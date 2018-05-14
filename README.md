@@ -1,13 +1,20 @@
 # TensorFlow Encrypted
 
+## Usage
+
+```python
+import tensorflow as tf
+import tensorflow_encrypted as tfe
+```
+
 ## Example
 
 Training a logistic regression model using the two-party SPDZ protocol.
 
+We first define our input providers, that in this example simply generate fake dataset. Note that `_build_data_generator` returns a generator function that is later executed by TensorFlow on the specified device as part of graph execution.
+
 ```python
 import numpy as np
-import tensorflow as tf
-import tensorflow_encrypted as tfe
 
 class MyInputProvider(tfe.NumpyInputProvider):
 
@@ -48,7 +55,11 @@ class MyInputProvider(tfe.NumpyInputProvider):
             return X, Y
 
         return generate_fake_training_data
+```
 
+We can then set up the parties needed for two-party SPDZ, here using three input providers.
+
+```python
 input_providers = [
     MyInputProvider('/job:localhost/replica:0/task:0/device:CPU:3', './data_0/file.txt'),
     MyInputProvider('/job:localhost/replica:0/task:0/device:CPU:3', './data_1/file.txt'),
@@ -58,7 +69,14 @@ input_providers = [
 server0 = tfe.Server('/job:localhost/replica:0/task:0/device:CPU:0')
 server1 = tfe.Server('/job:localhost/replica:0/task:0/device:CPU:1')
 crypto_producer = tfe.CryptoProducer('/job:localhost/replica:0/task:0/device:CPU:2')
+```
 
+Finally, we instantiate the protocol in order to:
+1) transfer the secret shared training set from the input providers to the two servers
+2) train a logistic model shared between the two servers
+3) perform an sample prediction
+
+```python
 with tfe.protocol.TwoPartySPDZ(server0, server1, crypto_producer) as prot:
 
     logreg = tfe.estimator.LogisticClassifier(
