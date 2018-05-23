@@ -19,7 +19,7 @@ class Protocol(object):
 
 __active_protocols = []
 
-def get_protocol():
+def get_active_protocol():
     return __active_protocols[-1]
 
 def enter_protocol(protocol):
@@ -32,3 +32,4 @@ def exit_protocol(protocol):
 
 from two_party_spdz import TwoPartySPDZ
 from secureml import SecureML
+from securenn import SecureNN

@@ -23,7 +23,7 @@ log2 = lambda x: log(x)/log(2)
 prod = lambda xs: reduce(lambda x,y: x*y, xs)
 
 from config import (
-    session,
+    session, run,
     SERVER_0, SERVER_1,
     CRYPTO_PRODUCER, INPUT_PROVIDER, OUTPUT_RECEIVER
 )
@@ -265,8 +265,7 @@ def transpose(x):
         if x_masked:
             # use mask for `x` to get mask for `x_t`
 
-            # TODO: use MaskedPrivateTensor
-            (a, a0, a1, alpha_on_0, alpha_on_1) = x_masked
+            a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
 
             with tf.device(CRYPTO_PRODUCER):
                 a_t = [ tf.transpose(t) for t in a ]
@@ -321,6 +320,7 @@ def concat(ys):
     return y_masked
 
 def split(y, num_splits):
+    assert isinstance(y, MaskedPrivateTensor)
     # FIXME[Morten] add support for PrivateTensors as well
 
     y0, y1 = y.unmasked.unwrapped
@@ -516,6 +516,7 @@ def cache(x, initializers=None, updators=None):
                     cached_x1 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(x1, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_x1, x1) ])
 
+            # TODO[Morten] wrap PrivateTensor around var.read_value() instead to ensure updated values?
             cached = PrivateTensor(cached_x0, cached_x1)
             _nodes[node_key] = cached
 
@@ -544,6 +545,7 @@ def cache(x, initializers=None, updators=None):
                     cached_alpha_on_1 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(alpha_on_1, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_alpha_on_1, alpha_on_1) ])
 
+            # TODO[Morten] wrap MaskedPrivateTensor around var.read_value() instead to ensure updated values?
             cached = MaskedPrivateTensor(
                 cached_x,
                 cached_a,
@@ -772,27 +774,28 @@ def define_input(shape, name=None):
         
     return input_x, PrivateTensor(x0, x1)
 
-# TODO implement this better
 def define_variable(initial_value, apply_encoding=True, name=None):
     
     v = initial_value
     v = encode(v) if apply_encoding else v
     v = decompose(v)
+    v0, v1 = share(v)
 
     with tf.name_scope('var{}'.format('-'+name if name else '')):
 
-        with tf.device(INPUT_PROVIDER):
-            v0, v1 = share(v)
-
         with tf.device(SERVER_0):
-            x0 = [ tf.Variable(vi, dtype=INT_TYPE).read_value() for vi in v0 ]
+            vars0 = [ tf.Variable(vi, dtype=INT_TYPE) for vi in v0 ]
+            init0 = [ vi.initializer for vi in vars0 ]
+            x0    = [ vi.read_value() for vi in vars0 ]
 
         with tf.device(SERVER_1):
-            x1 = [ tf.Variable(vi, dtype=INT_TYPE).read_value() for vi in v1 ]
+            vars1 = [ tf.Variable(vi, dtype=INT_TYPE) for vi in v1 ]
+            init1 = [ vi.initializer for vi in vars1 ]
+            x1    = [ vi.read_value() for vi in vars1 ]
 
         x = PrivateTensor(x0, x1)
 
-    return x
+    return x, init0+init1
 
 def assign(x, v):
     assert isinstance(x, PrivateTensor)
