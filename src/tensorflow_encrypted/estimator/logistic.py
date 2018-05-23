@@ -27,9 +27,9 @@ def training_loop(training_step, iterations, initial_weights, x, y):
 
 class LogisticClassifier(Classifier):
 
-    def __init__(self, num_features, sess=None):
+    def __init__(self, session, num_features):
+        self.sess = session
         self.num_features = num_features
-        self.sess = sess or session()
         self.parameters = None
 
     def initialize_parameters(self):

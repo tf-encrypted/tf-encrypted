@@ -2,11 +2,9 @@
 import numpy as np
 import tensorflow as tf
 import ops as tfe
+from protocol import Player
 
-class InputProvider(object):
-
-    def __init__(self, device_name):
-        self.device_name = device_name
+class InputProvider(Player):
 
     def send_data(self, mask=True):
 
@@ -44,9 +42,6 @@ class InputProvider(object):
         raise NotImplementedError()
 
 class NumpyInputProvider(InputProvider):
-
-    def __init__(self, device_name):
-        super(NumpyInputProvider, self).__init__(device_name)
 
     def _build_data_graph(self):
         data_generator = self._build_data_generator()

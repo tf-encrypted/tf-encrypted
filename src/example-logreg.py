@@ -43,8 +43,8 @@ class FakeInputProvider(tfe.NumpyInputProvider):
 
 input_providers = [
     FakeInputProvider('/job:localhost/replica:0/task:0/device:CPU:3'),
-    FakeInputProvider('/job:localhost/replica:0/task:0/device:CPU:3'),
-    FakeInputProvider('/job:localhost/replica:0/task:0/device:CPU:3')
+    FakeInputProvider('/job:localhost/replica:0/task:0/device:CPU:4'),
+    FakeInputProvider('/job:localhost/replica:0/task:0/device:CPU:5')
 ]
 
 server0 = tfe.Server('/job:localhost/replica:0/task:0/device:CPU:0')
@@ -53,15 +53,18 @@ crypto_producer = tfe.CryptoProducer('/job:localhost/replica:0/task:0/device:CPU
 
 with tfe.protocol.TwoPartySPDZ(server0, server1, crypto_producer) as prot:
 
-    logreg = tfe.estimator.LogisticClassifier(
-        num_features=2
-    )
+    with tfe.session(num_players=6) as sess:
 
-    logreg.prepare_training_data(input_providers)
-    
-    logreg.train(epochs=1, batch_size=30)
+        logreg = tfe.estimator.LogisticClassifier(
+            session=sess,
+            num_features=2
+        )
 
-    # ret = tfe.decode(tfe.recombine(tfe.reconstruct(y0, y1)))
-    # print ret.shape, ret
+        logreg.prepare_training_data(input_providers)
+        
+        logreg.train(epochs=1, batch_size=30)
 
-    # print logreg.predict(np.array([1., .5]))
+        # ret = tfe.decode(tfe.recombine(tfe.reconstruct(y0, y1)))
+        # print ret.shape, ret
+
+        # print logreg.predict(np.array([1., .5]))

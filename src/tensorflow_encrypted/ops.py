@@ -22,10 +22,10 @@ from crt import *
 log2 = lambda x: log(x)/log(2)
 prod = lambda xs: reduce(lambda x,y: x*y, xs)
 
+from protocol import get_active_protocol
+
 from config import (
-    session, run,
-    SERVER_0, SERVER_1,
-    CRYPTO_PRODUCER, INPUT_PROVIDER, OUTPUT_RECEIVER
+    session, run
 )
 
 # Idea is to simulate five different players on different devices. 
@@ -253,10 +253,10 @@ def transpose(x):
 
     with tf.name_scope('transpose'):
 
-        with tf.device(SERVER_0):
+        with tf.device(get_active_protocol().server_0.device_name):
             x0_t = [ tf.transpose(t) for t in x0 ]
 
-        with tf.device(SERVER_1):
+        with tf.device(get_active_protocol().server_1.device_name):
             x1_t = [ tf.transpose(t) for t in x1 ]
 
         x_t = PrivateTensor(x0_t, x1_t)
@@ -267,14 +267,14 @@ def transpose(x):
 
             a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
 
-            with tf.device(CRYPTO_PRODUCER):
+            with tf.device(get_active_protocol().crypto_producer.device_name):
                 a_t = [ tf.transpose(t) for t in a ]
 
-            with tf.device(SERVER_0):
+            with tf.device(get_active_protocol().server_0.device_name):
                 a0_t = [ tf.transpose(t) for t in a0 ]
                 alpha_on_0_t = [ tf.transpose(t) for t in alpha_on_0 ]
 
-            with tf.device(SERVER_1):
+            with tf.device(get_active_protocol().server_1.device_name):
                 a1_t = [ tf.transpose(t) for t in a1 ]
                 alpha_on_1_t = [ tf.transpose(t) for t in alpha_on_1 ]
 
@@ -301,15 +301,15 @@ def concat(ys):
         y0s, y1s = zip(*[ y.unmasked.unwrapped for y in ys ])
         bs, b0s, b1s, beta_on_0s, beta_on_1s = zip(*[ y.unwrapped for y in ys ])
 
-        with tf.device(CRYPTO_PRODUCER):
+        with tf.device(get_active_protocol().crypto_producer.device_name):
             b = helper(bs)
 
-        with tf.device(SERVER_0):
+        with tf.device(get_active_protocol().server_0.device_name):
             y0 = helper(y0s)
             b0 = helper(b0s)
             beta_on_0 = helper(beta_on_0s)
 
-        with tf.device(SERVER_1):
+        with tf.device(get_active_protocol().server_1.device_name):
             y1 = helper(y1s)
             b1 = helper(b1s)
             beta_on_1 = helper(beta_on_1s)
@@ -342,15 +342,15 @@ def split(y, num_splits):
 
     with tf.name_scope('split'):
 
-        with tf.device(CRYPTO_PRODUCER):
+        with tf.device(get_active_protocol().crypto_producer.device_name):
             bs = helper(b)
 
-        with tf.device(SERVER_0):
+        with tf.device(get_active_protocol().server_0.device_name):
             y0s = helper(y0)
             b0s = helper(b0)
             beta_on_0s = helper(beta_on_0)
 
-        with tf.device(SERVER_1):
+        with tf.device(get_active_protocol().server_1.device_name):
             y1s = helper(y1)
             b1s = helper(b1)
             beta_on_1s = helper(beta_on_1)
@@ -377,10 +377,10 @@ def add(x, y):
         
         with tf.name_scope('add'):
         
-            with tf.device(SERVER_0):
+            with tf.device(get_active_protocol().server_0.device_name):
                 z0 = crt_add(x0, y0)
 
-            with tf.device(SERVER_1):
+            with tf.device(get_active_protocol().server_1.device_name):
                 z1 = crt_add(x1, y1)
 
         z = PrivateTensor(z0, z1)
@@ -402,10 +402,10 @@ def sub(x, y):
         
         with tf.name_scope("sub"):
         
-            with tf.device(SERVER_0):
+            with tf.device(get_active_protocol().server_0.device_name):
                 z0 = crt_sub(x0, y0)
 
-            with tf.device(SERVER_1):
+            with tf.device(get_active_protocol().server_1.device_name):
                 z1 = crt_sub(x1, y1)
 
         z = PrivateTensor(z0, z1)
@@ -429,10 +429,10 @@ def scale(x, k, apply_encoding=None):
 
     with tf.name_scope('scale'):
 
-        with tf.device(SERVER_0):
+        with tf.device(get_active_protocol().server_0.device_name):
             y0 = crt_scale(x0, c)
 
-        with tf.device(SERVER_1):
+        with tf.device(get_active_protocol().server_1.device_name):
             y1 = crt_scale(x1, c)
 
     y = PrivateTensor(y0, y1)
@@ -454,22 +454,22 @@ def mask(x):
       
         with tf.name_scope('mask'):
 
-            with tf.device(CRYPTO_PRODUCER):
+            with tf.device(get_active_protocol().crypto_producer.device_name):
                 a = sample(shape)
                 a0, a1 = share(a)
 
-            with tf.device(SERVER_0):
+            with tf.device(get_active_protocol().server_0.device_name):
                 alpha0 = crt_sub(x0, a0)
 
-            with tf.device(SERVER_1):
+            with tf.device(get_active_protocol().server_1.device_name):
                 alpha1 = crt_sub(x1, a1)
 
             # exchange of alphas
 
-            with tf.device(SERVER_0):
+            with tf.device(get_active_protocol().server_0.device_name):
                 alpha_on_0 = reconstruct(alpha0, alpha1)
 
-            with tf.device(SERVER_1):
+            with tf.device(get_active_protocol().server_1.device_name):
                 alpha_on_1 = reconstruct(alpha0, alpha1)
 
         masked = MaskedPrivateTensor(x, a, a0, a1, alpha_on_0, alpha_on_1)
@@ -508,11 +508,11 @@ def cache(x, initializers=None, updators=None):
 
             with tf.name_scope('cache'):
 
-                with tf.device(SERVER_0):
+                with tf.device(get_active_protocol().server_0.device_name):
                     cached_x0 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(x0, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_x0, x0) ])
 
-                with tf.device(SERVER_1):
+                with tf.device(get_active_protocol().server_1.device_name):
                     cached_x1 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(x1, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_x1, x1) ])
 
@@ -527,18 +527,18 @@ def cache(x, initializers=None, updators=None):
 
             with tf.name_scope('cache'):
 
-                with tf.device(CRYPTO_PRODUCER):
+                with tf.device(get_active_protocol().crypto_producer.device_name):
                     cached_a = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_a, a) ])
 
-                with tf.device(SERVER_0):
+                with tf.device(get_active_protocol().server_0.device_name):
                     cached_a0 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a0, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_a0, a0) ])
 
                     cached_alpha_on_0 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(alpha_on_0, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_alpha_on_0, alpha_on_0) ])
 
-                with tf.device(SERVER_1):
+                with tf.device(get_active_protocol().server_1.device_name):
                     cached_a1 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a1, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_a1, a1) ])
 
@@ -576,18 +576,18 @@ def square(x):
 
         with tf.name_scope('square'):
 
-            with tf.device(CRYPTO_PRODUCER):
+            with tf.device(get_active_protocol().crypto_producer.device_name):
                 aa = crt_mul(a, a)
                 aa0, aa1 = share(aa)
 
-            with tf.device(SERVER_0):
+            with tf.device(get_active_protocol().server_0.device_name):
                 alpha = alpha_on_0
                 y0 = crt_add(aa0,
                      crt_add(crt_mul(a0, alpha),
                      crt_add(crt_mul(alpha, a0), # TODO replace with `scale(, 2)` op
                              crt_mul(alpha, alpha))))
 
-            with tf.device(SERVER_1):
+            with tf.device(get_active_protocol().server_1.device_name):
                 alpha = alpha_on_1
                 y1 = crt_add(aa1,
                      crt_add(crt_mul(a1, alpha),
@@ -620,11 +620,11 @@ def mul(x, y):
 
         with tf.name_scope('mul'):
 
-            with tf.device(CRYPTO_PRODUCER):
+            with tf.device(get_active_protocol().crypto_producer.device_name):
                 ab = crt_mul(a, b)
                 ab0, ab1 = share(ab)
 
-            with tf.device(SERVER_0):
+            with tf.device(get_active_protocol().server_0.device_name):
                 alpha = alpha_on_0
                 beta = beta_on_0
                 z0 = crt_add(ab0,
@@ -632,7 +632,7 @@ def mul(x, y):
                      crt_add(crt_mul(alpha, b0),
                              crt_mul(alpha, beta))))
 
-            with tf.device(SERVER_1):
+            with tf.device(get_active_protocol().server_1.device_name):
                 alpha = alpha_on_1
                 beta = beta_on_1
                 z1 = crt_add(ab1,
@@ -666,11 +666,11 @@ def dot(x, y):
 
         with tf.name_scope('dot'):
 
-            with tf.device(CRYPTO_PRODUCER):
+            with tf.device(get_active_protocol().crypto_producer.device_name):
                 ab = crt_dot(a, b)
                 ab0, ab1 = share(ab)
 
-            with tf.device(SERVER_0):
+            with tf.device(get_active_protocol().server_0.device_name):
                 alpha = alpha_on_0
                 beta = beta_on_0
                 z0 = crt_add(ab0,
@@ -678,7 +678,7 @@ def dot(x, y):
                      crt_add(crt_dot(alpha, b0),
                              crt_dot(alpha, beta))))
 
-            with tf.device(SERVER_1):
+            with tf.device(get_active_protocol().server_1.device_name):
                 alpha = alpha_on_1
                 beta = beta_on_1
                 z1 = crt_add(ab1,
@@ -709,10 +709,10 @@ def _gen_truncate():
 
         with tf.name_scope('truncate'):
     
-            with tf.device(SERVER_0):
+            with tf.device(get_active_protocol().server_0.device_name):
                 y0 = raw_truncate(x0)
 
-            with tf.device(SERVER_1):
+            with tf.device(get_active_protocol().server_1.device_name):
                 y1 = crt_sub(M_wrapped, raw_truncate(crt_sub(M_wrapped, x1)))
 
         return PrivateTensor(y0, y1)
@@ -746,7 +746,7 @@ def sigmoid(x):
         y7 = scale(x7, w7)
         y9 = scale(x9, w9)
 
-        with tf.device(SERVER_0):
+        with tf.device(get_active_protocol().server_0.device_name):
             z0 = crt_add(y1.share0,
                  crt_add(y3.share0,
                  crt_add(y5.share0,
@@ -754,7 +754,7 @@ def sigmoid(x):
                  crt_add(y9.share0,
                          decompose(encode(np.array([w0]))))))))
 
-        with tf.device(SERVER_1):
+        with tf.device(get_active_protocol().server_1.device_name):
             z1 = crt_add(y1.share1,
                  crt_add(y3.share1,
                  crt_add(y5.share1,
@@ -783,12 +783,12 @@ def define_variable(initial_value, apply_encoding=True, name=None):
 
     with tf.name_scope('var{}'.format('-'+name if name else '')):
 
-        with tf.device(SERVER_0):
+        with tf.device(get_active_protocol().server_0.device_name):
             vars0 = [ tf.Variable(vi, dtype=INT_TYPE) for vi in v0 ]
             init0 = [ vi.initializer for vi in vars0 ]
             x0    = [ vi.read_value() for vi in vars0 ]
 
-        with tf.device(SERVER_1):
+        with tf.device(get_active_protocol().server_1.device_name):
             vars1 = [ tf.Variable(vi, dtype=INT_TYPE) for vi in v1 ]
             init1 = [ vi.initializer for vi in vars1 ]
             x1    = [ vi.read_value() for vi in vars1 ]
@@ -806,10 +806,10 @@ def assign(x, v):
 
     with tf.name_scope("assign"):
 
-        with tf.device(SERVER_0):
+        with tf.device(get_active_protocol().server_0.device_name):
             y0 = [ tf.assign(xi, vi) for xi, vi in zip(x0, v0) ]
 
-        with tf.device(SERVER_1):
+        with tf.device(get_active_protocol().server_1.device_name):
             y1 = [ tf.assign(xi, vi) for xi, vi in zip(x1, v1) ]
 
     return y0, y1
