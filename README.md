@@ -9,17 +9,16 @@ import tensorflow_encrypted as tfe
 
 ## Example
 
-Training a logistic regression model using the two-party SPDZ protocol.
+Training a logistic regression model using the two-server SPDZ protocol.
 
-We first define our input providers, that in this example simply generate fake dataset. Note that `_build_data_generator` returns a generator function that is later executed by TensorFlow on the specified device as part of graph execution.
+We first define how our input providers are going to preprocess and prepare the training data; in this example we simply let each one generate a fake dataset. Note that `_build_data_generator` returns a generator function that is later executed by TensorFlow on the specified device as part of graph execution.
 
 ```python
 import numpy as np
 
 class MyInputProvider(tfe.NumpyInputProvider):
 
-    def __init__(self, device_name, filename):
-        self.filename = filename # TODO use
+    def __init__(self, device_name):
         super(MyInputProvider, self).__init__(device_name)
 
     @property
@@ -57,18 +56,29 @@ class MyInputProvider(tfe.NumpyInputProvider):
         return generate_fake_training_data
 ```
 
-We can then set up the parties needed for two-party SPDZ, here using three input providers.
+We create five instances of these running on different hosts:
 
 ```python
 input_providers = [
-    MyInputProvider('/job:localhost/replica:0/task:0/device:CPU:3', './data_0/file.txt'),
-    MyInputProvider('/job:localhost/replica:0/task:0/device:CPU:3', './data_1/file.txt'),
-    MyInputProvider('/job:localhost/replica:0/task:0/device:CPU:3', './data_2/file.txt')
+    MyInputProvider('10.0.0.1'),
+    MyInputProvider('10.0.0.2'),
+    MyInputProvider('10.0.0.3'),
+    MyInputProvider('10.0.0.4'),
+    MyInputProvider('10.0.0.5')
 ]
+```
 
-server0 = tfe.Server('/job:localhost/replica:0/task:0/device:CPU:0')
-server1 = tfe.Server('/job:localhost/replica:0/task:0/device:CPU:1')
-crypto_producer = tfe.CryptoProducer('/job:localhost/replica:0/task:0/device:CPU:2')
+Next we set up two servers that will jointly do the encrypted training and prediction, leaving the input providers to only be needed initially to distribute their encrypted data:
+
+```python
+server1 = tfe.Server('10.1.0.1')
+server2 = tfe.Server('10.1.0.2')
+```
+
+Finally, as part of the joint computation we also need certain cryptographic raw material that can processed in advance; for this example we let a single host produce this:
+
+```python
+crypto_producer = tfe.CryptoProducer('10.2.0.1')
 ```
 
 Finally, we instantiate the protocol in order to:
@@ -77,15 +87,19 @@ Finally, we instantiate the protocol in order to:
 3) perform an sample prediction
 
 ```python
-with tfe.protocol.TwoPartySPDZ(server0, server1, crypto_producer) as prot:
+with tfe.protocol.TwoServerSPDZ(server1, server2, crypto_producer):
 
-    logreg = tfe.estimator.LogisticClassifier(
-        num_features=2
-    )
+    with tfe.session() as sess:
 
-    logreg.prepare_training_data(input_providers)
-    logreg.train(epochs=1, batch_size=30)
+        logreg = tfe.estimator.LogisticClassifier(
+            session=sess,
+            num_features=2,
+        )
 
-    y_pred = logreg.predict(np.array([1., .5]))
-    print tfe.recombine_and_decode(tfe.reconstruct(*y_pred))
+        logreg.prepare_training_data(input_providers)
+        
+        logreg.train(epochs=10, batch_size=30)
+
+        y = logreg.predict(x)
+        print y.reveal()
 ```
