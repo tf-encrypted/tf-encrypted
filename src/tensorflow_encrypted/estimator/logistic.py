@@ -4,8 +4,11 @@ from ..ops import *
 class Classifier(object):
     pass
 
-def training_loop(training_step, iterations, initial_weights, x, y):
-    initial_w0, initial_w1 = initial_weights.unwrapped
+def training_loop(training_step, iterations, initial_weights, initial_bias, x, y):
+    initial_w0, initial_w1 = initial_weights
+    initial_b0, initial_b1 = initial_bias
+
+    # TODO use initial_bias!
 
     def loop_op(i, w0, w1):
         w = PrivateTensor(w0, w1)
@@ -21,9 +24,9 @@ def training_loop(training_step, iterations, initial_weights, x, y):
         parallel_iterations=1
     )
 
-    final_weights = final_w0, final_w1
-    return final_weights
-
+    final_weights = (final_w0, final_w1)
+    final_bias = (initial_b0, initial_b1) # TODO
+    return final_weights, final_bias
 
 class LogisticClassifier(Classifier):
 
@@ -34,13 +37,13 @@ class LogisticClassifier(Classifier):
 
     def initialize_parameters(self):
         initial_weights_value = np.zeros(shape=(self.num_features,1))
-        #initial_bias = np.zeros((1, 1))
+        initial_bias = np.zeros((1, 1))
 
         w, init_w = define_variable(initial_weights_value, name='w')
-        #b, init_b = define_variable(initial_bias, name='b')
+        b, init_b = define_variable(initial_bias, name='b')
 
-        run(self.sess, init_w, 'init')
-        self.parameters = w
+        run(self.sess, [init_w, init_b], 'init')
+        self.parameters = (w, b)
 
     def prepare_training_data(self, input_providers):
         # collect data from all input providers
@@ -95,16 +98,18 @@ class LogisticClassifier(Classifier):
                 #new_b = ...
                 return new_w #, new_b
 
-        weights = self.parameters
+        old_weights, old_bias = self.parameters
         training = training_loop(
             training_step=training_step,
-            iterations=1,
-            initial_weights=weights,
+            iterations=epochs,
+            initial_weights=old_weights.unwrapped,
+            initial_bias=old_bias.unwrapped,
             x=x.unmasked,
             y=y.unmasked
         )
 
-        run(self.sess, training, 'train')
+        new_weights, new_bias = run(self.sess, training, 'train')
+        self.parameters = (PrivateTensor(*new_weights), PrivateTensor(*new_bias))
 
     def _build_training_graph(self):
         pass
