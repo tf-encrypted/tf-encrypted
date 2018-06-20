@@ -55,16 +55,16 @@ with tfe.protocol.TwoPartySPDZ(server0, server1, crypto_producer) as prot:
 
     with tfe.session(num_players=6) as sess:
 
+        print("Creating a classifier...")
         logreg = tfe.estimator.LogisticClassifier(
             session=sess,
             num_features=2
         )
 
+        print("Preparing training data...")
         logreg.prepare_training_data(input_providers)
         
-        logreg.train(epochs=1, batch_size=30)
-
-        # ret = tfe.decode(tfe.recombine(tfe.reconstruct(y0, y1)))
-        # print ret.shape, ret
+        print("Training...")
+        logreg.train(epochs=100, batch_size=30)
 
         # print logreg.predict(np.array([1., .5]))
