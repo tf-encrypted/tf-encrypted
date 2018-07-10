@@ -1,8 +1,12 @@
 import numpy as np
 import tensorflow as tf
 
-from crt import *
-from helpers import log2
+from crt import (
+    gen_crt_decompose, gen_crt_recombine,
+    gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_mod,
+    gen_crt_sample_uniform
+)
+from helpers import prod, log2
 
 #
 # 32 bit CRT
