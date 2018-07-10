@@ -56,7 +56,7 @@ class LogisticClassifier(Classifier):
 
         # store in cache;
         # needed to avoid pulling again from input providers as these 
-        # use random ops that force re-evaluation
+        # may use random ops that force re-evaluation
         cache_initializers = []
         cache_updators = []
         cached_x = cache(combined_x, cache_initializers, cache_updators)
@@ -71,7 +71,7 @@ class LogisticClassifier(Classifier):
         assert self.training_data is not None, "No training data prepared"
         x, y = self.training_data
 
-        # prepare weights if none already
+        # make sure we have weights to work with
         if self.parameters is None:
             self.initialize_parameters()
 
@@ -107,6 +107,8 @@ class LogisticClassifier(Classifier):
             x=x.unmasked,
             y=y.unmasked
         )
+
+        # TODO[Morten] need to assign new_weights and new_bias here into of returning them, no?
 
         new_weights, new_bias = run(self.sess, training, 'train')
         self.parameters = (PrivateTensor(*new_weights), PrivateTensor(*new_bias))

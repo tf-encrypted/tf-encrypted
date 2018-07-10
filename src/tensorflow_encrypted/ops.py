@@ -17,11 +17,7 @@ from math import log
 import numpy as np
 import tensorflow as tf
 
-from crt import *
-
-log2 = lambda x: log(x)/log(2)
-prod = lambda xs: reduce(lambda x,y: x*y, xs)
-
+from tensor.int100 import Int100Tensor
 from protocol import get_active_protocol
 
 from config import (
@@ -50,201 +46,15 @@ from config import (
 #     1813194913083192535116061678809447818860
 # ]
 
-#
-# 32 bit CRT
-# - we need this to do dot product as int32 is the only supported type for that
-# - tried tf.float64 but didn't work out of the box
-# - 10 components for modulus ~100 bits
-#
-BITPRECISION_INTEGRAL   = 16
-BITPRECISION_FRACTIONAL = 16
-INT_TYPE = tf.int32
-FLOAT_TYPE = tf.float32
-TRUNCATION_GAP = 20
-m = [1201, 1433, 1217, 1237, 1321, 1103, 1129, 1367, 1093, 1039]
-M = 6616464272061971915798970247351 # == prod(m)
-lambdas = [
-    1008170659273389559193348505633, 
-    678730110253391396805616626909, 
-    3876367317978788805229799331439, 
-    1733010852181147049893990590252, 
-    2834912019672275627813941831946, 
-    5920625781074493455025914446179, 
-    4594604064921688203708053741296, 
-    4709451160728821268524065874669,
-    4618812662015813880836792588041, 
-    3107636732210050331963327700392
-]
-
-for mi in m: assert 2*log2(mi) + log2(1024) < log2(INT_TYPE.max)
-assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
-
-K = 2 ** BITPRECISION_FRACTIONAL
-
-def _egcd(a, b):
-    if a == 0:
-        return (b, 0, 1)
-    else:
-        g, y, x = _egcd(b % a, a)
-        return (g, x - (b // a) * y, y)
-    
-def _gcd(a, b):
-    g, _, _ = _egcd(a, b)
-    return g
-
-def _inverse(a, m):
-    _, b, _ = _egcd(a, m)
-    return b % m
-
-def encode(rationals, precision=BITPRECISION_FRACTIONAL):
-    """ [NumPy] Encode tensor of rational numbers into tensor of ring elements """
-    return (rationals * (2**precision)).astype(int).astype(object) % M
-
-def decode(elements, precision=BITPRECISION_FRACTIONAL):
-    """ [NumPy] Decode tensor of ring elements into tensor of rational numbers """
-    map_negative_range = np.vectorize(lambda element: element if element <= M/2 else element - M)
-    return map_negative_range(elements).astype(float) / (2**precision)
-
-def decompose(x):
-    return tuple( x % mi for mi in m )
-
-def recombine(x):
-    return sum( xi * li for xi, li in zip(x, lambdas) ) % M
-
 # *** NOTE ***
 # keeping mod operations in-lined here for simplicity;
 # we should do them lazily
-
-def crt_add(x, y):
-    with tf.name_scope('crt_add'):
-        return [ (xi + yi) % mi for xi, yi, mi in zip(x, y, m) ]
-
-def crt_sub(x, y):
-    with tf.name_scope("crt_sub"):
-        return [ (xi - yi) % mi for xi, yi, mi in zip(x, y, m) ]
 
 def crt_scale(x, k):
     with tf.name_scope("crt_scale"):
         return [ (xi * ki) % mi for xi, ki, mi in zip(x, k, m) ]
 
-def crt_mul(x, y):
-    with tf.name_scope("crt_mul"):
-        return [ (xi * yi) % mi for xi, yi, mi in zip(x, y, m) ]
-
-def crt_dot(x, y):
-    with tf.name_scope("crt_dot"):
-        return [ tf.matmul(xi, yi) % mi for xi, yi, mi in zip(x, y, m) ]
-
-def _gen_crt_mod():
-
-    # precomputation
-    q = [ _inverse(M // mi, mi) for mi in m ]
-    B = M % K
-    b = [ (M // mi) % K for mi in m ]
-
-    def crt_mod(x):
-        with tf.name_scope("crt_mod"):
-            t = [ (xi * qi) % mi for xi, qi, mi in zip(x, q, m) ]
-            alpha = tf.cast(
-                tf.round(
-                    tf.reduce_sum(
-                        [ tf.cast(ti, FLOAT_TYPE) / mi for ti, mi in zip(t, m) ],
-                        axis=0
-                    )
-                ),
-                INT_TYPE
-            )
-            v = tf.reduce_sum(
-                [ ti * bi for ti, bi in zip(t, b) ],
-                axis=0
-            ) - B * alpha
-            return decompose(v % K)
-
-    return crt_mod
-
-crt_mod = _gen_crt_mod()
-
-def sample(shape):
-    with tf.name_scope('sample'):
-        return [ tf.random_uniform(shape, maxval=mi, dtype=INT_TYPE) for mi in m ]
-
-def share(secret):
-    with tf.name_scope('share'):
-        shape = secret[0].shape
-        share0 = sample(shape)
-        share1 = crt_sub(secret, share0)
-        return share0, share1
-
-def reconstruct(share0, share1):
-    with tf.name_scope('reconstruct'):
-        return crt_add(share0, share1)
-
 _nodes = dict()
-
-class Tensor(object):
-
-    def __init__(self, xs):
-        self.xs = xs
-
-    @property
-    def shape(self):
-        return self.xs[0].shape
-
-    @property
-    def unwrapped(self):
-        return self.xs
-
-class PrivateTensor(object):
-    
-    def __init__(self, share0, share1):
-        self.share0 = share0
-        self.share1 = share1
-    
-    @property
-    def shape(self):
-        return self.share0[0].shape
-
-    @property
-    def unwrapped(self):
-        return (self.share0, self.share1)
-
-    def __add__(x, y):
-        return add(x, y)
-    
-    def __sub__(x, y):
-        return sub(x, y)
-    
-    def __mul__(x, y):
-        return mul(x, y)
-
-    def dot(x, y):
-        return dot(x, y)
-
-    def truncate(x):
-        return truncate(x)
-
-class MaskedPrivateTensor(object):
-
-    def __init__(self, x, a, a0, a1, alpha_on_0, alpha_on_1):
-        assert isinstance(x, PrivateTensor)
-        self.x  = x
-        self.a  = a
-        self.a0 = a0
-        self.a1 = a1
-        self.alpha_on_0 = alpha_on_0
-        self.alpha_on_1 = alpha_on_1
-
-    @property
-    def shape(self):
-        return self.a[0].shape
-
-    @property
-    def unmasked(self):
-        return self.x
-
-    @property
-    def unwrapped(self):
-        return (self.a, self.a0, self.a1, self.alpha_on_0, self.alpha_on_1)
 
 def transpose(x):
     assert isinstance(x, PrivateTensor)
@@ -254,10 +64,10 @@ def transpose(x):
     with tf.name_scope('transpose'):
 
         with tf.device(get_active_protocol().server_0.device_name):
-            x0_t = [ tf.transpose(t) for t in x0 ]
+            x0_t = x0.transpose()
 
         with tf.device(get_active_protocol().server_1.device_name):
-            x1_t = [ tf.transpose(t) for t in x1 ]
+            x1_t = x1.transpose()
 
         x_t = PrivateTensor(x0_t, x1_t)
 
@@ -268,21 +78,22 @@ def transpose(x):
             a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
 
             with tf.device(get_active_protocol().crypto_producer.device_name):
-                a_t = [ tf.transpose(t) for t in a ]
+                a_t = a.transpose()
 
             with tf.device(get_active_protocol().server_0.device_name):
-                a0_t = [ tf.transpose(t) for t in a0 ]
-                alpha_on_0_t = [ tf.transpose(t) for t in alpha_on_0 ]
+                a0_t = a0.transpose()
+                alpha_on_0_t = alpha_on_0.transpose()
 
             with tf.device(get_active_protocol().server_1.device_name):
-                a1_t = [ tf.transpose(t) for t in a1 ]
-                alpha_on_1_t = [ tf.transpose(t) for t in alpha_on_1 ]
+                a1_t = a.transpose()
+                alpha_on_1_t = alpha_on_1.transpose()
 
             x_masked_t = MaskedPrivateTensor(x_t, a_t, a0_t, a1_t, alpha_on_0_t, alpha_on_1_t)
             _nodes[('mask', x_t)] = x_masked_t
 
     return x_t
 
+# TODO[Morten] how to support this one with new abstractions?
 def concat(ys):
     # FIXME[Morten] add support for PrivateTensors as well
 
@@ -319,6 +130,7 @@ def concat(ys):
 
     return y_masked
 
+# TODO[Morten] how to support this one with new abstractions?
 def split(y, num_splits):
     assert isinstance(y, MaskedPrivateTensor)
     # FIXME[Morten] add support for PrivateTensors as well
@@ -363,61 +175,13 @@ def split(y, num_splits):
     
     return tensors
 
-def add(x, y):
-    assert isinstance(x, PrivateTensor)
-    assert isinstance(y, PrivateTensor)
-    
-    node_key = ('add', x, y)
-    z = _nodes.get(node_key, None)
-
-    if z is None:
-
-        x0, x1 = x.unwrapped
-        y0, y1 = y.unwrapped
-        
-        with tf.name_scope('add'):
-        
-            with tf.device(get_active_protocol().server_0.device_name):
-                z0 = crt_add(x0, y0)
-
-            with tf.device(get_active_protocol().server_1.device_name):
-                z1 = crt_add(x1, y1)
-
-        z = PrivateTensor(z0, z1)
-        _nodes[node_key] = z
-
-    return z
-
-def sub(x, y):
-    assert isinstance(x, PrivateTensor)
-    assert isinstance(y, PrivateTensor)
-    
-    node_key = ('sub', x, y)
-    z = _nodes.get(node_key, None)
-
-    if z is None:
-
-        x0, x1 = x.unwrapped
-        y0, y1 = y.unwrapped
-        
-        with tf.name_scope("sub"):
-        
-            with tf.device(get_active_protocol().server_0.device_name):
-                z0 = crt_sub(x0, y0)
-
-            with tf.device(get_active_protocol().server_1.device_name):
-                z1 = crt_sub(x1, y1)
-
-        z = PrivateTensor(z0, z1)
-        _nodes[node_key] = z
-
-    return z
-
 def scale(x, k, apply_encoding=None):
-    assert isinstance(x, PrivateTensor)
-    assert type(k) in [int, float]
+    assert type(x) in [PrivateTensor], type(x)
+    assert type(k) in [int, float], type(k)
 
     x0, x1 = x.unwrapped
+    assert type(x0) in [Int100Tensor], type(x0)
+    assert type(x1) in [Int100Tensor], type(x1)
 
     if apply_encoding is None:
         # determine automatically
@@ -425,15 +189,14 @@ def scale(x, k, apply_encoding=None):
 
     c = np.array([k])
     if apply_encoding: c = encode(c)
-    c = decompose(c)
 
     with tf.name_scope('scale'):
 
         with tf.device(get_active_protocol().server_0.device_name):
-            y0 = crt_scale(x0, c)
+            y0 = x0 * c
 
         with tf.device(get_active_protocol().server_1.device_name):
-            y1 = crt_scale(x1, c)
+            y1 = x1 * c
 
     y = PrivateTensor(y0, y1)
     if apply_encoding:
@@ -562,134 +325,13 @@ def cache(x, initializers=None, updators=None):
     return cached
 
 def square(x):
-
-    node_key = ('square', x)
-    y = _nodes.get(node_key, None)
-
-    if y is None:
-
-        if isinstance(x, PrivateTensor):
-            x = mask(x)
-
-        assert isinstance(x, MaskedPrivateTensor)
-        a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
-
-        with tf.name_scope('square'):
-
-            with tf.device(get_active_protocol().crypto_producer.device_name):
-                aa = crt_mul(a, a)
-                aa0, aa1 = share(aa)
-
-            with tf.device(get_active_protocol().server_0.device_name):
-                alpha = alpha_on_0
-                y0 = crt_add(aa0,
-                     crt_add(crt_mul(a0, alpha),
-                     crt_add(crt_mul(alpha, a0), # TODO replace with `scale(, 2)` op
-                             crt_mul(alpha, alpha))))
-
-            with tf.device(get_active_protocol().server_1.device_name):
-                alpha = alpha_on_1
-                y1 = crt_add(aa1,
-                     crt_add(crt_mul(a1, alpha),
-                             crt_mul(alpha, a1))) # TODO replace with `scale(, 2)` op
-        
-        y = PrivateTensor(y0, y1)
-        y = truncate(y)
-        _nodes[node_key] = y
-
-    return y
+    return get_active_protocol().square(x)
 
 def mul(x, y):
-
-    node_key = ('mul', x, y)
-    z = _nodes.get(node_key, None)
-
-    if z is None:
-
-        if isinstance(x, PrivateTensor):
-            x = mask(x)
-
-        if isinstance(y, PrivateTensor):
-            y = mask(y)
-
-        assert isinstance(x, MaskedPrivateTensor)
-        assert isinstance(y, MaskedPrivateTensor)
-
-        a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
-        b, b0, b1,  beta_on_0,  beta_on_1 = y.unwrapped
-
-        with tf.name_scope('mul'):
-
-            with tf.device(get_active_protocol().crypto_producer.device_name):
-                ab = crt_mul(a, b)
-                ab0, ab1 = share(ab)
-
-            with tf.device(get_active_protocol().server_0.device_name):
-                alpha = alpha_on_0
-                beta = beta_on_0
-                z0 = crt_add(ab0,
-                     crt_add(crt_mul(a0, beta),
-                     crt_add(crt_mul(alpha, b0),
-                             crt_mul(alpha, beta))))
-
-            with tf.device(get_active_protocol().server_1.device_name):
-                alpha = alpha_on_1
-                beta = beta_on_1
-                z1 = crt_add(ab1,
-                     crt_add(crt_mul(a1, beta),
-                             crt_mul(alpha, b1)))
-        
-        z = PrivateTensor(z0, z1)
-        z = truncate(z)
-        _nodes[node_key] = z
-
-    return z
+    return get_active_protocol().mul(x, y)
 
 def dot(x, y):
-
-    node_key = ('dot', x, y)
-    z = _nodes.get(node_key, None)
-
-    if z is None:
-
-        if isinstance(x, PrivateTensor):
-            x = mask(x)
-
-        if isinstance(y, PrivateTensor):
-            y = mask(y)
-
-        assert isinstance(x, MaskedPrivateTensor)
-        assert isinstance(y, MaskedPrivateTensor)
-        
-        a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
-        b, b0, b1,  beta_on_0,  beta_on_1 = y.unwrapped
-
-        with tf.name_scope('dot'):
-
-            with tf.device(get_active_protocol().crypto_producer.device_name):
-                ab = crt_dot(a, b)
-                ab0, ab1 = share(ab)
-
-            with tf.device(get_active_protocol().server_0.device_name):
-                alpha = alpha_on_0
-                beta = beta_on_0
-                z0 = crt_add(ab0,
-                     crt_add(crt_dot(a0, beta),
-                     crt_add(crt_dot(alpha, b0),
-                             crt_dot(alpha, beta))))
-
-            with tf.device(get_active_protocol().server_1.device_name):
-                alpha = alpha_on_1
-                beta = beta_on_1
-                z1 = crt_add(ab1,
-                     crt_add(crt_dot(a1, beta),
-                             crt_dot(alpha, b1)))
-
-        z = PrivateTensor(z0, z1)
-        z = truncate(z)
-        _nodes[node_key] = z
-
-    return z
+    return get_active_protocol().dot(x, y)
 
 def _gen_truncate():
     assert _gcd(K, M) == 1
@@ -713,7 +355,7 @@ def _gen_truncate():
                 y0 = raw_truncate(x0)
 
             with tf.device(get_active_protocol().server_1.device_name):
-                y1 = crt_sub(M_wrapped, raw_truncate(crt_sub(M_wrapped, x1)))
+                y1 = M_wrapped - raw_truncate(M_wrapped - x1)
 
         return PrivateTensor(y0, y1)
 
@@ -722,97 +364,7 @@ def _gen_truncate():
 truncate = _gen_truncate()
 
 def sigmoid(x):
-    assert isinstance(x, PrivateTensor)
-
-    w0 =  0.5
-    w1 =  0.2159198015
-    w3 = -0.0082176259
-    w5 =  0.0001825597
-    w7 = -0.0000018848
-    w9 =  0.0000000072
-
-    with tf.name_scope('sigmoid'):
-
-        # TODO optimise depth
-        x2 = square(x)
-        x3 = mul(x2, x)
-        x5 = mul(x2, x3)
-        x7 = mul(x2, x5)
-        x9 = mul(x2, x7)
-
-        y1 = scale(x,  w1)
-        y3 = scale(x3, w3)
-        y5 = scale(x5, w5)
-        y7 = scale(x7, w7)
-        y9 = scale(x9, w9)
-
-        with tf.device(get_active_protocol().server_0.device_name):
-            z0 = crt_add(y1.share0,
-                 crt_add(y3.share0,
-                 crt_add(y5.share0,
-                 crt_add(y7.share0,
-                 crt_add(y9.share0,
-                         decompose(encode(np.array([w0]))))))))
-
-        with tf.device(get_active_protocol().server_1.device_name):
-            z1 = crt_add(y1.share1,
-                 crt_add(y3.share1,
-                 crt_add(y5.share1,
-                 crt_add(y7.share1,
-                         y9.share1))))
-
-    z = PrivateTensor(z0, z1)
-    return z
-
-def define_input(shape, name=None):
-    
-    with tf.name_scope('input{}'.format('-'+name if name else '')):
-        
-        with tf.device(INPUT_PROVIDER):
-            input_x = [ tf.placeholder(INT_TYPE, shape=shape) for _ in m ]
-            x0, x1 = share(input_x)
-        
-    return input_x, PrivateTensor(x0, x1)
-
-def define_variable(initial_value, apply_encoding=True, name=None):
-    
-    v = initial_value
-    v = encode(v) if apply_encoding else v
-    v = decompose(v)
-    v0, v1 = share(v)
-
-    with tf.name_scope('var{}'.format('-'+name if name else '')):
-
-        with tf.device(get_active_protocol().server_0.device_name):
-            vars0 = [ tf.Variable(vi, dtype=INT_TYPE) for vi in v0 ]
-            init0 = [ vi.initializer for vi in vars0 ]
-            x0    = [ vi.read_value() for vi in vars0 ]
-
-        with tf.device(get_active_protocol().server_1.device_name):
-            vars1 = [ tf.Variable(vi, dtype=INT_TYPE) for vi in v1 ]
-            init1 = [ vi.initializer for vi in vars1 ]
-            x1    = [ vi.read_value() for vi in vars1 ]
-
-        x = PrivateTensor(x0, x1)
-
-    return x, init0+init1
-
-def assign(x, v):
-    assert isinstance(x, PrivateTensor)
-    assert isinstance(v, PrivateTensor)
-
-    x0, x1 = x.share0, x.share1
-    v0, v1 = v.share0, v.share1
-
-    with tf.name_scope("assign"):
-
-        with tf.device(get_active_protocol().server_0.device_name):
-            y0 = [ tf.assign(xi, vi) for xi, vi in zip(x0, v0) ]
-
-        with tf.device(get_active_protocol().server_1.device_name):
-            y1 = [ tf.assign(xi, vi) for xi, vi in zip(x1, v1) ]
-
-    return y0, y1
+    return get_active_protocol().sigmoid(x)
 
 def reveal(x):
     assert isinstance(x, PrivateTensor)
