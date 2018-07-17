@@ -50,49 +50,6 @@ from config import (
 # keeping mod operations in-lined here for simplicity;
 # we should do them lazily
 
-def crt_scale(x, k):
-    with tf.name_scope("crt_scale"):
-        return [ (xi * ki) % mi for xi, ki, mi in zip(x, k, m) ]
-
-_nodes = dict()
-
-def transpose(x):
-    assert isinstance(x, PrivateTensor)
-
-    x0, x1 = x.share0, x.share1
-
-    with tf.name_scope('transpose'):
-
-        with tf.device(get_active_protocol().server_0.device_name):
-            x0_t = x0.transpose()
-
-        with tf.device(get_active_protocol().server_1.device_name):
-            x1_t = x1.transpose()
-
-        x_t = PrivateTensor(x0_t, x1_t)
-
-        x_masked = _nodes.get(('mask', x), None)
-        if x_masked:
-            # use mask for `x` to get mask for `x_t`
-
-            a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
-
-            with tf.device(get_active_protocol().crypto_producer.device_name):
-                a_t = a.transpose()
-
-            with tf.device(get_active_protocol().server_0.device_name):
-                a0_t = a0.transpose()
-                alpha_on_0_t = alpha_on_0.transpose()
-
-            with tf.device(get_active_protocol().server_1.device_name):
-                a1_t = a.transpose()
-                alpha_on_1_t = alpha_on_1.transpose()
-
-            x_masked_t = MaskedPrivateTensor(x_t, a_t, a0_t, a1_t, alpha_on_0_t, alpha_on_1_t)
-            _nodes[('mask', x_t)] = x_masked_t
-
-    return x_t
-
 # TODO[Morten] how to support this one with new abstractions?
 def concat(ys):
     # FIXME[Morten] add support for PrivateTensors as well
@@ -204,42 +161,6 @@ def scale(x, k, apply_encoding=None):
 
     return y
 
-def mask(x):
-    assert isinstance(x, PrivateTensor)
-    
-    node_key = ('mask', x)
-    masked = _nodes.get(node_key, None)
-
-    if masked is None:
-      
-        x0, x1 = x.unwrapped
-        shape = x.shape
-      
-        with tf.name_scope('mask'):
-
-            with tf.device(get_active_protocol().crypto_producer.device_name):
-                a = sample(shape)
-                a0, a1 = share(a)
-
-            with tf.device(get_active_protocol().server_0.device_name):
-                alpha0 = crt_sub(x0, a0)
-
-            with tf.device(get_active_protocol().server_1.device_name):
-                alpha1 = crt_sub(x1, a1)
-
-            # exchange of alphas
-
-            with tf.device(get_active_protocol().server_0.device_name):
-                alpha_on_0 = reconstruct(alpha0, alpha1)
-
-            with tf.device(get_active_protocol().server_1.device_name):
-                alpha_on_1 = reconstruct(alpha0, alpha1)
-
-        masked = MaskedPrivateTensor(x, a, a0, a1, alpha_on_0, alpha_on_1)
-        _nodes[node_key] = masked
-        
-    return masked
-
 def local_mask(x):
     assert isinstance(x, Tensor), type(x)
 
@@ -323,60 +244,6 @@ def cache(x, initializers=None, updators=None):
             raise AssertionError("'x' not of supported type")
 
     return cached
-
-def square(x):
-    return get_active_protocol().square(x)
-
-def mul(x, y):
-    return get_active_protocol().mul(x, y)
-
-def dot(x, y):
-    return get_active_protocol().dot(x, y)
-
-def _gen_truncate():
-    assert _gcd(K, M) == 1
-
-    # precomputation for truncation
-    K_inv = decompose(_inverse(K, M))
-    M_wrapped = decompose(M)
-
-    def raw_truncate(x):
-        y = crt_sub(x, crt_mod(x))
-        return crt_mul(y, K_inv)
-
-    def truncate(x):
-        assert isinstance(x, PrivateTensor)
-
-        x0, x1 = x.share0, x.share1
-
-        with tf.name_scope('truncate'):
-    
-            with tf.device(get_active_protocol().server_0.device_name):
-                y0 = raw_truncate(x0)
-
-            with tf.device(get_active_protocol().server_1.device_name):
-                y1 = M_wrapped - raw_truncate(M_wrapped - x1)
-
-        return PrivateTensor(y0, y1)
-
-    return truncate
-
-truncate = _gen_truncate()
-
-def sigmoid(x):
-    return get_active_protocol().sigmoid(x)
-
-def reveal(x):
-    assert isinstance(x, PrivateTensor)
-    
-    x0, x1 = x.share0, x.share1
-
-    with tf.name_scope('reveal'):
-    
-        with tf.device(OUTPUT_RECEIVER):
-            y = reconstruct(x0, x1)
-    
-    return y
 
 def encode_input(vars_and_values):
     if not isinstance(vars_and_values, list):

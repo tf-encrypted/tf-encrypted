@@ -73,11 +73,11 @@ def gen_crt_mod(m, int_type, float_type):
     redecompose = gen_crt_decompose(m)
 
     def crt_mod(x, k):
+        assert type(k) in [int], type(k)
 
         # inner precomputations
-        K = 2**k
-        B = M % K
-        b = [ (M // mi) % K for mi in m ]
+        B = M % k
+        b = [ (M // mi) % k for mi in m ]
 
         with tf.name_scope('crt_mod'):
             t = [ (xi * qi) % mi for xi, qi, mi in zip(x, q, m) ]
@@ -94,6 +94,6 @@ def gen_crt_mod(m, int_type, float_type):
                 [ ti * bi for ti, bi in zip(t, b) ],
                 axis=0
             ) - B * alpha
-            return redecompose(v % K)
+            return redecompose(v % k)
 
     return crt_mod

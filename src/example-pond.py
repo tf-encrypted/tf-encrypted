@@ -11,11 +11,25 @@ prot = Pond(server0, server1, None)
 
 shape = (2,2)
 
-a = prot.define_public_placeholder(shape)
-b = a * 2
+a = prot.define_constant(np.array([4, 3, 2, 1]).reshape(2,2))
+b = prot.define_constant(np.array([4, 3, 2, 1]).reshape(2,2))
+c = a * b
 
-c = mask(a) + b
+d = prot.define_private_variable(np.array([1., 2., 3., 4.]).reshape(2,2))
+e = prot.define_private_variable(np.array([1., 2., 3., 4.]).reshape(2,2))
+f = (d * .5 + e * .5)
 
+sess = session(3)
+sess.run([d.initializer, e.initializer])
+
+print f.reveal().eval(sess)
+
+sess.run(prot.assign(d, d))
+sess.run(prot.assign(e, e))
+
+print f.reveal().eval(sess)
+
+sess.close()
 
 # b = prot.define_private_placeholder(shape)
 
