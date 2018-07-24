@@ -1,6 +1,6 @@
-
 import numpy as np
 import tensorflow as tf
+
 import ops as tfe
 from protocol import Player
 

@@ -7,6 +7,7 @@ from crt import (
     gen_crt_sample_uniform
 )
 from helpers import prod, log2
+from ..config import run
 
 #
 # 32 bit CRT
@@ -51,7 +52,7 @@ _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
 
 def to_native(backing):
     assert isinstance(backing, (list, tuple)), type(backing)
-    return _crt_recombine(backing).astype(int)
+    return _crt_recombine(backing).astype(object)
 
 class Int100Tensor(object):
 
@@ -69,7 +70,7 @@ class Int100Tensor(object):
 
     @staticmethod
     def from_native(value):
-        assert type(value) in [np.ndarray], type(value)
+        assert type(value) in (np.ndarray,), type(value)
         return Int100Tensor(value, None)
 
     @staticmethod
@@ -77,13 +78,12 @@ class Int100Tensor(object):
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
 
-    @property
-    def value(self):
-        return self.backing
+    def eval(self, sess, feed_dict={}):
+        return to_native(run(sess, self.backing, feed_dict=feed_dict))
 
     @staticmethod
     def sample_uniform(shape):
-        return sample_uniform(shape)
+        return _sample_uniform(shape)
 
     def __repr__(self):
         return 'Int100Tensor({})'.format(to_native(self.backing))
@@ -104,7 +104,7 @@ class Int100Tensor(object):
     def dot(self, other):
         return _dot(self, other)
 
-    def mod(self, k):
+    def __mod__(self, k):
         return _mod(self, k)
 
     def transpose(self):
@@ -116,8 +116,8 @@ def _lift(x):
     if isinstance(x, Int100Tensor):
         return x
 
-    if type(x) == int:
-        return Int100Tensor.from_native(x)
+    if type(x) is int:
+        return Int100Tensor.from_native(np.ndarray([x]))
 
     raise TypeError("Unsupported type {}".format(type(x)))
 
@@ -142,7 +142,7 @@ def _dot(x, y):
     return Int100Tensor.from_decomposed(z_backing)
 
 def _mod(x, k):
-    y_backing = _crt_mod(x, k)
+    y_backing = _crt_mod(x.backing, k)
     return Int100Tensor.from_decomposed(y_backing)
 
 def _sample_uniform(shape):
@@ -153,6 +153,31 @@ def _transpose(x):
     assert isinstance(x, Int100Tensor), type(x)
     backing = [ tf.transpose(xi) for xi in x.backing ]
     return Int100Tensor.from_decomposed(backing)
+
+class Int100Constant(Int100Tensor):
+
+    def __init__(self, native_value, int100_value=None):
+        if int100_value is None:
+            int100_value = Int100Tensor.from_native(native_value)
+
+        assert type(int100_value) in [Int100Tensor], type(int100_value)
+
+        backing = [ tf.constant(vi, dtype=Int100Tensor.int_type) for vi in int100_value.backing ]
+
+        super(Int100Constant, self).__init__(None, backing)
+
+    @staticmethod
+    def from_native(value):
+        assert type(value) in [np.ndarray], type(value)
+        return Int100Constant(value, None)
+
+    @staticmethod
+    def from_int100(value):
+        assert type(value) in [Int100Tensor], type(value)
+        return Int100Constant(None, value)
+
+    def __repr__(self):
+        return 'Int100Constant({})'.format(self.shape)
 
 class Int100Placeholder(Int100Tensor):
 
@@ -177,8 +202,8 @@ def _feed(placeholder, native_value, int100_value=None):
     if int100_value is None:
         int100_value = Int100Tensor.from_native(native_value)
 
-    assert type(placeholder) in [Int100Placeholder], type(placeholder)
-    assert type(int100_value) in [Int100Tensor], type(int100_value)
+    assert type(placeholder) is Int100Placeholder, type(placeholder)
+    assert type(int100_value) is Int100Tensor, type(int100_value)
     
     return {
         p: v for p, v in zip(placeholder.placeholders, int100_value.backing)
@@ -220,12 +245,12 @@ class Int100Variable(Int100Tensor):
         assert isinstance(value, Int100Tensor), type(value)
         return _assign(self, None, value)
 
-def _assign(variable, native_value, int100_value=None):
-    if int100_value is None:
-        int100_value = Int100Tensor.from_native(native_value)
+def _assign(variable, native_value, decomposed_value=None):
+    if decomposed_value is None:
+        decomposed_value = Int100Tensor.from_native(native_value)
 
-    assert type(variable) in [Int100Variable], type(variable)
-    assert isinstance(int100_value, Int100Tensor), type(int100_value)
+    assert type(variable) in (Int100Variable,), type(variable)
+    assert isinstance(decomposed_value, (Int100Tensor,)), type(decomposed_value)
 
-    ops = [ tf.assign(xi, vi).op for xi, vi in zip(variable.variables, int100_value.backing) ]
+    ops = [ tf.assign(xi, vi).op for xi, vi in zip(variable.variables, decomposed_value.backing) ]
     return tf.group(*ops)
