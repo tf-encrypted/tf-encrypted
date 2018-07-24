@@ -197,7 +197,7 @@ class Int100Variable(Int100Tensor):
 
         super(Int100Variable, self).__init__(None, backing)
         self.variables = variables
-        self.initializer = tf.group([ var.initializer for var in variables ])
+        self.initializer = tf.group(*[var.initializer for var in variables])
 
     @staticmethod
     def from_native(initial_value):
@@ -228,4 +228,4 @@ def _assign(variable, native_value, int100_value=None):
     assert isinstance(int100_value, Int100Tensor), type(int100_value)
 
     ops = [ tf.assign(xi, vi).op for xi, vi in zip(variable.variables, int100_value.backing) ]
-    return tf.group(ops)
+    return tf.group(*ops)
