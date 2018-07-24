@@ -67,3 +67,44 @@ class NumpyInputProvider(InputProvider):
         Function is executed on `device_name`.
         """
         raise NotImplementedError()
+
+
+class FakeInputProvider(NumpyInputProvider):
+
+    def __init__(self, device_name):
+        super(FakeInputProvider, self).__init__(device_name)
+
+    @property
+    def num_rows(self):
+        return 1000
+
+    @property
+    def num_cols(self):
+        return (2,1)
+
+    def _build_data_generator(self):
+
+        def generate_fake_training_data():
+            np.random.seed(42)
+
+            data_size = self.num_rows
+
+            # generate features
+            X0 = np.random.multivariate_normal([0, 0], [[1, .75],[.75, 1]], data_size//2)
+            X1 = np.random.multivariate_normal([1, 4], [[1, .75],[.75, 1]], data_size//2)
+            X = np.vstack((X0, X1)).astype(np.float32)
+
+            # generate labels
+            Y0 = np.zeros(data_size//2).reshape(-1, 1)
+            Y1 = np.ones(data_size//2).reshape(-1, 1)
+            Y = np.vstack((Y0, Y1)).astype(np.float32)
+
+            # shuffle
+            perm = np.random.permutation(len(X))
+            X = X[perm]
+            Y = Y[perm]
+
+            return X, Y
+
+        return generate_fake_training_data
+

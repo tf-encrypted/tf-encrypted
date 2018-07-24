@@ -4,30 +4,6 @@ from ..ops import *
 class Classifier(object):
     pass
 
-def training_loop(training_step, iterations, initial_weights, initial_bias, x, y):
-    initial_w0, initial_w1 = initial_weights
-    initial_b0, initial_b1 = initial_bias
-
-    # TODO use initial_bias!
-
-    def loop_op(i, w0, w1):
-        w = PrivateTensor(w0, w1)
-        # x = x_batched[i]
-        # y = y_batched[i]
-        new_w = training_step(w, x, y)
-        return new_w.share0, new_w.share1
-
-    _, final_w0, final_w1 = tf.while_loop(
-        cond=lambda i, w0, w1: tf.less(i, iterations),
-        body=lambda i, w0, w1: (i+1,) + loop_op(i, w0, w1),
-        loop_vars=(0, initial_w0, initial_w1),
-        parallel_iterations=1
-    )
-
-    final_weights = (final_w0, final_w1)
-    final_bias = (initial_b0, initial_b1) # TODO
-    return final_weights, final_bias
-
 class LogisticClassifier(Classifier):
 
     def __init__(self, session, num_features):
@@ -47,7 +23,7 @@ class LogisticClassifier(Classifier):
 
     def prepare_training_data(self, input_providers):
         # collect data from all input providers
-        input_graphs = [ input_provider.send_data(mask=True) for input_provider in input_providers ]
+        input_graphs = [input_provider.send_data(mask=True) for input_provider in input_providers ]
         xs, ys = zip(*input_graphs)
 
         # combine
@@ -90,26 +66,21 @@ class LogisticClassifier(Classifier):
         def training_step(w, x, y):
             batch_size = int(x.shape[0])
             with tf.name_scope('forward'):
-                y_pred = sigmoid(dot(x, w))
+                self.y_pred = sigmoid(dot(x, w))
             with tf.name_scope('backward'):
-                error = sub(y_pred, y)
+                error = sub(self.y_pred, y)
                 gradients = scale(dot(transpose(x), error), 1./batch_size)
                 new_w = sub(w, scale(gradients, learning_rate))
-                #new_b = ...
-                return new_w #, new_b
+                train_op = tf.group(*([tf.assign(w.share0[i], new_w.share0[i]) for i in range(len(w.share0))]
+                                    + [tf.assign(w.share1[i], new_w.share1[i]) for i in range(len(w.share1))]))
+                return train_op
 
-        old_weights, old_bias = self.parameters
-        training = training_loop(
-            training_step=training_step,
-            iterations=epochs,
-            initial_weights=old_weights.unwrapped,
-            initial_bias=old_bias.unwrapped,
-            x=x.unmasked,
-            y=y.unmasked
-        )
+        train_op = training_step(self.parameters[0], x.unmasked, y.unmasked)
 
-        new_weights, new_bias = run(self.sess, training, 'train')
-        self.parameters = (PrivateTensor(*new_weights), PrivateTensor(*new_bias))
+        for i in range(epochs):
+            _ = self.sess.run([train_op])
+            print "epoch: {}".format(i)
+
 
     def _build_training_graph(self):
         pass

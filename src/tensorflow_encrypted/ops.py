@@ -786,12 +786,15 @@ def define_variable(initial_value, apply_encoding=True, name=None):
         with tf.device(get_active_protocol().server_0.device_name):
             vars0 = [ tf.Variable(vi, dtype=INT_TYPE) for vi in v0 ]
             init0 = [ vi.initializer for vi in vars0 ]
-            x0    = [ vi.read_value() for vi in vars0 ]
+            # x0    = [ vi.read_value() for vi in vars0 ]
+            x0    = [ vi for vi in vars0 ]
+
 
         with tf.device(get_active_protocol().server_1.device_name):
             vars1 = [ tf.Variable(vi, dtype=INT_TYPE) for vi in v1 ]
             init1 = [ vi.initializer for vi in vars1 ]
-            x1    = [ vi.read_value() for vi in vars1 ]
+            # x1    = [ vi.read_value() for vi in vars1 ]
+            x1    = [ vi for vi in vars1 ]
 
         x = PrivateTensor(x0, x1)
 
