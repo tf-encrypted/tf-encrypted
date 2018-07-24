@@ -9,7 +9,6 @@ server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
 server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
 prot = Pond(server0, server1, None)
 
-shape = (2,2)
 
 a = prot.define_constant(np.array([4, 3, 2, 1]).reshape(2,2))
 b = prot.define_constant(np.array([4, 3, 2, 1]).reshape(2,2))
