@@ -222,7 +222,7 @@ class Int100Variable(Int100Tensor):
 
         super(Int100Variable, self).__init__(None, backing)
         self.variables = variables
-        self.initializer = tf.group([ var.initializer for var in variables ])
+        self.initializer = tf.group(*[var.initializer for var in variables])
 
     @staticmethod
     def from_native(initial_value):
@@ -253,4 +253,4 @@ def _assign(variable, native_value, decomposed_value=None):
     assert isinstance(decomposed_value, (Int100Tensor,)), type(decomposed_value)
 
     ops = [ tf.assign(xi, vi).op for xi, vi in zip(variable.variables, decomposed_value.backing) ]
-    return tf.group(ops)
+    return tf.group(*ops)

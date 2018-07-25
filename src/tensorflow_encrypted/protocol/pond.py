@@ -632,7 +632,7 @@ class PondPrivateVariable(PondPrivateTensor):
         super(PondPrivateVariable, self).__init__(prot, variable0, variable1)
         self.variable0 = variable0
         self.variable1 = variable1
-        self.initializer = tf.group([ var.initializer for var in [variable0, variable1]])
+        self.initializer = tf.group(*[ var.initializer for var in [variable0, variable1]])
 
     def __repr__(self):
         return 'PondPrivateVariable(shape={})'.format(self.shape)
