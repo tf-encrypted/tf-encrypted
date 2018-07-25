@@ -7,7 +7,8 @@ from tensorflow_encrypted.config import session
 
 server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
 server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
-prot = Pond(server0, server1, None)
+crypto_producer = Server('/job:localhost/replica:0/task:0/device:CPU:2')
+prot = Pond(server0, server1, crypto_producer)
 
 shape = (2,2)
 
@@ -17,21 +18,24 @@ c = a * b
 
 d = prot.define_private_variable(np.array([1., 2., 3., 4.]).reshape(2,2))
 e = prot.define_private_variable(np.array([1., 2., 3., 4.]).reshape(2,2))
-f = (d * .5 + e * .5)
+# f = (d * .5 + e * .5)
+f = d * e
 
-sess = session(3)
-sess.run([d.initializer, e.initializer])
+with session(3) as sess:
 
-print f.reveal().eval(sess)
+    sess.run([d.initializer, e.initializer])
 
-sess.run(prot.assign(d, d))
-sess.run(prot.assign(e, e))
+    print f.reveal().eval(sess)
 
-print f.reveal().eval(sess)
+    sess.run(prot.assign(d, f))
+    sess.run(prot.assign(e, e))
 
-sess.close()
+    print f.reveal().eval(sess)
 
-# b = prot.define_private_placeholder(shape)
+    g = prot.sigmoid(d)
+    print g.reveal().eval(sess)
 
-# c = prot.define_private_variable()
-# d = prot.define_public_variable()
+    # b = prot.define_private_placeholder(shape)
+
+    # c = prot.define_private_variable()
+    # d = prot.define_public_variable()

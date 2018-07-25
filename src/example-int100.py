@@ -9,11 +9,11 @@ from tensorflow_encrypted.tensor.int100 import (
     to_native
 )
 
-# x = Int100Tensor(np.array([1,2,3]))
-# y = Int100Tensor(np.array([1,2,3]))
-# z = x + y; print(z)
-# z = x - y; print(z)
-# z = x * y; print(z)
+x = Int100Tensor(np.array([1,2,3]))
+y = Int100Tensor(np.array([1,2,3]))
+z = x + y; print(z)
+z = x - y; print(z)
+z = x * y; print(z)
 
 c = Int100Constant(np.array([4,4,4]))
 v = Int100Variable(np.array([1,1,1]))

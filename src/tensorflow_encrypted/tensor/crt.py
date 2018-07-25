@@ -97,3 +97,6 @@ def gen_crt_mod(m, int_type, float_type):
             return redecompose(v % k)
 
     return crt_mod
+
+class CrtTensor(object):
+    pass

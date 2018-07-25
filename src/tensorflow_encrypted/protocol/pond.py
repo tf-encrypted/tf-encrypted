@@ -340,7 +340,7 @@ class Pond(Protocol):
         return x_t
 
     def sigmoid(self, x):
-        assert type(x) in [PondPrivateTensor], type(x)
+        assert isinstance(x, PondTensor), type(x)
 
         w0 =  0.5
         w1 =  0.2159198015
@@ -531,10 +531,6 @@ class PondMaskedTensor(PondTensor):
     @property
     def unwrapped(self):
         return (self.a, self.a0, self.a1, self.alpha_on_0, self.alpha_on_1)
-
-    @property
-    def unmasked(self):
-        return self.unmasked
 
 #
 # Extentions of the base Pond classes that record extra information
@@ -1070,7 +1066,7 @@ def _mul_masked_masked(prot, x, y):
 
         with tf.device(prot.crypto_producer.device_name):
             ab = a * b
-            ab0, ab1 = prot.share(ab)
+            ab0, ab1 = _share(ab)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -1118,16 +1114,16 @@ def _square_masked(prot, x):
 
     with tf.name_scope('square'):
 
-        with tf.device(self.crypto_producer.device_name):
+        with tf.device(prot.crypto_producer.device_name):
             aa = a * a
-            aa0, aa1 = prot.share(aa)
+            aa0, aa1 = _share(aa)
 
-        with tf.device(self.server_0.device_name):
+        with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
             # TODO replace with `scale(, 2)` op
             y0 = aa0 + (a0 * alpha) + (alpha * a0) + (alpha * alpha)
 
-        with tf.device(self.server_1.device_name):
+        with tf.device(prot.server_1.device_name):
             alpha = alpha_on_1
             # TODO replace with `scale(, 2)` op
             y1 = aa1 + (a1 * alpha) + (alpha * a1)
@@ -1241,7 +1237,7 @@ def _dot_masked_masked(prot, x, y):
 
         with tf.device(self.crypto_producer.device_name):
             ab = a.dot(b)
-            ab0, ab1 = prot.share(ab)
+            ab0, ab1 = _share(ab)
 
         with tf.device(self.server_0.device_name):
             alpha = alpha_on_0
@@ -1328,8 +1324,8 @@ def _mask_private(prot, x):
     with tf.name_scope('mask'):
 
         with tf.device(prot.crypto_producer.device_name):
-            a = sample(shape)
-            a0, a1 = share(a)
+            a = BackingTensor.sample_uniform(shape)
+            a0, a1 = _share(a)
 
         with tf.device(prot.server_0.device_name):
             alpha0 = x0 - a0
@@ -1340,10 +1336,10 @@ def _mask_private(prot, x):
         # exchange of alphas
 
         with tf.device(prot.server_0.device_name):
-            alpha_on_0 = reconstruct(alpha0, alpha1)
+            alpha_on_0 = _reconstruct(alpha0, alpha1)
 
         with tf.device(prot.server_1.device_name):
-            alpha_on_1 = reconstruct(alpha0, alpha1)
+            alpha_on_1 = _reconstruct(alpha0, alpha1)
 
     x_masked = PondMaskedTensor(prot, x, a, a0, a1, alpha_on_0, alpha_on_1)
     return x_masked
