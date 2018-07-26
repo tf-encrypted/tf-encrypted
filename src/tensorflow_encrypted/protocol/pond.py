@@ -390,6 +390,34 @@ class Pond(Protocol):
 
         return z
 
+    def conv2d(self, x, w):
+        node_key = ('conv2d', x, w)
+        z = _nodes.get(node_key, None)
+
+        if z is not None:
+            return z
+
+        dispatch = {
+            (PondPublicTensor,  PondPublicTensor):  _conv2d_public_public,
+            (PondPublicTensor,  PondPrivateTensor): _conv2d_public_private,
+            (PondPublicTensor,  PondMaskedTensor):  _conv2d_public_masked,
+            (PondPrivateTensor, PondPublicTensor):  _conv2d_private_public,
+            (PondPrivateTensor, PondPrivateTensor): _conv2d_private_private,
+            (PondPrivateTensor, PondMaskedTensor):  _conv2d_private_masked,
+            (PondMaskedTensor,  PondPublicTensor):  _conv2d_masked_public,
+            (PondMaskedTensor,  PondPrivateTensor): _conv2d_masked_private,
+            (PondMaskedTensor,  PondMaskedTensor):  _conv2d_masked_masked
+        }
+
+        func = dispatch.get((_type(x), _type(w)), None)
+        if func is None:
+            raise TypeError("Don't know how to conv2d {} and {}".format(type(x), type(w)))
+
+        z = func(self, x, y)
+        _nodes[node_key] = z
+
+        return z
+
 #
 # Classes representing the base values in the Pond protocol.
 #
