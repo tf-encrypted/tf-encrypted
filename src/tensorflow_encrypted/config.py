@@ -5,6 +5,7 @@ from tensorflow.python.client import timeline
 
 TENSORBOARD_DIR = '/tmp/tensorboard'
 IGNORE_STATS = False
+DEBUG = True
 
 _run_counter = defaultdict(int)
 
@@ -19,15 +20,18 @@ def session(num_players):
         )
     )
 
-def run(sess, fetches, tag=None):
+def run(sess, fetches, feed_dict={}, tag=None):
 
-    if tag is None or IGNORE_STATS:
+    if not DEBUG and (tag is None or IGNORE_STATS):
 
-        return sess.run(fetches)
+        return sess.run(
+            fetches,
+            feed_dict=feed_dict
+        )
 
     else:
 
-        run_tag = TENSORBOARD_DIR + ('/' + tag if tag is not None else '')        
+        run_tag = TENSORBOARD_DIR + ('/' + tag if tag is not None else '')
         session_tag = '{}{}'.format(tag, _run_counter[tag])
         _run_counter[tag] += 1
 
@@ -37,6 +41,7 @@ def run(sess, fetches, tag=None):
 
         results = sess.run(
             fetches,
+            feed_dict=feed_dict,
             options=run_options,
             run_metadata=run_metadata
         )
