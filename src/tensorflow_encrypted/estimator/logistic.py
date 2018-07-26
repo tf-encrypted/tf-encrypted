@@ -36,7 +36,7 @@ class LogisticClassifier(Classifier):
         self.parameters = None
 
     def initialize_parameters(self):
-        initial_weights_value = np.zeros(shape=(self.num_features,1))
+        initial_weights_value = np.zeros(shape=(self.num_features, 1))
         initial_bias = np.zeros((1, 1))
 
         w, init_w = define_variable(initial_weights_value, name='w')
