@@ -52,10 +52,11 @@ server0 = tfe.Server('/job:localhost/replica:0/task:0/device:CPU:0')
 server1 = tfe.Server('/job:localhost/replica:0/task:0/device:CPU:1')
 crypto_producer = tfe.CryptoProducer('/job:localhost/replica:0/task:0/device:CPU:2')
 
-with tfe.protocol.TwoPartySPDZ(server0, server1, crypto_producer) as prot:
+with tfe.session(num_players=6) as sess:
 
-    with tfe.session(num_players=6) as sess:
+    with tfe.protocol.TwoServerSPDZ(server0, server1, crypto_producer):
         begin = time.time()
+
         print("Creating a classifier...")
         logreg = tfe.estimator.LogisticClassifier(
             session=sess,
