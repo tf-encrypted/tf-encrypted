@@ -3,7 +3,7 @@ import tensorflow as tf
 
 from crt import (
     gen_crt_decompose, gen_crt_recombine,
-    gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_mod,
+    gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_im2col, gen_crt_mod,
     gen_crt_sample_uniform
 )
 from helpers import prod, log2
@@ -46,6 +46,7 @@ _crt_add = gen_crt_add(m)
 _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_dot = gen_crt_dot(m)
+_crt_im2col = gen_crt_im2col(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE, FLOAT_TYPE)
 
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
@@ -104,6 +105,9 @@ class Int100Tensor(object):
     def dot(self, other):
         return _dot(self, other)
 
+    def im2col(self, h_filter, w_filter, padding, strides):
+        return _im2col(self, h_filter, w_filter, padding, strides)
+
     def __mod__(self, k):
         return _mod(self, k)
 
@@ -140,6 +144,11 @@ def _dot(x, y):
     x, y = _lift(x), _lift(y)
     z_backing = _crt_dot(x.backing, y.backing)
     return Int100Tensor.from_decomposed(z_backing)
+
+def _im2col(x, h_filter, w_filter, padding, strides):
+    assert isinstance(x, Int100Tensor), type(x)
+    backing = _crt_im2col(x, h_filter, w_filter, padding, strides)
+    return Int100Tensor.from_decomposed(backing)
 
 def _mod(x, k):
     y_backing = _crt_mod(x.backing, k)

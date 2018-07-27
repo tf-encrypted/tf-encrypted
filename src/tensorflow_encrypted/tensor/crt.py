@@ -57,6 +57,18 @@ def gen_crt_dot(m):
     
     return crt_dot
 
+def gen_crt_im2col(m):
+
+    def crt_im2col(x, h_filter, w_filter, padding, strides):
+        with tf.name_scope('crt_im2col'):
+            # TODO[koen]: check this, what are rates?
+            return [ tf.extract_image_patches(xi,
+                                              ksizes=[1, h_filter, w_filter, 1],
+                                              strides= [1, strides, strides, 1],
+                                              rates= [1,1,1,1],
+                                              padding="SAME") for xi in x ]
+    return crt_im2col
+
 def gen_crt_sample_uniform(m, int_type):
 
     def crt_sample_uniform(shape):
