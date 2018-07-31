@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import math
 
 from ..protocol import Protocol
 from ..tensor.int100 import Int100Tensor as BackingTensor
@@ -413,7 +414,7 @@ class Pond(Protocol):
         if func is None:
             raise TypeError("Don't know how to conv2d {} and {}".format(type(x), type(w)))
 
-        z = func(self, x, y, strides, padding)
+        z = func(self, x, w, strides, padding)
         _nodes[node_key] = z
 
         return z
@@ -1306,37 +1307,60 @@ def _dot_masked_masked(prot, x, y):
             beta = beta_on_1
             z1 = ab1 + a1.dot(beta) + alpha.dot(b1)
 
+
     z = PondPrivateTensor(z0, z1)
     z = prot.truncate(z)
     return z
-
 
 #
 # Conv helpers
 #
 # TODO[koen] create operations for all possible combinations
 
-def _conv2d_int100(x, y, strides, padding):
-    h_filter, w_filter, d_filters, n_filters = y.shape
-    n_x, d_x, h_x, w_x = x.shape
-    h_out = int((h_x - h_filter + 2 * padding) / strides + 1)
-    w_out = int((w_x - w_filter + 2 * padding) / strides + 1)
+def _conv2d_int100(x, y, strides, padding="SAME"):
+    h_filter, w_filter, d_filters, n_filters = map(int, y.shape)
+    n_x, d_x, h_x, w_x = map(int, x.shape)
+    if padding == "SAME":
+        h_out = int(math.ceil(float(h_x) / float(strides)))
+        w_out = int(math.ceil(float(w_x) / float(strides)))
+    if padding == "VALID":
+        h_out = int(math.ceil(float(h_x - h_filter + 1) / float(strides)))
+        w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
 
     X_col = x.im2col(h_filter, w_filter, padding, strides)
-    W_col = y.transpose(3, 2, 0, 1).reshape(n_filters, -1)
+    W_col = y.transpose(3, 2, 0, 1).reshape(int(n_filters), -1)
     out = W_col.dot(X_col)
 
     out = out.reshape(n_filters, h_out, w_out, n_x)
     out = out.transpose(3, 0, 1, 2)
 
-    return out, X_col
+    return out
 
+def _conv2d_public_public(prot, x, y, strides, padding):
+    raise NotImplementedError()
+
+def _conv2d_public_private(prot, x, y, strides, padding):
+    raise NotImplementedError()
+
+def _conv2d_public_masked(prot, x, y, strides, padding):
+    raise NotImplementedError()
+
+def _conv2d_private_public(prot, x, y, strides, padding):
+    raise NotImplementedError()
+
+def _conv2d_private_masked(prot, x, y, strides, padding):
+    raise NotImplementedError()
 
 def _conv2d_private_private(prot, x, y, strides, padding):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
     return prot.conv2d(prot.mask(x), prot.mask(y), strides, padding)
 
+def _conv2d_masked_public(prot, x, y, strides, padding):
+    raise NotImplementedError()
+
+def _conv2d_masked_private(prot, x, y, strides, padding):
+    raise NotImplementedError()
 
 def _conv2d_masked_masked(prot, x, y, strides, padding):
     assert isinstance(x, PondMaskedTensor), type(x)
@@ -1348,23 +1372,28 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
     with tf.name_scope('conv2d'):
 
         with tf.device(prot.crypto_producer.device_name):
-            a_conv2d_b = a._conv2d_int100(b)
+            a_conv2d_b = _conv2d_int100(a, b, strides, padding)
             a_conv2d_b0, a_conv2d_b1 = _share(a_conv2d_b)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
             beta = beta_on_0
-            z0 = a_conv2d_b0 + a0._conv2d_int100(beta, strides, padding) + alpha._conv2d_int100(b0, strides, padding)\
-                 + beta._conv2d_int100(alpha, strides, padding)
+            _conv2d_int100(a0, beta, strides, padding)
+            _conv2d_int100(alpha, b0, strides, padding)
+            _conv2d_int100(alpha, beta, strides, padding)
+            # TODO[koen]: check last term is really conv(alpha,beta) instead of other way around
+            z0 = a_conv2d_b0 + _conv2d_int100(a0, beta, strides, padding) + _conv2d_int100(alpha, b0, strides, padding)\
+                 + _conv2d_int100(alpha, beta, strides, padding)
 
         with tf.device(prot.server_1.device_name):
             alpha = alpha_on_1
             beta = beta_on_1
-            z1 = a_conv2d_b1 + a1._conv2d_int100(beta, strides, padding) + alpha._conv2d_int100(b1, strides, padding)
+            z1 = a_conv2d_b1 + _conv2d_int100(a1, beta, strides, padding) + _conv2d_int100(alpha, b1, strides, padding)
 
-    z = PondPrivateTensor(z0, z1)
+    z = PondPrivateTensor(prot, z0, z1)
     z = prot.truncate(z)
     return z
+
 #
 # transpose helpers
 #
@@ -1392,17 +1421,17 @@ def _transpose_private(prot, x):
 
     with tf.name_scope('transpose'):
 
-        with tf.device(self.server_0.device_name):
+        with tf.device(prot.server_0.device_name):
             x0_t = x0.transpose()
 
-        with tf.device(self.server_1.device_name):
+        with tf.device(prot.server_1.device_name):
             x1_t = x1.transpose()
 
     x_t = PondPrivateTensor(prot, x0_t, x1_t)
     return x_t
 
-def _transpose_masked(prot, x):
-    assert isinstance(x, PondMaskedTensor)
+def _transpose_masked(prot, x_masked):
+    assert isinstance(x_masked, PondMaskedTensor)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
 

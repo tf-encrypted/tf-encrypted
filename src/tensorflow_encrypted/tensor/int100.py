@@ -3,7 +3,7 @@ import tensorflow as tf
 
 from crt import (
     gen_crt_decompose, gen_crt_recombine,
-    gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_im2col, gen_crt_mod,
+    gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_extract_patches, gen_crt_mod,
     gen_crt_sample_uniform
 )
 from helpers import prod, log2
@@ -46,7 +46,7 @@ _crt_add = gen_crt_add(m)
 _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_dot = gen_crt_dot(m)
-_crt_im2col = gen_crt_im2col(m)
+_crt_extract_patches = gen_crt_extract_patches(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE, FLOAT_TYPE)
 
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
@@ -106,13 +106,21 @@ class Int100Tensor(object):
         return _dot(self, other)
 
     def im2col(self, h_filter, w_filter, padding, strides):
-        return _im2col(self, h_filter, w_filter, padding, strides)
+        #TODO[koen]: re-check transposing/reshaping
+        NHWC_tensor = self.transpose(0, 2, 3, 1)
+        C = int(NHWC_tensor.shape[3])
+        patches_NHWC = extract_patches(NHWC_tensor, h_filter, w_filter, padding, strides)
+        x_col = patches_NHWC.transpose(3, 0, 1, 2).reshape(C * int(h_filter) * int(w_filter), -1)
+        return x_col
 
     def __mod__(self, k):
         return _mod(self, k)
 
-    def transpose(self):
-        return _transpose(self)
+    def transpose(self, *axes):
+        return _transpose(self, *axes)
+
+    def reshape(self, *axes):
+        return _reshape(self, *axes)
 
 def _lift(x):
     # TODO[Morten] support other types of `x`
@@ -145,9 +153,9 @@ def _dot(x, y):
     z_backing = _crt_dot(x.backing, y.backing)
     return Int100Tensor.from_decomposed(z_backing)
 
-def _im2col(x, h_filter, w_filter, padding, strides):
+def extract_patches(x, h_filter, w_filter, padding, strides):
     assert isinstance(x, Int100Tensor), type(x)
-    backing = _crt_im2col(x, h_filter, w_filter, padding, strides)
+    backing = _crt_extract_patches(x.backing, h_filter, w_filter, padding, strides)
     return Int100Tensor.from_decomposed(backing)
 
 def _mod(x, k):
@@ -158,9 +166,14 @@ def _sample_uniform(shape):
     backing = _crt_sample_uniform(shape)
     return Int100Tensor.from_decomposed(backing)
 
-def _transpose(x):
+def _transpose(x, *axes):
     assert isinstance(x, Int100Tensor), type(x)
-    backing = [ tf.transpose(xi) for xi in x.backing ]
+    backing = [ tf.transpose(xi, axes) for xi in x.backing ]
+    return Int100Tensor.from_decomposed(backing)
+
+def _reshape(x, *axes):
+    assert isinstance(x, Int100Tensor), type(x)
+    backing = [ tf.reshape(xi, axes) for xi in x.backing ]
     return Int100Tensor.from_decomposed(backing)
 
 class Int100Constant(Int100Tensor):

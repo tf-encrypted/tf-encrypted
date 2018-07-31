@@ -1,4 +1,5 @@
 import numpy as np
+import math
 from ..protocol.pond import Pond
 
 DEFAULT_PROTOCOL = Pond
@@ -65,7 +66,7 @@ class Sigmoid(Layer):
 
 
 class Conv2D(Layer):
-    def __init__(self, filter_shape, strides=1, padding=0,
+    def __init__(self, filter_shape, strides=1, padding="SAME",
                  filter_init=lambda shp: np.random.normal(scale=0.1, size=shp),
                  l2reg_lambda=0.0, channels_first=True):
         """ 2 Dimensional convolutional layer, expects NCHW data format
@@ -84,7 +85,6 @@ class Conv2D(Layer):
         self.cached_x_col = None
         self.cached_input_shape = None
         self.initializer = None
-        self.filters = None
         self.weights = None
         self.bias = None
         self.model = None
@@ -94,10 +94,15 @@ class Conv2D(Layer):
 
         h_filter, w_filter, d_filters, n_filters = self.fshape
         n_x, d_x, h_x, w_x = input_shape
-        h_out = int((h_x - h_filter + 2 * self.padding) / self.strides + 1)
-        w_out = int((w_x - w_filter + 2 * self.padding) / self.strides + 1)
 
-        initial_weights = self.initializer(self.filter_init(self.fshape))
+        if self.padding == "SAME":
+            h_out = int(math.ceil(float(h_x) / float(self.strides)))
+            w_out = int(math.ceil(float(w_x) / float(self.strides)))
+        if self.padding == "VALID":
+            h_out = int(math.ceil(float(h_x - h_filter + 1) / float(self.strides)))
+            w_out = int(math.ceil(float(w_x - w_filter + 1) / float(self.strides)))
+
+        initial_weights = self.filter_init(self.fshape)
         self.weights = self.prot.define_private_variable(initial_weights)
         self.bias = self.prot.define_private_variable(np.zeros((n_filters, h_out, w_out)))
 
@@ -106,7 +111,7 @@ class Conv2D(Layer):
     def forward(self, x):
         self.cached_input_shape = x.shape
         self.cache = x
-        out, self.cached_x_col = self.prot.conv2d(x, self.filters, self.strides, self.padding)
+        out = self.prot.conv2d(x, self.weights, self.strides, self.padding)
 
         return out + self.bias
 
