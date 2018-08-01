@@ -1,5 +1,7 @@
 # TensorFlow Encrypted
 
+This library provides a layer on top of TensorFlow allowing machine learning operations on encrypted data using techniques from e.g. [secure computation](https://en.wikipedia.org/wiki/Secure_multi-party_computation). The bottom layer consists of basic protocols for computing with encrypted tensors, the next gives operations for basic machine learning tasks using these protocols, and the final layer exposes more packaged models for training and prediction on encrypted data.
+
 ## Usage
 
 ```python
@@ -7,7 +9,56 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 ```
 
-## Example
+# Examples
+
+## Basic secure operations
+
+This example shows how to do basic operations on encrypted tensors using the Pond protocol.
+
+```python
+import tensorflow_encrypted as tfe
+
+# import the desired protocol for computing on encrypted data
+from tensorflow_encrypted.protocol import Pond 
+
+# this protocol requires two servers and a crypto producer;
+# here we give their IP addresses
+from tensorflow_encrypted.protocol import Server
+server0 = Server('10.1.0.1')
+server1 = Server('10.1.0.2')
+crypto_producer = Server('10.1.0.3')
+
+protocol = Pond(server0, server1, crypto_producer)
+
+# 
+a = prot.define_constant(np.array([4, 3, 2, 1]).reshape(2,2))
+b = prot.define_constant(np.array([4, 3, 2, 1]).reshape(2,2))
+c = a * b
+
+d = prot.define_private_variable(np.array([1., 2., 3., 4.]).reshape(2,2))
+e = prot.define_private_variable(np.array([1., 2., 3., 4.]).reshape(2,2))
+# f = (d * .5 + e * .5)
+f = d * e
+
+from tensorflow_encrypted.config import session
+
+
+with session(3) as sess:
+
+    sess.run([d.initializer, e.initializer])
+
+    print f.reveal().eval(sess)
+
+    sess.run(prot.assign(d, f))
+    sess.run(prot.assign(e, e))
+
+    print f.reveal().eval(sess)
+
+    g = prot.sigmoid(d)
+    print g.reveal().eval(sess)
+```
+
+## Logistic regression
 
 Training a logistic regression model using the two-server SPDZ protocol.
 
@@ -103,3 +154,5 @@ with tfe.protocol.TwoServerSPDZ(server1, server2, crypto_producer):
         y = logreg.predict(x)
         print y.reveal()
 ```
+
+# Contributors
