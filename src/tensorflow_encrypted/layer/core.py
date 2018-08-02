@@ -90,7 +90,7 @@ class Conv2D(Layer):
         self.model = None
         assert channels_first
 
-    def initialize(self, input_shape):
+    def initialize(self, input_shape, initial_weights=None):
 
         h_filter, w_filter, d_filters, n_filters = self.fshape
         n_x, d_x, h_x, w_x = input_shape
@@ -102,7 +102,8 @@ class Conv2D(Layer):
             h_out = int(math.ceil(float(h_x - h_filter + 1) / float(self.strides)))
             w_out = int(math.ceil(float(w_x - w_filter + 1) / float(self.strides)))
 
-        initial_weights = self.filter_init(self.fshape)
+        if initial_weights is None:
+            initial_weights = self.filter_init(self.fshape)
         self.weights = self.prot.define_private_variable(initial_weights)
         self.bias = self.prot.define_private_variable(np.zeros((n_filters, h_out, w_out)))
 
@@ -117,19 +118,18 @@ class Conv2D(Layer):
 
     def backward(self, d_y, learning_rate):
         x = self.cache
-        h_filter, w_filter, d_filter, n_filter = self.filters.shape
-        dx = None
+        h_filter, w_filter, d_filter, n_filter = map(int, self.weights.shape)
 
         if self.model.layers.index(self) != 0:
-            W_reshaped = self.filters.reshape(n_filter, -1).transpose()
+            W_reshaped = self.weights.reshape(n_filter, -1).transpose()
             dout_reshaped = d_y.transpose(1, 2, 3, 0).reshape(n_filter, -1)
             dx = W_reshaped.dot(dout_reshaped).col2im(imshape=self.cached_input_shape, field_height=h_filter,
                                                       field_width=w_filter, padding=self.padding, stride=self.strides)
 
-        d_w = self.prot.conv2d_bw(x, d_y, self.filters.shape, self.strides, self.padding)
+        d_w = self.prot.conv2d_bw(x, d_y, self.weights.shape, self.strides, self.padding)
         d_bias = d_y.sum(axis=0)
 
-        self.filters.assign((d_w * learning_rate).neg() + self.filters)
+        self.weights.assign((d_w * learning_rate).neg() + self.weights)
         self.bias.assign((d_bias * learning_rate).neg() + self.bias)
 
         return dx

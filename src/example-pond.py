@@ -33,9 +33,11 @@ conv_layer.initialize(conv_input_shape)
 conv_out = conv_layer.forward(conv_input)
 
 
-with session(3) as sess:
 
-    sess.run([d.initializer, e.initializer])
+
+with session(3) as sess:
+    sess.run(tf.global_variables_initializer())
+
     print "multiplication : "
     print f.reveal().eval(sess)
 
@@ -51,7 +53,6 @@ with session(3) as sess:
     print g.reveal().eval(sess)
 
     print "convolution forward: "
-    sess.run([conv_layer.weights.initializer, conv_layer.bias.initializer, conv_input.initializer])
     print conv_out.reveal().eval(sess)
 
 
