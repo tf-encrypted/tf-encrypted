@@ -21,7 +21,7 @@ from tensor.int100 import Int100Tensor
 # from protocol import get_active_protocol
 
 from config import (
-    session, run
+    run
 )
 
 # Idea is to simulate five different players on different devices. 
