@@ -64,12 +64,12 @@ class Pond(Protocol):
         with tf.name_scope('private-placeholder{}'.format('-'+name if name else '')):
 
             with tf.device(self.server_0.device_name):
-                x0 = Placeholder(shape)
+                x0 = BackingPlaceholder(shape)
 
             with tf.device(self.server_1.device_name):
-                x1 = Placeholder(shape)
+                x1 = BackingPlaceholder(shape)
 
-        return PrivatePlaceholder(x0, x1)
+        return PondPrivatePlaceholder(self, x0, x1)
 
     def define_public_variable(self, initial_value, apply_encoding=True, name=None):
 
@@ -636,6 +636,13 @@ class PondPrivatePlaceholder(PondPrivateTensor):
 
     def __repr__(self):
         return 'PondPrivatePlaceholder(shape={})'.format(self.shape)
+
+    # TODO[Morten] FROM HERE
+    # def feed_from_native(self, value):
+    #     assert type(value) in [np.ndarray], type(value)
+    #     feed_dict = dict()
+    #     feed_dict.update(self.placeholder0.feed_from_native)
+    #     return _feed(self, value, None)
 
 class PondPublicVariable(PondPublicTensor):
     """
@@ -1279,21 +1286,21 @@ def _dot_masked_masked(prot, x, y):
 
     with tf.name_scope('dot'):
 
-        with tf.device(self.crypto_producer.device_name):
+        with tf.device(prot.crypto_producer.device_name):
             ab = a.dot(b)
             ab0, ab1 = _share(ab)
 
-        with tf.device(self.server_0.device_name):
+        with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
             beta = beta_on_0
-            z0 = ab0 + a0.dot(beta) + alpha.dot(b0) + beta.dot(alpha)
+            z0 = ab0 + a0.dot(beta) + alpha.dot(b0) + alpha.dot(beta)
 
-        with tf.device(self.server_1.device_name):
+        with tf.device(prot.server_1.device_name):
             alpha = alpha_on_1
             beta = beta_on_1
             z1 = ab1 + a1.dot(beta) + alpha.dot(b1)
 
-    z = PondPrivateTensor(z0, z1)
+    z = PondPrivateTensor(prot, z0, z1)
     z = prot.truncate(z)
     return z
 
