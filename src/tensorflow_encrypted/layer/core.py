@@ -1,15 +1,15 @@
 import numpy as np
 import math
-from ..protocol.pond import Pond
-
-DEFAULT_PROTOCOL = Pond
+from ..protocol import get_protocol
 
 # TODO
 # split backward function in compute_gradient and compute_backpropagated_error ?
 
 class Layer:
-    prot = DEFAULT_PROTOCOL
 
+    @property
+    def prot(self):
+        return get_protocol()
 
 class Dense(Layer):
 

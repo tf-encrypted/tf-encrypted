@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import tensorflow as tf
 
@@ -106,7 +107,10 @@ class Int100Tensor(object):
         return _dot(self, other)
 
     def im2col(self, h_filter, w_filter, padding, strides):
-        return im2col(self, h_filter, w_filter, padding, strides)
+        return _im2col(self, h_filter, w_filter, padding, strides)
+
+    def conv2d(self, other, strides, padding='SAME'):
+        return _conv2d(self, other, strides, padding)
 
     def __mod__(self, k):
         return _mod(self, k)
@@ -148,10 +152,32 @@ def _dot(x, y):
     z_backing = _crt_dot(x.backing, y.backing)
     return Int100Tensor.from_decomposed(z_backing)
 
-def im2col(x, h_filter, w_filter, padding, strides):
+def _im2col(x, h_filter, w_filter, padding, strides):
     assert isinstance(x, Int100Tensor), type(x)
     backing = _crt_im2col(x.backing, h_filter, w_filter, padding, strides)
     return Int100Tensor.from_decomposed(backing)
+
+def _conv2d(x, y, strides, padding):
+    assert isinstance(x, Int100Tensor), type(x)
+    assert isinstance(y, Int100Tensor), type(y)
+
+    h_filter, w_filter, d_filters, n_filters = map(int, y.shape)
+    n_x, d_x, h_x, w_x = map(int, x.shape)
+    if padding == "SAME":
+        h_out = int(math.ceil(float(h_x) / float(strides)))
+        w_out = int(math.ceil(float(w_x) / float(strides)))
+    if padding == "VALID":
+        h_out = int(math.ceil(float(h_x - h_filter + 1) / float(strides)))
+        w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
+
+    X_col = x.im2col(h_filter, w_filter, padding, strides)
+    W_col = y.transpose(3, 2, 0, 1).reshape(int(n_filters), -1)
+    out = W_col.dot(X_col)
+
+    out = out.reshape(n_filters, h_out, w_out, n_x)
+    out = out.transpose(3, 0, 1, 2)
+
+    return out
 
 def _mod(x, k):
     y_backing = _crt_mod(x.backing, k)
