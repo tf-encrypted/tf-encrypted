@@ -1,4 +1,5 @@
 import numpy as np
+import time
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
@@ -54,6 +55,7 @@ crypto_producer = tfe.CryptoProducer('/job:localhost/replica:0/task:0/device:CPU
 with tfe.session(num_players=6) as sess:
 
     with tfe.protocol.TwoServerSPDZ(server0, server1, crypto_producer):
+        begin = time.time()
 
         print("Creating a classifier...")
         logreg = tfe.estimator.LogisticClassifier(
@@ -66,5 +68,7 @@ with tfe.session(num_players=6) as sess:
         
         print("Training...")
         logreg.train(epochs=100, batch_size=30)
+
+        print time.time() - begin
 
         # print logreg.predict(np.array([1., .5]))
