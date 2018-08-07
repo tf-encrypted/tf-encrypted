@@ -10,7 +10,7 @@ server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
 server2 = Server('/job:localhost/replica:0/task:0/device:CPU:2')
 
 # remote
-# master = '54.202.100.117:4440'
+# master = '10.0.0.1:4440'
 # server0 = Server('/job:spdz/replica:0/task:0/cpu:0')
 # server1 = Server('/job:spdz/replica:0/task:1/cpu:0')
 # server2 = Server('/job:spdz/replica:0/task:2/cpu:0')
