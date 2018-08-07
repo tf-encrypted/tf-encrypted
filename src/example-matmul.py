@@ -6,25 +6,26 @@ from tensorflow_encrypted.protocol import Pond, Server
 from tensorflow_encrypted.config import local_session, remote_session
 
 # local
-# server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
-# server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
-# server2 = Server('/job:localhost/replica:0/task:0/device:CPU:2')
+server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
+server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
+server2 = Server('/job:localhost/replica:0/task:0/device:CPU:2')
 
 # remote
-master = '54.202.100.117:4440'
-server0 = Server('/job:spdz/replica:0/task:0/cpu:0')
-server1 = Server('/job:spdz/replica:0/task:1/cpu:0')
-server2 = Server('/job:spdz/replica:0/task:2/cpu:0')
+# master = '54.202.100.117:4440'
+# server0 = Server('/job:spdz/replica:0/task:0/cpu:0')
+# server1 = Server('/job:spdz/replica:0/task:1/cpu:0')
+# server2 = Server('/job:spdz/replica:0/task:2/cpu:0')
 
 prot = Pond(server0, server1, server2)
 
-x = prot.define_private_variable(np.zeros((10,10)))
+w = prot.define_private_variable(np.zeros((100,100)))
+# x = prot.define_private_variable(np.zeros((1,100)))
 
-y = x
-for _ in range(5):
+y = w
+for _ in range(40):
     y = y.dot(y)
 
-# with local_session(3) as sess:
-with remote_session(master) as sess:
+with local_session(3) as sess:
+# with remote_session(master) as sess:
     tfe.run(sess, prot.initializer, tag='init')
     print(y.reveal().eval(sess, tag='reveal'))
