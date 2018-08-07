@@ -3,7 +3,6 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 
 from tensorflow_encrypted.protocol import Pond, Server
-from tensorflow_encrypted.config import local_session
 
 server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
 server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
@@ -24,7 +23,7 @@ z = x + y
 
 w = prot.define_private_variable(np.zeros((2,2)))
 
-with local_session(3) as sess:
+with tfe.local_session(3) as sess:
 
     # print c.eval(sess, tag='c')
 

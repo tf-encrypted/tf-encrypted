@@ -3,7 +3,6 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 
 from tensorflow_encrypted.protocol import Pond, Server
-from tensorflow_encrypted.config import session
 
 server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
 server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
@@ -20,7 +19,7 @@ e = prot.define_private_variable(np.array([1., 2., 3., 4.]).reshape(2,2))
 # f = (d * .5 + e * .5)
 f = d * e
 
-with session(3) as sess:
+with tfe.local_session(3) as sess:
 
     sess.run([d.initializer, e.initializer])
 

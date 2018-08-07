@@ -47,13 +47,13 @@ input_providers = [
     FakeInputProvider('/job:localhost/replica:0/task:0/device:CPU:5')
 ]
 
-server0 = tfe.Server('/job:localhost/replica:0/task:0/device:CPU:0')
-server1 = tfe.Server('/job:localhost/replica:0/task:0/device:CPU:1')
-crypto_producer = tfe.CryptoProducer('/job:localhost/replica:0/task:0/device:CPU:2')
+server0 = tfe.protocol.Server('/job:localhost/replica:0/task:0/device:CPU:0')
+server1 = tfe.protocol.Server('/job:localhost/replica:0/task:0/device:CPU:1')
+crypto_producer = tfe.protocol.CryptoProducer('/job:localhost/replica:0/task:0/device:CPU:2')
 
-with tfe.session(num_players=6) as sess:
+with tfe.local_session(num_players=6) as sess:
 
-    with tfe.protocol.TwoServerSPDZ(server0, server1, crypto_producer):
+    with tfe.protocol.Pond(server0, server1, crypto_producer):
 
         print("Creating a classifier...")
         logreg = tfe.estimator.LogisticClassifier(

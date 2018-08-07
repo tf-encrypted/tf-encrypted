@@ -3,7 +3,6 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 
 from tensorflow_encrypted.protocol import Pond, Server
-from tensorflow_encrypted.config import local_session, remote_session
 
 # local
 server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
@@ -25,7 +24,7 @@ y = w
 for _ in range(40):
     y = y.dot(y)
 
-with local_session(3) as sess:
-# with remote_session(master) as sess:
+with tfe.local_session(3) as sess:
+# with tfe.remote_session(master) as sess:
     tfe.run(sess, prot.initializer, tag='init')
     print(y.reveal().eval(sess, tag='reveal'))
