@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import math
 
 from ..protocol import Protocol
 from ..tensor.int100 import Int100Tensor as BackingTensor
@@ -406,8 +407,8 @@ class Pond(Protocol):
 
         return z
 
-    def conv2d(self, x, w):
-        node_key = ('conv2d', x, w)
+    def conv2d(self, x, w, strides, padding):
+        node_key = ('conv2d', x, w, strides, padding)
         z = _nodes.get(node_key, None)
 
         if z is not None:
@@ -429,7 +430,36 @@ class Pond(Protocol):
         if func is None:
             raise TypeError("Don't know how to conv2d {} and {}".format(type(x), type(w)))
 
-        z = func(self, x, y)
+        z = func(self, x, w, strides, padding)
+        _nodes[node_key] = z
+
+        return z
+
+
+    def conv2d_bw(self, x, w, strides, padding):
+        node_key = ('conv2d_bw', x, w)
+        z = _nodes.get(node_key, None)
+
+        if z is not None:
+            return z
+
+        dispatch = {
+            (PondPublicTensor,  PondPublicTensor):  _conv2d_bw_public_public,
+            (PondPublicTensor,  PondPrivateTensor): _conv2d_bw_public_private,
+            (PondPublicTensor,  PondMaskedTensor):  _conv2d_bw_public_masked,
+            (PondPrivateTensor, PondPublicTensor):  _conv2d_bw_private_public,
+            (PondPrivateTensor, PondPrivateTensor): _conv2d_bw_private_private,
+            (PondPrivateTensor, PondMaskedTensor):  _conv2d_bw_private_masked,
+            (PondMaskedTensor,  PondPublicTensor):  _conv2d_bw_masked_public,
+            (PondMaskedTensor,  PondPrivateTensor): _conv2d_bw_masked_private,
+            (PondMaskedTensor,  PondMaskedTensor):  _conv2d_bw_masked_masked
+        }
+
+        func = dispatch.get((_type(x), _type(w)), None)
+        if func is None:
+            raise TypeError("Don't know how to conv2d_bw {} and {}".format(type(x), type(w)))
+
+        z = func(self, x, y, strides, padding)
         _nodes[node_key] = z
 
         return z
@@ -1305,6 +1335,74 @@ def _dot_masked_masked(prot, x, y):
     return z
 
 #
+# Conv helpers
+#
+# TODO[koen] create operations for all possible combinations
+
+def _conv2d_public_public(prot, x, y, strides, padding):
+    raise NotImplementedError()
+
+def _conv2d_public_private(prot, x, y, strides, padding):
+    raise NotImplementedError()
+
+def _conv2d_public_masked(prot, x, y, strides, padding):
+    raise NotImplementedError()
+
+def _conv2d_private_public(prot, x, y, strides, padding):
+    raise NotImplementedError()
+
+def _conv2d_private_masked(prot, x, y, strides, padding):
+    assert isinstance(x, PondPrivateTensor), type(x)
+    assert isinstance(y, PondMaskedTensor), type(y)
+    return prot.conv2d(prot.mask(x), y, strides, padding)
+
+def _conv2d_private_private(prot, x, y, strides, padding):
+    assert isinstance(x, PondPrivateTensor), type(x)
+    assert isinstance(y, PondPrivateTensor), type(y)
+    return prot.conv2d(prot.mask(x), prot.mask(y), strides, padding)
+
+def _conv2d_masked_public(prot, x, y, strides, padding):
+    raise NotImplementedError()
+
+def _conv2d_masked_private(prot, x, y, strides, padding):
+    assert isinstance(x, PondMaskedTensor), type(x)
+    assert isinstance(y, PondPrivateTensor), type(y)
+    return prot.conv2d(x, prot.mask(y), strides, padding)
+
+def _conv2d_masked_masked(prot, x, y, strides, padding):
+    assert isinstance(x, PondMaskedTensor), type(x)
+    assert isinstance(y, PondMaskedTensor), type(y)
+
+    a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
+    b, b0, b1,  beta_on_0,  beta_on_1 = y.unwrapped
+
+    with tf.name_scope('conv2d'):
+
+        with tf.device(prot.crypto_producer.device_name):
+            a_conv2d_b = a.conv2d(b, strides, padding)
+            a_conv2d_b0, a_conv2d_b1 = _share(a_conv2d_b)
+
+        with tf.device(prot.server_0.device_name):
+            alpha = alpha_on_0
+            beta = beta_on_0
+            # TODO[koen]: check last term is really conv(alpha,beta) instead of other way around
+            z0 = a_conv2d_b0 \
+                + a0.conv2d(beta, strides, padding) \
+                + alpha.conv2d(b0, strides, padding) \
+                + alpha.conv2d(beta, strides, padding)
+
+        with tf.device(prot.server_1.device_name):
+            alpha = alpha_on_1
+            beta = beta_on_1
+            z1 = a_conv2d_b1 \
+                + a1.conv2d(beta, strides, padding) \
+                + alpha.conv2d(b1, strides, padding)
+
+    z = PondPrivateTensor(prot, z0, z1)
+    z = prot.truncate(z)
+    return z
+
+#
 # transpose helpers
 #
 
@@ -1331,17 +1429,17 @@ def _transpose_private(prot, x):
 
     with tf.name_scope('transpose'):
 
-        with tf.device(self.server_0.device_name):
+        with tf.device(prot.server_0.device_name):
             x0_t = x0.transpose()
 
-        with tf.device(self.server_1.device_name):
+        with tf.device(prot.server_1.device_name):
             x1_t = x1.transpose()
 
     x_t = PondPrivateTensor(prot, x0_t, x1_t)
     return x_t
 
-def _transpose_masked(prot, x):
-    assert isinstance(x, PondMaskedTensor)
+def _transpose_masked(prot, x_masked):
+    assert isinstance(x_masked, PondMaskedTensor)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
 
@@ -1358,7 +1456,7 @@ def _transpose_masked(prot, x):
             a1_t = a1.transpose()
             alpha_on_1_t = alpha_on_1.transpose()
 
-    x_unmasked_t = prot.transpose(x.unmasked)
+    x_unmasked_t = prot.transpose(x_masked.unmasked)
     x_t = PondMaskedTensor(prot, x_unmasked_t, a_t, a0_t, a1_t, alpha_on_0_t, alpha_on_1_t)
     return x_t
 
