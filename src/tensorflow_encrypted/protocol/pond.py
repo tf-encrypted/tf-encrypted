@@ -20,6 +20,7 @@ assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1
 assert gcd(K, M) == 1
 
 _nodes = dict()
+_initializers = list()
 
 class Pond(Protocol):
 
@@ -87,6 +88,7 @@ class Pond(Protocol):
                 x_on_1 = BackingVariable.from_int100(v)
 
         x = PondPublicVariable(self, x_on_0, x_on_1)
+        _initializers.append(x.initializer)
         return x
 
     def define_private_variable(self, initial_value, apply_encoding=True, name=None):
@@ -109,11 +111,22 @@ class Pond(Protocol):
                 x1 = BackingVariable.from_int100(v1)
 
         x = PondPrivateVariable(self, x0, x1)
+        _initializers.append(x.initializer)
         return x
+
+    @property
+    def initializer(self):
+        return tf.group(*_initializers)
 
     def assign(self, variable, value):
         assert isinstance(variable, PondPrivateVariable), type(variable)
         assert isinstance(value, PondPrivateTensor), type(value)
+
+        node_key = ('assign', variable, value)
+        op = _nodes.get(node_key, None)
+
+        if op is not None:
+            return op
 
         var0, var1 = variable.variable0, variable.variable1
         val0, val1 = value.share0, value.share1
@@ -126,7 +139,10 @@ class Pond(Protocol):
             with tf.device(self.server_1.device_name):
                 op1 = var1.assign_from_int100(val1)
 
-        return tf.group(op0, op1)
+        op = tf.group(op0, op1)
+        _nodes[node_key] = op
+
+        return op
 
     def add(self, x, y):
 
@@ -495,8 +511,8 @@ class PondPublicTensor(PondTensor):
     def unwrapped(self):
         return (self.value_on_0, self.value_on_1)
 
-    def eval(self, sess, feed_dict={}):
-        value = self.value_on_0.eval(sess, feed_dict=feed_dict)
+    def eval(self, sess, feed_dict={}, tag=None):
+        value = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
         value = _decode(value) #TODO[Morten] if self.encoded
         return value
 

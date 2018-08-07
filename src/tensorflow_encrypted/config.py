@@ -9,11 +9,16 @@ DEBUG = True
 
 _run_counter = defaultdict(int)
 
-def session(num_players):
+def local_session(num_players, log_device_placement=False):
+    """
+    Creates a session using threads on the local CPU to simulate the different players.
+    Intended mostly for development/debugging use.
+    """
+    
     return tf.Session(
         '',
         config=tf.ConfigProto(
-            log_device_placement=False,
+            log_device_placement=log_device_placement,
             device_count={"CPU": num_players},
             inter_op_parallelism_threads=1,
             intra_op_parallelism_threads=1
@@ -31,8 +36,9 @@ def run(sess, fetches, feed_dict={}, tag=None):
 
     else:
 
-        run_tag = TENSORBOARD_DIR + ('/' + tag if tag is not None else '')
         session_tag = '{}{}'.format(tag, _run_counter[tag])
+        # run_tag = TENSORBOARD_DIR + ('/' + tag if tag is not None else '')
+        run_tag = TENSORBOARD_DIR + ('/' + session_tag)
         _run_counter[tag] += 1
 
         writer = tf.summary.FileWriter(run_tag, sess.graph)

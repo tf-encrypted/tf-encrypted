@@ -78,8 +78,8 @@ class Int100Tensor(object):
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
 
-    def eval(self, sess, feed_dict={}):
-        return to_native(run(sess, self.backing, feed_dict=feed_dict))
+    def eval(self, sess, feed_dict={}, tag=None):
+        return to_native(run(sess, self.backing, feed_dict=feed_dict, tag=tag))
 
     @staticmethod
     def sample_uniform(shape):
