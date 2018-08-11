@@ -3,8 +3,7 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 
 from tensorflow_encrypted.protocol import Pond, Server
-from tensorflow_encrypted.config import session
-from tensorflow_encrypted.layer import Conv2D, set_protocol
+from tensorflow_encrypted.layer import Conv2D
 
 server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
 server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
@@ -28,7 +27,7 @@ with Pond(server0, server1, crypto_producer) as prot:
     conv_layer.initialize(conv_input_shape)
     conv_out = conv_layer.forward(conv_input)
 
-    with session(3) as sess:
+    with tfe.local_session(3) as sess:
         sess.run(tf.global_variables_initializer())
 
         print "multiplication : "

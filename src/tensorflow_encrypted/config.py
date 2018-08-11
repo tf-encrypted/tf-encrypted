@@ -19,10 +19,25 @@ def local_session(num_players, log_device_placement=False):
         '',
         config=tf.ConfigProto(
             log_device_placement=log_device_placement,
+            allow_soft_placement=False,
             device_count={"CPU": num_players},
             inter_op_parallelism_threads=1,
             intra_op_parallelism_threads=1
         )
+    )
+
+def remote_session(master_host, log_device_placement=False):
+
+    master_uri = 'grpc://{}'.format(master_host)
+
+    CONFIG = tf.ConfigProto(
+        log_device_placement=log_device_placement,
+        allow_soft_placement=False,
+    )
+
+    return tf.Session(
+        master_uri,
+        config=CONFIG
     )
 
 def run(sess, fetches, feed_dict={}, tag=None):
