@@ -1,6 +1,6 @@
 # TensorFlow Encrypted
 
-This library provides a layer on top of TensorFlow allowing machine learning operations on encrypted data using techniques from e.g. [secure computation](https://en.wikipedia.org/wiki/Secure_multi-party_computation). The bottom layer consists of basic protocols for computing with encrypted tensors, the next gives operations for basic machine learning tasks using these protocols, and the final layer exposes more packaged models for training and prediction on encrypted data.
+This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](http://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/). The bottom layer consists of basic protocols for computing with encrypted tensors, the next gives operations for basic machine learning tasks using these protocols, and the final layer exposes more packaged models for training and prediction on encrypted data.
 
 ## Usage
 
@@ -156,3 +156,7 @@ with tfe.protocol.TwoServerSPDZ(server1, server2, crypto_producer):
 ```
 
 # Contributors
+
+Several people have made significantly contributions to this project in one way or another:
+- [Koen van der Veen](https://github.com/koenvanderveen)
+- [Andrew Trask](https://github.com/iamtrask)
