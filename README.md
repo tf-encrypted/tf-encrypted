@@ -86,7 +86,7 @@ with tfe.remote_session() as sess:
         prediction = logreg.predict(prediction_providers)
 ```
 
-# Contributors
+# Contributions
 
 Several people have made contributions to this project in one way or another (in alphabetical order):
 - [Andrew Trask](https://github.com/iamtrask)
