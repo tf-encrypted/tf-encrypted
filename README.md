@@ -1,6 +1,6 @@
 # TensorFlow Encrypted
 
-This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](http://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) and is structured into roughly three levels: 
+This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) and is structured into roughly three levels: 
 
 - basic operations for computing on encrypted tensors
 - basic machine learning components using these
