@@ -8,23 +8,6 @@ This library provides a layer on top of TensorFlow for doing machine learning on
 
 with the aim of making it easy for researchers and practitioners to experiment in a familiar framework and without being an expert in both machine learning and cryptography.
 
-## Installation
-We recommend using a package manager like conda or virtualenv.
-
-Assuming you're in the preferred Python environment, the following code will install `tf-encrypted`:
-```shell
-git clone https://github.com/mortendahl/tf-encrypted.git
-cd tf-encrypted
-python setup.py install
-```
-If you're helping with development, you can replace `install` with `develop` in the last line.
-
-You can also install the repo directly with pip:
-```shell
-pip install git+https://github.com/mortendahl/tf-encrypted/#egg=tf_encrypted
-```
-
-
 ## Usage
 
 `tf-encrypted` can be imported next to TensorFlow, giving access to extra operations for constructing regular TensorFlow graphs that operate on encrypted data. Since secure computation protocols by nature involve more than one party, each protocol instance takes a list of hostnames as input (three for the `Pond` protocol) and then exposes methods for creating private variables etc. along the lines of traditional TensorFlow programs. Simple wrappers around `tf.Session` can finally be used to execute these.
@@ -102,6 +85,32 @@ with tfe.remote_session() as sess:
         # perform private prediction
         prediction = logreg.predict(prediction_providers)
 ```
+
+## Installation
+We recommend using a package manager like conda.
+
+Dependencies:
+- `setuptools`
+- `pip`
+- `tensorflow`
+
+To install Tensorflow, you can use pip:
+```shell
+pip install tensorflow
+```
+
+If installing the GPU version of Tensorflow, please refer to [their documentation](https://www.tensorflow.org/install/) for how to find the proper build for your platform and CUDA version.  You'll then point your `pip` command with a _tfBinaryURL_ specific to your system, or you'll use the generic:
+```shell
+pip install tensorflow-gpu
+```
+
+Assuming you're in the preferred Python environment, the following code will install `tf-encrypted`:
+```shell
+git clone https://github.com/mortendahl/tf-encrypted.git
+cd tf-encrypted
+pip install .[tf] # or .[tf_gpu] if using a tensorflow-gpu build
+```
+If you're helping with development, use `pip install -e ...` in the last line.
 
 # Contributions
 
