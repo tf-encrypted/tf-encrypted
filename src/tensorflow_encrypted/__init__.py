@@ -9,9 +9,9 @@ from .config import local_session, remote_session
 
 
 __all__ = [
-    'InputProvider', 
+    'InputProvider',
     'NumpyInputProvider',
-    'local_session', 
+    'local_session',
     'remote_session',
     'estimator',
     'layer',

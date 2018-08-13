@@ -7,7 +7,7 @@ def egcd(a, b):
     else:
         g, y, x = egcd(b % a, a)
         return (g, x - (b // a) * y, y)
-    
+
 def gcd(a, b):
     g, _, _ = egcd(a, b)
     return g
@@ -19,4 +19,3 @@ def inverse(a, m):
 log2 = lambda x: log(x)/log(2)
 
 prod = lambda xs: reduce(lambda x,y: x*y, xs)
-

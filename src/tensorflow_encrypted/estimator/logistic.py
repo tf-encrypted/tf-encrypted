@@ -1,8 +1,14 @@
+from __future__ import absolute_import
+
+import tensorflow as tf
+
 from ..ops import *
 # from ..training import *
 
+
 class Classifier(object):
     pass
+
 
 def training_loop(training_step, iterations, initial_weights, initial_bias, x, y):
     initial_w0, initial_w1 = initial_weights
@@ -27,6 +33,7 @@ def training_loop(training_step, iterations, initial_weights, initial_bias, x, y
     final_weights = (final_w0, final_w1)
     final_bias = (initial_b0, initial_b1) # TODO
     return final_weights, final_bias
+
 
 class LogisticClassifier(Classifier):
 
@@ -55,7 +62,7 @@ class LogisticClassifier(Classifier):
         combined_y = concat(ys)
 
         # store in cache;
-        # needed to avoid pulling again from input providers as these 
+        # needed to avoid pulling again from input providers as these
         # may use random ops that force re-evaluation
         cache_initializers = []
         cache_updators = []
@@ -125,7 +132,7 @@ class LogisticClassifier(Classifier):
             feed_dict=encode_input((input_x, x))
         )
         return decode_output(y_pred)
-        
+
     def _build_prediction_graphs(self):
         if self.prediction_graph is not None:
             return self.prediction_graph
@@ -133,4 +140,3 @@ class LogisticClassifier(Classifier):
         input_x, x = define_input((1, self.num_features), name='x')
         y = sigmoid(add(dot(x, w), b))
         self.prediction_graph = (input_x, y)
-    
