@@ -1,4 +1,3 @@
-
 # TODOs:
 # - use TensorArray as training buffers instead of FIFOQueue
 # - recombine without blowing up numbers (should fit in 64bit word)
@@ -11,18 +10,14 @@
 # - lazy mods
 # - sigmoid() is showing some unused substructures in TensorBoard; why?
 
-from functools import reduce
-from math import log
+from __future__ import absolute_import
 
 import numpy as np
 import tensorflow as tf
 
-from tensor.int100 import Int100Tensor
-# from protocol import get_active_protocol
+from .tensor.int100 import Int100Tensor
+from .protocol import get_protocol
 
-from config import (
-    run
-)
 
 # Idea is to simulate five different players on different devices. 
 # Hopefully Tensorflow can take care of (optimising?) networking like this.
@@ -69,15 +64,15 @@ def concat(ys):
         y0s, y1s = zip(*[ y.unmasked.unwrapped for y in ys ])
         bs, b0s, b1s, beta_on_0s, beta_on_1s = zip(*[ y.unwrapped for y in ys ])
 
-        with tf.device(get_active_protocol().crypto_producer.device_name):
+        with tf.device(get_protocol().crypto_producer.device_name):
             b = helper(bs)
 
-        with tf.device(get_active_protocol().server_0.device_name):
+        with tf.device(get_protocol().server_0.device_name):
             y0 = helper(y0s)
             b0 = helper(b0s)
             beta_on_0 = helper(beta_on_0s)
 
-        with tf.device(get_active_protocol().server_1.device_name):
+        with tf.device(get_protocol().server_1.device_name):
             y1 = helper(y1s)
             b1 = helper(b1s)
             beta_on_1 = helper(beta_on_1s)
@@ -111,15 +106,15 @@ def split(y, num_splits):
 
     with tf.name_scope('split'):
 
-        with tf.device(get_active_protocol().crypto_producer.device_name):
+        with tf.device(get_protocol().crypto_producer.device_name):
             bs = helper(b)
 
-        with tf.device(get_active_protocol().server_0.device_name):
+        with tf.device(get_protocol().server_0.device_name):
             y0s = helper(y0)
             b0s = helper(b0)
             beta_on_0s = helper(beta_on_0)
 
-        with tf.device(get_active_protocol().server_1.device_name):
+        with tf.device(get_protocol().server_1.device_name):
             y1s = helper(y1)
             b1s = helper(b1)
             beta_on_1s = helper(beta_on_1)
@@ -149,10 +144,10 @@ def scale(x, k, apply_encoding=None):
 
     with tf.name_scope('scale'):
 
-        with tf.device(get_active_protocol().server_0.device_name):
+        with tf.device(get_protocol().server_0.device_name):
             y0 = x0 * c
 
-        with tf.device(get_active_protocol().server_1.device_name):
+        with tf.device(get_protocol().server_1.device_name):
             y1 = x1 * c
 
     y = PrivateTensor(y0, y1)
@@ -192,11 +187,11 @@ def cache(x, initializers=None, updators=None):
 
             with tf.name_scope('cache'):
 
-                with tf.device(get_active_protocol().server_0.device_name):
+                with tf.device(get_protocol().server_0.device_name):
                     cached_x0 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(x0, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_x0, x0) ])
 
-                with tf.device(get_active_protocol().server_1.device_name):
+                with tf.device(get_protocol().server_1.device_name):
                     cached_x1 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(x1, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_x1, x1) ])
 
@@ -211,18 +206,18 @@ def cache(x, initializers=None, updators=None):
 
             with tf.name_scope('cache'):
 
-                with tf.device(get_active_protocol().crypto_producer.device_name):
+                with tf.device(get_protocol().crypto_producer.device_name):
                     cached_a = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_a, a) ])
 
-                with tf.device(get_active_protocol().server_0.device_name):
+                with tf.device(get_protocol().server_0.device_name):
                     cached_a0 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a0, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_a0, a0) ])
 
                     cached_alpha_on_0 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(alpha_on_0, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_alpha_on_0, alpha_on_0) ])
 
-                with tf.device(get_active_protocol().server_1.device_name):
+                with tf.device(get_protocol().server_1.device_name):
                     cached_a1 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a1, m) ]
                     updators.append([ tf.assign(var, val) for var, val in zip(cached_a1, a1) ])
 

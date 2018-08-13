@@ -1,13 +1,15 @@
+from __future__ import absolute_import
+
 import math
 import numpy as np
 import tensorflow as tf
 
-from crt import (
+from .crt import (
     gen_crt_decompose, gen_crt_recombine,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_im2col, gen_crt_mod,
     gen_crt_sample_uniform
 )
-from helpers import prod, log2
+from .helpers import prod, log2
 from ..config import run
 
 #

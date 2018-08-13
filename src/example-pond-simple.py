@@ -25,7 +25,7 @@ w = prot.define_private_variable(np.zeros((2,2)))
 
 with tfe.local_session(3) as sess:
 
-    # print c.eval(sess, tag='c')
+    # print(c.eval(sess, tag='c'))
 
     tfe.run(sess, prot.initializer, tag='init')
     tfe.run(sess, prot.assign(w, z), tag='assign')
@@ -38,10 +38,10 @@ with tfe.local_session(3) as sess:
     # sess.run(prot.assign(d, f))
     # sess.run(prot.assign(e, e))
 
-    # print f.reveal().eval(sess)
+    # print(f.reveal().eval(sess))
 
     # g = prot.sigmoid(d)
-    # print g.reveal().eval(sess)
+    # print(g.reveal().eval(sess))
 
     # b = prot.define_private_placeholder(shape)
 
