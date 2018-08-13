@@ -1,3 +1,4 @@
+from types import Dict
 from collections import defaultdict
 
 import tensorflow as tf
@@ -9,7 +10,7 @@ DEBUG = True
 
 _run_counter = defaultdict(int)
 
-def local_session(num_players, log_device_placement=False):
+def local_session(num_players:int, log_device_placement:bool=False) -> tf.Session:
     """
     Creates a session using threads on the local CPU to simulate the different players.
     Intended mostly for development/debugging use.
@@ -26,7 +27,7 @@ def local_session(num_players, log_device_placement=False):
         )
     )
 
-def remote_session(master_host, log_device_placement=False):
+def remote_session(master_host:str, log_device_placement:bool=False) -> tf.Session:
 
     master_uri = 'grpc://{}'.format(master_host)
 
@@ -40,7 +41,7 @@ def remote_session(master_host, log_device_placement=False):
         config=CONFIG
     )
 
-def run(sess, fetches, feed_dict={}, tag=None):
+def run(sess: tf.Session, fetches, feed_dict:Dict={}, tag=None) -> None:
 
     if not DEBUG and (tag is None or IGNORE_STATS):
 

@@ -5,9 +5,9 @@ import tensorflow_encrypted as tfe
 from tensorflow_encrypted.protocol import Pond, Server
 
 # local
-server0: Server = Server('/job:localhost/replica:0/task:0/device:CPU:0')
-server1: Server = Server('/job:localhost/replica:0/task:0/device:CPU:1')
-server2: Server = Server('/job:localhost/replica:0/task:0/device:CPU:2')
+server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
+server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
+server2 = Server('/job:localhost/replica:0/task:0/device:CPU:2')
 
 # remote
 # master = '10.0.0.1:4440'
@@ -15,7 +15,7 @@ server2: Server = Server('/job:localhost/replica:0/task:0/device:CPU:2')
 # server1 = Server('/job:spdz/replica:0/task:1/cpu:0')
 # server2 = Server('/job:spdz/replica:0/task:2/cpu:0')
 
-prot: Pond = Pond(server0, server1, server2)
+prot = Pond(server0, server1, server2)
 
 w = prot.define_private_variable(np.zeros((100,100)))
 # x = prot.define_private_variable(np.zeros((1,100)))
