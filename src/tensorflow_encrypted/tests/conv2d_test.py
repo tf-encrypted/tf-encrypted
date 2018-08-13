@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import unittest
 from tensorflow_encrypted.protocol import Pond
-from tensorflow_encrypted.protocol import Server
+from tensorflow_encrypted.protocol import Player
 from tensorflow_encrypted.layer import Conv2D, set_protocol
 from tensorflow_encrypted.config import session
 
@@ -23,9 +23,9 @@ class TestConv2D(unittest.TestCase):
         # convolution pond
         with session(3) as sess:
 
-            server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
-            server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
-            crypto_producer = Server('/job:localhost/replica:0/task:0/device:CPU:2')
+            server0 = Player('/job:localhost/replica:0/task:0/device:CPU:0')
+            server1 = Player('/job:localhost/replica:0/task:0/device:CPU:1')
+            crypto_producer = Player('/job:localhost/replica:0/task:0/device:CPU:2')
             prot = Pond(server0, server1, crypto_producer)
             set_protocol(prot)
 

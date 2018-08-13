@@ -2,11 +2,11 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-from tensorflow_encrypted.protocol import SecureNN, Server
+from tensorflow_encrypted.protocol import SecureNN, Player
 from tensorflow_encrypted.config import session
 
-server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
-server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
+server0 = Player('/job:localhost/replica:0/task:0/device:CPU:0')
+server1 = Player('/job:localhost/replica:0/task:0/device:CPU:1')
 prot = SecureNN(server0, server1, None)
 
 

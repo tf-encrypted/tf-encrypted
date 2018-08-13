@@ -14,12 +14,6 @@ class Player(object):
     def __init__(self, device_name):
         self.device_name = device_name
 
-class Server(Player):
-    pass
-
-class CryptoProducer(Player):
-    pass
-
 class Protocol(object):
 
     def __enter__(self):

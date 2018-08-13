@@ -17,9 +17,9 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 
 servers = [
-    tfe.protocol.Server('10.0.0.1'),
-    tfe.protocol.Server('10.0.0.2'),
-    tfe.protocol.Server('10.0.0.3')
+    tfe.protocol.Player('10.0.0.1'),
+    tfe.protocol.Player('10.0.0.2'),
+    tfe.protocol.Player('10.0.0.3')
 ]
 
 with tfe.protocol.Pond(*servers) as prot:
@@ -50,9 +50,9 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 
 servers = [
-    tfe.protocol.Server('10.0.0.1'),
-    tfe.protocol.Server('10.0.0.2'),
-    tfe.protocol.Server('10.0.0.3')
+    tfe.protocol.Player('10.0.0.1'),
+    tfe.protocol.Player('10.0.0.2'),
+    tfe.protocol.Player('10.0.0.3')
 ]
 
 training_providers = [

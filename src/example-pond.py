@@ -2,12 +2,12 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-from tensorflow_encrypted.protocol import Pond, Server
+from tensorflow_encrypted.protocol import Pond, Player
 from tensorflow_encrypted.layer import Conv2D
 
-server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
-server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
-crypto_producer = Server('/job:localhost/replica:0/task:0/device:CPU:2')
+server0 = Player('/job:localhost/replica:0/task:0/device:CPU:0')
+server1 = Player('/job:localhost/replica:0/task:0/device:CPU:1')
+crypto_producer = Player('/job:localhost/replica:0/task:0/device:CPU:2')
 
 with Pond(server0, server1, crypto_producer) as prot:
 
