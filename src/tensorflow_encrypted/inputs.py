@@ -1,8 +1,10 @@
+from __future__ import absolute_import
+
 import numpy as np
 import tensorflow as tf
 
-import ops as tfe
-from protocol import Player
+from . import ops as tfe
+from .protocol import Player
 
 class InputProvider(Player):
 

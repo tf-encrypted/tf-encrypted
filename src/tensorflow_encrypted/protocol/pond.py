@@ -1,6 +1,7 @@
+from __future__ import absolute_import
+
 import numpy as np
 import tensorflow as tf
-import math
 
 from ..protocol import Protocol
 from ..tensor.int100 import Int100Tensor as BackingTensor
@@ -61,16 +62,20 @@ class Pond(Protocol):
         return PondPublicPlaceholder(self, x_on_0, x_on_1)
 
     def define_private_placeholder(self, shape, name=None):
+        pl = BackingPlaceholder(shape)
+        v0, v1 = _share(pl)
+        assert type(v0) is BackingTensor, type(v0)
+        assert type(v1) is BackingTensor, type(v1)
 
         with tf.name_scope('private-placeholder{}'.format('-'+name if name else '')):
 
             with tf.device(self.server_0.device_name):
-                x0 = BackingPlaceholder(shape)
+                x0 = BackingTensor.from_decomposed(v0.backing)
 
             with tf.device(self.server_1.device_name):
-                x1 = BackingPlaceholder(shape)
+                x1 = BackingTensor.from_decomposed(v1.backing)
 
-        return PondPrivatePlaceholder(self, x0, x1)
+        return PondPrivatePlaceholder(self, pl, x0, x1)
 
     def define_public_variable(self, initial_value, apply_encoding=True, name=None):
 
@@ -655,24 +660,31 @@ class PondPrivatePlaceholder(PondPrivateTensor):
     order to allow treating it as a placeholder itself.
     """
 
-    def __init__(self, prot, placeholder0, placeholder1):
-        assert type(placeholder0) is BackingPlaceholder, type(placeholder0)
-        assert type(placeholder1) is BackingPlaceholder, type(placeholder1)
-        assert placeholder0.shape == placeholder1.shape
+    def __init__(self, prot, placeholder, tensor0, tensor1):
+        assert type(placeholder) is BackingPlaceholder, type(placeholder)
+        assert type(tensor0) is BackingTensor, type(tensor0)
+        assert type(tensor1) is BackingTensor, type(tensor1)
+        assert tensor0.shape == tensor1.shape
 
-        super(PondPrivatePlaceholder, self).__init__(prot, placeholder0, placeholder1)
-        self.placeholder0 = placeholder0
-        self.placeholder1 = placeholder1
+        super(PondPrivatePlaceholder, self).__init__(prot, tensor0, tensor1)
+        self.placeholders= placeholder.backing
+        self.tensor0 = tensor0
+        self.tensor1 = tensor1
 
     def __repr__(self):
         return 'PondPrivatePlaceholder(shape={})'.format(self.shape)
 
-    # TODO[Morten] FROM HERE
-    # def feed_from_native(self, value):
-    #     assert type(value) in [np.ndarray], type(value)
-    #     feed_dict = dict()
-    #     feed_dict.update(self.placeholder0.feed_from_native)
-    #     return _feed(self, value, None)
+    def feed_from_native(self, value, apply_encoding=True):
+        assert type(value) in [np.ndarray], type(value)
+
+        v = value
+        v = _encode(v) if apply_encoding else v
+        v = BackingTensor.from_native(v)
+
+        return {
+            p: v for p, v in zip(self.placeholders, v.backing)
+        }
+    
 
 class PondPublicVariable(PondPublicTensor):
     """

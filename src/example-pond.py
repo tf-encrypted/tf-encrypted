@@ -30,22 +30,22 @@ with Pond(server0, server1, crypto_producer) as prot:
     with tfe.local_session(3) as sess:
         sess.run(tf.global_variables_initializer())
 
-        print "multiplication : "
-        print f.reveal().eval(sess)
+        print("multiplication : ")
+        print(f.reveal().eval(sess))
 
-        print "assignment : "
+        print("assignment : ")
         sess.run(prot.assign(d, f))
         sess.run(prot.assign(e, e))
 
-        print "multiplication after assignment : "
-        print f.reveal().eval(sess)
+        print("multiplication after assignment : ")
+        print(f.reveal().eval(sess))
 
-        print "sigmoid: "
+        print("sigmoid: ")
         g = prot.sigmoid(d)
-        print g.reveal().eval(sess)
+        print(g.reveal().eval(sess))
 
-        print "convolution forward: "
-        print conv_out.reveal().eval(sess)
+        print("convolution forward: ")
+        print(conv_out.reveal().eval(sess))
 
 
 

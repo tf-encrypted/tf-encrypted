@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 
 _current_prot = None
 
@@ -30,6 +31,6 @@ class Protocol(object):
 
 # from unencrypted_native import UnencryptedNative
 # from unencrypted_fixedpoint import UnencryptedFixedpoint
-from pond import Pond
-from securenn import SecureNN
+from .pond import Pond
+from .securenn import SecureNN
 # from secureml import SecureML

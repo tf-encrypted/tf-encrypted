@@ -1,7 +1,9 @@
+from __future__ import absolute_import
+
 import numpy as np
 import tensorflow as tf
 
-from helpers import inverse, prod, log2
+from .helpers import inverse, prod, log2
 
 def gen_crt_decompose(m):
     
