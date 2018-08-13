@@ -1,12 +1,29 @@
 # TensorFlow Encrypted
 
-This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) and is structured into roughly three levels: 
+This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) and is structured into roughly three levels:
 
 - basic operations for computing on encrypted tensors
 - basic machine learning components using these
 - ready-to-use models for private machine learning
 
 with the aim of making it easy for researchers and practitioners to experiment in a familiar framework and without being an expert in both machine learning and cryptography.
+
+## Installation
+We recommend using a package manager like conda or virtualenv.
+
+Assuming you're in the preferred Python environment, the following code will install `tf-encrypted`:
+```shell
+git clone https://github.com/mortendahl/tf-encrypted.git
+cd tf-encrypted
+python setup.py install
+```
+If you're helping with development, you can replace `install` with `develop` in the last line.
+
+You can also install the repo directly with pip:
+```shell
+pip install git+https://github.com/mortendahl/tf-encrypted/#egg=tf_encrypted
+```
+
 
 ## Usage
 
