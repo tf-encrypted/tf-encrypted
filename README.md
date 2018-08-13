@@ -86,8 +86,46 @@ with tfe.remote_session() as sess:
         prediction = logreg.predict(prediction_providers)
 ```
 
+# Developing
+
+## Typing
+
+tf-encrypted is developed using types with [mypy](http://mypy-lang.org/).  
+This means your branch must not produce any errors when the project is run via mypy.
+Most popular editors have plugins that allow you to run mypy as you develop so you
+can catch problems early.
+
+### VS Code
+
+In [User Settings](https://code.visualstudio.com/docs/getstarted/settings) add the following information
+
+```json
+{
+    "python.linting.mypyEnabled": true
+}
+```
+
+On OSX you may also need to tell VS Code to use python3
+
+```json
+{
+    "python.pythonPath": "python3"
+}
+```
+
+You also need to have mypy installed
+
+```
+python3 -m pip install mypy
+```
+
+After that, you should see errors whenever you develop (if you cause any 😉)
+
+![](./img/invalid-type.png)
+
 # Contributions
 
 Several people have made contributions to this project in one way or another (in alphabetical order):
 - [Andrew Trask](https://github.com/iamtrask)
 - [Koen van der Veen](https://github.com/koenvanderveen)
+
