@@ -1,6 +1,6 @@
 # TensorFlow Encrypted
 
-This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) and is structured into roughly three levels: 
+This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) and is structured into roughly three levels:
 
 - basic operations for computing on encrypted tensors
 - basic machine learning components using these
@@ -95,6 +95,12 @@ This means your branch must not produce any errors when the project is run via m
 Most popular editors have plugins that allow you to run mypy as you develop so you
 can catch problems early.
 
+### Atom
+
+In Atom, you can install the [linter-mypy](https://atom.io/packages/linter-mypy) package.
+
+![](./img/invalid-type-atom.png)
+
 ### VS Code
 
 In [User Settings](https://code.visualstudio.com/docs/getstarted/settings) add the following information
@@ -121,11 +127,10 @@ python3 -m pip install mypy
 
 After that, you should see errors whenever you develop (if you cause any 😉)
 
-![](./img/invalid-type.png)
+![](./img/invalid-type-vscode.png)
 
 # Contributions
 
 Several people have made contributions to this project in one way or another (in alphabetical order):
 - [Andrew Trask](https://github.com/iamtrask)
 - [Koen van der Veen](https://github.com/koenvanderveen)
-
