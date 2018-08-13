@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name = 'tf-enrypted',
+    name = 'tf-encrypted',
     version = '0.0.1rc',
     packages = ['tensorflow_encrypted',],
     install_requires = ['numpy>=1.14.0'],
