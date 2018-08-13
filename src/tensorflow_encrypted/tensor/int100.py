@@ -26,15 +26,15 @@ m = [1201, 1433, 1217, 1237, 1321, 1103, 1129, 1367, 1093, 1039]
 M = prod(m)
 
 _lambdas = [
-    1008170659273389559193348505633, 
-    678730110253391396805616626909, 
-    3876367317978788805229799331439, 
-    1733010852181147049893990590252, 
-    2834912019672275627813941831946, 
-    5920625781074493455025914446179, 
-    4594604064921688203708053741296, 
+    1008170659273389559193348505633,
+    678730110253391396805616626909,
+    3876367317978788805229799331439,
+    1733010852181147049893990590252,
+    2834912019672275627813941831946,
+    5920625781074493455025914446179,
+    4594604064921688203708053741296,
     4709451160728821268524065874669,
-    4618812662015813880836792588041, 
+    4618812662015813880836792588041,
     3107636732210050331963327700392
 ]
 
@@ -66,7 +66,7 @@ class Int100Tensor(object):
     def __init__(self, native_value, decomposed_value=None):
         if decomposed_value is None:
             decomposed_value = _crt_decompose(native_value)
-        
+
         # TODO[Morten] turn any np.ndarray into a tf.Constant to only store tf.Tensors?
         assert type(decomposed_value) in [tuple, list], type(decomposed_value)
 
@@ -148,7 +148,7 @@ def _mul(x, y):
     x, y = _lift(x), _lift(y)
     z_backing = _crt_mul(x.backing, y.backing)
     return Int100Tensor.from_decomposed(z_backing)
-    
+
 def _dot(x, y):
     x, y = _lift(x), _lift(y)
     z_backing = _crt_dot(x.backing, y.backing)
@@ -249,7 +249,7 @@ def _feed(placeholder, native_value, int100_value=None):
 
     assert type(placeholder) is Int100Placeholder, type(placeholder)
     assert type(int100_value) is Int100Tensor, type(int100_value)
-    
+
     return {
         p: v for p, v in zip(placeholder.placeholders, int100_value.backing)
     }

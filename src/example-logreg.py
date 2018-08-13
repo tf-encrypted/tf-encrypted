@@ -13,7 +13,7 @@ class FakeInputProvider(tfe.NumpyInputProvider):
 
     @property
     def num_cols(self):
-        return (2,1)
+        return (2, 1)
 
     def _build_data_generator(self):
 
@@ -23,8 +23,8 @@ class FakeInputProvider(tfe.NumpyInputProvider):
             data_size = self.num_rows
 
             # generate features
-            X0 = np.random.multivariate_normal([0, 0], [[1, .75],[.75, 1]], data_size//2)
-            X1 = np.random.multivariate_normal([1, 4], [[1, .75],[.75, 1]], data_size//2)
+            X0 = np.random.multivariate_normal([0, 0], [[1, .75], [.75, 1]], data_size//2)
+            X1 = np.random.multivariate_normal([1, 4], [[1, .75], [.75, 1]], data_size//2)
             X = np.vstack((X0, X1)).astype(np.float32)
 
             # generate labels
@@ -36,7 +36,7 @@ class FakeInputProvider(tfe.NumpyInputProvider):
             perm = np.random.permutation(len(X))
             X = X[perm]
             Y = Y[perm]
-            
+
             return X, Y
 
         return generate_fake_training_data
@@ -65,7 +65,7 @@ with tfe.local_session(num_players=6) as sess:
 
         print("Preparing training data...")
         logreg.prepare_training_data(input_providers)
-        
+
         print("Training...")
         logreg.train(epochs=100, batch_size=30)
 
