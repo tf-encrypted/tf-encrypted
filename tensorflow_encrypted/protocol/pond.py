@@ -97,7 +97,7 @@ class Pond(Protocol):
         _initializers.append(x.initializer)
         return x
 
-    def define_private_variable(self, initial_value, apply_encoding=True, name=None) -> PondPrivateTensor:
+    def define_private_variable(self, initial_value, apply_encoding=True, name=None) -> PondPrivateVariable:
         assert type(initial_value) in [np.ndarray]
 
         v = initial_value
