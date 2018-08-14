@@ -2,20 +2,22 @@ from __future__ import absolute_import
 
 _current_prot = None
 
+
 def set_protocol(prot):
     global _current_prot
     _current_prot = prot
 
+
 def get_protocol():
     return _current_prot
 
+
 class Player(object):
-    
     def __init__(self, device_name):
         self.device_name = device_name
 
-class Protocol(object):
 
+class Protocol(object):
     def __enter__(self):
         set_protocol(self)
         return self

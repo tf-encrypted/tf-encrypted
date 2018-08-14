@@ -2,7 +2,8 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-from ..ops import concat, cache, decode_output
+from ..protocol import Pond
+from ..ops import concat, cache
 # from ..training import *
 
 
@@ -17,7 +18,7 @@ def training_loop(training_step, iterations, initial_weights, initial_bias, x, y
     # TODO use initial_bias!
 
     def loop_op(i, w0, w1):
-        w = PrivateTensor(w0, w1)
+        w = Pond.PondPrivateTensor(w0, w1)
         # x = x_batched[i]
         # y = y_batched[i]
         new_w = training_step(w, x, y)
@@ -125,21 +126,11 @@ class LogisticClassifier(Classifier):
         new_weights, new_bias = tfe.run(self.sess, training, 'train')
         self.parameters = (
             self.prot.define_private_variable(*new_weights),
-            PrivateTensor(*new_bias)
+            self.prot.define_private_variable(*new_bias)
         )
 
     def _build_training_graph(self):
         pass
-
-    def predict(self, x):
-        (input_x, y) = self._build_prediction_graph()
-
-        x = x.reshape(1, self.num_features)
-        y_pred = self.sess.run(
-            self.prot.reveal(y),
-            feed_dict=tfe.encode_input((input_x, x))
-        )
-        return decode_output(y_pred)
 
     def _build_prediction_graphs(self):
         if self.prediction_graph is not None:
@@ -152,3 +143,12 @@ class LogisticClassifier(Classifier):
         y = p.sigmoid(p.add(w.dot(input_x) + b))
 
         self.prediction_graph = (input_x, y)
+
+    def predict(self, x):
+        (input_x, y) = self._build_prediction_graph()
+
+        x = x.reshape(1, self.num_features)
+        feed_dict = x.feed_from_native(x)
+        y_pred = y.eval(self.sess, feed_dict=feed_dict, tag='reveal')
+
+        return y_pred
