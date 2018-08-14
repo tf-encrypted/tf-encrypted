@@ -64,6 +64,19 @@ class Sigmoid(Layer):
         return d_x
 
 
+class Relu(Layer):
+
+    def __init__(self):
+        self.layer_output = None
+
+    def innitialize(self, input_shape, initializer=None):
+        pass
+
+    def forward(self, x):
+        y = self.prot.relu(x)
+        self.layer_output = y
+        return y
+
 
 class Conv2D(Layer):
     def __init__(self, filter_shape, strides=1, padding="SAME",
