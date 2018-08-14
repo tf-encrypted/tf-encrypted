@@ -21,7 +21,7 @@ with Pond(server0, server1, crypto_producer) as prot:
     f = d * e
 
     # convolutions
-    conv_input_shape = (32, 1, 28, 28)  #NCHW
+    conv_input_shape = (32, 1, 28, 28)  # NCHW
     conv_input = prot.define_private_variable(np.random.normal(size=conv_input_shape))
     conv_layer = Conv2D((4, 4, 1, 20), strides=2)
     conv_layer.initialize(conv_input_shape)
