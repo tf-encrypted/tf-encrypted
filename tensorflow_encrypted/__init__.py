@@ -6,6 +6,7 @@ from . import layer
 from . import protocol
 from .tensor import *
 from .config import LocalConfig, RemoteConfig
+from . import convert
 
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     'RemoteConfig',
     'estimator',
     'layer',
-    'protocol'
+    'protocol',
+    'convert',
 ]
