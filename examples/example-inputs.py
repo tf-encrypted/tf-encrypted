@@ -2,14 +2,14 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-# config = tfe.LocalConfig(3)
-config = tfe.RemoteConfig(
-    player_hosts=[
-        'localhost:4440',
-        'localhost:4441',
-        'localhost:4442'
-    ]
-)
+config = tfe.LocalConfig(3)
+# config = tfe.RemoteConfig(
+#     player_hosts=[
+#         'localhost:4440',
+#         'localhost:4441',
+#         'localhost:4442'
+#     ]
+# )
 
 with tfe.protocol.Pond(*config.players) as prot:
 
