@@ -1,3 +1,4 @@
+from types import Dict
 from collections import defaultdict
 
 import tensorflow as tf
@@ -11,12 +12,12 @@ class LocalConfig(object):
     Intended mostly for development/debugging use.
     """
 
-    def __init__(self, num_players, job_name='localhost'):
+    def __init__(self, num_players:int, job_name:str='localhost'):
         self.num_players = num_players
         self.job_name = job_name
 
     @property
-    def players(self):
+    def players(self) -> list:
         return [
             Player('/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'.format(
                 job_name=self.job_name,
@@ -25,7 +26,7 @@ class LocalConfig(object):
             for index in range(self.num_players)
         ]
 
-    def session(self, log_device_placement=False):
+    def session(self, log_device_placement:bool=False) -> tf.Session:
         # reserve one CPU for the player executing the script, to avoid
         # default pinning of operations to one of the actual players
         return tf.Session(
@@ -44,7 +45,7 @@ class RemoteConfig(object):
     Configure tf-encrypted to use network hosts for the different players.
     """
 
-    def __init__(self, player_hosts, master_host=None, job_name='tfe'):
+    def __init__(self, player_hosts:list, master_host:str=None, job_name:str='tfe'):
         self.player_hosts = player_hosts
         self.master_host = master_host
         self.job_name = job_name
@@ -64,7 +65,7 @@ class RemoteConfig(object):
             for index in range(len(self.player_hosts))
         ]
 
-    def server(self, player_index):
+    def server(self, player_index:int):
         if self.master_host is None:
             # use first player as master so don't add any
             cluster = tf.train.ClusterSpec({ self.job_name: self.player_hosts })
@@ -74,7 +75,7 @@ class RemoteConfig(object):
             cluster = tf.train.ClusterSpec({ self.job_name: [self.master_host] + self.player_hosts })
             return tf.train.Server(cluster, job_name=self.job_name, task_index=player_index+1)
 
-    def session(self, log_device_placement=False):
+    def session(self, log_device_placement:bool=False):
         if self.master_host is None:
             # use first player as master
             target = 'grpc://{}'.format(self.player_hosts[0])
@@ -98,7 +99,7 @@ DEBUG = True
 
 _run_counter = defaultdict(int)
 
-def run(sess, fetches, feed_dict={}, tag=None):
+def run(sess: tf.Session, fetches, feed_dict:Dict={}, tag=None) -> None:
 
     if not DEBUG and (tag is None or IGNORE_STATS):
 
