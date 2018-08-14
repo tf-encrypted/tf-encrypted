@@ -2,9 +2,10 @@ import numpy as np
 import math
 from . import core
 
+
 class Conv2D(core.Layer):
     def __init__(self, filter_shape, strides=1, padding="SAME",
-                 filter_init=lambda shp: np.random.normal(scale=0.1, size=shp),
+                 filter_init=lambda shp: np.random.normal(scale = 0.1, size = shp),
                  l2reg_lambda=0.0, channels_first=True):
         """ 2 Dimensional convolutional layer, expects NCHW data format
             filter_shape: tuple of rank 4
@@ -61,8 +62,11 @@ class Conv2D(core.Layer):
         if self.model.layers.index(self) != 0:
             W_reshaped = self.weights.reshape(n_filter, -1).transpose()
             dout_reshaped = d_y.transpose(1, 2, 3, 0).reshape(n_filter, -1)
-            dx = W_reshaped.dot(dout_reshaped).col2im(imshape=self.cached_input_shape, field_height=h_filter,
-                                                      field_width=w_filter, padding=self.padding, stride=self.strides)
+            dx = W_reshaped.dot(dout_reshaped).col2im(imshape=self.cached_input_shape,
+                                                      field_height=h_filter,
+                                                      field_width=w_filter,
+                                                      padding=self.padding,
+                                                      stride=self.strides)
 
         d_w = self.prot.conv2d_bw(x, d_y, self.weights.shape, self.strides, self.padding)
         d_bias = d_y.sum(axis=0)

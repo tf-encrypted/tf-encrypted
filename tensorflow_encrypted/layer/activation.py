@@ -1,5 +1,6 @@
 from . import core
 
+
 class Sigmoid(core.Layer):
     def __init__(self):
         self.layer_output = None

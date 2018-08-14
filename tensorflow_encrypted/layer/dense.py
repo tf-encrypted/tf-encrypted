@@ -1,11 +1,13 @@
 import numpy as np
 from . import core
 
+
 class Dense(core.Layer):
     """Standard dense linear layer including bias.
 
     Arguments:
-    in_features (integer, required): number of neurons
+    in_features (int, required): number of input features
+    out_features (int, required): number of output neurons for the layer
     """
 
     def __init__(self, in_features: int, out_features: int):
