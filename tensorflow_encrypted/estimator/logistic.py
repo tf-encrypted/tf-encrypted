@@ -1,8 +1,14 @@
-from ..ops import *
+import numpy as np
+import tensorflow as tf
+import tensorflow_encrypted as tfe
+
+from ..ops import concat, cache, decode_output
 # from ..training import *
+
 
 class Classifier(object):
     pass
+
 
 def training_loop(training_step, iterations, initial_weights, initial_bias, x, y):
     initial_w0, initial_w1 = initial_weights
@@ -25,12 +31,14 @@ def training_loop(training_step, iterations, initial_weights, initial_bias, x, y
     )
 
     final_weights = (final_w0, final_w1)
-    final_bias = (initial_b0, initial_b1) # TODO
+    final_bias = (initial_b0, initial_b1)  # TODO
     return final_weights, final_bias
+
 
 class LogisticClassifier(Classifier):
 
-    def __init__(self, session, num_features):
+    def __init__(self, prot, session, num_features):
+        self.prot = prot
         self.sess = session
         self.num_features = num_features
         self.parameters = None
@@ -39,15 +47,15 @@ class LogisticClassifier(Classifier):
         initial_weights_value = np.zeros(shape=(self.num_features, 1))
         initial_bias = np.zeros((1, 1))
 
-        w, init_w = define_variable(initial_weights_value, name='w')
-        b, init_b = define_variable(initial_bias, name='b')
+        w = self.prot.define_private_variable(initial_weights_value, name='w')
+        b = self.prot.define_private_variable(initial_bias, name='b')
 
-        run(self.sess, [init_w, init_b], 'init')
+        tfe.run(self.sess, self.prot.initializer, tag='init')
         self.parameters = (w, b)
 
     def prepare_training_data(self, input_providers):
         # collect data from all input providers
-        input_graphs = [ input_provider.send_data(mask=True) for input_provider in input_providers ]
+        input_graphs = [input_provider.send_data(mask=True) for input_provider in input_providers]
         xs, ys = zip(*input_graphs)
 
         # combine
@@ -55,7 +63,7 @@ class LogisticClassifier(Classifier):
         combined_y = concat(ys)
 
         # store in cache;
-        # needed to avoid pulling again from input providers as these 
+        # needed to avoid pulling again from input providers as these
         # may use random ops that force re-evaluation
         cache_initializers = []
         cache_updators = []
@@ -63,8 +71,8 @@ class LogisticClassifier(Classifier):
         cached_y = cache(combined_y, cache_initializers, cache_updators)
 
         # execute
-        run(self.sess, cache_initializers)
-        run(self.sess, cache_updators, 'prepare')
+        tfe.run(self.sess, cache_initializers)
+        tfe.run(self.sess, cache_updators, 'prepare')
         self.training_data = (cached_x, cached_y)
 
     def train(self, epochs=1, batch_size=10):
@@ -89,14 +97,18 @@ class LogisticClassifier(Classifier):
         # build training graph
         def training_step(w, x, y):
             batch_size = int(x.shape[0])
+
             with tf.name_scope('forward'):
-                y_pred = sigmoid(dot(x, w))
+                y_pred = self.prot.sigmoid(self.prot.dot(x, w))
+
             with tf.name_scope('backward'):
-                error = sub(y_pred, y)
-                gradients = scale(dot(transpose(x), error), 1./batch_size)
-                new_w = sub(w, scale(gradients, learning_rate))
-                #new_b = ...
-                return new_w #, new_b
+                error = self.prot.sub(y_pred, y)
+                gradients = self.prot.scale(
+                    self.prot.dot(self.prot.transpose(x), error), 1./batch_size
+                )
+                new_w = self.prot.sub(w, self.prot.scale(gradients, learning_rate))
+                # new_b = ...
+                return new_w  # new_b
 
         old_weights, old_bias = self.parameters
         training = training_loop(
@@ -110,8 +122,11 @@ class LogisticClassifier(Classifier):
 
         # TODO[Morten] need to assign new_weights and new_bias here into of returning them, no?
 
-        new_weights, new_bias = run(self.sess, training, 'train')
-        self.parameters = (PrivateTensor(*new_weights), PrivateTensor(*new_bias))
+        new_weights, new_bias = tfe.run(self.sess, training, 'train')
+        self.parameters = (
+            self.prot.define_private_variable(*new_weights),
+            PrivateTensor(*new_bias)
+        )
 
     def _build_training_graph(self):
         pass
@@ -121,16 +136,19 @@ class LogisticClassifier(Classifier):
 
         x = x.reshape(1, self.num_features)
         y_pred = self.sess.run(
-            reveal(y),
-            feed_dict=encode_input((input_x, x))
+            self.prot.reveal(y),
+            feed_dict=tfe.encode_input((input_x, x))
         )
         return decode_output(y_pred)
-        
+
     def _build_prediction_graphs(self):
         if self.prediction_graph is not None:
             return self.prediction_graph
 
-        input_x, x = define_input((1, self.num_features), name='x')
-        y = sigmoid(add(dot(x, w), b))
+        p = self.prot
+
+        input_x = self.prot.define_private_placeholder((1, self.num_features), name='x')
+        w, b = self.parameters
+        y = p.sigmoid(p.add(w.dot(input_x) + b))
+
         self.prediction_graph = (input_x, y)
-    

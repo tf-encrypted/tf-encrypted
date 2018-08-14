@@ -5,6 +5,7 @@ import tensorflow as tf
 
 from .protocol import Player
 
+
 class InputProvider(Player):
 
     def send_data(self, mask=True):
@@ -42,13 +43,14 @@ class InputProvider(Player):
         """
         raise NotImplementedError()
 
+
 class NumpyInputProvider(InputProvider):
 
     def _build_data_graph(self):
         data_generator = self._build_data_generator()
 
         def wrapper():
-            
+
             # call subclass' data generator
             X, Y = data_generator()
 

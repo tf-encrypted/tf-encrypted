@@ -17,12 +17,10 @@ class FakeInputProvider(tfe.NumpyInputProvider):
         return (2, 1)
 
     def _build_data_generator(self):
+        np.random.seed(42)
+        data_size = self.num_rows
 
         def generate_fake_training_data():
-            np.random.seed(42)
-
-            data_size = self.num_rows
-
             # generate features
             X0 = np.random.multivariate_normal([0, 0], [[1, .75], [.75, 1]], data_size//2)
             X1 = np.random.multivariate_normal([1, 4], [[1, .75], [.75, 1]], data_size//2)
@@ -54,13 +52,12 @@ server1 = tfe.protocol.Player('/job:localhost/replica:0/task:0/device:CPU:1')
 crypto_producer = tfe.protocol.Player('/job:localhost/replica:0/task:0/device:CPU:2')
 
 with tfe.local_session(num_players=6) as sess:
-
-    with tfe.protocol.Pond(server0, server1, crypto_producer):
-
+    with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
         begin = time.time()
 
         print("Creating a classifier...")
         logreg = tfe.estimator.LogisticClassifier(
+            prot,
             session=sess,
             num_features=2
         )

@@ -225,7 +225,7 @@ class Pond(Protocol):
         else:
             raise TypeError("Don't know how to mask {}".format(type(x)))
 
-        _nodes[node_key] = x_masked    
+        _nodes[node_key] = x_masked
         return x_masked
 
     def mul(self, x, y):
@@ -582,7 +582,7 @@ class PondMaskedTensor(PondTensor):
     This class is part of an optimization where values are only ever masked
     once as opposed to for every operation in which they are used. As such
     it represents a private value with additional data associated, namely
-    the masks used for the shares on the two servers as well as on the 
+    the masks used for the shares on the two servers as well as on the
     crypto provider. For convenience it keeps a reference to the unmasked
     value as well (in the form of a private tensor).
     """
@@ -616,7 +616,7 @@ class PondMaskedTensor(PondTensor):
 
 class PondConstant(PondPublicTensor):
     """
-    This class essentially represents a public value, however it additionally 
+    This class essentially represents a public value, however it additionally
     records the fact that the underlying value was declared as a constant.
     """
 
@@ -636,7 +636,7 @@ class PondPublicPlaceholder(PondPublicTensor):
     """
     This class essentially represents a public value, however it additionally
     records the fact that the backing tensor was declared as a placeholder in
-    order to allow treating it as a placeholder itself. 
+    order to allow treating it as a placeholder itself.
     """
 
     def __init__(self, prot, placeholder_on_0, placeholder_on_1):
@@ -682,6 +682,7 @@ class PondPrivatePlaceholder(PondPrivateTensor):
         return {
             p: v for p, v in zip(self.placeholders, v.backing)
         }
+
 
 class PondPublicVariable(PondPublicTensor):
     """
@@ -750,7 +751,7 @@ def _reconstruct(share0, share1):
 
     with tf.name_scope('reconstruct'):
         return share0 + share1
-    
+
 #
 # helpers
 #
@@ -769,9 +770,9 @@ def _type(x):
     return type(x)
 
 def _lift(prot, x):
-    """ 
+    """
     Convenience method for working with constants in programs: mixing any of the
-    Pond objects together with eg ints and floats will automatically lift the 
+    Pond objects together with eg ints and floats will automatically lift the
     latter into Pond objects.
     """
 
@@ -789,7 +790,7 @@ def _lift(prot, x):
 
 #
 # truncate
-# 
+#
 
 # precomputation
 K_inv = BackingTensor.from_native(np.array([inverse(K, M)]))
