@@ -13,7 +13,7 @@ class Layer:
 
 class Dense(Layer):
 
-    def __init__(self, num_nodes, num_inputs):
+    def __init__(self, num_nodes: int, num_inputs: int):
 
         self.num_nodes = num_nodes
         self.num_inputs = num_inputs
