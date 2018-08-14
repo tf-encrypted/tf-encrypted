@@ -14,9 +14,12 @@ BITPRECISION_INTEGRAL   = 16
 BITPRECISION_FRACTIONAL = 16
 TRUNCATION_GAP = 20
 
+# modulus
 M = BackingTensor.modulus
+# truncation factor for going from double to single precision
 K = 2 ** BITPRECISION_FRACTIONAL
-INT_TYPE = BackingTensor.int_type
+# bound on magnitude of (single precision) encoded numbers
+B = (2 ** BITPRECISION_INTEGRAL) * (2 ** BITPRECISION_FRACTIONAL)
 
 assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
 assert gcd(K, M) == 1
@@ -31,12 +34,10 @@ class Pond(Protocol):
         self.server_1 = server_1
         self.crypto_producer = crypto_producer
 
-    def define_constant(self, value, apply_encoding=True, name=None):
+    def define_constant(self, value, apply_scaling=True, name=None):
         assert type(value) in [np.ndarray]
 
-        v = value
-        v = _encode(v) if apply_encoding else v
-        v = BackingTensor.from_native(v)
+        v: BackingTensor = _encode(value, apply_scaling)
 
         with tf.name_scope('constant{}'.format('-'+name if name else '')):
 
@@ -77,12 +78,10 @@ class Pond(Protocol):
 
         return PondPrivatePlaceholder(self, pl, x0, x1)
 
-    def define_public_variable(self, initial_value, apply_encoding=True, name=None):
+    def define_public_variable(self, initial_value, apply_scaling=True, name=None):
         assert type(initial_value) in [np.ndarray]
 
-        v = initial_value
-        v = _encode(v) if apply_encoding else v
-        v = BackingTensor.from_native(v)
+        v: BackingTensor = _encode(initial_value, apply_scaling)
 
         with tf.name_scope('var{}'.format('-'+name if name else '')):
 
@@ -96,16 +95,11 @@ class Pond(Protocol):
         _initializers.append(x.initializer)
         return x
 
-    def define_private_variable(self, initial_value, apply_encoding=True, name=None):
+    def define_private_variable(self, initial_value, apply_scaling=True, name=None):
         assert type(initial_value) in [np.ndarray]
 
-        v = initial_value
-        v = _encode(v) if apply_encoding else v
-        v = BackingTensor.from_native(v)
-
+        v: BackingTensor = _encode(initial_value, apply_scaling)
         v0, v1 = _share(v)
-        assert type(v0) is BackingTensor, type(v0)
-        assert type(v1) is BackingTensor, type(v1)
 
         with tf.name_scope('var{}'.format('-'+name if name else '')):
 
@@ -118,6 +112,36 @@ class Pond(Protocol):
         x = PondPrivateVariable(self, x0, x1)
         _initializers.append(x.initializer)
         return x
+
+    def define_private_input(self, input_provider, apply_scaling=True, name=None):
+        assert isinstance(input_provider, object) # TODO[Morten] assert real type
+
+        with tf.name_scope('input{}'.format('-'+name if name else '')):
+
+            with tf.device(input_provider.player.device_name):
+
+                v = input_provider.provide_input()
+                v: BackingTensor = _encode(v, apply_scaling)
+                x0, x1 = _share(v)
+
+        x = PondPrivateTensor(self, x0, x1)
+        return x
+
+    def define_private_output(self, x, output_receiver, apply_scaling=True, name=None):
+        assert isinstance(output_receiver, object) # TODO[Morten] assert real type
+        assert isinstance(x, PondPrivateTensor), type(x)
+
+        x0, x1 = x.unwrapped
+
+        with tf.name_scope('output{}'.format('-'+name if name else '')):
+
+            with tf.device(output_receiver.player.device_name):
+            
+                v: BackingTensor = _reconstruct(x0, x1)
+                v = _decode(v, apply_scaling)
+                op = output_receiver.receive_output(v)
+
+        return op
 
     @property
     def initializer(self):
@@ -545,8 +569,9 @@ class PondPublicTensor(PondTensor):
         return (self.value_on_0, self.value_on_1)
 
     def eval(self, sess, feed_dict={}, tag=None):
-        value = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
-        value = _decode(value) #TODO[Morten] if self.encoded
+        value: BackingTensor = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
+        value: np.ndarray = value.to_native()
+        value: np.ndarray = _decode(value, self.encoded)
         return value
 
 class PondPrivateTensor(PondTensor):
@@ -672,13 +697,10 @@ class PondPrivatePlaceholder(PondPrivateTensor):
     def __repr__(self):
         return 'PondPrivatePlaceholder(shape={})'.format(self.shape)
 
-    def feed_from_native(self, value, apply_encoding=True):
+    def feed_from_native(self, value, apply_scaling=True):
         assert type(value) in [np.ndarray], type(value)
 
-        v = value
-        v = _encode(v) if apply_encoding else v
-        v = BackingTensor.from_native(v)
-
+        v = _encode(value, apply_scaling)
         return {
             p: v for p, v in zip(self.placeholders, v.backing)
         }
@@ -727,14 +749,49 @@ class PondPrivateVariable(PondPrivateTensor):
     def __repr__(self):
         return 'PondPrivateVariable(shape={})'.format(self.shape)
 
-def _encode(rationals, precision=BITPRECISION_FRACTIONAL):
-    """ [NumPy] Encode tensor of rational numbers into tensor of ring elements """
-    return (rationals * (2**precision)).astype(int).astype(object) % M
+def _encode(rationals, apply_scaling) -> BackingTensor:
+    """ Encode tensor of rational numbers into tensor of ring elements """
 
-def _decode(elements, precision=BITPRECISION_FRACTIONAL):
-    """ [NumPy] Decode tensor of ring elements into tensor of rational numbers """
+    scaling_factor = 2**BITPRECISION_FRACTIONAL if apply_scaling else 1
+
+    if isinstance(rationals, np.ndarray):
+        return _encode_from_numpy(rationals, scaling_factor)
+
+    if isinstance(rationals, tf.Tensor):
+        return _encode_from_tftensor(rationals, scaling_factor)
+
+    raise TypeError("Don't know how to encode {}".format(type(rationals)))
+
+def _decode(elements, apply_scaling: bool):
+    """ Decode tensor of ring elements into tensor of rational numbers """
+
+    scaling_factor = 2**BITPRECISION_FRACTIONAL if apply_scaling else 1
+
+    if isinstance(elements, np.ndarray):
+        return _decode_to_numpy(elements, scaling_factor)
+
+    if isinstance(elements, tf.Tensor):
+        return _decode_to_tftensor(elements, scaling_factor)
+
+    raise TypeError("Don't know how to decode {}".format(type(elements)))
+
+def _encode_from_numpy(rationals: np.ndarray, scaling_factor: int) -> BackingTensor:
+    encoded = (rationals * scaling_factor).astype(int).astype(object)
+    return BackingTensor.from_native(encoded)
+
+def _decode_to_numpy(elements, scaling_factor: int):
     map_negative_range = np.vectorize(lambda element: element if element <= M/2 else element - M)
-    return map_negative_range(elements).astype(float) / (2**precision)
+    return map_negative_range(elements).astype(float) / scaling_factor
+
+def _encode_from_tftensor(rationals: tf.Tensor, scaling_factor: int) -> BackingTensor:
+    encoded = tf.cast(rationals * scaling_factor, BackingTensor.int_type)
+    return BackingTensor.from_native(encoded)
+
+def _decode_to_tftensor(elements, scaling_factor: int):
+    raise NotImplementedError() 
+    # TODO[Morten] how to decode negative numbers (since they're large)?
+    # we can use `(elements + B).to_native() - B`` but need crt_recombine to
+    # work first
 
 def _share(secret):
     assert isinstance(secret, BackingTensor), type(secret)
