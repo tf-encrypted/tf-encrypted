@@ -33,5 +33,6 @@ class Protocol(object):
 
     def __exit__(self, type: Optional[Type[BaseException]],
                  value: Optional[Exception],
-                 traceback: Optional[TracebackType]) -> Optional[None]:
+                 traceback: Optional[TracebackType]) -> Optional[bool]:
         set_protocol(None)
+        return None
