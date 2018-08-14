@@ -1,6 +1,6 @@
 # TensorFlow Encrypted
 
-This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) and is structured into roughly three levels: 
+This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) and is structured into roughly three levels:
 
 - basic operations for computing on encrypted tensors
 - basic machine learning components using these
@@ -38,6 +38,32 @@ with tfe.remote_session() as sess:
 ```
 
 Note that higher level estimators are also available, such as `tfe.estimator.LogisticClassifier`.
+
+## Installation
+We recommend using a package manager like conda.
+
+Dependencies:
+- `setuptools`
+- `pip`
+- `tensorflow`
+
+To install Tensorflow, you can use pip:
+```shell
+pip install tensorflow
+```
+
+If installing the GPU version of Tensorflow, please refer to [their documentation](https://www.tensorflow.org/install/) for how to find the proper build for your platform and CUDA version.  You'll then point your `pip` command with a _tfBinaryURL_ specific to your system, or you'll use the generic:
+```shell
+pip install tensorflow-gpu
+```
+
+Assuming you're in the preferred Python environment, the following code will install `tf-encrypted`:
+```shell
+git clone https://github.com/mortendahl/tf-encrypted.git
+cd tf-encrypted
+pip install .[tf] # or .[tf_gpu] if using a tensorflow-gpu build
+```
+If you're helping with development, use `pip install -e ...` in the last line.
 
 # Examples
 
