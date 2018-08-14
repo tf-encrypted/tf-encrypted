@@ -78,7 +78,6 @@ class Pond(Protocol):
         return PondPrivatePlaceholder(self, pl, x0, x1)
 
     def define_public_variable(self, initial_value, apply_encoding=True, name=None):
-
         assert type(initial_value) in [np.ndarray]
 
         v = initial_value
@@ -391,7 +390,7 @@ class Pond(Protocol):
 
         return z
 
-    def reveal(prot, x):
+    def reveal(self, x):
 
         node_key = ('reveal', x)
         z = _nodes.get(node_key, None)
@@ -407,7 +406,7 @@ class Pond(Protocol):
         if func is None:
             raise TypeError("Don't know how to reveal {}".format(_type(x)))
 
-        z = func(prot, x)
+        z = func(self, x)
         _nodes[node_key] = z
 
         return z
@@ -439,7 +438,6 @@ class Pond(Protocol):
         _nodes[node_key] = z
 
         return z
-
 
     def conv2d_bw(self, x, w, strides, padding):
         node_key = ('conv2d_bw', x, w)
@@ -667,7 +665,7 @@ class PondPrivatePlaceholder(PondPrivateTensor):
         assert tensor0.shape == tensor1.shape
 
         super(PondPrivatePlaceholder, self).__init__(prot, tensor0, tensor1)
-        self.placeholders= placeholder.backing
+        self.placeholders = placeholder.backing
         self.tensor0 = tensor0
         self.tensor1 = tensor1
 
@@ -684,7 +682,6 @@ class PondPrivatePlaceholder(PondPrivateTensor):
         return {
             p: v for p, v in zip(self.placeholders, v.backing)
         }
-    
 
 class PondPublicVariable(PondPublicTensor):
     """

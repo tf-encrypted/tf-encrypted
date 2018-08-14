@@ -2,14 +2,12 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-from tensorflow_encrypted.protocol import Pond, Server
+from tensorflow_encrypted.protocol import Pond
 from tensorflow_encrypted.layer import Conv2D
 
-server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
-server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
-crypto_producer = Server('/job:localhost/replica:0/task:0/device:CPU:2')
+config = tfe.LocalConfig(3)
 
-with Pond(server0, server1, crypto_producer) as prot:
+with Pond(*config.players) as prot:
 
     a = prot.define_constant(np.array([4, 3, 2, 1]).reshape(2, 2))
     b = prot.define_constant(np.array([4, 3, 2, 1]).reshape(2, 2))
@@ -27,7 +25,7 @@ with Pond(server0, server1, crypto_producer) as prot:
     conv_layer.initialize(conv_input_shape)
     conv_out = conv_layer.forward(conv_input)
 
-    with tfe.local_session(3) as sess:
+    with config.session() as sess:
         sess.run(tf.global_variables_initializer())
 
         print("multiplication : ")

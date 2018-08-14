@@ -1,13 +1,11 @@
 import numpy as np
 import tensorflow_encrypted as tfe
 
-from tensorflow_encrypted.protocol import Pond, Server
-from tensorflow_encrypted.config import local_session
+from tensorflow_encrypted.protocol import Pond
 
-server0 = Server('/job:localhost/replica:0/task:0/device:CPU:0')
-server1 = Server('/job:localhost/replica:0/task:0/device:CPU:1')
-crypto_producer = Server('/job:localhost/replica:0/task:0/device:CPU:2')
-prot = Pond(server0, server1, crypto_producer)
+config = tfe.LocalConfig(3)
+
+prot = Pond(*config.players)
 
 # parameters
 np_w = np.array([.1, .2, .3, .4]).reshape(2, 2)
@@ -26,7 +24,7 @@ def sigmoid(x):
     return 1/(1 + np.exp(-x))
 
 
-with local_session(3) as sess:
+with config.session() as sess:
     tfe.run(sess, prot.initializer, tag='init')
 
     np_x = np.array([.1, -.1, .2, -.2]).reshape(2, 2)

@@ -49,9 +49,9 @@ input_providers = [
     FakeInputProvider('/job:localhost/replica:0/task:0/device:CPU:5')
 ]
 
-server0 = tfe.protocol.Server('/job:localhost/replica:0/task:0/device:CPU:0')
-server1 = tfe.protocol.Server('/job:localhost/replica:0/task:0/device:CPU:1')
-crypto_producer = tfe.protocol.CryptoProducer('/job:localhost/replica:0/task:0/device:CPU:2')
+server0 = tfe.protocol.Player('/job:localhost/replica:0/task:0/device:CPU:0')
+server1 = tfe.protocol.Player('/job:localhost/replica:0/task:0/device:CPU:1')
+crypto_producer = tfe.protocol.Player('/job:localhost/replica:0/task:0/device:CPU:2')
 
 with tfe.local_session(num_players=6) as sess:
 

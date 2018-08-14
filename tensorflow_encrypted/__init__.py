@@ -5,14 +5,14 @@ from . import estimator
 from . import layer
 from . import protocol
 from .tensor import *
-from .config import local_session, remote_session
+from .config import LocalConfig, RemoteConfig
 
 
 __all__ = [
-    'InputProvider', 
+    'InputProvider',
     'NumpyInputProvider',
-    'local_session', 
-    'remote_session',
+    'LocalConfig',
+    'RemoteConfig',
     'estimator',
     'layer',
     'protocol'

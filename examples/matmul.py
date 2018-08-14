@@ -1,29 +1,28 @@
 import numpy as np
 import tensorflow_encrypted as tfe
 
-from tensorflow_encrypted.protocol import Pond, Server
+# use local config (for development/debugging)
+config = tfe.LocalConfig(3)
 
-# local
-server0: Server = Server('/job:localhost/replica:0/task:0/device:CPU:0')
-server1: Server = Server('/job:localhost/replica:0/task:0/device:CPU:1')
-server2: Server = Server('/job:localhost/replica:0/task:0/device:CPU:2')
+# use remote config
+# config = tfe.RemoteConfig([
+#     'localhost:4440',
+#     'localhost:4441',
+#     'localhost:4442'
+# ])
 
-# remote
-# master = '10.0.0.1:4440'
-# server0 = Server('/job:spdz/replica:0/task:0/cpu:0')
-# server1 = Server('/job:spdz/replica:0/task:1/cpu:0')
-# server2 = Server('/job:spdz/replica:0/task:2/cpu:0')
+# use remote config from cluster file
+# config = tfe.RemoteConfig.from_file('cluster.json')
 
-prot: Pond = Pond(server0, server1, server2)
+with tfe.protocol.Pond(*config.players) as prot:
 
-w = prot.define_private_variable(np.zeros((100, 100)))
-# x = prot.define_private_variable(np.zeros((1,100)))
+    w = prot.define_private_variable(np.zeros((100, 100)))
+    # x = prot.define_private_variable(np.zeros((1,100)))
 
-y = w
-for _ in range(40):
-    y = y.dot(y)
+    y = w
+    for _ in range(40):
+        y = y.dot(y)
 
-with tfe.local_session(3) as sess:
-    # with tfe.remote_session(master) as sess:
-    tfe.run(sess, prot.initializer, tag='init')
-    print(y.reveal().eval(sess, tag='reveal'))
+    with config.session() as sess:
+        tfe.run(sess, prot.initializer, tag='init')
+        print(y.reveal().eval(sess, tag='reveal'))
