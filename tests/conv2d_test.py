@@ -1,13 +1,11 @@
-import tensorflow as tf
-import numpy as np
 import unittest
-from tensorflow_encrypted.protocol import Pond
-from tensorflow_encrypted.protocol import Player
-from tensorflow_encrypted.layer import Conv2D, set_protocol
-from tensorflow_encrypted.config import session
 
+import numpy as np
+import tensorflow as tf
+import tensorflow_encrypted as tfe
 
 class TestConv2D(unittest.TestCase):
+
     def test_forward(self):
         # input
         batch_size, channels_in, channels_out = 32, 3, 64
@@ -20,23 +18,21 @@ class TestConv2D(unittest.TestCase):
         filter_shape = (h_filter, w_filter, channels_in, channels_out)
         filter_values = np.random.normal(size=filter_shape)
 
+        config = tfe.LocalConfig(3)
+
         # convolution pond
-        with session(3) as sess:
-
-            server0 = Player('/job:localhost/replica:0/task:0/device:CPU:0')
-            server1 = Player('/job:localhost/replica:0/task:0/device:CPU:1')
-            crypto_producer = Player('/job:localhost/replica:0/task:0/device:CPU:2')
-            prot = Pond(server0, server1, crypto_producer)
-            set_protocol(prot)
-
+        with tfe.protocol.Pond(*config.players) as prot:
+        
             conv_input = prot.define_private_variable(input_conv)
-            conv_layer = Conv2D(filter_shape, strides=2)
+            conv_layer = tfe.layer.Conv2D(filter_shape, strides=2)
             conv_layer.initialize(input_shape, initial_weights=filter_values)
             conv_out_pond = conv_layer.forward(conv_input)
 
-            sess.run(tf.global_variables_initializer())
-            # outputs
-            out_pond = conv_out_pond.reveal().eval(sess)
+            with config.session() as sess:
+
+                sess.run(tf.global_variables_initializer())
+                # outputs
+                out_pond = conv_out_pond.reveal().eval(sess)
 
         # reset graph
         tf.reset_default_graph()
