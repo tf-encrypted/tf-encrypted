@@ -1,4 +1,4 @@
-from types import Dict
+from typing import Dict
 from collections import defaultdict
 
 import tensorflow as tf
