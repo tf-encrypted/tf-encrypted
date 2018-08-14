@@ -10,7 +10,7 @@ def get_protocol():
     return _current_prot
 
 class Player(object):
-    
+
     def __init__(self, device_name):
         self.device_name = device_name
 
