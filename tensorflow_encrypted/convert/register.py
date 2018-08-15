@@ -4,20 +4,20 @@ from typing import Any, Dict, List
 
 
 def register() -> Dict[str, Any]:
-    reg = {}
-
-    reg['Placeholder'] = placeholder
-    reg['Const'] = constant
-    reg['Conv2D'] = conv2d
-    reg['Relu'] = relu
-    reg['BiasAdd'] = bias_add
-    reg['MaxPool'] = maxpool
-    reg['Shape'] = shape
-    reg['StridedSlice'] = strided_slice
-    reg['Pack'] = pack
-    reg['Reshape'] = reshape
-    reg['MatMul'] = matmul
-    reg['Softmax'] = softmax
+    reg = {
+        'Placeholder': placeholder,
+        'Const': constant,
+        'Conv2D': conv2d,
+        'Relu': relu,
+        'BiasAdd': bias_add,
+        'MaxPool': maxpool,
+        'Shape': shape,
+        'StridedSlice': strided_slice,
+        'Pack': pack,
+        'Reshape': reshape,
+        'MatMul': matmul,
+        'Softmax': softmax,
+    }
 
     return reg
 
