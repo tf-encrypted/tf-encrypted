@@ -364,12 +364,12 @@ class Pond(Protocol):
     def sigmoid(self, x):
         assert isinstance(x, PondTensor), type(x)
 
-        w0 =  0.5
-        w1 =  0.2159198015
+        w0 = 0.5
+        w1 = 0.2159198015
         w3 = -0.0082176259
-        w5 =  0.0001825597
+        w5 = 0.0001825597
         w7 = -0.0000018848
-        w9 =  0.0000000072
+        w9 = 0.0000000072
 
         with tf.name_scope('sigmoid'):
 
@@ -388,6 +388,34 @@ class Pond(Protocol):
             y9 = x9 * w9
 
             z = y9 + y7 + y5 + y3 + y1 + w0
+
+        return z
+
+    def relu(self, x):
+        assert isinstance(x, PondTensor), type(x)
+
+        w0 = 0.146717906
+        w1 = 0.500000000
+        w2 = 0.336526130
+        w4 = -0.036884259
+        w6 = 0.002189220
+        w8 = -0.000046140
+
+        with tf.name_scope('relu'):
+
+            x1 = x
+            x2 = x.square()
+            x4 = x2 * x2
+            x6 = x2 * x4
+            x8 = x2 * x6
+
+            y1 = x1 * w1
+            y2 = x2 * w2
+            y4 = x4 * w4
+            y6 = x6 * w6
+            y8 = x8 * w8
+
+            z = y8 + y6 + y4 + y2 + y1 + w0
 
         return z
 
