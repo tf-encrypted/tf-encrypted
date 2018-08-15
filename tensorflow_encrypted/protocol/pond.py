@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import numpy as np
 import tensorflow as tf
 
-from ..protocol import Protocol
+from .protocol import Protocol
 from ..tensor.int100 import Int100Tensor as BackingTensor
 from ..tensor.int100 import Int100Constant as BackingConstant
 from ..tensor.int100 import Int100Variable as BackingVariable
@@ -18,8 +18,8 @@ M = BackingTensor.modulus
 K = 2 ** BITPRECISION_FRACTIONAL
 INT_TYPE = BackingTensor.int_type
 
-bp = BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL
-assert log2(M) >= 2 * bp + log2(1024) + TRUNCATION_GAP
+BITPRECISION = BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL
+assert log2(M) >= 2 * BITPRECISION + log2(1024) + TRUNCATION_GAP
 assert gcd(K, M) == 1
 
 _nodes = dict()
@@ -469,8 +469,9 @@ class Pond(Protocol):
 
         return z
 
-
+#####
 # Classes representing the base values in the Pond protocol.
+#####
 
 class PondTensor(object):
     """
@@ -614,8 +615,10 @@ class PondMaskedTensor(PondTensor):
         return (self.a, self.a0, self.a1, self.alpha_on_0, self.alpha_on_1)
 
 
+#####
 # Extentions of the base Pond classes that record extra information
 # relevant to how TensorFlow works.
+#####
 
 class PondConstant(PondPublicTensor):
     """
@@ -763,7 +766,9 @@ def _reconstruct(share0, share1):
         return share0 + share1
 
 
+#####
 # helpers
+#####
 
 def _type(x):
 
@@ -799,8 +804,9 @@ def _lift(prot, x):
     raise TypeError("Don't know how to lift {}".format(type(x)))
 
 
+#####
 # truncate
-# TODO
+#####
 
 # precomputation
 K_inv = BackingTensor.from_native(np.array([inverse(K, M)]))
@@ -849,7 +855,9 @@ def _truncate_masked(prot, x):
     prot.truncate(x.unmasked)
 
 
+#####
 # reveal helpers
+#####
 
 def _reveal_private(prot, x):
     assert isinstance(x, PondPrivateTensor), type(x)
@@ -873,7 +881,9 @@ def _reveal_masked(prot, x):
     return prot.reveal(x.unmasked)
 
 
+#####
 # add helpers
+#####
 
 def _add_public_public(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
@@ -981,7 +991,9 @@ def _add_masked_masked(prot, x, y):
     return prot.add(x.unmasked, y.unmasked)
 
 
+#####
 # sub helpers
+#####
 
 def _sub_public_public(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
@@ -1089,7 +1101,9 @@ def _sub_masked_masked(prot, x, y):
     return prot.sub(x.unmasked, y.unmasked)
 
 
+#####
 # mul helpers
+#####
 
 def _mul_public_public(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
@@ -1209,7 +1223,9 @@ def _mul_masked_masked(prot, x, y):
     return z
 
 
+#####
 # square helpers
+#####
 
 def _square_public(prot, x):
     assert isinstance(x, PondPublicTensor), type(x)
@@ -1260,7 +1276,9 @@ def _square_masked(prot, x):
     return y
 
 
+#####
 # dot helpers
+#####
 
 def _dot_public_public(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
@@ -1388,7 +1406,9 @@ def _dot_masked_masked(prot, x, y):
     return z
 
 
+#####
 # Conv helpers
+#####
 # TODO[koen] create operations for all possible combinations
 
 def _conv2d_public_public(prot, x, y, strides, padding):
@@ -1463,7 +1483,9 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
     return z
 
 
+#####
 # transpose helpers
+#####
 
 def _transpose_public(prot, x):
     assert isinstance(x, PondPublicTensor)
@@ -1522,7 +1544,9 @@ def _transpose_masked(prot, x_masked):
     return x_t
 
 
+#####
 # mask helpers
+#####
 
 def _mask_private(prot, x):
     assert isinstance(x, PondPrivateTensor)
