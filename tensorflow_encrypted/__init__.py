@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from .inputs import InputProvider, NumpyInputProvider
 from . import estimator
-from . import layer
+from . import layers
 from . import protocol
 from .tensor import *
 from .config import LocalConfig, RemoteConfig
@@ -15,7 +15,7 @@ __all__ = [
     'LocalConfig',
     'RemoteConfig',
     'estimator',
-    'layer',
+    'layers',
     'protocol',
     'convert',
 ]

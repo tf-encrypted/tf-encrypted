@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import numpy as np
 import tensorflow as tf
 
-from ..protocol import Protocol
+from .protocol import Protocol
 from ..tensor.int100 import Int100Tensor as BackingTensor
 from ..tensor.int100 import Int100Constant as BackingConstant
 from ..tensor.int100 import Int100Variable as BackingVariable
