@@ -3,14 +3,14 @@ from __future__ import absolute_import
 import numpy as np
 import tensorflow as tf
 
-from ..protocol import Protocol
+from .protocol import Protocol
 from ..tensor.int100 import Int100Tensor as BackingTensor
 from ..tensor.int100 import Int100Constant as BackingConstant
 from ..tensor.int100 import Int100Variable as BackingVariable
 from ..tensor.int100 import Int100Placeholder as BackingPlaceholder
 from ..tensor.helpers import *
 
-BITPRECISION_INTEGRAL   = 16
+BITPRECISION_INTEGRAL = 16
 BITPRECISION_FRACTIONAL = 16
 TRUNCATION_GAP = 20
 
@@ -23,6 +23,7 @@ assert gcd(K, M) == 1
 
 _nodes = dict()
 _initializers = list()
+
 
 class Pond(Protocol):
 
