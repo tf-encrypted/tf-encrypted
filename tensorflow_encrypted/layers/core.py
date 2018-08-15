@@ -1,9 +1,8 @@
 import numpy as np
 import math
-from types import NoneType
 from typing import Optional
 from abc import ABC, abstractmethod
-from ..protocol import get_protocol, Protocol
+from ..protocol.protocol import get_protocol, Protocol
 
 # TODO
 # split backward function in compute_gradient and compute_backpropagated_error?
@@ -11,7 +10,7 @@ from ..protocol import get_protocol, Protocol
 
 class Layer(ABC):
     @abstractmethod
-    def initialize(self, *args, **kwargs) -> NoneType:
+    def initialize(self, *args, **kwargs) -> None:
         pass
 
     @abstractmethod
