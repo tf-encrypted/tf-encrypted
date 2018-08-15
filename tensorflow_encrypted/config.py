@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.python.client import timeline
 
-from .protocol import Player
+from .protocol.player import Player
 
 
 class LocalConfig(object):
@@ -118,11 +118,7 @@ _run_counter: Any = defaultdict(int)
 
 def run(
     sess: tf.Session,
-    fetches: Union[tf.GraphElement,
-                   List[tf.GraphElement],
-                   Tuple[tf.GraphElement],
-                   NamedTuple,
-                   Dict[str, tf.GraphElement]],
+    fetches: Any,
     feed_dict: Dict[str, np.ndarray]={},
     tag: Optional[str] = None
 ) -> Any:
