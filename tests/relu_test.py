@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
+from tensorflow_encrypted.layers.activation import Relu, Sigmoid
 
 
 class TestRelu(unittest.TestCase):
@@ -15,7 +16,7 @@ class TestRelu(unittest.TestCase):
         with tfe.protocol.Pond(*config.players) as prot:
 
             relu_input = prot.define_private_variable(input_relu)
-            relu_layer = tfe.layer.Relu()
+            relu_layer = Relu()
 
             relu_out_pond = relu_layer.forward(relu_input)
 
@@ -36,7 +37,6 @@ class TestRelu(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
 
                 out_tensorflow = sess.run(relu_out_tf)
-                print(out_tensorflow)
 
         assert(np.isclose(out_pond, out_tensorflow, atol=0.6).all())
 
