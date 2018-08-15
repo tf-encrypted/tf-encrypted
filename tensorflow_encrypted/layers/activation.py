@@ -33,4 +33,4 @@ class Relu(core.Layer):
 
     # TODO Approximate Relu derivate to implement backward
     def backward(self, d_y, *args):
-        pass
+        raise NotImplementedError
