@@ -54,10 +54,6 @@ _crt_mod = gen_crt_mod(m, INT_TYPE, FLOAT_TYPE)
 
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
 
-def to_native(backing):
-    assert isinstance(backing, (list, tuple)), type(backing)
-    return _crt_recombine(backing).astype(object)
-
 class Int100Tensor(object):
 
     modulus = M
@@ -74,7 +70,7 @@ class Int100Tensor(object):
 
     @staticmethod
     def from_native(value):
-        assert type(value) in (np.ndarray,), type(value)
+        assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
         return Int100Tensor(value, None)
 
     @staticmethod
@@ -83,14 +79,18 @@ class Int100Tensor(object):
         return Int100Tensor(None, value)
 
     def eval(self, sess, feed_dict={}, tag=None):
-        return to_native(run(sess, self.backing, feed_dict=feed_dict, tag=tag))
+        evaluated_backing: list = run(sess, self.backing, feed_dict=feed_dict, tag=tag)
+        return Int100Tensor.from_decomposed(evaluated_backing)
+
+    def to_native(self):
+        return _crt_recombine(self.backing).astype(object)
 
     @staticmethod
     def sample_uniform(shape):
         return _sample_uniform(shape)
 
     def __repr__(self):
-        return 'Int100Tensor({})'.format(to_native(self.backing))
+        return 'Int100Tensor({})'.format(self.to_native())
 
     @property
     def shape(self):

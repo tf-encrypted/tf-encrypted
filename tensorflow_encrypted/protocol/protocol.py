@@ -6,6 +6,7 @@ _current_prot = None
 
 
 class Protocol(object):
+
     def __enter__(self) -> 'Protocol':
         set_protocol(self)
         return self
