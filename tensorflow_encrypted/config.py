@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.python.client import timeline
 
-from .protocol.player import Player
+from .player import Player
 
 
 class LocalConfig(object):

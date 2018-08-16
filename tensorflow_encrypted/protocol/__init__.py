@@ -8,4 +8,4 @@ from .pond import Pond
 # from .securenn import SecureNN
 
 from .protocol import Protocol
-from .player import Player
+from ..player import Player
