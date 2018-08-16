@@ -192,51 +192,49 @@ class Pond(Protocol):
 
     @property
     def initializer(self):
-
-
-] return tf.group(*_initializers)
+        return tf.group(*_initializers)
 
     def clear_initializers(self):
-        del _initializers[: ]
+        del _initializers[:]
 
     def assign(self, variable, value):
         assert isinstance(variable, PondPrivateVariable), type(variable)
         assert isinstance(value, PondPrivateTensor), type(value)
 
-        node_key= ('assign', variable, value)
-        op= _nodes.get(node_key, None)
+        node_key = ('assign', variable, value)
+        op = _nodes.get(node_key, None)
 
         if op is not None:
             return op
 
-        var0, var1= variable.variable0, variable.variable1
-        val0, val1= value.share0, value.share1
+        var0, var1 = variable.variable0, variable.variable1
+        val0, val1 = value.share0, value.share1
 
         with tf.name_scope('assign'):
 
             with tf.device(self.server_0.device_name):
-                op0= var0.assign_from_int100(val0)
+                op0 = var0.assign_from_int100(val0)
 
             with tf.device(self.server_1.device_name):
-                op1= var1.assign_from_int100(val1)
+                op1 = var1.assign_from_int100(val1)
 
-        op= tf.group(op0, op1)
-        _nodes[node_key]= op
+        op = tf.group(op0, op1)
+        _nodes[node_key] = op
 
         return op
 
     def add(self, x, y):
 
-        node_key= ('add', x, y)
-        z= _nodes.get(node_key, None)
+        node_key = ('add', x, y)
+        z = _nodes.get(node_key, None)
 
         if z is not None:
             return z
 
-        x= _lift(self, x)
-        y= _lift(self, y)
+        x = _lift(self, x)
+        y = _lift(self, y)
 
-        dispatch= {
+        dispatch = {
             (PondPublicTensor,  PondPublicTensor):  _add_public_public,
             (PondPublicTensor,  PondPrivateTensor): _add_public_private,
             (PondPublicTensor,  PondMaskedTensor):  _add_public_masked,
