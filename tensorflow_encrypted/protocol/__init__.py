@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import tensorflow as tf
+
 _current_prot = None
 
 def set_protocol(prot):
@@ -8,11 +10,6 @@ def set_protocol(prot):
 
 def get_protocol():
     return _current_prot
-
-class Player(object):
-    
-    def __init__(self, device_name):
-        self.device_name = device_name
 
 class Protocol(object):
 

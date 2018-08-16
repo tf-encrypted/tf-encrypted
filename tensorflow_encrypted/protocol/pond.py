@@ -1,8 +1,10 @@
 from __future__ import absolute_import
+from typing import Tuple, Dict
 
 import numpy as np
 import tensorflow as tf
 
+from ..io import InputProvider, OutputReceiver
 from ..protocol import Protocol
 from ..tensor.int100 import Int100Tensor as BackingTensor
 from ..tensor.int100 import Int100Constant as BackingConstant
@@ -24,7 +26,7 @@ B = (2 ** BITPRECISION_INTEGRAL) * (2 ** BITPRECISION_FRACTIONAL)
 assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
 assert gcd(K, M) == 1
 
-_nodes = dict()
+_nodes: Dict = dict()
 _initializers = list()
 
 class Pond(Protocol):
@@ -83,7 +85,7 @@ class Pond(Protocol):
 
         v: BackingTensor = _encode(initial_value, apply_scaling)
 
-        with tf.name_scope('var{}'.format('-'+name if name else '')):
+        with tf.name_scope('public-var{}'.format('-'+name if name else '')):
 
             with tf.device(self.server_0.device_name):
                 x_on_0 = BackingVariable.from_int100(v)
@@ -101,7 +103,7 @@ class Pond(Protocol):
         v: BackingTensor = _encode(initial_value, apply_scaling)
         v0, v1 = _share(v)
 
-        with tf.name_scope('var{}'.format('-'+name if name else '')):
+        with tf.name_scope('private-var{}'.format('-'+name if name else '')):
 
             with tf.device(self.server_0.device_name):
                 x0 = BackingVariable.from_int100(v0)
@@ -113,33 +115,48 @@ class Pond(Protocol):
         _initializers.append(x.initializer)
         return x
 
-    def define_private_input(self, input_provider, apply_scaling=True, name=None):
-        assert isinstance(input_provider, object) # TODO[Morten] assert real type
+    def define_public_input(self, provider:InputProvider, apply_scaling:bool=True, name:str=None) -> 'PondPublicTensor':
 
-        with tf.name_scope('input{}'.format('-'+name if name else '')):
+        with tf.name_scope('public-input{}'.format('-'+name if name else '')):
 
-            with tf.device(input_provider.player.device_name):
+            with tf.device(provider.player.device_name):
 
-                v = input_provider.provide_input()
-                v: BackingTensor = _encode(v, apply_scaling)
+                v = provider.provide_input()
+                v = _encode(v, apply_scaling)
+                x_on_0 = v
+                x_on_1 = v
+
+        x = PondPublicTensor(self, x_on_0, x_on_1)
+        return x
+
+    def define_private_input(self, provider:InputProvider, apply_scaling:bool=True, name:str=None) -> 'PondPrivateTensor':
+
+        with tf.name_scope('private-input{}'.format('-'+name if name else '')):
+
+            with tf.device(provider.player.device_name):
+
+                v = provider.provide_input()
+                v = _encode(v, apply_scaling)
                 x0, x1 = _share(v)
 
         x = PondPrivateTensor(self, x0, x1)
         return x
 
-    def define_private_output(self, x, output_receiver, apply_scaling=True, name=None):
-        assert isinstance(output_receiver, object) # TODO[Morten] assert real type
+    def define_output(self, x, receiver:OutputReceiver, apply_scaling=True, name=None):
         assert isinstance(x, PondPrivateTensor), type(x)
 
         x0, x1 = x.unwrapped
 
         with tf.name_scope('output{}'.format('-'+name if name else '')):
 
-            with tf.device(output_receiver.player.device_name):
-            
+            with tf.device(receiver.player.device_name):
+
                 v: BackingTensor = _reconstruct(x0, x1)
-                v = _decode(v, apply_scaling)
-                op = output_receiver.receive_output(v)
+                # v = _decode(v, apply_scaling) # TODO[Morten] re-enable
+                op = receiver.receive_output(v.backing[0])
+
+                # wrap in tf.group to prevent sending back any tensors (which might hence be leaked)
+                op = tf.group(op)
 
         return op
 
@@ -463,34 +480,6 @@ class Pond(Protocol):
 
         return z
 
-    def conv2d_bw(self, x, w, strides, padding):
-        node_key = ('conv2d_bw', x, w)
-        z = _nodes.get(node_key, None)
-
-        if z is not None:
-            return z
-
-        dispatch = {
-            (PondPublicTensor,  PondPublicTensor):  _conv2d_bw_public_public,
-            (PondPublicTensor,  PondPrivateTensor): _conv2d_bw_public_private,
-            (PondPublicTensor,  PondMaskedTensor):  _conv2d_bw_public_masked,
-            (PondPrivateTensor, PondPublicTensor):  _conv2d_bw_private_public,
-            (PondPrivateTensor, PondPrivateTensor): _conv2d_bw_private_private,
-            (PondPrivateTensor, PondMaskedTensor):  _conv2d_bw_private_masked,
-            (PondMaskedTensor,  PondPublicTensor):  _conv2d_bw_masked_public,
-            (PondMaskedTensor,  PondPrivateTensor): _conv2d_bw_masked_private,
-            (PondMaskedTensor,  PondMaskedTensor):  _conv2d_bw_masked_masked
-        }
-
-        func = dispatch.get((_type(x), _type(w)), None)
-        if func is None:
-            raise TypeError("Don't know how to conv2d_bw {} and {}".format(type(x), type(w)))
-
-        z = func(self, x, y, strides, padding)
-        _nodes[node_key] = z
-
-        return z
-
 #
 # Classes representing the base values in the Pond protocol.
 #
@@ -547,7 +536,7 @@ class PondPublicTensor(PondTensor):
     in the operations where it's needed by both (eg multiplication).
     """
 
-    def __init__(self, prot, value_on_0, value_on_1):
+    def __init__(self, prot, value_on_0: BackingTensor, value_on_1: BackingTensor) -> None:
         assert isinstance(value_on_0, BackingTensor), type(value_on_0)
         assert isinstance(value_on_1, BackingTensor), type(value_on_1)
         assert value_on_0.shape == value_on_1.shape
@@ -579,7 +568,7 @@ class PondPrivateTensor(PondTensor):
     This class represents a private value that may be unknown to everyone.
     """
 
-    def __init__(self, prot, share0, share1):
+    def __init__(self, prot, share0: BackingTensor, share1: BackingTensor) -> None:
         assert isinstance(share0, BackingTensor), type(share0)
         assert isinstance(share1, BackingTensor), type(share1)
         assert share0.shape == share1.shape
@@ -793,7 +782,7 @@ def _decode_to_tftensor(elements, scaling_factor: int):
     # we can use `(elements + B).to_native() - B`` but need crt_recombine to
     # work first
 
-def _share(secret):
+def _share(secret) -> Tuple[BackingTensor, BackingTensor]:
     assert isinstance(secret, BackingTensor), type(secret)
 
     with tf.name_scope('share'):
@@ -888,7 +877,7 @@ def _truncate_private(prot, x):
 
 def _truncate_masked(prot, x):
     assert isinstance(x, PondMaskedTensor)
-    prot.truncate(x.unmasked)
+    return prot.truncate(x.unmasked)
 
 #
 # reveal helpers
@@ -940,7 +929,7 @@ def _add_public_private(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
 
-    x_on_0, x_on_1 = x.unwrapped
+    x_on_0, _ = x.unwrapped
     y0, y1 = y.unwrapped
 
     with tf.name_scope('add'):
@@ -964,7 +953,7 @@ def _add_private_public(prot, x, y):
     assert isinstance(y, PondPublicTensor), type(y)
 
     x0, x1 = x.unwrapped
-    y_on_0, y_on_1 = y.unwrapped
+    y_on_0, _ = y.unwrapped
 
     with tf.name_scope('add'):
 
@@ -1041,7 +1030,7 @@ def _sub_public_private(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
 
-    x_on_0, x_on_1 = x.unwrapped
+    x_on_0, _ = x.unwrapped
     y0, y1 = y.unwrapped
 
     with tf.name_scope('sub'):
@@ -1065,7 +1054,7 @@ def _sub_private_public(prot, x, y):
     assert isinstance(y, PondPublicTensor), type(y)
 
     x0, x1 = x.unwrapped
-    y_on_0, y_on_1 = y.unwrapped
+    y_on_0, _ = y.unwrapped
 
     with tf.name_scope('sub'):
 

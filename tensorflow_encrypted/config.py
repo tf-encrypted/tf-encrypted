@@ -4,7 +4,7 @@ from collections import defaultdict
 import tensorflow as tf
 from tensorflow.python.client import timeline
 
-from .protocol import Player
+from . import Player
 
 class LocalConfig(object):
     """

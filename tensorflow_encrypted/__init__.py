@@ -1,19 +1,21 @@
 from __future__ import absolute_import
 
-from .inputs import InputProvider, NumpyInputProvider
-from . import estimator
-from . import layer
-from . import protocol
+class Player(object):
+    def __init__(self, device_name: str) -> None:
+        self.device_name = device_name
+
 from .tensor import *
 from .config import LocalConfig, RemoteConfig
+from . import io
+from . import protocol
+from . import estimator
+from . import layer
 
-
-__all__ = [
-    'InputProvider',
-    'NumpyInputProvider',
-    'LocalConfig',
-    'RemoteConfig',
-    'estimator',
-    'layer',
-    'protocol'
-]
+# __all__ = [
+#     'InputProvider',
+#     'LocalConfig',
+#     'RemoteConfig',
+#     'estimator',
+#     'layer',
+#     'protocol'
+# ]
