@@ -50,6 +50,8 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
+            python examples/int100.py
+            python examples/inputs.py
             python examples/matmul.py
 
       - store_artifacts:
