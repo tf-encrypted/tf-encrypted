@@ -18,11 +18,14 @@ class Dense(core.Layer):
         self.weights = None
         self.bias = None
 
-    def initialize(self):
+    def initialize(self, initial_weights=None):
         initial_size = (self.in_features, self.out_features)
-        initial_weights = np.random.normal(scale=0.1, size=initial_size)
+
+        if initial_weights is None:
+            initial_weights = np.random.normal(scale=0.1, size=initial_size)
+
         self.weights = self.prot.define_private_variable(initial_weights)
-        initial_bias = np.zeros(1, self.num_nodes)
+        initial_bias = np.zeros((1, self.out_features))
         self.bias = self.prot.define_private_variable(initial_bias)
 
     def forward(self, x):

@@ -5,9 +5,13 @@ import tensorflow_encrypted as tfe
 from tensorflow_encrypted.protocol import Pond
 from tensorflow_encrypted.layers import Conv2D
 
-config = tfe.LocalConfig(3)
+config = tfe.LocalConfig([
+    'server0',
+    'server1',
+    'crypto_producer'
+])
 
-with Pond(*config.players) as prot:
+with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
 
     a = prot.define_constant(np.array([4, 3, 2, 1]).reshape(2, 2))
     b = prot.define_constant(np.array([4, 3, 2, 1]).reshape(2, 2))

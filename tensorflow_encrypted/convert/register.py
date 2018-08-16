@@ -39,9 +39,22 @@ def matmul(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
     a = output_lookup[inputs[0]]
     b = output_lookup[inputs[1]]
 
-    layer = Dense(b.shape[0], b.shape[1])
+    tensor = b.attr["value"].tensor
 
-    layer.initialize()
+    b_shape = [i.size for i in tensor.tensor_shape.dim]
+
+    layer = Dense(b_shape[0], b_shape[1])
+
+    dtype = tensor.dtype
+
+    if dtype == tf.float32:
+        nums = array.array('f', tensor.tensor_content)
+    elif dtype == tf.float64:
+        nums = array.array('d', tensor.tensor_content)
+    else:
+        raise TypeError("Unsupported dtype for weights")
+
+    layer.initialize(initial_weights=np.array(nums).reshape(b_shape))
 
     return layer.forward(a)
 
