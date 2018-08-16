@@ -3,9 +3,13 @@ import tensorflow_encrypted as tfe
 
 from tensorflow_encrypted.protocol import Pond
 
-config = tfe.LocalConfig(3)
+config = tfe.LocalConfig([
+    'server0',
+    'server1',
+    'crypto_producer'
+])
 
-prot = Pond(*config.players)
+prot = Pond(*config.get_players('server0, server1, crypto_producer'))
 
 # parameters
 np_w = np.array([.1, .2, .3, .4]).reshape(2, 2)

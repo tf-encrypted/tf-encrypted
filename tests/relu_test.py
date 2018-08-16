@@ -10,10 +10,14 @@ class TestRelu(unittest.TestCase):
     def test_forward(self):
         input_relu = np.array([-1.0, -0.5, 0.5, 3.0]).astype(np.float32)
 
-        config = tfe.LocalConfig(3)
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer'
+        ])
 
         # relu pond
-        with tfe.protocol.Pond(*config.players) as prot:
+        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
 
             relu_input = prot.define_private_variable(input_relu)
             relu_layer = Relu()

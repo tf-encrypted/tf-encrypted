@@ -1,16 +1,14 @@
 import sys
 import tensorflow_encrypted as tfe
 
-task_index = int(sys.argv[1])
+player_name = str(sys.argv[1])
 
-config = tfe.RemoteConfig(
-    player_hosts=[
-        'localhost:4440',
-        'localhost:4441',
-        'localhost:4442'
-    ]
-)
+config = tfe.RemoteConfig({
+    'server0': 'localhost:4440',
+    'server1': 'localhost:4441',
+    'crypto_producer': 'localhost:4442'
+})
 
-server = config.server(task_index)
+server = config.server(player_name)
 server.start()
 server.join()
