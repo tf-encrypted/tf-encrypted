@@ -776,24 +776,10 @@ class PondPublicVariable(PondPublicTensor):
         self.variable_on_0 = variable_on_0
         self.variable_on_1 = variable_on_1
 
-
-<< << << < Updated upstream
     self.initializer = tf.group(*[var.initializer for var in [variable_on_0, variable_on_1]])
-== == == =
-    self.initializer = tf.group([var.initializer] for var in [variable_on_0, variable_on_1])
->>>>>> > Stashed changes
 
     def __repr__(self):
         return 'PondPublicVariable(shape={})'.format(self.shape)
-
-<< << << < Updated upstream
-== == == =
-    @property
-    def initializer(self):
-        return self.initializer
-
-
->>>>>> > Stashed changes
 
 
 class PondPrivateVariable(PondPrivateTensor):
