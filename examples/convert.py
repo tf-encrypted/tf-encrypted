@@ -48,9 +48,9 @@ config = tfe.LocalConfig(3)
 with tfe.protocol.Pond(*config.players) as prot:
     input = prot.define_private_variable(np.random.normal(size=(1, 1, 28, 28)))
 
-    layers = convert(graph_def, input)
+    x = convert(graph_def, input)
 
     with config.session() as sess:
         tfe.run(sess, prot.initializer, tag='init')
 
-        print(input.reveal().eval(sess, tag='reveal'))
+        print(x.reveal().eval(sess, tag='reveal'))

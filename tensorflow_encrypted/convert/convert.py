@@ -45,4 +45,4 @@ def convert(graph_def: Any, input: PondPrivateTensor) -> Dict[str, Any]:
         reg = register()
         output_vars[output] = reg[node.op](node, inputs, output_vars)
 
-    return output_vars
+    return output_vars[graph_def.node[-1].name]

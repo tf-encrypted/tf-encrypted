@@ -35,16 +35,34 @@ def constant(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any
     return node
 
 
+def matmul(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+    a = output_lookup[inputs[0]]
+    b = output_lookup[inputs[1]]
+
+    layer = Dense(b.shape[0], b.shape[1])
+
+    layer.initialize()
+
+    return layer.forward(a)
+
+
 def conv2d(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
     input = output_lookup[inputs[0]]
     filter = output_lookup[inputs[1]]
 
     shape = [i.size for i in filter.attr["value"].tensor.tensor_shape.dim]
+    dtype = filter.attr["dtype"].type
 
     layer = Conv2D(shape, strides=int(node.attr["strides"].list.i[0]),
                    padding=node.attr["padding"].s.decode('ascii'))
+    print(filter)
 
-    nums = array.array('f', filter.attr["value"].tensor.tensor_content)
+    if dtype == tf.float32:
+        nums = array.array('f', filter.attr["value"].tensor.tensor_content)
+    elif dtype == tf.float64:
+        nums = array.array('d', filter.attr["value"].tensor.tensor_content)
+    else:
+        raise TypeError("Unsupported dtype for weights")
 
     layer.initialize(input.shape, initial_weights=np.array(nums).reshape(shape))
 
@@ -127,14 +145,3 @@ def reshape(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
     shape = output_lookup[inputs[1]]
 
     return tf.reshape(input, shape)
-
-
-def matmul(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    a = output_lookup[inputs[0]]
-    b = output_lookup[inputs[1]]
-
-    layer = Dense(b.shape[0], b.shape[1])
-
-    layer.initialize()
-
-    return layer.forward(a)
