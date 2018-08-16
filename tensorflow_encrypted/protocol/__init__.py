@@ -5,14 +5,7 @@ from types import TracebackType
 # from unencrypted_native import UnencryptedNative
 # from unencrypted_fixedpoint import UnencryptedFixedpoint
 from .pond import Pond
-from .securenn import SecureNN
-# from secureml import SecureML
-
-# from unencrypted_native import UnencryptedNative
-# from unencrypted_fixedpoint import UnencryptedFixedpoint
-from .pond import Pond
-from .securenn import SecureNN
-# from secureml import SecureML
+# from .securenn import SecureNN
 
 from .protocol import Protocol
-from .player import Player
+from ..player import Player
