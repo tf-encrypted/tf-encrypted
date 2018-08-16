@@ -52,10 +52,12 @@ def conv2d(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
 
     shape = [i.size for i in filter.attr["value"].tensor.tensor_shape.dim]
     dtype = filter.attr["dtype"].type
+    format = node.attr["data_format"].s
+    if format == "NHWC":
+        raise AttributeError("Wrong data format for convolution only support NCHW for now")
 
     layer = Conv2D(shape, strides=int(node.attr["strides"].list.i[0]),
                    padding=node.attr["padding"].s.decode('ascii'))
-    print(filter)
 
     if dtype == tf.float32:
         nums = array.array('f', filter.attr["value"].tensor.tensor_content)
