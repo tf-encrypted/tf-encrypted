@@ -78,4 +78,4 @@ class Conv2D(core.Layer):
 
 
 def set_protocol(new_prot):
-    core.Layer.prot = new_prot
+    Layer.prot = new_prot

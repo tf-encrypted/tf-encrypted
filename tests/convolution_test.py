@@ -18,14 +18,10 @@ class TestConv2D(unittest.TestCase):
         filter_shape = (h_filter, w_filter, channels_in, channels_out)
         filter_values = np.random.normal(size=filter_shape)
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
+        config = tfe.LocalConfig(3)
 
         # convolution pond
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond(*config.players) as prot:
         
             conv_input = prot.define_private_variable(input_conv)
             conv_layer = tfe.layer.Conv2D(filter_shape, strides=2)
