@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 
 import numpy as np
 import tensorflow as tf
@@ -27,7 +27,7 @@ assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1
 assert gcd(K, M) == 1
 
 _nodes: Dict = dict()
-_initializers = list()
+_initializers: List = list()
 
 
 class Pond(Protocol):
@@ -38,7 +38,7 @@ class Pond(Protocol):
         self.crypto_producer = crypto_producer
 
     def define_constant(self, value, apply_scaling=True, name=None):
-        assert type(value) in [np.ndarray]
+        assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
 
         v: BackingTensor = _encode(value, apply_scaling)
 
@@ -82,29 +82,54 @@ class Pond(Protocol):
         return PondPrivatePlaceholder(self, pl, x0, x1)
 
     def define_public_variable(self, initial_value, apply_scaling=True, name=None):
-        assert type(initial_value) in [np.ndarray]
-
-        v: BackingTensor = _encode(initial_value, apply_scaling)
+        assert isinstance(initial_value, (np.ndarray, PondPublicTensor)), type(initial_value)
 
         with tf.name_scope('public-var{}'.format('-'+name if name else '')):
 
+            if isinstance(initial_value, np.ndarray):
+                v: BackingTensor = _encode(initial_value, apply_scaling)
+                v_on_0, v_on_1 = v, v
+
+            elif isinstance(initial_value, PondPublicTensor):
+                v_on_0, v_on_1 = initial_value.unwrapped
+
+            else:
+                raise TypeError("Don't know how to turn {} into public variable".format(type(initial_value)))
+
             with tf.device(self.server_0.device_name):
-                x_on_0 = BackingVariable.from_int100(v)
+                x_on_0 = BackingVariable.from_int100(v_on_0)
 
             with tf.device(self.server_1.device_name):
-                x_on_1 = BackingVariable.from_int100(v)
+                x_on_1 = BackingVariable.from_int100(v_on_1)
 
         x = PondPublicVariable(self, x_on_0, x_on_1)
         _initializers.append(x.initializer)
         return x
 
     def define_private_variable(self, initial_value, apply_scaling=True, name=None):
-        assert type(initial_value) in [np.ndarray]
-
-        v: BackingTensor = _encode(initial_value, apply_scaling)
-        v0, v1 = _share(v)
+        assert isinstance(initial_value, (np.ndarray, PondPublicTensor, PondPrivateTensor)), type(initial_value)
 
         with tf.name_scope('private-var{}'.format('-'+name if name else '')):
+
+            if isinstance(initial_value, np.ndarray):
+                v: BackingTensor = _encode(initial_value, apply_scaling)
+                v0, v1 = _share(v)
+
+            elif isinstance(initial_value, PondPublicTensor):
+
+                v_on_0, _ = initial_value.unwrapped
+
+                with tf.device(self.server_0.device_name):
+                    # NOTE[Morten]
+                    # we can alternatively avoid transfer of v1 from server0 and server1
+                    # by having the crypto producer (pre-)generate sharings of zero
+                    v0, v1 = _share(v_on_0)
+
+            elif isinstance(initial_value, PondPrivateTensor):
+                v0, v1 = initial_value.unwrapped
+
+            else:
+                raise TypeError("Don't know how to turn {} into private variable".format(type(initial_value)))
 
             with tf.device(self.server_0.device_name):
                 x0 = BackingVariable.from_int100(v0)
@@ -738,14 +763,10 @@ class PondPublicVariable(PondPublicTensor):
         super(PondPublicVariable, self).__init__(prot, variable_on_0, variable_on_1)
         self.variable_on_0 = variable_on_0
         self.variable_on_1 = variable_on_1
-        self.initializer = tf.group([ var.initializer ] for var in [variable_on_0, variable_on_1])
+        self.initializer = tf.group(*[ var.initializer for var in [variable_on_0, variable_on_1]])
 
     def __repr__(self):
         return 'PondPublicVariable(shape={})'.format(self.shape)
-
-    @property
-    def initializer(self):
-        return self.initializer
 
 class PondPrivateVariable(PondPrivateTensor):
     """
