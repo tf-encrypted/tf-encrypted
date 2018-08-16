@@ -53,7 +53,7 @@ with tfe.protocol.Pond(*config.players[:3]) as prot:
 
     # send output
     prediction_op = prot.define_output(y, prediction_output)
-    
+
     with config.session() as sess:
         tfe.run(sess, tf.global_variables_initializer(), tag='init')
 

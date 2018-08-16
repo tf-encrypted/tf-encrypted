@@ -4,11 +4,18 @@ from collections import defaultdict
 import tensorflow as tf
 import numpy as np
 from tensorflow.python.client import timeline
+from abc import ABC, abstractmethod
 
 from .player import Player
 
 
-class LocalConfig(object):
+class Config(ABC):
+    @abstractmethod
+    def players(self) -> List[Player]:
+        pass
+
+
+class LocalConfig(Config):
     """
     Configure tf-encrypted to use threads on the local CPU
     to simulate the different players.
@@ -48,7 +55,7 @@ class LocalConfig(object):
         )
 
 
-class RemoteConfig(object):
+class RemoteConfig(Config):
     """
     Configure tf-encrypted to use network hosts for the different players.
     """
