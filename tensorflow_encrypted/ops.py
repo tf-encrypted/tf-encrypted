@@ -16,10 +16,10 @@ import numpy as np
 import tensorflow as tf
 
 from .tensor.int100 import Int100Tensor
-from .protocol import get_protocol
+from .protocol.protocol import get_protocol
 
 
-# Idea is to simulate five different players on different devices. 
+# Idea is to simulate five different players on different devices.
 # Hopefully Tensorflow can take care of (optimising?) networking like this.
 
 #
@@ -34,10 +34,10 @@ from .protocol import get_protocol
 # m = [89702869, 78489023, 69973811, 70736797, 79637461]
 # M = 2775323292128270996149412858586749843569 # == prod(m)
 # lambdas = [
-#     875825745388370376486957843033325692983, 
-#     2472444909335399274510299476273538963924, 
-#     394981838173825602426191615931186905822, 
-#     2769522470404025199908727961712750149119, 
+#     875825745388370376486957843033325692983,
+#     2472444909335399274510299476273538963924,
+#     394981838173825602426191615931186905822,
+#     2769522470404025199908727961712750149119,
 #     1813194913083192535116061678809447818860
 # ]
 
@@ -97,7 +97,7 @@ def split(y, num_splits):
         # now shape is (10,3000,2)
         tensors = tf.split(tensors, num_splits, axis=1)
         # now shape is [(10,30,2); 100] if num_splits == 100
-        tensors = [ 
+        tensors = [
             [ tf.reshape(xi, xi.shape[1:]) for xi in tf.split(tensor, 10, axis=0) ]
             for tensor in tensors
         ]
@@ -124,7 +124,7 @@ def split(y, num_splits):
         y = PrivateTensor(y0,y1)
         y_masked = MaskedPrivateTensor(y, b, b0, b1, beta_on_0, beta_on_1)
         tensors.append(y_masked)
-    
+
     return tensors
 
 def scale(x, k, apply_encoding=None):
@@ -273,7 +273,7 @@ def pyfunc_hack(func, x, shape=None):
     def pyfunc_hack_preexit(x):
         assert type(x) in [tuple, list]
         for xi in x: assert type(xi) == np.ndarray
-        # convert all values to floats; at least for small 
+        # convert all values to floats; at least for small
         # ints this should give correct results
         x = [ xi.astype(float) for xi in x ]
         # pack list into single tensor
