@@ -43,9 +43,14 @@ with gfile.FastGFile(model_filename, 'rb') as f:
     graph_def = tf.GraphDef()
     graph_def.ParseFromString(f.read())
 
-config = tfe.LocalConfig(3)
+config = tfe.LocalConfig([
+    'server0',
+    'server1',
+    'crypto_producer'
+])
 
-with tfe.protocol.Pond(*config.players) as prot:
+with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+
     input = prot.define_private_variable(np.random.normal(size=(1, 1, 28, 28)))
 
     x = convert(graph_def, input)
