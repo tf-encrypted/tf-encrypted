@@ -1,5 +1,7 @@
 from typing import Dict, Tuple, List, Any
 from .register import register
+from ..layers import Layer
+from ..protocol.pond import PondPrivateTensor
 
 
 def node_name(n: str) -> str:
@@ -24,13 +26,21 @@ def extract_graph_summary(graph_def: Any) -> Tuple[Dict[str, List[str]],
     return name_to_input_name, name_to_node
 
 
-def convert(graph_def: Any) -> Dict[str, Any]:
+def convert(graph_def: Any, input: PondPrivateTensor) -> Dict[str, Any]:
     name_to_input_name, name_to_node = extract_graph_summary(graph_def)
 
     output_vars: Dict[str, Any] = {}
 
+    if graph_def.node[0].op != "Placeholder":
+        raise AttributeError("First node in graph must be placeholder for now")
+
     for output, inputs in name_to_input_name.items():
         node = name_to_node[output]
+
+        # just take the input passed into this function for now
+        if node.op == "Placeholder":
+            output_vars[output] = input
+            continue
 
         reg = register()
         output_vars[output] = reg[node.op](node, inputs, output_vars)

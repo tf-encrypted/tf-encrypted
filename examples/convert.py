@@ -6,19 +6,22 @@ from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 from tensorflow_encrypted.convert import convert
 import numpy as np
+import tensorflow_encrypted as tfe
 
 import os
 
 
-def export_vgg16():
-    vgg16 = tf.keras.applications.VGG16()
+def export_cnn():
+    input = tf.placeholder(tf.float32, shape=(1, 1, 28, 28))
+    filter = tf.constant(np.ones((5, 5, 1, 16)), dtype=tf.float32)
+    x = tf.nn.conv2d(input, filter, (1, 1, 1, 1), "SAME", data_format='NCHW')
+    x = tf.nn.sigmoid(x)
+    x = tf.nn.relu(x)
 
     sess = K.backend.get_session()
 
-    pred = [None]
-    pred_node_names = [""]
-    pred_node_names[0] = "output"
-    pred[0] = tf.identity(vgg16.outputs[0], name=pred_node_names[0])
+    pred_node_names = ["output"]
+    pred = [tf.identity(x, name=pred_node_names[0])]
 
     constant_graph = graph_util.convert_variables_to_constants(sess,
                                                                sess.graph.as_graph_def(),
@@ -26,28 +29,28 @@ def export_vgg16():
 
     frozen = graph_util.remove_training_nodes(constant_graph)
 
-    output = "vgg16.pb"
+    output = "cnn.pb"
     graph_io.write_graph(frozen, ".", output, as_text=False)
     print('saved the frozen graph (ready for inference) at: ', output)
 
 
-export_vgg16()
+export_cnn()
 
 tf.reset_default_graph()
 
-model_filename = 'vgg16.pb'
+model_filename = 'cnn.pb'
 with gfile.FastGFile(model_filename, 'rb') as f:
     graph_def = tf.GraphDef()
     graph_def.ParseFromString(f.read())
 
-output_vars = convert(graph_def)
+config = tfe.LocalConfig(3)
 
-input = np.ones((1, 224, 224, 3))
+with tfe.protocol.Pond(*config.players) as prot:
+    input = prot.define_private_variable(np.random.normal(size=(1, 1, 28, 28)))
 
-with tf.Session() as sess:
-    pred = sess.run(output_vars[graph_def.node[-1].name],
-                    feed_dict={output_vars[graph_def.node[0].name]: input})
+    layers = convert(graph_def, input)
 
-    print(pred)
+    with config.session() as sess:
+        tfe.run(sess, prot.initializer, tag='init')
 
-os.remove('vgg16.pb')
+        print(input.reveal().eval(sess, tag='reveal'))

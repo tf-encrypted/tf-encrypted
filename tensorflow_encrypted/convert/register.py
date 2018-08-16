@@ -1,6 +1,9 @@
 import tensorflow as tf
 
 from typing import Any, Dict, List
+from ..layers import Conv2D, Relu, Sigmoid, Dense
+import numpy as np
+import array
 
 
 def register() -> Dict[str, Any]:
@@ -9,14 +12,14 @@ def register() -> Dict[str, Any]:
         'Const': constant,
         'Conv2D': conv2d,
         'Relu': relu,
-        'BiasAdd': bias_add,
-        'MaxPool': maxpool,
-        'Shape': shape,
-        'StridedSlice': strided_slice,
-        'Pack': pack,
-        'Reshape': reshape,
+        'Sigmoid': sigmoid,
         'MatMul': matmul,
-        'Softmax': softmax,
+        # 'Shape': shape,
+        # 'StridedSlice': strided_slice,
+        # 'Pack': pack,
+        # 'Reshape': reshape,
+        # 'BiasAdd': bias_add,
+        # 'MaxPool': maxpool,
     }
 
     return reg
@@ -28,24 +31,41 @@ def placeholder(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> 
 
 
 def constant(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    return tf.constant(node.attr["value"].tensor)
+    # need to able to access the underlying weights return the node
+    return node
 
 
 def conv2d(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
     input = output_lookup[inputs[0]]
     filter = output_lookup[inputs[1]]
 
-    return tf.nn.conv2d(input, filter, list(node.attr["strides"].list.i),
-                        node.attr["padding"].s)
+    shape = [i.size for i in filter.attr["value"].tensor.tensor_shape.dim]
+
+    layer = Conv2D(shape, strides=int(node.attr["strides"].list.i[0]),
+                   padding=node.attr["padding"].s.decode('ascii'))
+
+    nums = array.array('f', filter.attr["value"].tensor.tensor_content)
+
+    layer.initialize(input.shape, initial_weights=np.array(nums).reshape(shape))
+
+    return layer.forward(input)
 
 
 def relu(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
     input = output_lookup[inputs[0]]
 
-    return tf.nn.relu(input)
+    return Relu().forward(input)
+
+
+def sigmoid(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+    input = output_lookup[inputs[0]]
+
+    return Sigmoid().forward(input)
 
 
 def bias_add(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+    raise NotImplemented
+
     input = output_lookup[inputs[0]]
     bias = output_lookup[inputs[1]]
 
@@ -53,6 +73,8 @@ def bias_add(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any
 
 
 def maxpool(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+    raise NotImplemented
+
     input = output_lookup[inputs[0]]
 
     return tf.nn.max_pool(input, list(node.attr["ksize"].list.i),
@@ -61,12 +83,16 @@ def maxpool(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
 
 
 def shape(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+    raise NotImplemented
+
     input = output_lookup[inputs[0]]
 
     return tf.shape(input, out_type=node.attr["out_type"].type)
 
 
 def strided_slice(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+    raise NotImplemented
+
     input = output_lookup[inputs[0]]
     begin = output_lookup[inputs[1]]
     end = output_lookup[inputs[2]]
@@ -86,6 +112,8 @@ def strided_slice(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -
 
 
 def pack(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+    raise NotImplemented
+
     input1 = output_lookup[inputs[0]]
     input2 = output_lookup[inputs[1]]
 
@@ -93,6 +121,8 @@ def pack(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
 
 
 def reshape(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+    raise NotImplemented
+
     input = output_lookup[inputs[0]]
     shape = output_lookup[inputs[1]]
 
@@ -103,10 +133,8 @@ def matmul(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
     a = output_lookup[inputs[0]]
     b = output_lookup[inputs[1]]
 
-    return tf.matmul(a, b)  # consider transpose
+    layer = Dense(b.shape[0], b.shape[1])
 
+    layer.initialize()
 
-def softmax(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    logits = output_lookup[inputs[0]]
-
-    return tf.nn.softmax(logits)  # check axis?
+    return layer.forward(a)
