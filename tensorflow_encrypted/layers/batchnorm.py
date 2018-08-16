@@ -5,12 +5,12 @@ from . import core
 
 class Batchnorm(core.Layer):
     def __init__(self, mean: np.array, variance: np.array, scale: np.array,
-                 offset: np.array, variance_epsilone: float = 1e-8) -> None:
+                 offset: np.array, variance_epsilon: float = 1e-8) -> None:
         self.mean = mean
         self.variance = variance
         self.scale = scale
         self.offset = offset
-        self.variance_epsilone = variance_epsilone
+        self.variance_epsilon = variance_epsilon
         self.denom = None
 
     def initialize(self, input_shape: tuple) -> None:
@@ -30,7 +30,7 @@ class Batchnorm(core.Layer):
             self.scale = self.scale.reshape(1, C, 1, 1)
             self.offset = self.offset.reshape(1, C, 1, 1)
 
-        denomtemp = 1.0 / np.sqrt(self.variance + self.variance_epsilone)
+        denomtemp = 1.0 / np.sqrt(self.variance + self.variance_epsilon)
 
         self.denom = self.prot.define_public_variable(denomtemp)
         self.mean = self.prot.define_public_variable(self.mean)
