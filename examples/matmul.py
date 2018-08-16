@@ -20,7 +20,7 @@ with tfe.protocol.Pond(*config.players) as prot:
     # x = prot.define_private_variable(np.zeros((1,100)))
 
     y = w
-    for _ in range(40):
+    for _ in range(5):
         y = y.dot(y)
 
     with config.session() as sess:
