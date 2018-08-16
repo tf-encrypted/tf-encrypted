@@ -2,7 +2,11 @@ import numpy as np
 import tensorflow_encrypted as tfe
 
 # use local config (for development/debugging)
-config = tfe.LocalConfig(3)
+config = tfe.LocalConfig([
+    'server0',
+    'server1',
+    'crypto_producer'
+])
 
 # use remote config
 # config = tfe.RemoteConfig([
@@ -14,7 +18,7 @@ config = tfe.LocalConfig(3)
 # use remote config from cluster file
 # config = tfe.RemoteConfig.from_file('cluster.json')
 
-with tfe.protocol.Pond(*config.players) as prot:
+with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
 
     w = prot.define_private_variable(np.zeros((100, 100)))
     # x = prot.define_private_variable(np.zeros((1,100)))
