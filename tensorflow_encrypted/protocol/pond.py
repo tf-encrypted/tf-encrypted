@@ -38,7 +38,7 @@ class Pond(Protocol):
         self.server_1 = server_1
         self.crypto_producer = crypto_producer
 
-    def define_constant(self, value: Union[np.ndarray, tf.Tensor], apply_scaling: bool=True, name: Optional[str]=None) -> PondConstant:
+    def define_constant(self, value: Union[np.ndarray, tf.Tensor], apply_scaling: bool=True, name: Optional[str]=None) -> 'PondConstant':
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
 
         if isinstance(value, tf.Tensor):
