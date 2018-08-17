@@ -120,8 +120,12 @@ class Int100Tensor(object):
     def transpose(self, *axes):
         return _transpose(self, *axes)
 
+    def strided_slice(self, args, kwargs):
+        return _strided_slice(self, args, kwargs)
+
     def reshape(self, *axes):
         return _reshape(self, *axes)
+
 
 def _lift(x):
     # TODO[Morten] support other types of `x`
@@ -181,23 +185,34 @@ def _conv2d(x, y, strides, padding):
 
     return out
 
+
 def _mod(x, k):
     y_backing = _crt_mod(x.backing, k)
     return Int100Tensor.from_decomposed(y_backing)
+
 
 def _sample_uniform(shape):
     backing = _crt_sample_uniform(shape)
     return Int100Tensor.from_decomposed(backing)
 
+
 def _transpose(x, *axes):
     assert isinstance(x, Int100Tensor), type(x)
-    backing = [ tf.transpose(xi, axes) for xi in x.backing ]
+    backing = [tf.transpose(xi, axes) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
+
+
+def _strided_slice(x, args, kwargs):
+    assert isinstance(x, Int100Tensor), type(x)
+    backing = [tf.strided_slice(xi, *args, **kwargs) for xi in x.backing]
+    return Int100Tensor.from_decomposed(backing)
+
 
 def _reshape(x, *axes):
     assert isinstance(x, Int100Tensor), type(x)
-    backing = [ tf.reshape(xi, axes) for xi in x.backing ]
+    backing = [tf.reshape(xi, axes) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
+
 
 class Int100Constant(Int100Tensor):
 

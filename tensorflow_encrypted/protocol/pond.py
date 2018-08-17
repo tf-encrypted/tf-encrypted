@@ -434,6 +434,29 @@ class Pond(Protocol):
 
         return x_t
 
+    # see https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on
+    # the arguments
+    def strided_slice(self, x, *args, **kwargs):
+        node_key = ('strided_slice', x)
+        x_t = _nodes.get(node_key, None)
+
+        if x_t is not None:
+            return x_t
+
+        if isinstance(x, PondPublicTensor):
+            x_t = _strided_slice_public(self, x, args, kwargs)
+        elif isinstance(x, PondPrivateTensor):
+            x_t = _strided_slice_private(self, x, args, kwargs)
+        elif isinstance(x, PondMaskedTensor):
+            x_t = _strided_slice_masked(self, x, args, kwargs)
+            _nodes[('strided_slice', x.unmasked)] = x_t.unmasked
+        else:
+            raise TypeError("Don't know how to do a strided slice {}".format(type(x)))
+
+        _nodes[node_key] = x_t
+
+        return x_t
+
     def sigmoid(self, x):
         assert isinstance(x, PondTensor), type(x)
 
@@ -1573,8 +1596,70 @@ def _transpose_masked(prot, x_masked):
     return x_t
 
 #
+# strided slice helpers
+#
+
+
+def _strided_slice_public(prot, x, args, kwargs):
+    assert isinstance(x, PondPublicTensor)
+
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope('strided_slice'):
+
+        with tf.device(prot.server_0.device_name):
+            x_on_0_t = x_on_0.strided_slice(args, kwargs)
+
+        with tf.device(prot.server_1.device_name):
+            x_on_1_t = x_on_1.strided_slice(args, kwargs)
+
+    x_t = PondPublicTensor(prot, x_on_0_t, x_on_1_t)
+    return x_t
+
+
+def _strided_slice_private(prot, x, args, kwargs):
+    assert isinstance(x, PondPrivateTensor)
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope('strided_slice'):
+
+        with tf.device(prot.server_0.device_name):
+            x0_t = x0.strided_slice(args, kwargs)
+
+        with tf.device(prot.server_1.device_name):
+            x1_t = x1.strided_slice(args, kwargs)
+
+    x_t = PondPrivateTensor(prot, x0_t, x1_t)
+    return x_t
+
+
+def _strided_slice_masked(prot, x_masked, args, kwargs):
+    assert isinstance(x_masked, PondMaskedTensor)
+
+    a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
+
+    with tf.name_scope('strided_slice'):
+
+        with tf.device(prot.crypto_producer.device_name):
+            a_t = a.strided_slice()
+
+        with tf.device(prot.server_0.device_name):
+            a0_t = a0.strided_slice()
+            alpha_on_0_t = alpha_on_0.strided_slice(args, kwargs)
+
+        with tf.device(prot.server_1.device_name):
+            a1_t = a1.strided_slice()
+            alpha_on_1_t = alpha_on_1.strided_slice(args, kwargs)
+
+    x_unmasked_t = prot.strided_slice(x_masked.unmasked, args, kwargs)
+    x_t = PondMaskedTensor(prot, x_unmasked_t, a_t, a0_t, a1_t, alpha_on_0_t, alpha_on_1_t)
+    return x_t
+
+#
 # mask helpers
 #
+
 
 def _mask_private(prot, x):
     assert isinstance(x, PondPrivateTensor)
