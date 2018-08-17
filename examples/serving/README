@@ -1,0 +1,29 @@
+# TF Serving
+
+To use TF serving you need:
+- a `saved_model`
+- a `ModelServer`
+
+To obtain a distributed `saved_model`:
+`python examples/serving/export_distributed_model.py`
+**This is actually not working, if you look into the generated `pbtxt` file, you'll see that the devices are not stored**
+
+To launch the cluster, create 3 terminals and launch those 3 commands:
+`python examples/serving/servers.py server0`
+`python examples/serving/servers.py server1`
+`python examples/serving/servers.py crypto_producer`
+`python examples/serving/servers.py weights_provider`
+`python examples/serving/servers.py prediction_client`
+
+To launch a ModelServer you can use docker:
+`docker run -p 8500:8500 --mount type=bind,source=$(pwd)/models/mnist,target=/models/mnist -e MODEL_NAME=mnist -t tensorflow/serving &`
+
+Finally you can query the server:
+`python examples/serving/do_inference.py`
+
+## TODO:
+- Find a way to keep the different server devices inside the protobuf file
+- Find a way to compile TF Serving (this will be helpful when we want to control TF itself, for example securing gRPC, see [TF security.md](https://github.com/tensorflow/tensorflow/blob/master/SECURITY.md))
+- Make an actual test locally using a remote config
+- Make an actual test using actual remote servers
+- Finish the TODOs in the different files
