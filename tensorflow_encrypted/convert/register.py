@@ -14,7 +14,7 @@ def register() -> Dict[str, Any]:
         'Relu': relu,
         'Sigmoid': sigmoid,
         'MatMul': matmul,
-        # 'Shape': shape,
+        'Shape': shape,
         # 'StridedSlice': strided_slice,
         # 'Pack': pack,
         # 'Reshape': reshape,
@@ -97,7 +97,7 @@ def sigmoid(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
 
 
 def bias_add(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplemented
+    raise NotImplementedError
 
     input = output_lookup[inputs[0]]
     bias = output_lookup[inputs[1]]
@@ -106,7 +106,7 @@ def bias_add(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any
 
 
 def maxpool(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplemented
+    raise NotImplementedError
 
     input = output_lookup[inputs[0]]
 
@@ -116,15 +116,13 @@ def maxpool(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
 
 
 def shape(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplemented
-
     input = output_lookup[inputs[0]]
 
-    return tf.shape(input, out_type=node.attr["out_type"].type)
+    return input.shape
 
 
 def strided_slice(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplemented
+    raise NotImplementedError
 
     input = output_lookup[inputs[0]]
     begin = output_lookup[inputs[1]]
@@ -145,7 +143,7 @@ def strided_slice(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -
 
 
 def pack(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplemented
+    raise NotImplementedError
 
     input1 = output_lookup[inputs[0]]
     input2 = output_lookup[inputs[1]]
@@ -154,7 +152,7 @@ def pack(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
 
 
 def reshape(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplemented
+    raise NotImplementedError
 
     input = output_lookup[inputs[0]]
     shape = output_lookup[inputs[1]]
