@@ -41,6 +41,9 @@ class Pond(Protocol):
     def define_constant(self, value: Union[np.ndarray, tf.Tensor], apply_scaling: bool=True, name: Optional[str]=None) -> PondConstant:
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
 
+        if isinstance(value, tf.Tensor):
+            assert value.shape.is_fully_defined(), "Shape of input is not fully defined"
+
         v: BackingTensor = _encode(value, apply_scaling)
 
         with tf.name_scope('constant{}'.format('-'+name if name else '')):
@@ -149,6 +152,8 @@ class Pond(Protocol):
             with tf.device(provider.player.device_name):
 
                 v = provider.provide_input()
+                assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', provider.player.name)
+
                 v = _encode(v, apply_scaling)
                 x_on_0 = v
                 x_on_1 = v
@@ -163,6 +168,8 @@ class Pond(Protocol):
             with tf.device(provider.player.device_name):
 
                 v = provider.provide_input()
+                assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', provider.player.name)
+
                 v = _encode(v, apply_scaling)
                 x0, x1 = _share(v)
 

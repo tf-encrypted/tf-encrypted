@@ -1,61 +1,90 @@
+import sys
+
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-config = tfe.LocalConfig(5)
-# config = tfe.RemoteConfig(
-#     player_hosts=[
-#         'localhost:4440',
-#         'localhost:4441',
-#         'localhost:4442'
-#     ]
-# )
+config = tfe.LocalConfig([
+    'server0',
+    'server1',
+    'crypto_producer',
+    'weights_provider',
+    'prediction_client'
+])
 
-class WeightsInputProvider(tfe.io.InputProvider):
+# config = tfe.RemoteConfig([
+#     ('server0', 'localhost:4440'),
+#     ('server1', 'localhost:4441'),
+#     ('crypto_producer', 'localhost:4442'),
+#     ('weights_provider', 'localhost:4443'),
+#     ('prediction_client', 'localhost:4444')
+# ])
 
-    def provide_input(self) -> tf.Tensor:
-        raw_weights = np.array([1, 2, 3, 4]).reshape((2,2))
-        return tf.constant(raw_weights)
+if len(sys.argv) > 1:
 
-class PredictionInputProvider(tfe.io.InputProvider):
+    #
+    # assume we're running as a server
+    #
 
-    def provide_input(self) -> tf.Tensor:
-        return tf.constant([1, 2, 3, 4], shape=(2,2), dtype=tf.float32)
+    player_name = str(sys.argv[1])
 
-class PredictionOutputReceiver(tfe.io.OutputReceiver):
+    server = config.server(player_name)
+    server.start()
+    server.join()
 
-    def receive_output(self, tensor: tf.Tensor) -> tf.Operation:
-        return tf.Print(tensor, [tensor])
+else:
 
-weights_input = WeightsInputProvider(config.players[3])
-prediction_input = PredictionInputProvider(config.players[3])
-prediction_output = PredictionOutputReceiver(config.players[4])
+    #
+    # assume we're running as master
+    #
 
-with tfe.protocol.Pond(*config.players[:3]) as prot:
+    class WeightsInputProvider(tfe.io.InputProvider):
 
-    # # treat weights as private
-    # initial_w = prot.define_private_input(weights_input)
-    # w = prot.define_private_variable(initial_w)
+        def provide_input(self) -> tf.Tensor:
+            raw_w = np.array([5, 5, 5, 5]).reshape((2,2))
+            w = tf.constant(raw_w)
+            return tf.Print(w, [w])
 
-    # treat weights as private, but initial value as public
-    # initial_w = prot.define_public_input(weights_input)
-    # w = prot.define_private_variable(initial_w)
+    class PredictionInputProvider(tfe.io.InputProvider):
 
-    # treat weights as public
-    initial_w = prot.define_public_input(weights_input)
-    w = prot.define_public_variable(initial_w)
+        def provide_input(self) -> tf.Tensor:
+            x = tf.constant([1, 2, 3, 4], shape=(2,2), dtype=tf.float32)
+            return tf.Print(x, [x])
 
-    # load input for prediction
-    x = prot.define_private_input(prediction_input)
+    class PredictionOutputReceiver(tfe.io.OutputReceiver):
 
-    # compute prediction
-    y = x.dot(w)
+        def receive_output(self, tensor: tf.Tensor) -> tf.Operation:
+            return tf.Print(tensor, [tensor])
 
-    # send output
-    prediction_op = prot.define_output(y, prediction_output)
+    weights_input = WeightsInputProvider(config.get_player('weights_provider'))
+    prediction_input = PredictionInputProvider(config.get_player('prediction_client'))
+    prediction_output = PredictionOutputReceiver(config.get_player('prediction_client'))
 
-    with config.session() as sess:
-        tfe.run(sess, tf.global_variables_initializer(), tag='init')
+    with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
 
-        for _ in range(5):
-            tfe.run(sess, prediction_op, tag='prediction')
+        # # treat weights as private
+        # initial_w = prot.define_private_input(weights_input)
+        # w = prot.define_private_variable(initial_w)
+
+        # treat weights as private, but initial value as public
+        # initial_w = prot.define_public_input(weights_input)
+        # w = prot.define_private_variable(initial_w)
+
+        # treat weights as public
+        initial_w = prot.define_public_input(weights_input)
+        w = prot.define_public_variable(initial_w)
+
+        # load input for prediction
+        x = prot.define_private_input(prediction_input)
+
+        # compute prediction
+        y = x.dot(w)
+
+        # send output
+        prediction_op = prot.define_output(y, prediction_output)
+
+        with config.session() as sess:
+            tfe.run(sess, tf.global_variables_initializer(), tag='init')
+
+            for _ in range(5):
+                tfe.run(sess, prediction_op, tag='prediction')

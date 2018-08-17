@@ -22,24 +22,34 @@ class LocalConfig(Config):
     Intended mostly for development/debugging use.
     """
 
-    def __init__(self, num_players: int, job_name: str='localhost') -> None:
-        self.num_players = num_players
-        self.job_name = job_name
-
-    @property
-    def players(self) -> List[Player]:
-        return [
-            Player(
-                '/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'.format(
-                    job_name=self.job_name,
-                    # swift by one to allow for master to be `CPU:0`
+    def __init__(self, player_names:List[str], job_name:str='localhost') -> None:
+        self._players = {
+            name: Player(
+                name=name,
+                index=index+1,
+                device_name='/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'.format(
+                    job_name=job_name,
+                    # shift by one to allow for master to be `CPU:0`
                     cpu_id=index+1
                 )
             )
-            for index in range(self.num_players)
-        ]
+            for index, name in enumerate(player_names)
+        }
 
-    def session(self, log_device_placement: bool=False) -> tf.Session:
+    @property
+    def players(self) -> List[Player]:
+        return self._players.values()
+
+    def get_player(self, name:str) -> Player:
+        return self._players[name]
+
+    def get_players(self, names:Union[List[str], str]) -> List[Player]:
+        if isinstance(names, str):
+            names = [name.strip() for name in names.split(',')]
+        assert isinstance(names, list)
+        return [player for name, player in self._players.items() if name in names]
+
+    def session(self, log_device_placement:bool=False) -> tf.Session:
         # reserve one CPU for the player executing the script, to avoid
         # default pinning of operations to one of the actual players
         return tf.Session(
@@ -48,7 +58,7 @@ class LocalConfig(Config):
             config=tf.ConfigProto(
                 log_device_placement=log_device_placement,
                 allow_soft_placement=False,
-                device_count={"CPU": self.num_players + 1},
+                device_count={"CPU": len(self._players) + 1},
                 inter_op_parallelism_threads=1,
                 intra_op_parallelism_threads=1
             )
@@ -60,58 +70,72 @@ class RemoteConfig(Config):
     Configure tf-encrypted to use network hosts for the different players.
     """
 
-    def __init__(self, player_hosts: List[str],
+    def __init__(self,
+                 player_hostmap: Union[List[Tuple[str,str]], Dict[str, str]],
                  master_host: Optional[str]=None,
                  job_name: str='tfe') -> None:
 
-        self.player_hosts = player_hosts
-        self.master_host = master_host
-        self.job_name = job_name
+        self._job_name = job_name
+
+        if isinstance(player_hostmap, dict):
+            # ensure consistent ordering of the players across all instances
+            player_hostmap = list(sorted(player_hostmap.items()))
+
+        player_names, player_hosts = zip(*player_hostmap)
+
+        if master_host is None:
+            # use first player as master so don't add any
+            self._offset = 0
+            self._hostmap = player_hosts
+            self._target = 'grpc://{}'.format(player_hosts[0])
+        else:
+            # add explicit master to cluster as first host
+            self._offset = 1
+            self._hostmap = (master_host,) + player_hosts
+            self._target = 'grpc://{}'.format(master_host)
+
+        self._players = {
+            name: Player(
+                name=name,
+                index=index+self._offset,
+                device_name='/job:{job_name}/replica:0/task:{task_id}/cpu:0'.format(
+                    job_name=job_name,
+                    task_id=index+self._offset
+                ),
+                host=host
+            )
+            for index, (name, host) in enumerate(zip(player_names, player_hosts))
+        }
 
     @property
     def players(self) -> List[Player]:
-        if self.master_host is None:
-            offset = 0
-        else:
-            offset = 1
+        return self._players.values()
 
-        return [
-            Player('/job:{job_name}/replica:0/task:{task_id}/cpu:0'.format(
-                job_name=self.job_name,
-                task_id=index+offset
-            ))
-            for index in range(len(self.player_hosts))
-        ]
+    def get_player(self, name:str) -> Player:
+        return self._players[name]
 
-    def server(self, player_index: int) -> tf.train.Server:
-        if self.master_host is None:
-            # use first player as master so don't add any
-            cluster = tf.train.ClusterSpec({self.job_name: self.player_hosts})
-            return tf.train.Server(cluster, job_name=self.job_name,
-                                   task_index=player_index)
-        else:
-            # add explicit master to cluster
-            cluster = tf.train.ClusterSpec(
-                {self.job_name: [self.master_host] + self.player_hosts}
-            )
-            return tf.train.Server(cluster, job_name=self.job_name,
-                                   task_index=player_index+1)
+    def get_players(self, names:Union[List[str], str]) -> List[Player]:
+        if isinstance(names, str):
+            names = [name.strip() for name in names.split(',')]
+        assert isinstance(names, list)
+        return [player for name, player in self._players.items() if name in names]
 
-    def session(self, log_device_placement: bool=False) -> tf.Session:
-        if self.master_host is None:
-            # use first player as master
-            target = 'grpc://{}'.format(self.player_hosts[0])
-        else:
-            # use specified master
-            target = 'grpc://{}'.format(self.master_host)
+    def server(self, name:str) -> tf.train.Server:
+        player = self.get_player(name)
+        cluster = tf.train.ClusterSpec({self._job_name: self._hostmap})
+        return tf.train.Server(
+            cluster,
+            job_name=self._job_name,
+            task_index=player.index
+        )
 
+    def session(self, log_device_placement:bool=False) -> tf.Session:
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
             allow_soft_placement=False,
         )
-
         return tf.Session(
-            target,
+            self._target,
             config=config
         )
 
