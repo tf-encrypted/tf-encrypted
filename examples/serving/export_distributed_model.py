@@ -26,13 +26,13 @@ while os.path.exists(export_path):
 #     'weights_provider',
 #     'prediction_client',
 # ])
-config = tfe.RemoteConfig([
-    ('server0', '0.0.0.0:4440'),
-    ('server1', '0.0.0.0:4441'),
-    ('crypto_producer', '0.0.0.0:4442'),
-    ('weights_provider', '0.0.0.0:4443'),
-    ('prediction_client', '0.0.0.0:4444'),
-])
+config = tfe.RemoteConfig({
+    'server0': '0.0.0.0:4440',
+    'server1': '0.0.0.0:4441',
+    'crypto_producer': '0.0.0.0:4442',
+    'weights_provider': '0.0.0.0:4443',
+    'prediction_client': '0.0.0.0:4444',
+})
 
 np_input = np.array([.1, -.1, .2, -.2]).reshape(2, 2)
 np_w = np.array([.1, .2, .3, .4]).reshape(2, 2)
