@@ -6,15 +6,15 @@ import tensorflow as tf
 from .helpers import inverse, prod, log2
 
 def gen_crt_decompose(m):
-    
+
     def crt_decompose(x):
         return tuple( x % mi for mi in m )
-    
+
     return crt_decompose
 
 def gen_crt_recombine(m, lambdas):
     # TODO compute lambdas based on m
-    
+
     # precomputation
     M = prod(m)
 
@@ -32,31 +32,31 @@ def gen_crt_add(m):
     def crt_add(x, y):
         with tf.name_scope('crt_add'):
             return [ (xi + yi) % mi for xi, yi, mi in zip(x, y, m) ]
-    
+
     return crt_add
 
 def gen_crt_sub(m):
-    
+
     def crt_sub(x, y):
         with tf.name_scope('crt_sub'):
             return [ (xi - yi) % mi for xi, yi, mi in zip(x, y, m) ]
-    
+
     return crt_sub
 
 def gen_crt_mul(m):
-    
+
     def crt_mul(x, y):
         with tf.name_scope('crt_mul'):
             return [ (xi * yi) % mi for xi, yi, mi in zip(x, y, m) ]
-    
+
     return crt_mul
 
 def gen_crt_dot(m):
-    
+
     def crt_dot(x, y):
         with tf.name_scope('crt_dot'):
             return [ tf.matmul(xi, yi) % mi for xi, yi, mi in zip(x, y, m) ]
-    
+
     return crt_dot
 
 def gen_crt_im2col(m):
@@ -123,6 +123,27 @@ def gen_crt_mod(m, int_type, float_type):
             return redecompose(v % k)
 
     return crt_mod
+
+
+def gen_crt_sum(m):
+    def crt_sum(x, axis, keepdims=None):
+        with tf.name_scope('crt_sum'):
+            dims = x.shape.dims
+            begins = [0] * len(dims)
+            ends = [1] + [0] * (len(dims) - 1)
+            ax_len = dims.pop(axis)
+            x = tf.transpose(x, perm=[axis, *dims])
+            y = tf.zeros(dims, dtype=x.dtype)
+            for i in range(ax_len):
+                y += tf.slice(x, begins, ends)
+                y %= m
+                begins[0] += 1
+                ends[0] += 1
+            if keepdims:
+                return tf.expand_dims(y, axis)
+            return y
+
+        return crt_sum
 
 class CrtTensor(object):
     pass
