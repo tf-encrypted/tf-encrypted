@@ -6,9 +6,11 @@ import tensorflow_encrypted as tfe
 
 from tensorflow_encrypted.layers import Batchnorm
 
+from typing import Any, Optional, Tuple, Union
+
 
 class TestBatchnorm(unittest.TestCase):
-    def test_forward(self):
+    def test_forward(self) -> None:
 
         batch_size, channels_in, img_height, img_width = (32, 3, 28, 28)
 

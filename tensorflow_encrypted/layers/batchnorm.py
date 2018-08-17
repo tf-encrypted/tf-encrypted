@@ -2,10 +2,13 @@ import numpy as np
 import math
 from . import core
 
+from typing import Any, Optional, Tuple, Union
+from tensorflow_encrypted.protocol.pond import PondPrivateTensor
+
 
 class Batchnorm(core.Layer):
-    def __init__(self, mean: np.array, variance: np.array, scale: np.array,
-                 offset: np.array, variance_epsilon: float = 1e-8) -> None:
+    def __init__(self, mean: np.ndarray, variance: np.ndarray, scale: np.ndarray,
+                 offset: np.ndarray, variance_epsilon: float = 1e-8) -> None:
         self.mean = mean
         self.variance = variance
         self.scale = scale
@@ -13,7 +16,7 @@ class Batchnorm(core.Layer):
         self.variance_epsilon = variance_epsilon
         self.denom = None
 
-    def initialize(self, input_shape: tuple) -> None:
+    def initialize(self, input_shape: Union(Tuple[int, int], Tuple[int, int, int, int])) -> None:
         # Batchnorm after Dense layer
         if len(input_shape) == 2:
             N, D = input_shape
