@@ -14,7 +14,7 @@ class TestBatchnorm(unittest.TestCase):
 
         batch_size, channels_in, img_height, img_width = (32, 3, 28, 28)
 
-        input_shape = (batch_size, channels_in, img_height, img_width)
+        input_shape = [batch_size, channels_in, img_height, img_width]
         input_batchnorm = np.random.normal(size=input_shape).astype(np.float32)
 
         # I reshaped the input because tf.nn.batch_normalization doesn't reshape it

@@ -2,7 +2,7 @@ import numpy as np
 import math
 from . import core
 
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union, List
 from tensorflow_encrypted.protocol.pond import PondPrivateTensor
 
 
@@ -16,7 +16,7 @@ class Batchnorm(core.Layer):
         self.variance_epsilon = variance_epsilon
         self.denom = None
 
-    def initialize(self, input_shape: Union(Tuple[int, int], Tuple[int, int, int, int])) -> None:
+    def initialize(self, input_shape: List[int]) -> None:
         # Batchnorm after Dense layer
         if len(input_shape) == 2:
             N, D = input_shape
