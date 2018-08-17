@@ -436,9 +436,9 @@ class Pond(Protocol):
 
     # see https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on
     # the arguments
-    def strided_slice(self, x: Union[PondPublicTensor,
-                                     PondPrivateTensor,
-                                     PondMaskedTensor], *args: Any, **kwargs: Any):
+    def strided_slice(self, x: Union['PondPublicTensor',
+                                     'PondPrivateTensor',
+                                     'PondMaskedTensor'], *args: Any, **kwargs: Any):
         node_key = ('strided_slice', x)
         x_t = _nodes.get(node_key, None)
 
@@ -1610,13 +1610,13 @@ def _strided_slice_public(prot, x: PondPublicTensor, args: Any, kwargs: Any):
     with tf.name_scope('strided_slice'):
 
         with tf.device(prot.server_0.device_name):
-            x_on_0_t = x_on_0.strided_slice(args, kwargs)
+            x_on_0_slice = x_on_0.strided_slice(args, kwargs)
 
         with tf.device(prot.server_1.device_name):
-            x_on_1_t = x_on_1.strided_slice(args, kwargs)
+            x_on_1_slice = x_on_1.strided_slice(args, kwargs)
 
-    x_t = PondPublicTensor(prot, x_on_0_t, x_on_1_t)
-    return x_t
+    x_slice = PondPublicTensor(prot, x_on_0_slice, x_on_1_slice)
+    return x_slice
 
 
 def _strided_slice_private(prot, x: PondPrivateTensor, args: Any, kwargs: Any):
@@ -1627,13 +1627,13 @@ def _strided_slice_private(prot, x: PondPrivateTensor, args: Any, kwargs: Any):
     with tf.name_scope('strided_slice'):
 
         with tf.device(prot.server_0.device_name):
-            x0_t = x0.strided_slice(args, kwargs)
+            x0_slice = x0.strided_slice(args, kwargs)
 
         with tf.device(prot.server_1.device_name):
-            x1_t = x1.strided_slice(args, kwargs)
+            x1_slice = x1.strided_slice(args, kwargs)
 
-    x_t = PondPrivateTensor(prot, x0_t, x1_t)
-    return x_t
+    x_slice = PondPrivateTensor(prot, x0_slice, x1_slice)
+    return x_slice
 
 
 def _strided_slice_masked(prot, x_masked: PondMaskedTensor, args: Any, kwargs: Any):
@@ -1644,19 +1644,21 @@ def _strided_slice_masked(prot, x_masked: PondMaskedTensor, args: Any, kwargs: A
     with tf.name_scope('strided_slice'):
 
         with tf.device(prot.crypto_producer.device_name):
-            a_t = a.strided_slice()
+            a_slice = a.strided_slice(args, kwargs)
 
         with tf.device(prot.server_0.device_name):
-            a0_t = a0.strided_slice()
-            alpha_on_0_t = alpha_on_0.strided_slice(args, kwargs)
+            a0_slice = a0.strided_slice(args, kwargs)
+            alpha_on_0_slice = alpha_on_0.strided_slice(args, kwargs)
 
         with tf.device(prot.server_1.device_name):
-            a1_t = a1.strided_slice()
-            alpha_on_1_t = alpha_on_1.strided_slice(args, kwargs)
+            a1_slice = a1.strided_slice(args, kwargs)
+            alpha_on_1_slice = alpha_on_1.strided_slice(args, kwargs)
 
-    x_unmasked_t = prot.strided_slice(x_masked.unmasked, args, kwargs)
-    x_t = PondMaskedTensor(prot, x_unmasked_t, a_t, a0_t, a1_t, alpha_on_0_t, alpha_on_1_t)
-    return x_t
+    x_unmasked_slice = prot.strided_slice(x_masked.unmasked, args, kwargs)
+    x_slice = PondMaskedTensor(prot, x_unmasked_slice, a_slice,
+                               a0_slice, a1_slice, alpha_on_0_slice,
+                               alpha_on_1_slice)
+    return x_slice
 
 #
 # mask helpers
