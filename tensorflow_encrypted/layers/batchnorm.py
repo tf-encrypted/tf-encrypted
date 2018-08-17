@@ -2,7 +2,7 @@ import numpy as np
 import math
 from . import core
 
-from typing import Any, Optional, Tuple, Union, List
+from typing import Any, List
 from tensorflow_encrypted.protocol.pond import PondPrivateTensor
 
 
