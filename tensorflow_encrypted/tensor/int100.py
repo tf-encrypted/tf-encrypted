@@ -223,9 +223,15 @@ def _reshape(x, *axes):
     return Int100Tensor.from_decomposed(backing)
 
 
-def stack(x: Tuple[Int100Tensor], axis: int = 0):
+def stack(x: List[Int100Tensor], axis: int = 0):
     assert all([isinstance(i, Int100Tensor) for i in x])
-    backing = [tf.stack(x, axis=axis) for i in x]
+
+    backing = []
+    for i in range(len(x[0].backing)):
+        stacked = [j.backing[i] for j in x]
+
+        backing.append(tf.stack(stacked, axis=axis))
+
     return Int100Tensor.from_decomposed(backing)
 
 

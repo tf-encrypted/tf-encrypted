@@ -469,11 +469,11 @@ class Pond(Protocol):
     # see https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on
     # the arguments
 
-    def stack(self, x: Union[Tuple['PondPublicTensor'],
-                             Tuple['PondPrivateTensor'],
-                             Tuple['PondMaskedTensor']],
+    def stack(self, x: Union[List['PondPublicTensor'],
+                             List['PondPrivateTensor'],
+                             List['PondMaskedTensor']],
               axis: int = 0):
-        node_key = ('stack', x)
+        node_key = ('stack', tuple(x))
         x_stack = _nodes.get(node_key, None)
 
         if x_stack is not None:
@@ -1780,8 +1780,13 @@ def _strided_slice_masked(prot, x_masked: PondMaskedTensor, args: Any, kwargs: A
 #
 
 
-def _stack_public(prot, x: Tuple[PondPublicTensor], axis: int=0):
-    x_on_0, x_on_1 = x.unwrapped
+def _stack_public(prot, x: List[PondPublicTensor], axis: int=0):
+    x_on_0 = []
+    x_on_1 = []
+    for i in x:
+        i0, i1 = i.unwrapped
+        x_on_0.append(i0)
+        x_on_1.append(i1)
 
     with tf.name_scope('stack'):
 
@@ -1795,8 +1800,13 @@ def _stack_public(prot, x: Tuple[PondPublicTensor], axis: int=0):
     return x_stack
 
 
-def _stack_private(prot, x: Tuple[PondPrivateTensor], axis: int=0):
-    x0, x1 = x.unwrapped
+def _stack_private(prot, x: List[PondPrivateTensor], axis: int=0):
+    x0 = []
+    x1 = []
+    for i in x:
+        i0, i1 = i.unwrapped
+        x0.append(i0)
+        x1.append(i1)
 
     with tf.name_scope('stack'):
 
@@ -1810,8 +1820,19 @@ def _stack_private(prot, x: Tuple[PondPrivateTensor], axis: int=0):
     return x_stack
 
 
-def _stack_masked(prot, x_masked: Tuple[PondMaskedTensor], axis: int=0):
-    a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
+def _stack_masked(prot, x_masked: List[PondMaskedTensor], axis: int=0):
+    a = []
+    a0 = []
+    a1 = []
+    alpha_on_0 = []
+    alpha_on_1 = []
+    for i in x_masked:
+        ii, i0, i1, i_on_0, i_on_1 = i.unwrapped
+        a.append(ii)
+        a0.append(i0)
+        a1.append(i1)
+        alpha_on_0.append(i_on_0)
+        alpha_on_1.append(i_on_1)
 
     with tf.name_scope('stack'):
 
