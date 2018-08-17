@@ -88,41 +88,41 @@ class Int100Tensor(object):
         return _crt_recombine(self.backing).astype(object)
 
     @staticmethod
-    def sample_uniform(shape):
+    def sample_uniform(shape: List[int]) -> Int100Tensor:
         return _sample_uniform(shape)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'Int100Tensor({})'.format(self.to_native())
 
     @property
-    def shape(self):
+    def shape(self) -> List[int]:
         return self.backing[0].shape
 
-    def __add__(self, other):
+    def __add__(self, other: Int100Tensor) -> Int100Tensor:
         return _add(self, other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: Int100Tensor) -> Int100Tensor:
         return _sub(self, other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: Int100Tensor) -> Int100Tensor:
         return _mul(self, other)
 
-    def dot(self, other):
+    def dot(self, other: Int100Tensor) -> Int100Tensor:
         return _dot(self, other)
 
-    def im2col(self, h_filter, w_filter, padding, strides):
+    def im2col(self, h_filter, w_filter, padding, strides) -> Int100Tensor:
         return _im2col(self, h_filter, w_filter, padding, strides)
 
-    def conv2d(self, other, strides, padding='SAME'):
+    def conv2d(self, other, strides, padding='SAME') -> Int100Tensor:
         return _conv2d(self, other, strides, padding)
 
-    def __mod__(self, k):
+    def __mod__(self, k) -> Int100Tensor:
         return _mod(self, k)
 
-    def transpose(self, *axes):
+    def transpose(self, *axes) -> Int100Tensor:
         return _transpose(self, *axes)
 
-    def reshape(self, *axes):
+    def reshape(self, *axes) -> Int100Tensor:
         return _reshape(self, *axes)
 
 
