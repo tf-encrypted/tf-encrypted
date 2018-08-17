@@ -202,7 +202,7 @@ def _transpose(x, *axes):
     return Int100Tensor.from_decomposed(backing)
 
 
-def _strided_slice(x, args, kwargs):
+def _strided_slice(x: Int100Tensor, args, kwargs):
     assert isinstance(x, Int100Tensor), type(x)
     backing = [tf.strided_slice(xi, *args, **kwargs) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)

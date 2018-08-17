@@ -436,7 +436,9 @@ class Pond(Protocol):
 
     # see https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on
     # the arguments
-    def strided_slice(self, x, *args, **kwargs):
+    def strided_slice(self, x: Union[PondPublicTensor,
+                                     PondPrivateTensor,
+                                     PondMaskedTensor], *args, **kwargs):
         node_key = ('strided_slice', x)
         x_t = _nodes.get(node_key, None)
 
