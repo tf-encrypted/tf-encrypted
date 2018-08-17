@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from typing import Tuple, Dict, List, Any, Union
+from typing import Tuple, Dict, List, Union, Optional, Any
 
 import numpy as np
 import tensorflow as tf
@@ -12,6 +12,7 @@ from ..tensor.int100 import stack
 from ..tensor.helpers import *
 from ..io import InputProvider, OutputReceiver
 from .protocol import Protocol
+from ..player import Player
 
 BITPRECISION_INTEGRAL = 16
 BITPRECISION_FRACTIONAL = 16
@@ -34,12 +35,12 @@ _initializers: List = list()
 
 class Pond(Protocol):
 
-    def __init__(self, server_0, server_1, crypto_producer):
+    def __init__(self, server_0: Player, server_1: Player, crypto_producer: Player) -> None:
         self.server_0 = server_0
         self.server_1 = server_1
         self.crypto_producer = crypto_producer
 
-    def define_constant(self, value, apply_scaling=True, name=None):
+    def define_constant(self, value: Union[np.ndarray, tf.Tensor], apply_scaling: bool=True, name: Optional[str]=None) -> 'PondConstant':
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
 
         if isinstance(value, tf.Tensor):

@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import math
 import numpy as np
 import tensorflow as tf
+from typing import Union, Optional, List, Dict, Any
 
 from .crt import (
     gen_crt_decompose, gen_crt_recombine,
@@ -13,7 +14,7 @@ from .helpers import prod, log2
 from ..config import run
 from typing import Any, List, Tuple
 
-#
+
 # 32 bit CRT
 # - we need this to do dot product as int32 is the only supported type for that
 # - tried tf.float64 but didn't work out of the box
@@ -62,7 +63,7 @@ class Int100Tensor(object):
     modulus = M
     int_type = INT_TYPE
 
-    def __init__(self, native_value, decomposed_value=None):
+    def __init__(self, native_value: Optional[Union[np.ndarray, tf.Tensor]], decomposed_value: Optional[Union[List[np.ndarray], List[tf.Tensor]]]=None) -> None:
         if decomposed_value is None:
             decomposed_value = _crt_decompose(native_value)
 
@@ -72,61 +73,62 @@ class Int100Tensor(object):
         self.backing = decomposed_value
 
     @staticmethod
-    def from_native(value):
+    def from_native(value: Union[np.ndarray, tf.Tensor]) -> 'Int100Tensor':
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
         return Int100Tensor(value, None)
 
     @staticmethod
-    def from_decomposed(value):
+    def from_decomposed(value: Union[List[np.ndarray], List[tf.Tensor]]) -> 'Int100Tensor':
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
 
-    def eval(self, sess, feed_dict={}, tag=None):
-        evaluated_backing: list = run(sess, self.backing, feed_dict=feed_dict, tag=tag)
+    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int100Tensor':
+        evaluated_backing: Union[List[np.ndarray], List[tf.Tensor]] = run(
+            sess, self.backing, feed_dict=feed_dict, tag=tag)
         return Int100Tensor.from_decomposed(evaluated_backing)
 
-    def to_native(self):
+    def to_native(self) -> Union[List[np.ndarray], List[tf.Tensor]]:
         return _crt_recombine(self.backing).astype(object)
 
     @staticmethod
-    def sample_uniform(shape):
+    def sample_uniform(shape: List[int]) -> 'Int100Tensor':
         return _sample_uniform(shape)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'Int100Tensor({})'.format(self.to_native())
 
     @property
-    def shape(self):
+    def shape(self) -> List[int]:
         return self.backing[0].shape
 
-    def __add__(self, other):
+    def __add__(self, other: 'Int100Tensor') -> 'Int100Tensor':
         return _add(self, other)
 
-    def __sub__(self, other):
+    def __sub__(self, other: 'Int100Tensor') -> 'Int100Tensor':
         return _sub(self, other)
 
-    def __mul__(self, other):
+    def __mul__(self, other: 'Int100Tensor') -> 'Int100Tensor':
         return _mul(self, other)
 
-    def dot(self, other):
+    def dot(self, other: 'Int100Tensor') -> 'Int100Tensor':
         return _dot(self, other)
 
-    def im2col(self, h_filter, w_filter, padding, strides):
+    def im2col(self, h_filter, w_filter, padding, strides) -> 'Int100Tensor':
         return _im2col(self, h_filter, w_filter, padding, strides)
 
-    def conv2d(self, other, strides, padding='SAME'):
+    def conv2d(self, other, strides, padding='SAME') -> 'Int100Tensor':
         return _conv2d(self, other, strides, padding)
 
-    def __mod__(self, k):
+    def __mod__(self, k) -> 'Int100Tensor':
         return _mod(self, k)
 
-    def transpose(self, *axes):
+    def transpose(self, *axes) -> 'Int100Tensor':
         return _transpose(self, *axes)
 
     def strided_slice(self, args: Any, kwargs: Any):
         return _strided_slice(self, args, kwargs)
 
-    def reshape(self, *axes):
+    def reshape(self, *axes) -> 'Int100Tensor':
         return _reshape(self, *axes)
 
 
@@ -237,7 +239,7 @@ def stack(x: List[Int100Tensor], axis: int = 0):
 
 class Int100Constant(Int100Tensor):
 
-    def __init__(self, native_value, int100_value=None):
+    def __init__(self, native_value: np.ndarray, int100_value=None) -> None:
         if int100_value is None:
             int100_value = Int100Tensor.from_native(native_value)
 
@@ -248,16 +250,16 @@ class Int100Constant(Int100Tensor):
         super(Int100Constant, self).__init__(None, backing)
 
     @staticmethod
-    def from_native(value):
+    def from_native(value: np.ndarray) -> 'Int100Constant':
         assert type(value) in [np.ndarray], type(value)
         return Int100Constant(value, None)
 
     @staticmethod
-    def from_int100(value):
+    def from_int100(value: Int100Tensor) -> 'Int100Constant':
         assert type(value) in [Int100Tensor], type(value)
         return Int100Constant(None, value)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'Int100Constant({})'.format(self.shape)
 
 
