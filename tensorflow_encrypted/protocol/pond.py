@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Any, Union
 
 import numpy as np
 import tensorflow as tf
@@ -438,7 +438,7 @@ class Pond(Protocol):
     # the arguments
     def strided_slice(self, x: Union[PondPublicTensor,
                                      PondPrivateTensor,
-                                     PondMaskedTensor], *args, **kwargs):
+                                     PondMaskedTensor], *args: Any, **kwargs: Any):
         node_key = ('strided_slice', x)
         x_t = _nodes.get(node_key, None)
 
@@ -1602,7 +1602,7 @@ def _transpose_masked(prot, x_masked):
 #
 
 
-def _strided_slice_public(prot, x, args, kwargs):
+def _strided_slice_public(prot, x: PondPublicTensor, args: Any, kwargs: Any):
     assert isinstance(x, PondPublicTensor)
 
     x_on_0, x_on_1 = x.unwrapped
@@ -1619,7 +1619,7 @@ def _strided_slice_public(prot, x, args, kwargs):
     return x_t
 
 
-def _strided_slice_private(prot, x, args, kwargs):
+def _strided_slice_private(prot, x: PondPrivateTensor, args: Any, kwargs: Any):
     assert isinstance(x, PondPrivateTensor)
 
     x0, x1 = x.unwrapped
@@ -1636,7 +1636,7 @@ def _strided_slice_private(prot, x, args, kwargs):
     return x_t
 
 
-def _strided_slice_masked(prot, x_masked, args, kwargs):
+def _strided_slice_masked(prot, x_masked: PondMaskedTensor, args: Any, kwargs: Any):
     assert isinstance(x_masked, PondMaskedTensor)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped

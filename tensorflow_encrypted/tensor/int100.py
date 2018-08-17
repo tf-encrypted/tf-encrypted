@@ -11,6 +11,7 @@ from .crt import (
 )
 from .helpers import prod, log2
 from ..config import run
+from typing import Any
 
 #
 # 32 bit CRT
@@ -120,7 +121,7 @@ class Int100Tensor(object):
     def transpose(self, *axes):
         return _transpose(self, *axes)
 
-    def strided_slice(self, args, kwargs):
+    def strided_slice(self, args: Any, kwargs: Any):
         return _strided_slice(self, args, kwargs)
 
     def reshape(self, *axes):
@@ -202,7 +203,7 @@ def _transpose(x, *axes):
     return Int100Tensor.from_decomposed(backing)
 
 
-def _strided_slice(x: Int100Tensor, args, kwargs):
+def _strided_slice(x: Int100Tensor, args: Any, kwargs: Any):
     assert isinstance(x, Int100Tensor), type(x)
     backing = [tf.strided_slice(xi, *args, **kwargs) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
