@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from typing import Tuple, Dict, List, Any, Union
+from typing import Tuple, Dict, List, Union, Optional, Any
 
 import numpy as np
 import tensorflow as tf
@@ -11,6 +11,7 @@ from ..tensor.int100 import Int100Placeholder as BackingPlaceholder
 from ..tensor.helpers import *
 from ..io import InputProvider, OutputReceiver
 from .protocol import Protocol
+from ..player import Player
 
 BITPRECISION_INTEGRAL = 16
 BITPRECISION_FRACTIONAL = 16
@@ -23,7 +24,8 @@ K = 2 ** BITPRECISION_FRACTIONAL
 # bound on magnitude of (single precision) encoded numbers
 B = (2 ** BITPRECISION_INTEGRAL) * (2 ** BITPRECISION_FRACTIONAL)
 
-assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
+assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + \
+    log2(1024) + TRUNCATION_GAP
 assert gcd(K, M) == 1
 
 _nodes: Dict = dict()
@@ -32,12 +34,12 @@ _initializers: List = list()
 
 class Pond(Protocol):
 
-    def __init__(self, server_0, server_1, crypto_producer):
+    def __init__(self, server_0: Player, server_1: Player, crypto_producer: Player) -> None:
         self.server_0 = server_0
         self.server_1 = server_1
         self.crypto_producer = crypto_producer
 
-    def define_constant(self, value, apply_scaling=True, name=None):
+    def define_constant(self, value: Union[np.ndarray, tf.Tensor], apply_scaling: bool=True, name: Optional[str]=None) -> 'PondConstant':
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
 
         if isinstance(value, tf.Tensor):
@@ -97,7 +99,8 @@ class Pond(Protocol):
                 v_on_0, v_on_1 = initial_value.unwrapped
 
             else:
-                raise TypeError("Don't know how to turn {} into public variable".format(type(initial_value)))
+                raise TypeError(
+                    "Don't know how to turn {} into public variable".format(type(initial_value)))
 
             with tf.device(self.server_0.device_name):
                 x_on_0 = BackingVariable.from_int100(v_on_0)
@@ -110,7 +113,8 @@ class Pond(Protocol):
         return x
 
     def define_private_variable(self, initial_value, apply_scaling=True, name=None):
-        assert isinstance(initial_value, (np.ndarray, PondPublicTensor, PondPrivateTensor)), type(initial_value)
+        assert isinstance(initial_value, (np.ndarray, PondPublicTensor,
+                                          PondPrivateTensor)), type(initial_value)
 
         with tf.name_scope('private-var{}'.format('-'+name if name else '')):
 
@@ -132,7 +136,8 @@ class Pond(Protocol):
                 v0, v1 = initial_value.unwrapped
 
             else:
-                raise TypeError("Don't know how to turn {} into private variable".format(type(initial_value)))
+                raise TypeError(
+                    "Don't know how to turn {} into private variable".format(type(initial_value)))
 
             with tf.device(self.server_0.device_name):
                 x0 = BackingVariable.from_int100(v0)
@@ -144,14 +149,15 @@ class Pond(Protocol):
         _initializers.append(x.initializer)
         return x
 
-    def define_public_input(self, provider:InputProvider, apply_scaling:bool=True, name:str=None) -> 'PondPublicTensor':
+    def define_public_input(self, provider: InputProvider, apply_scaling: bool=True, name: str=None) -> 'PondPublicTensor':
 
         with tf.name_scope('public-input{}'.format('-'+name if name else '')):
 
             with tf.device(provider.player.device_name):
 
                 v = provider.provide_input()
-                assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', provider.player.name)
+                assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(
+                    name if name else '', provider.player.name)
 
                 v = _encode(v, apply_scaling)
                 x_on_0 = v
@@ -160,14 +166,15 @@ class Pond(Protocol):
         x = PondPublicTensor(self, x_on_0, x_on_1)
         return x
 
-    def define_private_input(self, provider:InputProvider, apply_scaling:bool=True, name:str=None) -> 'PondPrivateTensor':
+    def define_private_input(self, provider: InputProvider, apply_scaling: bool=True, name: str=None) -> 'PondPrivateTensor':
 
         with tf.name_scope('private-input{}'.format('-'+name if name else '')):
 
             with tf.device(provider.player.device_name):
 
                 v = provider.provide_input()
-                assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', provider.player.name)
+                assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(
+                    name if name else '', provider.player.name)
 
                 v = _encode(v, apply_scaling)
                 x0, x1 = _share(v)
@@ -175,7 +182,7 @@ class Pond(Protocol):
         x = PondPrivateTensor(self, x0, x1)
         return x
 
-    def define_output(self, x, receiver:OutputReceiver, apply_scaling=True, name=None):
+    def define_output(self, x, receiver: OutputReceiver, apply_scaling=True, name=None):
         assert isinstance(x, PondPrivateTensor), type(x)
 
         x0, x1 = x.unwrapped
@@ -570,6 +577,7 @@ class Pond(Protocol):
 # Classes representing the base values in the Pond protocol.
 #
 
+
 class PondTensor(object):
     """
     This class functions mostly as a convenient way of exposing operations
@@ -614,6 +622,7 @@ class PondTensor(object):
     def truncate(self):
         return self.prot.truncate(self)
 
+
 class PondPublicTensor(PondTensor):
     """
     This class represents a public tensor, known by at least the two servers
@@ -630,7 +639,7 @@ class PondPublicTensor(PondTensor):
         super(PondPublicTensor, self).__init__(prot)
         self.value_on_0 = value_on_0
         self.value_on_1 = value_on_1
-        self.encoded = True # TODO[Morten] take as parameter
+        self.encoded = True  # TODO[Morten] take as parameter
 
     def __repr__(self):
         return 'PondPublicTensor(shape={})'.format(self.shape)
@@ -648,6 +657,7 @@ class PondPublicTensor(PondTensor):
         value: np.ndarray = value.to_native()
         value: np.ndarray = _decode(value, self.encoded)
         return value
+
 
 class PondPrivateTensor(PondTensor):
     """
@@ -677,6 +687,7 @@ class PondPrivateTensor(PondTensor):
     def reveal(self):
         return self.prot.reveal(self)
 
+
 class PondMaskedTensor(PondTensor):
     """
     This class is part of an optimization where values are only ever masked
@@ -692,7 +703,7 @@ class PondMaskedTensor(PondTensor):
 
         super(PondMaskedTensor, self).__init__(prot)
         self.unmasked = unmasked
-        self.a  = a
+        self.a = a
         self.a0 = a0
         self.a1 = a1
         self.alpha_on_0 = alpha_on_0
@@ -714,6 +725,7 @@ class PondMaskedTensor(PondTensor):
 # relevant to how TensorFlow works.
 #
 
+
 class PondConstant(PondPublicTensor):
     """
     This class essentially represents a public value, however it additionally
@@ -731,6 +743,7 @@ class PondConstant(PondPublicTensor):
 
     def __repr__(self):
         return 'PondConstant(shape={})'.format(self.shape)
+
 
 class PondPublicPlaceholder(PondPublicTensor):
     """
@@ -750,6 +763,7 @@ class PondPublicPlaceholder(PondPublicTensor):
 
     def __repr__(self):
         return 'PondPublicPlaceholder(shape={})'.format(self.shape)
+
 
 class PondPrivatePlaceholder(PondPrivateTensor):
     """
@@ -780,6 +794,7 @@ class PondPrivatePlaceholder(PondPrivateTensor):
             p: v for p, v in zip(self.placeholders, v.backing)
         }
 
+
 class PondPublicVariable(PondPublicTensor):
     """
     This class essentially represents a public value, however it additionally
@@ -795,10 +810,11 @@ class PondPublicVariable(PondPublicTensor):
         super(PondPublicVariable, self).__init__(prot, variable_on_0, variable_on_1)
         self.variable_on_0 = variable_on_0
         self.variable_on_1 = variable_on_1
-        self.initializer = tf.group(*[ var.initializer for var in [variable_on_0, variable_on_1]])
+        self.initializer = tf.group(*[var.initializer for var in [variable_on_0, variable_on_1]])
 
     def __repr__(self):
         return 'PondPublicVariable(shape={})'.format(self.shape)
+
 
 class PondPrivateVariable(PondPrivateTensor):
     """
@@ -815,10 +831,11 @@ class PondPrivateVariable(PondPrivateTensor):
         super(PondPrivateVariable, self).__init__(prot, variable0, variable1)
         self.variable0 = variable0
         self.variable1 = variable1
-        self.initializer = tf.group(*[ var.initializer for var in [variable0, variable1]])
+        self.initializer = tf.group(*[var.initializer for var in [variable0, variable1]])
 
     def __repr__(self):
         return 'PondPrivateVariable(shape={})'.format(self.shape)
+
 
 def _encode(rationals, apply_scaling) -> BackingTensor:
     """ Encode tensor of rational numbers into tensor of ring elements """
@@ -833,6 +850,7 @@ def _encode(rationals, apply_scaling) -> BackingTensor:
 
     raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
+
 def _decode(elements, apply_scaling: bool):
     """ Decode tensor of ring elements into tensor of rational numbers """
 
@@ -846,23 +864,28 @@ def _decode(elements, apply_scaling: bool):
 
     raise TypeError("Don't know how to decode {}".format(type(elements)))
 
+
 def _encode_from_numpy(rationals: np.ndarray, scaling_factor: int) -> BackingTensor:
     encoded = (rationals * scaling_factor).astype(int).astype(object)
     return BackingTensor.from_native(encoded)
+
 
 def _decode_to_numpy(elements, scaling_factor: int):
     map_negative_range = np.vectorize(lambda element: element if element <= M/2 else element - M)
     return map_negative_range(elements).astype(float) / scaling_factor
 
+
 def _encode_from_tftensor(rationals: tf.Tensor, scaling_factor: int) -> BackingTensor:
     encoded = tf.cast(rationals * scaling_factor, BackingTensor.int_type)
     return BackingTensor.from_native(encoded)
 
+
 def _decode_to_tftensor(elements, scaling_factor: int):
-    raise NotImplementedError() 
+    raise NotImplementedError()
     # TODO[Morten] how to decode negative numbers (since they're large)?
     # we can use `(elements + B).to_native() - B`` but need crt_recombine to
     # work first
+
 
 def _share(secret) -> Tuple[BackingTensor, BackingTensor]:
     assert isinstance(secret, BackingTensor), type(secret)
@@ -871,6 +894,7 @@ def _share(secret) -> Tuple[BackingTensor, BackingTensor]:
         share0 = BackingTensor.sample_uniform(secret.shape)
         share1 = secret - share0
         return share0, share1
+
 
 def _reconstruct(share0, share1):
     assert isinstance(share0, BackingTensor), type(share0)
@@ -882,6 +906,7 @@ def _reconstruct(share0, share1):
 #
 # helpers
 #
+
 
 def _type(x):
 
@@ -895,6 +920,7 @@ def _type(x):
         return PondMaskedTensor
 
     return type(x)
+
 
 def _lift(prot, x):
     """
@@ -919,13 +945,16 @@ def _lift(prot, x):
 # truncate
 #
 
+
 # precomputation
 K_inv = BackingTensor.from_native(np.array([inverse(K, M)]))
 M_wrapped = BackingTensor.from_native(np.array([M]))
 
+
 def _raw_truncate(x):
     y = x - (x % K)
     return y * K_inv
+
 
 def _truncate_public(prot, x):
     assert isinstance(x, PondPublicTensor)
@@ -942,6 +971,7 @@ def _truncate_public(prot, x):
 
     return PondPublicTensor(prot, y_on_0, y_on_1)
 
+
 def _truncate_private(prot, x):
     assert isinstance(x, PondPrivateTensor)
 
@@ -957,6 +987,7 @@ def _truncate_private(prot, x):
 
     return PondPrivateTensor(prot, y0, y1)
 
+
 def _truncate_masked(prot, x):
     assert isinstance(x, PondMaskedTensor)
     return prot.truncate(x.unmasked)
@@ -964,6 +995,7 @@ def _truncate_masked(prot, x):
 #
 # reveal helpers
 #
+
 
 def _reveal_private(prot, x):
     assert isinstance(x, PondPrivateTensor), type(x)
@@ -981,6 +1013,7 @@ def _reveal_private(prot, x):
     z = PondPublicTensor(prot, z_on_0, z_on_1)
     return z
 
+
 def _reveal_masked(prot, x):
     assert isinstance(x, PondMaskedTensor), type(x)
     return prot.reveal(x.unmasked)
@@ -988,6 +1021,7 @@ def _reveal_masked(prot, x):
 #
 # add helpers
 #
+
 
 def _add_public_public(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
@@ -1007,6 +1041,7 @@ def _add_public_public(prot, x, y):
     z = PondPublicTensor(prot, z_on_0, z_on_1)
     return z
 
+
 def _add_public_private(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
@@ -1025,10 +1060,12 @@ def _add_public_private(prot, x, y):
     z = PondPrivateTensor(prot, z0, z1)
     return z
 
+
 def _add_public_masked(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
     return prot.add(x, y.unmasked)
+
 
 def _add_private_public(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
@@ -1048,6 +1085,7 @@ def _add_private_public(prot, x, y):
     z = PondPrivateTensor(prot, z0, z1)
     return z
 
+
 def _add_private_private(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
@@ -1066,20 +1104,24 @@ def _add_private_private(prot, x, y):
     z = PondPrivateTensor(prot, z0, z1)
     return z
 
+
 def _add_private_masked(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
     return prot.add(x, y.unmasked)
+
 
 def _add_masked_public(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondPublicTensor), type(y)
     return prot.add(x.unmasked, y)
 
+
 def _add_masked_private(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
     return prot.add(x.unmasked, y)
+
 
 def _add_masked_masked(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
@@ -1089,6 +1131,7 @@ def _add_masked_masked(prot, x, y):
 #
 # sub helpers
 #
+
 
 def _sub_public_public(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
@@ -1108,6 +1151,7 @@ def _sub_public_public(prot, x, y):
     z = PondPublicTensor(prot, z_on_0, z_on_1)
     return z
 
+
 def _sub_public_private(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
@@ -1126,10 +1170,12 @@ def _sub_public_private(prot, x, y):
     z = PondPrivateTensor(prot, z0, z1)
     return z
 
+
 def _sub_public_masked(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
     return prot.sub(x, y.unmasked)
+
 
 def _sub_private_public(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
@@ -1149,6 +1195,7 @@ def _sub_private_public(prot, x, y):
     z = PondPrivateTensor(prot, z0, z1)
     return z
 
+
 def _sub_private_private(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
@@ -1167,20 +1214,24 @@ def _sub_private_private(prot, x, y):
     z = PondPrivateTensor(prot, z0, z1)
     return z
 
+
 def _sub_private_masked(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
     return prot.sub(x, y.unmasked)
+
 
 def _sub_masked_public(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondPublicTensor), type(y)
     return prot.sub(x.unmasked, y)
 
+
 def _sub_masked_private(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
     return prot.sub(x.unmasked, y)
+
 
 def _sub_masked_masked(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
@@ -1190,6 +1241,7 @@ def _sub_masked_masked(prot, x, y):
 #
 # mul helpers
 #
+
 
 def _mul_public_public(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
@@ -1210,6 +1262,7 @@ def _mul_public_public(prot, x, y):
     z = prot.truncate(z)
     return z
 
+
 def _mul_public_private(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
@@ -1229,10 +1282,12 @@ def _mul_public_private(prot, x, y):
     z = prot.truncate(z)
     return z
 
+
 def _mul_public_masked(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
     return prot.mul(x, y.unmasked)
+
 
 def _mul_private_public(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
@@ -1253,25 +1308,30 @@ def _mul_private_public(prot, x, y):
     z = prot.truncate(z)
     return z
 
+
 def _mul_private_private(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
     return prot.mul(prot.mask(x), prot.mask(y))
+
 
 def _mul_private_masked(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
     return prot.mul(prot.mask(x), y)
 
+
 def _mul_masked_public(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondPublicTensor), type(y)
     return prot.mul(x.unmasked, y)
 
+
 def _mul_masked_private(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
     return prot.mul(x, prot.mask(y))
+
 
 def _mul_masked_masked(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
@@ -1304,6 +1364,7 @@ def _mul_masked_masked(prot, x, y):
 # square helpers
 #
 
+
 def _square_public(prot, x):
     assert isinstance(x, PondPublicTensor), type(x)
 
@@ -1321,9 +1382,11 @@ def _square_public(prot, x):
     y = prot.truncate(y)
     return y
 
+
 def _square_private(prot, x):
     assert isinstance(x, PondPrivateTensor), type(x)
     return prot.square(prot.mask(x))
+
 
 def _square_masked(prot, x):
     assert isinstance(x, PondMaskedTensor), type(x)
@@ -1354,6 +1417,7 @@ def _square_masked(prot, x):
 # dot helpers
 #
 
+
 def _dot_public_public(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondPublicTensor), type(y)
@@ -1377,6 +1441,7 @@ def _dot_public_public(prot, x, y):
     z = prot.truncate(z)
     return z
 
+
 def _dot_public_private(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
@@ -1398,10 +1463,12 @@ def _dot_public_private(prot, x, y):
     z = prot.truncate(z)
     return z
 
+
 def _dot_public_masked(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
     return prot.dot(x, y.unmasked)
+
 
 def _dot_private_public(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
@@ -1424,25 +1491,30 @@ def _dot_private_public(prot, x, y):
     z = prot.truncate(z)
     return z
 
+
 def _dot_private_private(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
     return prot.dot(prot.mask(x), prot.mask(y))
+
 
 def _dot_private_masked(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
     return prot.dot(prot.mask(x), y)
 
+
 def _dot_masked_public(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondPublicTensor), type(y)
     return prot.dot(x.unmasked, y)
 
+
 def _dot_masked_private(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
     return prot.dot(x, prot.mask(y))
+
 
 def _dot_masked_masked(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
@@ -1476,35 +1548,44 @@ def _dot_masked_masked(prot, x, y):
 #
 # TODO[koen] create operations for all possible combinations
 
+
 def _conv2d_public_public(prot, x, y, strides, padding):
     raise NotImplementedError()
+
 
 def _conv2d_public_private(prot, x, y, strides, padding):
     raise NotImplementedError()
 
+
 def _conv2d_public_masked(prot, x, y, strides, padding):
     raise NotImplementedError()
 
+
 def _conv2d_private_public(prot, x, y, strides, padding):
     raise NotImplementedError()
+
 
 def _conv2d_private_masked(prot, x, y, strides, padding):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
     return prot.conv2d(prot.mask(x), y, strides, padding)
 
+
 def _conv2d_private_private(prot, x, y, strides, padding):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
     return prot.conv2d(prot.mask(x), prot.mask(y), strides, padding)
 
+
 def _conv2d_masked_public(prot, x, y, strides, padding):
     raise NotImplementedError()
+
 
 def _conv2d_masked_private(prot, x, y, strides, padding):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
     return prot.conv2d(x, prot.mask(y), strides, padding)
+
 
 def _conv2d_masked_masked(prot, x, y, strides, padding):
     assert isinstance(x, PondMaskedTensor), type(x)
@@ -1543,6 +1624,7 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
 # transpose helpers
 #
 
+
 def _transpose_public(prot, x):
     assert isinstance(x, PondPublicTensor)
 
@@ -1559,6 +1641,7 @@ def _transpose_public(prot, x):
     x_t = PondPublicTensor(prot, x_on_0_t, x_on_1_t)
     return x_t
 
+
 def _transpose_private(prot, x):
     assert isinstance(x, PondPrivateTensor)
 
@@ -1574,6 +1657,7 @@ def _transpose_private(prot, x):
 
     x_t = PondPrivateTensor(prot, x0_t, x1_t)
     return x_t
+
 
 def _transpose_masked(prot, x_masked):
     assert isinstance(x_masked, PondMaskedTensor)
