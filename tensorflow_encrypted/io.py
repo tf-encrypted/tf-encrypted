@@ -4,6 +4,7 @@ import tensorflow as tf
 
 from .player import Player
 
+
 class InputProvider(object):
 
     def __init__(self, player: Player) -> None:
@@ -11,6 +12,7 @@ class InputProvider(object):
 
     def provide_input(self) -> tf.Tensor:
         raise NotImplementedError()
+
 
 class OutputReceiver(object):
 
