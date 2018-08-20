@@ -324,3 +324,10 @@ def group(
     *inputs: Tensor,
     **kwargs: Any,
     ) -> Operation: ...
+
+
+def reshape(
+    tensor: Any,
+    shape: Union[Tensor, List[int]],
+    name: Optional[str] = None
+    ) -> Tensor: ...

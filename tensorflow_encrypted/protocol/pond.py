@@ -442,8 +442,11 @@ class Pond(Protocol):
 
         return x_t
 
-    def reshape(self, x, shape):
-
+    def reshape(
+        self,
+        x: Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor'],
+        shape: List[int]
+    ):
         node_key = ('reshape', x)
         x_t = _nodes.get(node_key, None)
 
@@ -1844,7 +1847,7 @@ def _stack_private(prot, x: List[PondPrivateTensor], axis: int=0):
     return x_stack
 
 
-def _stack_masked(prot, x_masked: List[PondMaskedTensor], axis: int=0):
+def _stack_masked(prot, x_masked: List[PondMaskedTensor], axis: int = 0):
     a = []
     a0 = []
     a1 = []
@@ -1882,7 +1885,7 @@ def _stack_masked(prot, x_masked: List[PondMaskedTensor], axis: int=0):
 #
 
 
-def _mask_private(prot, x):
+def _mask_private(prot, x: PondPrivateTensor) -> PondMaskedTensor:
     assert isinstance(x, PondPrivateTensor)
 
     x0, x1 = x.unwrapped
@@ -1915,7 +1918,7 @@ def _mask_private(prot, x):
 #
 # reshape helpers
 #
-def _reshape_public(prot, x, shape):
+def _reshape_public(prot, x: PondPublicTensor, shape: List[int]) -> PondPublicTensor:
     assert isinstance(x, PondPublicTensor)
 
     x_on_0, x_on_1 = x.unwrapped
@@ -1932,7 +1935,7 @@ def _reshape_public(prot, x, shape):
     return x_reshaped
 
 
-def _reshape_private(prot, x, shape):
+def _reshape_private(prot, x: PondPrivateTensor, shape: List[int]) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
     x0, x1 = x.unwrapped
@@ -1949,7 +1952,7 @@ def _reshape_private(prot, x, shape):
     return x_reshaped
 
 
-def _reshape_masked(prot, x_masked, shape):
+def _reshape_masked(prot, x_masked: PondMaskedTensor, shape: List[int]) -> PondMaskedTensor:
     assert isinstance(x_masked, PondMaskedTensor)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped

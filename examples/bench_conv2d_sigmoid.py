@@ -25,7 +25,7 @@ config = tfe.LocalConfig([
 
 if len(sys.argv) > 1:
     if isinstance(config, tfe.LocalConfig):
-        raise Exception("You can launch a configured server only wit ha remote config")
+        raise Exception("You can launch a configured server only with a remote configuration")
     #
     # assume we're running as a server
     #

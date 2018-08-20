@@ -132,8 +132,8 @@ class Int100Tensor(object):
     def strided_slice(self, args: Any, kwargs: Any):
         return _strided_slice(self, args, kwargs)
 
-    def reshape(self, *axes) -> 'Int100Tensor':
-        return _reshape(self, *axes)
+    def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'Int100Tensor':
+        return _reshape(self, axes)
 
 
 def _lift(x):
@@ -228,7 +228,7 @@ def _strided_slice(x: Int100Tensor, args: Any, kwargs: Any):
     return Int100Tensor.from_decomposed(backing)
 
 
-def _reshape(x, *axes):
+def _reshape(x: Int100Tensor, axes: Union[tf.Tensor, List[int]]) -> Int100Tensor:
     assert isinstance(x, Int100Tensor), type(x)
     backing = [tf.reshape(xi, axes) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
