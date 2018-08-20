@@ -63,7 +63,6 @@ config = tfe.LocalConfig([
 ])
 
 with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
-
     input = PredictionInputProvider(config.get_player('prediction_client'))
     output = PredictionOutputReceiver(config.get_player('prediction_client'))
 
