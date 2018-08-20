@@ -9,4 +9,4 @@ WORKDIR /usr/src/tf-encrypted
 COPY . .
 RUN pip install -e .
 
-ENTRYPOINT ["/bin/bash"]
+ENTRYPOINT ["bin/serve"]
