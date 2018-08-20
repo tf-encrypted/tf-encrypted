@@ -12,7 +12,7 @@ from .crt import (
 )
 from .helpers import prod, log2
 from ..config import run
-from typing import Any
+from typing import Any, List, Tuple
 
 
 # 32 bit CRT
@@ -231,6 +231,18 @@ def _strided_slice(x: Int100Tensor, args: Any, kwargs: Any):
 def _reshape(x, *axes):
     assert isinstance(x, Int100Tensor), type(x)
     backing = [tf.reshape(xi, axes) for xi in x.backing]
+    return Int100Tensor.from_decomposed(backing)
+
+
+def stack(x: List[Int100Tensor], axis: int = 0):
+    assert all([isinstance(i, Int100Tensor) for i in x])
+
+    backing = []
+    for i in range(len(x[0].backing)):
+        stacked = [j.backing[i] for j in x]
+
+        backing.append(tf.stack(stacked, axis=axis))
+
     return Int100Tensor.from_decomposed(backing)
 
 

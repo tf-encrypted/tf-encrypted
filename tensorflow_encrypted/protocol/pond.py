@@ -8,6 +8,7 @@ from ..tensor.int100 import Int100Tensor as BackingTensor
 from ..tensor.int100 import Int100Constant as BackingConstant
 from ..tensor.int100 import Int100Variable as BackingVariable
 from ..tensor.int100 import Int100Placeholder as BackingPlaceholder
+from ..tensor.int100 import stack
 from ..tensor.helpers import *
 from ..io import InputProvider, OutputReceiver
 from .protocol import Protocol
@@ -203,6 +204,9 @@ class Pond(Protocol):
     @property
     def initializer(self):
         return tf.group(*_initializers)
+
+    def clear_initializers(self):
+        del _initializers[:]
 
     def assign(self, variable, value):
         assert isinstance(variable, PondPrivateVariable), type(variable)
@@ -465,6 +469,36 @@ class Pond(Protocol):
         _nodes[node_key] = x_t
 
         return x_t
+
+    # see https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on
+    # the arguments
+
+    def stack(self, x: Union[List['PondPublicTensor'],
+                             List['PondPrivateTensor'],
+                             List['PondMaskedTensor']],
+              axis: int = 0):
+        node_key = ('stack', tuple(x))
+        x_stack = _nodes.get(node_key, None)
+
+        if x_stack is not None:
+            return x_stack
+
+        if all([isinstance(i, PondPublicTensor) for i in x]):
+            x_stack = _stack_public(self, x, axis=axis)
+        elif all([isinstance(i, PondPrivateTensor) for i in x]):
+            x_stack = _stack_private(self, x, axis=axis)
+        elif all([isinstance(x, PondMaskedTensor) for i in x]):
+            x_stack = _stack_masked(self, x, axis=axis)
+
+            unmasked = [i.unmasked for i in x_stack]
+
+            _nodes[('stack', unmasked)] = unmasked
+        else:
+            raise TypeError("Don't know how to do a stack {}".format(type(x)))
+
+        _nodes[node_key] = x_stack
+
+        return x_stack
 
     def sigmoid(self, x):
         assert isinstance(x, PondTensor), type(x)
@@ -1817,6 +1851,85 @@ def _strided_slice_masked(prot, x_masked: PondMaskedTensor, args: Any, kwargs: A
                                a0_slice, a1_slice, alpha_on_0_slice,
                                alpha_on_1_slice)
     return x_slice
+
+
+#
+# strided slice helpers
+#
+
+
+def _stack_public(prot, x: List[PondPublicTensor], axis: int=0):
+    x_on_0 = []
+    x_on_1 = []
+    for i in x:
+        i0, i1 = i.unwrapped
+        x_on_0.append(i0)
+        x_on_1.append(i1)
+
+    with tf.name_scope('stack'):
+
+        with tf.device(prot.server_0.device_name):
+            x_on_0_stack = stack(x_on_0, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            x_on_1_stack = stack(x_on_1, axis=axis)
+
+    x_stack = PondPublicTensor(prot, x_on_0_stack, x_on_1_stack)
+    return x_stack
+
+
+def _stack_private(prot, x: List[PondPrivateTensor], axis: int=0):
+    x0 = []
+    x1 = []
+    for i in x:
+        i0, i1 = i.unwrapped
+        x0.append(i0)
+        x1.append(i1)
+
+    with tf.name_scope('stack'):
+
+        with tf.device(prot.server_0.device_name):
+            x0_stack = stack(x0, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            x1_stack = stack(x1, axis=axis)
+
+    x_stack = PondPrivateTensor(prot, x0_stack, x1_stack)
+    return x_stack
+
+
+def _stack_masked(prot, x_masked: List[PondMaskedTensor], axis: int=0):
+    a = []
+    a0 = []
+    a1 = []
+    alpha_on_0 = []
+    alpha_on_1 = []
+    for i in x_masked:
+        ii, i0, i1, i_on_0, i_on_1 = i.unwrapped
+        a.append(ii)
+        a0.append(i0)
+        a1.append(i1)
+        alpha_on_0.append(i_on_0)
+        alpha_on_1.append(i_on_1)
+
+    with tf.name_scope('stack'):
+
+        with tf.device(prot.crypto_producer.device_name):
+            a_stack = stack(a, axis=axis)
+
+        with tf.device(prot.server_0.device_name):
+            a0_stack = stack(a0, axis=axis)
+            alpha_on_0_stack = stack(alpha_on_0, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            a1_stack = stack(a1, axis=axis)
+            alpha_on_1_stack = stack(alpha_on_1, axis=axis)
+
+    x_unmasked_stack = prot.stack(x_masked.unmasked, axis=axis)
+    x_stack = PondMaskedTensor(prot, x_unmasked_stack, a_stack,
+                               a0_stack, a1_stack, alpha_on_0_stack,
+                               alpha_on_1_stack)
+    return x_stack
 
 #
 # mask helpers
