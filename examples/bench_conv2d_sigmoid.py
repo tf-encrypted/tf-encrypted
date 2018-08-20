@@ -316,7 +316,7 @@ else:
             print("Predict")
 
             start = time.time()
-            for i in range(5):
+            for i in range(1):
                 tfe.run(sess, prediction_op, tag='prediction')
             end = time.time()
             print((end - start)/5)
