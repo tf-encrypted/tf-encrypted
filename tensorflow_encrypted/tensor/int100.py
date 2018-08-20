@@ -8,7 +8,7 @@ from typing import Union, Optional, List, Dict, Any
 from .crt import (
     gen_crt_decompose, gen_crt_recombine,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_im2col, gen_crt_mod,
-    gen_crt_sample_uniform
+    gen_crt_sample_uniform, gen_crt_sum
 )
 from .helpers import prod, log2
 from ..config import run
@@ -49,6 +49,7 @@ _crt_decompose = gen_crt_decompose(m)
 _crt_recombine = gen_crt_recombine(m, _lambdas)
 
 _crt_add = gen_crt_add(m)
+_crt_sum = gen_crt_sum(m)
 _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_dot = gen_crt_dot(m)
@@ -104,6 +105,9 @@ class Int100Tensor(object):
     def __add__(self, other: 'Int100Tensor') -> 'Int100Tensor':
         return _add(self, other)
 
+    def sum(self, axis, keepdims=None):
+        return _sum(self, axis, keepdims)
+
     def __sub__(self, other: 'Int100Tensor') -> 'Int100Tensor':
         return _sub(self, other)
 
@@ -148,6 +152,11 @@ def _add(x, y):
     x, y = _lift(x), _lift(y)
     z_backing = _crt_add(x.backing, y.backing)
     return Int100Tensor.from_decomposed(z_backing)
+
+
+def _sum(x, axis, keepdims):
+    y_backing = _crt_sum(x.backing, axis, keepdims)
+    return Int100Tensor.from_decomposed(y_backing)
 
 
 def _sub(x, y):
