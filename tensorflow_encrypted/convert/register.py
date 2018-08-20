@@ -20,6 +20,7 @@ def register() -> Dict[str, Any]:
         'MatMul': matmul,
         'Shape': shape,
         'StridedSlice': strided_slice,
+        'Add': add,
         # 'Pack': pack,
         # 'Reshape': reshape,
         # 'BiasAdd': bias_add,
@@ -174,3 +175,9 @@ def reshape(converter: Converter, node: Any, inputs: List[str]) -> Any:
     shape = converter.outputs[inputs[1]]
 
     return tf.reshape(input, shape)
+
+def add(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    a = converter.outputs[inputs[0]]
+    b = converter.outputs[inputs[0]]
+
+    return converter.protocol.add(a, b)
