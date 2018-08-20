@@ -1678,6 +1678,7 @@ def _avgpool2d_public_reshape(x: BackingTensor,
                               pool_size: Tuple[int],
                               strides: Tuple[int],
                               padding: str) -> BackingTensor:
+
     raise NotImplementedError
 
 
@@ -1685,7 +1686,20 @@ def _avgpool2d_public_im2col(x: BackingTensor,
                              pool_size: Tuple[int],
                              strides: Tuple[int],
                              padding: str) -> BackingTensor:
-    raise NotImplementedError
+
+    batch, height, width, channels = x.shape
+    pool_height, pool_width = pool_size
+
+    out_height = (height - pool_height) / strides[0] + 1
+    out_width = (width - pool_width) / strides[0] + 1
+
+    x_split = x.reshape(batch * channels, 1, height, width)
+    x_cols = x.im2col(x_split, pool_height, pool_width, padding, strides)
+    x_cols_avg = np.average(x_cols, axis=0)
+    x_cols_avg = x_cols[x_cols_avg, np.arrange(x_cols.shape[1])]
+    out = x_cols_avg.reshape(out_height, out_width, batch, channels).transpose(2, 3, 0, 1)
+
+    return out
 
 
 def _avgpool2d_public(prot: Pond,
