@@ -573,6 +573,28 @@ class Pond(Protocol):
 
         return z
 
+    def avgpool2d(self, x, pool_size, strides, padding):
+        node_key = ('avgpool2d', x, pool_size, strides, padding)
+        z = _nodes.get(node_key, None)
+
+        if z is not None:
+            return z
+
+        dispatch = {
+            PondPublicTensor:  _avgpool2d_public,
+            PondPrivateTensor: _avgpool2d_private,
+            PondMaskedTensor:  _avgpool2d_masked,
+        }
+
+        func = dispatch.get(_type(x), None)
+        if func is None:
+            raise TypeError("Don't know how to avgpool2d {}".format(type(x)))
+
+        z = func(self, x, pool_size, strides, padding)
+        _nodes[node_key] = z
+
+        return z
+
 #
 # Classes representing the base values in the Pond protocol.
 #
@@ -1616,6 +1638,61 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
     z = PondPrivateTensor(prot, z0, z1)
     z = prot.truncate(z)
     return z
+
+
+def _avgpool2d_public_reshape(x: BackingTensor,
+                              pool_size: Tuple[int],
+                              strides: Tuple[int],
+                              padding: str) -> BackingTensor:
+    raise NotImplementedError
+
+
+def _avgpool2d_public_im2col(x: BackingTensor,
+                             pool_size: Tuple[int],
+                             strides: Tuple[int],
+                             padding: str) -> BackingTensor:
+    raise NotImplementedError
+
+
+def _avgpool2d_public(prot: Pond,
+                      x: PondPublicTensor,
+                      pool_size: Tuple[int],
+                      strides: Tuple[int],
+                      padding: str) -> PondPublicTensor:
+    x_on_0, x_on_1 = x.unwrapped
+    _, _, H, W = x.shape
+    siamese = pool_size == strides and pool_size[0] == pool_size[1]
+    even = H % pool_size[0] == 0 and W % pool_size[1] == 0
+
+    if siamese and even:
+        pooler = _avgpool2d_public_reshape
+    else:
+        pooler = _avgpool2d_public_im2col
+
+    with tf.name_scope('avgpool2d'):
+        with tf.device(prot.server_0.device_name):
+            y_on_0 = pooler(x_on_0, pool_size, strides, padding)
+
+        with tf.device(prot.server_1.device_name):
+            y_on_1 = pooler(x_on_1, pool_size, strides, padding)
+
+    return PondPublicTensor(prot, y_on_0, y_on_1)
+
+
+def _avgpool2d_private(prot: Pond,
+                       x: PondPrivateTensor,
+                       pool_size: Tuple[int],
+                       strides: Tuple[int],
+                       padding: str) -> PondPrivateTensor:
+    return _avgpool2d_masked(prot.mask(x), pool_size, strides, padding)
+
+
+def _avgpool2d_masked(prot: Pond,
+                      x: PondMaskedTensor,
+                      pool_size: Tuple[int],
+                      strides: Tuple[int],
+                      padding: str) -> PondPrivateTensor:
+    raise NotImplementedError
 
 #
 # transpose helpers

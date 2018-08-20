@@ -6,7 +6,7 @@ import tensorflow_encrypted as tfe
 
 class TestConv2D(unittest.TestCase):
 
-    def test_forward(self):
+    def test_forward(self) -> None:
         # input
         batch_size, channels_in, channels_out = 32, 3, 64
         img_height, img_width = 28, 28
