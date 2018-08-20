@@ -197,10 +197,10 @@ def _conv2d(x, y, strides, padding):
         w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
 
     X_col = x.im2col(h_filter, w_filter, padding, strides)
-    W_col = y.transpose(3, 2, 0, 1).reshape(int(n_filters), -1)
+    W_col = y.transpose(3, 2, 0, 1).reshape([int(n_filters), -1])
     out = W_col.dot(X_col)
 
-    out = out.reshape(n_filters, h_out, w_out, n_x)
+    out = out.reshape([n_filters, h_out, w_out, n_x])
     out = out.transpose(3, 0, 1, 2)
 
     return out
