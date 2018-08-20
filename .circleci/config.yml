@@ -18,6 +18,8 @@ jobs:
     working_directory: ~/repo
 
     steps:
+      - setup_remote_docker:
+          docker_layer_caching: true
       - checkout
 
       # Download and cache dependencies
@@ -53,6 +55,10 @@ jobs:
             python examples/int100.py
             python examples/inputs.py
             python examples/matmul.py
+      - run:
+          name: build docker contiainer
+          command: |
+            docker build --tag mortendahl/tf-encrypted:latest .
 
       - store_artifacts:
           path: test-reports
