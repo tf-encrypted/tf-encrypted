@@ -12,7 +12,6 @@ from tensorflow.python.framework import graph_io
 
 
 class TestConvert(unittest.TestCase):
-
     def test_cnn_convert(self):
         tf.reset_default_graph()
 
@@ -88,6 +87,46 @@ class TestConvert(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
+    def test_strided_slice_convert(self):
+        tf.reset_default_graph()
+
+        filename = "strided_slice.pb"
+
+        path = export_strided_slice(filename)
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        input = [[[1, 1, 1], [2, 2, 2]],
+                 [[3, 3, 3], [4, 4, 4]],
+                 [[5, 5, 5], [6, 6, 6]]]
+
+        actual = run_strided_slice(input)
+
+        tf.reset_default_graph()
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer'
+        ])
+
+        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            prot.clear_initializers()
+            input = prot.define_private_variable(np.array(input))
+
+            x = convert(graph_def, input)
+
+            with config.session() as sess:
+                tfe.run(sess, prot.initializer, tag='init')
+
+                output = x.reveal().eval(sess, tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
 
 def run_cnn(input_shape: List[int]):
     input = tf.placeholder(tf.float32, shape=input_shape, name="input")
@@ -133,6 +172,23 @@ def export_matmul(filename: str, input_shape: List[int]):
     x = tf.matmul(a, b)
 
     return export(x, filename)
+
+
+def export_strided_slice(filename: str, input_shape: List[int] = [3, 2, 3]):
+    t = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    out = tf.strided_slice(t, [1, 0, 0], [2, 1, 3], [1, 1, 1])
+
+    return export(out, filename)
+
+
+def run_strided_slice(input):
+    t = tf.constant(input, dtype=tf.float32)
+    out = tf.strided_slice(t, [1, 0, 0], [2, 1, 3], [1, 1, 1])
+
+    with tf.Session() as sess:
+        output = sess.run(out)
+
+    return output
 
 
 def export(x: tf.Tensor, filename: str):

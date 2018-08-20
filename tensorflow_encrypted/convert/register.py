@@ -5,6 +5,8 @@ from ..layers import Conv2D, Relu, Sigmoid, Dense
 import numpy as np
 import array
 
+from ..protocol.protocol import get_protocol
+
 
 def register() -> Dict[str, Any]:
     reg = {
@@ -15,7 +17,7 @@ def register() -> Dict[str, Any]:
         'Sigmoid': sigmoid,
         'MatMul': matmul,
         'Shape': shape,
-        # 'StridedSlice': strided_slice,
+        'StridedSlice': strided_slice,
         # 'Pack': pack,
         # 'Reshape': reshape,
         # 'BiasAdd': bias_add,
@@ -96,8 +98,43 @@ def sigmoid(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
     return Sigmoid().forward(input)
 
 
+def strided_slice(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+    input = output_lookup[inputs[0]]
+    begin = output_lookup[inputs[1]]
+    end = output_lookup[inputs[2]]
+    strides = output_lookup[inputs[3]]
+
+    begin_mask = node.attr["begin_mask"].i
+    end_mask = node.attr["end_mask"].i
+    ellipsis_mask = node.attr["ellipsis_mask"].i
+    new_axis_mask = node.attr["new_axis_mask"].i
+    shrink_axis_mask = node.attr["shrink_axis_mask"].i
+
+    prot = get_protocol()
+
+    begin = tf.constant(begin.attr["value"].tensor)
+    end = tf.constant(end.attr["value"].tensor)
+    strides = tf.constant(strides.attr["value"].tensor)
+
+    return prot.strided_slice(input, begin, end, strides=strides,
+                              begin_mask=begin_mask, end_mask=end_mask,
+                              ellipsis_mask=ellipsis_mask,
+                              new_axis_mask=new_axis_mask,
+                              shrink_axis_mask=shrink_axis_mask)
+
+
+def pack(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+    raise NotImplementedError()
+    input1 = output_lookup[inputs[0]]
+    input2 = output_lookup[inputs[1]]
+
+    prot = get_protocol()
+
+    return prot.stack([input1, input2], axis=node.attr["axis"].i)
+
+
 def bias_add(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplementedError
+    raise NotImplementedError()
 
     input = output_lookup[inputs[0]]
     bias = output_lookup[inputs[1]]
@@ -106,7 +143,7 @@ def bias_add(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any
 
 
 def maxpool(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplementedError
+    raise NotImplementedError()
 
     input = output_lookup[inputs[0]]
 
@@ -121,38 +158,8 @@ def shape(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
     return input.shape
 
 
-def strided_slice(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplementedError
-
-    input = output_lookup[inputs[0]]
-    begin = output_lookup[inputs[1]]
-    end = output_lookup[inputs[2]]
-    strides = output_lookup[inputs[3]]
-
-    begin_mask = node.attr["begin_mask"].i
-    end_mask = node.attr["end_mask"].i
-    ellipsis_mask = node.attr["ellipsis_mask"].i
-    new_axis_mask = node.attr["new_axis_mask"].i
-    shrink_axis_mask = node.attr["shrink_axis_mask"].i
-
-    return tf.strided_slice(input, begin, end, strides=strides,
-                            begin_mask=begin_mask, end_mask=end_mask,
-                            ellipsis_mask=ellipsis_mask,
-                            new_axis_mask=new_axis_mask,
-                            shrink_axis_mask=shrink_axis_mask)
-
-
-def pack(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplementedError
-
-    input1 = output_lookup[inputs[0]]
-    input2 = output_lookup[inputs[1]]
-
-    return tf.stack([input1, input2], axis=node.attr["axis"].i)
-
-
 def reshape(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplementedError
+    raise NotImplementedError()
 
     input = output_lookup[inputs[0]]
     shape = output_lookup[inputs[1]]
