@@ -918,8 +918,7 @@ def _decode_to_tftensor(elements, scaling_factor: int):
     # work first
 
 
-def _share(secret) -> Tuple[BackingTensor, BackingTensor]:
-    assert isinstance(secret, BackingTensor), type(secret)
+def _share(secret: BackingTensor) -> Tuple[BackingTensor, BackingTensor]:
 
     with tf.name_scope('share'):
         share0 = BackingTensor.sample_uniform(secret.shape)
@@ -927,9 +926,7 @@ def _share(secret) -> Tuple[BackingTensor, BackingTensor]:
         return share0, share1
 
 
-def _reconstruct(share0, share1):
-    assert isinstance(share0, BackingTensor), type(share0)
-    assert isinstance(share1, BackingTensor), type(share1)
+def _reconstruct(share0: BackingTensor, share1: BackingTensor):
 
     with tf.name_scope('reconstruct'):
         return share0 + share1
@@ -1449,9 +1446,9 @@ def _square_masked(prot, x):
 #
 
 
-def _dot_public_public(prot, x, y):
-    assert isinstance(x, PondPublicTensor), type(x)
-    assert isinstance(y, PondPublicTensor), type(y)
+def _dot_public_public(prot: Pond,
+                       x: PondPublicTensor,
+                       y: PondPublicTensor) -> PondTensor:
 
     x_on_0, x_on_1 = x.unwrapped
     y_on_0, y_on_1 = y.unwrapped

@@ -18,11 +18,7 @@ class TestConv2D(unittest.TestCase):
         filter_shape = (h_filter, w_filter, channels_in, channels_out)
         filter_values = np.random.normal(size=filter_shape)
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
+        config = tfe.LocalConfig(3)
 
         # convolution pond
         with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
