@@ -1,1 +1,2 @@
-from .convert import convert
+from .convert import Converter
+from .register import register
