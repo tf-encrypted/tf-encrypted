@@ -199,6 +199,53 @@ class TestConvert(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
+    def test_mul_convert(self):
+        tf.reset_default_graph()
+
+        filename = "mul.pb"
+
+        input_shape = [4, 1]
+
+        path = export_mul(filename, input_shape)
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        actual = run_mul(input_shape)
+
+        tf.reset_default_graph()
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer',
+            'prediction_client',
+            'weights_provider'
+        ])
+
+        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            prot.clear_initializers()
+
+            class PredictionClient(tfe.io.InputProvider):
+                def provide_input(self):
+                    return tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape))
+
+            input = PredictionClient(config.get_player('prediction_client'))
+
+            converter = Converter(config, prot, config.get_player('weights_provider'))
+
+            x = converter.convert(graph_def, input, register())
+
+            with config.session() as sess:
+                tfe.run(sess, prot.initializer, tag='init')
+
+                output = x.reveal().eval(sess, tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
     def test_strided_slice_convert(self):
         tf.reset_default_graph()
 
@@ -296,6 +343,7 @@ def export_matmul(filename: str, input_shape: List[int]):
 
     return export(x, filename)
 
+
 def run_add(input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
     b = tf.constant(np.ones((input_shape[1], 1)), dtype=tf.float32)
@@ -334,6 +382,27 @@ def export_sub(filename: str, input_shape: List[int]):
     b = tf.constant(np.ones((input_shape[1], 1)), dtype=tf.float32)
 
     x = tf.subtract(a, b)
+
+    return export(x, filename)
+
+
+def run_mul(input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape), dtype=tf.float32)
+
+    x = tf.multiply(a, b)
+
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape)})
+
+    return output
+
+
+def export_mul(filename: str, input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape), dtype=tf.float32)
+
+    x = tf.multiply(a, b)
 
     return export(x, filename)
 

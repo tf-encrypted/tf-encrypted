@@ -22,6 +22,7 @@ def register() -> Dict[str, Any]:
         'StridedSlice': strided_slice,
         'Add': add,
         'Sub': sub,
+        'Mul': mul,
         # 'Pack': pack,
         # 'Reshape': reshape,
         # 'BiasAdd': bias_add,
@@ -190,3 +191,10 @@ def sub(converter: Converter, node: Any, inputs: List[str]) -> Any:
     b = converter.outputs[inputs[0]]
 
     return converter.protocol.sub(a, b)
+
+
+def mul(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    a = converter.outputs[inputs[0]]
+    b = converter.outputs[inputs[0]]
+
+    return converter.protocol.mul(a, b)
