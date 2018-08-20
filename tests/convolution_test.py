@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
+
 class TestConv2D(unittest.TestCase):
 
     def test_forward(self):
@@ -19,16 +20,16 @@ class TestConv2D(unittest.TestCase):
         filter_values = np.random.normal(size=filter_shape)
 
         config = tfe.LocalConfig([
-            'server0',
-            'server1',
+            'server_0',
+            'server_1',
             'crypto_producer'
         ])
 
         # convolution pond
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
-        
+        with tfe.protocol.Pond(*config.players) as prot:
+
             conv_input = prot.define_private_variable(input_conv)
-            conv_layer = tfe.layer.Conv2D(filter_shape, strides=2)
+            conv_layer = tfe.layers.Conv2D(filter_shape, strides=2)
             conv_layer.initialize(input_shape, initial_weights=filter_values)
             conv_out_pond = conv_layer.forward(conv_input)
 

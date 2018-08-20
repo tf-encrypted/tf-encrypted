@@ -6,13 +6,15 @@ import tensorflow_encrypted as tfe
 
 from tensorflow_encrypted.layers import Batchnorm
 
+from typing import Any, Optional, Tuple, Union
+
 
 class TestBatchnorm(unittest.TestCase):
-    def test_forward(self):
+    def test_forward(self) -> None:
 
         batch_size, channels_in, img_height, img_width = (32, 3, 28, 28)
 
-        input_shape = (batch_size, channels_in, img_height, img_width)
+        input_shape = [batch_size, channels_in, img_height, img_width]
         input_batchnorm = np.random.normal(size=input_shape).astype(np.float32)
 
         # I reshaped the input because tf.nn.batch_normalization doesn't reshape it
@@ -21,7 +23,7 @@ class TestBatchnorm(unittest.TestCase):
         variance = np.array([0.5, 0.3, 0.1]).reshape(1, channels_in, 1, 1).astype(np.float32)
         scale = np.array([0.3, 0.5, 0.8]).reshape(1, channels_in, 1, 1).astype(np.float32)
         offset = np.array([1.5, 1.2, 1.4]).reshape(1, channels_in, 1, 1).astype(np.float32)
-        variance_epsilone = 1e-8
+        variance_epsilon = 1e-8
 
         config = tfe.LocalConfig([
             'server0',
@@ -52,7 +54,7 @@ class TestBatchnorm(unittest.TestCase):
                 x = tf.Variable(input_batchnorm, dtype=tf.float32)
 
                 batchnorm_out_tf = tf.nn.batch_normalization(
-                        x, mean, variance, offset, scale, variance_epsilone)
+                        x, mean, variance, offset, scale, variance_epsilon)
 
                 sess.run(tf.global_variables_initializer())
 
