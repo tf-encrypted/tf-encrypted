@@ -30,8 +30,10 @@ class Conv2D(core.Layer):
         assert channels_first
 
     def initialize(self, input_shape, initial_weights=None):
+        fshape = [int(i) for i in self.fshape]
+        input_shape = [int(i) for i in input_shape]
 
-        h_filter, w_filter, d_filters, n_filters = self.fshape
+        h_filter, w_filter, d_filters, n_filters = fshape
         n_x, d_x, h_x, w_x = input_shape
 
         if self.padding == "SAME":
@@ -43,6 +45,7 @@ class Conv2D(core.Layer):
 
         if initial_weights is None:
             initial_weights = self.filter_init(self.fshape)
+
         self.weights = self.prot.define_private_variable(initial_weights)
         self.bias = self.prot.define_private_variable(np.zeros((n_filters, h_out, w_out)))
 

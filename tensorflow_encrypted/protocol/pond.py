@@ -205,6 +205,9 @@ class Pond(Protocol):
     def initializer(self):
         return tf.group(*_initializers)
 
+    def clear_initializers(self):
+        del _initializers[:]
+
     def assign(self, variable, value):
         assert isinstance(variable, PondPrivateVariable), type(variable)
         assert isinstance(value, PondPrivateTensor), type(value)

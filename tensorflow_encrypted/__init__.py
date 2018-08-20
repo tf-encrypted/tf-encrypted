@@ -6,12 +6,4 @@ from . import io
 from . import protocol
 from . import estimator
 from . import layers
-
-# __all__ = [
-#     'InputProvider',
-#     'LocalConfig',
-#     'RemoteConfig',
-#     'estimator',
-#     'layer',
-#     'protocol'
-# ]
+from . import convert
