@@ -1,7 +1,57 @@
 from typing import Dict, Tuple, List, Any
-from .register import register
+import tensorflow as tf
+
 from ..layers import Layer
 from ..protocol.pond import PondPrivateTensor
+from ..io import InputProvider
+from ..protocol.protocol import get_protocol
+from ..player import Player
+from ..protocol.pond import Pond
+from ..config import Config
+
+
+class ConvertInputProvider(InputProvider):
+    input: tf.Tensor
+
+    def __init__(self, player: Player, input: tf.Tensor) -> None:
+        self.input = input
+        self.player = player
+
+    def provide_input(self) -> tf.Tensor:
+        return tf.identity(self.input)
+
+
+class Converter():
+    config: Config
+    protocol: Pond
+    outputs: Dict[str, Any] = {}
+    weights_provider: Player
+
+    def __init__(self, config: Config, protocol: Pond,
+                 weights_provider: Player) -> None:
+        self.config = config
+        self.protocol = protocol
+        self.weights_provider = weights_provider
+
+    def convert(self, graph_def: Any, input: InputProvider, register: Dict[str, Any]) -> Dict[str, Any]:
+        name_to_input_name, name_to_node = extract_graph_summary(graph_def)
+
+        if graph_def.node[0].op != "Placeholder":
+            raise AttributeError("First node in graph must be placeholder for now")
+
+        for output, inputs in name_to_input_name.items():
+            node = name_to_node[output]
+
+            # just take the input passed into this function for now
+            if node.op == "Placeholder":
+                x = self.protocol.define_private_input(input)
+
+                self.outputs[output] = x
+                continue
+
+            self.outputs[output] = register[node.op](self, node, inputs)
+
+        return self.outputs[graph_def.node[-1].name]
 
 
 def node_name(n: str) -> str:
@@ -24,25 +74,3 @@ def extract_graph_summary(graph_def: Any) -> Tuple[Dict[str, List[str]],
         name_to_input_name[n] = [node_name(x) for x in node.input]
 
     return name_to_input_name, name_to_node
-
-
-def convert(graph_def: Any, input: PondPrivateTensor) -> Dict[str, Any]:
-    name_to_input_name, name_to_node = extract_graph_summary(graph_def)
-
-    output_vars: Dict[str, Any] = {}
-
-    if graph_def.node[0].op != "Placeholder":
-        raise AttributeError("First node in graph must be placeholder for now")
-
-    for output, inputs in name_to_input_name.items():
-        node = name_to_node[output]
-
-        # just take the input passed into this function for now
-        if node.op == "Placeholder":
-            output_vars[output] = input
-            continue
-
-        reg = register()
-        output_vars[output] = reg[node.op](node, inputs, output_vars)
-
-    return output_vars[graph_def.node[-1].name]

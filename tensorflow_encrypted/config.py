@@ -14,6 +14,10 @@ class Config(ABC):
     def players(self) -> List[Player]:
         pass
 
+    @abstractmethod
+    def get_player(self, name:str) -> Player:
+        pass
+
 
 class LocalConfig(Config):
     """
