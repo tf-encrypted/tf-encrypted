@@ -1,5 +1,6 @@
 import sys
 import time
+from typing import List
 
 import tensorflow as tf
 import tensorflow_encrypted as tfe
@@ -21,46 +22,47 @@ config = tfe.LocalConfig([
 #     ('prediction_client', 'localhost:4444')
 # ])
 
-if len(sys.argv) > 1:
 
+if len(sys.argv) > 1:
+    if isinstance(config, tfe.LocalConfig):
+        raise Exception("You can launch a configured server only wit ha remote config")
     #
     # assume we're running as a server
     #
 
-    player_name = str(sys.argv[1])
+    player_name: str = str(sys.argv[1])
 
     server = config.server(player_name)
     server.start()
     server.join()
-
 else:
 
     #
     # assume we're running as master
     #
 
-    conv11_fshape = (3, 3, 3, 64)
-    conv12_fshape = (3, 3, 64, 64)
-    pool1_shape = (1, 1, 64, 64)
+    conv11_fshape: List = [3, 3, 3, 64]
+    conv12_fshape: List = [3, 3, 64, 64]
+    pool1_shape: List = [1, 1, 64, 64]
 
-    conv21_fshape = (3, 3, 64, 128)
-    conv22_fshape = (3, 3, 128, 128)
-    pool2_shape = (1, 1, 128, 128)
+    conv21_fshape: List = [3, 3, 64, 128]
+    conv22_fshape: List = [3, 3, 128, 128]
+    pool2_shape: List = [1, 1, 128, 128]
 
-    conv31_fshape = (3, 3, 128, 256)
-    conv32_fshape = (3, 3, 256, 256)
-    conv33_fshape = (3, 3, 256, 256)
-    pool3_shape = (1, 1, 256, 256)
+    conv31_fshape: List = [3, 3, 128, 256]
+    conv32_fshape: List = [3, 3, 256, 256]
+    conv33_fshape: List = [3, 3, 256, 256]
+    pool3_shape: List = [1, 1, 256, 256]
 
-    conv41_fshape = (3, 3, 256, 512)
-    conv42_fshape = (3, 3, 512, 512)
-    conv43_fshape = (3, 3, 512, 512)
-    pool4_shape = (1, 1, 512, 512)
+    conv41_fshape: List = [3, 3, 256, 512]
+    conv42_fshape: List = [3, 3, 512, 512]
+    conv43_fshape: List = [3, 3, 512, 512]
+    pool4_shape: List = [1, 1, 512, 512]
 
-    conv51_fshape = (3, 3, 512, 512)
-    conv52_fshape = (3, 3, 512, 512)
-    conv53_fshape = (3, 3, 512, 512)
-    pool5_shape = (1, 1, 512, 512)
+    conv51_fshape: List = [3, 3, 512, 512]
+    conv52_fshape: List = [3, 3, 512, 512]
+    conv53_fshape: List = [3, 3, 512, 512]
+    pool5_shape: List = [1, 1, 512, 512]
 
     class Conv11WeightsInputProvider(tfe.io.InputProvider):
         def provide_input(self) -> tf.Tensor:
@@ -154,12 +156,13 @@ else:
 
     class PredictionInputProvider(tfe.io.InputProvider):
         def provide_input(self) -> tf.Tensor:
-            x = tf.random_normal(shape=(1, 3, 192, 192), dtype=tf.float32)
+            x = tf.random_normal(shape=[1, 3, 192, 192], dtype=tf.float32)
             return tf.Print(x, [x], message="x:")
 
     class PredictionOutputReceiver(tfe.io.OutputReceiver):
         def receive_output(self, tensor: tf.Tensor) -> tf.Operation:
-            return tf.Print(tensor, [tensor, tf.shape(tensor)], message="output:")
+            x = tf.Print(tensor, [tensor, tf.shape(tensor)], message="output:")
+            return tf.group(x)
 
     weights_conv11 = Conv11WeightsInputProvider(config.get_player('weights_provider'))
     weights_conv12 = Conv12WeightsInputProvider(config.get_player('weights_provider'))

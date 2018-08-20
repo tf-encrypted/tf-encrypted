@@ -10,7 +10,7 @@ class Dense(core.Layer):
     out_features (int, required): number of output neurons for the layer
     """
 
-    def __init__(self, in_features: int, out_features: int):
+    def __init__(self, in_features: int, out_features: int) -> None:
         self.in_features = in_features
         self.out_features = out_features
 

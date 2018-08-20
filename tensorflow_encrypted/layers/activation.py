@@ -5,7 +5,7 @@ class Sigmoid(core.Layer):
     def __init__(self):
         self.layer_output = None
 
-    def initialize(self, input_shape, initializer=None):
+    def initialize(self, *args, **kwargs) -> None:
         pass
 
     def forward(self, x):
@@ -23,7 +23,7 @@ class Relu(core.Layer):
     def __init__(self):
         self.layer_output = None
 
-    def initialize(self, input_shape, initializer=None):
+    def initialize(self, *args, **kwargs) -> None:
         pass
 
     def forward(self, x):
