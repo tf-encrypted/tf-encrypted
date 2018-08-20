@@ -1,9 +1,11 @@
 import tensorflow as tf
-
-from typing import Any, Dict, List
-from ..layers import Conv2D, Relu, Sigmoid, Dense
 import numpy as np
 import array
+from typing import Any, Dict, List
+
+from ..layers import Conv2D, Relu, Sigmoid, Dense
+from ..protocol.protocol import get_protocol
+from .convert import Converter, ConvertInputProvider
 
 from ..protocol.protocol import get_protocol
 
@@ -27,19 +29,19 @@ def register() -> Dict[str, Any]:
     return reg
 
 
-def placeholder(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+def placeholder(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return tf.placeholder(node.attr["dtype"].type,
                           shape=node.attr["shape"].shape)
 
 
-def constant(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+def constant(converter: Converter, node: Any, inputs: List[str]) -> Any:
     # need to able to access the underlying weights return the node
     return node
 
 
-def matmul(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    a = output_lookup[inputs[0]]
-    b = output_lookup[inputs[1]]
+def matmul(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    a = converter.outputs[inputs[0]]
+    b = converter.outputs[inputs[1]]
 
     tensor = b.attr["value"].tensor
 
@@ -56,14 +58,18 @@ def matmul(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
     else:
         raise TypeError("Unsupported dtype for weights")
 
-    layer.initialize(initial_weights=np.array(nums).reshape(b_shape))
+    provider = ConvertInputProvider(converter.weights_provider,
+                                    np.array(nums).reshape(b_shape))
+    w = converter.protocol.define_private_input(provider)
+
+    layer.initialize(initial_weights=w)
 
     return layer.forward(a)
 
 
-def conv2d(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    input = output_lookup[inputs[0]]
-    filter = output_lookup[inputs[1]]
+def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+    filter = converter.outputs[inputs[1]]
 
     shape = [i.size for i in filter.attr["value"].tensor.tensor_shape.dim]
     dtype = filter.attr["dtype"].type
@@ -81,28 +87,32 @@ def conv2d(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
     else:
         raise TypeError("Unsupported dtype for weights")
 
-    layer.initialize(input.shape, initial_weights=np.array(nums).reshape(shape))
+    provider = ConvertInputProvider(converter.weights_provider,
+                                    np.array(nums).reshape(shape))
+    w = converter.protocol.define_private_input(provider)
+
+    layer.initialize(input.shape, initial_weights=w)
 
     return layer.forward(input)
 
 
-def relu(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    input = output_lookup[inputs[0]]
+def relu(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
 
     return Relu().forward(input)
 
 
-def sigmoid(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    input = output_lookup[inputs[0]]
+def sigmoid(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
 
     return Sigmoid().forward(input)
 
 
-def strided_slice(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    input = output_lookup[inputs[0]]
-    begin = output_lookup[inputs[1]]
-    end = output_lookup[inputs[2]]
-    strides = output_lookup[inputs[3]]
+def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+    begin = converter.outputs[inputs[1]]
+    end = converter.outputs[inputs[2]]
+    strides = converter.outputs[inputs[3]]
 
     begin_mask = node.attr["begin_mask"].i
     end_mask = node.attr["end_mask"].i
@@ -110,17 +120,16 @@ def strided_slice(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -
     new_axis_mask = node.attr["new_axis_mask"].i
     shrink_axis_mask = node.attr["shrink_axis_mask"].i
 
-    prot = get_protocol()
-
     begin = tf.constant(begin.attr["value"].tensor)
     end = tf.constant(end.attr["value"].tensor)
     strides = tf.constant(strides.attr["value"].tensor)
 
-    return prot.strided_slice(input, begin, end, strides=strides,
-                              begin_mask=begin_mask, end_mask=end_mask,
-                              ellipsis_mask=ellipsis_mask,
-                              new_axis_mask=new_axis_mask,
-                              shrink_axis_mask=shrink_axis_mask)
+    return converter.protocol.strided_slice(input, begin, end, strides=strides,
+                                            begin_mask=begin_mask,
+                                            end_mask=end_mask,
+                                            ellipsis_mask=ellipsis_mask,
+                                            new_axis_mask=new_axis_mask,
+                                            shrink_axis_mask=shrink_axis_mask)
 
 
 def pack(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
@@ -133,35 +142,35 @@ def pack(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
     return prot.stack([input1, input2], axis=node.attr["axis"].i)
 
 
-def bias_add(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+def bias_add(converter: Converter, node: Any, inputs: List[str]) -> Any:
     raise NotImplementedError()
 
-    input = output_lookup[inputs[0]]
-    bias = output_lookup[inputs[1]]
+    input = converter.outputs[inputs[0]]
+    bias = converter.outputs[inputs[1]]
 
     return input + bias
 
 
-def maxpool(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+def maxpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
     raise NotImplementedError()
 
-    input = output_lookup[inputs[0]]
+    input = converter.outputs[inputs[0]]
 
     return tf.nn.max_pool(input, list(node.attr["ksize"].list.i),
                           list(node.attr["strides"].list.i),
                           node.attr["padding"].s)
 
 
-def shape(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    input = output_lookup[inputs[0]]
+def shape(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
 
     return input.shape
 
 
-def reshape(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+def reshape(converter: Converter, node: Any, inputs: List[str]) -> Any:
     raise NotImplementedError()
 
-    input = output_lookup[inputs[0]]
-    shape = output_lookup[inputs[1]]
+    input = converter.outputs[inputs[0]]
+    shape = converter.outputs[inputs[1]]
 
     return tf.reshape(input, shape)
