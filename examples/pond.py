@@ -3,7 +3,7 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 
 from tensorflow_encrypted.protocol import Pond
-from tensorflow_encrypted.layer import Conv2D
+from tensorflow_encrypted.layers import Conv2D
 
 config = tfe.LocalConfig([
     'server0',
@@ -48,8 +48,6 @@ with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer'))
 
         print("convolution forward: ")
         print(conv_out.reveal().eval(sess))
-
-
 
         # b = prot.define_private_placeholder(shape)
         # c = prot.define_private_variable()
