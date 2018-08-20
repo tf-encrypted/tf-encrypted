@@ -4,7 +4,8 @@ from typing import List
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
-from tensorflow_encrypted.convert import convert
+from tensorflow_encrypted.convert import Converter
+from tensorflow_encrypted.convert.register import register
 
 from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
@@ -34,13 +35,21 @@ class TestConvert(unittest.TestCase):
         config = tfe.LocalConfig([
             'server0',
             'server1',
-            'crypto_producer'
+            'crypto_producer',
+            'prediction_client',
+            'weights_provider'
         ])
 
         with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
-            input = prot.define_private_variable(np.ones(input_shape))
+            class PredictionClient(tfe.io.InputProvider):
+                def provide_input(self):
+                    return tf.constant(np.ones(input_shape))
 
-            x = convert(graph_def, input)
+            input = PredictionClient(config.get_player('prediction_client'))
+
+            converter = Converter(config, prot, config.get_player('weights_provider'))
+
+            x = converter.convert(graph_def, input, register())
 
             with config.session() as sess:
                 tfe.run(sess, prot.initializer, tag='init')
@@ -71,14 +80,74 @@ class TestConvert(unittest.TestCase):
         config = tfe.LocalConfig([
             'server0',
             'server1',
-            'crypto_producer'
+            'crypto_producer',
+            'prediction_client',
+            'weights_provider'
         ])
 
         with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
             prot.clear_initializers()
-            input = prot.define_private_variable(np.ones(input_shape))
 
-            x = convert(graph_def, input)
+            class PredictionClient(tfe.io.InputProvider):
+                def provide_input(self):
+                    return tf.constant(np.ones(input_shape))
+
+            input = PredictionClient(config.get_player('prediction_client'))
+
+            converter = Converter(config, prot, config.get_player('weights_provider'))
+
+            x = converter.convert(graph_def, input, register())
+
+            with config.session() as sess:
+                tfe.run(sess, prot.initializer, tag='init')
+
+                output = x.reveal().eval(sess, tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
+    def test_strided_slice_convert(self):
+        tf.reset_default_graph()
+
+        filename = "strided_slice.pb"
+
+        path = export_strided_slice(filename)
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        input = [[[1, 1, 1], [2, 2, 2]],
+                 [[3, 3, 3], [4, 4, 4]],
+                 [[5, 5, 5], [6, 6, 6]]]
+
+        actual = run_strided_slice(input)
+
+        tf.reset_default_graph()
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer',
+            'prediction_client',
+            'weights_provider',
+        ])
+
+        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            prot.clear_initializers()
+
+            class PredictionClient(tfe.io.InputProvider):
+                def provide_input(self):
+                    return tf.constant([[[1, 1, 1], [2, 2, 2]],
+                                        [[3, 3, 3], [4, 4, 4]],
+                                        [[5, 5, 5], [6, 6, 6]]])
+
+            input = PredictionClient(config.get_player('prediction_client'))
+
+            converter = Converter(config, prot, config.get_player('weights_provider'))
+
+            x = converter.convert(graph_def, input, register())
 
             with config.session() as sess:
                 tfe.run(sess, prot.initializer, tag='init')
