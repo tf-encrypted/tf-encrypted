@@ -9,4 +9,6 @@ WORKDIR /usr/src/tf-encrypted
 COPY . .
 RUN pip install -e .
 
+EXPOSE 4440
+
 ENTRYPOINT ["bin/serve"]

@@ -56,8 +56,4 @@ jobs:
       - run:
           name: build docker contiainer
           command: |
-            docker build --tag mortendahl/tf-encrypted:latest .
-
-      - store_artifacts:
-          path: test-reports
-          destination: test-reports
+            docker build --tag partydb/tf-encrypted:latest .
