@@ -9,3 +9,4 @@ from .pond import Pond
 
 from .protocol import Protocol
 from ..player import Player
+from .types import TFEVariable
