@@ -265,6 +265,30 @@ class Pond(Protocol):
 
         return z
 
+    def sum(self, x, axis, keepdims):
+        node_key = ('sum', x)
+        z = _nodes.get(node_key, None)
+
+        if z is not None:
+            return z
+
+        x = _lift(self, x)
+        y = _lift(self, y)
+
+        dispatch = {
+            PondPublicTensor:  _sum_public,
+            PondPrivateTensor: _sum_private,
+            PondMaskedTensor:  _sum_masked
+        }
+        func = dispatch.get(_type(x), None)
+        if func is None:
+            raise TypeError("Don't know how to sum {}".format(type(x), type(y)))
+
+        z = func(self, x, axis, keepdims)
+        _nodes[node_key] = z
+
+        return z
+
     def sub(self, x, y):
 
         node_key = ('sub', x, y)
@@ -653,6 +677,9 @@ class PondTensor(object):
 
     def __add__(self, other):
         return self.prot.add(self, other)
+
+    def sum(self, axis, keepdims=False):
+        return self.prot.sum(self, axis, keepdims)
 
     def sub(self, other):
         return self.prot.sub(self, other)
@@ -1181,6 +1208,51 @@ def _add_masked_masked(prot, x, y):
     assert isinstance(y, PondMaskedTensor), type(y)
     return prot.add(x.unmasked, y.unmasked)
 
+#####
+# sum helpers
+#####
+
+
+def _sum_core(prot: Pond,
+              x: PondTensor,
+              axis: int,
+              keepdims: Optional[bool]) -> Tuple[BackingTensor, BackingTensor]:
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope('sum'):
+
+        with tf.device(prot.server_0.device_name):
+            y_on_0 = x_on_0.sum(axis, keepdims)
+
+        with tf.device(prot.server_1.device_name):
+            y_on_1 = x_on_1.sum(axis, keepdims)
+
+        return y_on_0, y_on_1
+
+
+def _sum_public(prot: Pond,
+                x: PondPublicTensor,
+                axis: int,
+                keepdims: Optional[bool]) -> PondPublicTensor:
+    y_on_0, y_on_1 = _sum_core(prot, x, axis, keepdims)
+    return PondPublicTensor(prot, y_on_0, y_on_1)
+
+
+def _sum_private(prot: Pond,
+                 x: PondPrivateTensor,
+                 axis: int,
+                 keepdims: Optional[bool]) -> PondPrivateTensor:
+    y_on_0, y_on_1 = _sum_core(prot, x, axis, keepdims)
+    return PondPrivateTensor(prot, y_on_0, y_on_1)
+
+
+def _sum_masked(prot: Pond,
+                x: PondMaskedTensor,
+                axis: int,
+                keepdims: Optional[bool]) -> PondMaskedTensor:
+    y_on_0, y_on_1 = _sum_core(prot, x, axis, keepdims)
+    return PondMaskedTensor(prot, y_on_0, y_on_1)
+
 #
 # sub helpers
 #
@@ -1473,7 +1545,7 @@ def _square_masked(prot, x):
 
 def _dot_public_public(prot: Pond,
                        x: PondPublicTensor,
-                       y: PondPublicTensor) -> PondTensor:
+                       y: PondPublicTensor) -> PondPublicTensor:
 
     x_on_0, x_on_1 = x.unwrapped
     y_on_0, y_on_1 = y.unwrapped
