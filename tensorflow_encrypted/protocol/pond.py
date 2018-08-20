@@ -1675,10 +1675,14 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
 
 
 def _avgpool2d_public_reshape(x: BackingTensor,
-                              pool_size: Tuple[int],
-                              strides: Tuple[int],
+                              pool_size: Tuple[int, int],
+                              strides: Tuple[int, int],
                               padding: str) -> BackingTensor:
-    raise NotImplementedError
+    pool_height, pool_width = pool_size
+    N, C, H, W = x.shape
+    x_reshaped = x.reshape(N, C, H / pool_height, pool_height, W / pool_width, pool_width)
+    scalar = 1 / (pool_height * pool_width)
+    return x_reshaped.sum(axis=3).sum(axis=4) * scalar
 
 
 def _avgpool2d_public_im2col(x: BackingTensor,
