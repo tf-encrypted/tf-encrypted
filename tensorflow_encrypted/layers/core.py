@@ -20,7 +20,7 @@ class Layer(ABC):
 
     @abstractmethod
     def get_output_shape(self) -> List[int]:
-        raise NotImplementedError
+        """Returns the layer's output shape"""
 
     @abstractmethod
     def initialize(self, *args, **kwargs) -> None:  # type: ignore
