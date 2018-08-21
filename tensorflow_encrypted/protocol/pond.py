@@ -451,27 +451,27 @@ class Pond(Protocol):
         shape: List[int]
     ):
         node_key = ('reshape', x)
-        x_t = _nodes.get(node_key, None)
+        x_reshaped = _nodes.get(node_key, None)
 
-        if x_t is not None:
-            return x_t
+        if x_reshaped is not None:
+            return x_reshaped
 
         if isinstance(x, PondPublicTensor):
-            x_t = _reshape_public(self, x, shape)
+            x_reshaped = _reshape_public(self, x, shape)
 
         elif isinstance(x, PondPrivateTensor):
-            x_t = _reshape_private(self, x, shape)
+            x_reshaped = _reshape_private(self, x, shape)
 
         elif isinstance(x, PondMaskedTensor):
-            x_t = _reshape_masked(self, x, shape)
-            _nodes[('reshape', x.unmasked)] = x_t.unmasked
+            x_reshaped = _reshape_masked(self, x, shape)
+            _nodes[('reshape', x.unmasked)] = x_reshaped.unmasked
 
         else:
             raise TypeError("Don't know how to reshape {}".format(type(x)))
 
-        _nodes[node_key] = x_t
+        _nodes[node_key] = x_reshaped
 
-        return x_t
+        return x_reshaped
 
     # see https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on
     # the arguments
@@ -480,24 +480,24 @@ class Pond(Protocol):
                                      'PondMaskedTensor'], *args: Any, **kwargs: Any):
         node_key = ('strided_slice', x)
 
-        x_t = _nodes.get(node_key, None)
+        x_sliced = _nodes.get(node_key, None)
 
-        if x_t is not None:
-            return x_t
+        if x_sliced is not None:
+            return x_sliced
 
         if isinstance(x, PondPublicTensor):
-            x_t = _strided_slice_public(self, x, args, kwargs)
+            x_sliced = _strided_slice_public(self, x, args, kwargs)
         elif isinstance(x, PondPrivateTensor):
-            x_t = _strided_slice_private(self, x, args, kwargs)
+            x_sliced = _strided_slice_private(self, x, args, kwargs)
         elif isinstance(x, PondMaskedTensor):
-            x_t = _strided_slice_masked(self, x, args, kwargs)
-            _nodes[('strided_slice', x.unmasked)] = x_t.unmasked
+            x_sliced = _strided_slice_masked(self, x, args, kwargs)
+            _nodes[('strided_slice', x.unmasked)] = x_sliced.unmasked
         else:
             raise TypeError("Don't know how to do a strided slice {}".format(type(x)))
 
-        _nodes[node_key] = x_t
+        _nodes[node_key] = x_sliced
 
-        return x_t
+        return x_sliced
 
     # see https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on
     # the arguments
