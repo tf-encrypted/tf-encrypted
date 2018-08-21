@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from abc import ABC, abstractmethod
 from ..protocol.protocol import get_protocol, Protocol
@@ -9,6 +9,19 @@ from ..protocol.types import TFEVariable
 
 
 class Layer(ABC):
+    input_shape: List[int]
+    output_shape: List[int]
+
+    def __init__(self, input_shape: List[int]) -> None:
+        self.input_shape = input_shape
+        self.output_shape = self.get_output_shape()
+
+        self.layer_output = None
+
+    @abstractmethod
+    def get_output_shape(self) -> List[int]:
+        raise NotImplementedError
+
     @abstractmethod
     def initialize(self, *args, **kwargs) -> None:  # type: ignore
         pass

@@ -1,13 +1,13 @@
 import numpy as np
-import math
 from . import core
 
-from typing import Any, List
+from typing import List
 from tensorflow_encrypted.protocol.pond import PondPrivateTensor
 
 
 class Batchnorm(core.Layer):
-    def __init__(self, mean: np.ndarray, variance: np.ndarray, scale: np.ndarray,
+    def __init__(self, input_shape: List[int],
+                 mean: np.ndarray, variance: np.ndarray, scale: np.ndarray,
                  offset: np.ndarray, variance_epsilon: float = 1e-8) -> None:
         self.mean = mean
         self.variance = variance
@@ -16,18 +16,23 @@ class Batchnorm(core.Layer):
         self.variance_epsilon = variance_epsilon
         self.denom = None
 
-    def initialize(self, input_shape: List[int]) -> None:
+        super(Batchnorm, self).__init__(input_shape)
+
+    def get_output_shape(self) -> List[int]:
+        return self.input_shape
+
+    def initialize(self) -> None:
         # Batchnorm after Dense layer
-        if len(input_shape) == 2:
-            N, D = input_shape
+        if len(self.input_shape) == 2:
+            N, D = self.input_shape
             self.mean = self.mean.reshape(1, N)
             self.variance = self.variance.reshape(1, N)
             self.scale = self.scale.reshape(1, N)
             self.offset = self.offset.reshape(1, N)
 
         # Batchnorm after Conv2D layer
-        elif len(input_shape) == 4:
-            N, C, H, W = input_shape
+        elif len(self.input_shape) == 4:
+            N, C, H, W = self.input_shape
             self.mean = self.mean.reshape(1, C, 1, 1)
             self.variance = self.variance.reshape(1, C, 1, 1)
             self.scale = self.scale.reshape(1, C, 1, 1)

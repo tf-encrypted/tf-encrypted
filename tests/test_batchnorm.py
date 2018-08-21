@@ -35,8 +35,8 @@ class TestBatchnorm(unittest.TestCase):
         with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
             batchnorm_input = prot.define_private_variable(input_batchnorm)
 
-            batchnorm_layer = Batchnorm(mean, variance, scale, offset)
-            batchnorm_layer.initialize(input_shape=input_shape)
+            batchnorm_layer = Batchnorm(input_shape, mean, variance, scale, offset)
+            batchnorm_layer.initialize()
             batchnorm_out_pond = batchnorm_layer.forward(batchnorm_input)
 
             with config.session() as sess:

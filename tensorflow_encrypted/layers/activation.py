@@ -1,9 +1,12 @@
+from typing import List
+
 from . import core
 
 
 class Sigmoid(core.Layer):
-    def __init__(self):
-        self.layer_output = None
+
+    def get_output_shape(self) -> List[int]:
+        return self.input_shape
 
     def initialize(self, *args, **kwargs) -> None:
         pass
@@ -20,8 +23,8 @@ class Sigmoid(core.Layer):
 
 
 class Relu(core.Layer):
-    def __init__(self):
-        self.layer_output = None
+    def get_output_shape(self) -> List[int]:
+        return self.input_shape
 
     def initialize(self, *args, **kwargs) -> None:
         pass

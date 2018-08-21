@@ -1929,10 +1929,10 @@ def _reshape_public(prot, x: PondPublicTensor, shape: List[int]) -> PondPublicTe
     with tf.name_scope('reshape'):
 
         with tf.device(prot.server_0.device_name):
-            x_on_0_reshaped = x_on_0.reshape(*shape)
+            x_on_0_reshaped = x_on_0.reshape(shape)
 
         with tf.device(prot.server_1.device_name):
-            x_on_1_reshaped = x_on_1.reshape(*shape)
+            x_on_1_reshaped = x_on_1.reshape(shape)
 
     x_reshaped = PondPublicTensor(prot, x_on_0_reshaped, x_on_1_reshaped)
     return x_reshaped
@@ -1946,10 +1946,10 @@ def _reshape_private(prot, x: PondPrivateTensor, shape: List[int]) -> PondPrivat
     with tf.name_scope('reshape'):
 
         with tf.device(prot.server_0.device_name):
-            x0_reshaped = x0.reshape(*shape)
+            x0_reshaped = x0.reshape(shape)
 
         with tf.device(prot.server_1.device_name):
-            x1_reshaped = x1.reshape(*shape)
+            x1_reshaped = x1.reshape(shape)
 
     x_reshaped = PondPrivateTensor(prot, x0_reshaped, x1_reshaped)
     return x_reshaped
@@ -1963,15 +1963,15 @@ def _reshape_masked(prot, x_masked: PondMaskedTensor, shape: List[int]) -> PondM
     with tf.name_scope('reshape'):
 
         with tf.device(prot.crypto_producer.device_name):
-            a_reshaped = a.reshape(*shape)
+            a_reshaped = a.reshape(shape)
 
         with tf.device(prot.server_0.device_name):
-            a0_reshaped = a0.reshape(*shape)
-            alpha_on_0_reshaped = alpha_on_0.reshape(*shape)
+            a0_reshaped = a0.reshape(shape)
+            alpha_on_0_reshaped = alpha_on_0.reshape(shape)
 
         with tf.device(prot.server_1.device_name):
-            a1_reshaped = a1.reshape(*shape)
-            alpha_on_1_reshaped = alpha_on_1.reshape(*shape)
+            a1_reshaped = a1.reshape(shape)
+            alpha_on_1_reshaped = alpha_on_1.reshape(shape)
 
     x_unmasked_reshaped = prot.reshape(x_masked.unmasked)
     x_reshaped = PondMaskedTensor(

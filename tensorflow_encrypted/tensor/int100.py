@@ -64,7 +64,11 @@ class Int100Tensor(object):
     modulus = M
     int_type = INT_TYPE
 
-    def __init__(self, native_value: Optional[Union[np.ndarray, tf.Tensor]], decomposed_value: Optional[Union[List[np.ndarray], List[tf.Tensor]]]=None) -> None:
+    def __init__(
+        self,
+        native_value: Optional[Union[np.ndarray, tf.Tensor]],
+        decomposed_value: Optional[Union[List[np.ndarray], List[tf.Tensor]]] = None
+    ) -> None:
         if decomposed_value is None:
             decomposed_value = _crt_decompose(native_value)
 
@@ -132,7 +136,7 @@ class Int100Tensor(object):
     def strided_slice(self, args: Any, kwargs: Any):
         return _strided_slice(self, args, kwargs)
 
-    def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'Int100Tensor':
+    def reshape(self, axes: List[int]) -> 'Int100Tensor':
         return _reshape(self, axes)
 
 
@@ -228,7 +232,7 @@ def _strided_slice(x: Int100Tensor, args: Any, kwargs: Any):
     return Int100Tensor.from_decomposed(backing)
 
 
-def _reshape(x: Int100Tensor, axes: Union[tf.Tensor, List[int]]) -> Int100Tensor:
+def _reshape(x: Int100Tensor, axes: List[int]) -> Int100Tensor:
     assert isinstance(x, Int100Tensor), type(x)
     backing = [tf.reshape(xi, axes) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
