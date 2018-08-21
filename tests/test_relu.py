@@ -7,6 +7,9 @@ from tensorflow_encrypted.layers.activation import Relu, Sigmoid
 
 
 class TestRelu(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
     def test_forward(self):
         input_relu = np.array([-1.0, -0.5, 0.5, 3.0]).astype(np.float32)
 

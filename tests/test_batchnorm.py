@@ -5,9 +5,12 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 
 from tensorflow_encrypted.layers import Batchnorm
-from tensorflow_encrypted.protocol import Pond
+
 
 class TestBatchnorm(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
     def test_forward(self) -> None:
 
         batch_size, channels_in, img_height, img_width = (32, 3, 28, 28)
