@@ -1,8 +1,8 @@
-import numpy as np
-import math
 from typing import Optional
 from abc import ABC, abstractmethod
 from ..protocol.protocol import get_protocol, Protocol
+
+from ..protocol.pond import PondPrivateTensor
 
 # TODO
 # split backward function in compute_gradient and compute_backpropagated_error?
@@ -14,7 +14,7 @@ class Layer(ABC):
         pass
 
     @abstractmethod
-    def forward(self, *args, **kwargs):
+    def forward(self, x: PondPrivateTensor) -> PondPrivateTensor:
         pass
 
     @abstractmethod

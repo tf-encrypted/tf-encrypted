@@ -442,12 +442,38 @@ class Pond(Protocol):
 
         return x_t
 
+    def reshape(self, x, shape):
+
+        node_key = ('reshape', x)
+        x_t = _nodes.get(node_key, None)
+
+        if x_t is not None:
+            return x_t
+
+        if isinstance(x, PondPublicTensor):
+            x_t = _reshape_public(self, x, shape)
+
+        elif isinstance(x, PondPrivateTensor):
+            x_t = _reshape_private(self, x, shape)
+
+        elif isinstance(x, PondMaskedTensor):
+            x_t = _reshape_masked(self, x, shape)
+            _nodes[('reshape', x.unmasked)] = x_t.unmasked
+
+        else:
+            raise TypeError("Don't know how to reshape {}".format(type(x)))
+
+        _nodes[node_key] = x_t
+
+        return x_t
+
     # see https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on
     # the arguments
     def strided_slice(self, x: Union['PondPublicTensor',
                                      'PondPrivateTensor',
                                      'PondMaskedTensor'], *args: Any, **kwargs: Any):
         node_key = ('strided_slice', x)
+
         x_t = _nodes.get(node_key, None)
 
         if x_t is not None:
@@ -1887,3 +1913,67 @@ def _mask_private(prot, x):
 
     x_masked = PondMaskedTensor(prot, x, a, a0, a1, alpha_on_0, alpha_on_1)
     return x_masked
+
+
+#
+# reshape helpers
+#
+def _reshape_public(prot, x, shape):
+    assert isinstance(x, PondPublicTensor)
+
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope('reshape'):
+
+        with tf.device(prot.server_0.device_name):
+            x_on_0_reshaped = x_on_0.reshape(*shape)
+
+        with tf.device(prot.server_1.device_name):
+            x_on_1_reshaped = x_on_1.reshape(*shape)
+
+    x_reshaped = PondPublicTensor(prot, x_on_0_reshaped, x_on_1_reshaped)
+    return x_reshaped
+
+
+def _reshape_private(prot, x, shape):
+    assert isinstance(x, PondPrivateTensor)
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope('reshape'):
+
+        with tf.device(prot.server_0.device_name):
+            x0_reshaped = x0.reshape(*shape)
+
+        with tf.device(prot.server_1.device_name):
+            x1_reshaped = x1.reshape(*shape)
+
+    x_reshaped = PondPrivateTensor(prot, x0_reshaped, x1_reshaped)
+    return x_reshaped
+
+
+def _reshape_masked(prot, x_masked, shape):
+    assert isinstance(x_masked, PondMaskedTensor)
+
+    a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
+
+    with tf.name_scope('reshape'):
+
+        with tf.device(prot.crypto_producer.device_name):
+            a_reshaped = a.reshape(*shape)
+
+        with tf.device(prot.server_0.device_name):
+            a0_reshaped = a0.reshape(*shape)
+            alpha_on_0_reshaped = alpha_on_0.reshape(*shape)
+
+        with tf.device(prot.server_1.device_name):
+            a1_reshaped = a1.reshape(*shape)
+            alpha_on_1_reshaped = alpha_on_1.reshape(*shape)
+
+    x_unmasked_reshaped = prot.reshape(x_masked.unmasked)
+    x_reshaped = PondMaskedTensor(
+        prot, x_unmasked_reshaped, a_reshaped,
+        a0_reshaped, a1_reshaped,
+        alpha_on_0_reshaped, alpha_on_1_reshaped)
+
+    return x_reshaped
