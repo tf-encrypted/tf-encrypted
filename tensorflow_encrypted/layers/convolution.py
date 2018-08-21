@@ -1,12 +1,16 @@
 import numpy as np
-import math
+
+from typing import List
+
 from . import core
 
 
 class Conv2D(core.Layer):
-    def __init__(self, filter_shape, strides=1, padding="SAME",
+    def __init__(self,
+                 input_shape: List[int], filter_shape: List[int],
+                 strides: int = 1, padding: str = "SAME",
                  filter_init=lambda shp: np.random.normal(scale = 0.1, size = shp),
-                 l2reg_lambda=0.0, channels_first=True):
+                 l2reg_lambda: float = 0.0, channels_first: bool = True) -> None:
         """ 2 Dimensional convolutional layer, expects NCHW data format
             filter_shape: tuple of rank 4
             strides: int with stride size
@@ -29,12 +33,11 @@ class Conv2D(core.Layer):
         self.model = None
         assert channels_first
 
-    def initialize(self, input_shape, initial_weights=None):
-        fshape = [int(i) for i in self.fshape]
-        input_shape = [int(i) for i in input_shape]
+        super(Conv2D, self).__init__(input_shape)
 
-        h_filter, w_filter, d_filters, n_filters = fshape
-        n_x, d_x, h_x, w_x = input_shape
+    def get_output_shape(self) -> List[int]:
+        h_filter, w_filter, d_filters, n_filters = self.fshape
+        n_x, d_x, h_x, w_x = self.input_shape
 
         if self.padding == "SAME":
             h_out = int(np.ceil(float(h_x) / float(self.strides)))
@@ -43,13 +46,14 @@ class Conv2D(core.Layer):
             h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides)))
             w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides)))
 
+        return [n_x, n_filters, h_out, w_out]
+
+    def initialize(self, initial_weights=None) -> None:
         if initial_weights is None:
             initial_weights = self.filter_init(self.fshape)
 
         self.weights = self.prot.define_private_variable(initial_weights)
-        self.bias = self.prot.define_private_variable(np.zeros((n_filters, h_out, w_out)))
-
-        return [n_x, n_filters, h_out, w_out]
+        self.bias = self.prot.define_private_variable(np.zeros(self.output_shape[1:]))
 
     def forward(self, x):
         self.cached_input_shape = x.shape

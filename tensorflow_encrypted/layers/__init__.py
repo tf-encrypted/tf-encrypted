@@ -6,3 +6,14 @@ from .activation import Sigmoid, Relu
 from .pooling import AveragePooling2D
 from .core import Layer
 from .batchnorm import Batchnorm
+from .reshape import Reshape
+
+
+__all__ = [
+    'Conv2D',
+    'Dense',
+    'Sigmoid',
+    'Relu',
+    'Batchnorm',
+    'Reshape'
+]
