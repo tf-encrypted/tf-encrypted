@@ -7,6 +7,8 @@ from ..layers import Conv2D, Relu, Sigmoid, Dense
 from ..protocol.protocol import get_protocol
 from .convert import Converter, ConvertInputProvider
 
+from ..protocol.protocol import get_protocol
+
 
 def register() -> Dict[str, Any]:
     reg = {
@@ -17,7 +19,7 @@ def register() -> Dict[str, Any]:
         'Sigmoid': sigmoid,
         'MatMul': matmul,
         'Shape': shape,
-        # 'StridedSlice': strided_slice,
+        'StridedSlice': strided_slice,
         # 'Pack': pack,
         # 'Reshape': reshape,
         # 'BiasAdd': bias_add,
@@ -106,34 +108,7 @@ def sigmoid(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return Sigmoid().forward(input)
 
 
-def shape(converter: Converter, node: Any, inputs: List[str]) -> Any:
-    input = converter.outputs[inputs[0]]
-
-    return input.shape
-
-
-def bias_add(converter: Converter, node: Any, inputs: List[str]) -> Any:
-    raise NotImplementedError
-
-    input = converter.outputs[inputs[0]]
-    bias = converter.outputs[inputs[1]]
-
-    return input + bias
-
-
-def maxpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
-    raise NotImplementedError
-
-    input = converter.outputs[inputs[0]]
-
-    return tf.nn.max_pool(input, list(node.attr["ksize"].list.i),
-                          list(node.attr["strides"].list.i),
-                          node.attr["padding"].s)
-
-
 def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
-    raise NotImplementedError
-
     input = converter.outputs[inputs[0]]
     begin = converter.outputs[inputs[1]]
     end = converter.outputs[inputs[2]]
@@ -145,24 +120,55 @@ def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
     new_axis_mask = node.attr["new_axis_mask"].i
     shrink_axis_mask = node.attr["shrink_axis_mask"].i
 
-    return tf.strided_slice(input, begin, end, strides=strides,
-                            begin_mask=begin_mask, end_mask=end_mask,
-                            ellipsis_mask=ellipsis_mask,
-                            new_axis_mask=new_axis_mask,
-                            shrink_axis_mask=shrink_axis_mask)
+    begin = tf.constant(begin.attr["value"].tensor)
+    end = tf.constant(end.attr["value"].tensor)
+    strides = tf.constant(strides.attr["value"].tensor)
+
+    return converter.protocol.strided_slice(input, begin, end, strides=strides,
+                                            begin_mask=begin_mask,
+                                            end_mask=end_mask,
+                                            ellipsis_mask=ellipsis_mask,
+                                            new_axis_mask=new_axis_mask,
+                                            shrink_axis_mask=shrink_axis_mask)
 
 
-def pack(converter: Converter, node: Any, inputs: List[str]) -> Any:
-    raise NotImplementedError
+def pack(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
+    raise NotImplementedError()
+    input1 = output_lookup[inputs[0]]
+    input2 = output_lookup[inputs[1]]
 
-    input1 = converter.outputs[inputs[0]]
-    input2 = converter.outputs[inputs[1]]
+    prot = get_protocol()
 
-    return tf.stack([input1, input2], axis=node.attr["axis"].i)
+    return prot.stack([input1, input2], axis=node.attr["axis"].i)
+
+
+def bias_add(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    raise NotImplementedError()
+
+    input = converter.outputs[inputs[0]]
+    bias = converter.outputs[inputs[1]]
+
+    return input + bias
+
+
+def maxpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    raise NotImplementedError()
+
+    input = converter.outputs[inputs[0]]
+
+    return tf.nn.max_pool(input, list(node.attr["ksize"].list.i),
+                          list(node.attr["strides"].list.i),
+                          node.attr["padding"].s)
+
+
+def shape(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+
+    return input.shape
 
 
 def reshape(converter: Converter, node: Any, inputs: List[str]) -> Any:
-    raise NotImplementedError
+    raise NotImplementedError()
 
     input = converter.outputs[inputs[0]]
     shape = converter.outputs[inputs[1]]

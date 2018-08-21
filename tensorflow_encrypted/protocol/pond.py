@@ -1698,7 +1698,7 @@ def _avgpool2d_public_im2col(x: BackingTensor,
     x_split = x.reshape(batch * channels, 1, height, width)
     x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
 
-    print(f'x_cols {x_cols.to_native()}')
+    print(f'x_cols {x_cols.to_native}')
 
     x_cols_avg = np.average(x_cols, axis=0)
     x_cols_avg = x_cols[x_cols_avg, np.arrange(x_cols.shape[1])]
