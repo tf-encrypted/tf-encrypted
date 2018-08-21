@@ -181,20 +181,20 @@ def reshape(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 def add(converter: Converter, node: Any, inputs: List[str]) -> Any:
     a = converter.outputs[inputs[0]]
-    b = converter.outputs[inputs[0]]
+    b = converter.outputs[inputs[1]]
 
     return converter.protocol.add(a, b)
 
 
 def sub(converter: Converter, node: Any, inputs: List[str]) -> Any:
     a = converter.outputs[inputs[0]]
-    b = converter.outputs[inputs[0]]
+    b = converter.outputs[inputs[1]]
 
     return converter.protocol.sub(a, b)
 
 
 def mul(converter: Converter, node: Any, inputs: List[str]) -> Any:
     a = converter.outputs[inputs[0]]
-    b = converter.outputs[inputs[0]]
+    b = converter.outputs[inputs[1]]
 
     return converter.protocol.mul(a, b)
