@@ -12,7 +12,7 @@ class TestReshape(unittest.TestCase):
 
     def test_forward(self):
         input_shape = [2, 3, 4, 5]
-        output_shape = [2, 3*4*5]
+        output_shape = [2, -1]
         input_reshape = np.random.standard_normal(input_shape)
 
         config = tfe.LocalConfig([

@@ -49,7 +49,7 @@ def matmul(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
     b_shape = [i.size for i in tensor.tensor_shape.dim]
 
-    layer = Dense(a.shape.as_list(), b_shape[0], b_shape[1])
+    layer = Dense(a.shape.as_list(), b_shape[1])
 
     dtype = tensor.dtype
 

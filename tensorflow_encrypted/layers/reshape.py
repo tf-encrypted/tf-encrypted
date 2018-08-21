@@ -1,6 +1,7 @@
-from . import core
-
+import numpy as np
 from typing import List
+
+from . import core
 
 
 class Reshape(core.Layer):
@@ -10,7 +11,23 @@ class Reshape(core.Layer):
         super(Reshape, self).__init__(input_shape)
 
     def get_output_shape(self) -> List[int]:
-        return self.output_shape
+        if -1 in self.output_shape:
+            total_input_dims = np.prod(self.input_shape)
+
+            dim = 1
+            for i in self.output_shape:
+                if i != -1:
+                    dim *= i
+            missing_dim = int(total_input_dims / dim)
+
+            output_shape = self.output_shape
+            for key, i in enumerate(output_shape):
+                if i == -1:
+                    output_shape[key] = missing_dim
+
+            return output_shape
+        else:
+            return self.output_shape
 
     def initialize(self, *args, **kwargs) -> None:
         pass
