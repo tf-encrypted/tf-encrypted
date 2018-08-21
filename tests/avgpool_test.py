@@ -11,7 +11,6 @@ class TestAvgPooling(unittest.TestCase):
 
         # input
         input = np.array((1,0,1,0, 0,1,0,1, 1,0,1,0, 0,1,0,1)).reshape(1, 4, 4, 1)
-        filter_shape = (1, 2, 2, 1)
 
         config = tfe.LocalConfig([
             'server_0',
@@ -22,9 +21,9 @@ class TestAvgPooling(unittest.TestCase):
         # convolution pond
         with tfe.protocol.Pond(*config.players) as prot:
 
-            pool_input = prot.define_public_input(input)
-            pool_layer = tfe.layers.AveragePooling2D(filter_shape, strides=2)
-            pool_layer.initialize(filter_shape)
+            pool_input = prot.define_public_variable(input)
+            pool_layer = tfe.layers.AveragePooling2D(pool_size=(2, 2), strides=(2, 2))
+            pool_layer.initialize(input_shape=(1, 4, 4, 1))
             pool_out_pond = pool_layer.forward(pool_input)
 
             with config.session() as sess:
