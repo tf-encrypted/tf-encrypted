@@ -1687,6 +1687,8 @@ def _avgpool2d_public_im2col(x: BackingTensor,
                              strides: Tuple[int],
                              padding: str) -> BackingTensor:
 
+    print(f'wow {x}')
+
     batch, height, width, channels = x.shape
     pool_height, pool_width = pool_size
 
@@ -1695,10 +1697,14 @@ def _avgpool2d_public_im2col(x: BackingTensor,
     out_height = (height - pool_height) // tf.Dimension(strides[0] + 1)
     out_width = (width - pool_width) // tf.Dimension(strides[0] + 1)
 
+    print(f'xxxx {x}')
+    print(f'reshape info N: {batch} C: {channels} h: {height} w: {width}')
     x_split = x.reshape(batch * channels, 1, height, width)
+    print(f'x_cols {x_split.to_native()}')
+
     x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
 
-    print(f'x_cols {x_cols.to_native}')
+    print(f'x_cols {x_cols.to_native()}')
 
     x_cols_avg = np.average(x_cols, axis=0)
     x_cols_avg = x_cols[x_cols_avg, np.arrange(x_cols.shape[1])]
