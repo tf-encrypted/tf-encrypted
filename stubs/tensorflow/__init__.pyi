@@ -1,16 +1,23 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, List
 
-from . import errors
-from . import train
 from . import nn
-from . import summary
+from . import errors
 from . import python
+from . import summary
+from . import train
 
+__all__ = [
+    'nn',
+    'errors',
+    'python',
+    'summary',
+    'train'
+]
 
 GraphElement = Union[
-    Operation,
-    Tensor,
-    SparseTensor,
+    'Operation',
+    'Tensor',
+    'SparseTensor',
     str,
 ]
 
@@ -100,6 +107,10 @@ class SparseTensor:
     pass
 
 
+class ClusterSpec:
+    pass
+
+
 class gpu_options:
     def __init__(self):
         self.allow_growth: bool
@@ -119,6 +130,10 @@ class Graph:
     pass
 
 
+class RNNCell:
+    pass
+
+
 class BaseSession:
     # TODO: options is of type RunOption, run_metadata is of type RunMetadata
     # Return type is option of:
@@ -127,10 +142,10 @@ class BaseSession:
     # a dictionary
     # Leaving it as Any for now
     def run(self, fetches: Any,
-            feed_dict: Optional[Dict[Any, Any]]=...,
-            run_options: Any=...,
-            run_metadata: Any=...,
-            options: Optional[RunOptions]=None,
+            feed_dict: Optional[Dict[Any, Any]] = ...,
+            run_options: Any = ...,
+            run_metadata: Any = ...,
+            options: Optional['RunOptions'] = None,
             ) -> Any: ...
 
     def close(self) -> None: ...
@@ -138,9 +153,9 @@ class BaseSession:
 
 class Session(BaseSession):
     def __init__(self,
-                 target: str=...,
-                 graph: Optional[Graph]=...,
-                 config: ConfigProto=...
+                 target: str = ...,
+                 graph: Optional[Graph] = ...,
+                 config: ConfigProto = ...
                  ) -> None:
         self.graph = graph
         ...
@@ -159,17 +174,17 @@ class Session(BaseSession):
 
 class Variable:
     def __init__(self,
-                 initial_value: Any=...,
-                 trainable: Optional[bool]=...,
-                 collections: Optional[Any]=...,
-                 validate_shape: Optional[bool]=...,
-                 caching_device: Optional[Any]=...,
-                 name: Optional[str]=...,
-                 variable_def: Optional[Any]=...,
-                 dtype: Optional[Any]=...,
-                 expected_shape: Optional[Any]=...,
-                 import_scope: Optional[str]=...,
-                 constraint: Optional[Any]=...
+                 initial_value: Any = ...,
+                 trainable: Optional[bool] = ...,
+                 collections: Optional[Any] = ...,
+                 validate_shape: Optional[bool] = ...,
+                 caching_device: Optional[Any] = ...,
+                 name: Optional[str] = ...,
+                 variable_def: Optional[Any] = ...,
+                 dtype: Optional[Any] = ...,
+                 expected_shape: Optional[Any] = ...,
+                 import_scope: Optional[str] = ...,
+                 constraint: Optional[Any] = ...
                  ) -> None: ...
 
 
@@ -193,8 +208,8 @@ class RunMetadata:
 # return type is Tensor
 def edit_distance(hypothesis: Any,
                   truth: Any,
-                  normalize: Optional[bool]=...,
-                  name: Optional[str]=...
+                  normalize: Optional[bool] = ...,
+                  name: Optional[str] = ...
                   ) -> Any: ...
 
 # Original function definition for global_variables_initializer here:
@@ -214,8 +229,8 @@ def reset_default_graph() -> Graph: ...
 # https://github.com/tensorflow/tensorflow/blob/28340a4b12e286fe14bb7ac08aebe325c3e150b4/tensorflow/python/ops/array_ops.py#L1693
 # TODO: improve types
 def placeholder(dtype: Any,
-                shape: Any=...,
-                name: Optional[str]=...
+                shape: Any = ...,
+                name: Optional[str] = ...
                 ) -> Any: ...
 
 # Original function definition for sparse_placeholder here:
@@ -224,8 +239,8 @@ def placeholder(dtype: Any,
 
 
 def sparse_placeholder(dtype: Any,
-                       shape: Any=...,
-                       name: Optional[str]=...
+                       shape: Any = ...,
+                       name: Optional[str] = ...
                        ) -> Any: ...
 
 # Original function definition for sparse_tensor_to_dense here:
@@ -235,9 +250,9 @@ def sparse_placeholder(dtype: Any,
 
 
 def sparse_tensor_to_dense(sp_input: Any,
-                           default_value: Any=...,
-                           validate_indices: bool=...,
-                           name: Optional[str]=...
+                           default_value: Any = ...,
+                           validate_indices: bool = ...,
+                           name: Optional[str] = ...
                            ) -> Any: ...
 
 # Original function definition for shape here:
@@ -249,8 +264,8 @@ def sparse_tensor_to_dense(sp_input: Any,
 
 
 def shape(input: Any,
-          name: Optional[str]=...,
-          out_type: Any=...
+          name: Optional[str] = ...,
+          out_type: Any = ...
           ) -> Any: ...
 
 # Original function definition for truncated_normal here:
@@ -258,11 +273,11 @@ def shape(input: Any,
 
 
 def truncated_normal(shape: Any,
-                     mean: Any=...,  # default 0.0
-                     stddev: Any=...,  # default 1.0
-                     dtype: Any=dtypes.float32,
-                     seed: Any=...,
-                     name: Optional[str]=...
+                     mean: Any = ...,  # default 0.0
+                     stddev: Any = ...,  # default 1.0
+                     dtype: Any = dtypes.float32,
+                     seed: Any = ...,
+                     name: Optional[str] = ...
                      ) -> Any: ...
 
 # Original function definition for reduce_mean here:
@@ -270,12 +285,12 @@ def truncated_normal(shape: Any,
 # Returns Tensor
 
 
-def reduce_mean(input_tensor: Any,
-                axis: Any=...,
-                keepdims: Any=...,
-                name: Optional[str]=...,
-                reduction_indices: Any=...,
-                keep_dims: Any=...
+def reduce_mean(input_tensor: Tensor,
+                axis: Any = ...,
+                keepdims: Any = ...,
+                name: Optional[str] = ...,
+                reduction_indices: Any = ...,
+                keep_dims: Any = ...
                 ) -> Any: ...
 
 
@@ -283,3 +298,36 @@ def name_scope(name: str) -> Any: ...
 
 
 def device(name: str) -> Any: ...
+
+
+def random_normal(
+    shape: List[int],
+    mean: Any = ...,
+    stddev: Any = ...,
+    dtype: Any = dtypes.float32,
+    seed: int = ...,
+    name: Optional[str] = ...
+    ) -> Tensor: ...
+
+
+def Print(
+    input_: Tensor,
+    data: List[Tensor],
+    message: Optional[str] = None,
+    first_n: Optional[int] = None,
+    summarize: Optional[int] = None,
+    name: Optional[str] = None
+    ) -> Tensor: ...
+
+
+def group(
+    *inputs: Tensor,
+    **kwargs: Any,
+    ) -> Operation: ...
+
+
+def reshape(
+    tensor: Any,
+    shape: Union[Tensor, List[int]],
+    name: Optional[str] = None
+    ) -> Tensor: ...

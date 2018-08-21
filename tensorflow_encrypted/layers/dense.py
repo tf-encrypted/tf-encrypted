@@ -1,4 +1,7 @@
 import numpy as np
+
+from typing import List
+
 from . import core
 
 
@@ -10,22 +13,27 @@ class Dense(core.Layer):
     out_features (int, required): number of output neurons for the layer
     """
 
-    def __init__(self, in_features: int, out_features: int):
-        self.in_features = in_features
+    def __init__(self, input_shape: List[int], out_features: int) -> None:
+        self.in_features = input_shape[-1]
         self.out_features = out_features
 
         self.layer_input = None
         self.weights = None
         self.bias = None
 
-    def initialize(self, initial_weights=None):
-        initial_size = (self.in_features, self.out_features)
+        super(Dense, self).__init__(input_shape)
 
+    def get_output_shape(self):
+        return [self.input_shape[0] + self.out_features]
+
+    def initialize(self, initial_weights=None, initial_bias=None):
         if initial_weights is None:
+            initial_size = (self.in_features, self.out_features)
             initial_weights = np.random.normal(scale=0.1, size=initial_size)
+        if initial_bias is None:
+            initial_bias = np.zeros((1, self.out_features))
 
         self.weights = self.prot.define_private_variable(initial_weights)
-        initial_bias = np.zeros((1, self.out_features))
         self.bias = self.prot.define_private_variable(initial_bias)
 
     def forward(self, x):

@@ -1,4 +1,7 @@
 import unittest
+import os
+import logging
+
 from typing import List
 
 import numpy as np
@@ -12,15 +15,28 @@ from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 
 
+global_filename: str = ''
+
+
 class TestConvert(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
+    def tearDown(self):
+        global global_filename
+
+        logging.debug("Cleaning file: %s" % global_filename)
+        os.remove(global_filename)
+
     def test_cnn_convert(self):
         tf.reset_default_graph()
 
-        filename = "cnn.pb"
+        global global_filename
+        global_filename = "cnn.pb"
 
         input_shape = [1, 1, 28, 28]
 
-        path = export_cnn(filename, input_shape)
+        path = export_cnn(global_filename, input_shape)
 
         tf.reset_default_graph()
 
@@ -61,11 +77,12 @@ class TestConvert(unittest.TestCase):
     def test_matmul_convert(self):
         tf.reset_default_graph()
 
-        filename = "matmul.pb"
+        global global_filename
+        global_filename = "matmul.pb"
 
         input_shape = [1, 28]
 
-        path = export_matmul(filename, input_shape)
+        path = export_matmul(global_filename, input_shape)
 
         tf.reset_default_graph()
 
@@ -108,11 +125,12 @@ class TestConvert(unittest.TestCase):
     def test_add_convert(self):
         tf.reset_default_graph()
 
-        filename = "add.pb"
+        global global_filename
+        global_filename = "add.pb"
 
         input_shape = [28, 1]
 
-        path = export_add(filename, input_shape)
+        path = export_add(global_filename, input_shape)
 
         tf.reset_default_graph()
 
@@ -155,11 +173,12 @@ class TestConvert(unittest.TestCase):
     def test_sub_convert(self):
         tf.reset_default_graph()
 
-        filename = "sub.pb"
+        global global_filename
+        global_filename = "sub.pb"
 
         input_shape = [28, 1]
 
-        path = export_sub(filename, input_shape)
+        path = export_sub(global_filename, input_shape)
 
         tf.reset_default_graph()
 
@@ -202,9 +221,10 @@ class TestConvert(unittest.TestCase):
     def test_strided_slice_convert(self):
         tf.reset_default_graph()
 
-        filename = "strided_slice.pb"
+        global global_filename
+        global_filename = "strided_slice.pb"
 
-        path = export_strided_slice(filename)
+        path = export_strided_slice(global_filename)
 
         tf.reset_default_graph()
 
