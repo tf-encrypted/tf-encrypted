@@ -22,6 +22,7 @@ def register() -> Dict[str, Any]:
         'StridedSlice': strided_slice,
         'Add': add,
         'Sub': sub,
+        'Transpose': transpose
         # 'Pack': pack,
         # 'Reshape': reshape,
         # 'BiasAdd': bias_add,
@@ -179,6 +180,24 @@ def reshape(converter: Converter, node: Any, inputs: List[str]) -> Any:
     shape = converter.outputs[inputs[1]]
 
     return tf.reshape(input, shape)
+
+
+def transpose(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+    perm = converter.outputs[inputs[1]]
+
+    tensor = perm.attr["value"].tensor
+    shape = [i.size for i in tensor.tensor_shape.dim]
+
+    dtype = perm.attr["dtype"].type
+    if dtype == tf.int32:
+        nums = array.array('i', tensor.tensor_content)
+    elif dtype == tf.int64:
+        nums = array.array('l', tensor.tensor_content)
+    else:
+        raise TypeError("Unsupported dtype for transpose perm")
+
+    return converter.protocol.transpose(input, np.array(nums).reshape(shape))
 
 
 def add(converter: Converter, node: Any, inputs: List[str]) -> Any:
