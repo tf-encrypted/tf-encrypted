@@ -420,7 +420,7 @@ class Pond(Protocol):
 
         return y
 
-    def transpose(self, x):
+    def transpose(self, x, perm=None):
 
         node_key = ('transpose', x)
         x_t = _nodes.get(node_key, None)
@@ -429,13 +429,13 @@ class Pond(Protocol):
             return x_t
 
         if isinstance(x, PondPublicTensor):
-            x_t = _transpose_public(self, x)
+            x_t = _transpose_public(self, x, perm=perm)
 
         elif isinstance(x, PondPrivateTensor):
-            x_t = _transpose_private(self, x)
+            x_t = _transpose_private(self, x, perm=perm)
 
         elif isinstance(x, PondMaskedTensor):
-            x_t = _transpose_masked(self, x)
+            x_t = _transpose_masked(self, x, perm=perm)
             _nodes[('transpose', x.unmasked)] = x_t.unmasked
 
         else:
@@ -1685,7 +1685,7 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
 #
 
 
-def _transpose_public(prot, x):
+def _transpose_public(prot, x, perm=None):
     assert isinstance(x, PondPublicTensor)
 
     x_on_0, x_on_1 = x.unwrapped
@@ -1693,16 +1693,16 @@ def _transpose_public(prot, x):
     with tf.name_scope('transpose'):
 
         with tf.device(prot.server_0.device_name):
-            x_on_0_t = x_on_0.transpose()
+            x_on_0_t = x_on_0.transpose(perm=perm)
 
         with tf.device(prot.server_1.device_name):
-            x_on_1_t = x_on_1.transpose()
+            x_on_1_t = x_on_1.transpose(perm=perm)
 
     x_t = PondPublicTensor(prot, x_on_0_t, x_on_1_t)
     return x_t
 
 
-def _transpose_private(prot, x):
+def _transpose_private(prot, x, perm=None):
     assert isinstance(x, PondPrivateTensor)
 
     x0, x1 = x.unwrapped
@@ -1710,16 +1710,16 @@ def _transpose_private(prot, x):
     with tf.name_scope('transpose'):
 
         with tf.device(prot.server_0.device_name):
-            x0_t = x0.transpose()
+            x0_t = x0.transpose(perm=perm)
 
         with tf.device(prot.server_1.device_name):
-            x1_t = x1.transpose()
+            x1_t = x1.transpose(perm=perm)
 
     x_t = PondPrivateTensor(prot, x0_t, x1_t)
     return x_t
 
 
-def _transpose_masked(prot, x_masked):
+def _transpose_masked(prot, x_masked, perm=None):
     assert isinstance(x_masked, PondMaskedTensor)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
@@ -1727,17 +1727,17 @@ def _transpose_masked(prot, x_masked):
     with tf.name_scope('transpose'):
 
         with tf.device(prot.crypto_producer.device_name):
-            a_t = a.transpose()
+            a_t = a.transpose(perm=perm)
 
         with tf.device(prot.server_0.device_name):
-            a0_t = a0.transpose()
-            alpha_on_0_t = alpha_on_0.transpose()
+            a0_t = a0.transpose(perm=perm)
+            alpha_on_0_t = alpha_on_0.transpose(perm=perm)
 
         with tf.device(prot.server_1.device_name):
-            a1_t = a1.transpose()
-            alpha_on_1_t = alpha_on_1.transpose()
+            a1_t = a1.transpose(perm=perm)
+            alpha_on_1_t = alpha_on_1.transpose(perm=perm)
 
-    x_unmasked_t = prot.transpose(x_masked.unmasked)
+    x_unmasked_t = prot.transpose(x_masked.unmasked, perm=perm)
     x_t = PondMaskedTensor(prot, x_unmasked_t, a_t, a0_t, a1_t, alpha_on_0_t, alpha_on_1_t)
     return x_t
 
