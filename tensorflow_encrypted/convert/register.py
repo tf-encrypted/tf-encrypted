@@ -22,9 +22,9 @@ def register() -> Dict[str, Any]:
         'StridedSlice': strided_slice,
         'Add': add,
         'Sub': sub,
-        'Transpose': transpose
+        'Transpose': transpose,
+        'Reshape': reshape,
         # 'Pack': pack,
-        # 'Reshape': reshape,
         # 'BiasAdd': bias_add,
         # 'MaxPool': maxpool,
     }
@@ -174,12 +174,19 @@ def shape(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 
 def reshape(converter: Converter, node: Any, inputs: List[str]) -> Any:
-    raise NotImplementedError()
-
     input = converter.outputs[inputs[0]]
     shape = converter.outputs[inputs[1]]
 
-    return tf.reshape(input, shape)
+    tensor = shape.attr["value"].tensor
+    dtype = shape.attr["dtype"].type
+    if dtype == tf.int32:
+        nums = array.array('i', tensor.tensor_content)
+    elif dtype == tf.int64:
+        nums = array.array('l', tensor.tensor_content)
+    else:
+        raise TypeError("Unsupported dtype for reshape shape")
+
+    return converter.protocol.reshape(input, list(nums))
 
 
 def transpose(converter: Converter, node: Any, inputs: List[str]) -> Any:
