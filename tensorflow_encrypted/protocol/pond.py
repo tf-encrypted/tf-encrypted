@@ -473,6 +473,31 @@ class Pond(Protocol):
 
         return x_reshaped
 
+    def expand_dims(self, x, axis=None):
+
+        node_key = ('expand', x)
+        x_e = _nodes.get(node_key, None)
+
+        if x_e is not None:
+            return x_e
+
+        if isinstance(x, PondPublicTensor):
+            x_e = _expand_dims_public(self, x, axis=axis)
+
+        elif isinstance(x, PondPrivateTensor):
+            x_e = _expand_dims_private(self, x, axis=axis)
+
+        elif isinstance(x, PondMaskedTensor):
+            x_e = _expand_dims_masked(self, x, axis=axis)
+            _nodes[('expand', x.unmasked)] = x_e.unmasked
+
+        else:
+            raise TypeError("Don't know how to expand dims {}".format(type(x)))
+
+        _nodes[node_key] = x_e
+
+        return x_e
+
     # see https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on
     # the arguments
     def strided_slice(self, x: Union['PondPublicTensor',
@@ -684,6 +709,9 @@ class PondTensor(object):
 
     def truncate(self):
         return self.prot.truncate(self)
+
+    def expand_dims(self):
+        return self.prot.expand_dims(self)
 
 
 class PondPublicTensor(PondTensor):
@@ -1980,3 +2008,64 @@ def _reshape_masked(prot, x_masked: PondMaskedTensor, shape: List[int]) -> PondM
         alpha_on_0_reshaped, alpha_on_1_reshaped)
 
     return x_reshaped
+
+#
+# transpose helpers
+#
+
+
+def _expand_dims_public(prot, x, axis=None):
+    assert isinstance(x, PondPublicTensor)
+
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope('expand'):
+
+        with tf.device(prot.server_0.device_name):
+            x_on_0_e = x_on_0.expand_dims(axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            x_on_1_e = x_on_1.expand_dims(axis=axis)
+
+    x_e = PondPublicTensor(prot, x_on_0_e, x_on_1_e)
+    return x_e
+
+
+def _expand_dims_private(prot, x, axis=None):
+    assert isinstance(x, PondPrivateTensor)
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope('expand'):
+
+        with tf.device(prot.server_0.device_name):
+            x0_e = x0.expand_dims(axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            x1_e = x1.expand_dims(axis=axis)
+
+    x_e = PondPrivateTensor(prot, x0_e, x1_e)
+    return x_e
+
+
+def _expand_dims_masked(prot, x_masked, axis=None):
+    assert isinstance(x_masked, PondMaskedTensor)
+
+    a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
+
+    with tf.name_scope('expand'):
+
+        with tf.device(prot.crypto_producer.device_name):
+            a_e = a.expand_dims(axis=axis)
+
+        with tf.device(prot.server_0.device_name):
+            a0_e = a0.expand_dims(axis=axis)
+            alpha_on_0_e = alpha_on_0.expand_dims(axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            a1_e = a1.expand_dims(axis=axis)
+            alpha_on_1_e = alpha_on_1.expand_dims(axis=axis)
+
+    x_unmasked_e = prot.expand_dims(x_masked.unmasked, axis=axis)
+    x_e = PondMaskedTensor(prot, x_unmasked_e, a_e, a0_e, a1_e, alpha_on_0_e, alpha_on_1_e)
+    return x_e
