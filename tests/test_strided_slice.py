@@ -5,9 +5,11 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 
 
-class TestStack(unittest.TestCase):
+class TestStridedSlice(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
 
-    def test_stack(self):
+    def test_strided_slice(self):
 
         config = tfe.LocalConfig([
             'server0',
@@ -16,21 +18,23 @@ class TestStack(unittest.TestCase):
         ])
 
         with tf.Session() as sess:
-            x = tf.constant([1, 4])
-            y = tf.constant([2, 5])
-            z = tf.constant([3, 6])
-            out = tf.stack([x, y, z])
+            t = tf.constant([[[1, 1, 1], [2, 2, 2]],
+                             [[3, 3, 3], [4, 4, 4]],
+                             [[5, 5, 5], [6, 6, 6]]])
+            out = tf.strided_slice(t, [1, 0, 0], [2, 1, 3], [1, 1, 1])
 
             actual = sess.run(out)
 
         tf.reset_default_graph()
 
         with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
-            x = prot.define_private_variable(np.array([1, 4]))
-            y = prot.define_private_variable(np.array([2, 5]))
-            z = prot.define_private_variable(np.array([3, 6]))
+            x = np.array([[[1, 1, 1], [2, 2, 2]],
+                          [[3, 3, 3], [4, 4, 4]],
+                          [[5, 5, 5], [6, 6, 6]]])
 
-            out = prot.stack((x, y, z))
+            out = prot.define_private_variable(x)
+
+            out = prot.strided_slice(out, [1, 0, 0], [2, 1, 3], [1, 1, 1])
 
             with config.session() as sess:
                 sess.run(tf.global_variables_initializer())

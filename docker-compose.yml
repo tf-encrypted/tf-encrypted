@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+  server0:
+    image: tf-encrypted/tf-encrypted:latest
+    ports:
+      - 4440:4440
+    environment:
+      TFE_NODE_NAME: server0
+      TFE_SERVER0_ADDRESS: localhost:4440
+      TFE_SERVER1_ADDRESS: server1:4440
+      TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
+
+  server1:
+    image: tf-encrypted/tf-encrypted:latest
+    ports:
+      - 4441:4440
+    environment:
+      TFE_NODE_NAME: server1
+      TFE_SERVER0_ADDRESS: server0:4440
+      TFE_SERVER1_ADDRESS: localhost:4440
+      TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
+
+  producer:
+    image: tf-encrypted/tf-encrypted:latest
+    ports:
+      - 4442:4440
+    environment:
+      TFE_NODE_NAME: crypto_producer
+      TFE_SERVER0_ADDRESS: server0:4440
+      TFE_SERVER1_ADDRESS: server1:4440
+      TFE_CRYPTO_PRODUCER_ADDRESS: localhost:4440

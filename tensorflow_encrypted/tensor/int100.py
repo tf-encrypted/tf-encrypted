@@ -64,7 +64,11 @@ class Int100Tensor(object):
     modulus = M
     int_type = INT_TYPE
 
-    def __init__(self, native_value: Optional[Union[np.ndarray, tf.Tensor]], decomposed_value: Optional[Union[List[np.ndarray], List[tf.Tensor]]]=None) -> None:
+    def __init__(
+        self,
+        native_value: Optional[Union[np.ndarray, tf.Tensor]],
+        decomposed_value: Optional[Union[List[np.ndarray], List[tf.Tensor]]] = None
+    ) -> None:
         if decomposed_value is None:
             decomposed_value = _crt_decompose(native_value)
 
@@ -126,14 +130,14 @@ class Int100Tensor(object):
     def __mod__(self, k) -> 'Int100Tensor':
         return _mod(self, k)
 
-    def transpose(self, *axes) -> 'Int100Tensor':
-        return _transpose(self, *axes)
+    def transpose(self, perm=None) -> 'Int100Tensor':
+        return _transpose(self, perm=perm)
 
     def strided_slice(self, args: Any, kwargs: Any):
         return _strided_slice(self, args, kwargs)
 
-    def reshape(self, *axes) -> 'Int100Tensor':
-        return _reshape(self, *axes)
+    def reshape(self, axes: List[int]) -> 'Int100Tensor':
+        return _reshape(self, axes)
 
 
 def _lift(x):
@@ -197,11 +201,11 @@ def _conv2d(x, y, strides, padding):
         w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
 
     X_col = x.im2col(h_filter, w_filter, padding, strides)
-    W_col = y.transpose(3, 2, 0, 1).reshape(int(n_filters), -1)
+    W_col = y.transpose(perm=(3, 2, 0, 1)).reshape([int(n_filters), -1])
     out = W_col.dot(X_col)
 
-    out = out.reshape(n_filters, h_out, w_out, n_x)
-    out = out.transpose(3, 0, 1, 2)
+    out = out.reshape([n_filters, h_out, w_out, n_x])
+    out = out.transpose(perm=(3, 0, 1, 2))
 
     return out
 
@@ -216,9 +220,9 @@ def _sample_uniform(shape):
     return Int100Tensor.from_decomposed(backing)
 
 
-def _transpose(x, *axes):
+def _transpose(x, perm=None):
     assert isinstance(x, Int100Tensor), type(x)
-    backing = [tf.transpose(xi, axes) for xi in x.backing]
+    backing = [tf.transpose(xi, perm=perm) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
 
 
@@ -228,7 +232,7 @@ def _strided_slice(x: Int100Tensor, args: Any, kwargs: Any):
     return Int100Tensor.from_decomposed(backing)
 
 
-def _reshape(x, *axes):
+def _reshape(x: Int100Tensor, axes: List[int]) -> Int100Tensor:
     assert isinstance(x, Int100Tensor), type(x)
     backing = [tf.reshape(xi, axes) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)

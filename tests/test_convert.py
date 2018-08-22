@@ -1,4 +1,7 @@
 import unittest
+import os
+import logging
+
 from typing import List
 
 import numpy as np
@@ -12,15 +15,28 @@ from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 
 
+global_filename: str = ''
+
+
 class TestConvert(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
+    def tearDown(self):
+        global global_filename
+
+        logging.debug("Cleaning file: %s" % global_filename)
+        os.remove(global_filename)
+
     def test_cnn_convert(self):
         tf.reset_default_graph()
 
-        filename = "cnn.pb"
+        global global_filename
+        global_filename = "cnn.pb"
 
         input_shape = [1, 1, 28, 28]
 
-        path = export_cnn(filename, input_shape)
+        path = export_cnn(global_filename, input_shape)
 
         tf.reset_default_graph()
 
@@ -61,11 +77,12 @@ class TestConvert(unittest.TestCase):
     def test_matmul_convert(self):
         tf.reset_default_graph()
 
-        filename = "matmul.pb"
+        global global_filename
+        global_filename = "matmul.pb"
 
         input_shape = [1, 28]
 
-        path = export_matmul(filename, input_shape)
+        path = export_matmul(global_filename, input_shape)
 
         tf.reset_default_graph()
 
@@ -108,11 +125,12 @@ class TestConvert(unittest.TestCase):
     def test_add_convert(self):
         tf.reset_default_graph()
 
-        filename = "add.pb"
+        global global_filename
+        global_filename = "add.pb"
 
         input_shape = [28, 1]
 
-        path = export_add(filename, input_shape)
+        path = export_add(global_filename, input_shape)
 
         tf.reset_default_graph()
 
@@ -153,14 +171,111 @@ class TestConvert(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
+    def test_transpose_convert(self):
+        tf.reset_default_graph()
+
+        global global_filename
+        global_filename = "transpose.pb"
+
+        input_shape = [1, 2, 3, 4]
+
+        path = export_transpose(global_filename, input_shape)
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        actual = run_transpose(input_shape)
+
+        tf.reset_default_graph()
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer',
+            'prediction_client',
+            'weights_provider'
+        ])
+
+        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            prot.clear_initializers()
+
+            class PredictionClient(tfe.io.InputProvider):
+                def provide_input(self):
+                    return tf.constant(np.ones(input_shape))
+
+            input = PredictionClient(config.get_player('prediction_client'))
+
+            converter = Converter(config, prot, config.get_player('weights_provider'))
+
+            x = converter.convert(graph_def, input, register())
+
+            with config.session() as sess:
+                tfe.run(sess, prot.initializer, tag='init')
+
+                output = x.reveal().eval(sess, tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
+    def test_reshape_convert(self):
+        tf.reset_default_graph()
+
+        global global_filename
+        global_filename = "reshape.pb"
+
+        input_shape = [1, 2, 3, 4]
+
+        path = export_reshape(global_filename, input_shape)
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        actual = run_reshape(input_shape)
+
+        tf.reset_default_graph()
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer',
+            'prediction_client',
+            'weights_provider'
+        ])
+
+        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            prot.clear_initializers()
+
+            class PredictionClient(tfe.io.InputProvider):
+                def provide_input(self):
+                    return tf.constant(np.ones(input_shape))
+
+            input = PredictionClient(config.get_player('prediction_client'))
+
+            converter = Converter(config, prot, config.get_player('weights_provider'))
+
+            x = converter.convert(graph_def, input, register())
+
+            with config.session() as sess:
+                tfe.run(sess, prot.initializer, tag='init')
+
+                output = x.reveal().eval(sess, tag='reveal')
+
+            np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
     def test_sub_convert(self):
         tf.reset_default_graph()
 
-        filename = "sub.pb"
+        global global_filename
+        global_filename = "sub.pb"
 
         input_shape = [28, 1]
 
-        path = export_sub(filename, input_shape)
+        path = export_sub(global_filename, input_shape)
 
         tf.reset_default_graph()
 
@@ -250,9 +365,10 @@ class TestConvert(unittest.TestCase):
     def test_strided_slice_convert(self):
         tf.reset_default_graph()
 
-        filename = "strided_slice.pb"
+        global global_filename
+        global_filename = "strided_slice.pb"
 
-        path = export_strided_slice(filename)
+        path = export_strided_slice(global_filename)
 
         tf.reset_default_graph()
 
@@ -362,6 +478,52 @@ def export_add(filename: str, input_shape: List[int]):
     b = tf.constant(np.ones((input_shape[0], 1)), dtype=tf.float32)
 
     x = tf.add(a, b)
+
+    return export(x, filename)
+
+
+def run_transpose(input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    x = tf.transpose(a, perm=(0, 3, 1, 2))
+
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: np.ones(input_shape)})
+
+    return output
+
+
+def export_transpose(filename: str, input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    x = tf.transpose(a, perm=(0, 3, 1, 2))
+
+    return export(x, filename)
+
+
+def run_reshape(input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    last_size = 1
+    for i in input_shape[1:]:
+        last_size *= i
+
+    x = tf.reshape(a, [-1, last_size])
+
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: np.ones(input_shape)})
+
+    return output
+
+
+def export_reshape(filename: str, input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    last_size = 1
+    for i in input_shape[1:]:
+        last_size *= i
+
+    x = tf.reshape(a, [-1, last_size])
 
     return export(x, filename)
 

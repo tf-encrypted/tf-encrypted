@@ -24,9 +24,10 @@ def register() -> Dict[str, Any]:
         'StridedSlice': strided_slice,
         'Add': add,
         'Sub': sub,
+        'Transpose': transpose,
+        'Reshape': reshape,
         'Mul': mul,
         # 'Pack': pack,
-        # 'Reshape': reshape,
         # 'BiasAdd': bias_add,
         # 'MaxPool': maxpool,
     }
@@ -52,7 +53,7 @@ def matmul(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
     b_shape = [i.size for i in tensor.tensor_shape.dim]
 
-    layer = Dense(b_shape[0], b_shape[1])
+    layer = Dense(a.shape.as_list(), b_shape[1])
 
     dtype = tensor.dtype
 
@@ -82,8 +83,11 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
     if format == "NHWC":
         raise AttributeError("Wrong data format for convolution only support NCHW for now")
 
-    layer = Conv2D(shape, strides=int(node.attr["strides"].list.i[0]),
-                   padding=node.attr["padding"].s.decode('ascii'))
+    layer = Conv2D(
+        input.shape.as_list(), shape,
+        strides=int(node.attr["strides"].list.i[0]),
+        padding=node.attr["padding"].s.decode('ascii')
+    )
 
     if dtype == tf.float32:
         nums = array.array('f', filter.attr["value"].tensor.tensor_content)
@@ -96,7 +100,7 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
                                     np.array(nums).reshape(shape))
     w = converter.protocol.define_private_input(provider)
 
-    layer.initialize(input.shape, initial_weights=w)
+    layer.initialize(initial_weights=w)
 
     return layer.forward(input)
 
@@ -104,13 +108,13 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
 def relu(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
-    return Relu().forward(input)
+    return Relu(input.shape.as_list()).forward(input)
 
 
 def sigmoid(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
-    return Sigmoid().forward(input)
+    return Sigmoid(input.shape.as_list()).forward(input)
 
 
 def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
@@ -173,12 +177,37 @@ def shape(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 
 def reshape(converter: Converter, node: Any, inputs: List[str]) -> Any:
-    raise NotImplementedError()
-
     input = converter.outputs[inputs[0]]
     shape = converter.outputs[inputs[1]]
 
-    return tf.reshape(input, shape)
+    tensor = shape.attr["value"].tensor
+    dtype = shape.attr["dtype"].type
+    if dtype == tf.int32:
+        nums = array.array('i', tensor.tensor_content)
+    elif dtype == tf.int64:
+        nums = array.array('l', tensor.tensor_content)
+    else:
+        raise TypeError("Unsupported dtype for reshape shape")
+
+    return converter.protocol.reshape(input, list(nums))
+
+
+def transpose(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+    perm = converter.outputs[inputs[1]]
+
+    tensor = perm.attr["value"].tensor
+    shape = [i.size for i in tensor.tensor_shape.dim]
+
+    dtype = perm.attr["dtype"].type
+    if dtype == tf.int32:
+        nums = array.array('i', tensor.tensor_content)
+    elif dtype == tf.int64:
+        nums = array.array('l', tensor.tensor_content)
+    else:
+        raise TypeError("Unsupported dtype for transpose perm")
+
+    return converter.protocol.transpose(input, np.array(nums).reshape(shape))
 
 
 def add(converter: Converter, node: Any, inputs: List[str]) -> Any:

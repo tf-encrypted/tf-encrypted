@@ -6,6 +6,8 @@ import tensorflow_encrypted as tfe
 
 
 class TestConv2D(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
 
     def test_forward(self):
         # input
@@ -29,8 +31,8 @@ class TestConv2D(unittest.TestCase):
         with tfe.protocol.Pond(*config.players) as prot:
 
             conv_input = prot.define_private_variable(input_conv)
-            conv_layer = tfe.layers.Conv2D(filter_shape, strides=2)
-            conv_layer.initialize(input_shape, initial_weights=filter_values)
+            conv_layer = tfe.layers.Conv2D(input_shape, filter_shape, strides=2)
+            conv_layer.initialize(initial_weights=filter_values)
             conv_out_pond = conv_layer.forward(conv_input)
 
             with config.session() as sess:
