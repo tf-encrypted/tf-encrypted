@@ -31,7 +31,7 @@ class Conv2D(core.Layer):
         self.weights = None
         self.bias = None
         self.model = None
-        assert channels_first
+        self.channels_first = channels_first
 
         super(Conv2D, self).__init__(input_shape)
 
@@ -58,11 +58,23 @@ class Conv2D(core.Layer):
     def forward(self, x):
         self.cached_input_shape = x.shape
         self.cache = x
+
+        if not self.channels_first:
+            x = self.prot.transpose(x, perm=[0, 3, 1, 2])
+
         out = self.prot.conv2d(x, self.weights, self.strides, self.padding)
 
-        return out + self.bias
+        out = out + self.bias
+
+        if not self.channels_first:
+            out = self.prot.transpose(out, perm=[0, 2, 3, 1])
+
+        return out
 
     def backward(self, d_y, learning_rate):
+        if not self.channels_first:
+            raise TypeError("channels must be first on the backward pass")
+
         x = self.cache
         h_filter, w_filter, d_filter, n_filter = map(int, self.weights.shape)
 

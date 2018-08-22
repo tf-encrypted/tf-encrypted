@@ -80,14 +80,13 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
     shape = [i.size for i in filter.attr["value"].tensor.tensor_shape.dim]
     dtype = filter.attr["dtype"].type
-    format = node.attr["data_format"].s
-    if format == "NHWC":
-        raise AttributeError("Wrong data format for convolution only support NCHW for now")
+    format = node.attr["data_format"].s.decode('ascii')
 
     layer = Conv2D(
         input.shape.as_list(), shape,
         strides=int(node.attr["strides"].list.i[0]),
-        padding=node.attr["padding"].s.decode('ascii')
+        padding=node.attr["padding"].s.decode('ascii'),
+        channels_first=format == "NCHW"
     )
 
     if dtype == tf.float32:
@@ -103,7 +102,9 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
     layer.initialize(initial_weights=w)
 
-    return layer.forward(input)
+    out = layer.forward(input)
+
+    return out
 
 
 def relu(converter: Converter, node: Any, inputs: List[str]) -> Any:
