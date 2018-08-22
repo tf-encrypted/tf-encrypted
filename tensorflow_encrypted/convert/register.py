@@ -26,7 +26,8 @@ def register() -> Dict[str, Any]:
         'Sub': sub,
         'Transpose': transpose,
         'Reshape': reshape,
-        'Mul': mul,
+        'Rsqrt': rsqrt,
+        'Mul': mul
         # 'Pack': pack,
         # 'BiasAdd': bias_add,
         # 'MaxPool': maxpool,
@@ -210,6 +211,29 @@ def transpose(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.transpose(input, np.array(nums).reshape(shape))
 
 
+def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+
+    tensor = input.attr["value"].tensor
+    shape = [i.size for i in tensor.tensor_shape.dim]
+
+    dtype = input.attr["dtype"].type
+    if dtype == tf.float32:
+        nums = array.array('f', tensor.tensor_content)
+    elif dtype == tf.float64:
+        nums = array.array('d', tensor.tensor_content)
+    else:
+        raise TypeError("Unsupported dtype for rsqrt")
+
+    x = 1 / np.sqrt(np.array(nums).reshape(shape))
+
+    provider = ConvertInputProvider(converter.weights_provider, x)
+
+    x = converter.protocol.define_public_input(provider)
+
+    return x
+
+
 def add(converter: Converter, node: Any, inputs: List[str]) -> Any:
     a = converter.outputs[inputs[0]]
     b = converter.outputs[inputs[1]]
@@ -261,8 +285,7 @@ def mul(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.mul(a_out, b_out)
 
 
-def nodef_to_public_pond(converter: Converter, x) -> 'PondPublicTensor':
-
+def nodef_to_public_pond(converter: Converter, x: Any) -> 'PondPublicTensor':
     dtype = x.attr["dtype"].type
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
