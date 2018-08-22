@@ -316,6 +316,7 @@ def export_matmul(filename: str, input_shape: List[int]):
 
     return export(x, filename)
 
+
 def run_add(input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
     b = tf.constant(np.ones((input_shape[1], 1)), dtype=tf.float32)
