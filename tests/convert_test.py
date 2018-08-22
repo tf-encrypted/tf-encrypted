@@ -368,7 +368,7 @@ def export_add(filename: str, input_shape: List[int]):
 
 def run_sub(input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    b = tf.constant(np.ones((input_shape[1], 1)), dtype=tf.float32)
+    b = tf.constant(np.ones((input_shape[0], 1)), dtype=tf.float32)
 
     x = tf.subtract(a, b)
 
@@ -380,7 +380,7 @@ def run_sub(input_shape: List[int]):
 
 def export_sub(filename: str, input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    b = tf.constant(np.ones((input_shape[1], 1)), dtype=tf.float32)
+    b = tf.constant(np.ones((input_shape[0], 1)), dtype=tf.float32)
 
     x = tf.subtract(a, b)
 
