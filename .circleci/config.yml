@@ -58,6 +58,7 @@ jobs:
           command: |
             . venv/bin/activate
             pycodestyle tests/ --max-line-length 100
+            pycodestyle examples/api --max-line-length 100
 
       - run:
           name: build docker contiainer
