@@ -193,7 +193,7 @@ def transpose(converter: Converter, node: Any, inputs: List[str]) -> Any:
     if dtype == tf.int32:
         nums = array.array('i', tensor.tensor_content)
     elif dtype == tf.int64:
-        nums = array.array('d', tensor.tensor_content)
+        nums = array.array('l', tensor.tensor_content)
     else:
         raise TypeError("Unsupported dtype for transpose perm")
 
