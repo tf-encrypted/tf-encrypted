@@ -140,6 +140,7 @@ class TestConvert(unittest.TestCase):
                     return tf.constant(np.ones(input_shape))
 
             input = PredictionClient(config.get_player('prediction_client'))
+            print(input)
 
             converter = Converter(config, prot, config.get_player('weights_provider'))
 
@@ -358,7 +359,7 @@ def run_add(input_shape: List[int]):
 
 def export_add(filename: str, input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    b = tf.constant(np.ones((input_shape[1], 1)), dtype=tf.float32)
+    b = tf.constant(np.ones((input_shape[0], 1)), dtype=tf.float32)
 
     x = tf.add(a, b)
 

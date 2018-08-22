@@ -9,6 +9,8 @@ from .convert import Converter, ConvertInputProvider
 
 from ..protocol.protocol import get_protocol
 
+from tensorflow_encrypted.protocol.pond import PondPublicTensor
+
 
 def register() -> Dict[str, Any]:
     reg = {
@@ -183,7 +185,17 @@ def add(converter: Converter, node: Any, inputs: List[str]) -> Any:
     a = converter.outputs[inputs[0]]
     b = converter.outputs[inputs[1]]
 
-    return converter.protocol.add(a, b)
+    if isinstance(a, tf.NodeDef):
+        a_out = nodef_to_public_pond(converter, a)
+    else:
+        a_out = a
+
+    if isinstance(b, tf.NodeDef):
+        b_out = nodef_to_public_pond(converter, b)
+    else:
+        b_out = b
+
+    return converter.protocol.add(a_out, b_out)
 
 
 def sub(converter: Converter, node: Any, inputs: List[str]) -> Any:
@@ -198,3 +210,23 @@ def mul(converter: Converter, node: Any, inputs: List[str]) -> Any:
     b = converter.outputs[inputs[1]]
 
     return converter.protocol.mul(a, b)
+
+
+def nodef_to_public_pond(converter: Converter, x) -> 'PondPublicTensor':
+
+    dtype = x.attr["dtype"].type
+    x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
+
+    if dtype == tf.float32:
+        nums = array.array('f', x.attr["value"].tensor.tensor_content)
+    elif dtype == tf.float64:
+        nums = array.array('d', x.attr["value"].tensor.tensor_content)
+    else:
+        raise TypeError("Unsupported dtype")
+
+    provider = ConvertInputProvider(converter.weights_provider,
+                                    np.array(nums).reshape(x_shape))
+
+    x_public = converter.protocol.define_public_input(provider)
+
+    return x_public
