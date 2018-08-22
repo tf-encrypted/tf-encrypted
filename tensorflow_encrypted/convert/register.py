@@ -24,6 +24,8 @@ def register() -> Dict[str, Any]:
         'Sub': sub,
         'Transpose': transpose,
         'Reshape': reshape,
+        'Rsqrt': rsqrt,
+        'Mul': mul
         # 'Pack': pack,
         # 'BiasAdd': bias_add,
         # 'MaxPool': maxpool,
@@ -207,7 +209,24 @@ def transpose(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.transpose(input, np.array(nums).reshape(shape))
 
 
+def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+
+    tensor = input.attr["value"].tensor
+    shape = [i.size for i in tensor.tensor_shape.dim]
+
+    dtype = input.attr["dtype"].type
+    if dtype == tf.float32:
+        nums = array.array('f', tensor.tensor_content)
+    elif dtype == tf.float64:
+        nums = array.array('d', tensor.tensor_content)
+    else:
+        raise TypeError("Unsupported dtype for rsqrt")
+
+    return 1 / np.sqrt(np.array(nums).reshape(shape))
+
 def add(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    print(node.op, inputs)
     a = converter.outputs[inputs[0]]
     b = converter.outputs[inputs[0]]
 
@@ -215,7 +234,13 @@ def add(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 
 def sub(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    print(node.op, inputs)
+    return
     a = converter.outputs[inputs[0]]
     b = converter.outputs[inputs[0]]
 
     return converter.protocol.sub(a, b)
+
+
+def mul(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    print(node.op, inputs)

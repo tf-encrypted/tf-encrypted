@@ -366,6 +366,85 @@ class TestConvert(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
+    def test_batchnorm_convert(self):
+        tf.reset_default_graph()
+
+        global global_filename
+        global_filename = "batchnrom.pb"
+
+        input_shape = [1, 1, 28, 28]
+
+        path = export_batchnorm(global_filename, input_shape)
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        actual = run_batchnorm(input_shape)
+
+        tf.reset_default_graph()
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer',
+            'prediction_client',
+            'weights_provider',
+        ])
+
+        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            prot.clear_initializers()
+
+            class PredictionClient(tfe.io.InputProvider):
+                def provide_input(self):
+                    return tf.constant([[[1, 1, 1], [2, 2, 2]],
+                                        [[3, 3, 3], [4, 4, 4]],
+                                        [[5, 5, 5], [6, 6, 6]]])
+
+            input = PredictionClient(config.get_player('prediction_client'))
+
+            converter = Converter(config, prot, config.get_player('weights_provider'))
+
+            x = converter.convert(graph_def, input, register())
+
+            with config.session() as sess:
+                tfe.run(sess, prot.initializer, tag='init')
+
+                output = x.reveal().eval(sess, tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
+
+def run_batchnorm(input_shape: List[int]):
+    input = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    mean = np.ones((1, 1, 1, input_shape[3])) * 1
+    variance = np.ones((1, 1, 1, input_shape[3])) * 2
+    offset = np.ones((1, 1, 1, input_shape[3])) * 3
+    scale = np.ones((1, 1, 1, input_shape[3])) * 4
+
+    x = tf.nn.batch_normalization(input, mean, variance, offset, scale, 0.00001)
+
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={input: np.ones(input_shape)})
+
+    return output
+
+
+def export_batchnorm(filename: str, input_shape: List[int]):
+    input = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    mean = np.ones((1, 1, 1, input_shape[3]), dtype=np.float32) * 1
+    variance = np.ones((1, 1, 1, input_shape[3]), dtype=np.float32) * 2
+    offset = np.ones((1, 1, 1, input_shape[3]), dtype=np.float32) * 3
+    scale = np.ones((1, 1, 1, input_shape[3]), dtype=np.float32) * 4
+
+    x = tf.nn.batch_normalization(input, mean, variance, offset, scale, 0.00001)
+
+    return export(x, filename)
+
 
 def run_cnn(input_shape: List[int]):
     input = tf.placeholder(tf.float32, shape=input_shape, name="input")
