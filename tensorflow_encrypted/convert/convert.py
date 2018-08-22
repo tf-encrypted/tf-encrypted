@@ -33,18 +33,21 @@ class Converter():
         self.protocol = protocol
         self.weights_provider = weights_provider
 
-    def convert(self, graph_def: Any, input: InputProvider, register: Dict[str, Any]) -> Dict[str, Any]:
+    def convert(self, graph_def: Any, input: List[InputProvider],
+                register: Dict[str, Any]) -> Dict[str, Any]:
         name_to_input_name, name_to_node = extract_graph_summary(graph_def)
 
         if graph_def.node[0].op != "Placeholder":
             raise AttributeError("First node in graph must be placeholder for now")
 
+        next_input = 0
         for output, inputs in name_to_input_name.items():
             node = name_to_node[output]
 
             # just take the input passed into this function for now
             if node.op == "Placeholder":
-                x = self.protocol.define_private_input(input)
+                x = self.protocol.define_private_input(input[next_input])
+                next_input +=
 
                 self.outputs[output] = x
                 continue
