@@ -6,3 +6,7 @@ curl -s -X POST -H "Content-Type: application/json" -d "$(echo -e "import numpy 
 done
 
 wait
+
+
+# Polling
+# curl -s -X POST -H "Content-Type: application/json" -d '"c6fa7396-ea9f-4df4-b989-84ddc57c7c3d"' http://localhost:5000/poll

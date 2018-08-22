@@ -1,4 +1,8 @@
 import os
+import uuid
+from threading import Thread
+from typing import Dict, Any
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import tensorflow as tf
@@ -8,6 +12,7 @@ import tensorflow_encrypted as tfe
 from tensorflow_encrypted.convert import convert
 from tensorflow_encrypted.convert.register import register
 
+_global_memory: Dict[str, Any] = {}
 
 # define the app
 app = Flask(__name__)
@@ -30,11 +35,9 @@ def get_model_predict():
 
     tf.reset_default_graph()
 
-    pl = tf.placeholder(tf.float32, shape=[1, 16])
-
     class PredictionInputProvider(tfe.io.InputProvider):
         def provide_input(self) -> tf.Tensor:
-            return pl
+            return tf.placeholder(tf.float32, shape=[1, 16], name="api")
 
     class PredictionOutputReceiver(tfe.io.OutputReceiver):
         def receive_output(self, tensor: tf.Tensor) -> tf.Tensor:
@@ -46,24 +49,30 @@ def get_model_predict():
 
     sess = config.session()
     with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        # The machine which feeds input must be the flask server for now
         input = PredictionInputProvider(config.get_player('master'))
-        output = PredictionOutputReceiver(config.get_player('master'))
 
         c = convert.Converter(config, prot, config.get_player('weights_provider'))
         x = c.convert(graph_def, input, register())
-        prediction_op = prot.define_output(x, output)
+
+        # Not sure how to use this scheme for now
+        # output = PredictionOutputReceiver(config.get_player('master'))
+        # prediction_op = prot.define_output(x, output)
 
         tfe.run(sess, prot.initializer, tag='init')
 
-    def model_api(input_data):
+    pl = tf.get_default_graph().get_tensor_by_name("private-input/api:0")
+
+    def predict_fn(request_id: str, input_data: Any) -> None:
         output_data = x.reveal().eval(
             sess=sess,
             feed_dict={pl: input_data},
             tag='prediction',
         )
-        return output_data[0].tolist()
 
-    return model_api
+        _global_memory[request_id] = output_data[0].tolist()
+
+    return predict_fn
 
 
 predict = get_model_predict()
@@ -73,9 +82,31 @@ predict = get_model_predict()
 @app.route('/predict', methods=['POST'])
 def api_predict():
     input_data = request.json
-    app.logger.info("api_input: " + str(input_data))
-    output_data = predict(input_data)
-    app.logger.info("api_output: " + str(output_data))
+    app.logger.info("api_predict_input: " + str(input_data))
+
+    request_id = str(uuid.uuid4())
+
+    thread = Thread(target=predict, kwargs={
+        'request_id': request_id,
+        'input_data': input_data
+    })
+    thread.start()
+
+    app.logger.info("api_predict_output: " + request_id)
+    data = {'request_id': request_id}
+    response = jsonify(data)
+    return response
+
+
+@app.route('/poll', methods=['POST'])
+def api_poll():
+    request_id = request.json
+    app.logger.info("api_poll_input: " + str(request_id))
+    print(_global_memory)
+
+    output_data = _global_memory.pop(request_id, None)
+
+    app.logger.info("api_poll_output: " + str(output_data))
     response = jsonify(output_data)
     return response
 

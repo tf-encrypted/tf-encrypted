@@ -19,5 +19,5 @@ class OutputReceiver(object):
     def __init__(self, player: Player) -> None:
         self.player = player
 
-    def receive_output(self, tensor: tf.Tensor) -> tf.Operation:
+    def receive_output(self, tensor: tf.Tensor) -> tf.Tensor:
         raise NotImplementedError()
