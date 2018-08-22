@@ -76,9 +76,9 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
     shape = [i.size for i in filter.attr["value"].tensor.tensor_shape.dim]
     dtype = filter.attr["dtype"].type
-    format = node.attr["data_format"].s
+    format = node.attr["data_format"].s.decode('ascii')
     if format == "NHWC":
-        raise AttributeError("Wrong data format for convolution only support NCHW for now")
+        input = converter.protocol.transpose(input, perm=[0, 3, 1, 2])
 
     layer = Conv2D(
         input.shape.as_list(), shape,
@@ -99,7 +99,12 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
     layer.initialize(initial_weights=w)
 
-    return layer.forward(input)
+    out = layer.forward(input)
+
+    if format == "NHWC":
+        out = converter.protocol.transpose(out, perm=[0, 2, 3, 1])
+
+    return out
 
 
 def relu(converter: Converter, node: Any, inputs: List[str]) -> Any:
