@@ -1825,28 +1825,31 @@ def _avgpool2d_im2col_reduce(x: BackingTensor,
                              pool_size: Tuple[int],
                              strides: Tuple[int],
                              padding: str) -> BackingTensor:
-    print(f'wow {x}')
 
-    batch, height, width, channels = x.shape
+    batch, channels, height, width = x.shape
     pool_height, pool_width = pool_size
 
-    print(f'hrmm {width, pool_width}')
+    print(f'heights {height} {pool_height}')
 
     out_height = (height - pool_height) // tf.Dimension(strides[0] + 1)
     out_width = (width - pool_width) // tf.Dimension(strides[0] + 1)
 
-    print(f'xxxx {x}')
-    print(f'reshape info N: {batch} C: {channels} h: {height} w: {width}')
     x_split = x.reshape((batch * channels, 1, height, width))
-    print(f'x_split {x_split}')
-
     x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
 
-    print(f'x_cols {x_cols.to_native()}')
 
-    x_cols_avg = np.average(x_cols, axis=0)
-    x_cols_avg = x_cols[x_cols_avg, np.arrange(x_cols.shape[1])]
-    out = x_cols_avg.reshape(out_height, out_width, batch, channels).transpose(2, 3, 0, 1)
+
+    x_cols_sum = x_cols.sum(axis=0)
+    print(f'x cols shape {x_cols_sum.shape}')
+    #
+    # print(f'sum shape {x_cols_sum.shape}')
+    # print(f'types {type(x_cols)} .. {type(x_cols_sum)}')
+    # print(f'type2 {type(int(x_cols.shape[1]))}')
+    # lol = np.arange(int(x_cols.shape[1]))
+
+
+    # x_cols_avg = x_cols[x_cols_sum, lol]
+    out = x_cols_sum.reshape(out_height, out_width, batch, channels).transpose(2, 3, 0, 1)
 
     return out
 

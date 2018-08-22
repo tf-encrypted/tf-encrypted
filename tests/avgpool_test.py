@@ -11,12 +11,12 @@ class TestAvgPooling(unittest.TestCase):
     def test_forward(self) -> None:
 
         # input
-        input = np.array((1,0,1,0,
-                          0,1,0,1,
-                          1,0,1,0,
-                          0,1,0,1,
-                          1,0,1,0,
-                          0,1,0,1)).reshape(1, 1, 4, 6)
+        input = np.array((1, 0, 1, 0,
+                          0, 1, 0, 1,
+                          1, 0, 1, 0,
+                          0, 1, 0, 1,
+                          1, 0, 1, 0,
+                          0, 1, 0, 1)).reshape(1, 1, 4, 6)
 
         config = tfe.LocalConfig([
             'server_0',
