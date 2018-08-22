@@ -77,13 +77,12 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
     shape = [i.size for i in filter.attr["value"].tensor.tensor_shape.dim]
     dtype = filter.attr["dtype"].type
     format = node.attr["data_format"].s.decode('ascii')
-    if format == "NHWC":
-        input = converter.protocol.transpose(input, perm=[0, 3, 1, 2])
 
     layer = Conv2D(
         input.shape.as_list(), shape,
         strides=int(node.attr["strides"].list.i[0]),
-        padding=node.attr["padding"].s.decode('ascii')
+        padding=node.attr["padding"].s.decode('ascii'),
+        channels_first=format == "NCHW"
     )
 
     if dtype == tf.float32:
@@ -100,9 +99,6 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
     layer.initialize(initial_weights=w)
 
     out = layer.forward(input)
-
-    if format == "NHWC":
-        out = converter.protocol.transpose(out, perm=[0, 2, 3, 1])
 
     return out
 
