@@ -128,22 +128,25 @@ def gen_crt_mod(m, int_type, float_type):
 def gen_crt_sum(m):
     def crt_sum(x, axis, keepdims=None):
         with tf.name_scope('crt_sum'):
-            dims = x.shape.dims
-            begins = [0] * len(dims)
-            ends = [1] + [0] * (len(dims) - 1)
+            dims = x[0].shape.dims.copy()
             ax_len = dims.pop(axis)
-            x = tf.transpose(x, perm=[axis, *dims])
-            y = tf.zeros(dims, dtype=x.dtype)
+            begins = [0] * len(dims)
+            ends = [x.value for x in dims]
+            perm = [axis, *[i for i in range(len(dims) + 1) if i != axis]]
+            x = [tf.transpose(xi, perm=perm) for xi in x]
+            y = [tf.zeros(dims, dtype=xi.dtype) for xi in x]
             for i in range(ax_len):
-                y += tf.slice(x, begins, ends)
-                y %= m
+                for j in range(len(x)):
+                    sl = x[j][i]
+                    y[j] += sl
+                    y[j] %= m[j]
                 begins[0] += 1
                 ends[0] += 1
             if keepdims:
-                return tf.expand_dims(y, axis)
+                return [tf.expand_dims(yi, axis) for yi in y]
             return y
 
-        return crt_sum
+    return crt_sum
 
 class CrtTensor(object):
     pass

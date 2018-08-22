@@ -1,0 +1,83 @@
+import unittest
+import numpy as np
+import tensorflow as tf
+import tensorflow_encrypted as tfe
+from typing import Tuple, Union
+
+from tensorflow_encrypted.layers import AveragePooling2D
+
+
+class TestAveragePooling2D(unittest.TestCase):
+    def _get_fixtures(self) -> Tuple[np.ndarray, Tuple[int, int, int, int], tfe.LocalConfig]:
+        batch_size, channels_in = 2, 2
+        img_height, img_width = 8, 8
+        input_shape = (batch_size, channels_in, img_height, img_width)
+
+        n_elements = batch_size * channels_in * img_height * img_width
+        input_pool = np.arange(n_elements, dtype=np.float32).reshape(input_shape)
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer'
+        ])
+
+        return input_pool, input_shape, config
+
+    def _tf_tiled_forward(self, input_pool: np.ndarray) -> np.ndarray:
+        with tf.Session() as sess:
+            x = tf.Variable(input_pool, dtype=tf.float32)
+            x_NHWC = tf.transpose(x, (0, 2, 3, 1))
+            ksize = [1, 2, 2, 1]
+            pool_out_tf = tf.nn.avg_pool(x_NHWC, ksize=ksize, strides=ksize, padding="SAME")
+
+            sess.run(tf.global_variables_initializer())
+            out_tf = sess.run(pool_out_tf).transpose(0, 3, 1, 2)
+
+            return out_tf
+
+    def _generic_tiled_forward(self, t_type: str) -> None:
+        assert t_type in ['public', 'private', 'masked']
+        input_pool, input_shape, config = self._get_fixtures()
+
+        # pooling in pond
+        with tfe.protocol.Pond(*config.players) as prot:
+            if t_type == 'public':
+                x_in = prot.define_public_variable(input_pool)
+            elif t_type in ['private', 'masked']:
+                x_in = prot.define_private_variable(input_pool)
+            if t_type == 'masked':
+                x_in = prot.mask(x_in)
+            pool = AveragePooling2D(list(input_shape), pool_size=2)
+            pool_out_pond = pool.forward(x_in)
+
+            with config.session() as sess:
+                sess.run(tf.global_variables_initializer())
+                if t_type in ['private', 'masked']:
+                    out_pond = pool_out_pond.reveal().eval(sess)
+                else:
+                    out_pond = pool_out_pond.eval(sess)
+
+        # reset tf graph
+        tf.reset_default_graph()
+
+        # pooling in tf
+        out_tf = self._tf_tiled_forward(input_pool)
+
+        np.testing.assert_array_almost_equal(out_pond, out_tf, decimal=3)
+
+    def test_public_tiled_forward(self) -> None:
+        self._generic_tiled_forward('public')
+
+    def test_private_tiled_forward(self) -> None:
+        self._generic_tiled_forward('private')
+
+    def test_masked_tiled_forward(self) -> None:
+        self._generic_tiled_forward('masked')
+
+    def test_backward(self):
+        pass
+
+
+if __name__ == '__main__':
+    unittest.main()
