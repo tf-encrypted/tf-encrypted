@@ -54,6 +54,12 @@ jobs:
             python -m unittest discover
 
       - run:
+          name: run linting
+          command: |
+            . venv/bin/activate
+            pycodestyle tests/ --max-line-length 100
+
+      - run:
           name: build docker contiainer
           command: |
             docker build --tag partydb/tf-encrypted:latest .
