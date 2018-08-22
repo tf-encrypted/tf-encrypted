@@ -72,7 +72,8 @@ class Conv2D(core.Layer):
         return out
 
     def backward(self, d_y, learning_rate):
-        assert self.channels_first
+        if not channels_first:
+            raise TypeError("channels must be first on the backward pass")
 
         x = self.cache
         h_filter, w_filter, d_filter, n_filter = map(int, self.weights.shape)
