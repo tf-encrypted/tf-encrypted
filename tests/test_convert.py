@@ -218,7 +218,6 @@ class TestConvert(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
-
     def test_reshape_convert(self):
         tf.reset_default_graph()
 
