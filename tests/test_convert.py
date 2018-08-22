@@ -218,6 +218,54 @@ class TestConvert(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
+    def test_reshape_convert(self):
+        tf.reset_default_graph()
+
+        global global_filename
+        global_filename = "reshape.pb"
+
+        input_shape = [1, 2, 3, 4]
+
+        path = export_reshape(global_filename, input_shape)
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        actual = run_reshape(input_shape)
+
+        tf.reset_default_graph()
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer',
+            'prediction_client',
+            'weights_provider'
+        ])
+
+        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            prot.clear_initializers()
+
+            class PredictionClient(tfe.io.InputProvider):
+                def provide_input(self):
+                    return tf.constant(np.ones(input_shape))
+
+            input = PredictionClient(config.get_player('prediction_client'))
+
+            converter = Converter(config, prot, config.get_player('weights_provider'))
+
+            x = converter.convert(graph_def, input, register())
+
+            with config.session() as sess:
+                tfe.run(sess, prot.initializer, tag='init')
+
+                output = x.reveal().eval(sess, tag='reveal')
+
+            np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
     def test_sub_convert(self):
         tf.reset_default_graph()
 
@@ -401,6 +449,33 @@ def export_transpose(filename: str, input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
 
     x = tf.transpose(a, perm=(0, 3, 1, 2))
+
+    return export(x, filename)
+
+
+def run_reshape(input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    last_size = 1
+    for i in input_shape[1:]:
+        last_size *= i
+
+    x = tf.reshape(a, [-1, last_size])
+
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: np.ones(input_shape)})
+
+    return output
+
+
+def export_reshape(filename: str, input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    last_size = 1
+    for i in input_shape[1:]:
+        last_size *= i
+
+    x = tf.reshape(a, [-1, last_size])
 
     return export(x, filename)
 
