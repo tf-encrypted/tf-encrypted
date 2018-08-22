@@ -318,11 +318,12 @@ class TestConvert(unittest.TestCase):
     def test_mul_convert(self):
         tf.reset_default_graph()
 
-        filename = "mul.pb"
+        global global_filename
+        global_filename = "mul.pb"
 
         input_shape = [4, 1]
 
-        path = export_mul(filename, input_shape)
+        path = export_mul(global_filename, input_shape)
 
         tf.reset_default_graph()
 
