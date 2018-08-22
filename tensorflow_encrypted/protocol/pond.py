@@ -265,30 +265,6 @@ class Pond(Protocol):
 
         return z
 
-    def sum(self, x, axis, keepdims):
-        node_key = ('sum', x)
-        z = _nodes.get(node_key, None)
-
-        if z is not None:
-            return z
-
-        x = _lift(self, x)
-        y = _lift(self, y)
-
-        dispatch = {
-            PondPublicTensor:  _sum_public,
-            PondPrivateTensor: _sum_private,
-            PondMaskedTensor:  _sum_masked
-        }
-        func = dispatch.get(_type(x), None)
-        if func is None:
-            raise TypeError("Don't know how to sum {}".format(type(x), type(y)))
-
-        z = func(self, x, axis, keepdims)
-        _nodes[node_key] = z
-
-        return z
-
     def sub(self, x, y):
 
         node_key = ('sub', x, y)
@@ -706,9 +682,6 @@ class PondTensor(object):
 
     def __add__(self, other):
         return self.prot.add(self, other)
-
-    def sum(self, axis, keepdims=False):
-        return self.prot.sum(self, axis, keepdims)
 
     def sub(self, other):
         return self.prot.sub(self, other)
@@ -1237,52 +1210,6 @@ def _add_masked_masked(prot, x, y):
     assert isinstance(y, PondMaskedTensor), type(y)
     return prot.add(x.unmasked, y.unmasked)
 
-#####
-# sum helpers
-#####
-
-
-def _sum_core(prot: Pond,
-              x: PondTensor,
-              axis: int,
-              keepdims: Optional[bool]) -> Tuple[BackingTensor, BackingTensor]:
-    x_on_0, x_on_1 = x.unwrapped
-
-    with tf.name_scope('sum'):
-
-        with tf.device(prot.server_0.device_name):
-            y_on_0 = x_on_0.sum(axis, keepdims)
-
-        with tf.device(prot.server_1.device_name):
-            y_on_1 = x_on_1.sum(axis, keepdims)
-
-        return y_on_0, y_on_1
-
-
-def _sum_public(prot: Pond,
-                x: PondPublicTensor,
-                axis: int,
-                keepdims: Optional[bool]) -> PondPublicTensor:
-    y_on_0, y_on_1 = _sum_core(prot, x, axis, keepdims)
-    return PondPublicTensor(prot, y_on_0, y_on_1)
-
-
-def _sum_private(prot: Pond,
-                 x: PondPrivateTensor,
-                 axis: int,
-                 keepdims: Optional[bool]) -> PondPrivateTensor:
-    y_on_0, y_on_1 = _sum_core(prot, x, axis, keepdims)
-    return PondPrivateTensor(prot, y_on_0, y_on_1)
-
-
-def _sum_masked(prot: Pond,
-                x: PondMaskedTensor,
-                axis: int,
-                keepdims: Optional[bool]) -> PondPrivateTensor:
-    # y_on_0, y_on_1 = _sum_core(prot, x.unmasked, axis, keepdims)
-    # return PondPrivateTensor(prot, y_on_0, y_on_1)
-    raise NotImplementedError
-
 #
 # sub helpers
 #
@@ -1575,7 +1502,7 @@ def _square_masked(prot, x):
 
 def _dot_public_public(prot: Pond,
                        x: PondPublicTensor,
-                       y: PondPublicTensor) -> PondPublicTensor:
+                       y: PondPublicTensor) -> PondTensor:
 
     x_on_0, x_on_1 = x.unwrapped
     y_on_0, y_on_1 = y.unwrapped
@@ -1775,25 +1702,60 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
     z = prot.truncate(z)
     return z
 
-#####
-# average pooling helpers
-#####
+
+def _avgpool2d_public_reshape(x: BackingTensor,
+                              pool_size: Tuple[int],
+                              strides: Tuple[int],
+                              padding: str) -> BackingTensor:
+
+    raise NotImplementedError
 
 
-def _avgpool2d_core(prot: Pond,
-                    x: PondTensor,
-                    pool_size: Tuple[int, int],
-                    strides: Tuple[int, int],
-                    padding: str) -> Tuple[BackingTensor, BackingTensor]:
+def _avgpool2d_public_im2col(x: BackingTensor,
+                             pool_size: Tuple[int],
+                             strides: Tuple[int],
+                             padding: str) -> BackingTensor:
+
+    print(f'wow {x}')
+
+    batch, height, width, channels = x.shape
+    pool_height, pool_width = pool_size
+
+    print(f'hrmm {width, pool_width}')
+
+    out_height = (height - pool_height) // tf.Dimension(strides[0] + 1)
+    out_width = (width - pool_width) // tf.Dimension(strides[0] + 1)
+
+    print(f'xxxx {x}')
+    print(f'reshape info N: {batch} C: {channels} h: {height} w: {width}')
+    x_split = x.reshape(batch * channels, 1, height, width)
+    print(f'x_cols {x_split.to_native()}')
+
+    x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
+
+    print(f'x_cols {x_cols.to_native()}')
+
+    x_cols_avg = np.average(x_cols, axis=0)
+    x_cols_avg = x_cols[x_cols_avg, np.arrange(x_cols.shape[1])]
+    out = x_cols_avg.reshape(out_height, out_width, batch, channels).transpose(2, 3, 0, 1)
+
+    return out
+
+
+def _avgpool2d_public(prot: Pond,
+                      x: PondPublicTensor,
+                      pool_size: Tuple[int],
+                      strides: Tuple[int],
+                      padding: str) -> PondPublicTensor:
     x_on_0, x_on_1 = x.unwrapped
     _, _, H, W = x.shape
     siamese = pool_size == strides and pool_size[0] == pool_size[1]
     even = H % pool_size[0] == 0 and W % pool_size[1] == 0
 
     if siamese and even:
-        pooler = _avgpool2d_reshape
+        pooler = _avgpool2d_public_reshape
     else:
-        pooler = _avgpool2d_im2col
+        pooler = _avgpool2d_public_im2col
 
     with tf.name_scope('avgpool2d'):
         with tf.device(prot.server_0.device_name):
@@ -1802,52 +1764,23 @@ def _avgpool2d_core(prot: Pond,
         with tf.device(prot.server_1.device_name):
             y_on_1 = pooler(x_on_1, pool_size, strides, padding)
 
-        return y_on_0, y_on_1
-
-
-def _avgpool2d_reshape(x: BackingTensor,
-                              pool_size: Tuple[int, int],
-                              strides: Tuple[int, int],
-                              padding: str) -> BackingTensor:
-    pool_height, pool_width = pool_size
-    N, C, H, W = x.shape
-    x_reshaped = x.reshape(N, C, H / pool_height, pool_height, W / pool_width, pool_width)
-    scalar = 1 / (pool_height * pool_width)
-    return x_reshaped.sum(axis=3).sum(axis=4) * scalar
-
-
-def _avgpool2d_im2col(x: BackingTensor,
-                             pool_size: Tuple[int],
-                             strides: Tuple[int],
-                             padding: str) -> BackingTensor:
-    raise NotImplementedError
-
-
-def _avgpool2d_public(prot: Pond,
-                      x: PondPublicTensor,
-                      pool_size: Tuple[int, int],
-                      strides: Tuple[int, int],
-                      padding: str) -> PondPublicTensor:
-    y_on_0, y_on_1 = _avgpool2d_core(prot, x, pool_size, strides, padding)
     return PondPublicTensor(prot, y_on_0, y_on_1)
 
 
 def _avgpool2d_private(prot: Pond,
                        x: PondPrivateTensor,
-                       pool_size: Tuple[int, int],
-                       strides: Tuple[int, int],
+                       pool_size: Tuple[int],
+                       strides: Tuple[int],
                        padding: str) -> PondPrivateTensor:
-    y_on_0, y_on_1 = _avgpool2d_core(prot, x, pool_size, strides, padding)
-    return PondPrivateTensor(prot, y_on_0, y_on_1)
+    return _avgpool2d_masked(prot.mask(x), pool_size, strides, padding)
 
 
 def _avgpool2d_masked(prot: Pond,
                       x: PondMaskedTensor,
-                      pool_size: Tuple[int, int],
-                      strides: Tuple[int, int],
+                      pool_size: Tuple[int],
+                      strides: Tuple[int],
                       padding: str) -> PondPrivateTensor:
-    y_on_0, y_on_1 = _avgpool2d_core(prot, x.unmasked, pool_size, strides, padding)
-    return PondMaskedTensor(prot, y_on_0, y_on_1)
+    raise NotImplementedError
 
 #
 # transpose helpers
