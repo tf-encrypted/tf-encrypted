@@ -219,7 +219,17 @@ def mul(converter: Converter, node: Any, inputs: List[str]) -> Any:
     a = converter.outputs[inputs[0]]
     b = converter.outputs[inputs[1]]
 
-    return converter.protocol.mul(a, b)
+    if isinstance(a, tf.NodeDef):
+        a_out = nodef_to_public_pond(converter, a)
+    else:
+        a_out = a
+
+    if isinstance(b, tf.NodeDef):
+        b_out = nodef_to_public_pond(converter, b)
+    else:
+        b_out = b
+
+    return converter.protocol.mul(a_out, b_out)
 
 
 def nodef_to_public_pond(converter: Converter, x) -> 'PondPublicTensor':
