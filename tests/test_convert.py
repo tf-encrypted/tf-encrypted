@@ -158,7 +158,6 @@ class TestConvert(unittest.TestCase):
                     return tf.constant(np.ones(input_shape))
 
             input = PredictionClient(config.get_player('prediction_client'))
-            print(input)
 
             converter = Converter(config, prot, config.get_player('weights_provider'))
 
@@ -448,9 +447,7 @@ class TestConvert(unittest.TestCase):
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
-                    return tf.constant([[[1, 1, 1], [2, 2, 2]],
-                                        [[3, 3, 3], [4, 4, 4]],
-                                        [[5, 5, 5], [6, 6, 6]]])
+                    return tf.constant(np.ones(input_shape))
 
             input = PredictionClient(config.get_player('prediction_client'))
 

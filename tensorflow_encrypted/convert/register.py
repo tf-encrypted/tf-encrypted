@@ -225,7 +225,14 @@ def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
     else:
         raise TypeError("Unsupported dtype for rsqrt")
 
-    return 1 / np.sqrt(np.array(nums).reshape(shape))
+    x = 1 / np.sqrt(np.array(nums).reshape(shape))
+
+    provider = ConvertInputProvider(converter.weights_provider, x)
+
+    x = converter.protocol.define_public_input(provider)
+
+    return x
+
 
 def add(converter: Converter, node: Any, inputs: List[str]) -> Any:
     a = converter.outputs[inputs[0]]
@@ -278,8 +285,7 @@ def mul(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.mul(a_out, b_out)
 
 
-def nodef_to_public_pond(converter: Converter, x) -> 'PondPublicTensor':
-
+def nodef_to_public_pond(converter: Converter, x: Any) -> 'PondPublicTensor':
     dtype = x.attr["dtype"].type
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
