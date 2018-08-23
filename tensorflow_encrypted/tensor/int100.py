@@ -100,7 +100,7 @@ class Int100Tensor(object):
         return _sample_uniform(shape)
 
     def __repr__(self) -> str:
-        return 'Int100Tensor({})'.format(self.to_native())
+        return 'Int100Tensor({})'.format(self.shape)
 
     @property
     def shape(self) -> List[int]:
