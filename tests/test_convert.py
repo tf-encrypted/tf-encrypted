@@ -2,7 +2,7 @@ import unittest
 import os
 import logging
 
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -365,6 +365,87 @@ class TestConvert(unittest.TestCase):
                 output = x.reveal().eval(sess, tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
+    def test_stack_convert(self):
+        tf.reset_default_graph()
+
+        global global_filename
+        global_filename = "stack.pb"
+
+        input1 = np.array([1, 4])
+        input2 = np.array([2, 5])
+        input3 = np.array([3, 6])
+
+        path = export_stack(global_filename, input1.shape)
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        actual = run_stack(input1, input2, input3)
+
+        tf.reset_default_graph()
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer',
+            'prediction_client',
+            'weights_provider',
+        ])
+
+        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            prot.clear_initializers()
+
+            class PredictionClient(tfe.io.InputProvider):
+                self.input = None
+
+                def provide_input(self):
+                    return tf.constant(self.input)
+
+            i1 = PredictionClient(config.get_player('prediction_client'))
+            i1.input = input1
+            i2 = PredictionClient(config.get_player('prediction_client'))
+            i2.input = input2
+            i3 = PredictionClient(config.get_player('prediction_client'))
+            i3.input = input3
+
+            input = [i1, i2, i3]
+
+            converter = Converter(config, prot, config.get_player('weights_provider'))
+
+            x = converter.convert(graph_def, input, register())
+
+            with config.session() as sess:
+                tfe.run(sess, prot.initializer, tag='init')
+
+                output = x.reveal().eval(sess, tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
+
+def run_stack(input1, input2, input3):
+    x = tf.constant(input1)
+    y = tf.constant(input2)
+    z = tf.constant(input3)
+    out = tf.stack([x, y, z])
+
+    with tf.Session() as sess:
+        out = sess.run(out)
+
+    return out
+
+
+def export_stack(filename: str, input_shape: Tuple[int]):
+    x = tf.placeholder(tf.float32, shape=input_shape)
+    y = tf.placeholder(tf.float32, shape=input_shape)
+    z = tf.placeholder(tf.float32, shape=input_shape)
+
+    out = tf.stack([x, y, z])
+
+    return export(out, filename)
 
 
 def run_cnn(input_shape: List[int]):
