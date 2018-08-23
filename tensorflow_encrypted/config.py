@@ -26,7 +26,7 @@ class LocalConfig(Config):
     Intended mostly for development/debugging use.
     """
 
-    def __init__(self, player_names: List[str], job_name: str='localhost') -> None:
+    def __init__(self, player_names: List[str], job_name: str = 'localhost') -> None:
         self._players = {
             name: Player(
                 name=name,
@@ -53,7 +53,7 @@ class LocalConfig(Config):
         assert isinstance(names, list)
         return [player for name, player in self._players.items() if name in names]
 
-    def session(self, log_device_placement: bool=False) -> tf.Session:
+    def session(self, log_device_placement: bool = False) -> tf.Session:
         # reserve one CPU for the player executing the script, to avoid
         # default pinning of operations to one of the actual players
         return tf.Session(
@@ -76,8 +76,8 @@ class RemoteConfig(Config):
 
     def __init__(self,
                  player_hostmap: Union[List[Tuple[str, str]], Dict[str, str]],
-                 master_host: Optional[str]=None,
-                 job_name: str='tfe') -> None:
+                 master_host: Optional[str] = None,
+                 job_name: str = 'tfe') -> None:
 
         self._job_name = job_name
 
@@ -133,7 +133,7 @@ class RemoteConfig(Config):
             task_index=player.index
         )
 
-    def session(self, log_device_placement: bool=False) -> tf.Session:
+    def session(self, log_device_placement: bool = False) -> tf.Session:
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
             allow_soft_placement=False,
@@ -154,7 +154,7 @@ _run_counter: Any = defaultdict(int)
 def run(
     sess: tf.Session,
     fetches: Any,
-    feed_dict: Dict[str, np.ndarray]={},
+    feed_dict: Dict[str, np.ndarray] = {},
     tag: Optional[str] = None
 ) -> Any:
 

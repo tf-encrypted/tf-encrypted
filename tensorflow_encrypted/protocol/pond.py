@@ -40,7 +40,7 @@ class Pond(Protocol):
         self.server_1 = server_1
         self.crypto_producer = crypto_producer
 
-    def define_constant(self, value: Union[np.ndarray, tf.Tensor], apply_scaling: bool=True, name: Optional[str]=None) -> 'PondConstant':
+    def define_constant(self, value: Union[np.ndarray, tf.Tensor], apply_scaling: bool = True, name: Optional[str] = None) -> 'PondConstant':
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
 
         if isinstance(value, tf.Tensor):
@@ -150,7 +150,7 @@ class Pond(Protocol):
         _initializers.append(x.initializer)
         return x
 
-    def define_public_input(self, provider: InputProvider, apply_scaling: bool=True, name: str=None) -> 'PondPublicTensor':
+    def define_public_input(self, provider: InputProvider, apply_scaling: bool = True, name: str = None) -> 'PondPublicTensor':
 
         with tf.name_scope('public-input{}'.format('-' + name if name else '')):
 
@@ -167,7 +167,7 @@ class Pond(Protocol):
         x = PondPublicTensor(self, x_on_0, x_on_1)
         return x
 
-    def define_private_input(self, provider: InputProvider, apply_scaling: bool=True, name: str=None) -> 'PondPrivateTensor':
+    def define_private_input(self, provider: InputProvider, apply_scaling: bool = True, name: str = None) -> 'PondPrivateTensor':
 
         with tf.name_scope('private-input{}'.format('-' + name if name else '')):
 
@@ -1810,7 +1810,7 @@ def _strided_slice_masked(prot, x_masked: PondMaskedTensor, args: Any, kwargs: A
 #
 
 
-def _stack_public(prot, x: List[PondPublicTensor], axis: int=0):
+def _stack_public(prot, x: List[PondPublicTensor], axis: int = 0):
     x_on_0 = []
     x_on_1 = []
     for i in x:
@@ -1830,7 +1830,7 @@ def _stack_public(prot, x: List[PondPublicTensor], axis: int=0):
     return x_stack
 
 
-def _stack_private(prot, x: List[PondPrivateTensor], axis: int=0):
+def _stack_private(prot, x: List[PondPrivateTensor], axis: int = 0):
     x0 = []
     x1 = []
     for i in x:

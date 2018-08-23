@@ -87,7 +87,7 @@ class Int100Tensor(object):
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
 
-    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int100Tensor':
+    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any] = {}, tag: Optional[str] = None) -> 'Int100Tensor':
         evaluated_backing: Union[List[np.ndarray], List[tf.Tensor]] = run(
             sess, self.backing, feed_dict=feed_dict, tag=tag)
         return Int100Tensor.from_decomposed(evaluated_backing)
