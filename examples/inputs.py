@@ -41,14 +41,14 @@ else:
     class WeightsInputProvider(tfe.io.InputProvider):
 
         def provide_input(self) -> tf.Tensor:
-            raw_w = np.array([5, 5, 5, 5]).reshape((2,2))
+            raw_w = np.array([5, 5, 5, 5]).reshape((2, 2))
             w = tf.constant(raw_w)
             return tf.Print(w, [w])
 
     class PredictionInputProvider(tfe.io.InputProvider):
 
         def provide_input(self) -> tf.Tensor:
-            x = tf.constant([1, 2, 3, 4], shape=(2,2), dtype=tf.float32)
+            x = tf.constant([1, 2, 3, 4], shape=(2, 2), dtype=tf.float32)
             return tf.Print(x, [x])
 
     class PredictionOutputReceiver(tfe.io.OutputReceiver):

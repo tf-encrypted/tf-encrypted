@@ -43,7 +43,7 @@ _lambdas = [
 # make sure we have room for lazy reductions:
 # - 1 multiplication followed by 1024 additions
 for mi in m:
-    assert 2*log2(mi) + log2(1024) < log2(INT_TYPE.max)
+    assert 2 * log2(mi) + log2(1024) < log2(INT_TYPE.max)
 
 _crt_decompose = gen_crt_decompose(m)
 _crt_recombine = gen_crt_recombine(m, _lambdas)
@@ -87,7 +87,7 @@ class Int100Tensor(object):
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
 
-    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int100Tensor':
+    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any] = {}, tag: Optional[str] = None) -> 'Int100Tensor':
         evaluated_backing: Union[List[np.ndarray], List[tf.Tensor]] = run(
             sess, self.backing, feed_dict=feed_dict, tag=tag)
         return Int100Tensor.from_decomposed(evaluated_backing)
@@ -138,6 +138,9 @@ class Int100Tensor(object):
 
     def reshape(self, axes: List[int]) -> 'Int100Tensor':
         return _reshape(self, axes)
+
+    def expand_dims(self, axis: int) -> 'Int100Tensor':
+        return _expand_dims(self, axis)
 
 
 def _lift(x):
@@ -235,6 +238,12 @@ def _strided_slice(x: Int100Tensor, args: Any, kwargs: Any):
 def _reshape(x: Int100Tensor, axes: List[int]) -> Int100Tensor:
     assert isinstance(x, Int100Tensor), type(x)
     backing = [tf.reshape(xi, axes) for xi in x.backing]
+    return Int100Tensor.from_decomposed(backing)
+
+
+def _expand_dims(x, axis=None):
+    assert isinstance(x, Int100Tensor), type(x)
+    backing = [tf.expand_dims(xi, axis) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
 
 
