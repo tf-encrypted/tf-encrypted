@@ -31,8 +31,6 @@ class AveragePooling2D(core.Layer):
         self.strides = strides
         if padding not in ['SAME', 'VALID']:
             raise ValueError("Don't know how to do padding of type {}".format(padding))
-        if padding == 'VALID':
-            raise NotImplementedError('Padding not supported')
         self.padding = padding
         super(AveragePooling2D, self).__init__(input_shape)
         self.cache = None
