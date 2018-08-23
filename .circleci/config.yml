@@ -1,65 +1,81 @@
 version: 2
+
+variables:
+  docker-caching: &docker-caching
+    setup_remote_docker:
+      docker_layer_caching: true
+  bootstrap: &bootstrap
+    run:
+      name: Bootstrap the environment
+      command: |
+        python3 -m venv venv
+        . venv/bin/activate
+        make bootstrap
+  docker-login: &docker-login
+    run:
+      name: Login to Docker
+      command: make docker-login
+  build-release: &build-release
+    run:
+      name: Build and push release artifacts (e.g. docker containers)
+      command: RELEASE_CONFIRM=yes make push
+  restore-cache: &restore-cache
+    restore_cache:
+      keys:
+        - v1-dependencies-{{ checksum "requirements.txt" }}
+        # fallback to using the latest cache if no exact match is found
+        - v1-dependencies-
+  save-cache: &save-cache
+    save_cache:
+      paths:
+        - ./venv
+      key: v1-dependencies-{{ checksum "requirements.txt" }}
+
 jobs:
   build:
     docker:
-      # specify the version you desire here
-      # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
-      - image: circleci/python:3.6.1
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
-
+      - image: circleci/python:3.6.4
     working_directory: ~/repo
-
     steps:
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - *docker-caching
       - checkout
-
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "requirements.txt" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
-      - run:
-          name: install dependencies
-          command: |
-            python3 -m venv venv
-            . venv/bin/activate
-            pip install -r requirements.txt
-            pip install tensorflow
-            pip install -e .
-
-      - save_cache:
-          paths:
-            - ./venv
-          key: v1-dependencies-{{ checksum "requirements.txt" }}
-
-      # run tests!
-      # this example uses Django's built-in test-runner
-      # other common Python testing frameworks include pytest and nose
-      # https://pytest.org
-      # https://nose.readthedocs.io
+      - *restore-cache
+      - *bootstrap
+      - *save-cache
       - run:
           name: run tests
           command: |
             . venv/bin/activate
-            python examples/int100.py
-            python examples/inputs.py
-            python examples/matmul.py
-            python -m unittest discover
+            make test
 
-      - run:
-          name: run linting
-          command: |
-            . venv/bin/activate
-            pycodestyle tests/ --max-line-length 100
+  deploy:
+    docker:
+      - image: circleci/python:3.6.4
+    working_directory: ~/repo
+    steps:
+      - *docker-caching
+      - checkout
+      - *restore-cache
+      - *bootstrap
+      - *docker-login
+      - *build-release
 
-      - run:
-          name: build docker contiainer
-          command: |
-            docker build --tag partydb/tf-encrypted:latest .
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build:
+          filters:
+            tags:
+              # In order for the 'deploy' job to run, we must first kick off
+              # the build job on all tags. By default, Circle CI only kicks off
+              # builds on tags if a filter is defined.
+              only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc\.[0-9]+)?)$/
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
+            tags:
+              only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc\.[0-9]+)?)$/

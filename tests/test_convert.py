@@ -57,6 +57,56 @@ class TestConvert(unittest.TestCase):
         ])
 
         with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            prot.clear_initializers()
+
+            class PredictionClient(tfe.io.InputProvider):
+                def provide_input(self):
+                    return tf.constant(np.ones(input_shape))
+
+            input = PredictionClient(config.get_player('prediction_client'))
+
+            converter = Converter(config, prot, config.get_player('weights_provider'))
+
+            x = converter.convert(graph_def, input, register())
+
+            with config.session() as sess:
+                tfe.run(sess, prot.initializer, tag='init')
+
+                output = x.reveal().eval(sess, tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
+    def test_cnn_NHWC_convert(self):
+        tf.reset_default_graph()
+
+        global global_filename
+        global_filename = "cnn_nhwc.pb"
+
+        input_shape = [1, 28, 28, 1]
+
+        path = export_cnn(global_filename, input_shape, data_format="NHWC")
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        actual = run_cnn(input_shape, data_format="NHWC")
+
+        tf.reset_default_graph()
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer',
+            'prediction_client',
+            'weights_provider'
+        ])
+
+        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            prot.clear_initializers()
+
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.ones(input_shape))
@@ -314,6 +364,54 @@ class TestConvert(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
+    def test_mul_convert(self):
+        tf.reset_default_graph()
+
+        global global_filename
+        global_filename = "mul.pb"
+
+        input_shape = [4, 1]
+
+        path = export_mul(global_filename, input_shape)
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        actual = run_mul(input_shape)
+
+        tf.reset_default_graph()
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer',
+            'prediction_client',
+            'weights_provider'
+        ])
+
+        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            prot.clear_initializers()
+
+            class PredictionClient(tfe.io.InputProvider):
+                def provide_input(self):
+                    return tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape))
+
+            input = PredictionClient(config.get_player('prediction_client'))
+
+            converter = Converter(config, prot, config.get_player('weights_provider'))
+
+            x = converter.convert(graph_def, input, register())
+
+            with config.session() as sess:
+                tfe.run(sess, prot.initializer, tag='init')
+
+                output = x.reveal().eval(sess, tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
     def test_strided_slice_convert(self):
         tf.reset_default_graph()
 
@@ -352,6 +450,54 @@ class TestConvert(unittest.TestCase):
                     return tf.constant([[[1, 1, 1], [2, 2, 2]],
                                         [[3, 3, 3], [4, 4, 4]],
                                         [[5, 5, 5], [6, 6, 6]]])
+
+            input = PredictionClient(config.get_player('prediction_client'))
+
+            converter = Converter(config, prot, config.get_player('weights_provider'))
+
+            x = converter.convert(graph_def, input, register())
+
+            with config.session() as sess:
+                tfe.run(sess, prot.initializer, tag='init')
+
+                output = x.reveal().eval(sess, tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
+    def test_batchnorm_convert(self):
+        tf.reset_default_graph()
+
+        global global_filename
+        global_filename = "batchnrom.pb"
+
+        input_shape = [1, 1, 28, 28]
+
+        path = export_batchnorm(global_filename, input_shape)
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        actual = run_batchnorm(input_shape)
+
+        tf.reset_default_graph()
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer',
+            'prediction_client',
+            'weights_provider',
+        ])
+
+        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            prot.clear_initializers()
+
+            class PredictionClient(tfe.io.InputProvider):
+                def provide_input(self):
+                    return tf.constant(np.ones(input_shape))
 
             input = PredictionClient(config.get_player('prediction_client'))
 
@@ -448,27 +594,59 @@ def export_stack(filename: str, input_shape: Tuple[int]):
     return export(out, filename)
 
 
-def run_cnn(input_shape: List[int]):
+def run_batchnorm(input_shape: List[int]):
     input = tf.placeholder(tf.float32, shape=input_shape, name="input")
 
-    input_NHWC = tf.transpose(input, (0, 2, 3, 1))
+    mean = np.ones((1, 1, 1, input_shape[3])) * 1
+    variance = np.ones((1, 1, 1, input_shape[3])) * 2
+    offset = np.ones((1, 1, 1, input_shape[3])) * 3
+    scale = np.ones((1, 1, 1, input_shape[3])) * 4
 
-    filter = tf.constant(np.ones((5, 5, 1, 16)), dtype=tf.float32, name="weights")
-    x = tf.nn.conv2d(input_NHWC, filter, (1, 1, 1, 1), "SAME", name="conv2d")
+    x = tf.nn.batch_normalization(input, mean, variance, offset, scale, 0.00001)
 
     with tf.Session() as sess:
         output = sess.run(x, feed_dict={input: np.ones(input_shape)})
 
-        output = output.transpose(0, 3, 1, 2)
+    return output
+
+
+def export_batchnorm(filename: str, input_shape: List[int]):
+    input = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    mean = np.ones((1, 1, 1, input_shape[3]), dtype=np.float32) * 1
+    variance = np.ones((1, 1, 1, input_shape[3]), dtype=np.float32) * 2
+    offset = np.ones((1, 1, 1, input_shape[3]), dtype=np.float32) * 3
+    scale = np.ones((1, 1, 1, input_shape[3]), dtype=np.float32) * 4
+
+    x = tf.nn.batch_normalization(input, mean, variance, offset, scale, 0.00001)
+
+    return export(x, filename)
+
+
+def run_cnn(input_shape: List[int], data_format="NCHW"):
+    input = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    x = input
+    if data_format == "NCHW":
+        x = tf.transpose(input, (0, 2, 3, 1))
+
+    filter = tf.constant(np.ones((5, 5, 1, 16)), dtype=tf.float32, name="weights")
+    x = tf.nn.conv2d(x, filter, (1, 1, 1, 1), "SAME", name="conv2d")
+
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={input: np.ones(input_shape)})
+
+        if data_format == "NCHW":
+            output = output.transpose(0, 3, 1, 2)
 
     return output
 
 
-def export_cnn(filename: str, input_shape: List[int]):
+def export_cnn(filename: str, input_shape: List[int], data_format="NCHW"):
     input = tf.placeholder(tf.float32, shape=input_shape, name="input")
 
     filter = tf.constant(np.ones((5, 5, 1, 16)), dtype=tf.float32, name="weights")
-    x = tf.nn.conv2d(input, filter, (1, 1, 1, 1), "SAME", data_format="NCHW", name="conv2d")
+    x = tf.nn.conv2d(input, filter, (1, 1, 1, 1), "SAME", data_format=data_format, name="conv2d")
 
     return export(x, filename)
 
@@ -508,7 +686,7 @@ def run_add(input_shape: List[int]):
 
 def export_add(filename: str, input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    b = tf.constant(np.ones((input_shape[1], 1)), dtype=tf.float32)
+    b = tf.constant(np.ones((input_shape[0], 1)), dtype=tf.float32)
 
     x = tf.add(a, b)
 
@@ -563,7 +741,7 @@ def export_reshape(filename: str, input_shape: List[int]):
 
 def run_sub(input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    b = tf.constant(np.ones((input_shape[1], 1)), dtype=tf.float32)
+    b = tf.constant(np.ones((input_shape[0], 1)), dtype=tf.float32)
 
     x = tf.subtract(a, b)
 
@@ -575,9 +753,30 @@ def run_sub(input_shape: List[int]):
 
 def export_sub(filename: str, input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    b = tf.constant(np.ones((input_shape[1], 1)), dtype=tf.float32)
+    b = tf.constant(np.ones((input_shape[0], 1)), dtype=tf.float32)
 
     x = tf.subtract(a, b)
+
+    return export(x, filename)
+
+
+def run_mul(input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape), dtype=tf.float32)
+
+    x = tf.multiply(a, b)
+
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape)})
+
+    return output
+
+
+def export_mul(filename: str, input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape), dtype=tf.float32)
+
+    x = tf.multiply(a, b)
 
     return export(x, filename)
 
