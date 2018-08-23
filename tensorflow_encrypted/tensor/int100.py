@@ -139,7 +139,7 @@ class Int100Tensor(object):
     def reshape(self, axes: List[int]) -> 'Int100Tensor':
         return _reshape(self, axes)
 
-    def expand_dims(self, axis: List[int]) -> 'Int100Tensor':
+    def expand_dims(self, axis: int) -> 'Int100Tensor':
         return _expand_dims(self, axis)
 
 
@@ -242,7 +242,7 @@ def _reshape(x: Int100Tensor, axes: List[int]) -> Int100Tensor:
 
 def _expand_dims(x, axis=None):
     assert isinstance(x, Int100Tensor), type(x)
-    backing = [tf.expand_dims(xi, axis=axis) for xi in x.backing]
+    backing = [tf.expand_dims(xi, axis) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
 
 def stack(x: List[Int100Tensor], axis: int = 0):
