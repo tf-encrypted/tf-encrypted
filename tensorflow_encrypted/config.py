@@ -30,11 +30,11 @@ class LocalConfig(Config):
         self._players = {
             name: Player(
                 name=name,
-                index=index+1,
+                index=index + 1,
                 device_name='/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'.format(
                     job_name=job_name,
                     # shift by one to allow for master to be `CPU:0`
-                    cpu_id=index+1
+                    cpu_id=index + 1
                 )
             )
             for index, name in enumerate(player_names)
@@ -101,10 +101,10 @@ class RemoteConfig(Config):
         self._players = {
             name: Player(
                 name=name,
-                index=index+self._offset,
+                index=index + self._offset,
                 device_name='/job:{job_name}/replica:0/task:{task_id}/cpu:0'.format(
                     job_name=job_name,
-                    task_id=index+self._offset
+                    task_id=index + self._offset
                 ),
                 host=host
             )

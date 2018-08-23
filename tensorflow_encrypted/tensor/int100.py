@@ -43,7 +43,7 @@ _lambdas = [
 # make sure we have room for lazy reductions:
 # - 1 multiplication followed by 1024 additions
 for mi in m:
-    assert 2*log2(mi) + log2(1024) < log2(INT_TYPE.max)
+    assert 2 * log2(mi) + log2(1024) < log2(INT_TYPE.max)
 
 _crt_decompose = gen_crt_decompose(m)
 _crt_recombine = gen_crt_recombine(m, _lambdas)

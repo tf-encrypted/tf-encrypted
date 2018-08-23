@@ -49,8 +49,7 @@ class TestBatchnorm(unittest.TestCase):
             with tf.Session() as sess:
                 x = tf.Variable(input_batchnorm, dtype=tf.float32)
 
-                batchnorm_out_tf = tf.nn.batch_normalization(
-                        x, mean, variance, offset, scale, variance_epsilon)
+                batchnorm_out_tf = tf.nn.batch_normalization(x, mean, variance, offset, scale, variance_epsilon)
 
                 sess.run(tf.global_variables_initializer())
 
