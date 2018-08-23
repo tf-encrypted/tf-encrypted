@@ -55,14 +55,14 @@ def concat(ys):
         # now shape is (10,3000,2)
         tensors = tf.split(tensors, 10, axis=0)
         # now shape is [(1,3000,2); 10]
-        tensors = [ tf.reshape(tensor, tensor.shape[1:]) for tensor in tensors ]
+        tensors = [tf.reshape(tensor, tensor.shape[1:]) for tensor in tensors]
         # now shape is [(3000,2); 10]
         return tensors
 
     with tf.name_scope('concat'):
 
-        y0s, y1s = zip(*[ y.unmasked.unwrapped for y in ys ])
-        bs, b0s, b1s, beta_on_0s, beta_on_1s = zip(*[ y.unwrapped for y in ys ])
+        y0s, y1s = zip(*[yunmasked.unwrapped for y in ys])
+        bs, b0s, b1s, beta_on_0s, beta_on_1s = zip(*[y.unwrapped for y in ys])
 
         with tf.device(get_protocol().crypto_producer.device_name):
             b = helper(bs)
@@ -83,6 +83,8 @@ def concat(ys):
     return y_masked
 
 # TODO[Morten] how to support this one with new abstractions?
+
+
 def split(y, num_splits):
     assert isinstance(y, MaskedPrivateTensor)
     # FIXME[Morten] add support for PrivateTensors as well
@@ -98,7 +100,7 @@ def split(y, num_splits):
         tensors = tf.split(tensors, num_splits, axis=1)
         # now shape is [(10,30,2); 100] if num_splits == 100
         tensors = [
-            [ tf.reshape(xi, xi.shape[1:]) for xi in tf.split(tensor, 10, axis=0) ]
+            [tf.reshape(xi, xi.shape[1:]) for xi in tf.split(tensor, 10, axis=0)]
             for tensor in tensors
         ]
         # now shape is [[(30,2); 10]; 100]
@@ -121,11 +123,12 @@ def split(y, num_splits):
 
     tensors = []
     for y0, y1, b, b0, b1, beta_on_0, beta_on_1 in zip(y0s, y1s, bs, b0s, b1s, beta_on_0s, beta_on_1s):
-        y = PrivateTensor(y0,y1)
+        y = PrivateTensor(y0, y1)
         y_masked = MaskedPrivateTensor(y, b, b0, b1, beta_on_0, beta_on_1)
         tensors.append(y_masked)
 
     return tensors
+
 
 def scale(x, k, apply_encoding=None):
     assert type(x) in [PrivateTensor], type(x)
@@ -140,7 +143,8 @@ def scale(x, k, apply_encoding=None):
         apply_encoding = type(k) is float
 
     c = np.array([k])
-    if apply_encoding: c = encode(c)
+    if apply_encoding:
+        c = encode(c)
 
     with tf.name_scope('scale'):
 
@@ -156,6 +160,7 @@ def scale(x, k, apply_encoding=None):
 
     return y
 
+
 def local_mask(x):
     assert isinstance(x, Tensor), type(x)
 
@@ -167,7 +172,9 @@ def local_mask(x):
 
     return MaskedPrivateTensor(PrivateTensor(x0, x1), a, a0, a1, alpha, alpha)
 
+
 global_cache_updators = []
+
 
 def cache(x, initializers=None, updators=None):
 
@@ -188,12 +195,12 @@ def cache(x, initializers=None, updators=None):
             with tf.name_scope('cache'):
 
                 with tf.device(get_protocol().server_0.device_name):
-                    cached_x0 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(x0, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_x0, x0) ])
+                    cached_x0 = [tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(x0, m)]
+                    updators.append([tf.assign(var, val) for var, val in zip(cached_x0, x0)])
 
                 with tf.device(get_protocol().server_1.device_name):
-                    cached_x1 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(x1, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_x1, x1) ])
+                    cached_x1 = [tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(x1, m)]
+                    updators.append([tf.assign(var, val) for var, val in zip(cached_x1, x1)])
 
             # TODO[Morten] wrap PrivateTensor around var.read_value() instead to ensure updated values?
             cached = PrivateTensor(cached_x0, cached_x1)
@@ -207,22 +214,22 @@ def cache(x, initializers=None, updators=None):
             with tf.name_scope('cache'):
 
                 with tf.device(get_protocol().crypto_producer.device_name):
-                    cached_a = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_a, a) ])
+                    cached_a = [tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a, m)]
+                    updators.append([tf.assign(var, val) for var, val in zip(cached_a, a)])
 
                 with tf.device(get_protocol().server_0.device_name):
-                    cached_a0 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a0, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_a0, a0) ])
+                    cached_a0 = [tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a0, m)]
+                    updators.append([tf.assign(var, val) for var, val in zip(cached_a0, a0)])
 
-                    cached_alpha_on_0 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(alpha_on_0, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_alpha_on_0, alpha_on_0) ])
+                    cached_alpha_on_0 = [tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(alpha_on_0, m)]
+                    updators.append([tf.assign(var, val) for var, val in zip(cached_alpha_on_0, alpha_on_0)])
 
                 with tf.device(get_protocol().server_1.device_name):
-                    cached_a1 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a1, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_a1, a1) ])
+                    cached_a1 = [tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a1, m)]
+                    updators.append([tf.assign(var, val) for var, val in zip(cached_a1, a1)])
 
-                    cached_alpha_on_1 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(alpha_on_1, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_alpha_on_1, alpha_on_1) ])
+                    cached_alpha_on_1 = [tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(alpha_on_1, m)]
+                    updators.append([tf.assign(var, val) for var, val in zip(cached_alpha_on_1, alpha_on_1)])
 
             # TODO[Morten] wrap MaskedPrivateTensor around var.read_value() instead to ensure updated values?
             cached = MaskedPrivateTensor(
@@ -240,16 +247,19 @@ def cache(x, initializers=None, updators=None):
 
     return cached
 
+
 def encode_input(vars_and_values):
     if not isinstance(vars_and_values, list):
         vars_and_values = [vars_and_values]
     result = dict()
     for input_x, X in vars_and_values:
-        result.update( (input_xi, Xi) for input_xi, Xi in zip(input_x, decompose(encode(X))) )
+        result.update((input_xi, Xi) for input_xi, Xi in zip(input_x, decompose(encode(X))))
     return result
+
 
 def decode_output(value):
     return decode(recombine(value))
+
 
 def pyfunc_hack(func, x, shape=None):
     """ Essentially calls `tf.py_func(func, [x])` but supports
@@ -272,10 +282,11 @@ def pyfunc_hack(func, x, shape=None):
     # applied just before exiting tf.py_func
     def pyfunc_hack_preexit(x):
         assert type(x) in [tuple, list]
-        for xi in x: assert type(xi) == np.ndarray
+        for xi in x:
+            assert type(xi) == np.ndarray
         # convert all values to floats; at least for small
         # ints this should give correct results
-        x = [ xi.astype(float) for xi in x ]
+        x = [xi.astype(float) for xi in x]
         # pack list into single tensor
         x = np.array(x)
         return x
@@ -289,16 +300,18 @@ def pyfunc_hack(func, x, shape=None):
             for xi in tf.split(x, num_components)
         ]
         # convert to ints
-        x = [ tf.cast(xi, dtype=tf.int32) for xi in x ]
+        x = [tf.cast(xi, dtype=tf.int32) for xi in x]
         return x
 
     y = tf.py_func(patched_func, [x], tf.double)
     y = pyfunc_hack_postexit(y, shape or x.shape)
     return y
 
+
 def encode_and_decompose(x, shape=None):
     func = lambda x: decompose(encode(x))
     return pyfunc_hack(func, x, shape=shape)
+
 
 def recombine_and_decode(x):
     return decode(recombine(x))

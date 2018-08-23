@@ -15,7 +15,7 @@ class Config(ABC):
         pass
 
     @abstractmethod
-    def get_player(self, name:str) -> Player:
+    def get_player(self, name: str) -> Player:
         pass
 
 
@@ -26,7 +26,7 @@ class LocalConfig(Config):
     Intended mostly for development/debugging use.
     """
 
-    def __init__(self, player_names:List[str], job_name:str='localhost') -> None:
+    def __init__(self, player_names: List[str], job_name: str='localhost') -> None:
         self._players = {
             name: Player(
                 name=name,
@@ -44,16 +44,16 @@ class LocalConfig(Config):
     def players(self) -> List[Player]:
         return self._players.values()
 
-    def get_player(self, name:str) -> Player:
+    def get_player(self, name: str) -> Player:
         return self._players[name]
 
-    def get_players(self, names:Union[List[str], str]) -> List[Player]:
+    def get_players(self, names: Union[List[str], str]) -> List[Player]:
         if isinstance(names, str):
             names = [name.strip() for name in names.split(',')]
         assert isinstance(names, list)
         return [player for name, player in self._players.items() if name in names]
 
-    def session(self, log_device_placement:bool=False) -> tf.Session:
+    def session(self, log_device_placement: bool=False) -> tf.Session:
         # reserve one CPU for the player executing the script, to avoid
         # default pinning of operations to one of the actual players
         return tf.Session(
@@ -75,7 +75,7 @@ class RemoteConfig(Config):
     """
 
     def __init__(self,
-                 player_hostmap: Union[List[Tuple[str,str]], Dict[str, str]],
+                 player_hostmap: Union[List[Tuple[str, str]], Dict[str, str]],
                  master_host: Optional[str]=None,
                  job_name: str='tfe') -> None:
 
@@ -115,16 +115,16 @@ class RemoteConfig(Config):
     def players(self) -> List[Player]:
         return self._players.values()
 
-    def get_player(self, name:str) -> Player:
+    def get_player(self, name: str) -> Player:
         return self._players[name]
 
-    def get_players(self, names:Union[List[str], str]) -> List[Player]:
+    def get_players(self, names: Union[List[str], str]) -> List[Player]:
         if isinstance(names, str):
             names = [name.strip() for name in names.split(',')]
         assert isinstance(names, list)
         return [player for name, player in self._players.items() if name in names]
 
-    def server(self, name:str) -> tf.train.Server:
+    def server(self, name: str) -> tf.train.Server:
         player = self.get_player(name)
         cluster = tf.train.ClusterSpec({self._job_name: self._hostmap})
         return tf.train.Server(
@@ -133,7 +133,7 @@ class RemoteConfig(Config):
             task_index=player.index
         )
 
-    def session(self, log_device_placement:bool=False) -> tf.Session:
+    def session(self, log_device_placement: bool=False) -> tf.Session:
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
             allow_soft_placement=False,

@@ -63,7 +63,7 @@ test: lint pythoncheck
 	python -m unittest discover
 
 lint: pythoncheck
-	pycodestyle tests/ tensorflow_encrypted/layers --max-line-length 100
+	pycodestyle tests/ tensorflow_encrypted/
 
 .PHONY: lint test
 
