@@ -75,17 +75,35 @@ def gen_crt_im2col(m):
             NHWC_tensors = [tf.transpose(xi, [0, 2, 3, 1]) for xi in x]
             channels = int(NHWC_tensors[0].shape[3])
             # extract patches
-            patch_tensors = [tf.extract_image_patches(xi,
-                                                      ksizes=[1, h_filter, w_filter, 1],
-                                                      strides=[1, strides, strides, 1],
-                                                      rates=[1, 1, 1, 1],
-                                                      padding=padding) for xi in NHWC_tensors]
+            patch_tensors = [
+                tf.extract_image_patches(
+                    xi,
+                    ksizes=[1, h_filter, w_filter, 1],
+                    strides=[1, strides, strides, 1],
+                    rates=[1, 1, 1, 1],
+                    padding=padding
+                )
+                for xi in NHWC_tensors
+            ]
+
             # change back to NCHW
-            patch_tensors_NCHW = [tf.reshape(tf.transpose(patches, [3, 1, 2, 0]), (h_filter, w_filter, channels, -1))
-                                  for patches in patch_tensors]
+            patch_tensors_NCHW = [
+                tf.reshape(
+                    tf.transpose(patches, [3, 1, 2, 0]),
+                    (h_filter, w_filter, channels, -1)
+                )
+                for patches in patch_tensors
+            ]
+
             # reshape to x_col
-            x_col_tensors = [tf.reshape(tf.transpose(x_col_NHWC, [2, 0, 1, 3]), (channels * h_filter * w_filter, -1))
-                             for x_col_NHWC in patch_tensors_NCHW]
+            x_col_tensors = [
+                tf.reshape(
+                    tf.transpose(x_col_NHWC, [2, 0, 1, 3]),
+                    (channels * h_filter * w_filter, -1)
+                )
+                for x_col_NHWC in patch_tensors_NCHW
+            ]
+
             return x_col_tensors
 
     return im2col

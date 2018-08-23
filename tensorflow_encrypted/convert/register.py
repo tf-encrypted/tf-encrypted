@@ -212,6 +212,7 @@ def transpose(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
     return converter.protocol.transpose(input, np.array(nums).reshape(shape))
 
+
 def expand_dims(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
     axis = converter.outputs[inputs[1]]
