@@ -1,8 +1,10 @@
 from ..ops import *
 # from ..training import *
 
+
 class Classifier(object):
     pass
+
 
 def training_loop(training_step, iterations, initial_weights, initial_bias, x, y):
     initial_w0, initial_w1 = initial_weights
@@ -19,14 +21,15 @@ def training_loop(training_step, iterations, initial_weights, initial_bias, x, y
 
     _, final_w0, final_w1 = tf.while_loop(
         cond=lambda i, w0, w1: tf.less(i, iterations),
-        body=lambda i, w0, w1: (i+1,) + loop_op(i, w0, w1),
+        body=lambda i, w0, w1: (i + 1,) + loop_op(i, w0, w1),
         loop_vars=(0, initial_w0, initial_w1),
         parallel_iterations=1
     )
 
     final_weights = (final_w0, final_w1)
-    final_bias = (initial_b0, initial_b1) # TODO
+    final_bias = (initial_b0, initial_b1)  # TODO
     return final_weights, final_bias
+
 
 class LogisticClassifier(Classifier):
 
@@ -47,7 +50,7 @@ class LogisticClassifier(Classifier):
 
     def prepare_training_data(self, input_providers):
         # collect data from all input providers
-        input_graphs = [ input_provider.send_data(mask=True) for input_provider in input_providers ]
+        input_graphs = [input_provider.send_data(mask=True) for input_provider in input_providers]
         xs, ys = zip(*input_graphs)
 
         # combine
@@ -55,7 +58,7 @@ class LogisticClassifier(Classifier):
         combined_y = concat(ys)
 
         # store in cache;
-        # needed to avoid pulling again from input providers as these 
+        # needed to avoid pulling again from input providers as these
         # may use random ops that force re-evaluation
         cache_initializers = []
         cache_updators = []
@@ -93,10 +96,10 @@ class LogisticClassifier(Classifier):
                 y_pred = sigmoid(dot(x, w))
             with tf.name_scope('backward'):
                 error = sub(y_pred, y)
-                gradients = scale(dot(transpose(x), error), 1./batch_size)
+                gradients = scale(dot(transpose(x), error), 1. / batch_size)
                 new_w = sub(w, scale(gradients, learning_rate))
-                #new_b = ...
-                return new_w #, new_b
+                # new_b = ...
+                return new_w  # , new_b
 
         old_weights, old_bias = self.parameters
         training = training_loop(
@@ -125,7 +128,7 @@ class LogisticClassifier(Classifier):
             feed_dict=encode_input((input_x, x))
         )
         return decode_output(y_pred)
-        
+
     def _build_prediction_graphs(self):
         if self.prediction_graph is not None:
             return self.prediction_graph
@@ -133,4 +136,3 @@ class LogisticClassifier(Classifier):
         input_x, x = define_input((1, self.num_features), name='x')
         y = sigmoid(add(dot(x, w), b))
         self.prediction_graph = (input_x, y)
-    

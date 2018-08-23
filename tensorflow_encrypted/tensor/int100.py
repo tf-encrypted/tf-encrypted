@@ -43,7 +43,7 @@ _lambdas = [
 # make sure we have room for lazy reductions:
 # - 1 multiplication followed by 1024 additions
 for mi in m:
-    assert 2*log2(mi) + log2(1024) < log2(INT_TYPE.max)
+    assert 2 * log2(mi) + log2(1024) < log2(INT_TYPE.max)
 
 _crt_decompose = gen_crt_decompose(m)
 _crt_recombine = gen_crt_recombine(m, _lambdas)
@@ -87,7 +87,7 @@ class Int100Tensor(object):
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
 
-    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int100Tensor':
+    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any] = {}, tag: Optional[str] = None) -> 'Int100Tensor':
         evaluated_backing: Union[List[np.ndarray], List[tf.Tensor]] = run(
             sess, self.backing, feed_dict=feed_dict, tag=tag)
         return Int100Tensor.from_decomposed(evaluated_backing)
@@ -100,7 +100,7 @@ class Int100Tensor(object):
         return _sample_uniform(shape)
 
     def __repr__(self) -> str:
-        return 'Int100Tensor({})'.format(self.to_native())
+        return 'Int100Tensor({})'.format(self.shape)
 
     @property
     def shape(self) -> List[int]:
@@ -130,14 +130,17 @@ class Int100Tensor(object):
     def __mod__(self, k) -> 'Int100Tensor':
         return _mod(self, k)
 
-    def transpose(self, *axes) -> 'Int100Tensor':
-        return _transpose(self, *axes)
+    def transpose(self, perm=None) -> 'Int100Tensor':
+        return _transpose(self, perm=perm)
 
     def strided_slice(self, args: Any, kwargs: Any):
         return _strided_slice(self, args, kwargs)
 
     def reshape(self, axes: List[int]) -> 'Int100Tensor':
         return _reshape(self, axes)
+
+    def expand_dims(self, axis: int) -> 'Int100Tensor':
+        return _expand_dims(self, axis)
 
 
 def _lift(x):
@@ -201,11 +204,11 @@ def _conv2d(x, y, strides, padding):
         w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
 
     X_col = x.im2col(h_filter, w_filter, padding, strides)
-    W_col = y.transpose(3, 2, 0, 1).reshape([int(n_filters), -1])
+    W_col = y.transpose(perm=(3, 2, 0, 1)).reshape([int(n_filters), -1])
     out = W_col.dot(X_col)
 
     out = out.reshape([n_filters, h_out, w_out, n_x])
-    out = out.transpose(3, 0, 1, 2)
+    out = out.transpose(perm=(3, 0, 1, 2))
 
     return out
 
@@ -220,9 +223,9 @@ def _sample_uniform(shape):
     return Int100Tensor.from_decomposed(backing)
 
 
-def _transpose(x, *axes):
+def _transpose(x, perm=None):
     assert isinstance(x, Int100Tensor), type(x)
-    backing = [tf.transpose(xi, axes) for xi in x.backing]
+    backing = [tf.transpose(xi, perm=perm) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
 
 
@@ -237,6 +240,10 @@ def _reshape(x: Int100Tensor, axes: List[int]) -> Int100Tensor:
     backing = [tf.reshape(xi, axes) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
 
+def _expand_dims(x, axis=None):
+    assert isinstance(x, Int100Tensor), type(x)
+    backing = [tf.expand_dims(xi, axis) for xi in x.backing]
+    return Int100Tensor.from_decomposed(backing)
 
 def stack(x: List[Int100Tensor], axis: int = 0):
     assert all([isinstance(i, Int100Tensor) for i in x])
