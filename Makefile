@@ -63,7 +63,8 @@ test: lint pythoncheck
 	python -m unittest discover
 
 lint: pythoncheck
-	pycodestyle tests/ --max-line-length 100
+	pycodestyle tests
+	pycodestyle examples/api
 
 .PHONY: lint test
 

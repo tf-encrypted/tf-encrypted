@@ -51,8 +51,7 @@ jobs:
           name: run linting
           command: |
             . venv/bin/activate
-            pycodestyle tests/ --max-line-length 100
-            pycodestyle examples/api --max-line-length 100
+            make lint
   deploy:
     docker:
       - image: circleci/python:3.6.4
