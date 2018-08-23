@@ -26,7 +26,8 @@ def register() -> Dict[str, Any]:
         'Rsqrt': rsqrt,
         'Mul': mul,
         'ExpandDims': expand_dims,
-        'AvgPool': avgpool
+        'AvgPool': avgpool,
+        'Squeeze': squeeze
         # 'Pack': pack,
         # 'BiasAdd': bias_add,
         # 'MaxPool': maxpool,
@@ -216,6 +217,13 @@ def expand_dims(converter: Converter, node: Any, inputs: List[str]) -> Any:
     axis_val = node.attr["axis"].i
 
     return converter.protocol.expand_dims(input, axis_val)
+
+
+def squeeze(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+    axis = node.attr["squeeze_dims"].list.i
+
+    return converter.protocol.squeeze(input, list(axis))
 
 
 def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
