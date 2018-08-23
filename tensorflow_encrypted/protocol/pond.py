@@ -687,7 +687,7 @@ class Pond(Protocol):
         return z
 
     def avgpool2d(self, x, pool_size, strides, padding):
-        node_key = ('avgpool2d', x, pool_size, strides, padding)
+        node_key = ('avgpool2d', x, tuple(pool_size), tuple(strides), padding)
         z = _nodes.get(node_key, None)
 
         if z is not None:

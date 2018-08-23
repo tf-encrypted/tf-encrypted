@@ -16,11 +16,12 @@ class AveragePooling2D(core.Layer):
     strides (int or tuple/list of ints) stride length
     padding (str) SAME or VALID
     """
+
     def __init__(self,
                  input_shape: List[int],
                  pool_size: IntTuple,
                  strides: Optional[IntTuple] = None,
-                 padding: str = "SAME") -> None:
+                 padding: str = "SAME", channels_first: bool = True) -> None:
         if type(pool_size) == int:
             pool_size = (pool_size, pool_size)  # type: ignore
         self.pool_size = pool_size
@@ -35,6 +36,8 @@ class AveragePooling2D(core.Layer):
         super(AveragePooling2D, self).__init__(input_shape)
         self.cache = None
         self.cached_input_shape = None
+
+        self.channels_first = channels_first
 
     def initialize(self,
                    input_shape: IntTuple,
@@ -54,9 +57,18 @@ class AveragePooling2D(core.Layer):
         return [self.input_shape[0], self.input_shape[1], H_out, W_out]
 
     def forward(self, x: TFEVariable) -> TFEVariable:
+        if not self.channels_first:
+            x = self.prot.transpose(x, perm=[0, 3, 1, 2])
+
         self.cached_input_shape = x.shape
         self.cache = x
-        return self.prot.avgpool2d(x, self.pool_size, self.strides, self.padding)
+
+        out = self.prot.avgpool2d(x, self.pool_size, self.strides, self.padding)
+
+        if not self.channels_first:
+            out = self.prot.transpose(out, perm=[0, 2, 3, 1])
+
+        return out
 
     def backward(self, d_y: TFEVariable, learning_rate: float) -> Optional[TFEVariable]:
         raise NotImplementedError
