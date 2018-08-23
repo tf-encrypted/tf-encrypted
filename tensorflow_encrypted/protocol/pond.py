@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from typing import Tuple, Dict, List, Union, Optional, Any
 
+import math
 import numpy as np
 import tensorflow as tf
 
@@ -1822,34 +1823,23 @@ def _avgpool2d_reshape_reduce(x: BackingTensor,
 
 
 def _avgpool2d_im2col_reduce(x: BackingTensor,
-                             pool_size: Tuple[int],
-                             strides: Tuple[int],
+                             pool_size: Tuple[int, int],
+                             strides: Tuple[int, int],
                              padding: str) -> BackingTensor:
-
     batch, channels, height, width = x.shape
     pool_height, pool_width = pool_size
 
-    print(f'heights {height} {pool_height}')
-
-    out_height = (height - pool_height) // tf.Dimension(strides[0] + 1)
-    out_width = (width - pool_width) // tf.Dimension(strides[0] + 1)
+    if padding == "SAME":
+        out_height: int = math.ceil(int(height) / strides[0])
+        out_width: int = math.ceil(int(width) / strides[1])
+    else:
+        out_height = math.ceil((height - pool_size[0] + 1) / strides[0])
+        out_width = math.ceil((width - pool_size[1] + 1) / strides[1])
 
     x_split = x.reshape((batch * channels, 1, height, width))
     x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
-
-
-
     x_cols_sum = x_cols.sum(axis=0)
-    print(f'x cols shape {x_cols_sum.shape}')
-    #
-    # print(f'sum shape {x_cols_sum.shape}')
-    # print(f'types {type(x_cols)} .. {type(x_cols_sum)}')
-    # print(f'type2 {type(int(x_cols.shape[1]))}')
-    # lol = np.arange(int(x_cols.shape[1]))
-
-
-    # x_cols_avg = x_cols[x_cols_sum, lol]
-    out = x_cols_sum.reshape(out_height, out_width, batch, channels).transpose(2, 3, 0, 1)
+    out = x_cols_sum.reshape([out_height, out_width, batch, channels]).transpose([2, 3, 0, 1])
 
     return out
 
