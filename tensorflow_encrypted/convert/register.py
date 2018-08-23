@@ -27,7 +27,8 @@ def register() -> Dict[str, Any]:
         'Transpose': transpose,
         'Reshape': reshape,
         'Rsqrt': rsqrt,
-        'Mul': mul
+        'Mul': mul,
+        'ExpandDims': expand_dims
         # 'Pack': pack,
         # 'BiasAdd': bias_add,
         # 'MaxPool': maxpool,
@@ -210,6 +211,14 @@ def transpose(converter: Converter, node: Any, inputs: List[str]) -> Any:
         raise TypeError("Unsupported dtype for transpose perm")
 
     return converter.protocol.transpose(input, np.array(nums).reshape(shape))
+
+def expand_dims(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+    axis = converter.outputs[inputs[1]]
+
+    axis_val = node.attr["axis"].i
+
+    return converter.protocol.expand_dims(input, axis_val)
 
 
 def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
