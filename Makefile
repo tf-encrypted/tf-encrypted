@@ -63,8 +63,8 @@ test: lint pythoncheck
 	python -m unittest discover
 
 lint: pythoncheck
-	pycodestyle tests/ tensorflow_encrypted/
-
+	pycodestyle
+	
 .PHONY: lint test
 
 # ###############################################
