@@ -838,6 +838,7 @@ def export_expand_dims(filename: str, input_shape: List[int]):
 
     return export(x, filename)
 
+
 def run_squeeze(input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
 
