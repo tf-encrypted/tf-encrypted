@@ -2010,7 +2010,7 @@ def _reshape_masked(prot, x_masked: PondMaskedTensor, shape: List[int]) -> PondM
     return x_reshaped
 
 #
-# transpose helpers
+# expand dims helpers
 #
 
 
