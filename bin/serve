@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import tensorflow_encrypted as tfe
+
+name = os.environ.get('TFE_NODE_NAME')
+server0_address = os.environ.get('TFE_SERVER0_ADDRESS')
+server1_address = os.environ.get('TFE_SERVER1_ADDRESS')
+producer_address = os.environ.get('TFE_CRYPTO_PRODUCER_ADDRESS')
+
+if name is None:
+    print("The name of this node must be provided via the 'TFE_NODE_NAME' environment variable")
+    sys.exit(1)
+
+if server0_address is None:
+    print("The address for server 0 must be provided via the 'TFE_SERVER0_ADDRESS' environment variable")
+    sys.exit(1)
+
+if server1_address is None:
+    print("The address for server 1 must be provided via the 'TFE_SERVER1_ADDRESS' environment variable")
+    sys.exit(1)
+
+if producer_address is None:
+    print("The address for the producer must be provided via the 'TFE_CRYPTO_PRODUCER_ADRESS' environment variable")
+    sys.exit(1)
+
+config = tfe.RemoteConfig({
+    'server0': server0_address,
+    'server1': server1_address,
+    'crypto_producer': producer_address
+})
+
+server = config.server(name)
+server.start()
+server.join()
