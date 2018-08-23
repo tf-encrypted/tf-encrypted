@@ -5,12 +5,14 @@ import tensorflow as tf
 
 from .helpers import inverse, prod, log2
 
+
 def gen_crt_decompose(m):
 
     def crt_decompose(x):
-        return tuple( x % mi for mi in m )
+        return tuple(x % mi for mi in m)
 
     return crt_decompose
+
 
 def gen_crt_recombine(m, lambdas):
     # TODO compute lambdas based on m
@@ -19,7 +21,7 @@ def gen_crt_recombine(m, lambdas):
     M = prod(m)
 
     def crt_recombine(x):
-        return sum( xi * li for xi, li in zip(x, lambdas) ) % M
+        return sum(xi * li for xi, li in zip(x, lambdas)) % M
 
     return crt_recombine
 
@@ -27,37 +29,42 @@ def gen_crt_recombine(m, lambdas):
 # keeping mod operations in-lined here for simplicity;
 # we should do them lazily
 
+
 def gen_crt_add(m):
 
     def crt_add(x, y):
         with tf.name_scope('crt_add'):
-            return [ (xi + yi) % mi for xi, yi, mi in zip(x, y, m) ]
+            return [(xi + yi) % mi for xi, yi, mi in zip(x, y, m)]
 
     return crt_add
+
 
 def gen_crt_sub(m):
 
     def crt_sub(x, y):
         with tf.name_scope('crt_sub'):
-            return [ (xi - yi) % mi for xi, yi, mi in zip(x, y, m) ]
+            return [(xi - yi) % mi for xi, yi, mi in zip(x, y, m)]
 
     return crt_sub
+
 
 def gen_crt_mul(m):
 
     def crt_mul(x, y):
         with tf.name_scope('crt_mul'):
-            return [ (xi * yi) % mi for xi, yi, mi in zip(x, y, m) ]
+            return [(xi * yi) % mi for xi, yi, mi in zip(x, y, m)]
 
     return crt_mul
+
 
 def gen_crt_dot(m):
 
     def crt_dot(x, y):
         with tf.name_scope('crt_dot'):
-            return [ tf.matmul(xi, yi) % mi for xi, yi, mi in zip(x, y, m) ]
+            return [tf.matmul(xi, yi) % mi for xi, yi, mi in zip(x, y, m)]
 
     return crt_dot
+
 
 def gen_crt_im2col(m):
 
@@ -69,10 +76,10 @@ def gen_crt_im2col(m):
             channels = int(NHWC_tensors[0].shape[3])
             # extract patches
             patch_tensors = [tf.extract_image_patches(xi,
-                                              ksizes=[1, h_filter, w_filter, 1],
-                                              strides=[1, strides, strides, 1],
-                                              rates=[1, 1, 1, 1],
-                                              padding=padding) for xi in NHWC_tensors]
+                                                      ksizes=[1, h_filter, w_filter, 1],
+                                                      strides=[1, strides, strides, 1],
+                                                      rates=[1, 1, 1, 1],
+                                                      padding=padding) for xi in NHWC_tensors]
             # change back to NCHW
             patch_tensors_NCHW = [tf.reshape(tf.transpose(patches, [3, 1, 2, 0]), (h_filter, w_filter, channels, -1))
                                   for patches in patch_tensors]
@@ -83,19 +90,21 @@ def gen_crt_im2col(m):
 
     return im2col
 
+
 def gen_crt_sample_uniform(m, int_type):
 
     def crt_sample_uniform(shape):
         with tf.name_scope('sample'):
-            return [ tf.random_uniform(shape, maxval=mi, dtype=int_type) for mi in m ]
+            return [tf.random_uniform(shape, maxval=mi, dtype=int_type) for mi in m]
 
     return crt_sample_uniform
+
 
 def gen_crt_mod(m, int_type, float_type):
 
     # outer precomputation
     M = prod(m)
-    q = [ inverse(M // mi, mi) for mi in m ]
+    q = [inverse(M // mi, mi) for mi in m]
     redecompose = gen_crt_decompose(m)
 
     def crt_mod(x, k):
@@ -103,21 +112,21 @@ def gen_crt_mod(m, int_type, float_type):
 
         # inner precomputations
         B = M % k
-        b = [ (M // mi) % k for mi in m ]
+        b = [(M // mi) % k for mi in m]
 
         with tf.name_scope('crt_mod'):
-            t = [ (xi * qi) % mi for xi, qi, mi in zip(x, q, m) ]
+            t = [(xi * qi) % mi for xi, qi, mi in zip(x, q, m)]
             alpha = tf.cast(
                 tf.round(
                     tf.reduce_sum(
-                        [ tf.cast(ti, float_type) / mi for ti, mi in zip(t, m) ],
+                        [tf.cast(ti, float_type) / mi for ti, mi in zip(t, m)],
                         axis=0
                     )
                 ),
                 int_type
             )
             v = tf.reduce_sum(
-                [ ti * bi for ti, bi in zip(t, b) ],
+                [ti * bi for ti, bi in zip(t, b)],
                 axis=0
             ) - B * alpha
             return redecompose(v % k)
@@ -144,6 +153,7 @@ def gen_crt_sum(m):
             return y
 
         return crt_sum
+
 
 class CrtTensor(object):
     pass

@@ -3,6 +3,7 @@ import tensorflow as tf
 from ops import *
 from ops import m
 
+
 def define_batch_buffer(shape, capacity, varname):
 
     # each server holds three values: xi, ai, and alpha
@@ -37,9 +38,11 @@ def define_batch_buffer(shape, capacity, varname):
 
     return (queue_0, queue_1, queue_cp)
 
+
 def pack_server(tensors):
     with tf.name_scope('pack'):
-        return tf.stack([ tf.stack(tensor, axis=0) for tensor in tensors ], axis=0)
+        return tf.stack([tf.stack(tensor, axis=0) for tensor in tensors], axis=0)
+
 
 def unpack_server(shape, tensors):
     with tf.name_scope('unpack'):
@@ -51,9 +54,11 @@ def unpack_server(shape, tensors):
             for tensor in tf.split(tensors, 3)
         ]
 
+
 def pack_cryptoproducer(tensor):
     with tf.name_scope('pack'):
         return tf.stack(tensor, axis=0)
+
 
 def unpack_cryptoproducer(shape, tensor):
     with tf.name_scope('unpack'):
@@ -62,13 +67,14 @@ def unpack_cryptoproducer(shape, tensor):
             for subtensor in tf.split(tensor, len(m))
         ]
 
+
 def distribute_batch(shape, buffer, varname):
 
     queue_0, queue_1, queue_cp = buffer
 
     with tf.name_scope('distribute_{}'.format(varname)):
 
-        input_x = [ tf.placeholder(INT_TYPE, shape=shape) for _ in m ]
+        input_x = [tf.placeholder(INT_TYPE, shape=shape) for _ in m]
 
         with tf.device(INPUT_PROVIDER):
             with tf.name_scope('preprocess'):
@@ -92,6 +98,7 @@ def distribute_batch(shape, buffer, varname):
 
     return input_x, populate_op
 
+
 def load_batch(shape, buffer, varname):
 
     shape = tuple(shape)
@@ -112,11 +119,12 @@ def load_batch(shape, buffer, varname):
             a = unpack_cryptoproducer(shape, packed_cp)
 
     x = PrivateTensor(x0, x1)
-    
+
     node_key = ('mask', x)
     nodes[node_key] = (a, a0, a1, alpha_on_0, alpha_on_1)
 
     return x
+
 
 def training_loop(buffers, shapes, iterations, initial_weights, training_step):
 
@@ -134,12 +142,13 @@ def training_loop(buffers, shapes, iterations, initial_weights, training_step):
 
     _, final_w0, final_w1 = tf.while_loop(
         cond=lambda i, w0, w1: tf.less(i, iterations),
-        body=lambda i, w0, w1: (i+1,) + loop_op(w0, w1),
+        body=lambda i, w0, w1: (i + 1,) + loop_op(w0, w1),
         loop_vars=(0, initial_w0, initial_w1),
         parallel_iterations=1
     )
 
     return final_w0, final_w1
+
 
 buffer_x = define_batch_buffer(shape_x, num_batches, varname='x')
 buffer_y = define_batch_buffer(shape_y, num_batches, varname='y')
