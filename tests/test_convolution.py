@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
+
 class TestConv2D(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()

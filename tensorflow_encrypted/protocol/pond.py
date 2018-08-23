@@ -1833,8 +1833,8 @@ def _avgpool2d_im2col_reduce(x: BackingTensor,
         out_height: int = math.ceil(int(height) / strides[0])
         out_width: int = math.ceil(int(width) / strides[1])
     else:
-        out_height = math.ceil((height - pool_size[0] + 1) / strides[0])
-        out_width = math.ceil((width - pool_size[1] + 1) / strides[1])
+        out_height = math.ceil((int(height) - pool_size[0] + 1) / strides[0])
+        out_width = math.ceil((int(width) - pool_size[1] + 1) / strides[1])
 
     x_split = x.reshape((batch * channels, 1, height, width))
     x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
