@@ -333,7 +333,6 @@ class TestConvert(unittest.TestCase):
         tf.reset_default_graph()
 
         actual = run_expand_dims(input_shape)
-    
         tf.reset_default_graph()
 
         config = tfe.LocalConfig([
@@ -705,10 +704,11 @@ def export_reshape(filename: str, input_shape: List[int]):
 
     return export(x, filename)
 
+
 def run_expand_dims(input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
 
-    x = tf.expand_dims(a, axis = 0)
+    x = tf.expand_dims(a, axis=0)
 
     with tf.Session() as sess:
         output = sess.run(x, feed_dict={a: np.ones(input_shape)})
@@ -719,7 +719,7 @@ def run_expand_dims(input_shape: List[int]):
 def export_expand_dims(filename: str, input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
 
-    x = tf.expand_dims(a, axis = 0)
+    x = tf.expand_dims(a, axis=0)
 
     return export(x, filename)
 
