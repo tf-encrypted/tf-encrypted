@@ -75,17 +75,35 @@ def gen_crt_im2col(m):
             NHWC_tensors = [tf.transpose(xi, [0, 2, 3, 1]) for xi in x]
             channels = int(NHWC_tensors[0].shape[3])
             # extract patches
-            patch_tensors = [tf.extract_image_patches(xi,
-                                                      ksizes=[1, h_filter, w_filter, 1],
-                                                      strides=[1, strides, strides, 1],
-                                                      rates=[1, 1, 1, 1],
-                                                      padding=padding) for xi in NHWC_tensors]
+            patch_tensors = [
+                tf.extract_image_patches(
+                    xi,
+                    ksizes=[1, h_filter, w_filter, 1],
+                    strides=[1, strides, strides, 1],
+                    rates=[1, 1, 1, 1],
+                    padding=padding
+                )
+                for xi in NHWC_tensors
+            ]
+
             # change back to NCHW
-            patch_tensors_NCHW = [tf.reshape(tf.transpose(patches, [3, 1, 2, 0]), (h_filter, w_filter, channels, -1))
-                                  for patches in patch_tensors]
+            patch_tensors_NCHW = [
+                tf.reshape(
+                    tf.transpose(patches, [3, 1, 2, 0]),
+                    (h_filter, w_filter, channels, -1)
+                )
+                for patches in patch_tensors
+            ]
+
             # reshape to x_col
-            x_col_tensors = [tf.reshape(tf.transpose(x_col_NHWC, [2, 0, 1, 3]), (channels * h_filter * w_filter, -1))
-                             for x_col_NHWC in patch_tensors_NCHW]
+            x_col_tensors = [
+                tf.reshape(
+                    tf.transpose(x_col_NHWC, [2, 0, 1, 3]),
+                    (channels * h_filter * w_filter, -1)
+                )
+                for x_col_NHWC in patch_tensors_NCHW
+            ]
+
             return x_col_tensors
 
     return im2col
@@ -137,22 +155,25 @@ def gen_crt_mod(m, int_type, float_type):
 def gen_crt_sum(m):
     def crt_sum(x, axis, keepdims=None):
         with tf.name_scope('crt_sum'):
-            dims = x.shape.dims
-            begins = [0] * len(dims)
-            ends = [1] + [0] * (len(dims) - 1)
+            dims = x[0].shape.dims.copy()
             ax_len = dims.pop(axis)
-            x = tf.transpose(x, perm=[axis, *dims])
-            y = tf.zeros(dims, dtype=x.dtype)
+            begins = [0] * len(dims)
+            ends = [x.value for x in dims]
+            perm = [axis, *[i for i in range(len(dims) + 1) if i != axis]]
+            x = [tf.transpose(xi, perm=perm) for xi in x]
+            y = [tf.zeros(dims, dtype=xi.dtype) for xi in x]
             for i in range(ax_len):
-                y += tf.slice(x, begins, ends)
-                y %= m
+                for j in range(len(x)):
+                    sl = x[j][i]
+                    y[j] += sl
+                    y[j] %= m[j]
                 begins[0] += 1
                 ends[0] += 1
             if keepdims:
-                return tf.expand_dims(y, axis)
+                return [tf.expand_dims(yi, axis) for yi in y]
             return y
 
-        return crt_sum
+    return crt_sum
 
 
 class CrtTensor(object):
