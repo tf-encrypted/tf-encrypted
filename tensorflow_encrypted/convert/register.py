@@ -3,11 +3,8 @@ import numpy as np
 import array
 from typing import Any, Dict, List
 
-from ..layers import Conv2D, Relu, Sigmoid, Dense
-from ..protocol.protocol import get_protocol
+from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D
 from .convert import Converter, ConvertInputProvider
-
-from ..protocol.protocol import get_protocol
 
 from tensorflow_encrypted.protocol.pond import PondPublicTensor
 
@@ -28,7 +25,8 @@ def register() -> Dict[str, Any]:
         'Reshape': reshape,
         'Rsqrt': rsqrt,
         'Mul': mul,
-        'ExpandDims': expand_dims
+        'ExpandDims': expand_dims,
+        'AvgPool': avgpool
         # 'Pack': pack,
         # 'BiasAdd': bias_add,
         # 'MaxPool': maxpool,
@@ -148,8 +146,6 @@ def pack(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
     raise NotImplementedError()
     input1 = output_lookup[inputs[0]]
     input2 = output_lookup[inputs[1]]
-
-    prot = get_protocol()
 
     return prot.stack([input1, input2], axis=node.attr["axis"].i)
 
@@ -294,6 +290,27 @@ def mul(converter: Converter, node: Any, inputs: List[str]) -> Any:
         b_out = b
 
     return converter.protocol.mul(a_out, b_out)
+
+
+def avgpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+
+    ksize = node.attr["ksize"].list.i
+    s = node.attr["strides"].list.i
+
+    padding = node.attr["padding"].s.decode('ascii')
+    pool_size = [ksize[1], ksize[2]]
+    strides = [s[1], s[2]]
+
+    shape = [int(i) for i in input.shape]
+
+    channels_first = node.attr["data_format"].s.decode('ascii') == "NCHW"
+
+    avg = AveragePooling2D(shape, pool_size, strides, padding, channels_first)
+
+    out = avg.forward(input)
+
+    return out
 
 
 def nodef_to_public_pond(converter: Converter, x: Any) -> 'PondPublicTensor':
