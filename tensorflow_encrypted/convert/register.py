@@ -23,6 +23,7 @@ def register() -> Dict[str, Any]:
         'Sub': sub,
         'Transpose': transpose,
         'Reshape': reshape,
+        'Pack': pack,
         'Rsqrt': rsqrt,
         'Mul': mul,
         'ExpandDims': expand_dims,
@@ -142,12 +143,13 @@ def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
                                             shrink_axis_mask=shrink_axis_mask)
 
 
-def pack(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplementedError()
-    input1 = output_lookup[inputs[0]]
-    input2 = output_lookup[inputs[1]]
+def pack(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    final_inputs = []
 
-    return prot.stack([input1, input2], axis=node.attr["axis"].i)
+    for input in inputs:
+        final_inputs.append(converter.outputs[input])
+
+    return converter.protocol.stack(final_inputs, axis=node.attr["axis"].i)
 
 
 def bias_add(converter: Converter, node: Any, inputs: List[str]) -> Any:

@@ -1,5 +1,6 @@
-from typing import Dict, Tuple, List, Any
+from typing import Dict, Tuple, List, Any, Union
 import tensorflow as tf
+from collections import Iterable
 
 from ..layers import Layer
 from ..protocol.pond import PondPrivateTensor
@@ -33,18 +34,30 @@ class Converter():
         self.protocol = protocol
         self.weights_provider = weights_provider
 
-    def convert(self, graph_def: Any, input: InputProvider, register: Dict[str, Any]) -> Dict[str, Any]:
+    def convert(self, graph_def: Any, input: Union[List[InputProvider], InputProvider],
+                register: Dict[str, Any]) -> Dict[str, Any]:
         name_to_input_name, name_to_node = extract_graph_summary(graph_def)
 
-        if graph_def.node[0].op != "Placeholder":
-            raise AttributeError("First node in graph must be placeholder for now")
+        if isinstance(input, InputProvider):
+            i = [input]
+        elif isinstance(input, Iterable):
+            i = input
+        else:
+            i = []
 
+        iter = enumerate(i)
+
+        next_input = 0
         for output, inputs in name_to_input_name.items():
             node = name_to_node[output]
 
-            # just take the input passed into this function for now
             if node.op == "Placeholder":
-                x = self.protocol.define_private_input(input)
+                try:
+                    count, item = iter.__next__()
+                except StopIteration:
+                    raise InvalidArgumentError("Not enough placeholders supplied")
+
+                x = self.protocol.define_private_input(item)
 
                 self.outputs[output] = x
                 continue
@@ -74,3 +87,7 @@ def extract_graph_summary(graph_def: Any) -> Tuple[Dict[str, List[str]],
         name_to_input_name[n] = [node_name(x) for x in node.input]
 
     return name_to_input_name, name_to_node
+
+
+class InvalidArgumentError(Exception):
+    pass
