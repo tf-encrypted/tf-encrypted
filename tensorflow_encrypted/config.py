@@ -76,7 +76,7 @@ class RemoteConfig(Config):
 
     def __init__(self,
                  player_hostmap: Union[List[Tuple[str, str]], Dict[str, str]],
-                 master_host: Optional[str] = None,
+                 master_host: Optional[str] = 'localhost:4444',
                  job_name: str = 'tfe') -> None:
 
         self._job_name = job_name
@@ -86,29 +86,21 @@ class RemoteConfig(Config):
             player_hostmap = list(sorted(player_hostmap.items()))
 
         player_names, player_hosts = zip(*player_hostmap)
-
-        if master_host is None:
-            # use first player as master so don't add any
-            self._offset = 0
-            self._hostmap = player_hosts
-            self._target = 'grpc://{}'.format(player_hosts[0])
-        else:
-            # add explicit master to cluster as first host
-            self._offset = 1
-            self._hostmap = (master_host,) + player_hosts
-            self._target = 'grpc://{}'.format(master_host)
+        player_names = ('master',) + player_names
+        self._hostmap = (master_host,) + player_hosts
+        self._target = 'grpc://{}'.format(master_host)
 
         self._players = {
             name: Player(
                 name=name,
-                index=index + self._offset,
+                index=index,
                 device_name='/job:{job_name}/replica:0/task:{task_id}/cpu:0'.format(
                     job_name=job_name,
-                    task_id=index + self._offset
+                    task_id=index
                 ),
                 host=host
             )
-            for index, (name, host) in enumerate(zip(player_names, player_hosts))
+            for index, (name, host) in enumerate(zip(player_names, self._hostmap))
         }
 
     @property
@@ -138,6 +130,7 @@ class RemoteConfig(Config):
             log_device_placement=log_device_placement,
             allow_soft_placement=False,
         )
+        print('Starting session on target: %s' % self._target, config)
         return tf.Session(
             self._target,
             config=config

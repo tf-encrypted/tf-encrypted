@@ -50,10 +50,10 @@ services:
     ports:
       - 5000:5000
     environment:
-      TFE_NODE_NAME: api
+      TFE_NODE_NAME: master
       TFE_SERVER0_ADDRESS: server0:4440
       TFE_SERVER1_ADDRESS: server1:4440
-      TFE_CRYPTO_PRODUCER_ADDRESS: localhost:4440
+      TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
       TFE_WEIGHT_PROVIDER_ADDRESS: provider:4440
     depends_on:
       - server0

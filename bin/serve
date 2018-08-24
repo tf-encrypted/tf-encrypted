@@ -47,9 +47,10 @@ remote_config = tfe.RemoteConfig({
     'weights_provider': provider_address
 })
 
-if node_name != 'api':
-    server = remote_config.server(node_name)
-    server.start()
+print("Hi I'm node %s" % node_name)
+server = remote_config.server(node_name)
+
+if node_name != 'master':
     server.join()
 else:
     print('Starting the API endpoint')
@@ -61,7 +62,6 @@ else:
         "--model_name", type=str, default="matmul", help="increase output verbosity")
     config = parser.parse_args()
 
-
     print('Loading model: %s' % config.model_name)
     model_file = os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
@@ -70,7 +70,7 @@ else:
         "%s.pb" % config.model_name,
     )
 
-    print('Setting input pipeline')
+    print('Setting the input pipeline')
     tf.reset_default_graph()
 
     class PredictionInputProvider(tfe.io.InputProvider):
@@ -88,21 +88,22 @@ else:
     sess = remote_config.session()
     with tfe.protocol.Pond(*remote_config.get_players('server0, server1, crypto_producer')) as prot:
         # The machine which feeds input must be the flask server for now
-        input = PredictionInputProvider(remote_config.get_player('server0'))
+        x = PredictionInputProvider(remote_config.get_player('master'))
 
+        print('Securing computation')
         c = tfe.convert.convert.Converter(config, prot, remote_config.get_player('weights_provider'))
-        x = c.convert(graph_def, input, tfe.convert.register())
+        y = c.convert(graph_def, x, tfe.convert.register())
 
+        y = y.reveal()
         # Not sure how to use this scheme for now
         # output = PredictionOutputReceiver(remote_config.get_player('master'))
         # prediction_op = prot.define_output(x, output)
-
+        print('Initializing weights')
         tfe.run(sess, prot.initializer, tag='init')
 
     pl = tf.get_default_graph().get_tensor_by_name("private-input/api:0")
-
     def predict(request_id: str, input_data: Any) -> None:
-        output_data = x.reveal().eval(
+        output_data = y.eval(
             sess=sess,
             feed_dict={pl: input_data},
             tag='prediction',
