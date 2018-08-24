@@ -33,11 +33,11 @@ class AveragePooling2D(core.Layer):
         if padding not in ['SAME', 'VALID']:
             raise ValueError("Don't know how to do padding of type {}".format(padding))
         self.padding = padding
+        self.channels_first = channels_first
+
         super(AveragePooling2D, self).__init__(input_shape)
         self.cache = None
         self.cached_input_shape = None
-
-        self.channels_first = channels_first
 
     def initialize(self,
                    input_shape: IntTuple,
@@ -45,9 +45,11 @@ class AveragePooling2D(core.Layer):
         pass
 
     def get_output_shape(self) -> List[int]:
-        channels = self.input_shape[1]  # assumes NCHW
-        H_in = self.input_shape[2]
-        W_in = self.input_shape[3]
+        if self.channels_first:
+            _, channels, H_in, W_in = self.input_shape
+        else:
+            _, H_in, W_in, channels = self.input_shape
+
         if self.padding == "SAME":
             H_out: int = math.ceil(H_in / self.strides[0])
             W_out: int = math.ceil(W_in / self.strides[1])
