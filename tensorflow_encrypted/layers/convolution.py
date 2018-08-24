@@ -37,7 +37,11 @@ class Conv2D(core.Layer):
 
     def get_output_shape(self) -> List[int]:
         h_filter, w_filter, d_filters, n_filters = self.fshape
-        n_x, d_x, h_x, w_x = self.input_shape
+
+        if self.channels_first:
+            n_x, d_x, h_x, w_x = self.input_shape
+        else:
+            n_x, h_x, w_x, d_x = self.input_shape
 
         if self.padding == "SAME":
             h_out = int(np.ceil(float(h_x) / float(self.strides)))
