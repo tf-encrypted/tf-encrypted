@@ -15,7 +15,7 @@ import os
 
 
 parser = argparse.ArgumentParser(description='Runs the specified model with the specified input')
-parser.add_argument('model_path', type=str, help='path to skin cancer model')
+parser.add_argument('model_path', type=str, help='path to model')
 parser.add_argument('input_path', type=str, help='path to input to model')
 args = parser.parse_args()
 
