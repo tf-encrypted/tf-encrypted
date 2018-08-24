@@ -101,10 +101,10 @@ class RemoteConfig(Config):
         self._players = {
             name: Player(
                 name=name,
-                index=index+self._offset,
+                index=index + self._offset,
                 device_name='/job:{job_name}/replica:0/task:{task_id}/cpu:0'.format(
                     job_name=job_name,
-                    task_id=index+self._offset
+                    task_id=index + self._offset
                 ),
                 host=host
             )

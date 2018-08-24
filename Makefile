@@ -63,8 +63,7 @@ test: lint pythoncheck
 	python -m unittest discover
 
 lint: pythoncheck
-	pycodestyle tests
-	pycodestyle examples/api
+	pycodestyle
 
 .PHONY: lint test
 

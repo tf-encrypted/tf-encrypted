@@ -9,7 +9,7 @@ class TestConv2D(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
 
-    def test_forward(self):
+    def test_forward(self) -> None:
         # input
         batch_size, channels_in, channels_out = 32, 3, 64
         img_height, img_width = 28, 28
