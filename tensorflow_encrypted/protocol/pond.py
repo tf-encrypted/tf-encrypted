@@ -18,13 +18,12 @@ from ..player import Player
 BITPRECISION_INTEGRAL = 16
 BITPRECISION_FRACTIONAL = 16
 TRUNCATION_GAP = 20
+BOUND = 2**30  # bound on magnitude of encoded numbers: x in [-BOUND, +BOUND)
 
 # modulus
 M = BackingTensor.modulus
 # truncation factor for going from double to single precision
 K = 2 ** BITPRECISION_FRACTIONAL
-# bound on magnitude of (single precision) encoded numbers
-B = (2 ** BITPRECISION_INTEGRAL) * (2 ** BITPRECISION_FRACTIONAL)
 
 assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + \
     log2(1024) + TRUNCATION_GAP
@@ -194,8 +193,8 @@ class Pond(Protocol):
             with tf.device(receiver.player.device_name):
 
                 v: BackingTensor = _reconstruct(x0, x1)
-                # v = _decode(v, apply_scaling) # TODO[Morten] re-enable
-                op = receiver.receive_output(v.backing[0])
+                v: tf.Tensor = _decode(v, apply_scaling)
+                op = receiver.receive_output(v)
 
                 # wrap in tf.group to prevent sending back any tensors (which might hence be leaked)
                 op = tf.group(op)
@@ -795,9 +794,7 @@ class PondPublicTensor(PondTensor):
 
     def eval(self, sess, feed_dict={}, tag=None):
         value: BackingTensor = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
-        value: np.ndarray = value.to_native()
-        value: np.ndarray = _decode(value, self.encoded)
-        return value
+        return _decode(value, self.encoded)
 
 
 class PondPrivateTensor(PondTensor):
@@ -981,51 +978,27 @@ class PondPrivateVariable(PondPrivateTensor):
 def _encode(rationals, apply_scaling) -> BackingTensor:
     """ Encode tensor of rational numbers into tensor of ring elements """
 
-    scaling_factor = 2**BITPRECISION_FRACTIONAL if apply_scaling else 1
+    scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
 
     if isinstance(rationals, np.ndarray):
-        return _encode_from_numpy(rationals, scaling_factor)
+        encoded = (rationals * scaling_factor).astype(int).astype(object)
 
-    if isinstance(rationals, tf.Tensor):
-        return _encode_from_tftensor(rationals, scaling_factor)
+    elif isinstance(rationals, tf.Tensor):
+        encoded = tf.cast(rationals * scaling_factor, tf.int32)
 
-    raise TypeError("Don't know how to encode {}".format(type(rationals)))
+    else:
+        raise TypeError("Don't know how to encode {}".format(type(rationals)))
+
+    return BackingTensor.from_native(encoded)
 
 
-def _decode(elements, apply_scaling: bool):
+def _decode(elements: BackingTensor, apply_scaling: bool):
     """ Decode tensor of ring elements into tensor of rational numbers """
 
-    scaling_factor = 2**BITPRECISION_FRACTIONAL if apply_scaling else 1
+    scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
 
-    if isinstance(elements, np.ndarray):
-        return _decode_to_numpy(elements, scaling_factor)
-
-    if isinstance(elements, tf.Tensor):
-        return _decode_to_tftensor(elements, scaling_factor)
-
-    raise TypeError("Don't know how to decode {}".format(type(elements)))
-
-
-def _encode_from_numpy(rationals: np.ndarray, scaling_factor: int) -> BackingTensor:
-    encoded = (rationals * scaling_factor).astype(int).astype(object)
-    return BackingTensor.from_native(encoded)
-
-
-def _decode_to_numpy(elements, scaling_factor: int):
-    map_negative_range = np.vectorize(lambda element: element if element <= M / 2 else element - M)
-    return map_negative_range(elements).astype(float) / scaling_factor
-
-
-def _encode_from_tftensor(rationals: tf.Tensor, scaling_factor: int) -> BackingTensor:
-    encoded = tf.cast(rationals * scaling_factor, BackingTensor.int_type)
-    return BackingTensor.from_native(encoded)
-
-
-def _decode_to_tftensor(elements, scaling_factor: int):
-    raise NotImplementedError()
-    # TODO[Morten] how to decode negative numbers (since they're large)?
-    # we can use `(elements + B).to_native() - B`` but need crt_recombine to
-    # work first
+    # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
+    return ((elements + BOUND).to_native() - BOUND) / scaling_factor
 
 
 def _share(secret: BackingTensor) -> Tuple[BackingTensor, BackingTensor]:

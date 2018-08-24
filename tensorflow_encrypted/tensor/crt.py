@@ -14,16 +14,70 @@ def gen_crt_decompose(m):
     return crt_decompose
 
 
-def gen_crt_recombine(m, lambdas):
-    # TODO compute lambdas based on m
+def gen_crt_recombine_lagrange(m):
 
     # precomputation
     M = prod(m)
+    n = [M // mi for mi in m]
+    lambdas = [ni * inverse(ni, mi) % M for ni, mi in zip(n, m)]
 
-    def crt_recombine(x):
-        return sum(xi * li for xi, li in zip(x, lambdas)) % M
+    def crt_recombine_lagrange(x):
 
-    return crt_recombine
+        with tf.name_scope('crt_recombine_lagrange'):
+            res = sum(xi * li for xi, li in zip(x, lambdas)) % M
+            res = res.astype(object)
+            return res
+
+    return crt_recombine_lagrange
+
+
+def gen_crt_recombine_explicit(m, int_type):
+
+    # precomputation
+    M = prod(m)
+    q = [inverse(M // mi, mi) for mi in m]
+
+    def crt_recombine_explicit(x, bound):
+
+        B = M % bound
+        b = [(M // mi) % bound for mi in m]
+
+        with tf.name_scope('crt_recombine_explicit'):
+
+            if isinstance(x[0], np.ndarray):
+                # backed by np.ndarray
+                t = [(xi * qi) % mi for xi, qi, mi in zip(x, q, m)]
+                alpha = np.round(
+                    np.sum(
+                        [ti.astype(float) / mi for ti, mi in zip(t, m)],
+                        axis=0
+                    ))
+                u = np.sum((ti * bi for ti, bi in zip(t, b)), axis=0).astype(np.int64)
+                v = alpha.astype(np.int64) * B
+                w = u - v
+                res = w % bound
+                res = res.astype(np.int32)
+                return res
+
+            elif isinstance(x[0], tf.Tensor):
+                # backed by tf.Tensor
+                t = [(xi * qi) % mi for xi, qi, mi in zip(x, q, m)]
+                alpha = tf.round(
+                    tf.reduce_sum(
+                        [tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, m)],
+                        axis=0
+                    ))
+                u = tf.cast(tf.reduce_sum([ti * bi for ti, bi in zip(t, b)], axis=0), tf.int64)
+                v = tf.cast(alpha, tf.int64) * B
+                w = u - v
+                res = w % bound
+                res = tf.cast(res, int_type)
+                return res
+
+            else:
+                raise TypeError("Don't know how to recombine {}".format(type(x[0])))
+
+    return crt_recombine_explicit
 
 # *** NOTE ***
 # keeping mod operations in-lined here for simplicity;
