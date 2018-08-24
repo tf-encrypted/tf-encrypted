@@ -2,7 +2,7 @@ version: '3'
 
 services:
   server0:
-    image: tf-encrypted/tf-encrypted:latest
+    build: .
     ports:
       - 4440:4440
     environment:
@@ -10,9 +10,10 @@ services:
       TFE_SERVER0_ADDRESS: localhost:4440
       TFE_SERVER1_ADDRESS: server1:4440
       TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
+      TFE_WEIGHT_PROVIDER_ADDRESS: provider:4440
 
   server1:
-    image: tf-encrypted/tf-encrypted:latest
+    build: .
     ports:
       - 4441:4440
     environment:
@@ -20,9 +21,10 @@ services:
       TFE_SERVER0_ADDRESS: server0:4440
       TFE_SERVER1_ADDRESS: localhost:4440
       TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
+      TFE_WEIGHT_PROVIDER_ADDRESS: provider:4440
 
   producer:
-    image: tf-encrypted/tf-encrypted:latest
+    build: .
     ports:
       - 4442:4440
     environment:
@@ -30,3 +32,33 @@ services:
       TFE_SERVER0_ADDRESS: server0:4440
       TFE_SERVER1_ADDRESS: server1:4440
       TFE_CRYPTO_PRODUCER_ADDRESS: localhost:4440
+      TFE_WEIGHT_PROVIDER_ADDRESS: provider:4440
+
+  provider:
+    build: .
+    ports:
+      - 4443:4440
+    environment:
+      TFE_NODE_NAME: weights_provider
+      TFE_SERVER0_ADDRESS: server0:4440
+      TFE_SERVER1_ADDRESS: server1:4440
+      TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
+      TFE_WEIGHT_PROVIDER_ADDRESS: localhost:4440
+
+  api:
+    build: .
+    ports:
+      - 5000:5000
+    environment:
+      TFE_NODE_NAME: master
+      TFE_SERVER0_ADDRESS: server0:4440
+      TFE_SERVER1_ADDRESS: server1:4440
+      TFE_CRYPTO_PRODUCER_ADDRESS: localhost:4440
+      TFE_WEIGHT_PROVIDER_ADDRESS: provider:4440
+    entrypoint: bin/serve_api
+    depends_on:
+      - server0
+      - server1
+      - producer
+      - provider
+

@@ -49,6 +49,7 @@ endif
 endif
 
 bootstrap: pythoncheck pipcheck tensorflowcheck
+	pip install -r requirements.txt
 	pip install -e .
 
 # ###############################################

@@ -5,6 +5,7 @@ certifi==2018.8.13
 cffi==1.11.5
 colorama==0.3.7
 cryptography==2.3
+flask==1.0.2
 gast==0.2.0
 grpcio==1.14.1
 idna==2.7
@@ -17,6 +18,7 @@ protobuf==3.6.1
 pyasn1==0.4.2
 pycodestyle==2.4.0
 pycparser==2.18
+requests==2.19.1
 rsa==3.4.2
 s3transfer==0.1.13
 six==1.11.0

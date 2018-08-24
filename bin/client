@@ -1,5 +1,9 @@
-from typing import List
+#!/usr/bin/env python
 
+from typing import List, Any, Optional
+
+import time
+import threading
 import argparse
 import json
 import requests
@@ -12,17 +16,44 @@ class Client():
         self.port = port
         self.base_url = "http://%s:%d" % (self.host, self.port)
 
+    def send_inputs(self, input_data: List[Any]) -> str:
+        r = requests.post("%s/predict" % self.base_url, json=input_data)
+        output_data = json.loads(r.text)
+
+        return output_data['request_id']
+
     def send_random_inputs(self, shape: List[int]) -> str:
-        data = np.random.standard_normal(shape).tolist()
+        input_data = np.random.standard_normal(shape).tolist()
+        r = requests.post("%s/predict" % self.base_url, json=input_data)
+        output_data = json.loads(r.text)
 
-        r = requests.post("%s/predict" % self.base_url, json=data)
-        data = json.loads(r.text)
-
-        return data['request_id']
+        return output_data['request_id']
 
     def poll(self, request_id: str) -> str:
-        r = requests.post("%s/poll" % self.base_url, json=request_id)
-        return json.loads(r.text)
+        output_data = None
+
+        def polling(request_id: str)-> Optional[str]:
+            i = 0
+            while i < 60:
+                i += 1
+                # Keep polling until we have an answer
+                r = requests.post("%s/poll" % self.base_url, json=request_id)
+                output_data = r.text
+                print(output_data)
+                if output_data is not None:
+                    return output_data
+                else:
+                    time.sleep(5)
+
+            return None
+
+        thread = threading.Thread(target=polling, args=(request_id))
+        thread.start()
+        thread.join()
+        if output_data is None:
+            return None
+        else:
+            return json.loads(output_data)
 
 
 def main(config):

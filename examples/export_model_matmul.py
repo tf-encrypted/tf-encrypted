@@ -5,7 +5,9 @@ from tensorflow.python.framework import graph_io
 
 output_file = dir_path = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
-    "matmul.pb"
+    "..",
+    "models",
+    "matmul.pb",
 )
 
 input_shape = [1, 16]
