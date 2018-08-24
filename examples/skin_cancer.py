@@ -1,6 +1,5 @@
 import tensorflow as tf
 from tensorflow.python.platform import gfile
-import tensorflow.keras as K
 
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
@@ -16,14 +15,6 @@ model_filename = 'skin_cancer_tensorflow_model.pb'
 with gfile.FastGFile(model_filename, 'rb') as f:
     graph_def = tf.GraphDef()
     graph_def.ParseFromString(f.read())
-
-"""
-config = tfe.RemoteConfig({
-    'server0': '35.231.136.135:4440',
-    'server1': '35.237.47.233:4441',
-    'crypto_producer': '35.237.40.217:4442',
-})
-"""
 
 config = tfe.LocalConfig([
     'server0',
@@ -52,7 +43,8 @@ with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer'))
     prediction_op = prot.define_output(x, output)
 
     with config.session() as sess:
-        print("running!!!")
+        print("initing!!!")
         tfe.run(sess, prot.initializer, tag='init')
 
+        print("running")
         print(tfe.run(sess, prediction_op, tag='prediction'))
