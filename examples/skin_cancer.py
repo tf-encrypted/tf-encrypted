@@ -1,3 +1,4 @@
+import argparse
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 
@@ -11,8 +12,12 @@ import tensorflow_encrypted as tfe
 import os
 
 
-model_filename = 'skin_cancer_tensorflow_model.pb'
-with gfile.FastGFile(model_filename, 'rb') as f:
+parser = argparse.ArgumentParser(description='Runs the skin cancer demo with the specified model!')
+parser.add_argument('model_path', type=str, help='path to skin cancer model')
+args = parser.parse_args()
+
+model_path = args.model_path
+with gfile.FastGFile(model_path, 'rb') as f:
     graph_def = tf.GraphDef()
     graph_def.ParseFromString(f.read())
 
@@ -28,23 +33,16 @@ class PredictionInputProvider(tfe.io.InputProvider):
         return tf.constant(np.random.normal(size=(1, 200, 200, 3)), tf.float32)
 
 
-class PredictionOutputReceiver(tfe.io.OutputReceiver):
-    def receive_output(self, tensor: tf.Tensor) -> tf.Operation:
-        return tf.Print(tensor, [tensor])
-
-
 with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
     input = PredictionInputProvider(config.get_player('crypto_producer'))
-    output = PredictionOutputReceiver(config.get_player('crypto_producer'))
 
     c = convert.Converter(config, prot, config.get_player('crypto_producer'))
     x = c.convert(graph_def, input, register())
-
-    prediction_op = prot.define_output(x, output)
 
     with config.session() as sess:
         print("initing!!!")
         tfe.run(sess, prot.initializer, tag='init')
 
         print("running")
-        print(tfe.run(sess, prediction_op, tag='prediction'))
+        output = x.reveal().eval(sess, tag='prediction')
+        print(output)
