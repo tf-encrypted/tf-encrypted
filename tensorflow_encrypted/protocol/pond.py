@@ -11,22 +11,22 @@ from ..tensor.int100 import Int100Placeholder as BackingPlaceholder
 from ..tensor.int100 import stack
 from ..tensor.helpers import *
 from ..io import InputProvider, OutputReceiver
-from .protocol import Protocol
 from ..player import Player
+from .protocol import Protocol
 
-BITPRECISION_INTEGRAL = 16
+# the assumption in encoding/decoding is that encoded numbers will fit into signed int32
+BITPRECISION_INTEGRAL = 14
 BITPRECISION_FRACTIONAL = 16
 TRUNCATION_GAP = 20
+BOUND = 2**30  # bound on magnitude of encoded numbers: x in [-BOUND, +BOUND)
 
 # modulus
 M = BackingTensor.modulus
 # truncation factor for going from double to single precision
 K = 2 ** BITPRECISION_FRACTIONAL
-# bound on magnitude of (single precision) encoded numbers
-B = (2 ** BITPRECISION_INTEGRAL) * (2 ** BITPRECISION_FRACTIONAL)
 
-assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + \
-    log2(1024) + TRUNCATION_GAP
+assert log2(BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) <= log2(BOUND)
+assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
 assert gcd(K, M) == 1
 
 _nodes: Dict = dict()
@@ -150,51 +150,69 @@ class Pond(Protocol):
         _initializers.append(x.initializer)
         return x
 
-    def define_public_input(self, provider: InputProvider, apply_scaling: bool=True, name: str=None) -> 'PondPublicTensor':
+    def define_public_input(self, provider: InputProvider, apply_scaling: bool=True, name: str=None) -> 'List[PondPublicTensor]':
+
+        xs = []
 
         with tf.name_scope('public-input{}'.format('-'+name if name else '')):
 
             with tf.device(provider.player.device_name):
 
-                v = provider.provide_input()
-                assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(
-                    name if name else '', provider.player.name)
+                vs = provider.provide_input()
+                assert isinstance(vs, (list, tuple)), type(vs)
 
-                v = _encode(v, apply_scaling)
-                x_on_0 = v
-                x_on_1 = v
+                for v in vs:
+                    assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', provider.player.name)
 
-        x = PondPublicTensor(self, x_on_0, x_on_1)
-        return x
+                    v: BackingTensor = _encode(v, apply_scaling)
+                    x_on_0 = v
+                    x_on_1 = v
 
-    def define_private_input(self, provider: InputProvider, apply_scaling: bool=True, name: str=None) -> 'PondPrivateTensor':
+                    x = PondPublicTensor(self, x_on_0, x_on_1)
+                    xs.append(x)
+
+        return xs
+
+    def define_private_input(self, provider: InputProvider, apply_scaling: bool=True, name: str=None) -> 'List[PondPrivateTensor]':
+
+        xs = []
 
         with tf.name_scope('private-input{}'.format('-'+name if name else '')):
 
             with tf.device(provider.player.device_name):
 
-                v = provider.provide_input()
-                assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(
-                    name if name else '', provider.player.name)
+                vs = provider.provide_input()
+                assert isinstance(vs, (list, tuple)), type(vs)
 
-                v = _encode(v, apply_scaling)
-                x0, x1 = _share(v)
+                for v in vs:
+                    assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', provider.player.name)
 
-        x = PondPrivateTensor(self, x0, x1)
-        return x
+                    v = _encode(v, apply_scaling)
+                    x0, x1 = _share(v)
 
-    def define_output(self, x, receiver: OutputReceiver, apply_scaling=True, name=None):
-        assert isinstance(x, PondPrivateTensor), type(x)
+                    x = PondPrivateTensor(self, x0, x1)
+                    xs.append(x)
 
-        x0, x1 = x.unwrapped
+        return xs
+
+    def define_output(self, xs, receiver: OutputReceiver, apply_scaling=True, name=None):
 
         with tf.name_scope('output{}'.format('-'+name if name else '')):
 
             with tf.device(receiver.player.device_name):
 
-                v: BackingTensor = _reconstruct(x0, x1)
-                # v = _decode(v, apply_scaling) # TODO[Morten] re-enable
-                op = receiver.receive_output(v.backing[0])
+                vs = []
+
+                for x in xs:
+                    assert isinstance(x, PondPrivateTensor), type(x)
+
+                    x0, x1 = x.unwrapped
+
+                    v: BackingTensor = _reconstruct(x0, x1)
+                    v: tf.Tensor = _decode(v, apply_scaling)
+                    vs.append(v)
+
+                op = receiver.receive_output(vs)
 
                 # wrap in tf.group to prevent sending back any tensors (which might hence be leaked)
                 op = tf.group(op)
@@ -442,11 +460,11 @@ class Pond(Protocol):
 
         return x_t
 
-    # see https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on
-    # the arguments
     def strided_slice(self, x: Union['PondPublicTensor',
                                      'PondPrivateTensor',
                                      'PondMaskedTensor'], *args: Any, **kwargs: Any):
+        """ See https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on the arguments """
+
         node_key = ('strided_slice', x)
         x_t = _nodes.get(node_key, None)
 
@@ -466,9 +484,6 @@ class Pond(Protocol):
         _nodes[node_key] = x_t
 
         return x_t
-
-    # see https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on
-    # the arguments
 
     def stack(self, x: Union[List['PondPublicTensor'],
                              List['PondPrivateTensor'],
@@ -685,9 +700,7 @@ class PondPublicTensor(PondTensor):
 
     def eval(self, sess, feed_dict={}, tag=None):
         value: BackingTensor = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
-        value: np.ndarray = value.to_native()
-        value: np.ndarray = _decode(value, self.encoded)
-        return value
+        return _decode(value, self.encoded)
 
 
 class PondPrivateTensor(PondTensor):
@@ -871,51 +884,27 @@ class PondPrivateVariable(PondPrivateTensor):
 def _encode(rationals, apply_scaling) -> BackingTensor:
     """ Encode tensor of rational numbers into tensor of ring elements """
 
-    scaling_factor = 2**BITPRECISION_FRACTIONAL if apply_scaling else 1
+    scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
 
     if isinstance(rationals, np.ndarray):
-        return _encode_from_numpy(rationals, scaling_factor)
+        encoded = (rationals * scaling_factor).astype(int).astype(object)
 
-    if isinstance(rationals, tf.Tensor):
-        return _encode_from_tftensor(rationals, scaling_factor)
+    elif isinstance(rationals, tf.Tensor):
+        encoded = tf.cast(rationals * scaling_factor, tf.int32)
 
-    raise TypeError("Don't know how to encode {}".format(type(rationals)))
+    else:
+        raise TypeError("Don't know how to encode {}".format(type(rationals)))
+
+    return BackingTensor.from_native(encoded)
 
 
-def _decode(elements, apply_scaling: bool):
+def _decode(elements: BackingTensor, apply_scaling: bool):
     """ Decode tensor of ring elements into tensor of rational numbers """
 
-    scaling_factor = 2**BITPRECISION_FRACTIONAL if apply_scaling else 1
+    scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
 
-    if isinstance(elements, np.ndarray):
-        return _decode_to_numpy(elements, scaling_factor)
-
-    if isinstance(elements, tf.Tensor):
-        return _decode_to_tftensor(elements, scaling_factor)
-
-    raise TypeError("Don't know how to decode {}".format(type(elements)))
-
-
-def _encode_from_numpy(rationals: np.ndarray, scaling_factor: int) -> BackingTensor:
-    encoded = (rationals * scaling_factor).astype(int).astype(object)
-    return BackingTensor.from_native(encoded)
-
-
-def _decode_to_numpy(elements, scaling_factor: int):
-    map_negative_range = np.vectorize(lambda element: element if element <= M/2 else element - M)
-    return map_negative_range(elements).astype(float) / scaling_factor
-
-
-def _encode_from_tftensor(rationals: tf.Tensor, scaling_factor: int) -> BackingTensor:
-    encoded = tf.cast(rationals * scaling_factor, BackingTensor.int_type)
-    return BackingTensor.from_native(encoded)
-
-
-def _decode_to_tftensor(elements, scaling_factor: int):
-    raise NotImplementedError()
-    # TODO[Morten] how to decode negative numbers (since they're large)?
-    # we can use `(elements + B).to_native() - B`` but need crt_recombine to
-    # work first
+    # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
+    return ((elements + BOUND).to_int32() - BOUND) / scaling_factor
 
 
 def _share(secret) -> Tuple[BackingTensor, BackingTensor]:

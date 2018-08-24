@@ -6,7 +6,7 @@ import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any
 
 from .crt import (
-    gen_crt_decompose, gen_crt_recombine,
+    gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_im2col, gen_crt_mod,
     gen_crt_sample_uniform
 )
@@ -22,23 +22,9 @@ from typing import Any, List, Tuple
 #
 
 INT_TYPE = tf.int32
-FLOAT_TYPE = tf.float32
 
 m = [1201, 1433, 1217, 1237, 1321, 1103, 1129, 1367, 1093, 1039]
 M = prod(m)
-
-_lambdas = [
-    1008170659273389559193348505633,
-    678730110253391396805616626909,
-    3876367317978788805229799331439,
-    1733010852181147049893990590252,
-    2834912019672275627813941831946,
-    5920625781074493455025914446179,
-    4594604064921688203708053741296,
-    4709451160728821268524065874669,
-    4618812662015813880836792588041,
-    3107636732210050331963327700392
-]
 
 # make sure we have room for lazy reductions:
 # - 1 multiplication followed by 1024 additions
@@ -46,14 +32,15 @@ for mi in m:
     assert 2*log2(mi) + log2(1024) < log2(INT_TYPE.max)
 
 _crt_decompose = gen_crt_decompose(m)
-_crt_recombine = gen_crt_recombine(m, _lambdas)
+_crt_recombine_lagrange = gen_crt_recombine_lagrange(m)
+_crt_recombine_explicit = gen_crt_recombine_explicit(m, INT_TYPE)
 
 _crt_add = gen_crt_add(m)
 _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_dot = gen_crt_dot(m)
 _crt_im2col = gen_crt_im2col(m)
-_crt_mod = gen_crt_mod(m, INT_TYPE, FLOAT_TYPE)
+_crt_mod = gen_crt_mod(m, INT_TYPE)
 
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
 
@@ -74,6 +61,7 @@ class Int100Tensor(object):
 
     @staticmethod
     def from_native(value: Union[np.ndarray, tf.Tensor]) -> 'Int100Tensor':
+        # TODO[Morten] rename to `from_natural` to highlight that you can feed: int32, int64, bigint
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
         return Int100Tensor(value, None)
 
@@ -83,19 +71,21 @@ class Int100Tensor(object):
         return Int100Tensor(None, value)
 
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int100Tensor':
-        evaluated_backing: Union[List[np.ndarray], List[tf.Tensor]] = run(
-            sess, self.backing, feed_dict=feed_dict, tag=tag)
+        evaluated_backing: Union[List[np.ndarray], List[tf.Tensor]] = run(sess, self.backing, feed_dict=feed_dict, tag=tag)
         return Int100Tensor.from_decomposed(evaluated_backing)
 
-    def to_native(self) -> Union[List[np.ndarray], List[tf.Tensor]]:
-        return _crt_recombine(self.backing).astype(object)
+    def to_int32(self) -> Union[tf.Tensor, np.ndarray]:
+        return _crt_recombine_explicit(self.backing, 2**31)
+
+    def to_bigint(self) -> np.ndarray:
+        return _crt_recombine_lagrange(self.backing)
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int100Tensor':
         return _sample_uniform(shape)
 
     def __repr__(self) -> str:
-        return 'Int100Tensor({})'.format(self.to_native())
+        return 'Int100Tensor({})'.format(self.shape)
 
     @property
     def shape(self) -> List[int]:
@@ -139,7 +129,7 @@ def _lift(x):
         return x
 
     if type(x) is int:
-        return Int100Tensor.from_native(np.ndarray([x]))
+        return Int100Tensor.from_native(np.array([x]))
 
     raise TypeError("Unsupported type {}".format(type(x)))
 
@@ -245,7 +235,7 @@ class Int100Constant(Int100Tensor):
 
         assert type(int100_value) in [Int100Tensor], type(int100_value)
 
-        backing = [tf.constant(vi, dtype=Int100Tensor.int_type) for vi in int100_value.backing]
+        backing = [tf.convert_to_tensor(vi, dtype=INT_TYPE) for vi in int100_value.backing]
 
         super(Int100Constant, self).__init__(None, backing)
 
@@ -303,8 +293,7 @@ class Int100Variable(Int100Tensor):
 
         assert type(int100_initial_value) in [Int100Tensor], type(int100_initial_value)
 
-        variables = [tf.Variable(vi, dtype=Int100Tensor.int_type)
-                     for vi in int100_initial_value.backing]
+        variables = [tf.Variable(vi, dtype=Int100Tensor.int_type) for vi in int100_initial_value.backing]
         backing = [vi.read_value() for vi in variables]
 
         super(Int100Variable, self).__init__(None, backing)
