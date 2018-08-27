@@ -18,13 +18,12 @@ from ..player import Player
 BITPRECISION_INTEGRAL = 16
 BITPRECISION_FRACTIONAL = 16
 TRUNCATION_GAP = 20
+BOUND = 2**30  # bound on magnitude of encoded numbers: x in [-BOUND, +BOUND)
 
 # modulus
 M = BackingTensor.modulus
 # truncation factor for going from double to single precision
 K = 2 ** BITPRECISION_FRACTIONAL
-# bound on magnitude of (single precision) encoded numbers
-B = (2 ** BITPRECISION_INTEGRAL) * (2 ** BITPRECISION_FRACTIONAL)
 
 assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + \
     log2(1024) + TRUNCATION_GAP
@@ -194,8 +193,8 @@ class Pond(Protocol):
             with tf.device(receiver.player.device_name):
 
                 v: BackingTensor = _reconstruct(x0, x1)
-                # v = _decode(v, apply_scaling) # TODO[Morten] re-enable
-                op = receiver.receive_output(v.backing[0])
+                v: tf.Tensor = _decode(v, apply_scaling)
+                op = receiver.receive_output(v)
 
                 # wrap in tf.group to prevent sending back any tensors (which might hence be leaked)
                 op = tf.group(op)
@@ -523,6 +522,34 @@ class Pond(Protocol):
 
         return x_e
 
+    def squeeze(
+        self,
+        x: Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor'],
+        axis: List[int]
+    ):
+        node_key = ('squeeze', x)
+        x_squeezed = _nodes.get(node_key, None)
+
+        if x_squeezed is not None:
+            return x_squeezed
+
+        if isinstance(x, PondPublicTensor):
+            x_squeezed = _squeeze_public(self, x, axis)
+
+        elif isinstance(x, PondPrivateTensor):
+            x_squeezed = _squeeze_private(self, x, axis)
+
+        elif isinstance(x, PondMaskedTensor):
+            x_squeezed = _squeeze_masked(self, x, axis)
+            _nodes[('sqeeze', x.unmasked)] = x_squeezed.unmasked
+
+        else:
+            raise TypeError("Don't know how to squeeze {}".format(type(x)))
+
+        _nodes[node_key] = x_squeezed
+
+        return x_squeezed
+
     # see https://www.tensorflow.org/api_docs/python/tf/strided_slice for documentation on
     # the arguments
     def strided_slice(self, x: Union['PondPublicTensor',
@@ -795,9 +822,7 @@ class PondPublicTensor(PondTensor):
 
     def eval(self, sess, feed_dict={}, tag=None):
         value: BackingTensor = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
-        value: np.ndarray = value.to_native()
-        value: np.ndarray = _decode(value, self.encoded)
-        return value
+        return _decode(value, self.encoded)
 
 
 class PondPrivateTensor(PondTensor):
@@ -981,51 +1006,27 @@ class PondPrivateVariable(PondPrivateTensor):
 def _encode(rationals, apply_scaling) -> BackingTensor:
     """ Encode tensor of rational numbers into tensor of ring elements """
 
-    scaling_factor = 2**BITPRECISION_FRACTIONAL if apply_scaling else 1
+    scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
 
     if isinstance(rationals, np.ndarray):
-        return _encode_from_numpy(rationals, scaling_factor)
+        encoded = (rationals * scaling_factor).astype(int).astype(object)
 
-    if isinstance(rationals, tf.Tensor):
-        return _encode_from_tftensor(rationals, scaling_factor)
+    elif isinstance(rationals, tf.Tensor):
+        encoded = tf.cast(rationals * scaling_factor, tf.int32)
 
-    raise TypeError("Don't know how to encode {}".format(type(rationals)))
+    else:
+        raise TypeError("Don't know how to encode {}".format(type(rationals)))
+
+    return BackingTensor.from_native(encoded)
 
 
-def _decode(elements, apply_scaling: bool):
+def _decode(elements: BackingTensor, apply_scaling: bool):
     """ Decode tensor of ring elements into tensor of rational numbers """
 
-    scaling_factor = 2**BITPRECISION_FRACTIONAL if apply_scaling else 1
+    scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
 
-    if isinstance(elements, np.ndarray):
-        return _decode_to_numpy(elements, scaling_factor)
-
-    if isinstance(elements, tf.Tensor):
-        return _decode_to_tftensor(elements, scaling_factor)
-
-    raise TypeError("Don't know how to decode {}".format(type(elements)))
-
-
-def _encode_from_numpy(rationals: np.ndarray, scaling_factor: int) -> BackingTensor:
-    encoded = (rationals * scaling_factor).astype(int).astype(object)
-    return BackingTensor.from_native(encoded)
-
-
-def _decode_to_numpy(elements, scaling_factor: int):
-    map_negative_range = np.vectorize(lambda element: element if element <= M / 2 else element - M)
-    return map_negative_range(elements).astype(float) / scaling_factor
-
-
-def _encode_from_tftensor(rationals: tf.Tensor, scaling_factor: int) -> BackingTensor:
-    encoded = tf.cast(rationals * scaling_factor, BackingTensor.int_type)
-    return BackingTensor.from_native(encoded)
-
-
-def _decode_to_tftensor(elements, scaling_factor: int):
-    raise NotImplementedError()
-    # TODO[Morten] how to decode negative numbers (since they're large)?
-    # we can use `(elements + B).to_native() - B`` but need crt_recombine to
-    # work first
+    # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
+    return ((elements + BOUND).to_native() - BOUND) / scaling_factor
 
 
 def _share(secret: BackingTensor) -> Tuple[BackingTensor, BackingTensor]:
@@ -2265,3 +2266,68 @@ def _expand_dims_masked(prot, x_masked, axis=None):
     x_unmasked_e = prot.expand_dims(x_masked.unmasked, axis=axis)
     x_e = PondMaskedTensor(prot, x_unmasked_e, a_e, a0_e, a1_e, alpha_on_0_e, alpha_on_1_e)
     return x_e
+
+#
+# squeeze helpers
+#
+
+
+def _squeeze_public(prot, x: PondPublicTensor, axis: List[int]) -> PondPublicTensor:
+    assert isinstance(x, PondPublicTensor)
+
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope('squeeze'):
+
+        with tf.device(prot.server_0.device_name):
+            x_on_0_squeezed = x_on_0.squeeze(axis)
+
+        with tf.device(prot.server_1.device_name):
+            x_on_1_squeezed = x_on_1.squeeze(axis)
+
+    x_squeezed = PondPublicTensor(prot, x_on_0_squeezed, x_on_1_squeezed)
+    return x_squeezed
+
+
+def _squeeze_private(prot, x: PondPrivateTensor, axis: List[int]) -> PondPrivateTensor:
+    assert isinstance(x, PondPrivateTensor)
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope('squeeze'):
+
+        with tf.device(prot.server_0.device_name):
+            x0_squeezed = x0.squeeze(axis)
+
+        with tf.device(prot.server_1.device_name):
+            x1_squeezed = x1.squeeze(axis)
+
+    x_squeezed = PondPrivateTensor(prot, x0_squeezed, x1_squeezed)
+    return x_squeezed
+
+
+def _squeeze_masked(prot, x_masked: PondMaskedTensor, axis: List[int]) -> PondMaskedTensor:
+    assert isinstance(x_masked, PondMaskedTensor)
+
+    a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
+
+    with tf.name_scope('squeeze'):
+
+        with tf.device(prot.crypto_producer.device_name):
+            a_squeezed = a.squeeze(axis)
+
+        with tf.device(prot.server_0.device_name):
+            a0_squeezed = a0.squeeze(axis)
+            alpha_on_0_squeezed = alpha_on_0.squeeze(axis)
+
+        with tf.device(prot.server_1.device_name):
+            a1_squeezed = a1.squeeze(axis)
+            alpha_on_1_squeezed = alpha_on_1.squeeze(axis)
+
+    x_unmasked_squeezed = prot.squeeze(x_masked.unmasked)
+    x_squeezed = PondMaskedTensor(
+        prot, x_unmasked_squeezed, a_squeezed,
+        a0_squeezed, a1_squeezed,
+        alpha_on_0_squeezed, alpha_on_1_squeezed)
+
+    return x_squeezed

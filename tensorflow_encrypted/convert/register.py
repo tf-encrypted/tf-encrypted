@@ -23,10 +23,12 @@ def register() -> Dict[str, Any]:
         'Sub': sub,
         'Transpose': transpose,
         'Reshape': reshape,
+        'Pack': pack,
         'Rsqrt': rsqrt,
         'Mul': mul,
         'ExpandDims': expand_dims,
-        'AvgPool': avgpool
+        'AvgPool': avgpool,
+        'Squeeze': squeeze
         # 'Pack': pack,
         # 'BiasAdd': bias_add,
         # 'MaxPool': maxpool,
@@ -142,12 +144,13 @@ def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
                                             shrink_axis_mask=shrink_axis_mask)
 
 
-def pack(node: Any, inputs: List[str], output_lookup: Dict[str, Any]) -> Any:
-    raise NotImplementedError()
-    input1 = output_lookup[inputs[0]]
-    input2 = output_lookup[inputs[1]]
+def pack(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    final_inputs = []
 
-    return prot.stack([input1, input2], axis=node.attr["axis"].i)
+    for input in inputs:
+        final_inputs.append(converter.outputs[input])
+
+    return converter.protocol.stack(final_inputs, axis=node.attr["axis"].i)
 
 
 def bias_add(converter: Converter, node: Any, inputs: List[str]) -> Any:
@@ -216,6 +219,13 @@ def expand_dims(converter: Converter, node: Any, inputs: List[str]) -> Any:
     axis_val = node.attr["axis"].i
 
     return converter.protocol.expand_dims(input, axis_val)
+
+
+def squeeze(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+    axis = node.attr["squeeze_dims"].list.i
+
+    return converter.protocol.squeeze(input, list(axis))
 
 
 def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
