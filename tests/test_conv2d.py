@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
+
 class TestConv2D(unittest.TestCase):
 
     def test_forward(self):
@@ -45,12 +46,12 @@ class TestConv2D(unittest.TestCase):
         with tf.Session() as sess:
             # conv input
             x = tf.Variable(input_conv, dtype=tf.float32)
-            x_NHWC = tf.transpose(x, (0, 2, 3, 1))
+            x_nhwc = tf.transpose(x, (0, 2, 3, 1))
 
             # convolution Tensorflow
             filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
-            conv_out_tf = tf.nn.conv2d(x_NHWC, filters_tf, strides=[1, strides, strides, 1],
+            conv_out_tf = tf.nn.conv2d(x_nhwc, filters_tf, strides=[1, strides, strides, 1],
                                        padding="SAME")
 
             sess.run(tf.global_variables_initializer())
@@ -59,7 +60,45 @@ class TestConv2D(unittest.TestCase):
         np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=3)
 
     def test_backward(self):
-        pass
+
+        batch_size, channels_in, channels_out = 32, 3, 64
+        img_height, img_width = 28, 28
+        input_shape = (batch_size, channels_in, img_height, img_width)
+        input_conv = np.random.normal(size=input_shape).astype(np.float32)
+
+        # filters
+        h_filter, w_filter, strides, padding = 2, 2, 2, 0
+        filter_shape = (h_filter, w_filter, channels_in, channels_out)
+        filter_values = np.random.normal(size=filter_shape)
+
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer'
+        ])
+
+        # convolution pond
+
+        # convolution tensorflow
+        with tf.Session() as sess:
+            x = tf.Variable(input_conv, dtype=tf.float32)
+            x_nhwc = tf.transpose(x, (0, 2, 3, 1))
+            filters_tf = tf.Variable(filter_values, dtype=tf.float32)
+
+            # forward
+            conv_out = tf.nn.conv2d(x_nhwc, filters_tf, strides=[1, strides, strides, 1],
+                                       padding="SAME")
+
+            # multiply conv output with some matrix
+            s = tuple(map(int, conv_out.shape))
+            w = tf.Variable(np.arange(np.prod(s), dtype=np.float32).reshape(s))
+            loss = conv_out * w
+            
+            # backward
+            d_x, d_filters = tf.gradients(xs=[x, filters_tf], ys=loss)
+
+            sess.run(tf.global_variables_initializer())
+            d_x_tensorflow, d_filters_tensorflow = sess.run([d_x, d_filters])
 
 
 if __name__ == '__main__':
