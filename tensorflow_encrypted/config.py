@@ -32,7 +32,7 @@ class LocalConfig(Config):
             name: Player(
                 name=name,
                 index=index,
-                device_name='/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'.format(
+                device_name='/job:{job_name}/task:0/device:CPU:{cpu_id}'.format(
                     job_name=job_name,
                     cpu_id=index
                 )
@@ -76,8 +76,8 @@ class RemoteConfig(Config):
 
     def __init__(self,
                  player_hostmap: Union[List[Tuple[str, str]], Dict[str, str]],
-                 master_host: Optional[str] = 'localhost:4444',
-                 job_name: str = 'tfe') -> None:
+                 master_host: Optional[str] = '0.0.0.0:4440',
+                 job_name: str = 'worker') -> None:
 
         self._job_name = job_name
 
@@ -94,7 +94,7 @@ class RemoteConfig(Config):
             name: Player(
                 name=name,
                 index=index,
-                device_name='/job:{job_name}/replica:0/task:{task_id}/cpu:0'.format(
+                device_name='/job:{job_name}/task:{task_id}/cpu:0'.format(
                     job_name=job_name,
                     task_id=index
                 ),
@@ -119,11 +119,14 @@ class RemoteConfig(Config):
     def server(self, name: str) -> tf.train.Server:
         player = self.get_player(name)
         cluster = tf.train.ClusterSpec({self._job_name: self._hostmap})
-        return tf.train.Server(
+        server = tf.train.Server(
             cluster,
             job_name=self._job_name,
             task_index=player.index
         )
+        self._target = server.target
+        print("Hi I'm node %s listening on %s with device_name %s" % (name, server.target, player.device_name))
+        return server
 
     def session(self, log_device_placement: bool = False) -> tf.Session:
         config = tf.ConfigProto(
@@ -168,6 +171,12 @@ def run(
         writer = tf.summary.FileWriter(run_tag, sess.graph)
         run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
         run_metadata = tf.RunMetadata()
+
+        # tf_debug.watch_graph(
+        #     run_options,
+        #     sess.graph,
+        #     debug_urls=["file:///shared/storage/location/tfdbg_dumps_1"]
+        # )
 
         results = sess.run(
             fetches,

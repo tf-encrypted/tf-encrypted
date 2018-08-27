@@ -8,6 +8,7 @@ from typing import Dict, Any
 
 import argparse
 import tensorflow as tf
+from tensorflow.python import debug as tf_debug
 from tensorflow.python.platform import gfile
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -41,15 +42,15 @@ if provider_address is None:
     sys.exit(1)
 
 remote_config = tfe.RemoteConfig({
-    'server0': server0_address,
-    'server1': server1_address,
-    'crypto_producer': producer_address,
-    'weights_provider': provider_address
-})
+        'server0': server0_address,
+        'server1': server1_address,
+        'crypto_producer': producer_address,
+        'weights_provider': provider_address
+    },
+    master_host='master:4440'
+)
 
-print("Hi I'm node %s" % node_name)
 server = remote_config.server(node_name)
-
 if node_name != 'master':
     server.join()
 else:
@@ -86,6 +87,7 @@ else:
         graph_def.ParseFromString(f.read())
 
     sess = remote_config.session()
+    # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
     with tfe.protocol.Pond(*remote_config.get_players('server0, server1, crypto_producer')) as prot:
         # The machine which feeds input must be the flask server for now
         x = PredictionInputProvider(remote_config.get_player('master'))
@@ -165,4 +167,4 @@ else:
         See logs for full stacktrace.
         """.format(e), 500
 
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host='0.0.0.0', debug=True, use_reloader=False)

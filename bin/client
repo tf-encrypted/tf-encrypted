@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
-from typing import List, Any, Optional
+from typing import List, Any
 
 import time
-import threading
 import argparse
 import json
 import requests
@@ -30,30 +29,20 @@ class Client():
         return output_data['request_id']
 
     def poll(self, request_id: str) -> str:
-        output_data = None
-
-        def polling(request_id: str)-> Optional[str]:
-            i = 0
-            while i < 60:
-                i += 1
-                # Keep polling until we have an answer
-                r = requests.post("%s/poll" % self.base_url, json=request_id)
-                output_data = r.text
-                print(output_data)
-                if output_data is not None:
-                    return output_data
-                else:
-                    time.sleep(5)
+        print('Polling result')
+        i = 0
+        while i < 240:
+            i += 1
+            # Keep polling until we have an answer
+            r = requests.post("%s/poll" % self.base_url, json=request_id)
+            output_data = r.text
+            print(output_data)
+            if output_data is not None:
+                return json.loads(output_data)
+            else:
+                time.sleep(1)
 
             return None
-
-        thread = threading.Thread(target=polling, args=(request_id))
-        thread.start()
-        thread.join()
-        if output_data is None:
-            return None
-        else:
-            return json.loads(output_data)
 
 
 def main(config):
