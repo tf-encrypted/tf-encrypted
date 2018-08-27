@@ -6,7 +6,7 @@ import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any
 
 from .crt import (
-    gen_crt_decompose, gen_crt_recombine,
+    gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_im2col, gen_crt_mod,
     gen_crt_sample_uniform, gen_crt_sum
 )
@@ -27,26 +27,14 @@ FLOAT_TYPE = tf.float32
 m = [1201, 1433, 1217, 1237, 1321, 1103, 1129, 1367, 1093, 1039]
 M = prod(m)
 
-_lambdas = [
-    1008170659273389559193348505633,
-    678730110253391396805616626909,
-    3876367317978788805229799331439,
-    1733010852181147049893990590252,
-    2834912019672275627813941831946,
-    5920625781074493455025914446179,
-    4594604064921688203708053741296,
-    4709451160728821268524065874669,
-    4618812662015813880836792588041,
-    3107636732210050331963327700392
-]
-
 # make sure we have room for lazy reductions:
 # - 1 multiplication followed by 1024 additions
 for mi in m:
     assert 2 * log2(mi) + log2(1024) < log2(INT_TYPE.max)
 
 _crt_decompose = gen_crt_decompose(m)
-_crt_recombine = gen_crt_recombine(m, _lambdas)
+_crt_recombine_lagrange = gen_crt_recombine_lagrange(m)
+_crt_recombine_explicit = gen_crt_recombine_explicit(m, INT_TYPE)
 
 _crt_add = gen_crt_add(m)
 _crt_sum = gen_crt_sum(m)
@@ -92,8 +80,11 @@ class Int100Tensor(object):
             sess, self.backing, feed_dict=feed_dict, tag=tag)
         return Int100Tensor.from_decomposed(evaluated_backing)
 
-    def to_native(self) -> Union[List[np.ndarray], List[tf.Tensor]]:
-        return _crt_recombine(self.backing).astype(object)
+    def to_native(self) -> Union[np.ndarray, tf.Tensor]:
+        return _crt_recombine_explicit(self.backing, 2**31)
+
+    def to_bigint(self) -> np.ndarray:
+        return _crt_recombine_lagrange(self.backing)
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int100Tensor':
@@ -153,7 +144,7 @@ def _lift(x):
         return x
 
     if type(x) is int:
-        return Int100Tensor.from_native(np.ndarray([x]))
+        return Int100Tensor.from_native(np.array([x]))
 
     raise TypeError("Unsupported type {}".format(type(x)))
 

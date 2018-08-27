@@ -20,7 +20,7 @@ config = tfe.LocalConfig([
 
 with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
 
-    w = prot.define_private_variable(np.zeros((100, 100)))
+    w = prot.define_private_variable(np.zeros((10, 10)))
     # x = prot.define_private_variable(np.zeros((1,100)))
 
     y = w

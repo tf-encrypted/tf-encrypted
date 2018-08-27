@@ -38,4 +38,4 @@ with tf.Session() as sess:
     print('Assignment')
     w = c - p
     sess.run(v.assign_from_int100(w), feed_dict=p.feed_from_native(np.array([5, 5, 5])))
-    print(v.eval(sess).to_native() - Int100Tensor.modulus)
+    print(v.eval(sess).to_bigint() - Int100Tensor.modulus)
