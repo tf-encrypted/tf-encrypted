@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
@@ -8,6 +9,12 @@ output_file = dir_path = os.path.join(
     "..",
     "models",
     "matmul.pb",
+)
+input_data_file = dir_path = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    "..",
+    "models",
+    "matmul_input_example.npy",
 )
 
 input_shape = [1, 16]
@@ -36,3 +43,6 @@ frozen = graph_util.remove_training_nodes(constant_graph)
 
 graph_io.write_graph(frozen, ".", output_file, as_text=False)
 print('saved the frozen graph (ready for inference) at: ', output_file)
+
+data = np.random.standard_normal(input_shape)
+np.save(input_data_file, data)

@@ -47,11 +47,6 @@ jobs:
           command: |
             . venv/bin/activate
             make test
-      - run:
-          name: run linting
-          command: |
-            . venv/bin/activate
-            make lint
   deploy:
     docker:
       - image: circleci/python:3.6.4

@@ -36,7 +36,6 @@ class Client():
             # Keep polling until we have an answer
             r = requests.post("%s/poll" % self.base_url, json=request_id)
             output_data = r.text
-            print(output_data)
             if output_data is not None:
                 return json.loads(output_data)
             else:
@@ -56,6 +55,10 @@ def main(config):
 
         output = c.poll(request_id)
         print(output)
+    elif config.input_file != '':
+        input_data = np.load(config.input_file)
+        request_id = c.send_inputs(input_data.tolist())
+        print(request_id)
     else:
         shape = list(map(lambda x: int(x), config.shape.split(',')))
         request_id = c.send_random_inputs(shape)
@@ -73,7 +76,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--request_id', type=str, help='id used to poll an output')
     parser.add_argument(
-        '--shape', type=str, default="1", help='shape as a string array: 1,2,3')
+        '--input_file', type=str, default="", help='load the data from a numpy file format (.npy)')
+    parser.add_argument(
+        '--shape', type=str, default="1", help='Generate a random input of the given shape, must be as comma separated numbers: 1,2,3')
     args = parser.parse_args()
 
     main(args)

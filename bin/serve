@@ -54,14 +54,16 @@ server = remote_config.server(node_name)
 if node_name != 'master':
     server.join()
 else:
-    print('Starting the API endpoint')
-
     _global_memory: Dict[str, Any] = {}
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--model_name", type=str, default="matmul", help="increase output verbosity")
+    parser.add_argument(
+        "--debug", type=bool, default=False, help="Turn on debug mode")
     config = parser.parse_args()
+
+    tfe.setDebugMode(config.debug)
 
     print('Loading model: %s' % config.model_name)
     model_file = os.path.join(
@@ -71,39 +73,31 @@ else:
         "%s.pb" % config.model_name,
     )
 
-    print('Setting the input pipeline')
     tf.reset_default_graph()
 
     class PredictionInputProvider(tfe.io.InputProvider):
         def provide_input(self) -> tf.Tensor:
             return tf.placeholder(tf.float32, shape=[1, 16], name="api")
 
-    class PredictionOutputReceiver(tfe.io.OutputReceiver):
-        def receive_output(self, tensor: tf.Tensor) -> tf.Tensor:
-            return tf.Print(tensor, [tensor], message="tf.Print(output): ")
-
     with gfile.FastGFile(model_file, 'rb') as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
 
     sess = remote_config.session()
-    # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+
     with tfe.protocol.Pond(*remote_config.get_players('server0, server1, crypto_producer')) as prot:
-        # The machine which feeds input must be the flask server for now
         x = PredictionInputProvider(remote_config.get_player('master'))
 
         print('Securing computation')
-        c = tfe.convert.convert.Converter(config, prot, remote_config.get_player('weights_provider'))
+        c = tfe.convert.convert.Converter(remote_config, prot, remote_config.get_player('weights_provider'))
         y = c.convert(graph_def, x, tfe.convert.register())
 
+        # TODO: do not reveal on the master server
         y = y.reveal()
-        # Not sure how to use this scheme for now
-        # output = PredictionOutputReceiver(remote_config.get_player('master'))
-        # prediction_op = prot.define_output(x, output)
-        print('Initializing weights')
         tfe.run(sess, prot.initializer, tag='init')
 
     pl = tf.get_default_graph().get_tensor_by_name("private-input/api:0")
+
     def predict(request_id: str, input_data: Any) -> None:
         output_data = y.eval(
             sess=sess,
@@ -125,7 +119,6 @@ else:
         app.logger.info("api_predict_input: " + str(input_data))
 
         request_id = str(uuid.uuid4())
-
         thread = Thread(target=predict, kwargs={
             'request_id': request_id,
             'input_data': input_data
@@ -133,9 +126,9 @@ else:
         thread.start()
 
         app.logger.info("api_predict_output: " + request_id)
+
         data = {'request_id': request_id}
-        response = jsonify(data)
-        return response
+        return jsonify(data)
 
     @app.route('/poll', methods=['POST'])
     def api_poll():
@@ -167,4 +160,4 @@ else:
         See logs for full stacktrace.
         """.format(e), 500
 
-    app.run(host='0.0.0.0', debug=True, use_reloader=False)
+    app.run(host='0.0.0.0', debug=config.debug, use_reloader=False)

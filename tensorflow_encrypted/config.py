@@ -2,11 +2,15 @@ from typing import Dict, List, Optional, Any, Union, Tuple
 from collections import defaultdict
 
 import tensorflow as tf
+from tensorflow.python import debug as tf_debug
 import numpy as np
 from tensorflow.python.client import timeline
 from abc import ABC, abstractmethod
 
 from .player import Player
+
+
+__TFE_DEBUG__ = False
 
 
 class Config(ABC):
@@ -54,9 +58,10 @@ class LocalConfig(Config):
         return [player for name, player in self._players.items() if name in names]
 
     def session(self, log_device_placement: bool = False) -> tf.Session:
+        global __TFE_DEBUG__
         # reserve one CPU for the player executing the script, to avoid
         # default pinning of operations to one of the actual players
-        return tf.Session(
+        sess = tf.Session(
             '',
             None,
             config=tf.ConfigProto(
@@ -67,6 +72,11 @@ class LocalConfig(Config):
                 intra_op_parallelism_threads=1
             )
         )
+        if __TFE_DEBUG__:
+            print('session in debug mode')
+            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+
+        return sess
 
 
 class RemoteConfig(Config):
@@ -129,15 +139,21 @@ class RemoteConfig(Config):
         return server
 
     def session(self, log_device_placement: bool = False) -> tf.Session:
+        global __TFE_DEBUG__
+
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
             allow_soft_placement=False,
         )
         print('Starting session on target: %s' % self._target, config)
-        return tf.Session(
+        sess = tf.Session(
             self._target,
             config=config
         )
+        if __TFE_DEBUG__:
+            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+
+        return sess
 
 
 TENSORBOARD_DIR = '/tmp/tensorboard'
@@ -145,6 +161,14 @@ IGNORE_STATS = False
 DEBUG = True
 
 _run_counter: Any = defaultdict(int)
+
+
+def setDebugMode(debug=True):
+    global __TFE_DEBUG__
+    if debug is True:
+        print("Tensorflow encrypted is running in DEBUG mode")
+
+    __TFE_DEBUG__ = debug
 
 
 def run(
@@ -164,19 +188,12 @@ def run(
     else:
 
         session_tag = '{}{}'.format(tag, _run_counter[tag])
-        # run_tag = TENSORBOARD_DIR + ('/' + tag if tag is not None else '')
         run_tag = TENSORBOARD_DIR + ('/' + session_tag)
         _run_counter[tag] += 1
 
         writer = tf.summary.FileWriter(run_tag, sess.graph)
         run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
         run_metadata = tf.RunMetadata()
-
-        # tf_debug.watch_graph(
-        #     run_options,
-        #     sess.graph,
-        #     debug_urls=["file:///shared/storage/location/tfdbg_dumps_1"]
-        # )
 
         results = sess.run(
             fetches,
