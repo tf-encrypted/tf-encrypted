@@ -15,6 +15,7 @@ from ..config import run
 from typing import Any, List, Tuple
 
 
+#
 # 32 bit CRT
 # - we need this to do dot product as int32 is the only supported type for that
 # - tried tf.float64 but didn't work out of the box
@@ -241,7 +242,7 @@ class Int100Constant(Int100Tensor):
 
     @staticmethod
     def from_native(value: np.ndarray) -> 'Int100Constant':
-        assert type(value) in [np.ndarray], type(value)
+        assert type(value) in [np.ndarray, tf.Tensor], type(value)
         return Int100Constant(value, None)
 
     @staticmethod
@@ -293,7 +294,7 @@ class Int100Variable(Int100Tensor):
 
         assert type(int100_initial_value) in [Int100Tensor], type(int100_initial_value)
 
-        variables = [tf.Variable(vi, dtype=Int100Tensor.int_type) for vi in int100_initial_value.backing]
+        variables = [tf.Variable(vi, dtype=Int100Tensor.int_type, trainable=False) for vi in int100_initial_value.backing]
         backing = [vi.read_value() for vi in variables]
 
         super(Int100Variable, self).__init__(None, backing)
@@ -302,7 +303,7 @@ class Int100Variable(Int100Tensor):
 
     @staticmethod
     def from_native(initial_value):
-        assert type(initial_value) in [np.ndarray], type(initial_value)
+        assert type(initial_value) in [np.ndarray, tf.Tensor], type(initial_value)
         return Int100Variable(initial_value, None)
 
     @staticmethod

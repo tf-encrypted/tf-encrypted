@@ -156,89 +156,8 @@ def scale(x, k, apply_encoding=None):
 
     return y
 
-def local_mask(x):
-    assert isinstance(x, Tensor), type(x)
-
-    with tf.name_scope('local_mask'):
-        x0, x1 = share(x.unwrapped)
-        a = sample(x.shape)
-        a0, a1 = share(a)
-        alpha = crt_sub(x.unwrapped, a)
-
-    return MaskedPrivateTensor(PrivateTensor(x0, x1), a, a0, a1, alpha, alpha)
-
 global_cache_updators = []
 
-def cache(x, initializers=None, updators=None):
-
-    if updators is None:
-        updators = global_cache_updators
-
-    # TODO[Morten] use `initializers`
-
-    node_key = ('cache', x)
-    cached = _nodes.get(node_key, None)
-
-    if cached is None:
-
-        if isinstance(x, PrivateTensor):
-
-            x0, x1 = x.unwrapped
-
-            with tf.name_scope('cache'):
-
-                with tf.device(get_protocol().server_0.device_name):
-                    cached_x0 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(x0, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_x0, x0) ])
-
-                with tf.device(get_protocol().server_1.device_name):
-                    cached_x1 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(x1, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_x1, x1) ])
-
-            # TODO[Morten] wrap PrivateTensor around var.read_value() instead to ensure updated values?
-            cached = PrivateTensor(cached_x0, cached_x1)
-            _nodes[node_key] = cached
-
-        elif isinstance(x, MaskedPrivateTensor):
-
-            a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
-            cached_x = cache(x.unmasked, initializers, updators)
-
-            with tf.name_scope('cache'):
-
-                with tf.device(get_protocol().crypto_producer.device_name):
-                    cached_a = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_a, a) ])
-
-                with tf.device(get_protocol().server_0.device_name):
-                    cached_a0 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a0, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_a0, a0) ])
-
-                    cached_alpha_on_0 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(alpha_on_0, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_alpha_on_0, alpha_on_0) ])
-
-                with tf.device(get_protocol().server_1.device_name):
-                    cached_a1 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(a1, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_a1, a1) ])
-
-                    cached_alpha_on_1 = [ tf.Variable(tf.random_uniform(shape=vi.shape, maxval=mi, dtype=INT_TYPE), dtype=INT_TYPE) for vi, mi in zip(alpha_on_1, m) ]
-                    updators.append([ tf.assign(var, val) for var, val in zip(cached_alpha_on_1, alpha_on_1) ])
-
-            # TODO[Morten] wrap MaskedPrivateTensor around var.read_value() instead to ensure updated values?
-            cached = MaskedPrivateTensor(
-                cached_x,
-                cached_a,
-                cached_a0,
-                cached_a1,
-                cached_alpha_on_0,
-                cached_alpha_on_1
-            )
-            _nodes[node_key] = cached
-
-        else:
-            raise AssertionError("'x' not of supported type")
-
-    return cached
 
 def encode_input(vars_and_values):
     if not isinstance(vars_and_values, list):
