@@ -47,7 +47,6 @@ jobs:
           command: |
             . venv/bin/activate
             make test
-
   deploy:
     docker:
       - image: circleci/python:3.6.4

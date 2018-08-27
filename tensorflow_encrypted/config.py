@@ -1,12 +1,16 @@
-from typing import Dict, List, Optional, Any, Union, Tuple, NamedTuple
+from typing import Dict, List, Optional, Any, Union, Tuple
 from collections import defaultdict
 
 import tensorflow as tf
+from tensorflow.python import debug as tf_debug
 import numpy as np
 from tensorflow.python.client import timeline
 from abc import ABC, abstractmethod
 
 from .player import Player
+
+
+__TFE_DEBUG__ = False
 
 
 class Config(ABC):
@@ -27,14 +31,14 @@ class LocalConfig(Config):
     """
 
     def __init__(self, player_names: List[str], job_name: str = 'localhost') -> None:
+        player_names = ['master'] + player_names
         self._players = {
             name: Player(
                 name=name,
-                index=index + 1,
-                device_name='/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'.format(
+                index=index,
+                device_name='/job:{job_name}/task:0/device:CPU:{cpu_id}'.format(
                     job_name=job_name,
-                    # shift by one to allow for master to be `CPU:0`
-                    cpu_id=index + 1
+                    cpu_id=index
                 )
             )
             for index, name in enumerate(player_names)
@@ -42,7 +46,7 @@ class LocalConfig(Config):
 
     @property
     def players(self) -> List[Player]:
-        return self._players.values()
+        return list(self._players.values())
 
     def get_player(self, name: str) -> Player:
         return self._players[name]
@@ -54,9 +58,10 @@ class LocalConfig(Config):
         return [player for name, player in self._players.items() if name in names]
 
     def session(self, log_device_placement: bool = False) -> tf.Session:
+        global __TFE_DEBUG__
         # reserve one CPU for the player executing the script, to avoid
         # default pinning of operations to one of the actual players
-        return tf.Session(
+        sess = tf.Session(
             '',
             None,
             config=tf.ConfigProto(
@@ -67,6 +72,11 @@ class LocalConfig(Config):
                 intra_op_parallelism_threads=1
             )
         )
+        if __TFE_DEBUG__:
+            print('session in debug mode')
+            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+
+        return sess
 
 
 class RemoteConfig(Config):
@@ -76,8 +86,8 @@ class RemoteConfig(Config):
 
     def __init__(self,
                  player_hostmap: Union[List[Tuple[str, str]], Dict[str, str]],
-                 master_host: Optional[str] = None,
-                 job_name: str = 'tfe') -> None:
+                 master_host: Optional[str] = '0.0.0.0:4440',
+                 job_name: str = 'worker') -> None:
 
         self._job_name = job_name
 
@@ -86,34 +96,26 @@ class RemoteConfig(Config):
             player_hostmap = list(sorted(player_hostmap.items()))
 
         player_names, player_hosts = zip(*player_hostmap)
-
-        if master_host is None:
-            # use first player as master so don't add any
-            self._offset = 0
-            self._hostmap = player_hosts
-            self._target = 'grpc://{}'.format(player_hosts[0])
-        else:
-            # add explicit master to cluster as first host
-            self._offset = 1
-            self._hostmap = (master_host,) + player_hosts
-            self._target = 'grpc://{}'.format(master_host)
+        player_names = ('master',) + player_names
+        self._hostmap = (master_host,) + player_hosts
+        self._target = 'grpc://{}'.format(master_host)
 
         self._players = {
             name: Player(
                 name=name,
-                index=index + self._offset,
-                device_name='/job:{job_name}/replica:0/task:{task_id}/cpu:0'.format(
+                index=index,
+                device_name='/job:{job_name}/task:{task_id}/cpu:0'.format(
                     job_name=job_name,
-                    task_id=index + self._offset
+                    task_id=index
                 ),
                 host=host
             )
-            for index, (name, host) in enumerate(zip(player_names, player_hosts))
+            for index, (name, host) in enumerate(zip(player_names, self._hostmap))
         }
 
     @property
     def players(self) -> List[Player]:
-        return self._players.values()
+        return list(self._players.values())
 
     def get_player(self, name: str) -> Player:
         return self._players[name]
@@ -127,21 +129,31 @@ class RemoteConfig(Config):
     def server(self, name: str) -> tf.train.Server:
         player = self.get_player(name)
         cluster = tf.train.ClusterSpec({self._job_name: self._hostmap})
-        return tf.train.Server(
+        server = tf.train.Server(
             cluster,
             job_name=self._job_name,
             task_index=player.index
         )
+        self._target = server.target
+        print("Hi I'm node %s listening on %s with device_name %s" % (name, server.target, player.device_name))
+        return server
 
     def session(self, log_device_placement: bool = False) -> tf.Session:
+        global __TFE_DEBUG__
+
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
             allow_soft_placement=False,
         )
-        return tf.Session(
+        print('Starting session on target: %s' % self._target, config)
+        sess = tf.Session(
             self._target,
             config=config
         )
+        if __TFE_DEBUG__:
+            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+
+        return sess
 
 
 TENSORBOARD_DIR = '/tmp/tensorboard'
@@ -149,6 +161,14 @@ IGNORE_STATS = False
 DEBUG = True
 
 _run_counter: Any = defaultdict(int)
+
+
+def setDebugMode(debug=True):
+    global __TFE_DEBUG__
+    if debug is True:
+        print("Tensorflow encrypted is running in DEBUG mode")
+
+    __TFE_DEBUG__ = debug
 
 
 def run(
@@ -168,7 +188,6 @@ def run(
     else:
 
         session_tag = '{}{}'.format(tag, _run_counter[tag])
-        # run_tag = TENSORBOARD_DIR + ('/' + tag if tag is not None else '')
         run_tag = TENSORBOARD_DIR + ('/' + session_tag)
         _run_counter[tag] += 1
 

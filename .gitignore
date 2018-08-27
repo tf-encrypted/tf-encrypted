@@ -7,4 +7,5 @@
 
 build/
 dist/
+examples/api/*.pb
 *.egg-info
