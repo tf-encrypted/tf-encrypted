@@ -199,9 +199,10 @@ class Pond(Protocol):
                     x = PondPrivateTensor(self, x0, x1)
 
                     if masked:
-                        a = BackingTensor.sample_uniform(v.shape)
-                        a0, a1 = _share(a)
-                        alpha = v - a
+                        with tf.name_scope('local_mask'):
+                            a = BackingTensor.sample_uniform(v.shape)
+                            a0, a1 = _share(a)
+                            alpha = v - a
                         x = PondMaskedTensor(self, x, a, a0, a1, alpha, alpha)
 
                     xs.append(x)
@@ -1000,27 +1001,31 @@ class PondCachedMaskedTensor(PondMaskedTensor):
 def _encode(rationals, apply_scaling) -> BackingTensor:
     """ Encode tensor of rational numbers into tensor of ring elements """
 
-    scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
+    with tf.name_scope('encode'):
 
-    if isinstance(rationals, np.ndarray):
-        encoded = (rationals * scaling_factor).astype(int).astype(object)
+        scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
 
-    elif isinstance(rationals, tf.Tensor):
-        encoded = tf.cast(rationals * scaling_factor, tf.int32)
+        if isinstance(rationals, np.ndarray):
+            encoded = (rationals * scaling_factor).astype(int).astype(object)
 
-    else:
-        raise TypeError("Don't know how to encode {}".format(type(rationals)))
+        elif isinstance(rationals, tf.Tensor):
+            encoded = tf.cast(rationals * scaling_factor, tf.int32)
 
-    return BackingTensor.from_native(encoded)
+        else:
+            raise TypeError("Don't know how to encode {}".format(type(rationals)))
+
+        return BackingTensor.from_native(encoded)
 
 
 def _decode(elements: BackingTensor, apply_scaling: bool):
     """ Decode tensor of ring elements into tensor of rational numbers """
 
-    scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
+    with tf.name_scope('decode'):
 
-    # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
-    return ((elements + BOUND).to_int32() - BOUND) / scaling_factor
+        scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
+
+        # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
+        return ((elements + BOUND).to_int32() - BOUND) / scaling_factor
 
 
 def _share(secret) -> Tuple[BackingTensor, BackingTensor]:

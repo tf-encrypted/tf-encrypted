@@ -130,17 +130,19 @@ else:
         def provide_input(self) -> List[tf.Tensor]:
             with tf.name_scope('loading'):
                 prediction_input, expected_result = self.build_data_pipeline().get_next()
-
-            with tf.name_scope('preprocessing'):
-                prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 28*28))
                 prediction_input = tf.Print(prediction_input, [expected_result], summarize=10, message="EXPECT ")
+
+            with tf.name_scope('pre-processing'):
+                prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 28*28))
 
             return [prediction_input]
 
         def receive_output(self, tensors: List[tf.Tensor]) -> tf.Operation:
-            likelihoods = tensors[0]
-            prediction = tf.argmax(likelihoods, axis=1)
-            return tf.Print([], [prediction], summarize=10, message="ACTUAL ")
+            likelihoods, = tensors
+            with tf.name_scope('post-processing'):
+                prediction = tf.argmax(likelihoods, axis=1)
+                op = tf.Print([], [prediction], summarize=self.BATCH_SIZE, message="ACTUAL ")
+                return op
 
 
     model_trainer = ModelTrainer(config.get_player('model_trainer'))
@@ -155,7 +157,7 @@ else:
         # get model parameters as private tensors from model owner
         w0, b0, w1, b1 = prot.define_private_input(model_trainer, masked=True) # pylint: disable=E0632
 
-        # since we'll the parameters several times we cache them
+        # we'll use the same parameters for each prediction so we cache them to avoid re-training each time
         w0, b0, w1, b1 = prot.cache([w0, b0, w1, b1])
 
         # get prediction input from client
