@@ -1082,9 +1082,9 @@ def _cache_public(prot, x):
         with tf.device(prot.server_1.device_name):
             [x_on_1_cached], updator1 = _cache_wrap_helper([x_on_1])
 
-    updator = tf.group(updator0, updator1)
-    _global_cache_updators.append(updator)
+        updator = tf.group(updator0, updator1)
 
+    _global_cache_updators.append(updator)
     return PondCachedPublicTensor(
         prot,
         x_on_0_cached,
@@ -1106,9 +1106,9 @@ def _cache_private(prot, x):
         with tf.device(prot.server_1.device_name):
             [x1_cached], updator1 = _cache_wrap_helper([x1])
 
-    updator = tf.group(updator0, updator1)
-    _global_cache_updators.append(updator)
+        updator = tf.group(updator0, updator1)
 
+    _global_cache_updators.append(updator)
     return PondCachedPrivateTensor(
         prot,
         x0_cached,
@@ -1134,10 +1134,10 @@ def _cache_masked(prot, x):
         with tf.device(prot.server_1.device_name):
             [a1_cached, alpha_on_1_cached], updator1 = _cache_wrap_helper([a1, alpha_on_1])
 
-    updator = tf.group(updator_cp, updator0, updator1)
-    _global_cache_updators.append(updator)
+        updator = tf.group(updator_cp, updator0, updator1)
+        unmasked_cached = prot.cache(unmasked)
 
-    unmasked_cached = prot.cache(unmasked)
+    _global_cache_updators.append(updator)
     return PondCachedMaskedTensor(
         prot,
         unmasked_cached,

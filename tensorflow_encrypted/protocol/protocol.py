@@ -30,4 +30,5 @@ def get_protocol() -> Optional[Protocol]:
 
 
 def global_caches_updator():
-    return tf.group(*_global_cache_updators)
+    with tf.name_scope('cache_update'):
+        return tf.group(*_global_cache_updators)

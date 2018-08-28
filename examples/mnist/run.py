@@ -48,7 +48,7 @@ else:
 
         BATCH_SIZE = 30
         ITERATIONS = 60000//BATCH_SIZE
-        EPOCHS = 5
+        EPOCHS = 1
 
         def build_data_pipeline(self):
 
@@ -61,6 +61,7 @@ else:
             dataset = dataset.map(normalize)
             dataset = dataset.repeat()
             dataset = dataset.batch(self.BATCH_SIZE)
+
             iterator = dataset.make_one_shot_iterator()
             return iterator
 
@@ -99,10 +100,13 @@ else:
                 return [w0.read_value(), b0.read_value(), w1.read_value(), b1.read_value()]
 
         def provide_input(self) -> List[tf.Tensor]:
-            with tf.name_scope('training'):
+            with tf.name_scope('loading'):
                 training_data = self.build_data_pipeline()
+
+            with tf.name_scope('training'):
                 parameters = self.build_training_graph(training_data)
-                return parameters
+
+            return parameters
 
 
     class PredictionClient(tfe.io.InputProvider, tfe.io.OutputReceiver):
@@ -119,13 +123,19 @@ else:
             dataset = dataset.map(decode)
             dataset = dataset.map(normalize)
             dataset = dataset.batch(self.BATCH_SIZE)
-            return dataset
+
+            iterator = dataset.make_one_shot_iterator()
+            return iterator
 
         def provide_input(self) -> List[tf.Tensor]:
+            with tf.name_scope('loading'):
+                prediction_input, expected_result = self.build_data_pipeline().get_next()
+
             with tf.name_scope('preprocessing'):
-                prediction_input, expected_result = self.build_data_pipeline().make_one_shot_iterator().get_next()
                 prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 28*28))
-                return [tf.Print(prediction_input, [expected_result], summarize=10, message="EXPECT ")]
+                prediction_input = tf.Print(prediction_input, [expected_result], summarize=10, message="EXPECT ")
+
+            return [prediction_input]
 
         def receive_output(self, tensors: List[tf.Tensor]) -> tf.Operation:
             likelihoods = tensors[0]
