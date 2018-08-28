@@ -9,7 +9,7 @@ def import_meta_graph(path: str) -> Any:
 
 
 class Server:
-    def __init__(self, clusterSpec: ClusterSpec,
+    def __init__(self, clusterSpec: 'ClusterSpec',
                  job_name: str, task_index: int) -> None: ...
 
 
@@ -28,7 +28,7 @@ class Saver:
              sess: Any,
              save_path: str,
              global_step: Any = None,
-             latest_filename: Optional[str]=None,
+             latest_filename: Optional[str] = None,
              meta_graph_suffix: str = "meta",
              write_meta_graph: bool = True,
              write_state: bool = True,

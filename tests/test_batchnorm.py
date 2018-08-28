@@ -5,9 +5,7 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 
 from tensorflow_encrypted.layers import Batchnorm
-
-from typing import Any, Optional, Tuple, Union
-
+from tensorflow_encrypted.protocol import Pond
 
 class TestBatchnorm(unittest.TestCase):
     def test_forward(self) -> None:
@@ -32,19 +30,14 @@ class TestBatchnorm(unittest.TestCase):
         ])
 
         with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
-
             batchnorm_input = prot.define_private_variable(input_batchnorm)
 
             batchnorm_layer = Batchnorm(mean, variance, scale, offset)
-
             batchnorm_layer.initialize(input_shape=input_shape)
-
             batchnorm_out_pond = batchnorm_layer.forward(batchnorm_input)
 
             with config.session() as sess:
-
                 sess.run(tf.global_variables_initializer())
-
                 out_pond = batchnorm_out_pond.reveal().eval(sess)
 
             # reset graph
