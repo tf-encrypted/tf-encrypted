@@ -19,7 +19,7 @@ node_name = os.environ.get('TFE_NODE_NAME')
 server0_address = os.environ.get('TFE_SERVER0_ADDRESS')
 server1_address = os.environ.get('TFE_SERVER1_ADDRESS')
 producer_address = os.environ.get('TFE_CRYPTO_PRODUCER_ADDRESS')
-provider_address = os.environ.get('TFE_WEIGHT_PROVIDER_ADDRESS')
+provider_address = os.environ.get('TFE_WEIGHTS_PROVIDER_ADDRESS')
 
 if node_name is None:
     print("The node_name of this node must be provided via the 'TFE_NODE_NAME' environment variable")
@@ -38,7 +38,7 @@ if producer_address is None:
     sys.exit(1)
 
 if provider_address is None:
-    print("The address for the weight provider must be provided via the 'TFE_WEIGHT_PROVIDER_ADDRESS' environment variable")
+    print("The address for the weights provider must be provided via the 'TFE_WEIGHTS_PROVIDER_ADDRESS' environment variable")
     sys.exit(1)
 
 remote_config = tfe.RemoteConfig({
