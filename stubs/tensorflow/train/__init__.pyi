@@ -10,11 +10,17 @@ def import_meta_graph(path: str) -> Any:
 
 class Server:
     def __init__(self, clusterSpec: 'ClusterSpec',
-                 job_name: str, task_index: int) -> None: ...
+                 job_name: str, task_index: int) -> None:
+        ...
+
+    @property
+    def target(self)-> str:
+        ...
 
 
 class ClusterSpec:
-    def __init__(self, cluster: Dict[str, List[str]]) -> None: ...
+    def __init__(self, cluster: Dict[str, List[str]]) -> None:
+        ...
 
 
 class Saver:
@@ -33,4 +39,5 @@ class Saver:
              write_meta_graph: bool = True,
              write_state: bool = True,
              strip_default_attrs: bool = False
-             ) -> Optional[str]: ...
+             ) -> Optional[str]:
+        ...

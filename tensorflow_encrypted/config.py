@@ -210,7 +210,6 @@ def run(
 
         return results
     else:
-        print('Not monitoring stats')
         return sess.run(
             fetches,
             feed_dict=feed_dict
