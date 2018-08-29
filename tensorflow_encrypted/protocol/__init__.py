@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from .pond import Pond
 # from .securenn import SecureNN
 
-from .protocol import Protocol
+from .protocol import Protocol, global_caches_updator
 from ..player import Player
 
 __all__ = [
