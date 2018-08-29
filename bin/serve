@@ -41,6 +41,10 @@ if provider_address is None:
     print("The address for the weights provider must be provided via the 'TFE_WEIGHTS_PROVIDER_ADDRESS' environment variable")
     sys.exit(1)
 
+tfe.setMonitorStatsFlag(bool(os.environ.get('TFE_MONITOR_STATS')))
+tfe.setTFEDebugFlag(bool(os.environ.get('TFE_DEBUG')))
+
+
 remote_config = tfe.RemoteConfig({
         'server0': server0_address,
         'server1': server1_address,
@@ -58,12 +62,8 @@ else:
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--model_name", type=str, default="matmul", help="increase output verbosity")
-    parser.add_argument(
-        "--debug", type=bool, default=False, help="Turn on debug mode")
+        "--model_name", type=str, default="2lfc", help="increase output verbosity")
     config = parser.parse_args()
-
-    tfe.setDebugMode(config.debug)
 
     print('Loading model: %s' % config.model_name)
     model_file = os.path.join(
@@ -134,7 +134,6 @@ else:
     def api_poll():
         request_id = request.json
         app.logger.info("api_poll_input: " + str(request_id))
-        print(_global_memory)
 
         output_data = _global_memory.pop(request_id, None)
 
@@ -160,4 +159,4 @@ else:
         See logs for full stacktrace.
         """.format(e), 500
 
-    app.run(host='0.0.0.0', debug=config.debug, use_reloader=False)
+    app.run(host='0.0.0.0', debug=True, use_reloader=False)
