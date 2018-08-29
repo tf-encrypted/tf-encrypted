@@ -20,6 +20,7 @@ server0_address = os.environ.get('TFE_SERVER0_ADDRESS')
 server1_address = os.environ.get('TFE_SERVER1_ADDRESS')
 producer_address = os.environ.get('TFE_CRYPTO_PRODUCER_ADDRESS')
 provider_address = os.environ.get('TFE_WEIGHTS_PROVIDER_ADDRESS')
+port = os.environ.get('TFE_API_PORT')
 
 if node_name is None:
     print("The node_name of this node must be provided via the 'TFE_NODE_NAME' environment variable")
@@ -40,6 +41,9 @@ if producer_address is None:
 if provider_address is None:
     print("The address for the weights provider must be provided via the 'TFE_WEIGHTS_PROVIDER_ADDRESS' environment variable")
     sys.exit(1)
+
+if port is None:
+    port = 8080
 
 tfe.setMonitorStatsFlag(bool(os.environ.get('TFE_MONITOR_STATS')))
 tfe.setTFEDebugFlag(bool(os.environ.get('TFE_DEBUG')))
@@ -159,4 +163,4 @@ else:
         See logs for full stacktrace.
         """.format(e), 500
 
-    app.run(host='0.0.0.0', debug=True, use_reloader=False)
+    app.run(host='0.0.0.0', debug=True, use_reloader=False, port=port)
