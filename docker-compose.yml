@@ -56,9 +56,12 @@ services:
       TFE_SERVER1_ADDRESS: server1:4440
       TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
       TFE_WEIGHT_PROVIDER_ADDRESS: provider:4440
+      TFE_MONITOR_STATS: null
+      TFE_DEBUG: null
     depends_on:
       - server0
       - server1
       - producer
       - provider
-
+    # volumes:
+    #   - /tmp/tensorboard:/tmp/tensorboard

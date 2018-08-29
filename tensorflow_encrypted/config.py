@@ -158,18 +158,25 @@ class RemoteConfig(Config):
 
 
 TENSORBOARD_DIR = '/tmp/tensorboard'
-IGNORE_STATS = False
-DEBUG = True
+__MONITOR_STATS__ = False
 
 _run_counter: Any = defaultdict(int)
 
 
-def setDebugMode(debug=True):
+def setTFEDebugFlag(debug=True):
     global __TFE_DEBUG__
     if debug is True:
         print("Tensorflow encrypted is running in DEBUG mode")
 
     __TFE_DEBUG__ = debug
+
+
+def setMonitorStatsFlag(monitor_stats=False):
+    global __MONITOR_STATS__
+    if monitor_stats is True:
+        print("Tensorflow encrypted is monitoring statistics for each session.run() call using a tag")
+
+    __MONITOR_STATS__ = monitor_stats
 
 
 def run(
@@ -178,16 +185,7 @@ def run(
     feed_dict: Dict[str, np.ndarray] = {},
     tag: Optional[str] = None
 ) -> Any:
-
-    if not DEBUG and (tag is None or IGNORE_STATS):
-
-        return sess.run(
-            fetches,
-            feed_dict=feed_dict
-        )
-
-    else:
-
+    if __MONITOR_STATS__ and tag is not None:
         session_tag = "{}{}".format(tag, _run_counter[tag])
         run_tag = os.path.join(TENSORBOARD_DIR, session_tag)
         _run_counter[tag] += 1
@@ -211,3 +209,9 @@ def run(
             f.write(chrome_trace)
 
         return results
+    else:
+        print('Not monitoring stats')
+        return sess.run(
+            fetches,
+            feed_dict=feed_dict
+        )
