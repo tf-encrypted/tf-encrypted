@@ -2,25 +2,32 @@
 
 This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) and is structured into roughly three levels:
 
-- basic operations for computing on encrypted tensors
-- basic machine learning components using these
-- ready-to-use models for private machine learning
+- secure operations for computing on encrypted tensors
+- typical machine learning operations built on top of these
+- ready-to-use components for private prediction and training
 
 with the aim of making it easy for researchers and practitioners to experiment in a familiar framework and without being an expert in both machine learning and cryptography.
 
+Several individuals and companies have put resources into the development of the library, including people from the [OpenMined](https://www.openmined.org/) community and [Dropout Labs](TODO) (see below for details).
+
+
 ## Usage
 
-`tf-encrypted` can be imported next to TensorFlow, giving access to extra operations for constructing regular TensorFlow graphs that operate on encrypted data. Since secure computation protocols by nature involve more than one party, each protocol instance takes a list of hostnames as input (three for the `Pond` protocol) and then exposes methods for creating private variables etc. along the lines of traditional TensorFlow programs. Simple wrappers around `tf.Session` can finally be used to execute these.
+`tf-encrypted` can be imported next to TensorFlow, giving access to tools for constructing regular TensorFlow graphs operating on encrypted data. As such, secure computations mix easily with other operations on unencrypted data.
+
+Since secure computation protocols by nature involve more than one player, each protocol instance takes a list of hostnames as input, three in the case of the `Pond` protocol. Each protocol then exposes methods for creating and processing private values along the lines of traditional TensorFlow programs.
 
 ```python
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-servers = [
-    tfe.protocol.Player('10.0.0.1'),
-    tfe.protocol.Player('10.0.0.2'),
-    tfe.protocol.Player('10.0.0.3')
-]
+config = tfe.RemoteConfig({
+    'server0': '10.0.0.1:4440',
+    'server1': '10.0.0.2:4440',
+    'crypto_producer': '10.0.0.3:4440'
+})
+
+servers = config.get_players('server0, server1, crypto_producer')
 
 with tfe.protocol.Pond(*servers) as prot:
 
