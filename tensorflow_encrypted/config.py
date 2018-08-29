@@ -1,3 +1,4 @@
+import os
 from typing import Dict, List, Optional, Any, Union, Tuple
 from collections import defaultdict
 
@@ -36,7 +37,7 @@ class LocalConfig(Config):
             name: Player(
                 name=name,
                 index=index,
-                device_name='/job:{job_name}/task:0/device:CPU:{cpu_id}'.format(
+                device_name='/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'.format(
                     job_name=job_name,
                     cpu_id=index
                 )
@@ -104,7 +105,7 @@ class RemoteConfig(Config):
             name: Player(
                 name=name,
                 index=index,
-                device_name='/job:{job_name}/task:{task_id}/cpu:0'.format(
+                device_name='/job:{job_name}/replica:0/task:{task_id}/cpu:0'.format(
                     job_name=job_name,
                     task_id=index
                 ),
@@ -187,8 +188,8 @@ def run(
 
     else:
 
-        session_tag = '{}{}'.format(tag, _run_counter[tag])
-        run_tag = TENSORBOARD_DIR + ('/' + session_tag)
+        session_tag = "{}{}".format(tag, _run_counter[tag])
+        run_tag = os.path.join(TENSORBOARD_DIR, session_tag)
         _run_counter[tag] += 1
 
         writer = tf.summary.FileWriter(run_tag, sess.graph)
@@ -202,7 +203,9 @@ def run(
             run_metadata=run_metadata
         )
 
-        writer.add_run_metadata(run_metadata, session_tag)
+        writer.add_run_metadata(run_metadata, 'step0')
+        writer.close()
+
         chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
         with open('{}/{}.ctr'.format(TENSORBOARD_DIR, session_tag), 'w') as f:
             f.write(chrome_trace)
