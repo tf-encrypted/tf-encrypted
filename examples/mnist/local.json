@@ -1,0 +1,10 @@
+{
+    "type": "local",
+    "player_names": [
+        "server0",
+        "server1",
+        "crypto_producer",
+        "model_trainer",
+        "prediction_client"
+    ]
+}

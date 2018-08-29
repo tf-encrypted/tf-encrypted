@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional, Any, Union, Tuple, NamedTuple
 from collections import defaultdict
 
+import json
 import tensorflow as tf
 import numpy as np
 from tensorflow.python.client import timeline
@@ -23,6 +24,7 @@ class LocalConfig(Config):
     """
 
     def __init__(self, player_names:List[str], job_name:str='localhost') -> None:
+        self._job_name = job_name
         self._players = {
             name: Player(
                 name=name,
@@ -35,6 +37,24 @@ class LocalConfig(Config):
             )
             for index, name in enumerate(player_names)
         }
+
+    @staticmethod
+    def from_dict(params) -> Optional['LocalConfig']:
+        if not params.get('type', None) == 'local':
+            return None
+
+        return LocalConfig(
+            player_names=params['player_names'], 
+            job_name=params['job_name']
+        )
+
+    def to_dict(self) -> Dict:
+        params = {
+            'type': 'local',
+            'job_name': self._job_name,
+            'player_names': [p.name for p in sorted(self._players.values(), keyfunc=lambda p: p.index)]
+        }
+        return params
 
     @property
     def players(self) -> List[Player]:
@@ -85,11 +105,13 @@ class RemoteConfig(Config):
 
         if master_host is None:
             # use first player as master so don't add any
+            self._master_host = master_host
             self._offset = 0
             self._hostmap = player_hosts
             self._target = 'grpc://{}'.format(player_hosts[0])
         else:
             # add explicit master to cluster as first host
+            self._master_host = master_host
             self._offset = 1
             self._hostmap = (master_host,) + player_hosts
             self._target = 'grpc://{}'.format(master_host)
@@ -106,6 +128,29 @@ class RemoteConfig(Config):
             )
             for index, (name, host) in enumerate(zip(player_names, player_hosts))
         }
+
+    @staticmethod
+    def from_dict(params) -> Optional['RemoteConfig']:
+        if not params.get('type', None) == 'remote':
+            return None
+
+        return RemoteConfig(
+            player_hostmap=params['player_hostmap'],
+            job_name=params['job_name'],
+            master_host=params.get('master_host', None)
+        )
+
+    def to_dict(self) -> Dict:
+        params = {
+            'type': 'remote',
+            'job_name': self._job_name,
+            'player_hostmap': [(p.name, p.host) for p in sorted(self._players.values(), keyfunc=lambda p: p.index)]
+        }
+
+        if self._master_host is not None:
+            params['master_host'] = self._master_host
+
+        return params
 
     @property
     def players(self) -> List[Player]:
@@ -138,6 +183,18 @@ class RemoteConfig(Config):
             self._target,
             config=config
         )
+
+
+def load(filename) -> Optional[Config]:
+    with open(filename, 'r') as f:
+        params = json.load(f)
+
+    for config_cls in [LocalConfig, RemoteConfig]:
+        config = config_cls.from_dict(params)
+        if config is not None:
+            return config
+
+    return None
 
 
 TENSORBOARD_DIR = '/tmp/tensorboard'
