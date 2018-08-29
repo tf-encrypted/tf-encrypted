@@ -188,7 +188,7 @@ def run(
 
     else:
 
-        session_tag = "%s%s" % (tag, _run_counter[tag])
+        session_tag = "{}{}".format(tag, _run_counter[tag])
         run_tag = os.path.join(TENSORBOARD_DIR, session_tag)
         _run_counter[tag] += 1
 
