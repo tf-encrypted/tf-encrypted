@@ -10,5 +10,5 @@ setup(
         'tf_gpu': ["tensorflow-gpu>=1.0.0"],
     },
     license = '',
-    long_description = open('README.md').read(),
+    long_description = '',
 )

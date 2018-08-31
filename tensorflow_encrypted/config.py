@@ -144,7 +144,7 @@ class RemoteConfig(Config):
         params = {
             'type': 'remote',
             'job_name': self._job_name,
-            'player_hostmap': [(p.name, p.host) for p in sorted(self._players.values(), keyfunc=lambda p: p.index)]
+            'player_hostmap': [(p.name, p.host) for p in sorted(self._players.values(), key=lambda p: p.index)]
         }
 
         if self._master_host is not None:
@@ -195,6 +195,11 @@ def load(filename) -> Optional[Config]:
             return config
 
     return None
+
+
+def save(config, filename) -> None:
+    with open(filename, 'w') as f:
+        json.dump(config.to_dict(), f)
 
 
 TENSORBOARD_DIR = '/tmp/tensorboard'
