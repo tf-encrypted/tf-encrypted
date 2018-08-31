@@ -64,17 +64,7 @@ test: lint pythoncheck
 	python -m unittest discover
 
 lint: pythoncheck
-	pycodestyle
-	pyflakes bin
-	pyflakes tests
-	pyflakes examples
-	pyflakes tensorflow_encrypted/layers
-	pyflakes tensorflow_encrypted/convert
-	pyflakes tensorflow_encrypted/protocol/
-	pyflakes tensorflow_encrypted/tensor
-	pyflakes tensorflow_encrypted/config.py
-	pyflakes tensorflow_encrypted/io.py
-	pyflakes tensorflow_encrypted/player.py 
+	flake8
 
 .PHONY: lint test
 
