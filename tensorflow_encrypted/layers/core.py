@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from abc import ABC, abstractmethod
 from ..protocol.protocol import get_protocol, Protocol
-from ..protocol.types import TFEVariable
+from ..protocol.pond import TFEVariable
 
 # TODO
 # Split backward function in compute_gradient and compute_backpropagated_error?

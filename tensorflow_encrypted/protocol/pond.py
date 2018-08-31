@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from typing import Tuple, Dict, List, Union, Optional, Any
+from typing import Tuple, Dict, List, Union, Optional, Any, NewType
 
 import math
 import numpy as np
@@ -20,6 +20,11 @@ from ..tensor.helpers import (
 from ..io import InputProvider, OutputReceiver
 from .protocol import Protocol
 from ..player import Player
+
+TFEData = Union[np.ndarray, tf.Tensor]
+TFEVariable = Union['PondPublicVariable', 'PondPrivateVariable', tf.Variable]
+TFEPublicTensor = NewType('TFEPublicTensor', 'PondPublicTensor')
+TFETensor = Union[TFEPublicTensor, 'PondPrivateTensor']
 
 BITPRECISION_INTEGRAL = 16
 BITPRECISION_FRACTIONAL = 16
@@ -2357,6 +2362,3 @@ def _squeeze_masked(prot, x_masked: PondMaskedTensor, axis: List[int]) -> PondMa
         alpha_on_0_squeezed, alpha_on_1_squeezed)
 
     return x_squeezed
-
-
-from .types import TFEData, TFETensor  # noqa
