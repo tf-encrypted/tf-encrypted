@@ -75,13 +75,15 @@ which will launch a TensorFlow server on all of them.
 
 With the above in place we can finally run the example using
 ```shell
-gcloud compute ssh master --command='rm -rf /tmp/tensorboard; python3 tf-encrypted/examples/mnist/run.py config.json'
+gcloud compute ssh master --command='rm -rf /tmp/tensorboard'
+gcloud compute ssh master --command='python3 tf-encrypted/examples/mnist/run.py config.json'
 ```
 that will (optionally) first clear any TensorBoard logs on the master that was previously recorded.
 
 Once completely, the logs may optionally be pulled down from the master
 ```shell
-rm -rf /tmp/tensorboard; gcloud compute scp --recurse master:/tmp/tensorboard /tmp/tensorboard
+rm -rf /tmp/tensorboard
+gcloud compute scp --recurse master:/tmp/tensorboard /tmp/tensorboard
 ```
 and explored by launching TensorBoard
 ```shell
