@@ -53,23 +53,25 @@ or alternatively, if they have already been created but are current terminated, 
 ./tools/gcp/start master server0 server1 crypto-producer model-trainer prediction-client
 ```
 
-Either way, the next step is to link them together by creating and distributing a new configuration file
-```shell
-./tools/gcp/link master server0 server1 crypto-producer model-trainer prediction-client
-```
-which will put an updated `config.json` file in the home directory on each instance.
-
-### 
-
-Next, we need to download and convert the MNIST dataset on both model trainer and the prediction client
+We also need to download and convert the MNIST dataset on both the model trainer and the prediction client
 ```shell
 gcloud compute ssh model-trainer --command='python3 tf-encrypted/examples/mnist/download.py'
 gcloud compute ssh prediction-client --command='python3 tf-encrypted/examples/mnist/download.py'
 ```
-and launch a TensorFlow server on all instances
+
+### Launching servers
+
+Once the instances are ready the next step is to link them together by creating and distributing a new configuration file
+```shell
+./tools/gcp/link master server0 server1 crypto-producer model-trainer prediction-client
+```
+which will put an updated `config.json` file in the home directory on each instance, following by
 ```shell
 ./tools/gcp/serve master server0 server1 crypto-producer model-trainer prediction-client
 ```
+which will launch a TensorFlow server on all of them.
+
+### Running
 
 Finally, with the above in place we can the example using
 ```shell
