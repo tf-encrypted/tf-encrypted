@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union, List
+from typing import Any, Dict, Optional, Union, List, Callable
 
 from . import nn
 from . import errors
@@ -23,6 +23,10 @@ GraphElement = Union[
 
 
 class dtype:
+    ...
+
+
+class string(str):
     ...
 
 
@@ -96,19 +100,29 @@ class dtypes:
 
 
 class Operation:
-    pass
+    ...
 
 
 class Tensor:
-    pass
+    @property
+    def shape(self) -> 'TensorShape':
+        ...
 
 
 class SparseTensor:
-    pass
+    ...
+
+
+class TensorShape:
+    def __init__(self, dims: Optional[List[Any]] = None) -> None:
+        ...
+
+    def is_fully_defined(self) -> bool:
+        ...
 
 
 class ClusterSpec:
-    pass
+    ...
 
 
 class gpu_options:
@@ -123,15 +137,21 @@ class ConfigProto:
                  device_count: Optional[Dict[str, int]] = None,
                  inter_op_parallelism_threads: Optional[int] = 0,
                  intra_op_parallelism_threads: Optional[int] = 0) -> None:
-        pass
+        ...
 
 
 class Graph:
-    pass
+    def get_tensor_by_name(self, name: str) -> Tensor:
+        ...
+
+
+class GraphDef:
+    def ParseFromString(self, str) -> None:
+        ...
 
 
 class RNNCell:
-    pass
+    ...
 
 
 class BaseSession:
@@ -206,6 +226,25 @@ class RunOptions:
 class RunMetadata:
     def __init__(self) -> None:
         self.step_stats: Any
+
+
+class FIFOQueue:
+    def __init__(
+        self,
+        capacity: int,
+        dtypes: List[Any],
+        shapes: Optional[List[Any]] = None,
+        names: Optional[List[str]] = None,
+        shared_name: Optional[str] = None,
+        name: Optional[str] = 'fifo_queue'
+    ) -> None:
+        ...
+
+    def enqueue(self, vals: Any, name: Optional[str] = None) -> Operation:
+        ...
+
+    def dequeue(self, name: Optional[str] = None) -> Any:
+        ...
 
 
 # Original function definition for edit_distance here:
@@ -350,4 +389,31 @@ def reshape(
     shape: Union[Tensor, List[int]],
     name: Optional[str] = None
 ) -> Tensor:
+    ...
+
+
+def control_dependencies(control_inputs: List[Union[Operation, Tensor]]) -> Any:
+    ...
+
+
+def get_default_graph() -> Graph:
+    ...
+
+
+def while_loop(
+    cond: Callable,
+    body: Callable,
+    loop_vars: Any,
+    shape_invariants: Optional[Any] = None,
+    parallel_iterations: int = 10,
+    back_prop: bool = True,
+    swap_memory: bool = False,
+    name: Optional[str] = None,
+    maximum_iterations: Optional[int] = None,
+    return_same_structure: bool = False
+) -> Any:
+    ...
+
+
+def identity(input: Tensor, name: Optional[str] = None) -> Tensor:
     ...

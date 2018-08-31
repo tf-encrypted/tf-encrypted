@@ -17,6 +17,9 @@ class Server:
     def target(self)-> str:
         ...
 
+    def join(self)-> None:
+        ...
+
 
 class ClusterSpec:
     def __init__(self, cluster: Dict[str, List[str]]) -> None:

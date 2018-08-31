@@ -4,14 +4,13 @@ import sys
 import os
 import uuid
 from threading import Thread
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 
 import argparse
 import tensorflow as tf
-from tensorflow.python import debug as tf_debug
 from tensorflow.python.platform import gfile
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask import Flask, request, jsonify  # type: ignore
+from flask_cors import CORS  # type: ignore
 
 import tensorflow_encrypted as tfe
 
@@ -34,7 +33,9 @@ if server1_address is None:
     print("The address for server 1 must be provided via the 'TFE_SERVER1_ADDRESS' environment variable")
     sys.exit(1)
 
+
 if producer_address is None:
+
     print("The address for the producer must be provided via the 'TFE_CRYPTO_PRODUCER_ADRESS' environment variable")
     sys.exit(1)
 
@@ -49,7 +50,8 @@ tfe.setMonitorStatsFlag(bool(os.environ.get('TFE_MONITOR_STATS')))
 tfe.setTFEDebugFlag(bool(os.environ.get('TFE_DEBUG')))
 
 
-remote_config = tfe.RemoteConfig({
+remote_config = tfe.RemoteConfig(
+    {
         'server0': server0_address,
         'server1': server1_address,
         'crypto_producer': producer_address,
@@ -98,7 +100,8 @@ else:
 
         # TODO: do not reveal on the master server
         y = y.reveal()
-        tfe.run(sess, prot.initializer, tag='init')
+        if isinstance(prot, tfe.protocol.Pond):
+            tfe.run(sess, prot.initializer, tag='init')
 
     pl = tf.get_default_graph().get_tensor_by_name("private-input/api:0")
 
@@ -117,8 +120,8 @@ else:
     app = Flask(__name__)
     CORS(app)  # needed for cross-domain requests, allow everything by default
 
-    @app.route('/predict', methods=['POST'])
-    def api_predict():
+    @app.route('/predict', methods=['POST'])  # type: ignore
+    def api_predict() -> str:
         input_data = request.json
         app.logger.info("api_predict_input: " + str(input_data))
 
@@ -134,8 +137,8 @@ else:
         data = {'request_id': request_id}
         return jsonify(data)
 
-    @app.route('/poll', methods=['POST'])
-    def api_poll():
+    @app.route('/poll', methods=['POST'])  # type: ignore
+    def api_poll() -> str:
         request_id = request.json
         app.logger.info("api_poll_input: " + str(request_id))
 
@@ -145,19 +148,19 @@ else:
         response = jsonify(output_data)
         return response
 
-    @app.route('/')
-    def index():
+    @app.route('/')  # type: ignore
+    def index() -> str:
         return "Welcome to PartyDB! An crypto-friendly production environment for serving machine learning models"
 
     # HTTP Errors handlers
-    @app.errorhandler(404)
-    def url_error(e):
+    @app.errorhandler(404)  # type: ignore
+    def url_error(e: str) -> Tuple[str, int]:
         return """
         Wrong URL!
         <pre>{}</pre>""".format(e), 404
 
-    @app.errorhandler(500)
-    def server_error(e):
+    @app.errorhandler(500)  # type: ignore
+    def server_error(e: str) -> Tuple[str, int]:
         return """
         An internal error occurred: <pre>{}</pre>
         See logs for full stacktrace.
