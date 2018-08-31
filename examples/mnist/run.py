@@ -87,6 +87,7 @@ class ModelTrainer(tfe.io.InputProvider):
 
         return parameters
 
+
 class PredictionClient(tfe.io.InputProvider, tfe.io.OutputReceiver):
 
     BATCH_SIZE = 20
@@ -121,6 +122,7 @@ class PredictionClient(tfe.io.InputProvider, tfe.io.OutputReceiver):
             prediction = tf.argmax(likelihoods, axis=1)
             op = tf.Print([], [prediction], summarize=self.BATCH_SIZE, message="ACTUAL ")
             return op
+
 
 model_trainer = ModelTrainer(config.get_player('model-trainer'))
 prediction_client = PredictionClient(config.get_player('prediction-client'))
