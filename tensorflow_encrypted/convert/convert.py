@@ -2,10 +2,7 @@ from typing import Dict, Tuple, List, Any, Union
 import tensorflow as tf
 from collections import Iterable
 
-from ..layers import Layer
-from ..protocol.pond import PondPrivateTensor
 from ..io import InputProvider
-from ..protocol.protocol import get_protocol
 from ..player import Player
 from ..protocol.pond import Pond
 from ..config import Config
@@ -35,7 +32,7 @@ class Converter():
         self.weights_provider = weights_provider
 
     def convert(self, graph_def: Any, input: Union[List[InputProvider], InputProvider],
-                register: Dict[str, Any]) -> Dict[str, Any]:
+                register: Dict[str, Any]) -> Any:
         name_to_input_name, name_to_node = extract_graph_summary(graph_def)
 
         if isinstance(input, InputProvider):
@@ -47,7 +44,6 @@ class Converter():
 
         iter = enumerate(i)
 
-        next_input = 0
         for output, inputs in name_to_input_name.items():
             node = name_to_node[output]
 

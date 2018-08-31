@@ -1,4 +1,4 @@
-from typing import Optional, Any, Type
+from typing import Optional, Type
 from types import TracebackType
 
 

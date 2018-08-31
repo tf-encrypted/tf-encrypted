@@ -65,6 +65,12 @@ test: lint pythoncheck
 
 lint: pythoncheck
 	pycodestyle
+	pyflakes bin
+	pyflakes tests
+	pyflakes examples
+	pyflakes tensorflow_encrypted/layers
+	pyflakes tensorflow_encrypted/convert
+	pyflakes tensorflow_encrypted/tensor
 
 .PHONY: lint test
 

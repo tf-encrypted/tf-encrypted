@@ -2,7 +2,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-from tensorflow_encrypted.protocol import Pond
 from tensorflow_encrypted.layers import Conv2D
 
 config = tfe.LocalConfig([

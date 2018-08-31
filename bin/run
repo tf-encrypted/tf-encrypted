@@ -4,14 +4,10 @@ import argparse
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 
-from tensorflow.python.framework import graph_util
-from tensorflow.python.framework import graph_io
 from tensorflow_encrypted.convert import convert
 from tensorflow_encrypted.convert.register import register
 import numpy as np
 import tensorflow_encrypted as tfe
-
-import os
 
 
 parser = argparse.ArgumentParser(description='Runs the specified model with the specified input')

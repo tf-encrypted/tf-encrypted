@@ -1,4 +1,3 @@
-import numpy as np
 from ..protocol import Pond
 from ..protocol.pond import _nodes, _lift, _type
 

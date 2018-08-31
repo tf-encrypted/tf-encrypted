@@ -163,7 +163,7 @@ __MONITOR_STATS__ = False
 _run_counter: Any = defaultdict(int)
 
 
-def setTFEDebugFlag(debug=True):
+def setTFEDebugFlag(debug: bool = True) -> None:
     global __TFE_DEBUG__
     if debug is True:
         print("Tensorflow encrypted is running in DEBUG mode")
@@ -171,7 +171,7 @@ def setTFEDebugFlag(debug=True):
     __TFE_DEBUG__ = debug
 
 
-def setMonitorStatsFlag(monitor_stats=False):
+def setMonitorStatsFlag(monitor_stats: bool = False) -> None:
     global __MONITOR_STATS__
     if monitor_stats is True:
         print("Tensorflow encrypted is monitoring statistics for each session.run() call using a tag")

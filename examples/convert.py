@@ -9,8 +9,6 @@ from tensorflow_encrypted.convert.register import register
 import numpy as np
 import tensorflow_encrypted as tfe
 
-import os
-
 
 def export_cnn():
     input = tf.placeholder(tf.float32, shape=(1, 1, 28, 28))
@@ -22,7 +20,7 @@ def export_cnn():
     sess = K.backend.get_session()
 
     pred_node_names = ["output"]
-    pred = [tf.identity(x, name=pred_node_names[0])]
+    tf.identity(x, name=pred_node_names[0])
 
     constant_graph = graph_util.convert_variables_to_constants(sess,
                                                                sess.graph.as_graph_def(),
