@@ -1,5 +1,16 @@
-from .pond import PondPublicVariable, PondPrivateVariable
-from tensorflow import Variable as tfVariable
-from typing import Union, NewType
+from typing import Union
 
-TFEVariable = Union[PondPublicVariable, PondPrivateVariable, tfVariable]
+import tensorflow as tf
+import numpy as np
+
+from .pond import (
+    PondPublicVariable,
+    PondPrivateVariable,
+    PondPublicTensor,
+    PondPrivateTensor
+)
+
+TFEData = Union[np.ndarray, tf.Tensor]
+TFEVariable = Union[PondPublicVariable, PondPrivateVariable, tf.Variable]
+TFEPublicTensor = PondPublicTensor
+TFETensor = Union[TFEPublicTensor, PondPrivateTensor]

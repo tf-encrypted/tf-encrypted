@@ -19,7 +19,7 @@ server0_address = os.environ.get('TFE_SERVER0_ADDRESS')
 server1_address = os.environ.get('TFE_SERVER1_ADDRESS')
 producer_address = os.environ.get('TFE_CRYPTO_PRODUCER_ADDRESS')
 provider_address = os.environ.get('TFE_WEIGHTS_PROVIDER_ADDRESS')
-port = os.environ.get('TFE_API_PORT')
+port = int(os.environ.get('TFE_API_PORT', "8080"))
 
 if node_name is None:
     print("The node_name of this node must be provided via the 'TFE_NODE_NAME' environment variable")
@@ -42,9 +42,6 @@ if producer_address is None:
 if provider_address is None:
     print("The address for the weights provider must be provided via the 'TFE_WEIGHTS_PROVIDER_ADDRESS' environment variable")
     sys.exit(1)
-
-if port is None:
-    port = 8080
 
 tfe.setMonitorStatsFlag(bool(os.environ.get('TFE_MONITOR_STATS')))
 tfe.setTFEDebugFlag(bool(os.environ.get('TFE_DEBUG')))
@@ -92,6 +89,8 @@ else:
     sess = remote_config.session()
 
     with tfe.protocol.Pond(*remote_config.get_players('server0, server1, crypto_producer')) as prot:
+        assert isinstance(prot, tfe.protocol.Pond)
+
         x = PredictionInputProvider(remote_config.get_player('master'))
 
         print('Securing computation')

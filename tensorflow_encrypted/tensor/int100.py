@@ -12,7 +12,6 @@ from .crt import (
 )
 from .helpers import prod, log2
 from ..config import run
-from typing import Any, List, Tuple
 
 
 # 32 bit CRT

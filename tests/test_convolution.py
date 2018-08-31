@@ -17,7 +17,7 @@ class TestConv2D(unittest.TestCase):
         input_conv = np.random.normal(size=input_shape).astype(np.float32)
 
         # filters
-        h_filter, w_filter, strides, padding = 2, 2, 2, 0
+        h_filter, w_filter, strides = 2, 2, 2
         filter_shape = (h_filter, w_filter, channels_in, channels_out)
         filter_values = np.random.normal(size=filter_shape)
 

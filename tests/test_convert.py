@@ -1001,7 +1001,7 @@ def run_strided_slice(input):
 def export(x: tf.Tensor, filename: str):
     with tf.Session() as sess:
         pred_node_names = ["output"]
-        pred = [tf.identity(x, name=pred_node_names[0])]
+        tf.identity(x, name=pred_node_names[0])
 
         graph = graph_util.convert_variables_to_constants(sess,
                                                           sess.graph.as_graph_def(),

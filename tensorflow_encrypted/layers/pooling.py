@@ -1,10 +1,8 @@
-import numpy as np
 import math
 from . import core
-from ..protocol.pond import PondPublicVariable, PondPrivateVariable
+
 from ..protocol.types import TFEVariable
-import tensorflow as tf
-from typing import Optional, Union, Tuple, NewType, List
+from typing import Optional, Union, Tuple, List
 
 IntTuple = Union[int, Tuple[int, int], List[int]]
 

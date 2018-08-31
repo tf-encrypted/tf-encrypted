@@ -5,12 +5,18 @@ import math
 import numpy as np
 import tensorflow as tf
 
-from ..tensor.int100 import Int100Tensor as BackingTensor
-from ..tensor.int100 import Int100Constant as BackingConstant
-from ..tensor.int100 import Int100Variable as BackingVariable
-from ..tensor.int100 import Int100Placeholder as BackingPlaceholder
-from ..tensor.int100 import stack
-from ..tensor.helpers import *
+from ..tensor.int100 import (
+    Int100Tensor as BackingTensor,
+    Int100Constant as BackingConstant,
+    Int100Variable as BackingVariable,
+    Int100Placeholder as BackingPlaceholder,
+    stack,
+)
+from ..tensor.helpers import (
+    log2,
+    gcd,
+    inverse
+)
 from ..io import InputProvider, OutputReceiver
 from .protocol import Protocol
 from ..player import Player
@@ -113,7 +119,12 @@ class Pond(Protocol):
         _initializers.append(x.initializer)
         return x
 
-    def define_private_variable(self, initial_value, apply_scaling=True, name=None):
+    def define_private_variable(
+        self,
+        initial_value: Union['TFEData', 'TFETensor'],
+        apply_scaling: bool = True,
+        name: Optional[str] = None
+    ) -> 'PondPrivateVariable':
         assert isinstance(initial_value, (np.ndarray, PondPublicTensor,
                                           PondPrivateTensor)), type(initial_value)
 
@@ -150,7 +161,12 @@ class Pond(Protocol):
         _initializers.append(x.initializer)
         return x
 
-    def define_public_input(self, provider: InputProvider, apply_scaling: bool = True, name: str = None) -> 'PondPublicTensor':
+    def define_public_input(
+        self,
+        provider: InputProvider,
+        apply_scaling: bool = True,
+        name: Optional[str] = None
+    ) -> 'PondPublicTensor':
 
         with tf.name_scope('public-input{}'.format('-' + name if name else '')):
 
@@ -160,14 +176,19 @@ class Pond(Protocol):
                 assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(
                     name if name else '', provider.player.name)
 
-                v = _encode(v, apply_scaling)
-                x_on_0 = v
-                x_on_1 = v
+                v_encoded = _encode(v, apply_scaling)
+                x_on_0 = v_encoded
+                x_on_1 = v_encoded
 
         x = PondPublicTensor(self, x_on_0, x_on_1)
         return x
 
-    def define_private_input(self, provider: InputProvider, apply_scaling: bool = True, name: str = None) -> 'PondPrivateTensor':
+    def define_private_input(
+        self,
+        provider: InputProvider,
+        apply_scaling: bool = True,
+        name: Optional[str] = None
+    ) -> 'PondPrivateTensor':
 
         with tf.name_scope('private-input{}'.format('-' + name if name else '')):
 
@@ -177,13 +198,19 @@ class Pond(Protocol):
                 assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(
                     name if name else '', provider.player.name)
 
-                v = _encode(v, apply_scaling)
-                x0, x1 = _share(v)
+                v_encoded = _encode(v, apply_scaling)
+                x0, x1 = _share(v_encoded)
 
         x = PondPrivateTensor(self, x0, x1)
         return x
 
-    def define_output(self, x, receiver: OutputReceiver, apply_scaling=True, name=None):
+    def define_output(
+        self,
+        x: 'PondPrivateTensor',
+        receiver: OutputReceiver,
+        apply_scaling: bool = True,
+        name: Optional[str] = None
+    ) -> tf.Operation:
         assert isinstance(x, PondPrivateTensor), type(x)
 
         x0, x1 = x.unwrapped
@@ -192,20 +219,20 @@ class Pond(Protocol):
 
             with tf.device(receiver.player.device_name):
 
-                v: BackingTensor = _reconstruct(x0, x1)
-                v: tf.Tensor = _decode(v, apply_scaling)
-                op = receiver.receive_output(v)
+                v = _reconstruct(x0, x1)
+                v_decoded = _decode(v, apply_scaling)
+                out = receiver.receive_output(v_decoded)
 
                 # wrap in tf.group to prevent sending back any tensors (which might hence be leaked)
-                op = tf.group(op)
+                op = tf.group(out)
 
         return op
 
     @property
-    def initializer(self):
+    def initializer(self) -> tf.Operation:
         return tf.group(*_initializers)
 
-    def clear_initializers(self):
+    def clear_initializers(self) -> None:
         del _initializers[:]
 
     def assign(self, variable, value):
@@ -273,7 +300,6 @@ class Pond(Protocol):
             return z
 
         x = _lift(self, x)
-        y = _lift(self, y)
 
         dispatch = {
             PondPublicTensor: _sum_public,
@@ -282,7 +308,7 @@ class Pond(Protocol):
         }
         func = dispatch.get(_type(x), None)
         if func is None:
-            raise TypeError("Don't know how to sum {}".format(type(x), type(y)))
+            raise TypeError("Don't know how to sum {}".format(type(x)))
 
         z = func(self, x, axis, keepdims)
         _nodes[node_key] = z
@@ -2331,3 +2357,6 @@ def _squeeze_masked(prot, x_masked: PondMaskedTensor, axis: List[int]) -> PondMa
         alpha_on_0_squeezed, alpha_on_1_squeezed)
 
     return x_squeezed
+
+
+from .types import TFEData, TFETensor  # noqa

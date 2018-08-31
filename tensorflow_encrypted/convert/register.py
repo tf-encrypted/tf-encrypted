@@ -214,7 +214,7 @@ def transpose(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 def expand_dims(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
-    axis = converter.outputs[inputs[1]]
+    # axis = converter.outputs[inputs[1]]
 
     axis_val = node.attr["axis"].i
 

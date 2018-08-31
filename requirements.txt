@@ -19,6 +19,7 @@ protobuf==3.6.1
 pyasn1==0.4.2
 pycodestyle==2.4.0
 pycparser==2.18
+pyflakes==2.0.0
 requests==2.19.1
 rsa==3.4.2
 s3transfer==0.1.13
