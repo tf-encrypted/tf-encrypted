@@ -40,7 +40,7 @@ and navigating to http://localhost:6006 in a browser.
 
 ## Remotely on GCP
 
-This way of running the example is slightly more involved but will give actual performance numbers (and security). All steps here assume that the [Cloud SDK](https://cloud.google.com/sdk/) has already been installed (for macOS this may be done via e.g. Homebrew: `brew cask install google-cloud-sdk`) and that a [tfe-image](../../tools/gcp/) has already been created.
+This way of running the example is slightly more involved but will give actual performance numbers (and security). All steps here assume that the [Cloud SDK](https://cloud.google.com/sdk/) has already been installed (for macOS this may be done via e.g. Homebrew: `brew cask install google-cloud-sdk`) and that a [tfe-image](../../tools/gcp/#base-image) has already been created.
 
 ### Setup instances
 
