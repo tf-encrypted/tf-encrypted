@@ -5,6 +5,7 @@ certifi==2018.8.13
 cffi==1.11.5
 colorama==0.3.7
 cryptography==2.3
+flake8==3.5.0
 Flask==1.0.2
 Flask-Cors==3.0.6
 gast==0.2.0
@@ -17,9 +18,7 @@ mypy==0.620
 numpy==1.14.5
 protobuf==3.6.1
 pyasn1==0.4.2
-pycodestyle==2.4.0
 pycparser==2.18
-pyflakes==2.0.0
 requests==2.19.1
 rsa==3.4.2
 s3transfer==0.1.13
