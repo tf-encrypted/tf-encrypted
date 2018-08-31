@@ -61,11 +61,11 @@ gcloud compute ssh prediction-client --command='python3 tf-encrypted/examples/mn
 
 ### Launching servers
 
-Once the instances are ready the next step is to link them together by creating and distributing a new configuration file
+Once the instances are ready and running the next step is to link them together by creating and distributing a new configuration file
 ```shell
 ./tools/gcp/link master server0 server1 crypto-producer model-trainer prediction-client
 ```
-which will put an updated `config.json` file in the home directory on each instance, following by
+which will put an updated `config.json` file in the home directory on each instance, followed by
 ```shell
 ./tools/gcp/serve master server0 server1 crypto-producer model-trainer prediction-client
 ```
@@ -73,13 +73,13 @@ which will launch a TensorFlow server on all of them.
 
 ### Running
 
-Finally, with the above in place we can the example using
+With the above in place we can finally run the example using
 ```shell
 gcloud compute ssh master --command='rm -rf /tmp/tensorboard; python3 tf-encrypted/examples/mnist/run.py config.json'
 ```
 that will (optionally) first clear any TensorBoard logs on the master that was previously recorded.
 
-Once completely, the logs may be pulled down from the master
+Once completely, the logs may optionally be pulled down from the master
 ```shell
 rm -rf /tmp/tensorboard; gcloud compute scp --recurse master:/tmp/tensorboard /tmp/tensorboard
 ```
@@ -88,3 +88,14 @@ and explored by launching TensorBoard
 tensorboard --logdir=/tmp/tensorboard
 ```
 and navigating to `http://localhost:6006/` in a browser
+
+### Cleaning up
+
+Once done, the instances can either simply be stopped with
+```shell
+./tools/gcp/stop master server0 server1 crypto-producer model-trainer prediction-client
+```
+or destroyed entirely with
+```shell
+./tools/gcp/delete master server0 server1 crypto-producer model-trainer prediction-client
+```
