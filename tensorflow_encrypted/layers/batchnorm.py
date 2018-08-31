@@ -46,7 +46,7 @@ class Batchnorm(core.Layer):
         self.scale = self.prot.define_public_variable(self.scale)
         self.offset = self.prot.define_public_variable(self.offset)
 
-    def forward(self, x: 'PondPrivateTensor') -> 'PondPrivateTensor':
+    def forward(self, x: PondPrivateTensor) -> PondPrivateTensor:
         if self.scale is None and self.offset is None:
             out = (x - self.mean) * self.denom
         elif self.scale is None:

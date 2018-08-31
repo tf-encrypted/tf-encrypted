@@ -323,7 +323,7 @@ def avgpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return out
 
 
-def nodef_to_public_pond(converter: Converter, x: Any) -> 'PondPublicTensor':
+def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
     dtype = x.attr["dtype"].type
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
