@@ -1,7 +1,7 @@
 import math
 from . import core
 
-from ..protocol.types import TFEVariable
+from ..protocol.pond import TFEVariable
 from typing import Optional, Union, Tuple, List
 
 IntTuple = Union[int, Tuple[int, int], List[int]]

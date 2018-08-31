@@ -70,7 +70,11 @@ lint: pythoncheck
 	pyflakes examples
 	pyflakes tensorflow_encrypted/layers
 	pyflakes tensorflow_encrypted/convert
+	pyflakes tensorflow_encrypted/protocol/
 	pyflakes tensorflow_encrypted/tensor
+	pyflakes tensorflow_encrypted/config.py
+	pyflakes tensorflow_encrypted/io.py
+	pyflakes tensorflow_encrypted/player.py 
 
 .PHONY: lint test
 
