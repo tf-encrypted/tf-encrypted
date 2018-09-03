@@ -97,7 +97,7 @@ Please see [`tools/gcp/`](./tools/gcp/) for further information about setting up
 
 ### Development
 
-Please see [`DEVELOP`](./DEVELOP) for guidelines and further instructions for setting up the project for development.
+Please see [`DEVELOP`](./DEVELOP.md) for guidelines and further instructions for setting up the project for development.
 
 # Contributions
 
