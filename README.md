@@ -89,7 +89,15 @@ cd tf-encrypted
 pip install -e .
 ```
 
-Note however that currently **only Python 3.6 is supported**. To manage this we recommend using a package manager like pip or conda.
+Note however that currently **only Python 3.6 is supported**; to manage this we recommend using a package manager like pip or conda.
+
+After successful installation you should be able to e.g. run the examples
+
+```shell
+python3 examples/federated-average/run.py
+```
+
+using a local configuration.
 
 ### Google Cloud Platform
 
