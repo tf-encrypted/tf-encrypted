@@ -91,7 +91,13 @@ pip install -e .
 
 Note however that currently **only Python 3.6 is supported**. To manage this we recommend using a package manager like pip or conda.
 
-For further instructions on setting up for development please see the [`DEVELOP`](./DEVELOP).
+### Google Cloud Platform
+
+Please see [`tools/gcp/`](./tools/gcp/) for further information about setting up and running on the Google Cloud Platform.
+
+### Development
+
+Please see [`DEVELOP`](./DEVELOP) for guidelines and further instructions for setting up the project for development.
 
 # Contributions
 

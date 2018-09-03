@@ -4,6 +4,7 @@ setup(
     name='tf-encrypted',
     version='0.0.1rc',
     packages=['tensorflow_encrypted',],
+    python_requires='==3.6',
     install_requires=[
         'tensorflow>=1.10.0',
         'numpy>=1.14.0',
