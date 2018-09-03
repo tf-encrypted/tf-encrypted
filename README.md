@@ -101,7 +101,7 @@ Please see [`DEVELOP`](./DEVELOP.md) for guidelines and further instructions for
 
 # Contributions
 
-Although led by [Morten Dahl](https://github.com/mortendahl), several people have had an impact on the development of this library (in alphabetical order):
+Several people have had an impact on the development of this library (in alphabetical order):
 
 - [Andrew Trask](https://github.com/iamtrask)
 - [Koen van der Veen](https://github.com/koenvanderveen)
