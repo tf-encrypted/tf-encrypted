@@ -4,11 +4,17 @@ from typing import Tuple, Dict, List, Union, Optional, Any
 import numpy as np
 import tensorflow as tf
 
-from ..tensor.int100 import Int100Tensor as BackingTensor
-from ..tensor.int100 import Int100Constant as BackingConstant
-from ..tensor.int100 import Int100Variable as BackingVariable
-from ..tensor.int100 import Int100Placeholder as BackingPlaceholder
-from ..tensor.int100 import stack
+# from ..tensor.int100 import Int100Tensor as BackingTensor
+# from ..tensor.int100 import Int100Constant as BackingConstant
+# from ..tensor.int100 import Int100Variable as BackingVariable
+# from ..tensor.int100 import Int100Placeholder as BackingPlaceholder
+# from ..tensor.int100 import stack
+
+from ..tensor.int32 import Int32Tensor as BackingTensor
+from ..tensor.int32 import Int32Constant as BackingConstant
+from ..tensor.int32 import Int32Variable as BackingVariable
+from ..tensor.int32 import Int32Placeholder as BackingPlaceholder
+
 from ..tensor.helpers import *
 from ..io import InputProvider, OutputReceiver
 from ..player import Player
@@ -25,9 +31,9 @@ M = BackingTensor.modulus
 # truncation factor for going from double to single precision
 K = 2 ** BITPRECISION_FRACTIONAL
 
-assert log2(BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) <= log2(BOUND)
-assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
-assert gcd(K, M) == 1
+# assert log2(BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) <= log2(BOUND)
+# assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
+# assert gcd(K, M) == 1
 
 _nodes: Dict = dict()
 _initializers: List = list()
@@ -51,10 +57,10 @@ class Pond(Protocol):
         with tf.name_scope('constant{}'.format('-'+name if name else '')):
 
             with tf.device(self.server_0.device_name):
-                x_on_0 = BackingConstant.from_int100(v)
+                x_on_0 = BackingConstant.from_same(v)
 
             with tf.device(self.server_1.device_name):
-                x_on_1 = BackingConstant.from_int100(v)
+                x_on_1 = BackingConstant.from_same(v)
 
         x = PondConstant(self, x_on_0, x_on_1)
         return x
@@ -104,10 +110,10 @@ class Pond(Protocol):
                     "Don't know how to turn {} into public variable".format(type(initial_value)))
 
             with tf.device(self.server_0.device_name):
-                x_on_0 = BackingVariable.from_int100(v_on_0)
+                x_on_0 = BackingVariable.from_same(v_on_0)
 
             with tf.device(self.server_1.device_name):
-                x_on_1 = BackingVariable.from_int100(v_on_1)
+                x_on_1 = BackingVariable.from_same(v_on_1)
 
         x = PondPublicVariable(self, x_on_0, x_on_1)
         _initializers.append(x.initializer)
@@ -141,10 +147,10 @@ class Pond(Protocol):
                     "Don't know how to turn {} into private variable".format(type(initial_value)))
 
             with tf.device(self.server_0.device_name):
-                x0 = BackingVariable.from_int100(v0)
+                x0 = BackingVariable.from_same(v0)
 
             with tf.device(self.server_1.device_name):
-                x1 = BackingVariable.from_int100(v1)
+                x1 = BackingVariable.from_same(v1)
 
         x = PondPrivateVariable(self, x0, x1)
         _initializers.append(x.initializer)
@@ -253,10 +259,10 @@ class Pond(Protocol):
         with tf.name_scope('assign'):
 
             with tf.device(self.server_0.device_name):
-                op0 = var0.assign_from_int100(val0)
+                op0 = var0.assign_from_same(val0)
 
             with tf.device(self.server_1.device_name):
-                op1 = var1.assign_from_int100(val1)
+                op1 = var1.assign_from_same(val1)
 
         op = tf.group(op0, op1)
         _nodes[node_key] = op

@@ -216,7 +216,7 @@ def _reshape(x, *axes):
     return Int100Tensor.from_decomposed(backing)
 
 
-def stack(x: List[Int100Tensor], axis: int = 0):
+def _stack(x: List[Int100Tensor], axis: int = 0):
     assert all([isinstance(i, Int100Tensor) for i in x])
 
     backing = []
@@ -246,7 +246,7 @@ class Int100Constant(Int100Tensor):
         return Int100Constant(value, None)
 
     @staticmethod
-    def from_int100(value: Int100Tensor) -> 'Int100Constant':
+    def from_same(value: Int100Tensor) -> 'Int100Constant':
         assert type(value) in [Int100Tensor], type(value)
         return Int100Constant(None, value)
 
@@ -266,7 +266,7 @@ class Int100Placeholder(Int100Tensor):
         assert type(value) in [np.ndarray], type(value)
         return _feed(self, value, None)
 
-    def feed_from_int100(self, value):
+    def feed_from_same(self, value):
         assert type(value) in [Int100Tensor], type(value)
         return _feed(self, None, value)
 
@@ -307,7 +307,7 @@ class Int100Variable(Int100Tensor):
         return Int100Variable(initial_value, None)
 
     @staticmethod
-    def from_int100(initial_value):
+    def from_same(initial_value):
         assert type(initial_value) in [Int100Tensor], type(initial_value)
         return Int100Variable(None, initial_value)
 
