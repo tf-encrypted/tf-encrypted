@@ -67,6 +67,10 @@ class Int100Tensor(object):
         return Int100Tensor(value, None)
 
     @staticmethod
+    def from_same(value:'Int100Tensor') -> 'Int100Tensor':
+        return Int100Tensor.from_decomposed(value.backing)
+
+    @staticmethod
     def from_decomposed(value: Union[List[np.ndarray], List[tf.Tensor]]) -> 'Int100Tensor':
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
@@ -230,7 +234,7 @@ def _stack(x: List[Int100Tensor], axis: int = 0):
 
 class Int100Constant(Int100Tensor):
 
-    def __init__(self, native_value: np.ndarray, int100_value=None) -> None:
+    def __init__(self, native_value:np.ndarray, int100_value=None) -> None:
         if int100_value is None:
             int100_value = Int100Tensor.from_native(native_value)
 
@@ -241,12 +245,12 @@ class Int100Constant(Int100Tensor):
         super(Int100Constant, self).__init__(None, backing)
 
     @staticmethod
-    def from_native(value: np.ndarray) -> 'Int100Constant':
+    def from_native(value:np.ndarray) -> 'Int100Constant':
         assert type(value) in [np.ndarray, tf.Tensor], type(value)
         return Int100Constant(value, None)
 
     @staticmethod
-    def from_same(value: Int100Tensor) -> 'Int100Constant':
+    def from_same(value:Int100Tensor) -> 'Int100Constant':
         assert type(value) in [Int100Tensor], type(value)
         return Int100Constant(None, value)
 
@@ -318,7 +322,7 @@ class Int100Variable(Int100Tensor):
         assert type(value) in [np.ndarray], type(value)
         return _assign(self, value, None)
 
-    def assign_from_int100(self, value):
+    def assign_from_same(self, value):
         assert isinstance(value, Int100Tensor), type(value)
         return _assign(self, None, value)
 
