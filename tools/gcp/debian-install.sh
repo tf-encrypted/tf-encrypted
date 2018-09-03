@@ -13,9 +13,6 @@ sudo apt-get install -y screen # for running a tf server
 sudo apt-get install -y psmisc # for killall
 sudo apt-get install -y tcptrack iftop # for network monitoring
 
-# install python packages
-pip3 install numpy tensorflow tensorboard
-
 # install tensorflow-encrypted
 git clone https://github.com/mortendahl/tf-encrypted.git
 cd tf-encrypted
