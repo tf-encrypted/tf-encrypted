@@ -42,15 +42,21 @@ and navigating to http://localhost:6006 in a browser.
 
 This way of running the example is slightly more involved but will give actual performance numbers (and security). All steps here assume that the [Cloud SDK](https://cloud.google.com/sdk/) has already been installed (for macOS this may be done via e.g. Homebrew: `brew cask install google-cloud-sdk`) and that a [tfe-image](../../tools/gcp/#base-image) has already been created.
 
+This example needs the following instances to run
+```shell
+export INSTANCE_NAMES="master server0 server1 crypto-producer model-trainer prediction-client"
+```
+which we'll use frequently below.
+
 ### Setup instances
 
-This example needs the following instances: `master`, `server0`, `server1`, `crypto-producer`, `model-trainer` and `prediction-client`. To create these we can run the following from the project's root directory
+To first create the needed instances we can run the following from the project's root directory
 ```shell
-./tools/gcp/create master server0 server1 crypto-producer model-trainer prediction-client
+./tools/gcp/create $INSTANCE_NAMES
 ```
 or alternatively, if they have already been created but are current terminated, simply start them again with
 ```shell
-./tools/gcp/start master server0 server1 crypto-producer model-trainer prediction-client
+./tools/gcp/start $INSTANCE_NAMES
 ```
 
 We also need to download and convert the MNIST dataset on both the model trainer and the prediction client
@@ -63,11 +69,11 @@ gcloud compute ssh prediction-client --command='python3 tf-encrypted/examples/mn
 
 Once the instances are ready and running the next step is to link them together by creating and distributing a new configuration file
 ```shell
-./tools/gcp/link master server0 server1 crypto-producer model-trainer prediction-client
+./tools/gcp/link $INSTANCE_NAMES
 ```
 which will put an updated `config.json` file in the home directory on each instance, followed by
 ```shell
-./tools/gcp/serve master server0 server1 crypto-producer model-trainer prediction-client
+./tools/gcp/serve $INSTANCE_NAMES
 ```
 which will launch a TensorFlow server on all of them.
 
@@ -95,9 +101,9 @@ and navigating to `http://localhost:6006/` in a browser
 
 Once done, the instances can either simply be stopped with
 ```shell
-./tools/gcp/stop master server0 server1 crypto-producer model-trainer prediction-client
+./tools/gcp/stop $INSTANCE_NAMES
 ```
 or destroyed entirely with
 ```shell
-./tools/gcp/delete master server0 server1 crypto-producer model-trainer prediction-client
+./tools/gcp/delete $INSTANCE_NAMES
 ```
