@@ -67,7 +67,7 @@ class ModelTrainer(tfe.io.InputProvider):
             layer0 = x
             layer1 = tf.nn.sigmoid(tf.matmul(layer0, w0) + b0)
             layer2 = tf.nn.sigmoid(tf.matmul(layer1, w1) + b1)
-            layer3 = tf.matmul(layer2, w2) + b2
+            layer3 = tf.nn.sigmoid(tf.matmul(layer2, w2) + b2) # TODO[Morten] should be several sigmoids/relus here
             predictions = layer3
 
             loss = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(logits=predictions, labels=y))    
@@ -153,7 +153,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     layer0 = x
     layer1 = prot.sigmoid( (prot.dot(layer0, w0) + b0) ) # input normalized to avoid large values
     layer2 = prot.sigmoid( (prot.dot(layer1, w1) + b1) ) # input normalized to avoid large values
-    layer3 = prot.dot(layer2, w2) + b2
+    layer3 = prot.sidmoid( (prot.dot(layer2, w2) + b2) ) # TODO[Morten] should be several..
     prediction = layer3
 
     # send prediction output back to client
