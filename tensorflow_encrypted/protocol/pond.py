@@ -4,16 +4,18 @@ from typing import Tuple, Dict, List, Union, Optional, Any
 import numpy as np
 import tensorflow as tf
 
-# from ..tensor.int100 import Int100Tensor as BackingTensor
-# from ..tensor.int100 import Int100Constant as BackingConstant
-# from ..tensor.int100 import Int100Variable as BackingVariable
-# from ..tensor.int100 import Int100Placeholder as BackingPlaceholder
+# from ..tensor import int100 as tensor_type
+# BackingTensor = tensor_type.Int100Tensor
+# BackingConstant = tensor_type.Int100Constant
+# BackingVariable = tensor_type.Int100Variable
+# BackingPlaceholder = tensor_type.Int100Placeholder
 # from ..tensor.int100 import stack
 
-from ..tensor.int32 import Int32Tensor as BackingTensor
-from ..tensor.int32 import Int32Constant as BackingConstant
-from ..tensor.int32 import Int32Variable as BackingVariable
-from ..tensor.int32 import Int32Placeholder as BackingPlaceholder
+from ..tensor import int32 as tensor_type
+BackingTensor = tensor_type.Tensor
+BackingConstant = tensor_type.Constant
+BackingVariable = tensor_type.Variable
+BackingPlaceholder = tensor_type.Placeholder
 
 from ..tensor.helpers import *
 from ..io import InputProvider, OutputReceiver
@@ -78,18 +80,21 @@ class Pond(Protocol):
         return PondPublicPlaceholder(self, x_on_0, x_on_1)
 
     def define_private_placeholder(self, shape, name=None):
+        
+        # run on master
         pl = BackingPlaceholder(shape)
         v0, v1 = _share(pl)
+        
         assert type(v0) is BackingTensor, type(v0)
         assert type(v1) is BackingTensor, type(v1)
 
         with tf.name_scope('private-placeholder{}'.format('-'+name if name else '')):
 
             with tf.device(self.server_0.device_name):
-                x0 = BackingTensor.from_decomposed(v0.backing)
+                x0 = BackingTensor.from_same(v0)
 
             with tf.device(self.server_1.device_name):
-                x1 = BackingTensor.from_decomposed(v1.backing)
+                x1 = BackingTensor.from_same(v1)
 
         return PondPrivatePlaceholder(self, pl, x0, x1)
 
@@ -754,7 +759,7 @@ class PondPublicTensor(PondTensor):
     in the operations where it's needed by both (eg multiplication).
     """
 
-    def __init__(self, prot, value_on_0: BackingTensor, value_on_1: BackingTensor) -> None:
+    def __init__(self, prot, value_on_0:BackingTensor, value_on_1:BackingTensor) -> None:
         assert isinstance(value_on_0, BackingTensor), type(value_on_0)
         assert isinstance(value_on_1, BackingTensor), type(value_on_1)
         assert value_on_0.shape == value_on_1.shape
@@ -776,8 +781,8 @@ class PondPublicTensor(PondTensor):
         return (self.value_on_0, self.value_on_1)
 
     def eval(self, sess, feed_dict={}, tag=None):
-        value: BackingTensor = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
-        return _decode(value, self.encoded)
+        concrete_value = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
+        return _decode(concrete_value, self.encoded)
 
 
 class PondPrivateTensor(PondTensor):
@@ -900,7 +905,7 @@ class PondPrivatePlaceholder(PondPrivateTensor):
         assert tensor0.shape == tensor1.shape
 
         super(PondPrivatePlaceholder, self).__init__(prot, tensor0, tensor1)
-        self.placeholders = placeholder.backing
+        self.placeholder = placeholder
         self.tensor0 = tensor0
         self.tensor1 = tensor1
 
@@ -909,11 +914,8 @@ class PondPrivatePlaceholder(PondPrivateTensor):
 
     def feed_from_native(self, value, apply_scaling=True):
         assert type(value) in [np.ndarray], type(value)
-
-        v = _encode(value, apply_scaling)
-        return {
-            p: v for p, v in zip(self.placeholders, v.backing)
-        }
+        v: BackingTensor = _encode(value, apply_scaling)
+        return self.placeholder.feed_from_same(v)
 
 
 class PondPublicVariable(PondPublicTensor):
@@ -1100,7 +1102,7 @@ def _cache_wrap_helper(sources):
         for source in sources
     ]
     updator = tf.group(*[
-        var.assign_from_int100(val)
+        var.assign_from_same(val)
         for var, val in zip(variables, sources)
     ])
     return variables, updator
