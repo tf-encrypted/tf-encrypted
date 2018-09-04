@@ -10,12 +10,12 @@ Today, the only release artifact produced from this repository is a
 [Docker](https://www.docker.com) container.
 
 If a release candidate (e.g. `X.Y.Z-rc.#`) is pushed then Circle CI will build
-the container (`partydb/tf-encrypted:X.Y.Z-rc.#`) and push it to Docker Hub
-*without* updating the `partydb/tf-encrypted:latest` tag.
+the container (`mortendahl/tf-encrypted:X.Y.Z-rc.#`) and push it to Docker Hub
+*without* updating the `mortendahl/tf-encrypted:latest` tag.
 
 If a release tag (e.g. `X.Y.Z`) is pushed then Circle CI will build the
-containers and push both `partydb/tf-encrypted:X.Y.Z` and
-`partydb/tf-encrypted:lateset` to Docker Hub.
+containers and push both `mortendahl/tf-encrypted:X.Y.Z` and
+`mortendahl/tf-encrypted:lateset` to Docker Hub.
 
 ### Whats the flow?
 
@@ -39,7 +39,7 @@ tf-encrypted below:
    0.1.0`). Once the build is done, the release is available in the wild!
 
 Have a question about the process or have a suggestion on how to improve it?
-Don't hesitate to open an [issue](https://github.com/partydb/tf-encrypted/issues/new)
+Don't hesitate to open an [issue](https://github.com/mortendahl/tf-encrypted/issues/new)
 with your thoughts!
 
 ### Whats with the tags?
