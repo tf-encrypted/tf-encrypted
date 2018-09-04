@@ -1,0 +1,6 @@
+#!/bin/sh
+
+gcloud compute instances create \
+    $@ \
+    --image tfe-image \
+    --machine-type=n1-standard-4

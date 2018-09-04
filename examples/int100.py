@@ -26,14 +26,14 @@ p = Int100Placeholder((3, ))
 with tf.Session() as sess:
 
     print('Constant')
-    print(c.eval(sess).to_native())
+    print(c.eval(sess).to_int32())
 
     print('Variable')
     sess.run(v.initializer)
-    print(v.eval(sess).to_native())
+    print(v.eval(sess).to_int32())
 
     print('Placeholder')
-    print(p.eval(sess, feed_dict=p.feed_from_native(np.array([5, 5, 5]))).to_native())
+    print(p.eval(sess, feed_dict=p.feed_from_native(np.array([5, 5, 5]))).to_int32())
 
     print('Assignment')
     w = c - p

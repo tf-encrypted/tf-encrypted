@@ -1,8 +1,10 @@
-from typing import Optional, Type
+from typing import Optional, Type, List
 from types import TracebackType
+import tensorflow as tf
 
 
 _current_prot = None
+_global_cache_updators: List = []
 
 
 class Protocol(object):
@@ -25,3 +27,8 @@ def set_protocol(prot: Optional[Protocol]) -> None:
 
 def get_protocol() -> Optional[Protocol]:
     return _current_prot
+
+
+def global_caches_updator():
+    with tf.name_scope('cache_update'):
+        return tf.group(*_global_cache_updators)
