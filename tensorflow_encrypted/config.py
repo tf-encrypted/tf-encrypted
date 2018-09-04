@@ -213,7 +213,8 @@ def run(
     sess: tf.Session,
     fetches: Any,
     feed_dict: Dict[str, np.ndarray]={},
-    tag: Optional[str] = None
+    tag: Optional[str]=None,
+    write_trace: bool=True
 ) -> Any:
 
     if not DEBUG and (tag is None or IGNORE_STATS):
@@ -242,8 +243,10 @@ def run(
         )
 
         writer.add_run_metadata(run_metadata, session_tag)
-        chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
-        with open('{}/{}.ctr'.format(TENSORBOARD_DIR, session_tag), 'w') as f:
-            f.write(chrome_trace)
+
+        if write_trace:
+            chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
+            with open('{}/{}.ctr'.format(TENSORBOARD_DIR, session_tag), 'w') as f:
+                f.write(chrome_trace)
 
         return results
