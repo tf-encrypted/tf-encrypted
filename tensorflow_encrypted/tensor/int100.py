@@ -119,6 +119,9 @@ class Int100Tensor(object):
     def conv2d(self, other, strides, padding='SAME') -> 'Int100Tensor':
         return _conv2d(self, other, strides, padding)
 
+    def conv2d_bw(self, other, w_shape, strides, padding) -> 'Int100Tensor':
+        return _conv2d_bw(self, other, w_shape, strides, padding)
+
     def __mod__(self, k) -> 'Int100Tensor':
         return _mod(self, k)
 
@@ -197,6 +200,19 @@ def _conv2d(x, y, strides, padding):
     return out
 
 
+def _conv2d_bw(x, d_y, w_shape, strides, padding):
+    # TODO: also accept NHWC
+    assert isinstance(x, Int100Tensor), type(x)
+    assert isinstance(d_y, Int100Tensor), type(d_y)
+
+    h_filter, w_filter, d_filters, n_filters = tuple(map(int, w_shape))
+    x_col = x.im2col(h_filter, w_filter, padding, strides)
+
+    dout_reshaped = d_y.transpose(1, 2, 3, 0).reshape(n_filters, -1)
+    d_w = dout_reshaped.dot(x_col.transpose())
+    d_w = d_w.reshape(*w_shape)
+    return d_w
+
 def _mod(x, k):
     y_backing = _crt_mod(x.backing, k)
     return Int100Tensor.from_decomposed(y_backing)
@@ -209,6 +225,8 @@ def _sample_uniform(shape):
 
 def _transpose(x, *axes):
     assert isinstance(x, Int100Tensor), type(x)
+    if len(axes) == 0:
+        axes = None
     backing = [tf.transpose(xi, axes) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
 
