@@ -20,6 +20,8 @@ server1_address = os.environ.get('TFE_SERVER1_ADDRESS')
 producer_address = os.environ.get('TFE_CRYPTO_PRODUCER_ADDRESS')
 provider_address = os.environ.get('TFE_WEIGHTS_PROVIDER_ADDRESS')
 port = int(os.environ.get('TFE_API_PORT', "8080"))
+enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
+enable_debug = os.environ.get('TFE_DEBUG') is not None
 
 if node_name is None:
     print("The node_name of this node must be provided via the 'TFE_NODE_NAME' environment variable")
@@ -43,9 +45,8 @@ if provider_address is None:
     print("The address for the weights provider must be provided via the 'TFE_WEIGHTS_PROVIDER_ADDRESS' environment variable")
     sys.exit(1)
 
-tfe.setMonitorStatsFlag(bool(os.environ.get('TFE_MONITOR_STATS')))
-tfe.setTFEDebugFlag(bool(os.environ.get('TFE_DEBUG')))
-
+tfe.setMonitorStatsFlag(enable_stats_monitor)
+tfe.setTFEDebugFlag(enable_debug)
 
 remote_config = tfe.RemoteConfig(
     {
