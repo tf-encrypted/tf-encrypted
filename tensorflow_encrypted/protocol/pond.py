@@ -813,6 +813,7 @@ class Pond(Protocol):
 
         return z
 
+
 #
 # Classes representing the base values in the Pond protocol.
 #
@@ -2041,9 +2042,9 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
     return z
 
 
-#####
+#
 # average pooling helpers
-#####
+#
 
 
 def _avgpool2d_core(prot: Pond,
