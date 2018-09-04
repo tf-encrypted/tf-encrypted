@@ -6,4 +6,5 @@
 
 build/
 dist/
+data/
 *.egg-info

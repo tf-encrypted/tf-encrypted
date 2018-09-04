@@ -6,22 +6,75 @@ import tensorflow as tf
 from .helpers import inverse, prod, log2
 
 def gen_crt_decompose(m):
-    
+
     def crt_decompose(x):
         return tuple( x % mi for mi in m )
-    
+
     return crt_decompose
 
-def gen_crt_recombine(m, lambdas):
-    # TODO compute lambdas based on m
-    
+def gen_crt_recombine_lagrange(m):
+
     # precomputation
     M = prod(m)
+    n = [ M // mi for mi in m ]
+    lambdas = [ ni * inverse(ni, mi) % M for ni, mi in zip(n, m) ]
 
-    def crt_recombine(x):
-        return sum( xi * li for xi, li in zip(x, lambdas) ) % M
+    def crt_recombine_lagrange(x):
 
-    return crt_recombine
+        with tf.name_scope('crt_recombine_lagrange'):
+            res = sum( xi * li for xi, li in zip(x, lambdas) ) % M
+            res = res.astype(object)
+            return res
+
+    return crt_recombine_lagrange
+
+def gen_crt_recombine_explicit(m, int_type):
+
+    # precomputation
+    M = prod(m)
+    q = [ inverse(M // mi, mi) for mi in m ]
+
+    def crt_recombine_explicit(x, bound):
+
+        B = M % bound
+        b = [ (M // mi) % bound for mi in m ]
+
+        with tf.name_scope('crt_recombine_explicit'):
+
+            if isinstance(x[0], np.ndarray):
+                # backed by np.ndarray
+                t = [ (xi * qi) % mi for xi, qi, mi in zip(x, q, m) ]
+                alpha = np.round(
+                    np.sum(
+                        [ ti.astype(float) / mi for ti, mi in zip(t, m) ],
+                        axis=0
+                    ))
+                u = np.sum( ( ti * bi for ti, bi in zip(t, b) ), axis=0).astype(np.int64)
+                v = alpha.astype(np.int64) * B
+                w = u - v
+                res = w % bound
+                res = res.astype(np.int32)
+                return res
+
+            elif isinstance(x[0], tf.Tensor):
+                # backed by tf.Tensor
+                t = [ (xi * qi) % mi for xi, qi, mi in zip(x, q, m) ]
+                alpha = tf.round(
+                    tf.reduce_sum(
+                        [ tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, m) ],
+                        axis=0
+                    ))
+                u = tf.cast(tf.reduce_sum([ ti * bi for ti, bi in zip(t, b) ], axis=0), tf.int64)
+                v = tf.cast(alpha, tf.int64) * B
+                w = u - v
+                res = w % bound
+                res = tf.cast(res, int_type)
+                return res
+
+            else:
+                raise TypeError("Don't know how to recombine {}".format(type(x[0])))
+
+    return crt_recombine_explicit
 
 # *** NOTE ***
 # keeping mod operations in-lined here for simplicity;
@@ -91,7 +144,7 @@ def gen_crt_sample_uniform(m, int_type):
 
     return crt_sample_uniform
 
-def gen_crt_mod(m, int_type, float_type):
+def gen_crt_mod(m, int_type):
 
     # outer precomputation
     M = prod(m)
@@ -107,20 +160,16 @@ def gen_crt_mod(m, int_type, float_type):
 
         with tf.name_scope('crt_mod'):
             t = [ (xi * qi) % mi for xi, qi, mi in zip(x, q, m) ]
-            alpha = tf.cast(
-                tf.round(
-                    tf.reduce_sum(
-                        [ tf.cast(ti, float_type) / mi for ti, mi in zip(t, m) ],
-                        axis=0
-                    )
-                ),
-                int_type
+            alpha = tf.round(
+                tf.reduce_sum(
+                    [ tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, m) ],
+                    axis=0
+                )
             )
-            v = tf.reduce_sum(
-                [ ti * bi for ti, bi in zip(t, b) ],
-                axis=0
-            ) - B * alpha
-            return redecompose(v % k)
+            u = tf.reduce_sum([ ti * bi for ti, bi in zip(t, b) ], axis=0)
+            v = tf.cast(alpha, int_type) * B
+            w = u - v
+            return redecompose(w % k)
 
     return crt_mod
 

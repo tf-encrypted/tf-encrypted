@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+
+import sys
+import json
+import subprocess
+
+import tensorflow_encrypted as tfe
+
+INSTANCE_NAMES = [str(name) for name in sys.argv[1:]]
+BASE_PORT = 4440
+LOCAL_CONFIG_FILE = '/tmp/config.json'
+REMOTE_CONFIG_FILE = 'config.json'
+
+CMD_INTERNAL_HOST = "gcloud --format='value(networkInterfaces[0].networkIP)' compute instances list {instance_name}"
+HOSTS = [
+    subprocess.check_output(CMD_INTERNAL_HOST.format(instance_name=instance_name), shell=True).decode("utf-8").strip()
+    for instance_name in INSTANCE_NAMES
+]
+
+HOSTS = [
+    '{}:{}'.format(host, BASE_PORT+index)
+    for index, host in enumerate(HOSTS)
+]
+
+HOSTMAP = [
+    (name, host)
+    for name, host in zip(INSTANCE_NAMES, HOSTS)
+]
+
+print("Hostmap:", json.dumps({name: host for (name, host) in HOSTMAP}, indent=2))
+
+config = tfe.config.RemoteConfig(HOSTMAP)
+tfe.config.save(config, LOCAL_CONFIG_FILE)
+
+CMD_HOSTS_SCP = "gcloud compute scp {local_config_file} {instance_name}:{remote_config_file}"
+for instance_name in INSTANCE_NAMES:
+    subprocess.call(
+        CMD_HOSTS_SCP.format(
+            local_config_file=LOCAL_CONFIG_FILE,
+            remote_config_file=REMOTE_CONFIG_FILE,
+            instance_name=instance_name),
+        shell=True
+    )
