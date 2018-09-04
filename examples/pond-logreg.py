@@ -9,6 +9,14 @@ config = tfe.LocalConfig([
     'crypto_producer'
 ])
 
+# config = tfe.RemoteConfig(
+#     player_hosts=[
+#         '0.0.0.0:4440',
+#         '0.0.0.0:4441',
+#         '0.0.0.0:4442'
+#     ]
+# )
+
 prot = Pond(*config.get_players('server0, server1, crypto_producer'))
 
 # parameters

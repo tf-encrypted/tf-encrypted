@@ -8,3 +8,6 @@ build/
 dist/
 data/
 *.egg-info
+
+# Examples
+examples/serving/logreg
