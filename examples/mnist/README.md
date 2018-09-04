@@ -68,11 +68,11 @@ gcloud compute ssh prediction-client --command='python3 tf-encrypted/examples/mn
 
 Once the instances are ready and running the next step is to link them together by creating and distributing a new configuration file
 ```shell
-./tools/gcp/link `echo $INSTANCE_NAMES`
+./tools/gcp/link $INSTANCE_NAMES
 ```
 which will put an updated `config.json` file in the home directory on each instance, followed by
 ```shell
-./tools/gcp/serve `echo $INSTANCE_NAMES`
+./tools/gcp/serve $INSTANCE_NAMES
 ```
 which will launch a TensorFlow server on all of them.
 
