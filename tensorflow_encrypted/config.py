@@ -185,7 +185,7 @@ class RemoteConfig(Config):
         )
 
 
-def load(filename) -> Optional[Config]:
+def load(filename) -> Config:
     with open(filename, 'r') as f:
         params = json.load(f)
 
@@ -194,7 +194,7 @@ def load(filename) -> Optional[Config]:
         if config is not None:
             return config
 
-    return None
+    raise ValueError("Failed to parse config file")
 
 
 def save(config, filename) -> None:
