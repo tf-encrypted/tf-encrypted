@@ -106,7 +106,7 @@ endif
 # test.
 # ###############################################
 docker: Dockerfile dockercheck
-	docker build -t partydb/tf-encrypted:latest -f Dockerfile .
+	docker build -t mortendahl/tf-encrypted:latest -f Dockerfile .
 
 .PHONY: docker
 
@@ -117,8 +117,8 @@ docker: Dockerfile dockercheck
 # authenticating to docker hub and pushing built docker containers up with the
 # appropriate tags.
 # ###############################################
-DOCKER_TAG=docker tag partydb/tf-encrypted:latest partydb/tf-encrypted:$(1)
-DOCKER_PUSH=docker push partydb/tf-encrypted:$(1)
+DOCKER_TAG=docker tag mortendahl/tf-encrypted:latest mortendahl/tf-encrypted:$(1)
+DOCKER_PUSH=docker push mortendahl/tf-encrypted:$(1)
 
 docker-tag: dockercheck
 	$(call DOCKER_TAG,$(VERSION))

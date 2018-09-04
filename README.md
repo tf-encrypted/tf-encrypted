@@ -116,7 +116,7 @@ with tfe.remote_session() as sess:
 
 ## Typing
 
-tf-encrypted is developed using types with [mypy](http://mypy-lang.org/).  
+tf-encrypted is developed using types with [mypy](http://mypy-lang.org/).
 This means your branch must not produce any errors when the project is run via mypy.
 Most popular editors have plugins that allow you to run mypy as you develop so you
 can catch problems early.
