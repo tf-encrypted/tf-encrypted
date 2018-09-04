@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import json
 import subprocess
 
 import tensorflow_encrypted as tfe
 
-INSTANCE_NAMES = [str(name) for name in sys.argv[1:]]
+INSTANCE_NAMES = [name.strip() for arg in sys.argv[1:] for name in os.path.expandvars(arg).split(' ') if name]
 BASE_PORT = 4440
 LOCAL_CONFIG_FILE = '/tmp/config.json'
 REMOTE_CONFIG_FILE = 'config.json'

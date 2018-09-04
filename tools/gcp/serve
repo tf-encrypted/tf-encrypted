@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import subprocess
 
-INSTANCE_NAMES = [str(name) for name in sys.argv[1:]]
+INSTANCE_NAMES = [name.strip() for arg in sys.argv[1:] for name in os.path.expandvars(arg).split(' ') if name]
 
 CMD_KILL = "gcloud compute ssh {name} --command='killall screen'"
 for name in INSTANCE_NAMES:
