@@ -8,7 +8,7 @@ This library provides a layer on top of TensorFlow for doing machine learning on
 
 that are all exposed through Python interfaces, and all resulting in ordinary TensorFlow graphs for easy integration with other TensorFlow mechanisms and efficient execution.
 
-Several contributors have put resources into the development of this library, most notably [Dropout Labs](FIXME) and members of the [OpenMined](https://www.openmined.org/) community (see below for [details](#contributions)).
+Several contributors have put resources into the development of this library, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community (see below for [details](#contributions)).
 
 **Important**: this is experimental software that should not be used in production for security reasons.
 
