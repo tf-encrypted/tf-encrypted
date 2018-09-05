@@ -9,7 +9,7 @@ from .helpers import inverse, prod
 def gen_crt_decompose(m):
 
     def crt_decompose(x):
-        return tuple( x % mi for mi in m )
+        return tuple(x % mi for mi in m)
 
     return crt_decompose
 
@@ -47,7 +47,7 @@ def gen_crt_recombine_explicit(m, int_type):
                 t = [(xi * qi) % mi for xi, qi, mi in zip(x, q, m)]
                 alpha = np.round(
                     np.sum(
-                        [ ti.astype(float) / mi for ti, mi in zip(t, m) ],
+                        [ti.astype(float) / mi for ti, mi in zip(t, m)],
                         axis=0
                     ))
                 u = np.sum((ti * bi for ti, bi in zip(t, b)), axis=0).astype(np.int64)
@@ -184,7 +184,7 @@ def gen_crt_mod(m, int_type):
         b = [(M // mi) % k for mi in m]
 
         with tf.name_scope('crt_mod'):
-            t = [ (xi * qi) % mi for xi, qi, mi in zip(x, q, m) ]
+            t = [(xi * qi) % mi for xi, qi, mi in zip(x, q, m)]
             alpha = tf.round(
                 tf.reduce_sum(
                     [ tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, m) ],
