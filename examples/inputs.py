@@ -63,9 +63,6 @@ else:
         # treat weights as private
         w, = prot.define_private_input(weights_input)
 
-        # # treat weights as public
-        # w, = prot.define_private_input(weights_input)
-
         # load input for prediction
         x, = prot.define_private_input(prediction_input)
 
