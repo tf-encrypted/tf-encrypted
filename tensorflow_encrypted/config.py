@@ -32,8 +32,7 @@ class LocalConfig(Config):
     Intended mostly for development/debugging use.
     """
 
-    def __init__(self, player_names:List[str], job_name:str='localhost') -> None:
-        #player_names = ['master'] + player_names # TODO[Morten] @Morgan why was this added?
+    def __init__(self, player_names: List[str], job_name: str='localhost') -> None:
         self._job_name = job_name
         self._players = {
             name: Player(
@@ -53,7 +52,7 @@ class LocalConfig(Config):
             return None
 
         return LocalConfig(
-            player_names=params['player_names'], 
+            player_names=params['player_names'],
             job_name=params['job_name']
         )
 

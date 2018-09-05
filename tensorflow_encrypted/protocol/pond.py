@@ -129,7 +129,8 @@ class Pond(Protocol):
         self,
         initial_value: Union['TFEData', 'TFETensor'],
         apply_scaling: bool = True,
-        name: Optional[str] = None) -> 'PondPrivateVariable':
+        name: Optional[str] = None
+    ) -> 'PondPrivateVariable':
 
         assert isinstance(initial_value, (np.ndarray, PondPublicTensor,
                                           PondPrivateTensor)), type(initial_value)
@@ -167,10 +168,12 @@ class Pond(Protocol):
         _initializers.append(x.initializer)
         return x
 
-    def define_public_input(self,
-        provider:InputProvider,
-        apply_scaling:bool=True,
-        name:str=None) -> 'List[PondPublicTensor]':
+    def define_public_input(
+        self,
+        provider: InputProvider,
+        apply_scaling: bool=True,
+        name: str=None
+    ) -> 'List[PondPublicTensor]':
 
         xs = []
 
@@ -193,11 +196,13 @@ class Pond(Protocol):
 
         return xs
 
-    def define_private_input(self,
-        provider:InputProvider,
-        apply_scaling:bool=True,
-        name:str=None,
-        masked:bool=False) -> 'Union[List[PondPrivateTensor], List[PondMaskedTensor]]':
+    def define_private_input(
+        self,
+        provider: InputProvider,
+        apply_scaling: bool=True,
+        name: str=None,
+        masked: bool=False
+    ) -> 'Union[List[PondPrivateTensor], List[PondMaskedTensor]]':
 
         xs = []
 
@@ -226,11 +231,13 @@ class Pond(Protocol):
 
         return xs
 
-    def define_output(self,
-        xs:List['PondPrivateTensor'],
-        receiver:OutputReceiver,
-        apply_scaling:bool=True,
-        name:Optional[str]=None):
+    def define_output(
+        self,
+        xs: List['PondPrivateTensor'],
+        receiver: OutputReceiver,
+        apply_scaling: bool=True,
+        name: Optional[str]=None
+    ):
 
         with tf.name_scope('output{}'.format('-' + name if name else '')):
 
@@ -250,7 +257,7 @@ class Pond(Protocol):
                 op = receiver.receive_output(vs)
 
                 # wrap in tf.group to prevent sending back any tensors (which might hence be leaked)
-                op = tf.group(out)
+                op = tf.group(op)
 
         return op
 
@@ -528,8 +535,9 @@ class Pond(Protocol):
     def reshape(
         self,
         x: Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor'],
-        shape: List[int]):
-        
+        shape: List[int]
+    ):
+
         node_key = ('reshape', x)
         x_reshaped = _nodes.get(node_key, None)
 
@@ -578,8 +586,11 @@ class Pond(Protocol):
 
         return x_e
 
-    def squeeze(self, x: Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor'],
-        axis: List[int]):
+    def squeeze(
+        self,
+        x: Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor'],
+        axis: List[int]
+    ):
 
         node_key = ('squeeze', x)
         x_squeezed = _nodes.get(node_key, None)
@@ -750,9 +761,9 @@ class Pond(Protocol):
             return cached
 
         dispatch = {
-            PondPublicTensor:  _cache_public,
-            PondPrivateTensor: _cache_private,
-            PondMaskedTensor:  _cache_masked
+            PondPublicTensor:  _cache_public,  # noqa: E241
+            PondPrivateTensor: _cache_private,  # noqa: E241
+            PondMaskedTensor:  _cache_masked  # noqa: E241
         }
         func = dispatch.get(_type(x), None)
         if func is None:

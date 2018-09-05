@@ -10,6 +10,7 @@ from ..player import Player
 
 __all__ = [
     'Protocol',
+    'global_caches_updator',
     'Player',
     'Pond',
     'TFEVariable',

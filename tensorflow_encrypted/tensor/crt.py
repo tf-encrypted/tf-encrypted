@@ -13,6 +13,7 @@ def gen_crt_decompose(m):
 
     return crt_decompose
 
+
 def gen_crt_recombine_lagrange(m):
 
     # precomputation
@@ -28,6 +29,7 @@ def gen_crt_recombine_lagrange(m):
             return res
 
     return crt_recombine_lagrange
+
 
 def gen_crt_recombine_explicit(m, int_type):
 
@@ -76,6 +78,7 @@ def gen_crt_recombine_explicit(m, int_type):
                 raise TypeError("Don't know how to recombine {}".format(type(x[0])))
 
     return crt_recombine_explicit
+
 
 # *** NOTE ***
 # keeping mod operations in-lined here for simplicity;
@@ -169,6 +172,7 @@ def gen_crt_sample_uniform(m, int_type):
 
     return crt_sample_uniform
 
+
 def gen_crt_mod(m, int_type):
 
     # outer precomputation
@@ -187,11 +191,11 @@ def gen_crt_mod(m, int_type):
             t = [(xi * qi) % mi for xi, qi, mi in zip(x, q, m)]
             alpha = tf.round(
                 tf.reduce_sum(
-                    [ tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, m) ],
+                    [tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, m)],
                     axis=0
                 )
             )
-            u = tf.reduce_sum([ ti * bi for ti, bi in zip(t, b) ], axis=0)
+            u = tf.reduce_sum([ti * bi for ti, bi in zip(t, b)], axis=0)
             v = tf.cast(alpha, int_type) * B
             w = u - v
             return redecompose(w % k)
