@@ -107,6 +107,10 @@ Please see [`tools/gcp/`](./tools/gcp/) for further information about setting up
 
 Please see [`DEVELOP`](./DEVELOP.md) for guidelines and further instructions for setting up the project for development.
 
+# License
+
+Licensed under Apache License, Version 2.0 (see [LICENSE](./LICENSE) or http://www.apache.org/licenses/LICENSE-2.0). Copyright as specified in [NOTICE](./NOTICE).
+
 # Contributions
 
 Several people have had an impact on the development of this library (in alphabetical order):
