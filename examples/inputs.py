@@ -50,8 +50,8 @@ else:
             return tf.Print(x, [x])
 
     class PredictionOutputReceiver(tfe.io.OutputReceiver):
-        def receive_output(self, tensors):
-            return tf.Print([], tensors, summarize=4)
+        def receive_output(self, prediction):
+            return tf.Print([], [prediction], summarize=4)
 
     weights_input = WeightsInputProvider(config.get_player('weights_provider'))
     prediction_input = PredictionInputProvider(config.get_player('prediction_client'))
@@ -60,16 +60,16 @@ else:
     with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
 
         # treat weights as private
-        w, = prot.define_private_input(weights_input)
+        w = prot.define_private_input(weights_input)
 
         # load input for prediction
-        x, = prot.define_private_input(prediction_input)
+        x = prot.define_private_input(prediction_input)
 
         # compute prediction
         y = prot.dot(x, w)
 
         # send output
-        prediction_op = prot.define_output([y], prediction_output)
+        prediction_op = prot.define_output(y, prediction_output)
 
         with config.session() as sess:
             tfe.run(sess, tf.global_variables_initializer(), tag='init')

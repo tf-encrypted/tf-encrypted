@@ -266,7 +266,7 @@ class Int100Constant(Int100Tensor):
 
         assert type(int100_value) in [Int100Tensor], type(int100_value)
 
-        backing = [tf.convert_to_tensor(vi, dtype=INT_TYPE) for vi in int100_value.backing]
+        backing = [tf.constant(vi, dtype=INT_TYPE) for vi in int100_value.backing]
 
         super(Int100Constant, self).__init__(None, backing)
 
