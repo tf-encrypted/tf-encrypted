@@ -4,7 +4,7 @@ import sys
 import os
 import uuid
 from threading import Thread
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Callable
 
 import argparse
 import tensorflow as tf
@@ -78,36 +78,64 @@ else:
 
     tf.reset_default_graph()
 
-    class PredictionInputProvider(tfe.io.InputProvider):
-        def provide_input(self) -> tf.Tensor:
-            return tf.placeholder(tf.float32, shape=[1, 16], name="api")
-
+    input_spec = []
     with gfile.FastGFile(model_file, 'rb') as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
+
+        for node in graph_def.node:
+            if node.op != "Placeholder":
+                continue
+
+            input_spec.append({
+                'name': node.name,
+                'dtype': node.attr['dtype'].type,
+                'shape': [int(d.size) for d in node.attr['shape'].shape.dim]
+            })
 
     sess = remote_config.session()
 
     with tfe.protocol.Pond(*remote_config.get_players('server0, server1, crypto_producer')) as prot:
         assert isinstance(prot, tfe.protocol.Pond)
 
-        x = PredictionInputProvider(remote_config.get_player('master'))
+        inputs = []
+        for i, spec in enumerate(input_spec):
+            def scope(i: int) -> Callable[[], tf.Tensor]:
+                def provide_input() -> tf.Tensor:
+                    pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
+                    return pl
+
+                return provide_input
+
+            x = tfe.io.InputProvider(remote_config.get_player('master'), scope(i))
+            inputs.append(x)
 
         print('Securing computation')
         c = tfe.convert.convert.Converter(remote_config, prot, remote_config.get_player('weights_provider'))
-        y = c.convert(graph_def, x, tfe.convert.register())
+        y = c.convert(graph_def, inputs, tfe.convert.register())
 
         # TODO: do not reveal on the master server
         y = y.reveal()
         if isinstance(prot, tfe.protocol.Pond):
             tfe.run(sess, prot.initializer, tag='init')
 
-    pl = tf.get_default_graph().get_tensor_by_name("private-input/api:0")
+    pls = []
+    for i in range(len(input_spec)):
+        if i == 0:
+            name = "private-input/api/{}:0".format(i)
+        else:
+            name = "private-input_{}/api/{}:0".format(i, i)
+        pls.append(
+            tf.get_default_graph().get_tensor_by_name(name)
+        )
 
-    def predict(request_id: str, input_data: Any) -> None:
+    def predict(request_id: str, input_data: Tuple[Any]) -> None:
+        feed_dict = {
+            pl: input_data[i] for i, pl in enumerate(pls)
+        }
         output_data = y.eval(
             sess=sess,
-            feed_dict={pl: input_data},
+            feed_dict=feed_dict,
             tag='prediction',
         )
 
@@ -118,6 +146,10 @@ else:
     # define the app
     app = Flask(__name__)
     CORS(app)  # needed for cross-domain requests, allow everything by default
+
+    @app.route('/input_spec')  # type: ignore
+    def api_input_spec() -> str:
+        return jsonify(input_spec)
 
     @app.route('/predict', methods=['POST'])  # type: ignore
     def api_predict() -> str:

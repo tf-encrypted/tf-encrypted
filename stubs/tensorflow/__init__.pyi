@@ -145,8 +145,30 @@ class Graph:
         ...
 
 
+class NodeDef:
+    @property
+    def name(self) -> str:
+        ...
+
+    @property
+    def op(self) -> str:
+        ...
+
+    @property
+    def attr(self, str: str) -> 'AttrValue':
+        ...
+
+
+class AttrValue:
+    ...
+
+
 class GraphDef:
-    def ParseFromString(self, str) -> None:
+    def ParseFromString(self, str: str) -> None:
+        ...
+
+    @property
+    def node(self) -> List[NodeDef]:
         ...
 
 
