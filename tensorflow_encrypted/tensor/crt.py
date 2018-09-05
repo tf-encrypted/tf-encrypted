@@ -79,6 +79,7 @@ def gen_crt_recombine_explicit(m, int_type):
 
     return crt_recombine_explicit
 
+
 # *** NOTE ***
 # keeping mod operations in-lined here for simplicity;
 # we should do them lazily
@@ -172,7 +173,7 @@ def gen_crt_sample_uniform(m, int_type):
     return crt_sample_uniform
 
 
-def gen_crt_mod(m, int_type, float_type):
+def gen_crt_mod(m, int_type):
 
     # outer precomputation
     M = prod(m)
@@ -188,20 +189,16 @@ def gen_crt_mod(m, int_type, float_type):
 
         with tf.name_scope('crt_mod'):
             t = [(xi * qi) % mi for xi, qi, mi in zip(x, q, m)]
-            alpha = tf.cast(
-                tf.round(
-                    tf.reduce_sum(
-                        [tf.cast(ti, float_type) / mi for ti, mi in zip(t, m)],
-                        axis=0
-                    )
-                ),
-                int_type
+            alpha = tf.round(
+                tf.reduce_sum(
+                    [tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, m)],
+                    axis=0
+                )
             )
-            v = tf.reduce_sum(
-                [ti * bi for ti, bi in zip(t, b)],
-                axis=0
-            ) - B * alpha
-            return redecompose(v % k)
+            u = tf.reduce_sum([ti * bi for ti, bi in zip(t, b)], axis=0)
+            v = tf.cast(alpha, int_type) * B
+            w = u - v
+            return redecompose(w % k)
 
     return crt_mod
 

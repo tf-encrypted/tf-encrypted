@@ -39,22 +39,19 @@ else:
     #
 
     class WeightsInputProvider(tfe.io.InputProvider):
-
         def provide_input(self) -> tf.Tensor:
             raw_w = np.array([5, 5, 5, 5]).reshape((2, 2))
             w = tf.constant(raw_w)
             return tf.Print(w, [w])
 
     class PredictionInputProvider(tfe.io.InputProvider):
-
         def provide_input(self) -> tf.Tensor:
             x = tf.constant([1, 2, 3, 4], shape=(2, 2), dtype=tf.float32)
             return tf.Print(x, [x])
 
     class PredictionOutputReceiver(tfe.io.OutputReceiver):
-
-        def receive_output(self, tensor: tf.Tensor) -> tf.Operation:
-            return tf.Print(tensor, [tensor])
+        def receive_output(self, prediction):
+            return tf.Print([], [prediction], summarize=4)
 
     weights_input = WeightsInputProvider(config.get_player('weights_provider'))
     prediction_input = PredictionInputProvider(config.get_player('prediction_client'))
@@ -62,23 +59,14 @@ else:
 
     with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
 
-        # # treat weights as private
-        # initial_w = prot.define_private_input(weights_input)
-        # w = prot.define_private_variable(initial_w)
-
-        # treat weights as private, but initial value as public
-        # initial_w = prot.define_public_input(weights_input)
-        # w = prot.define_private_variable(initial_w)
-
-        # treat weights as public
-        initial_w = prot.define_public_input(weights_input)
-        w = prot.define_public_variable(initial_w)
+        # treat weights as private
+        w = prot.define_private_input(weights_input)
 
         # load input for prediction
         x = prot.define_private_input(prediction_input)
 
         # compute prediction
-        y = x.dot(w)
+        y = prot.dot(x, w)
 
         # send output
         prediction_op = prot.define_output(y, prediction_output)
