@@ -10,8 +10,11 @@ from abc import ABC, abstractmethod
 
 from .player import Player
 
-
 __TFE_DEBUG__ = False
+TENSORBOARD_DIR = '/tmp/tensorboard'
+__MONITOR_STATS__ = False
+
+_run_counter: Any = defaultdict(int)
 
 
 class Config(ABC):
@@ -157,13 +160,7 @@ class RemoteConfig(Config):
         return sess
 
 
-TENSORBOARD_DIR = '/tmp/tensorboard'
-__MONITOR_STATS__ = False
-
-_run_counter: Any = defaultdict(int)
-
-
-def setTFEDebugFlag(debug: bool = True) -> None:
+def setTFEDebugFlag(debug: bool = False) -> None:
     global __TFE_DEBUG__
     if debug is True:
         print("Tensorflow encrypted is running in DEBUG mode")
