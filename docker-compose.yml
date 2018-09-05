@@ -2,7 +2,7 @@ version: '3'
 
 services:
   server0:
-    image: partydb/tf-encrypted:latest
+    image: mortendahl/tf-encrypted:latest
     ports:
       - 4440:4440
     environment:
@@ -13,7 +13,7 @@ services:
       TFE_WEIGHTS_PROVIDER_ADDRESS: provider:4440
 
   server1:
-    image: partydb/tf-encrypted:latest
+    image: mortendahl/tf-encrypted:latest
     ports:
       - 4441:4440
     environment:
@@ -24,7 +24,7 @@ services:
       TFE_WEIGHTS_PROVIDER_ADDRESS: provider:4440
 
   producer:
-    image: partydb/tf-encrypted:latest
+    image: mortendahl/tf-encrypted:latest
     ports:
       - 4442:4440
     environment:
@@ -35,7 +35,7 @@ services:
       TFE_WEIGHTS_PROVIDER_ADDRESS: provider:4440
 
   provider:
-    image: partydb/tf-encrypted:latest
+    image: mortendahl/tf-encrypted:latest
     ports:
       - 4443:4440
     environment:
@@ -46,7 +46,7 @@ services:
       TFE_WEIGHTS_PROVIDER_ADDRESS: 0.0.0.0:4440
 
   master:
-    image: partydb/tf-encrypted:latest
+    image: mortendahl/tf-encrypted:latest
     ports:
       - 4444:4440
       - 5000:5000
@@ -65,5 +65,11 @@ services:
       - server1
       - producer
       - provider
+    entrypoint:
+      - "python"
+      - "-u"
+      - "bin/serve"
+      - "--model_name"
+      - "2inputs"
     # volumes:
     #   - /tmp/tensorboard:/tmp/tensorboard

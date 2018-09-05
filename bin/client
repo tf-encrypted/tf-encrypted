@@ -16,14 +16,25 @@ class Client():
         self.base_url = "http://%s:%d" % (self.host, self.port)
 
     def send_inputs(self, input_data: List[Any]) -> str:
-        r = requests.post("%s/predict" % self.base_url, json=input_data)
+        url = "{}/predict".format(self.base_url)
+        r = requests.post(url, json=input_data)
         output_data = json.loads(r.text)
 
         return output_data['request_id']
 
-    def send_random_inputs(self, shape: List[int]) -> str:
-        input_data = np.random.standard_normal(shape).tolist()
-        r = requests.post("%s/predict" % self.base_url, json=input_data)
+    def send_random_inputs(self) -> str:
+        input_spec_url = "{}/input_spec".format(self.base_url)
+        r = requests.get(input_spec_url)
+        input_spec = json.loads(r.text)
+
+        input_data = []
+        for spec in input_spec:
+            input_data.append(
+                np.random.standard_normal(spec['shape']).tolist()
+            )
+
+        url = "{}/predict".format(self.base_url)
+        r = requests.post(url, json=input_data)
         output_data = json.loads(r.text)
 
         return output_data['request_id']
@@ -34,7 +45,8 @@ class Client():
         while i < 240:
             i += 1
             # Keep polling until we have an answer
-            r = requests.post("%s/poll" % self.base_url, json=request_id)
+            url = "{}/poll".format(self.base_url)
+            r = requests.post(url, json=request_id)
             output_data = r.text
             if output_data is not None:
                 return json.loads(output_data)
@@ -47,7 +59,7 @@ class Client():
 def main(config):
     c = Client(config.host, config.port)
 
-    if config.poll:
+    if config.request_id is not None:
         request_id = config.request_id
         if request_id is None:
             print("you need to provide a request_id")
@@ -60,8 +72,7 @@ def main(config):
         request_id = c.send_inputs(input_data.tolist())
         print(request_id)
     else:
-        shape = list(map(lambda x: int(x), config.shape.split(',')))
-        request_id = c.send_random_inputs(shape)
+        request_id = c.send_random_inputs()
         print(request_id)
 
 
@@ -70,15 +81,11 @@ if __name__ == '__main__':
     parser.add_argument(
         "--host", type=str, default="localhost", help="increase output verbosity")
     parser.add_argument(
-        '--port', type=int, default=5000, help='port API endpoint for the prediction')
-    parser.add_argument(
-        '--poll', type=bool, default=False, help='Perform pooling')
+        '--port', type=int, default=8080, help='port API endpoint for the prediction')
     parser.add_argument(
         '--request_id', type=str, help='id used to poll an output')
     parser.add_argument(
         '--input_file', type=str, default="", help='load the data from a numpy file format (.npy)')
-    parser.add_argument(
-        '--shape', type=str, default="1", help='Generate a random input of the given shape, must be as comma separated numbers: 1,2,3')
     args = parser.parse_args()
 
     main(args)
