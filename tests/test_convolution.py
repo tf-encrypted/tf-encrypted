@@ -4,9 +4,12 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-class TestConv2D(unittest.TestCase):
 
-    def test_forward(self):
+class TestConv2D(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
+    def test_forward(self) -> None:
         # input
         batch_size, channels_in, channels_out = 32, 3, 64
         img_height, img_width = 28, 28
@@ -14,7 +17,7 @@ class TestConv2D(unittest.TestCase):
         input_conv = np.random.normal(size=input_shape).astype(np.float32)
 
         # filters
-        h_filter, w_filter, strides, padding = 2, 2, 2, 0
+        h_filter, w_filter, strides = 2, 2, 2
         filter_shape = (h_filter, w_filter, channels_in, channels_out)
         filter_values = np.random.normal(size=filter_shape)
 
@@ -28,8 +31,8 @@ class TestConv2D(unittest.TestCase):
         with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
 
             conv_input = prot.define_private_variable(input_conv)
-            conv_layer = tfe.layers.Conv2D(filter_shape, strides=2)
-            conv_layer.initialize(input_shape, initial_weights=filter_values)
+            conv_layer = tfe.layers.Conv2D(input_shape, filter_shape, strides=2)
+            conv_layer.initialize(initial_weights=filter_values)
             conv_out_pond = conv_layer.forward(conv_input)
 
             with config.session() as sess:

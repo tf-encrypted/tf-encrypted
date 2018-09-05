@@ -8,11 +8,10 @@ from typing import Union, Optional, List, Dict, Any
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_im2col, gen_crt_mod,
-    gen_crt_sample_uniform
+    gen_crt_sample_uniform, gen_crt_sum
 )
 from .helpers import prod, log2
 from ..config import run
-from typing import Any, List, Tuple
 
 
 #
@@ -30,13 +29,14 @@ M = prod(m)
 # make sure we have room for lazy reductions:
 # - 1 multiplication followed by 1024 additions
 for mi in m:
-    assert 2*log2(mi) + log2(1024) < log2(INT_TYPE.max)
+    assert 2 * log2(mi) + log2(1024) < log2(INT_TYPE.max)
 
 _crt_decompose = gen_crt_decompose(m)
 _crt_recombine_lagrange = gen_crt_recombine_lagrange(m)
 _crt_recombine_explicit = gen_crt_recombine_explicit(m, INT_TYPE)
 
 _crt_add = gen_crt_add(m)
+_crt_sum = gen_crt_sum(m)
 _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_dot = gen_crt_dot(m)
@@ -51,7 +51,11 @@ class Int100Tensor(object):
     modulus = M
     int_type = INT_TYPE
 
-    def __init__(self, native_value: Optional[Union[np.ndarray, tf.Tensor]], decomposed_value: Optional[Union[List[np.ndarray], List[tf.Tensor]]]=None) -> None:
+    def __init__(
+        self,
+        native_value: Optional[Union[np.ndarray, tf.Tensor]],
+        decomposed_value: Optional[Union[List[np.ndarray], List[tf.Tensor]]] = None
+    ) -> None:
         if decomposed_value is None:
             decomposed_value = _crt_decompose(native_value)
 
@@ -72,7 +76,7 @@ class Int100Tensor(object):
         return Int100Tensor(None, value)
 
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int100Tensor':
-        evaluated_backing: Union[List[np.ndarray], List[tf.Tensor]] = run(sess, self.backing, feed_dict=feed_dict, tag=tag)
+        evaluated_backing = run(sess, self.backing, feed_dict=feed_dict, tag=tag)
         return Int100Tensor.from_decomposed(evaluated_backing)
 
     def to_int32(self) -> Union[tf.Tensor, np.ndarray]:
@@ -95,6 +99,9 @@ class Int100Tensor(object):
     def __add__(self, other: 'Int100Tensor') -> 'Int100Tensor':
         return _add(self, other)
 
+    def sum(self, axis, keepdims=None):
+        return _sum(self, axis, keepdims)
+
     def __sub__(self, other: 'Int100Tensor') -> 'Int100Tensor':
         return _sub(self, other)
 
@@ -113,14 +120,20 @@ class Int100Tensor(object):
     def __mod__(self, k) -> 'Int100Tensor':
         return _mod(self, k)
 
-    def transpose(self, *axes) -> 'Int100Tensor':
-        return _transpose(self, *axes)
+    def transpose(self, perm=None) -> 'Int100Tensor':
+        return _transpose(self, perm=perm)
 
     def strided_slice(self, args: Any, kwargs: Any):
         return _strided_slice(self, args, kwargs)
 
-    def reshape(self, *axes) -> 'Int100Tensor':
-        return _reshape(self, *axes)
+    def reshape(self, axes: List[int]) -> 'Int100Tensor':
+        return _reshape(self, axes)
+
+    def expand_dims(self, axis: int) -> 'Int100Tensor':
+        return _expand_dims(self, axis)
+
+    def squeeze(self, axis: List[int]) -> 'Int100Tensor':
+        return _squeeze(self, axis)
 
 
 def _lift(x):
@@ -139,6 +152,11 @@ def _add(x, y):
     x, y = _lift(x), _lift(y)
     z_backing = _crt_add(x.backing, y.backing)
     return Int100Tensor.from_decomposed(z_backing)
+
+
+def _sum(x, axis, keepdims):
+    y_backing = _crt_sum(x.backing, axis, keepdims)
+    return Int100Tensor.from_decomposed(y_backing)
 
 
 def _sub(x, y):
@@ -179,11 +197,11 @@ def _conv2d(x, y, strides, padding):
         w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
 
     X_col = x.im2col(h_filter, w_filter, padding, strides)
-    W_col = y.transpose(3, 2, 0, 1).reshape(int(n_filters), -1)
+    W_col = y.transpose(perm=(3, 2, 0, 1)).reshape([int(n_filters), -1])
     out = W_col.dot(X_col)
 
-    out = out.reshape(n_filters, h_out, w_out, n_x)
-    out = out.transpose(3, 0, 1, 2)
+    out = out.reshape([n_filters, h_out, w_out, n_x])
+    out = out.transpose(perm=(3, 0, 1, 2))
 
     return out
 
@@ -198,9 +216,9 @@ def _sample_uniform(shape):
     return Int100Tensor.from_decomposed(backing)
 
 
-def _transpose(x, *axes):
+def _transpose(x, perm=None):
     assert isinstance(x, Int100Tensor), type(x)
-    backing = [tf.transpose(xi, axes) for xi in x.backing]
+    backing = [tf.transpose(xi, perm=perm) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
 
 
@@ -210,9 +228,21 @@ def _strided_slice(x: Int100Tensor, args: Any, kwargs: Any):
     return Int100Tensor.from_decomposed(backing)
 
 
-def _reshape(x, *axes):
+def _reshape(x: Int100Tensor, axes: List[int]) -> Int100Tensor:
     assert isinstance(x, Int100Tensor), type(x)
     backing = [tf.reshape(xi, axes) for xi in x.backing]
+    return Int100Tensor.from_decomposed(backing)
+
+
+def _expand_dims(x, axis=None):
+    assert isinstance(x, Int100Tensor), type(x)
+    backing = [tf.expand_dims(xi, axis) for xi in x.backing]
+    return Int100Tensor.from_decomposed(backing)
+
+
+def _squeeze(x, axis=None):
+    assert isinstance(x, Int100Tensor), type(x)
+    backing = [tf.squeeze(xi, axis=axis) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
 
 
@@ -236,7 +266,7 @@ class Int100Constant(Int100Tensor):
 
         assert type(int100_value) in [Int100Tensor], type(int100_value)
 
-        backing = [tf.convert_to_tensor(vi, dtype=INT_TYPE) for vi in int100_value.backing]
+        backing = [tf.constant(vi, dtype=INT_TYPE) for vi in int100_value.backing]
 
         super(Int100Constant, self).__init__(None, backing)
 

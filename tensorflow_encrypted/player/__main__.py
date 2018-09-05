@@ -14,4 +14,3 @@ if __name__ == '__main__':
     server = config.server(args.name)
     server.start()
     server.join()
-    

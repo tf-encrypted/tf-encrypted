@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+
+import argparse
+import tensorflow as tf
+from tensorflow.python.platform import gfile
+
+from tensorflow_encrypted.convert import convert
+from tensorflow_encrypted.convert.register import register
+import numpy as np
+import tensorflow_encrypted as tfe
+
+
+parser = argparse.ArgumentParser(description='Runs the specified model with the specified input')
+parser.add_argument('model_path', type=str, help='path to model')
+parser.add_argument('input_path', type=str, help='path to input to model')
+args = parser.parse_args()
+
+model_path = args.model_path
+with gfile.FastGFile(model_path, 'rb') as f:
+    graph_def = tf.GraphDef()
+    graph_def.ParseFromString(f.read())
+
+input_path = args.input_path
+
+config = tfe.LocalConfig([
+    'server0',
+    'server1',
+    'crypto_producer'
+])
+
+
+class PredictionInputProvider(tfe.io.InputProvider):
+    def provide_input(self) -> tf.Tensor:
+        input = np.load(self.input_path)
+
+        return tf.constant(input, tf.float32)
+
+
+with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+    input = PredictionInputProvider(config.get_player('crypto_producer'))
+    input.input_path = input_path
+
+    c = convert.Converter(config, prot, config.get_player('crypto_producer'))
+    x = c.convert(graph_def, input, register())
+
+    with config.session() as sess:
+        print("initing!!!")
+        tfe.run(sess, prot.initializer, tag='init')
+
+        print("running")
+        output = x.reveal().eval(sess, tag='prediction')
+        print(output)

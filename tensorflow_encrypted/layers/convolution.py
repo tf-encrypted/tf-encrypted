@@ -1,11 +1,16 @@
 import numpy as np
+
+from typing import List
+
 from . import core
 
 
 class Conv2D(core.Layer):
-    def __init__(self, filter_shape, strides=1, padding="SAME",
+    def __init__(self,
+                 input_shape: List[int], filter_shape: List[int],
+                 strides: int = 1, padding: str = "SAME",
                  filter_init=lambda shp: np.random.normal(scale = 0.1, size = shp),
-                 l2reg_lambda=0.0, channels_first=True):
+                 l2reg_lambda: float = 0.0, channels_first: bool = True) -> None:
         """ 2 Dimensional convolutional layer, expects NCHW data format
             filter_shape: tuple of rank 4
             strides: int with stride size
@@ -26,12 +31,17 @@ class Conv2D(core.Layer):
         self.weights = None
         self.bias = None
         self.model = None
-        assert channels_first
+        self.channels_first = channels_first
 
-    def initialize(self, input_shape, initial_weights=None):
+        super(Conv2D, self).__init__(input_shape)
 
+    def get_output_shape(self) -> List[int]:
         h_filter, w_filter, d_filters, n_filters = self.fshape
-        n_x, d_x, h_x, w_x = input_shape
+
+        if self.channels_first:
+            n_x, d_x, h_x, w_x = self.input_shape
+        else:
+            n_x, h_x, w_x, d_x = self.input_shape
 
         if self.padding == "SAME":
             h_out = int(np.ceil(float(h_x) / float(self.strides)))
@@ -40,21 +50,35 @@ class Conv2D(core.Layer):
             h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides)))
             w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides)))
 
+        return [n_x, n_filters, h_out, w_out]
+
+    def initialize(self, initial_weights=None) -> None:
         if initial_weights is None:
             initial_weights = self.filter_init(self.fshape)
-        self.weights = self.prot.define_private_variable(initial_weights)
-        self.bias = self.prot.define_private_variable(np.zeros((n_filters, h_out, w_out)))
 
-        return [n_x, n_filters, h_out, w_out]
+        self.weights = self.prot.define_private_variable(initial_weights)
+        self.bias = self.prot.define_private_variable(np.zeros(self.output_shape[1:]))
 
     def forward(self, x):
         self.cached_input_shape = x.shape
         self.cache = x
+
+        if not self.channels_first:
+            x = self.prot.transpose(x, perm=[0, 3, 1, 2])
+
         out = self.prot.conv2d(x, self.weights, self.strides, self.padding)
 
-        return out + self.bias
+        out = out + self.bias
+
+        if not self.channels_first:
+            out = self.prot.transpose(out, perm=[0, 2, 3, 1])
+
+        return out
 
     def backward(self, d_y, learning_rate):
+        if not self.channels_first:
+            raise TypeError("channels must be first on the backward pass")
+
         x = self.cache
         h_filter, w_filter, d_filter, n_filter = map(int, self.weights.shape)
 

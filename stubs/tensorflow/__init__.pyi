@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union, List
+from typing import Any, Dict, Optional, Union, List, Callable
 
 from . import nn
 from . import errors
@@ -23,6 +23,10 @@ GraphElement = Union[
 
 
 class dtype:
+    ...
+
+
+class string(str):
     ...
 
 
@@ -96,19 +100,29 @@ class dtypes:
 
 
 class Operation:
-    pass
+    ...
 
 
 class Tensor:
-    pass
+    @property
+    def shape(self) -> 'TensorShape':
+        ...
 
 
 class SparseTensor:
-    pass
+    ...
+
+
+class TensorShape:
+    def __init__(self, dims: Optional[List[Any]] = None) -> None:
+        ...
+
+    def is_fully_defined(self) -> bool:
+        ...
 
 
 class ClusterSpec:
-    pass
+    ...
 
 
 class gpu_options:
@@ -123,15 +137,43 @@ class ConfigProto:
                  device_count: Optional[Dict[str, int]] = None,
                  inter_op_parallelism_threads: Optional[int] = 0,
                  intra_op_parallelism_threads: Optional[int] = 0) -> None:
-        pass
+        ...
 
 
 class Graph:
-    pass
+    def get_tensor_by_name(self, name: str) -> Tensor:
+        ...
+
+
+class NodeDef:
+    @property
+    def name(self) -> str:
+        ...
+
+    @property
+    def op(self) -> str:
+        ...
+
+    @property
+    def attr(self, str: str) -> 'AttrValue':
+        ...
+
+
+class AttrValue:
+    ...
+
+
+class GraphDef:
+    def ParseFromString(self, str: str) -> None:
+        ...
+
+    @property
+    def node(self) -> List[NodeDef]:
+        ...
 
 
 class RNNCell:
-    pass
+    ...
 
 
 class BaseSession:
@@ -146,16 +188,18 @@ class BaseSession:
             run_options: Any = ...,
             run_metadata: Any = ...,
             options: Optional['RunOptions'] = None,
-            ) -> Any: ...
+            ) -> Any:
+        ...
 
-    def close(self) -> None: ...
+    def close(self) -> None:
+            ...
 
 
 class Session(BaseSession):
     def __init__(self,
                  target: str = ...,
                  graph: Optional[Graph] = ...,
-                 config: ConfigProto = ...
+                 config: ConfigProto = ...,
                  ) -> None:
         self.graph = graph
         ...
@@ -166,7 +210,8 @@ class Session(BaseSession):
     def __exit__(self, type, value, traceback):
         ...
 
-    def close(self) -> None: ...
+    def close(self) -> None:
+        ...
 
 # defined here
 # https://github.com/tensorflow/tensorflow/blob/d8f9538ab48e3c677aaf532769d29bc29a05b76e/tensorflow/python/ops/variables.py#L40
@@ -184,8 +229,9 @@ class Variable:
                  dtype: Optional[Any] = ...,
                  expected_shape: Optional[Any] = ...,
                  import_scope: Optional[str] = ...,
-                 constraint: Optional[Any] = ...
-                 ) -> None: ...
+                 constraint: Optional[Any] = ...,
+                 ) -> None:
+        ...
 
 
 class RunOptions:
@@ -195,12 +241,32 @@ class RunOptions:
     HARDWARE_TRACE = 2
     FULL_TRACE = 3
 
-    def __init__(self, trace_level: int) -> None: ...
+    def __init__(self, trace_level: int) -> None:
+        ...
 
 
 class RunMetadata:
     def __init__(self) -> None:
         self.step_stats: Any
+
+
+class FIFOQueue:
+    def __init__(
+        self,
+        capacity: int,
+        dtypes: List[Any],
+        shapes: Optional[List[Any]] = None,
+        names: Optional[List[str]] = None,
+        shared_name: Optional[str] = None,
+        name: Optional[str] = 'fifo_queue'
+    ) -> None:
+        ...
+
+    def enqueue(self, vals: Any, name: Optional[str] = None) -> Operation:
+        ...
+
+    def dequeue(self, name: Optional[str] = None) -> Any:
+        ...
 
 
 # Original function definition for edit_distance here:
@@ -209,20 +275,23 @@ class RunMetadata:
 def edit_distance(hypothesis: Any,
                   truth: Any,
                   normalize: Optional[bool] = ...,
-                  name: Optional[str] = ...
-                  ) -> Any: ...
+                  name: Optional[str] = ...,
+                  ) -> Any:
+    ...
 
 # Original function definition for global_variables_initializer here:
 # https://github.com/tensorflow/tensorflow/blob/28340a4b12e286fe14bb7ac08aebe325c3e150b4/tensorflow/python/ops/variables.py#L1565
 
 
-def global_variables_initializer() -> Any: ...
+def global_variables_initializer() -> Any:
+    ...
 
 # Original function definition for reset_default_graph here:
 # https://github.com/tensorflow/tensorflow/blob/28340a4b12e286fe14bb7ac08aebe325c3e150b4/tensorflow/python/framework/ops.py#L5531
 
 
-def reset_default_graph() -> Graph: ...
+def reset_default_graph() -> Graph:
+    ...
 
 
 # Original function definition for placeholder here:
@@ -230,8 +299,9 @@ def reset_default_graph() -> Graph: ...
 # TODO: improve types
 def placeholder(dtype: Any,
                 shape: Any = ...,
-                name: Optional[str] = ...
-                ) -> Any: ...
+                name: Optional[str] = ...,
+                ) -> Any:
+    ...
 
 # Original function definition for sparse_placeholder here:
 # https://github.com/tensorflow/tensorflow/blob/28340a4b12e286fe14bb7ac08aebe325c3e150b4/tensorflow/python/ops/array_ops.py#L1749
@@ -240,8 +310,9 @@ def placeholder(dtype: Any,
 
 def sparse_placeholder(dtype: Any,
                        shape: Any = ...,
-                       name: Optional[str] = ...
-                       ) -> Any: ...
+                       name: Optional[str] = ...,
+                       ) -> Any:
+    ...
 
 # Original function definition for sparse_tensor_to_dense here:
 # https://github.com/tensorflow/tensorflow/blob/d8f9538ab48e3c677aaf532769d29bc29a05b76e/tensorflow/python/ops/sparse_ops.py#L948
@@ -252,8 +323,9 @@ def sparse_placeholder(dtype: Any,
 def sparse_tensor_to_dense(sp_input: Any,
                            default_value: Any = ...,
                            validate_indices: bool = ...,
-                           name: Optional[str] = ...
-                           ) -> Any: ...
+                           name: Optional[str] = ...,
+                           ) -> Any:
+    ...
 
 # Original function definition for shape here:
 # https://github.com/tensorflow/tensorflow/blob/28340a4b12e286fe14bb7ac08aebe325c3e150b4/tensorflow/python/ops/array_ops.py#L197
@@ -265,8 +337,9 @@ def sparse_tensor_to_dense(sp_input: Any,
 
 def shape(input: Any,
           name: Optional[str] = ...,
-          out_type: Any = ...
-          ) -> Any: ...
+          out_type: Any = ...,
+          ) -> Any:
+    ...
 
 # Original function definition for truncated_normal here:
 # https://github.com/tensorflow/tensorflow/blob/70cd9ed2d2ea37a6da6f813a99b32c03e90736a4/tensorflow/python/ops/random_ops.py#L139
@@ -277,8 +350,9 @@ def truncated_normal(shape: Any,
                      stddev: Any = ...,  # default 1.0
                      dtype: Any = dtypes.float32,
                      seed: Any = ...,
-                     name: Optional[str] = ...
-                     ) -> Any: ...
+                     name: Optional[str] = ...,
+                     ) -> Any:
+    ...
 
 # Original function definition for reduce_mean here:
 # https://github.com/tensorflow/tensorflow/blob/3f8febf04b075eef0950a18c7e122f0addeacfe9/tensorflow/python/ops/math_ops.py#L1384
@@ -290,14 +364,17 @@ def reduce_mean(input_tensor: Tensor,
                 keepdims: Any = ...,
                 name: Optional[str] = ...,
                 reduction_indices: Any = ...,
-                keep_dims: Any = ...
-                ) -> Any: ...
+                keep_dims: Any = ...,
+                ) -> Any:
+    ...
 
 
-def name_scope(name: str) -> Any: ...
+def name_scope(name: str) -> Any:
+        ...
 
 
-def device(name: str) -> Any: ...
+def device(name: str) -> Any:
+        ...
 
 
 def random_normal(
@@ -306,8 +383,9 @@ def random_normal(
     stddev: Any = ...,
     dtype: Any = dtypes.float32,
     seed: int = ...,
-    name: Optional[str] = ...
-    ) -> Tensor: ...
+    name: Optional[str] = ...,
+) -> Tensor:
+    ...
 
 
 def Print(
@@ -317,10 +395,47 @@ def Print(
     first_n: Optional[int] = None,
     summarize: Optional[int] = None,
     name: Optional[str] = None
-    ) -> Tensor: ...
+) -> Tensor:
+    ...
 
 
 def group(
     *inputs: Tensor,
     **kwargs: Any,
-    ) -> Operation: ...
+) -> Operation:
+    ...
+
+
+def reshape(
+    tensor: Any,
+    shape: Union[Tensor, List[int]],
+    name: Optional[str] = None
+) -> Tensor:
+    ...
+
+
+def control_dependencies(control_inputs: List[Union[Operation, Tensor]]) -> Any:
+    ...
+
+
+def get_default_graph() -> Graph:
+    ...
+
+
+def while_loop(
+    cond: Callable,
+    body: Callable,
+    loop_vars: Any,
+    shape_invariants: Optional[Any] = None,
+    parallel_iterations: int = 10,
+    back_prop: bool = True,
+    swap_memory: bool = False,
+    name: Optional[str] = None,
+    maximum_iterations: Optional[int] = None,
+    return_same_structure: bool = False
+) -> Any:
+    ...
+
+
+def identity(input: Tensor, name: Optional[str] = None) -> Tensor:
+    ...

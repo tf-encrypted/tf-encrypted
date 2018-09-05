@@ -21,5 +21,5 @@ def inverse(a: int, m: int) -> int:
     return b % m
 
 
-log2: Callable[[int], float] = lambda x: log(x)/log(2)
-prod: Callable[[List[int]], int] = lambda xs: reduce(lambda x, y: x*y, xs)
+log2: Callable[[int], float] = lambda x: log(x) / log(2)
+prod: Callable[[List[int]], int] = lambda xs: reduce(lambda x, y: x * y, xs)

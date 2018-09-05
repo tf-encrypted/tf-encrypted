@@ -1,4 +1,4 @@
-from typing import Optional, Any, Type, List
+from typing import Optional, Type, List
 from types import TracebackType
 import tensorflow as tf
 

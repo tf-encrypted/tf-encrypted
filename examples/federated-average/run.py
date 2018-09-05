@@ -2,7 +2,6 @@ from typing import List
 import sys
 from functools import reduce
 
-import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
@@ -26,11 +25,13 @@ class Inputter(tfe.io.InputProvider):
         # pick random tensor to be averaged
         return [tf.random_normal(shape=(10,))]
 
+
 class ResultReceiver(tfe.io.OutputReceiver):
     def receive_output(self, tensors: List[tf.Tensor]) -> tf.Operation:
         average, = tensors
         # simply print average
         return tf.Print([], [average], summarize=10, message="Average:")
+
 
 # create players based on names from above
 inputters = [Inputter(config.get_player(name)) for name in player_names_inputter]
@@ -45,12 +46,12 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     inputs = [prot.define_private_input(inputter)[0] for inputter in inputters]
 
     # sum all inputs and divide by count
-    result = reduce(lambda x,y: x+y, inputs) * (1/len(inputs))
+    result = reduce(lambda x, y: x + y, inputs) * (1 / len(inputs))
 
     # send result to receiver
     result_op = prot.define_output([result], result_receiver)
 
     with config.session() as sess:
-        tfe.run(sess, tf.global_variables_initializer())            
+        tfe.run(sess, tf.global_variables_initializer())
         for _ in range(3):
             tfe.run(sess, result_op, tag='average')
