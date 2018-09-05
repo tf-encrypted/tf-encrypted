@@ -59,7 +59,7 @@ class Client():
 def main(config):
     c = Client(config.host, config.port)
 
-    if config.poll:
+    if config.request_id is not None:
         request_id = config.request_id
         if request_id is None:
             print("you need to provide a request_id")
@@ -82,8 +82,6 @@ if __name__ == '__main__':
         "--host", type=str, default="localhost", help="increase output verbosity")
     parser.add_argument(
         '--port', type=int, default=8080, help='port API endpoint for the prediction')
-    parser.add_argument(
-        '--poll', type=bool, default=False, help='Perform pooling')
     parser.add_argument(
         '--request_id', type=str, help='id used to poll an output')
     parser.add_argument(
