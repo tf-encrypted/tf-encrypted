@@ -14,6 +14,7 @@ from .player import Player
 
 __TFE_DEBUG__ = bool(os.getenv('TFE_DEBUG', False))
 __TFE_STATS__ = bool(os.getenv('TFE_STATS', False))
+__TFE_TRACE__ = bool(os.getenv('TFE_TRACE', False))
 __TENSORBOARD_DIR__ = str(os.getenv('TFE_STATS_DIR', '/tmp/tensorboard'))
 
 _run_counter: Any = defaultdict(int)
@@ -302,8 +303,9 @@ def run(
         writer.add_run_metadata(run_metadata, session_tag)
         writer.close()
 
-        chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
-        with open('{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag), 'w') as f:
-            f.write(chrome_trace)
+        if __TFE_TRACE__:
+            chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
+            with open('{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag), 'w') as f:
+                f.write(chrome_trace)
 
         return results
