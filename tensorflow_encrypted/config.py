@@ -179,7 +179,7 @@ class RemoteConfig(Config):
 
     def server(self, name: str) -> tf.train.Server:
         player = self.get_player(name)
-        cluster = tf.train.ClusterSpec({self._job_name: self._hostmap})
+        cluster = tf.train.ClusterSpec({self._job_name: self._hosts})
         server = tf.train.Server(cluster, job_name=self._job_name, task_index=player.index)
         print("Hi, I'm node '{name}' running as device '{device}' and with session target '{target}'".format(
             name=name,
@@ -197,7 +197,7 @@ class RemoteConfig(Config):
 
         if isinstance(master, int):
             # interpret as index
-            master_host = self._hostmap[master][1]
+            master_host = self._hosts[master]
 
         elif isinstance(master, str):
             # is it a player name?
