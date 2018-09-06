@@ -6,8 +6,9 @@ import tensorflow_encrypted as tfe
 
 
 class TestStridedSlice(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
 
-    @unittest.skip("Strided slice seems to conflict when run in parallel of other tests")
     def test_strided_slice(self):
 
         config = tfe.LocalConfig([

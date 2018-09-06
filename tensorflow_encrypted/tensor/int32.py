@@ -1,30 +1,28 @@
 from __future__ import absolute_import
 
-import math
 import numpy as np
 import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any
 
-from .helpers import prod, log2
 from ..config import run
-from typing import Any, List, Tuple
 
 INT_TYPE = tf.int32
+
 
 class Int32Tensor(object):
 
     modulus = 2**31
     int_type = INT_TYPE
 
-    def __init__(self, value:Optional[Union[np.ndarray, tf.Tensor]]) -> None:
+    def __init__(self, value: Optional[Union[np.ndarray, tf.Tensor]]) -> None:
         self.value = value
 
     @staticmethod
-    def from_native(value:Union[np.ndarray,tf.Tensor]) -> 'Int32Tensor':
+    def from_native(value: Union[np.ndarray, tf.Tensor]) -> 'Int32Tensor':
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
         return Int32Tensor(value)
 
-    def eval(self, sess:tf.Session, feed_dict:Dict[Any,Any]={}, tag:Optional[str]=None) -> 'Int32Tensor':
+    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int32Tensor':
         return Int32Tensor(run(sess, self.value, feed_dict=feed_dict, tag=tag))
 
     def to_int32(self) -> Union[tf.Tensor, np.ndarray]:
@@ -32,7 +30,7 @@ class Int32Tensor(object):
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int32Tensor':
-        return Int32Tensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=2**32)) # TODO[Morten] account for negative numbers?
+        return Int32Tensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=2**32))  # TODO[Morten] account for negative numbers?
 
     def __repr__(self) -> str:
         return 'Int32Tensor({})'.format(self.shape)
@@ -47,7 +45,7 @@ class Int32Tensor(object):
     def __sub__(self, other: 'Int32Tensor') -> 'Int32Tensor':
         return self.sub(other)
 
-    def __mul__(self, other:'Int32Tensor') -> 'Int32Tensor':
+    def __mul__(self, other: 'Int32Tensor') -> 'Int32Tensor':
         return self.mul(other)
 
     def __mod__(self, k) -> 'Int32Tensor':
@@ -61,11 +59,11 @@ class Int32Tensor(object):
         x, y = _lift(self), _lift(other)
         return Int32Tensor(x.value - y.value)
 
-    def mul(self, other:'Int32Tensor') -> 'Int32Tensor':
+    def mul(self, other: 'Int32Tensor') -> 'Int32Tensor':
         x, y = _lift(self), _lift(other)
         return Int32Tensor(x.value * y.value)
 
-    def dot(self, other:'Int32Tensor') -> 'Int32Tensor':
+    def dot(self, other: 'Int32Tensor') -> 'Int32Tensor':
         x, y = _lift(self), _lift(other)
         return Int32Tensor(tf.matmul(x.value, y.value))
 
@@ -100,8 +98,6 @@ def _lift(x):
     raise TypeError("Unsupported type {}".format(type(x)))
 
 
-
-
 # TODO
 # def _im2col(x, h_filter, w_filter, padding, strides):
 #     assert isinstance(x, Int100Tensor), type(x)
@@ -130,7 +126,6 @@ def _lift(x):
 #     out = out.transpose(3, 0, 1, 2)
 
 #     return out
-
 
 
 def _strided_slice(x: Int32Tensor, args: Any, kwargs: Any):
@@ -204,10 +199,10 @@ class Int32Variable(Int32Tensor):
     def __repr__(self):
         return 'Int32Variable({})'.format(self.shape)
 
-    def assign_from_native(self, value:np.ndarray):
+    def assign_from_native(self, value: np.ndarray):
         assert type(value) in [np.ndarray], type(value)
         return tf.assign(self.variable, value).op
 
-    def assign_from_same(self, value:Int32Tensor):
+    def assign_from_same(self, value: Int32Tensor):
         assert isinstance(value, (Int32Tensor,)), type(value)
         return tf.assign(self.variable, value.value).op

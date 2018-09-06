@@ -6,6 +6,8 @@ import tensorflow_encrypted as tfe
 
 
 class TestStack(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
 
     def test_stack(self):
 
