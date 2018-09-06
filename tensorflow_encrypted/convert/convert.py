@@ -1,6 +1,7 @@
 from typing import Dict, Tuple, List, Any, Union
 import tensorflow as tf
 from collections import Iterable
+import numpy as np
 
 from ..io import InputProvider
 from ..player import Player
@@ -9,14 +10,14 @@ from ..config import Config
 
 
 class ConvertInputProvider(InputProvider):
-    input: tf.Tensor
+    input: np.ndarray
 
-    def __init__(self, player: Player, input: tf.Tensor) -> None:
+    def __init__(self, player: Player, input: np.ndarray) -> None:
         self.input = input
         self.player = player
 
     def provide_input(self) -> tf.Tensor:
-        return tf.identity(self.input)
+        return tf.constant(self.input)
 
 
 class Converter():
