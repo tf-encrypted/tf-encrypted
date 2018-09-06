@@ -1,24 +1,26 @@
 import os
+import json
+from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any, Union, Tuple
 from collections import defaultdict
 
-import json
+import numpy as np
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
-import numpy as np
 from tensorflow.python.client import timeline
-from abc import ABC, abstractmethod
 
 from .player import Player
 
-__TFE_DEBUG__ = False
-TENSORBOARD_DIR = '/tmp/tensorboard'
-__MONITOR_STATS__ = False
+
+__TFE_DEBUG__ = bool(os.getenv('TFE_DEBUG', False))
+__TFE_STATS__ = bool(os.getenv('TFE_STATS', False))
+__TENSORBOARD_DIR__ = str(os.getenv('TFE_STATS_DIR', '/tmp/tensorboard'))
 
 _run_counter: Any = defaultdict(int)
 
 
 class Config(ABC):
+
     @abstractmethod
     def players(self) -> List[Player]:
         pass
@@ -251,12 +253,6 @@ def save(config, filename) -> None:
         json.dump(config.to_dict(), f)
 
 
-TENSORBOARD_DIR = '/tmp/tensorboard'
-__MONITOR_STATS__ = False
-
-_run_counter: Any = defaultdict(int)
-
-
 def setTFEDebugFlag(debug: bool = False) -> None:
     global __TFE_DEBUG__
     if debug is True:
@@ -266,11 +262,11 @@ def setTFEDebugFlag(debug: bool = False) -> None:
 
 
 def setMonitorStatsFlag(monitor_stats: bool = False) -> None:
-    global __MONITOR_STATS__
+    global __TFE_STATS__
     if monitor_stats is True:
         print("Tensorflow encrypted is monitoring statistics for each session.run() call using a tag")
 
-    __MONITOR_STATS__ = monitor_stats
+    __TFE_STATS__ = monitor_stats
 
 
 def run(
@@ -279,9 +275,17 @@ def run(
     feed_dict: Dict[str, np.ndarray] = {},
     tag: Optional[str] = None
 ) -> Any:
-    if __MONITOR_STATS__ and tag is not None:
+
+    if not __TFE_STATS__ or tag is None:
+
+        return sess.run(
+            fetches,
+            feed_dict=feed_dict
+        )
+
+    else:
         session_tag = "{}{}".format(tag, _run_counter[tag])
-        run_tag = os.path.join(TENSORBOARD_DIR, session_tag)
+        run_tag = os.path.join(__TENSORBOARD_DIR__, session_tag)
         _run_counter[tag] += 1
 
         writer = tf.summary.FileWriter(run_tag, sess.graph)
@@ -295,16 +299,11 @@ def run(
             run_metadata=run_metadata
         )
 
-        writer.add_run_metadata(run_metadata, 'step0')
+        writer.add_run_metadata(run_metadata, session_tag)
         writer.close()
 
         chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
-        with open('{}/{}.ctr'.format(TENSORBOARD_DIR, session_tag), 'w') as f:
+        with open('{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag), 'w') as f:
             f.write(chrome_trace)
 
         return results
-    else:
-        return sess.run(
-            fetches,
-            feed_dict=feed_dict
-        )
