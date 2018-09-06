@@ -63,7 +63,7 @@ class LocalConfig(Config):
         params = {
             'type': 'local',
             'job_name': self._job_name,
-            'player_names': [p.name for p in sorted(self._players.values(), keyfunc=lambda p: p.index)]
+            'player_names': [p.name for p in sorted(self._players.values(), key=lambda p: p.index)]
         }
         return params
 
@@ -80,23 +80,30 @@ class LocalConfig(Config):
         assert isinstance(names, list)
         return [player for name, player in self._players.items() if name in names]
 
-    def session(self, log_device_placement: bool = False) -> tf.Session:
-        global __TFE_DEBUG__
-        # reserve one CPU for the player executing the script, to avoid
-        # default pinning of operations to one of the actual players
+    def session(
+        self,
+        master: Optional[Union[int, str]] = None,
+        log_device_placement: bool = False
+    ) -> tf.Session:    
+
+        if master is not None:
+            print("WARNING: master '{}' is ignored, always using first player".format(master))
+
         sess = tf.Session(
             '',
             None,
             config=tf.ConfigProto(
                 log_device_placement=log_device_placement,
                 allow_soft_placement=False,
-                device_count={"CPU": len(self._players) + 1},
+                device_count={"CPU": len(self._players)},
                 inter_op_parallelism_threads=1,
                 intra_op_parallelism_threads=1
             )
         )
+
+        global __TFE_DEBUG__
         if __TFE_DEBUG__:
-            print('session in debug mode')
+            print('Session in debug mode')
             sess = tf_debug.LocalCLIDebugWrapperSession(sess)
 
         return sess
@@ -108,31 +115,17 @@ class RemoteConfig(Config):
     """
 
     def __init__(self,
-                 player_hostmap: Union[List[Tuple[str, str]], Dict[str, str]],
-                 master_host: Optional[str] = '0.0.0.0:4440',
-                 job_name: str = 'worker') -> None:
+                 hostmap: Union[List[Tuple[str, str]], Dict[str, str]],
+                 master: Optional[Union[int, str]] = None,
+                 job_name: str = 'tfe') -> None:
+
+        if isinstance(hostmap, dict):
+            # ensure consistent ordering of the players across all instances
+            hostmap = list(sorted(hostmap.items()))
 
         self._job_name = job_name
-
-        if isinstance(player_hostmap, dict):
-            # ensure consistent ordering of the players across all instances
-            player_hostmap = list(sorted(player_hostmap.items()))
-
-        player_names, player_hosts = zip(*player_hostmap)
-
-        if master_host is None:
-            # use first player as master so don't add any
-            self._master_host = master_host
-            self._offset = 0
-            self._hostmap = player_hosts
-            self._target = 'grpc://{}'.format(player_hosts[0])
-        else:
-            # add explicit master to cluster as first host
-            self._master_host = master_host
-            self._offset = 1
-            self._hostmap = (master_host,) + player_hosts
-            self._target = 'grpc://{}'.format(master_host)
-
+        self._master = master
+        self._hostmap = hostmap
         self._players = {
             name: Player(
                 name=name,
@@ -143,7 +136,7 @@ class RemoteConfig(Config):
                 ),
                 host=host
             )
-            for index, (name, host) in enumerate(zip(player_names, self._hostmap))
+            for index, (name, host) in enumerate(self._hostmap)
         }
 
     @staticmethod
@@ -152,20 +145,20 @@ class RemoteConfig(Config):
             return None
 
         return RemoteConfig(
-            player_hostmap=params['player_hostmap'],
+            hostmap=params['hostmap'],
             job_name=params['job_name'],
-            master_host=params.get('master_host', None)
+            master=params.get('master', None)
         )
 
     def to_dict(self) -> Dict:
         params = {
             'type': 'remote',
             'job_name': self._job_name,
-            'player_hostmap': [(p.name, p.host) for p in sorted(self._players.values(), key=lambda p: p.index)]
+            'hostmap': [(p.name, p.host) for p in sorted(self._players.values(), key=lambda p: p.index)]
         }
 
-        if self._master_host is not None:
-            params['master_host'] = self._master_host
+        if self._master is not None:
+            params['master'] = self._master
 
         return params
 
@@ -185,27 +178,56 @@ class RemoteConfig(Config):
     def server(self, name: str) -> tf.train.Server:
         player = self.get_player(name)
         cluster = tf.train.ClusterSpec({self._job_name: self._hostmap})
-        server = tf.train.Server(
-            cluster,
-            job_name=self._job_name,
-            task_index=player.index
-        )
-        self._target = server.target
-        print("Hi I'm node %s listening on %s with device_name %s" % (name, server.target, player.device_name))
+        server = tf.train.Server(cluster, job_name=self._job_name, task_index=player.index)
+        print("Hi, I'm node '{name}' running as device '{device}' and with session target '{target}'".format(
+            name=name,
+            device=player.device_name,
+            target=server.target
+        ))
         return server
 
-    def session(self, log_device_placement: bool = False) -> tf.Session:
-        global __TFE_DEBUG__
+    def _compute_target(self, master: Optional[Union[int, str]]):
 
+        # if no specific master is given then fall back to the default
+        if master is None:
+            # ... and if no default master is given then use first player
+            master = self._master if self._master is not None else 0
+
+        if isinstance(master, int):
+            # interpret as index
+            master_host = self._hostmap[master][1]
+
+        elif isinstance(master, str):
+            # is it a player name?
+            player = self._players.get(master, None)
+            if player is not None:
+                # ... yes it was so use its host
+                master_host = player.host
+            else:
+                # ... no it wasn't so just assume it's an URI
+                master_host = master
+
+        else:
+            raise TypeError("Don't know how to turn '{}' into a target".format(master))
+
+        target = 'grpc://{}'.format(master_host)
+        return target
+
+    def session(
+        self,
+        master: Optional[Union[int, str]] = None,
+        log_device_placement: bool = False
+    ) -> tf.Session:
+
+        target = self._compute_target(master)
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
             allow_soft_placement=False,
         )
-        print('Starting session on target: %s' % self._target, config)
-        sess = tf.Session(
-            self._target,
-            config=config
-        )
+        print("Starting session on target '{}' using config {}".format(target, config))
+        sess = tf.Session(target, config=config)
+
+        global __TFE_DEBUG__
         if __TFE_DEBUG__:
             sess = tf_debug.LocalCLIDebugWrapperSession(sess)
 
