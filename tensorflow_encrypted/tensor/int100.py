@@ -8,7 +8,7 @@ from typing import Union, Optional, List, Dict, Any
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_im2col, gen_crt_mod,
-    gen_crt_sample_uniform, gen_crt_sum
+    gen_crt_sample_uniform, gen_crt_sum, crt_matmul_split
 )
 from .helpers import prod, log2
 from ..config import run
@@ -30,6 +30,8 @@ M = prod(m)
 # - 1 multiplication followed by 1024 additions
 for mi in m:
     assert 2 * log2(mi) + log2(1024) < log2(INT_TYPE.max)
+
+dot_threshold = 1000
 
 _crt_decompose = gen_crt_decompose(m)
 _crt_recombine_lagrange = gen_crt_recombine_lagrange(m)
@@ -136,7 +138,7 @@ class Int100Tensor(object):
         return _squeeze(self, axis)
 
 
-def _lift(x):
+def _lift(x: Union[Int100Tensor, int]) -> Int100Tensor:
     # TODO[Morten] support other types of `x`
 
     if isinstance(x, Int100Tensor):
@@ -171,9 +173,20 @@ def _mul(x, y):
     return Int100Tensor.from_decomposed(z_backing)
 
 
-def _dot(x, y):
+def _dot(x: Union[Int100Tensor, int], y: Union[Int100Tensor, int]) -> Int100Tensor:
     x, y = _lift(x), _lift(y)
-    z_backing = _crt_dot(x.backing, y.backing)
+
+    if x.shape[1] > dot_threshold:
+        split_backing = crt_matmul_split(x.backing, y.backing, dot_threshold)
+
+        backings = [_crt_dot(tup[0], tup[1]) for tup in split_backing]
+
+        z_backing = backings[0]
+        for i in range(1, len(backings)):
+            z_backing = _crt_add(z_backing, backings[i])
+    else:
+        z_backing = _crt_dot(x.backing, y.backing)
+
     return Int100Tensor.from_decomposed(z_backing)
 
 
@@ -258,6 +271,18 @@ def stack(x: List[Int100Tensor], axis: int = 0):
     return Int100Tensor.from_decomposed(backing)
 
 
+def concat(x: List[Int100Tensor], axis: int = 0):
+    assert all([isinstance(i, Int100Tensor) for i in x])
+
+    backing = []
+    for i in range(len(x[0].backing)):
+        concated = [j.backing[i] for j in x]
+
+        backing.append(tf.concat(concated, axis=axis))
+
+    return Int100Tensor.from_decomposed(backing)
+
+
 class Int100Constant(Int100Tensor):
 
     def __init__(self, native_value: np.ndarray, int100_value=None) -> None:
@@ -324,7 +349,8 @@ class Int100Variable(Int100Tensor):
 
         assert type(int100_initial_value) in [Int100Tensor], type(int100_initial_value)
 
-        variables = [tf.Variable(vi, dtype=Int100Tensor.int_type, trainable=False) for vi in int100_initial_value.backing]
+        variables = [tf.Variable(vi, dtype=Int100Tensor.int_type, trainable=False)
+                     for vi in int100_initial_value.backing]
         backing = [vi.read_value() for vi in variables]
 
         super(Int100Variable, self).__init__(None, backing)
