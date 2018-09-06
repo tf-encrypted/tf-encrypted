@@ -127,7 +127,7 @@ class RemoteConfig(Config):
 
         self._job_name = job_name
         self._master = master
-        self._hostmap = hostmap
+        self._hosts = [entry[1] for entry in hostmap]
         self._players = {
             name: Player(
                 name=name,
@@ -138,7 +138,7 @@ class RemoteConfig(Config):
                 ),
                 host=host
             )
-            for index, (name, host) in enumerate(self._hostmap)
+            for index, (name, host) in enumerate(hostmap)
         }
 
     @staticmethod
