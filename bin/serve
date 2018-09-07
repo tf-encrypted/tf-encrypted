@@ -48,14 +48,20 @@ if provider_address is None:
 tfe.setMonitorStatsFlag(enable_stats_monitor)
 tfe.setTFEDebugFlag(enable_debug)
 
+if node_name == 'master':
+    master_host = '0.0.0.0:4440'
+else:
+    master_host = 'master:4440'
+
 remote_config = tfe.RemoteConfig(
     {
+        'master': master_host,
         'server0': server0_address,
         'server1': server1_address,
         'crypto_producer': producer_address,
         'weights_provider': provider_address
     },
-    master_host='master:4440'
+    master='master'
 )
 
 server = remote_config.server(node_name)
