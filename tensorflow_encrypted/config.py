@@ -30,6 +30,10 @@ class Config(ABC):
     def get_player(self, name: str) -> Player:
         pass
 
+    @abstractmethod
+    def to_dict(self) -> Dict:
+        pass
+
 
 class LocalConfig(Config):
     """
@@ -53,7 +57,7 @@ class LocalConfig(Config):
         }
 
     @staticmethod
-    def from_dict(params) -> Optional['LocalConfig']:
+    def from_dict(params: Dict) -> Optional['LocalConfig']:
         if not params.get('type', None) == 'local':
             return None
 
@@ -87,7 +91,7 @@ class LocalConfig(Config):
         self,
         master: Optional[Union[int, str]] = None,
         log_device_placement: bool = False
-    ) -> tf.Session:    
+    ) -> tf.Session:
 
         if master is not None:
             print("WARNING: master '{}' is ignored, always using first player".format(master))
@@ -143,7 +147,7 @@ class RemoteConfig(Config):
         }
 
     @staticmethod
-    def from_dict(params) -> Optional['RemoteConfig']:
+    def from_dict(params: Dict) -> Optional['RemoteConfig']:
         if not params.get('type', None) == 'remote':
             return None
 
@@ -189,7 +193,7 @@ class RemoteConfig(Config):
         ))
         return server
 
-    def _compute_target(self, master: Optional[Union[int, str]]):
+    def _compute_target(self, master: Optional[Union[int, str]]) -> str:
 
         # if no specific master is given then fall back to the default
         if master is None:
@@ -203,7 +207,7 @@ class RemoteConfig(Config):
         elif isinstance(master, str):
             # is it a player name?
             player = self._players.get(master, None)
-            if player is not None:
+            if player is not None and player.host is not None:
                 # ... yes it was so use its host
                 master_host = player.host
             else:
@@ -237,19 +241,20 @@ class RemoteConfig(Config):
         return sess
 
 
-def load(filename) -> Optional[Config]:
+def load(filename: str) -> Optional[Config]:
     with open(filename, 'r') as f:
         params = json.load(f)
 
-    for config_cls in [LocalConfig, RemoteConfig]:
-        config = config_cls.from_dict(params)
-        if config is not None:
-            return config
+    config_type = params.get('type', None)
+    if config_type == 'remote':
+        return RemoteConfig.from_dict(params)
+    elif config_type == 'local':
+        return LocalConfig.from_dict(params)
 
     return None
 
 
-def save(config, filename) -> None:
+def save(config: Config, filename: str) -> None:
     with open(filename, 'w') as f:
         json.dump(config.to_dict(), f)
 
