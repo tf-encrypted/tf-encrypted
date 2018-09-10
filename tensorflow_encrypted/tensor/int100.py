@@ -7,8 +7,9 @@ from typing import Union, Optional, List, Dict, Any
 
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
-    gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_im2col, gen_crt_mod,
-    gen_crt_sample_uniform, gen_crt_sum
+    gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_mod,
+    gen_crt_sum, gen_crt_im2col,
+    gen_crt_sample_uniform, gen_crt_sample_bounded
 )
 from .helpers import prod, log2
 from ..config import run
@@ -44,6 +45,7 @@ _crt_im2col = gen_crt_im2col(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE)
 
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
+_crt_sample_bounded = gen_crt_sample_bounded(m, INT_TYPE)
 
 
 class Int100Tensor(object):
@@ -88,6 +90,10 @@ class Int100Tensor(object):
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int100Tensor':
         return _sample_uniform(shape)
+
+    @staticmethod
+    def sample_bounded(shape: List[int], bitlength: int) -> 'Int100Tensor':
+        return _sample_bounded(shape, bitlength)
 
     def __repr__(self) -> str:
         return 'Int100Tensor({})'.format(self.shape)
@@ -213,6 +219,11 @@ def _mod(x, k):
 
 def _sample_uniform(shape):
     backing = _crt_sample_uniform(shape)
+    return Int100Tensor.from_decomposed(backing)
+
+
+def _sample_bounded(shape, bitlength):
+    backing = _crt_sample_bounded(shape, bitlength)
     return Int100Tensor.from_decomposed(backing)
 
 

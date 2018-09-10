@@ -52,7 +52,7 @@ def gen_crt_recombine_explicit(m, int_type):
                         [ti.astype(float) / mi for ti, mi in zip(t, m)],
                         axis=0
                     ))
-                u = np.sum((ti * bi for ti, bi in zip(t, b)), axis=0).astype(np.int64)
+                u = np.sum([ti * bi for ti, bi in zip(t, b)], axis=0).astype(np.int64)
                 v = alpha.astype(np.int64) * B
                 w = u - v
                 res = w % bound
@@ -171,6 +171,33 @@ def gen_crt_sample_uniform(m, int_type):
             return [tf.random_uniform(shape, maxval=mi, dtype=int_type) for mi in m]
 
     return crt_sample_uniform
+
+
+def gen_crt_sample_bounded(m, int_type):
+
+    CHUNK_MAX_BITLENGTH = 30  # TODO[Morten] bump to full range once signed numbers is settled (change minval etc)
+    add = gen_crt_add(m)
+    mul = gen_crt_mul(m)
+    decompose = gen_crt_decompose(m)
+
+    def crt_sample_bounded(shape, bitlength):
+
+        with tf.name_scope('sample_bounded'):
+            q, r = bitlength // CHUNK_MAX_BITLENGTH, bitlength % CHUNK_MAX_BITLENGTH
+            chunk_sizes = [CHUNK_MAX_BITLENGTH] * q + [r]
+
+            result = decompose(0)
+            for chunk_size in chunk_sizes:
+                chunk_value = tf.random_uniform(shape, minval=0, maxval=2**chunk_size, dtype=int_type)
+                scale = 2**chunk_size
+                result = add(
+                    mul(result, decompose(scale)),
+                    decompose(chunk_value)
+                )
+
+        return result
+
+    return crt_sample_bounded
 
 
 def gen_crt_mod(m, int_type):
