@@ -129,7 +129,7 @@ def crt_matmul_split(x: TFEData, y: TFEData, threshold: int) -> List[Tuple[TFEDa
     with tf.name_scope('matmul_split'):
         z_split = []
 
-        num_columns = x[0].shape[1]
+        num_columns = int(x[0].shape[1])
         num_split = int(ceil(num_columns / threshold))
         for i in range(num_split):
 
