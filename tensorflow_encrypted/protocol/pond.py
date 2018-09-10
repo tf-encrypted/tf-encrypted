@@ -38,8 +38,7 @@ M = BackingTensor.modulus
 K = 2 ** BITPRECISION_FRACTIONAL
 
 assert log2(BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) <= log2(BOUND)
-assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + \
-    log2(1024) + TRUNCATION_GAP
+assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
 assert gcd(K, M) == 1
 
 _nodes: Dict = dict()
@@ -104,8 +103,7 @@ class Pond(Protocol):
         apply_scaling: bool=True,
         name: Optional[str]=None
     ) -> 'PondPublicVariable':
-        assert isinstance(initial_value, (np.ndarray, tf.Tensor,
-                                          PondPublicTensor)), type(initial_value)
+        assert isinstance(initial_value, (np.ndarray, tf.Tensor, PondPublicTensor)), type(initial_value)
 
         with tf.name_scope('public-var{}'.format('-' + name if name else '')):
 
