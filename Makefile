@@ -71,8 +71,7 @@ typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tensorflow_encrypted
 
 
-
-.PHONY: lint test
+.PHONY: lint test typecheck
 
 # ###############################################
 # Version Derivation
