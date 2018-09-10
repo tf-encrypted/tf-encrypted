@@ -18,7 +18,7 @@ from ..tensor.helpers import (
     inverse
 )
 from ..io import InputProvider, OutputReceiver
-from ..player import Player
+from ..player import Player, player
 from .protocol import Protocol, _global_cache_updators
 
 TFEData = Union[np.ndarray, tf.Tensor]
@@ -31,15 +31,13 @@ BITPRECISION_INTEGRAL = 14
 BITPRECISION_FRACTIONAL = 16
 TRUNCATION_GAP = 20
 BOUND = 2**30  # bound on magnitude of encoded numbers: x in [-BOUND, +BOUND)
+STATISTICAL_SECURITY = 40  # number of bit for statistical security TODO[Morten] write assertions
 
 # modulus
 M = BackingTensor.modulus
-# truncation factor for going from double to single precision
-K = 2 ** BITPRECISION_FRACTIONAL
 
 assert log2(BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) <= log2(BOUND)
 assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
-assert gcd(K, M) == 1
 
 _nodes: Dict = dict()
 _initializers: List = list()
@@ -47,10 +45,17 @@ _initializers: List = list()
 
 class Pond(Protocol):
 
-    def __init__(self, server_0: Player, server_1: Player, crypto_producer: Player) -> None:
+    def __init__(
+        self,
+        server_0: Player,
+        server_1: Player,
+        crypto_producer: Player,
+        use_interactive_truncation: bool=False
+    ) -> None:
         self.server_0 = server_0
         self.server_1 = server_1
         self.crypto_producer = crypto_producer
+        self.use_interactive_truncation = use_interactive_truncation
 
     def define_constant(self, value: np.ndarray, apply_scaling: bool = True, name: Optional[str] = None) -> 'PondConstant':
         assert isinstance(value, (np.ndarray,)), type(value)
@@ -177,8 +182,8 @@ class Pond(Protocol):
 
         def helper(v: tf.Tensor):
             assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', provider.player.name)
-            v: BackingTensor = _encode(v, apply_scaling)
-            return PondPublicTensor(self, v, v)
+            w: BackingTensor = _encode(v, apply_scaling)
+            return PondPublicTensor(self, w, w)
 
         with tf.name_scope('public-input{}'.format('-' + name if name else '')):
 
@@ -213,14 +218,14 @@ class Pond(Protocol):
             x0, x1 = _share(v)
             x = PondPrivateTensor(self, x0, x1)
 
-            if masked:
+            if not masked:
+                return x
+            else:
                 with tf.name_scope('local_mask'):
                     a = BackingTensor.sample_uniform(v.shape)
                     a0, a1 = _share(a)
                     alpha = v - a
-                x = PondMaskedTensor(self, x, a, a0, a1, alpha, alpha)
-
-            return x
+                return PondMaskedTensor(self, x, a, a0, a1, alpha, alpha)
 
         with tf.name_scope('private-input{}'.format('-' + name if name else '')):
 
@@ -254,8 +259,8 @@ class Pond(Protocol):
             assert isinstance(x, PondPrivateTensor), type(x)
             x0, x1 = x.unwrapped
             v: BackingTensor = _reconstruct(x0, x1)
-            v: tf.Tensor = _decode(v, apply_scaling)
-            return v
+            w: tf.Tensor = _decode(v, apply_scaling)
+            return w
 
         with tf.name_scope('output{}'.format('-' + name if name else '')):
 
@@ -511,7 +516,10 @@ class Pond(Protocol):
             y = _truncate_public(self, x)
 
         elif isinstance(x, PondPrivateTensor):
-            y = _truncate_private(self, x)
+            if self.use_interactive_truncation:
+                y = _truncate_private_interactive(self, x)
+            else:
+                y = _truncate_private_noninteractive(self, x)
 
         elif isinstance(x, PondMaskedTensor):
             y = _truncate_masked(self, x)
@@ -933,7 +941,7 @@ class PondPublicTensor(PondTensor):
     def unwrapped(self):
         return (self.value_on_0, self.value_on_1)
 
-    def eval(self, sess, feed_dict={}, tag=None):
+    def eval(self, sess, feed_dict={}, tag=None) -> np.ndarray:
         value: BackingTensor = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
         return _decode(value, self.encoded)
 
@@ -1182,7 +1190,7 @@ def _encode(rationals, apply_scaling) -> BackingTensor:
         return BackingTensor.from_native(encoded)
 
 
-def _decode(elements: BackingTensor, apply_scaling: bool):
+def _decode(elements: BackingTensor, apply_scaling: bool) -> Union[tf.Tensor, np.ndarray]:
     """ Decode tensor of ring elements into tensor of rational numbers """
 
     with tf.name_scope('decode'):
@@ -1201,7 +1209,7 @@ def _share(secret: BackingTensor) -> Tuple[BackingTensor, BackingTensor]:
         return share0, share1
 
 
-def _reconstruct(share0: BackingTensor, share1: BackingTensor):
+def _reconstruct(share0: BackingTensor, share1: BackingTensor) -> BackingTensor:
 
     with tf.name_scope('reconstruct'):
         return share0 + share1
@@ -1348,14 +1356,17 @@ def _cache_masked(prot, x):
 # truncate
 #
 
-# precomputation
-K_inv = BackingTensor.from_native(np.array([inverse(K, M)]))
+# truncation factor for going from double to single precision
+K = 2 ** BITPRECISION_FRACTIONAL
+assert gcd(K, M) == 1
+
+K_inv_wrapped = BackingTensor.from_native(np.array([inverse(K, M)]))
 M_wrapped = BackingTensor.from_native(np.array([M]))
 
 
-def _raw_truncate(x):
+def _raw_truncate(x: BackingTensor):
     y = x - (x % K)
-    return y * K_inv
+    return y * K_inv_wrapped
 
 
 def _truncate_public(prot, x):
@@ -1374,12 +1385,12 @@ def _truncate_public(prot, x):
     return PondPublicTensor(prot, y_on_0, y_on_1)
 
 
-def _truncate_private(prot, x):
+def _truncate_private_noninteractive(prot, x):
     assert isinstance(x, PondPrivateTensor)
 
     x0, x1 = x.unwrapped
 
-    with tf.name_scope('truncate'):
+    with tf.name_scope('truncate-ni'):
 
         with tf.device(prot.server_0.device_name):
             y0 = _raw_truncate(x0)
@@ -1388,6 +1399,62 @@ def _truncate_private(prot, x):
             y1 = M_wrapped - _raw_truncate(M_wrapped - x1)
 
     return PondPrivateTensor(prot, y0, y1)
+
+
+def _truncate_private_interactive(prot, a: PondPrivateTensor):
+    """ See protocol TruncPr (3.1) in "Secure Computation With Fixed-Point Numbers"
+    by Octavian Catrina and Amitabh Saxena, FC'10. """
+
+    with tf.name_scope('truncate-i'):
+
+        shape = a.shape
+
+        # we first rotate `a` to make sure the reconstructed value fall into
+        # a non-negative interval `[0, 2B)` for some bound B; this uses an
+        # assumption that the values originally lie in `[-B, B)`, and will
+        # leak private information otherwise
+
+        B = 2**(BITPRECISION_INTEGRAL + 2 * BITPRECISION_FRACTIONAL)
+        b = a + B
+
+        # next step is for server0 to add a statistical mask to `b`, reveal
+        # it to server1, and compute the lower part
+
+        mask_bitlength = int(log2(B) + STATISTICAL_SECURITY)
+        assert mask_bitlength < 100, mask_bitlength
+
+        b0, b1 = b.unwrapped
+
+        with tf.device(prot.server_0.device_name):
+            r = BackingTensor.sample_bounded(shape, mask_bitlength)
+            c0 = b0 + r
+
+        with tf.device(prot.server_1.device_name):
+            c1 = b1
+            c_lower = _reconstruct(c0, c1) % K
+
+        # then use the lower part of the masked value to compute lower part
+        # of original value
+
+        with tf.device(prot.server_0.device_name):
+            r_lower = r % K
+            a_lower0 = r_lower * -1
+
+        with tf.device(prot.server_1.device_name):
+            a_lower1 = c_lower
+
+        # finally subtract and multiply by inverse
+
+        a0, a1 = a.unwrapped
+
+        with tf.device(prot.server_0.device_name):
+            d0 = (a0 - a_lower0) * K_inv_wrapped
+
+        with tf.device(prot.server_1.device_name):
+            d1 = (a1 - a_lower1) * K_inv_wrapped
+
+    d = PondPrivateTensor(prot, d0, d1)
+    return d
 
 
 def _truncate_masked(prot, x):
