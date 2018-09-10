@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from math import ceil
 
 import numpy as np
 import tensorflow as tf
@@ -126,24 +127,24 @@ def gen_crt_dot(m):
 
 def crt_matmul_split(x: TFEData, y: TFEData, threshold: int) -> List[Tuple[TFEData, TFEData]]:
     with tf.name_scope('matmul_split'):
-        aCols = int(x[0].shape[1])
-        bCols = int(y[0].shape[1])
-
         z_split = []
 
-        num_split = int(np.ceil(aCols / threshold))
-        remainder = aCols % threshold
-        for i in range(0, num_split):
+        num_columns = int(x[0].shape[1])
+        num_split = int(ceil(num_columns / threshold))
+        for i in range(num_split):
+
+            left = i * threshold
             right = (i + 1) * threshold
-            if right > aCols:
-                right = right - remainder
+
             inner_x: List[Union[tf.Tensor, np.ndarray]] = []
             inner_y: List[Union[tf.Tensor, np.ndarray]] = []
+
             for xi, yi in zip(x, y):
-                inner_x.append(xi[0:aCols, i * threshold:right])
-                inner_y.append(yi[i * threshold:right, 0:bCols])
+                inner_x.append(xi[:, left:right])
+                inner_y.append(yi[left:right, :])
 
             z_split.append((inner_x, inner_y))
+
     return z_split
 
 

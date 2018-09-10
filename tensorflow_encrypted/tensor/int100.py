@@ -31,7 +31,7 @@ M = prod(m)
 for mi in m:
     assert 2 * log2(mi) + log2(1024) < log2(INT_TYPE.max)
 
-dot_threshold = 1000
+DOT_THRESHOLD = 1024
 
 _crt_decompose = gen_crt_decompose(m)
 _crt_recombine_lagrange = gen_crt_recombine_lagrange(m)
@@ -52,6 +52,7 @@ class Int100Tensor(object):
 
     modulus = M
     int_type = INT_TYPE
+    backing: Union[List[np.ndarray], List[tf.Tensor]]
 
     def __init__(
         self,
@@ -176,10 +177,10 @@ def _mul(x, y):
 def _dot(x: Union[Int100Tensor, int], y: Union[Int100Tensor, int]) -> Int100Tensor:
     x, y = _lift(x), _lift(y)
 
-    if x.shape[1] > dot_threshold:
-        split_backing = crt_matmul_split(x.backing, y.backing, dot_threshold)
+    if x.shape[1] > DOT_THRESHOLD:
+        split_backing = crt_matmul_split(x.backing, y.backing, DOT_THRESHOLD)
 
-        backings = [_crt_dot(tup[0], tup[1]) for tup in split_backing]
+        backings = [_crt_dot(xi, yi) for xi, yi in split_backing]
 
         z_backing = backings[0]
         for i in range(1, len(backings)):
@@ -259,27 +260,21 @@ def _squeeze(x, axis=None):
     return Int100Tensor.from_decomposed(backing)
 
 
-def stack(x: List[Int100Tensor], axis: int = 0):
-    assert all([isinstance(i, Int100Tensor) for i in x])
-
-    backing = []
-    for i in range(len(x[0].backing)):
-        stacked = [j.backing[i] for j in x]
-
-        backing.append(tf.stack(stacked, axis=axis))
-
+def stack(xs: List[Int100Tensor], axis: int = 0):
+    assert all(isinstance(x, Int100Tensor) for x in xs)
+    backing = [
+        tf.stack([x.backing[i] for x in xs], axis=axis)
+        for i in range(len(xs[0].backing))
+    ]
     return Int100Tensor.from_decomposed(backing)
 
 
-def concat(x: List[Int100Tensor], axis: int = 0):
-    assert all([isinstance(i, Int100Tensor) for i in x])
-
-    backing = []
-    for i in range(len(x[0].backing)):
-        concated = [j.backing[i] for j in x]
-
-        backing.append(tf.concat(concated, axis=axis))
-
+def concat(xs: List[Int100Tensor], axis: int = 0):
+    assert all(isinstance(x, Int100Tensor) for x in xs)
+    backing = [
+        tf.concat([x.backing[i] for x in xs], axis=axis)
+        for i in range(len(xs[0].backing))
+    ]
     return Int100Tensor.from_decomposed(backing)
 
 
