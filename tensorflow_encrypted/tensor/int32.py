@@ -26,6 +26,9 @@ class Int32Tensor(object):
         return Int32Tensor(run(sess, self.value, feed_dict=feed_dict, tag=tag))
 
     def to_int32(self) -> Union[tf.Tensor, np.ndarray]:
+        if self.value is None:
+            raise Exception("Can't call 'to_int32' on a empty tensor")
+
         return self.value
 
     @staticmethod
@@ -37,6 +40,9 @@ class Int32Tensor(object):
 
     @property
     def shape(self) -> List[int]:
+        if self.value is None:
+            raise Exception("Can't call 'shape' on a empty tensor")
+
         return self.value.shape
 
     def __add__(self, other: 'Int32Tensor') -> 'Int32Tensor':
@@ -51,11 +57,11 @@ class Int32Tensor(object):
     def __mod__(self, k) -> 'Int32Tensor':
         return self.mod(k)
 
-    def add(self, other):
+    def add(self, other: 'Int32Tensor') -> 'Int32Tensor':
         x, y = _lift(self), _lift(other)
         return Int32Tensor(x.value + y.value)
 
-    def sub(self, other):
+    def sub(self, other: 'Int32Tensor') -> 'Int32Tensor':
         x, y = _lift(self), _lift(other)
         return Int32Tensor(x.value - y.value)
 

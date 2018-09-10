@@ -14,6 +14,7 @@ PYTHON_REQUIRED_VERSION=3.6.
 TENSORFLOW_REQUIRED_VERSION=1.10
 SHELL := /bin/bash
 
+CURRENT_DIR=$(shell pwd)
 PIP_PATH=$(shell which pip)
 DOCKER_PATH=$(shell which docker)
 CURRENT_TF_VERSION=$(shell python -c 'import tensorflow as tf; print(tf.__version__)' 2>/dev/null)
@@ -66,7 +67,11 @@ test: lint pythoncheck
 lint: pythoncheck
 	flake8
 
-.PHONY: lint test
+typecheck: pythoncheck
+	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tensorflow_encrypted
+
+
+.PHONY: lint test typecheck
 
 # ###############################################
 # Version Derivation

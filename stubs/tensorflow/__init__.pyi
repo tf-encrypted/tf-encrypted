@@ -21,6 +21,20 @@ GraphElement = Union[
     str,
 ]
 
+TFTypes = Union[
+    'int8',
+    'int16',
+    'int32',
+    'int64',
+    'uint8',
+    'uint16',
+    'uint32',
+    'uint64',
+    'float16',
+    'float32',
+    'float64',
+]
+
 
 class dtype:
     ...
@@ -98,6 +112,9 @@ class float64(floating):
 class dtypes:
     float32 = float32
 
+    def as_string(self) -> str:
+        ...
+
 
 class Operation:
     ...
@@ -155,7 +172,7 @@ class NodeDef:
         ...
 
     @property
-    def attr(self, str: str) -> 'AttrValue':
+    def attr(self) -> List['AttrValue']:
         ...
 
 
@@ -438,4 +455,35 @@ def while_loop(
 
 
 def identity(input: Tensor, name: Optional[str] = None) -> Tensor:
+    ...
+
+
+def constant(
+    value: Union[Any, List[Any]],
+    dtype: Optional[Any] = None,
+    shape: Optional[List[int]] = None,
+    name: Optional[str] = 'Const',
+    verify_shape: bool = False,
+) -> Tensor:
+    ...
+
+
+def random_uniform(
+    shape: Union[Tensor, List[int]],
+    minval: Any = 0,
+    maxval: Optional[Any] = None,
+    dtype: Optional[TFTypes] = float32,
+    seed: Optional[int] = None,
+    name: Optional[str] = None
+) -> Tensor:
+    ...
+
+
+def assign(
+    ref: Variable,
+    value: Tensor,
+    validate_shape: Optional[bool] = None,
+    use_locking: Optional[bool] = None,
+    name: Optional[str] = None
+) -> Tensor:
     ...
