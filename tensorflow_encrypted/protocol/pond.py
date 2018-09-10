@@ -18,7 +18,7 @@ from ..tensor.helpers import (
     inverse
 )
 from ..io import InputProvider, OutputReceiver
-from ..player import Player, player
+from ..player import Player
 from .protocol import Protocol, _global_cache_updators
 
 TFEData = Union[np.ndarray, tf.Tensor]
@@ -50,7 +50,7 @@ class Pond(Protocol):
         server_0: Player,
         server_1: Player,
         crypto_producer: Player,
-        use_interactive_truncation: bool=False
+        use_interactive_truncation: bool=True
     ) -> None:
         self.server_0 = server_0
         self.server_1 = server_1
