@@ -52,6 +52,7 @@ class Int100Tensor(object):
 
     modulus = M
     int_type = INT_TYPE
+    backing: Union[List[np.ndarray], List[tf.Tensor]]
 
     def __init__(
         self,
@@ -259,27 +260,21 @@ def _squeeze(x, axis=None):
     return Int100Tensor.from_decomposed(backing)
 
 
-def stack(x: List[Int100Tensor], axis: int = 0):
-    assert all([isinstance(i, Int100Tensor) for i in x])
-
-    backing = []
-    for i in range(len(x[0].backing)):
-        stacked = [j.backing[i] for j in x]
-
-        backing.append(tf.stack(stacked, axis=axis))
-
+def stack(xs: List[Int100Tensor], axis: int = 0):
+    assert all(isinstance(x, Int100Tensor) for x in xs)
+    backing = [
+        tf.stack([x.backing[i] for x in xs], axis=axis)
+        for i in range(len(xs[0].backing))
+    ]
     return Int100Tensor.from_decomposed(backing)
 
 
-def concat(x: List[Int100Tensor], axis: int = 0):
-    assert all([isinstance(i, Int100Tensor) for i in x])
-
-    backing = []
-    for i in range(len(x[0].backing)):
-        concated = [j.backing[i] for j in x]
-
-        backing.append(tf.concat(concated, axis=axis))
-
+def concat(xs: List[Int100Tensor], axis: int = 0):
+    assert all(isinstance(x, Int100Tensor) for x in xs)
+    backing = [
+        tf.concat([x.backing[i] for x in xs], axis=axis)
+        for i in range(len(xs[0].backing))
+    ]
     return Int100Tensor.from_decomposed(backing)
 
 
