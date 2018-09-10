@@ -31,7 +31,7 @@ M = prod(m)
 for mi in m:
     assert 2 * log2(mi) + log2(1024) < log2(INT_TYPE.max)
 
-dot_threshold = 1000
+DOT_THRESHOLD = 1024
 
 _crt_decompose = gen_crt_decompose(m)
 _crt_recombine_lagrange = gen_crt_recombine_lagrange(m)
@@ -176,10 +176,10 @@ def _mul(x, y):
 def _dot(x: Union[Int100Tensor, int], y: Union[Int100Tensor, int]) -> Int100Tensor:
     x, y = _lift(x), _lift(y)
 
-    if x.shape[1] > dot_threshold:
-        split_backing = crt_matmul_split(x.backing, y.backing, dot_threshold)
+    if x.shape[1] > DOT_THRESHOLD:
+        split_backing = crt_matmul_split(x.backing, y.backing, DOT_THRESHOLD)
 
-        backings = [_crt_dot(tup[0], tup[1]) for tup in split_backing]
+        backings = [_crt_dot(xi, yi) for xi, yi in split_backing]
 
         z_backing = backings[0]
         for i in range(1, len(backings)):
