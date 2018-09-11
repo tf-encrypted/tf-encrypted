@@ -8,3 +8,5 @@ build/
 dist/
 data/
 *.egg-info
+.idea/
+.cache

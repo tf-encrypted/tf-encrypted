@@ -58,22 +58,23 @@ class Conv2D(core.Layer):
         x = self.cache
         h_filter, w_filter, d_filter, n_filter = map(int, self.weights.shape)
 
-        if self.model.layers.index(self) != 0:
-            W_reshaped = self.weights.reshape(n_filter, -1).transpose()
-            dout_reshaped = d_y.transpose(1, 2, 3, 0).reshape(n_filter, -1)
-            dx = W_reshaped.dot(dout_reshaped).col2im(imshape=self.cached_input_shape,
-                                                      field_height=h_filter,
-                                                      field_width=w_filter,
-                                                      padding=self.padding,
-                                                      stride=self.strides)
+        dx = None
+        # if self.model.layers.index(self) != 0:
+        #     W_reshaped = self.weights.reshape(n_filter, -1).transpose()
+        #     dout_reshaped = d_y.transpose(1, 2, 3, 0).reshape(n_filter, -1)
+        #     dx = W_reshaped.dot(dout_reshaped).col2im(imshape=self.cached_input_shape,
+        #                                               field_height=h_filter,
+        #                                               field_width=w_filter,
+        #                                               padding=self.padding,
+        #                                               stride=self.strides)
 
-        d_w = self.prot.conv2d_bw(x, d_y, self.weights.shape, self.strides, self.padding)
-        d_bias = d_y.sum(axis=0)
+        d_w = self.prot.conv2d_bw(x, d_y, tuple(map(int, self.weights.shape)), self.strides, self.padding)
+        # d_bias = d_y.sum(axis=0)
 
-        self.weights.assign((d_w * learning_rate).neg() + self.weights)
-        self.bias.assign((d_bias * learning_rate).neg() + self.bias)
+        # self.weights.assign((d_w * learning_rate).neg() + self.weights)
+        # self.bias.assign((d_bias * learning_rate).neg() + self.bias)
 
-        return dx
+        return dx, d_w
 
 
 def set_protocol(new_prot):
