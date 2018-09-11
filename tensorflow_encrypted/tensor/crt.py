@@ -1,9 +1,13 @@
 from __future__ import absolute_import
+from math import ceil
 
 import numpy as np
 import tensorflow as tf
 
 from .helpers import inverse, prod
+from typing import Union, List, Tuple
+
+TFEData = Union[List[tf.Tensor], List[np.ndarray]]
 
 
 def gen_crt_decompose(m):
@@ -119,6 +123,29 @@ def gen_crt_dot(m):
             return [tf.matmul(xi, yi) % mi for xi, yi, mi in zip(x, y, m)]
 
     return crt_dot
+
+
+def crt_matmul_split(x: TFEData, y: TFEData, threshold: int) -> List[Tuple[TFEData, TFEData]]:
+    with tf.name_scope('matmul_split'):
+        z_split = []
+
+        num_columns = int(x[0].shape[1])
+        num_split = int(ceil(num_columns / threshold))
+        for i in range(num_split):
+
+            left = i * threshold
+            right = (i + 1) * threshold
+
+            inner_x: List[Union[tf.Tensor, np.ndarray]] = []
+            inner_y: List[Union[tf.Tensor, np.ndarray]] = []
+
+            for xi, yi in zip(x, y):
+                inner_x.append(xi[:, left:right])
+                inner_y.append(yi[left:right, :])
+
+            z_split.append((inner_x, inner_y))
+
+    return z_split
 
 
 def gen_crt_im2col(m):

@@ -201,7 +201,8 @@ class Pond(Protocol):
                     return [helper(v) for v in inputs]
 
                 else:
-                    raise TypeError("Don't know how to handle inputs of type {}".format(type(inputs)))
+                    raise TypeError(
+                        "Don't know how to handle inputs of type {}".format(type(inputs)))
 
     def define_private_input(
         self,
@@ -212,7 +213,8 @@ class Pond(Protocol):
     ) -> Union['PondPrivateTensor', 'PondMaskedTensor', List['PondPrivateTensor'], List['PondMaskedTensor']]:
 
         def helper(v: tf.Tensor):
-            assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', provider.player.name)
+            assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(
+                name if name else '', provider.player.name)
 
             v = _encode(v, apply_scaling)
             x0, x1 = _share(v)
@@ -243,7 +245,8 @@ class Pond(Protocol):
                     output = [helper(v) for v in inputs]
 
                 else:
-                    raise TypeError("Don't know how to handle inputs of type {}".format(type(inputs)))
+                    raise TypeError(
+                        "Don't know how to handle inputs of type {}".format(type(inputs)))
 
         return output
 
@@ -1164,7 +1167,8 @@ class PondCachedMaskedTensor(PondMaskedTensor):
         assert isinstance(alpha_on_1, BackingTensor), type(alpha_on_1)
         assert isinstance(updator, tf.Operation), type(updator)
 
-        super(PondCachedMaskedTensor, self).__init__(prot, unmasked, a, a0, a1, alpha_on_0, alpha_on_1)
+        super(PondCachedMaskedTensor, self).__init__(
+            prot, unmasked, a, a0, a1, alpha_on_0, alpha_on_1)
         self.updator = updator
 
     def __repr__(self):
@@ -2072,7 +2076,23 @@ def _dot_masked_masked(prot, x, y):
 
 
 def _conv2d_public_public(prot, x, y, strides, padding):
-    raise NotImplementedError()
+    assert isinstance(x, PondPublicTensor), type(x)
+    assert isinstance(y, PondPublicTensor), type(y)
+
+    x_0, x_1 = x.unwrapped
+    y_0, y_1 = y.unwrapped
+
+    with tf.name_scope('conv2d'):
+
+        with tf.device(prot.server_0.device_name):
+            z0 = x_0.conv2d(y_0, strides, padding)
+
+        with tf.device(prot.server_1.device_name):
+            z1 = x_1.conv2d(y_1, strides, padding)
+
+    z = PondPublicTensor(prot, z0, z1)
+    z = prot.truncate(z)
+    return z
 
 
 def _conv2d_public_private(prot, x, y, strides, padding):
