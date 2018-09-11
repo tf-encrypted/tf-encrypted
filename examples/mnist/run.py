@@ -104,7 +104,7 @@ class PredictionClient(tfe.io.InputProvider, tfe.io.OutputReceiver):
         iterator = dataset.make_one_shot_iterator()
         return iterator
 
-    def provide_input(self) -> List[tf.Tensor]:
+    def provide_input(self) -> tf.Tensor:
         with tf.name_scope('loading'):
             prediction_input, expected_result = self.build_data_pipeline().get_next()
             prediction_input = tf.Print(prediction_input, [expected_result], summarize=self.BATCH_SIZE, message="EXPECT ")
@@ -112,10 +112,9 @@ class PredictionClient(tfe.io.InputProvider, tfe.io.OutputReceiver):
         with tf.name_scope('pre-processing'):
             prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 28 * 28))
 
-        return [prediction_input]
+        return prediction_input
 
-    def receive_output(self, tensors: List[tf.Tensor]) -> tf.Operation:
-        likelihoods, = tensors
+    def receive_output(self, likelihoods: tf.Tensor) -> tf.Operation:
         with tf.name_scope('post-processing'):
             prediction = tf.argmax(likelihoods, axis=1)
             op = tf.Print([], [prediction], summarize=self.BATCH_SIZE, message="ACTUAL ")
@@ -138,7 +137,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     w0, b0, w1, b1 = prot.cache([w0, b0, w1, b1])
 
     # get prediction input from client
-    x, = prot.define_private_input(prediction_client, masked=True)  # pylint: disable=E0632
+    x = prot.define_private_input(prediction_client, masked=True)  # pylint: disable=E0632
 
     # compute prediction
     layer0 = prot.dot(x, w0) + b0
@@ -147,7 +146,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     prediction = layer2
 
     # send prediction output back to client
-    prediction_op = prot.define_output([prediction], prediction_client)
+    prediction_op = prot.define_output(prediction, prediction_client)
 
 
 target = sys.argv[2] if len(sys.argv) > 2 else None
