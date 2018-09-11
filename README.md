@@ -120,7 +120,7 @@ Several people have had an impact on the development of this library (in alphabe
 
 and several companies have invested significant resources (in alphabetical order):
 
-- [Dropout Labs](FIXME) continues to sponsor a large amount of both research and engineering
+- [Dropout Labs](https://dropoutlabs.com/) continues to sponsor a large amount of both research and engineering
 - [OpenMined](https://openmined.org) was the breeding ground for the initial idea and continues to support discussions and guidance
 
 ## Reported uses

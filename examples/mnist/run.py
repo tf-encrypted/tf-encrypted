@@ -6,8 +6,7 @@ import tensorflow_encrypted as tfe
 
 from convert import decode
 
-
-if len(sys.argv) >= 2:
+if len(sys.argv) > 1:
     # config file was specified
     config_file = sys.argv[1]
     config = tfe.config.load(config_file)
@@ -151,7 +150,9 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     prediction_op = prot.define_output([prediction], prediction_client)
 
 
-with config.session() as sess:
+target = sys.argv[2] if len(sys.argv) > 2 else None
+with config.session(target) as sess:
+
     print("Init")
     tfe.run(sess, tf.global_variables_initializer(), tag='init')
 
