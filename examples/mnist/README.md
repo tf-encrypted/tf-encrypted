@@ -8,11 +8,11 @@ In particular, we here have a separate *model trainer* that provides encrypted w
 Concretely, a `ModelTrainer` and `PredictionClient` class represent the two parties above, both extending `tfe.io.InputProvider` and the latter also `tfe.io.OutputReceiver`. When private values are needed from either their `provide_input()` methods are executed *locally* on their associated host, and the resulting `tf.Tensors` are encrypted before sending them to the servers. This input and output behaviour is then connected with the secure computation simply by
 ```python
 w0, b0, w1, b1 = prot.define_private_input(model_trainer)
-x, = prot.define_private_input(prediction_client)
+x = prot.define_private_input(prediction_client)
 ```
 and
 ```python
-prediction_op = prot.define_output([prediction], prediction_client)
+prediction_op = prot.define_output(prediction, prediction_client)
 ```
 where `prediction` is the encrypted result of the prediction on `x`.
 
