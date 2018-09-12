@@ -3,12 +3,14 @@
 import sys
 import os
 import uuid
+import time
 from threading import Thread
-from typing import Dict, Any, Tuple, Callable
+from typing import Dict, Any, Tuple, Callable, List
 
 import argparse
 import tensorflow as tf
 from tensorflow.python.platform import gfile
+import numpy as np
 from flask import Flask, request, jsonify  # type: ignore
 from flask_cors import CORS  # type: ignore
 
@@ -136,7 +138,7 @@ else:
             tf.get_default_graph().get_tensor_by_name(name)
         )
 
-    def predict(request_id: str, input_data: Tuple[Any]) -> None:
+    def predict(request_id: str, input_data: List[Any]) -> None:
         feed_dict = {
             pl: input_data[i] for i, pl in enumerate(pls)
         }
@@ -147,6 +149,18 @@ else:
         )
 
         _global_memory[request_id] = output_data[0].tolist()
+
+    print("Warming up the graph")
+    warmup_data = []
+    for spec in input_spec:
+        warmup_data.append(
+            np.random.standard_normal(spec['shape']).tolist()
+        )
+    warmup_start = time.time()
+    predict("warm-up-id", warmup_data)
+    warmup_end = time.time()
+    _global_memory.pop("warm-up-id")
+    print("Graph warmed up in {}".format(warmup_end - warmup_start))
 
     print('Serving model: %s' % config.model_name)
 
