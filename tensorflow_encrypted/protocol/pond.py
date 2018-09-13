@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from typing import Tuple, Dict, List, Union, Optional, Any, NewType
 
+import abc
 import math
 import numpy as np
 import tensorflow as tf
@@ -864,7 +865,7 @@ class Pond(Protocol):
 #
 
 
-class PondTensor(object):
+class PondTensor(abc.ABC):
     """
     This class functions mostly as a convenient way of exposing operations
     directly on the various tensor objects, ie allowing one to write x + y
@@ -872,11 +873,18 @@ class PondTensor(object):
     tensors we put it in this superclass.
 
     This class should never be instantiated on its own.
-    TODO[Morten] make it abstract
     """
 
     def __init__(self, prot):
         self.prot = prot
+
+    @abc.abstractmethod
+    def shape(self):
+        return
+
+    @abc.abstractmethod
+    def unwrapped(self):
+        return
 
     def add(self, other):
         return self.prot.add(self, other)
