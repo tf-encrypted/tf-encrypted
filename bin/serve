@@ -21,6 +21,7 @@ server0_address = os.environ.get('TFE_SERVER0_ADDRESS')
 server1_address = os.environ.get('TFE_SERVER1_ADDRESS')
 producer_address = os.environ.get('TFE_CRYPTO_PRODUCER_ADDRESS')
 provider_address = os.environ.get('TFE_WEIGHTS_PROVIDER_ADDRESS')
+master_address = os.environ.get('TFE_MASTER_ADDRESS')
 port = int(os.environ.get('TFE_API_PORT', "8080"))
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
 enable_debug = os.environ.get('TFE_DEBUG') is not None
@@ -39,7 +40,6 @@ if server1_address is None:
 
 
 if producer_address is None:
-
     print("The address for the producer must be provided via the 'TFE_CRYPTO_PRODUCER_ADRESS' environment variable")
     sys.exit(1)
 
@@ -47,17 +47,16 @@ if provider_address is None:
     print("The address for the weights provider must be provided via the 'TFE_WEIGHTS_PROVIDER_ADDRESS' environment variable")
     sys.exit(1)
 
+if master_address is None:
+    print("The address for master must be provided via the 'TFE_MASTER_ADDRESS' environment variable")
+    sys.exit(1)
+
 tfe.setMonitorStatsFlag(enable_stats_monitor)
 tfe.setTFEDebugFlag(enable_debug)
 
-if node_name == 'master':
-    master_host = '0.0.0.0:4440'
-else:
-    master_host = 'master:4440'
-
 remote_config = tfe.RemoteConfig(
     {
-        'master': master_host,
+        'master': master_address,
         'server0': server0_address,
         'server1': server1_address,
         'crypto_producer': producer_address,

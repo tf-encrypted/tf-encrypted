@@ -246,13 +246,13 @@ class RemoteConfig(Config):
         master: Optional[Union[int, str]] = None,
         log_device_placement: bool = False
     ) -> tf.Session:
-        cpu_cores = get_cpu_quota_within_docker() or multiprocessing.cpu_count()
+        # cpu_cores = get_cpu_quota_within_docker() or multiprocessing.cpu_count()
         target = self._compute_target(master)
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
             allow_soft_placement=False,
-            inter_op_parallelism_threads=1,  # see https://github.com/tensorflow/tensorflow/issues/22098
-            intra_op_parallelism_threads=cpu_cores
+            # inter_op_parallelism_threads=cpu_cores,  # see https://github.com/tensorflow/tensorflow/issues/22098
+            # intra_op_parallelism_threads=cpu_cores
         )
         print("Starting session on target '{}' using config {}".format(target, config))
         sess = tf.Session(target, config=config)
