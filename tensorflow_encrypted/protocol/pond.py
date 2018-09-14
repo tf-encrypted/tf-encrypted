@@ -1237,13 +1237,13 @@ def _cache_masked(prot, x):
         with tf.device(prot.server_1.device_name):
             [a1_cached, alpha_on_1_cached], updator1 = _cache_wrap_helper([a1, alpha_on_1])
 
-        x_unmasked_cached = prot.cache(unmasked)
         updator = tf.group(updator_cp, updator0, updator1)
+        unmasked_cached = prot.cache(unmasked)
 
     _global_cache_updators.append(updator)
     return PondCachedMaskedTensor(
         prot,
-        x_unmasked_cached,
+        unmasked_cached,
         a_cached,
         a0_cached,
         a1_cached,
