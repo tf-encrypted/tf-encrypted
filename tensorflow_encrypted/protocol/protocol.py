@@ -38,14 +38,13 @@ def global_caches_updator():
 
 
 def cached(func):
-    
+
     @functools.wraps(func)
     def cache_nodes(self, *args, **kwargs):
 
         node_key = (func.__name__, args, tuple(sorted(kwargs.items())))
-        print(node_key)
-        cached_result = _nodes.get(node_key, None)
 
+        cached_result = _nodes.get(node_key, None)
         if cached_result is not None:
             return cached_result
 

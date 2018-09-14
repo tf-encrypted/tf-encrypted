@@ -1,8 +1,6 @@
-import tensorflow as tf
-
 from .protocol import cached
 from ..protocol.pond import (
-    Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
+    Pond, PondTensor
 )
 
 
@@ -10,31 +8,31 @@ class SecureNN(Pond):
 
     @cached
     def bitwise_not(self, x: PondTensor) -> PondTensor:
-        assert not x.encoded, "Input is not supposed to be encoded"
-        return self.one() - x
+        assert not x.is_scaled, "Input is not supposed to be scaled"
+        return self.sub(1, x)
 
     @cached
     def bitwise_and(self, x: PondTensor, y: PondTensor) -> PondTensor:
-        assert (not x.encoded) and (not y.encoded), "Inputs are not supposed to be encoded"
+        assert (not x.is_scaled) and (not y.is_scaled), "Inputs are not supposed to be scaled"
         return self.mul(x, y)
 
     @cached
     def bitwise_or(self, x: PondTensor, y: PondTensor) -> PondTensor:
-        assert (not x.encoded) and (not y.encoded), "Inputs are not supposed to be encoded"
+        assert (not x.is_scaled) and (not y.is_scaled), "Inputs are not supposed to be scaled"
         return x + y - self.bitwise_and(x, y)
 
     @cached
-    def bitwise_xor(self, x, y):
-        assert (not x.encoded) and (not y.encoded), "Inputs are not supposed to be encoded"
-        return x + y - self.mul(2, self.bitwise_and(x, y))
+    def bitwise_xor(self, x: PondTensor, y: PondTensor) -> PondTensor:
+        assert (not x.is_scaled) and (not y.is_scaled), "Inputs are not supposed to be scaled"
+        return x + y - self.bitwise_and(x, y) * 2
 
     @cached
-    def msb(self, x):
+    def msb(self, x: PondTensor) -> PondTensor:
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
         # TODO assert that we're actually using an odd modulus
         return self.lsb(x * 2)
 
-    def lsb(self, x):
+    def lsb(self, x: PondTensor) -> PondTensor:
         raise NotImplementedError
 
     def select_share(self, x, y):

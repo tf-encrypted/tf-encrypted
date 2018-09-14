@@ -83,7 +83,7 @@ class Int100Tensor(object):
     @staticmethod
     def zero() -> 'Int100Tensor':
         return Int100Tensor.from_decomposed([0] * len(m))
-    
+
     @staticmethod
     def one() -> 'Int100Tensor':
         return Int100Tensor.from_decomposed([1] * len(m))
