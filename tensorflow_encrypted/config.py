@@ -37,7 +37,7 @@ class Config(ABC):
 
 class LocalConfig(Config):
     """
-    Configure tf-encrypted to use threads on the local CPU
+    Configure tf-encrypted to use threads on the local CPU.
     to simulate the different players.
     Intended mostly for development/debugging use.
     """

@@ -1,9 +1,11 @@
 from __future__ import absolute_import
-from typing import Optional, Callable
+from typing import Optional, Callable, Union, List
 
 import tensorflow as tf
 
 from .player import Player
+
+OutputFunc = Optional[Callable[[Union[tf.Tensor, List[tf.Tensor]]], tf.Tensor]]
 
 
 class InputProvider(object):
@@ -21,11 +23,11 @@ class InputProvider(object):
 
 class OutputReceiver(object):
 
-    def __init__(self, player: Player, output_fn: Optional[Callable[[tf.Tensor], tf.Tensor]] = None) -> None:
+    def __init__(self, player: Player, output_fn: OutputFunc = None) -> None:
         self.player = player
         self.output_fn = output_fn
 
-    def receive_output(self, tensor: tf.Tensor) -> tf.Tensor:
+    def receive_output(self, tensor: Union[tf.Tensor, List[tf.Tensor]]) -> tf.Tensor:
         if self.output_fn is None:
             raise NotImplementedError()
 
