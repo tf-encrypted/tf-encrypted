@@ -37,7 +37,7 @@ def global_caches_updator():
         return tf.group(*_global_cache_updators)
 
 
-def cached(func):
+def memoize(func):
 
     @functools.wraps(func)
     def cache_nodes(self, *args, **kwargs):

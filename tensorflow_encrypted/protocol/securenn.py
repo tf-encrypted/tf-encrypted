@@ -1,4 +1,4 @@
-from .protocol import cached
+from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor
 )
@@ -6,27 +6,27 @@ from ..protocol.pond import (
 
 class SecureNN(Pond):
 
-    @cached
+    @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
         assert not x.is_scaled, "Input is not supposed to be scaled"
         return self.sub(1, x)
 
-    @cached
+    @memoize
     def bitwise_and(self, x: PondTensor, y: PondTensor) -> PondTensor:
         assert (not x.is_scaled) and (not y.is_scaled), "Inputs are not supposed to be scaled"
         return self.mul(x, y)
 
-    @cached
+    @memoize
     def bitwise_or(self, x: PondTensor, y: PondTensor) -> PondTensor:
         assert (not x.is_scaled) and (not y.is_scaled), "Inputs are not supposed to be scaled"
         return x + y - self.bitwise_and(x, y)
 
-    @cached
+    @memoize
     def bitwise_xor(self, x: PondTensor, y: PondTensor) -> PondTensor:
         assert (not x.is_scaled) and (not y.is_scaled), "Inputs are not supposed to be scaled"
         return x + y - self.bitwise_and(x, y) * 2
 
-    @cached
+    @memoize
     def msb(self, x: PondTensor) -> PondTensor:
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
         # TODO assert that we're actually using an odd modulus
@@ -50,7 +50,7 @@ class SecureNN(Pond):
     def drelu(self, x):
         raise NotImplementedError
 
-    @cached
+    @memoize
     def relu(self, x):
         return self.drelu(x) * x
 

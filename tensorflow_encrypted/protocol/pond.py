@@ -20,7 +20,7 @@ from ..tensor.helpers import (
 )
 from ..io import InputProvider, OutputReceiver
 from ..player import Player
-from .protocol import Protocol, _global_cache_updators, cached, _nodes
+from .protocol import Protocol, _global_cache_updators, memoize, _nodes
 
 TFEData = Union[np.ndarray, tf.Tensor]
 TFEVariable = Union['PondPublicVariable', 'PondPrivateVariable', tf.Variable]
@@ -318,7 +318,7 @@ class Pond(Protocol):
 
         return op
 
-    @cached
+    @memoize
     def add(self, x, y):
         x, y = self.lift(x, y)
         return self.dispatch('add', x, y)
@@ -391,7 +391,7 @@ class Pond(Protocol):
 
         return z
 
-    @cached
+    @memoize
     def sub(self, x, y):
         x, y = self.lift(x, y)
         return self.dispatch('sub', x, y)
@@ -417,20 +417,20 @@ class Pond(Protocol):
         _nodes[node_key] = x_masked
         return x_masked
 
-    @cached
+    @memoize
     def mul(self, x, y):
         x, y = self.lift(x, y)
         return self.dispatch('mul', x, y)
 
-    @cached
+    @memoize
     def square(self, x):
         return self.dispatch('square', x)
 
-    @cached
+    @memoize
     def dot(self, x, y):
         return self.dispatch('dot', x, y)
 
-    @cached
+    @memoize
     def truncate(self, x: 'PondTensor'):
         return self.dispatch('truncate', x)
 
@@ -585,7 +585,7 @@ class Pond(Protocol):
 
         return xs_stack
 
-    @cached
+    @memoize
     def sigmoid(self, x: 'PondTensor'):
         assert isinstance(x, PondTensor), type(x)
 
@@ -617,7 +617,7 @@ class Pond(Protocol):
 
         return z
 
-    @cached
+    @memoize
     def relu(self, x: 'PondTensor'):
         assert isinstance(x, PondTensor), type(x)
 
@@ -646,7 +646,7 @@ class Pond(Protocol):
 
         return z
 
-    @cached
+    @memoize
     def reveal(self, x):
         return self.dispatch('reveal', x)
 
