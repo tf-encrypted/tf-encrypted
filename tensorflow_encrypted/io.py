@@ -5,7 +5,7 @@ import tensorflow as tf
 
 from .player import Player
 
-OutputFunc = Optional[Callable[[Union[tf.Tensor, List[tf.Tensor]]], tf.Tensor]]
+OutputFunc = Optional[Callable[[Union[tf.Tensor, List[tf.Tensor]]], tf.Operation]]
 
 
 class InputProvider(object):
@@ -27,7 +27,7 @@ class OutputReceiver(object):
         self.player = player
         self.output_fn = output_fn
 
-    def receive_output(self, tensor: Union[tf.Tensor, List[tf.Tensor]]) -> tf.Tensor:
+    def receive_output(self, tensor: Union[tf.Tensor, List[tf.Tensor]]) -> tf.Operation:
         if self.output_fn is None:
             raise NotImplementedError()
 

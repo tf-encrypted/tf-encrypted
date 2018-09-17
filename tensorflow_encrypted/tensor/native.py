@@ -57,11 +57,11 @@ class NativeTensor(object):
 
     def add(self, other: Union['NativeTensor', int]) -> 'NativeTensor':
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
-        return NativeTensor(x.value + y.value % self.modulus, self.modulus)
+        return NativeTensor((x.value + y.value) % self.modulus, self.modulus)
 
     def sub(self, other: Union['NativeTensor', int]) -> 'NativeTensor':
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
-        return NativeTensor(x.value - y.value % self.modulus, self.modulus)
+        return NativeTensor((x.value - y.value) % self.modulus, self.modulus)
 
     def mul(self, other: Union['NativeTensor', int]) -> 'NativeTensor':
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
@@ -78,8 +78,8 @@ class NativeTensor(object):
     #     return _conv2d(self, other, strides, padding)
 
     def mod(self, k: Union['NativeTensor', int]) -> 'NativeTensor':
-        x, y = _lift(self, self.modulus), _lift(k, self.modulus)
-        return NativeTensor(x.value % y.value, self.modulus)
+        x = _lift(self, self.modulus)
+        return NativeTensor(x.value % k, self.modulus)
 
     def transpose(self, perm: Union[List[int], Tuple[int]]) -> 'NativeTensor':
         return NativeTensor(tf.transpose(self.value, perm), self.modulus)
