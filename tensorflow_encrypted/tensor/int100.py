@@ -319,7 +319,7 @@ class Int100Constant(Int100Tensor):
         return Int100Constant(value, None)
 
     @staticmethod
-    def from_int100(value: Int100Tensor) -> 'Int100Constant':
+    def from_same(value: Int100Tensor) -> 'Int100Constant':
         assert type(value) in [Int100Tensor], type(value)
         return Int100Constant(None, value)
 
@@ -339,7 +339,7 @@ class Int100Placeholder(Int100Tensor):
         assert type(value) in [np.ndarray], type(value)
         return _feed(self, value, None)
 
-    def feed_from_int100(self, value):
+    def feed_from_same(self, value):
         assert type(value) in [Int100Tensor], type(value)
         return _feed(self, None, value)
 
@@ -381,7 +381,7 @@ class Int100Variable(Int100Tensor):
         return Int100Variable(initial_value, None)
 
     @staticmethod
-    def from_int100(initial_value):
+    def from_same(initial_value):
         assert type(initial_value) in [Int100Tensor], type(initial_value)
         return Int100Variable(None, initial_value)
 
@@ -392,7 +392,7 @@ class Int100Variable(Int100Tensor):
         assert type(value) in [np.ndarray], type(value)
         return _assign(self, value, None)
 
-    def assign_from_int100(self, value):
+    def assign_from_same(self, value):
         assert isinstance(value, Int100Tensor), type(value)
         return _assign(self, None, value)
 
