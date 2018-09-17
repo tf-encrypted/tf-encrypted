@@ -2,9 +2,24 @@ from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor
 )
+from ..player import Player
 
 
 class SecureNN(Pond):
+
+    def __init__(
+        self,
+        server_0: Player,
+        server_1: Player,
+        server_2: Player,
+        **kwargs
+    ) -> None:
+        super(SecureNN, self).__init__(
+            server_0=server_0,
+            server_1=server_1,
+            crypto_producer=server_2,
+            **kwargs
+        )
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
@@ -13,17 +28,20 @@ class SecureNN(Pond):
 
     @memoize
     def bitwise_and(self, x: PondTensor, y: PondTensor) -> PondTensor:
-        assert (not x.is_scaled) and (not y.is_scaled), "Inputs are not supposed to be scaled"
+        assert not x.is_scaled, "Input is not supposed to be scaled"
+        assert not y.is_scaled, "Input is not supposed to be scaled"
         return x * y
 
     @memoize
     def bitwise_or(self, x: PondTensor, y: PondTensor) -> PondTensor:
-        assert (not x.is_scaled) and (not y.is_scaled), "Inputs are not supposed to be scaled"
+        assert not x.is_scaled, "Input is not supposed to be scaled"
+        assert not y.is_scaled, "Input is not supposed to be scaled"
         return x + y - self.bitwise_and(x, y)
 
     @memoize
     def bitwise_xor(self, x: PondTensor, y: PondTensor) -> PondTensor:
-        assert (not x.is_scaled) and (not y.is_scaled), "Inputs are not supposed to be scaled"
+        assert not x.is_scaled, "Input is not supposed to be scaled"
+        assert not y.is_scaled, "Input is not supposed to be scaled"
         return x + y - self.bitwise_and(x, y) * 2
 
     @memoize
