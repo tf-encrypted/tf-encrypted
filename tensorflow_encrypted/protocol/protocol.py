@@ -1,10 +1,13 @@
-from typing import Optional, Type, List
+import functools
+from typing import Optional, Type, List, Dict
 from types import TracebackType
+
 import tensorflow as tf
 
 
 _current_prot = None
-_global_cache_updators: List = []
+global_cache_updators: List = []
+nodes: Dict = {}
 
 
 class Protocol(object):
@@ -31,4 +34,23 @@ def get_protocol() -> Optional[Protocol]:
 
 def global_caches_updator():
     with tf.name_scope('cache_update'):
-        return tf.group(*_global_cache_updators)
+        return tf.group(*global_cache_updators)
+
+
+def memoize(func):
+
+    @functools.wraps(func)
+    def cache_nodes(self, *args, **kwargs):
+
+        node_key = (func.__name__, args, tuple(sorted(kwargs.items())))
+
+        cached_result = nodes.get(node_key, None)
+        if cached_result is not None:
+            return cached_result
+
+        result = func(self, *args, **kwargs)
+
+        nodes[node_key] = result
+        return result
+
+    return cache_nodes

@@ -80,6 +80,14 @@ class Int100Tensor(object):
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
 
+    @staticmethod
+    def zero() -> 'Int100Tensor':
+        return Int100Tensor.from_decomposed([0] * len(m))
+
+    @staticmethod
+    def one() -> 'Int100Tensor':
+        return Int100Tensor.from_decomposed([1] * len(m))
+
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int100Tensor':
         evaluated_backing = run(sess, self.backing, feed_dict=feed_dict, tag=tag)
         return Int100Tensor.from_decomposed(evaluated_backing)
@@ -143,6 +151,10 @@ class Int100Tensor(object):
 
     def squeeze(self, axis: List[int]) -> 'Int100Tensor':
         return _squeeze(self, axis)
+
+    def negative(self) -> 'Int100Tensor':
+        # TODO[Morten] there's probably a more efficient way
+        return Int100Tensor.zero() - self
 
 
 def _lift(x: Union[Int100Tensor, int]) -> Int100Tensor:

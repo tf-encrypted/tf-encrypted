@@ -21,7 +21,7 @@ class TestTruncate(unittest.TestCase):
 
         prot = tfe.protocol.Pond(
             server0, server1, cp,
-            use_interactive_truncation=True
+            use_noninteractive_truncation=False
         )
 
         with config.session() as sess:
@@ -48,7 +48,7 @@ class TestTruncate(unittest.TestCase):
 
         prot = tfe.protocol.Pond(
             server0, server1, cp,
-            use_interactive_truncation=False
+            use_noninteractive_truncation=True
         )
 
         with config.session() as sess:
