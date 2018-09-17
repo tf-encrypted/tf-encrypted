@@ -14,7 +14,7 @@ class SecureNN(Pond):
     @memoize
     def bitwise_and(self, x: PondTensor, y: PondTensor) -> PondTensor:
         assert (not x.is_scaled) and (not y.is_scaled), "Inputs are not supposed to be scaled"
-        return self.mul(x, y)
+        return x * y
 
     @memoize
     def bitwise_or(self, x: PondTensor, y: PondTensor) -> PondTensor:
@@ -35,6 +35,31 @@ class SecureNN(Pond):
     def lsb(self, x: PondTensor) -> PondTensor:
         raise NotImplementedError
 
+    @memoize
+    def negative(self, x: PondTensor) -> PondTensor:
+        # NOTE MSB is 1 iff xi < 0
+        return self.msb(x)
+
+    @memoize
+    def non_negative(self, x: PondTensor) -> PondTensor:
+        return self.bitwise_not(self.msb(x))
+
+    @memoize
+    def less(self, x: PondTensor, y: PondTensor) -> PondTensor:
+        return self.negative(x - y)
+
+    @memoize
+    def less_equal(self, x: PondTensor, y: PondTensor) -> PondTensor:
+        return self.bitwise_not(self.greater(x, y))
+
+    @memoize
+    def greater(self, x: PondTensor, y: PondTensor) -> PondTensor:
+        return self.negative(y - x)
+
+    @memoize
+    def greater_equal(self, x: PondTensor, y: PondTensor) -> PondTensor:
+        return self.bitwise_not(self.less(x, y))
+
     def select_share(self, x, y):
         raise NotImplementedError
 
@@ -47,12 +72,14 @@ class SecureNN(Pond):
     def divide(self, x, y):
         raise NotImplementedError
 
-    def drelu(self, x):
-        raise NotImplementedError
-
     @memoize
     def relu(self, x):
-        return self.drelu(x) * x
+        drelu = self.non_negative(x)
+        # TODO[Morten]
+        # mul below will fail since drelu is not encoded while x is;
+        # how do we deal with this? allowing mixing different scaling
+        # factors? introduce explicit types like in tf?
+        return drelu * x
 
     def max_pool(self, x):
         raise NotImplementedError
