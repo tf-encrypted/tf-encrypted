@@ -1,10 +1,11 @@
-from typing import Any, Dict, Optional, Union, List, Callable
+from typing import Any, Dict, Optional, Union, List, Callable, Tuple, Type
 
 from . import nn
 from . import errors
 from . import python
 from . import summary
 from . import train
+import numpy as np
 
 __all__ = [
     'nn',
@@ -22,17 +23,17 @@ GraphElement = Union[
 ]
 
 TFTypes = Union[
-    'int8',
-    'int16',
-    'int32',
-    'int64',
-    'uint8',
-    'uint16',
-    'uint32',
-    'uint64',
-    'float16',
-    'float32',
-    'float64',
+    Type['int8'],
+    Type['int16'],
+    Type['int32'],
+    Type['int64'],
+    Type['uint8'],
+    Type['uint16'],
+    Type['uint32'],
+    Type['uint64'],
+    Type['float16'],
+    Type['float32'],
+    Type['float64'],
 ]
 
 
@@ -121,8 +122,22 @@ class Operation:
 
 
 class Tensor:
+    op: Operation
+
     @property
     def shape(self) -> 'TensorShape':
+        ...
+
+    def __add__(self, other):
+        ...
+
+    def __mul__(self, other):
+        ...
+
+    def __sub__(self, other):
+        ...
+
+    def __mod__(self, other):
         ...
 
 
@@ -209,7 +224,7 @@ class BaseSession:
         ...
 
     def close(self) -> None:
-            ...
+        ...
 
 
 class Session(BaseSession):
@@ -248,6 +263,13 @@ class Variable:
                  import_scope: Optional[str] = ...,
                  constraint: Optional[Any] = ...,
                  ) -> None:
+        ...
+
+    def read_value(self) -> Tensor:
+        ...
+
+    @property
+    def initializer(self) -> Operation:
         ...
 
 
@@ -317,7 +339,7 @@ def reset_default_graph() -> Graph:
 def placeholder(dtype: Any,
                 shape: Any = ...,
                 name: Optional[str] = ...,
-                ) -> Any:
+                ) -> Tensor:
     ...
 
 # Original function definition for sparse_placeholder here:
@@ -387,11 +409,11 @@ def reduce_mean(input_tensor: Tensor,
 
 
 def name_scope(name: str) -> Any:
-        ...
+    ...
 
 
 def device(name: str) -> Any:
-        ...
+    ...
 
 
 def random_normal(
@@ -468,8 +490,22 @@ def constant(
     ...
 
 
+def matmul(
+    a: Union[np.ndarray, Tensor],
+    b: Union[np.ndarray, Tensor],
+    transpose_a=False,
+    transpose_b=False,
+    adjoint_a=False,
+    adjoint_b=False,
+    a_is_sparse=False,
+    b_is_sparse=False,
+    name=None
+) -> Tensor:
+    ...
+
+
 def random_uniform(
-    shape: Union[Tensor, List[int]],
+    shape: Union[Tuple[int, ...], TensorShape],
     minval: Any = 0,
     maxval: Optional[Any] = None,
     dtype: Optional[TFTypes] = float32,
@@ -481,9 +517,26 @@ def random_uniform(
 
 def assign(
     ref: Variable,
-    value: Tensor,
+    value: Union[Tensor, np.ndarray],
     validate_shape: Optional[bool] = None,
     use_locking: Optional[bool] = None,
     name: Optional[str] = None
+) -> Tensor:
+    ...
+
+
+def transpose(
+    a: Union[np.ndarray, Tensor],
+    perm: Optional[Union[List[int], Tuple[int, ...]]]=None,
+    name: str='transpose',
+    conjugate: bool=False
+) -> Tensor:
+    ...
+
+
+def stack(
+    values: List[Union[np.ndarray, Tensor]],
+    axis: int=0,
+    name: str='stack'
 ) -> Tensor:
     ...
