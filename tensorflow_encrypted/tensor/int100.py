@@ -70,7 +70,7 @@ class Int100Tensor(object):
         self.backing = decomposed_value
 
     @staticmethod
-    def from_native(value: Union[np.ndarray, tf.Tensor]) -> 'Int100Tensor':
+    def from_native(value: Union[np.ndarray, tf.Tensor], modulus=None) -> 'Int100Tensor':
         # TODO[Morten] rename to `from_natural` to highlight that you can feed: int32, int64, bigint
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
         return Int100Tensor(value, None)
@@ -314,12 +314,12 @@ class Int100Constant(Int100Tensor):
         super(Int100Constant, self).__init__(None, backing)
 
     @staticmethod
-    def from_native(value: np.ndarray) -> 'Int100Constant':
+    def from_native(value: np.ndarray, modulus=None) -> 'Int100Constant':
         assert type(value) in [np.ndarray, tf.Tensor], type(value)
         return Int100Constant(value, None)
 
     @staticmethod
-    def from_same(value: Int100Tensor) -> 'Int100Constant':
+    def from_same(value: Int100Tensor, modulus=None) -> 'Int100Constant':
         assert type(value) in [Int100Tensor], type(value)
         return Int100Constant(None, value)
 
@@ -335,11 +335,11 @@ class Int100Placeholder(Int100Tensor):
         super(Int100Placeholder, self).__init__(None, placeholders)
         self.placeholders = placeholders
 
-    def feed_from_native(self, value):
+    def feed_from_native(self, value, modulus=None):
         assert type(value) in [np.ndarray], type(value)
         return _feed(self, value, None)
 
-    def feed_from_same(self, value):
+    def feed_from_same(self, value, modulus=None):
         assert type(value) in [Int100Tensor], type(value)
         return _feed(self, None, value)
 
@@ -376,12 +376,12 @@ class Int100Variable(Int100Tensor):
         self.initializer = tf.group(*[var.initializer for var in variables])
 
     @staticmethod
-    def from_native(initial_value):
+    def from_native(initial_value, modulus=None):
         assert type(initial_value) in [np.ndarray, tf.Tensor], type(initial_value)
         return Int100Variable(initial_value, None)
 
     @staticmethod
-    def from_same(initial_value):
+    def from_same(initial_value, modulus=None):
         assert type(initial_value) in [Int100Tensor], type(initial_value)
         return Int100Variable(None, initial_value)
 

@@ -14,6 +14,8 @@ from ..tensor.int100 import (
     Int100Placeholder as BackingPlaceholder,
     stack,
 )
+
+
 from ..tensor.helpers import (
     log2,
     gcd,
@@ -45,6 +47,24 @@ _initializers: List = list()
 _thismodule = sys.modules[__name__]
 
 
+def import_native() -> None:
+    global BackingTensor
+    global BackingConstant
+    global BackingVariable
+    global BackingPlaceholder
+    global stack
+    from ..tensor.native import (
+        NativeTensor as BackingTensor,
+        NativeConstant as BackingConstant,
+        NativeVariable as BackingVariable,
+        NativePlaceholder as BackingPlaceholder,
+        stack,
+    )
+
+    global M
+    M = 2**16
+
+
 class Pond(Protocol):
 
     def __init__(
@@ -52,12 +72,16 @@ class Pond(Protocol):
         server_0: Player,
         server_1: Player,
         crypto_producer: Player,
-        use_noninteractive_truncation: bool=False
+        use_noninteractive_truncation: bool=False,
+        use_native: bool=False
     ) -> None:
         self.server_0 = server_0
         self.server_1 = server_1
         self.crypto_producer = crypto_producer
         self.use_noninteractive_truncation = use_noninteractive_truncation
+
+        if use_native:
+            import_native()
 
     def define_constant(self, value: np.ndarray, apply_scaling: bool=True, name: Optional[str]=None) -> 'PondConstant':
         assert isinstance(value, (np.ndarray,)), type(value)
@@ -67,10 +91,10 @@ class Pond(Protocol):
         with tf.name_scope('constant{}'.format('-' + name if name else '')):
 
             with tf.device(self.server_0.device_name):
-                x_on_0 = BackingConstant.from_same(v)
+                x_on_0 = BackingConstant.from_same(v, M)
 
             with tf.device(self.server_1.device_name):
-                x_on_1 = BackingConstant.from_same(v)
+                x_on_1 = BackingConstant.from_same(v, M)
 
         x = PondConstant(self, x_on_0, x_on_1, apply_scaling)
         return x
@@ -97,10 +121,10 @@ class Pond(Protocol):
         with tf.name_scope('private-placeholder{}'.format('-' + name if name else '')):
 
             with tf.device(self.server_0.device_name):
-                x0 = BackingTensor.from_decomposed(v0.backing)
+                x0 = BackingTensor.from_decomposed(v0.backing, M)
 
             with tf.device(self.server_1.device_name):
-                x1 = BackingTensor.from_decomposed(v1.backing)
+                x1 = BackingTensor.from_decomposed(v1.backing, M)
 
         return PondPrivatePlaceholder(self, pl, x0, x1, apply_scaling)
 
@@ -125,10 +149,10 @@ class Pond(Protocol):
                 raise TypeError("Don't know how to turn {} into public variable".format(type(initial_value)))
 
             with tf.device(self.server_0.device_name):
-                x_on_0 = BackingVariable.from_same(v_on_0)
+                x_on_0 = BackingVariable.from_same(v_on_0, M)
 
             with tf.device(self.server_1.device_name):
-                x_on_1 = BackingVariable.from_same(v_on_1)
+                x_on_1 = BackingVariable.from_same(v_on_1, M)
 
         x = PondPublicVariable(self, x_on_0, x_on_1, apply_scaling)
         _initializers.append(x.initializer)
@@ -165,10 +189,10 @@ class Pond(Protocol):
                     "Don't know how to turn {} into private variable".format(type(initial_value)))
 
             with tf.device(self.server_0.device_name):
-                x0 = BackingVariable.from_same(v0)
+                x0 = BackingVariable.from_same(v0, M)
 
             with tf.device(self.server_1.device_name):
-                x1 = BackingVariable.from_same(v1)
+                x1 = BackingVariable.from_same(v1, M)
 
         x = PondPrivateVariable(self, x0, x1, apply_scaling)
         _initializers.append(x.initializer)
@@ -309,10 +333,10 @@ class Pond(Protocol):
         with tf.name_scope('assign'):
 
             with tf.device(self.server_0.device_name):
-                op0 = var0.assign_from_same(val0)
+                op0 = var0.assign_from_same(val0, M)
 
             with tf.device(self.server_1.device_name):
-                op1 = var1.assign_from_same(val1)
+                op1 = var1.assign_from_same(val1, M)
 
         op = tf.group(op0, op1)
         nodes[node_key] = op
@@ -1112,7 +1136,7 @@ def _encode(rationals, apply_scaling) -> BackingTensor:
         else:
             raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
-        return BackingTensor.from_native(scaled)
+        return BackingTensor.from_native(scaled, M)
 
 
 def _decode(elements: BackingTensor, is_scaled: bool) -> Union[tf.Tensor, np.ndarray]:
@@ -1121,9 +1145,10 @@ def _decode(elements: BackingTensor, is_scaled: bool) -> Union[tf.Tensor, np.nda
     with tf.name_scope('decode'):
 
         scaling_factor = 2 ** BITPRECISION_FRACTIONAL if is_scaled else 1
+        b = BOUND if is_scaled else 1
 
         # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
-        return ((elements + BOUND).to_int32() - BOUND) / scaling_factor
+        return ((elements + b).to_int32() - b) / scaling_factor
 
 
 def _share(secret: BackingTensor) -> Tuple[BackingTensor, BackingTensor]:
@@ -1166,11 +1191,11 @@ def _type(x):
 
 def _cache_wrap_helper(sources):
     variables = [
-        BackingVariable.from_native(tf.zeros(shape=source.shape, dtype=BackingTensor.int_type))
+        BackingVariable.from_native(tf.zeros(shape=source.shape, dtype=BackingTensor.int_type), M)
         for source in sources
     ]
     updator = tf.group(*[
-        var.assign_from_same(val)
+        var.assign_from_same(val, M)
         for var, val in zip(variables, sources)
     ])
     return variables, updator
@@ -1268,8 +1293,8 @@ def _cache_masked(prot, x):
 K = 2 ** BITPRECISION_FRACTIONAL
 assert gcd(K, M) == 1
 
-K_inv_wrapped = BackingTensor.from_native(np.array([inverse(K, M)]))
-M_wrapped = BackingTensor.from_native(np.array([M]))
+K_inv_wrapped = BackingTensor.from_native(np.array([inverse(K, M)]), M)
+M_wrapped = BackingTensor.from_native(np.array([M]), M)
 
 
 def _raw_truncate(x: BackingTensor):
