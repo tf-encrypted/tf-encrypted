@@ -52,7 +52,7 @@ class NativeTensor(object):
     def __mul__(self, other: Union['NativeTensor', int]) -> 'NativeTensor':
         return self.mul(other)
 
-    def __mod__(self, k: Union['NativeTensor', int]) -> 'NativeTensor':
+    def __mod__(self, k: int) -> 'NativeTensor':
         return self.mod(k)
 
     def add(self, other: Union['NativeTensor', int]) -> 'NativeTensor':
@@ -77,7 +77,7 @@ class NativeTensor(object):
     # def conv2d(self, other, strides, padding='SAME') -> 'NativeTensor':
     #     return _conv2d(self, other, strides, padding)
 
-    def mod(self, k: Union['NativeTensor', int]) -> 'NativeTensor':
+    def mod(self, k: int) -> 'NativeTensor':
         x = _lift(self, self.modulus)
         return NativeTensor(x.value % k, self.modulus)
 
