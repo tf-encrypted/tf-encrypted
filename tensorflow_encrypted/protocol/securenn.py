@@ -75,10 +75,6 @@ class SecureNN(Pond):
     @memoize
     def relu(self, x):
         drelu = self.non_negative(x)
-        # TODO[Morten]
-        # mul below will fail since drelu is not encoded while x is;
-        # how do we deal with this? allowing mixing different scaling
-        # factors? introduce explicit types like in tf?
         return drelu * x
 
     def max_pool(self, x):

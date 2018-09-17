@@ -450,7 +450,6 @@ class Pond(Protocol):
 
         elif isinstance(x, PondMaskedTensor):
             x_t = _transpose_masked(self, x, perm=perm)
-            _nodes[('transpose', x.unmasked)] = x_t.unmasked
 
         else:
             raise TypeError("Don't know how to transpose {}".format(type(x)))
@@ -1675,7 +1674,6 @@ def _sub_masked_masked(prot, x, y):
 def _mul_public_public(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondPublicTensor), type(y)
-    assert x.is_scaled == y.is_scaled, "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
 
     x_on_0, x_on_1 = x.unwrapped
     y_on_0, y_on_1 = y.unwrapped
@@ -1688,15 +1686,14 @@ def _mul_public_public(prot, x, y):
         with tf.device(prot.server_1.device_name):
             z_on_1 = x_on_1 * y_on_1
 
-    z = PondPublicTensor(prot, z_on_0, z_on_1, x.is_scaled)
-    z = prot.truncate(z) if z.is_scaled else z
+    z = PondPublicTensor(prot, z_on_0, z_on_1, x.is_scaled or y.is_scaled)
+    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
     return z
 
 
 def _mul_public_private(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
-    assert x.is_scaled == y.is_scaled, "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
 
     x_on_0, x_on_1 = x.unwrapped
     y0, y1 = y.unwrapped
@@ -1709,8 +1706,8 @@ def _mul_public_private(prot, x, y):
         with tf.device(prot.server_1.device_name):
             z1 = x_on_1 * y1
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled)
-    z = prot.truncate(z) if z.is_scaled else z
+    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
     return z
 
 
@@ -1723,7 +1720,6 @@ def _mul_public_masked(prot, x, y):
 def _mul_private_public(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondPublicTensor), type(y)
-    assert x.is_scaled == y.is_scaled, "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
 
     x0, x1 = x.unwrapped
     y_on_0, y_on_1 = y.unwrapped
@@ -1736,8 +1732,8 @@ def _mul_private_public(prot, x, y):
         with tf.device(prot.server_1.device_name):
             z1 = x1 * y_on_1
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled)
-    z = prot.truncate(z) if z.is_scaled else z
+    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
     return z
 
 
@@ -1768,7 +1764,6 @@ def _mul_masked_private(prot, x, y):
 def _mul_masked_masked(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
-    assert x.is_scaled == y.is_scaled, "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
     b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
@@ -1789,8 +1784,8 @@ def _mul_masked_masked(prot, x, y):
             beta = beta_on_1
             z1 = ab1 + (a1 * beta) + (alpha * b1)
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled)
-    z = prot.truncate(z) if z.is_scaled else z
+    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
     return z
 
 
@@ -1851,10 +1846,7 @@ def _square_masked(prot, x):
 #
 
 
-def _dot_public_public(prot: Pond,
-                       x: PondPublicTensor,
-                       y: PondPublicTensor) -> PondPublicTensor:
-    assert x.is_scaled == y.is_scaled, "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
+def _dot_public_public(prot, x: PondPublicTensor, y: PondPublicTensor) -> PondPublicTensor:
 
     x_on_0, x_on_1 = x.unwrapped
     y_on_0, y_on_1 = y.unwrapped
@@ -1871,15 +1863,14 @@ def _dot_public_public(prot: Pond,
             y = y_on_1
             z_on_1 = x.dot(y)
 
-    z = PondPublicTensor(prot, z_on_0, z_on_1, x.is_scaled)
-    z = prot.truncate(z) if z.is_scaled else z
+    z = PondPublicTensor(prot, z_on_0, z_on_1, x.is_scaled or y.is_scaled)
+    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
     return z
 
 
 def _dot_public_private(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
-    assert x.is_scaled == y.is_scaled, "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
 
     x_on_0, x_on_1 = x.unwrapped
     y0, y1 = y.unwrapped
@@ -1894,8 +1885,8 @@ def _dot_public_private(prot, x, y):
             x = x_on_1
             z1 = x.dot(y1)
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled)
-    z = prot.truncate(z) if z.is_scaled else z
+    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
     return z
 
 
@@ -1908,7 +1899,6 @@ def _dot_public_masked(prot, x, y):
 def _dot_private_public(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondPublicTensor), type(y)
-    assert x.is_scaled == y.is_scaled, "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
 
     x0, x1 = x.unwrapped
     y_on_0, y_on_1 = y.unwrapped
@@ -1923,8 +1913,8 @@ def _dot_private_public(prot, x, y):
             y = y_on_1
             z1 = x1.dot(y)
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled)
-    z = prot.truncate(z) if z.is_scaled else z
+    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
     return z
 
 
@@ -1955,7 +1945,6 @@ def _dot_masked_private(prot, x, y):
 def _dot_masked_masked(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
-    assert x.is_scaled == y.is_scaled, "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
     b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
@@ -1976,8 +1965,8 @@ def _dot_masked_masked(prot, x, y):
             beta = beta_on_1
             z1 = ab1 + a1.dot(beta) + alpha.dot(b1)
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled)
-    z = prot.truncate(z) if z.is_scaled else z
+    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
     return z
 
 
@@ -1990,7 +1979,6 @@ def _dot_masked_masked(prot, x, y):
 def _conv2d_public_public(prot, x, y, strides, padding):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondPublicTensor), type(y)
-    assert x.is_scaled == y.is_scaled, "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
 
     x_0, x_1 = x.unwrapped
     y_0, y_1 = y.unwrapped
@@ -2003,8 +1991,8 @@ def _conv2d_public_public(prot, x, y, strides, padding):
         with tf.device(prot.server_1.device_name):
             z1 = x_1.conv2d(y_1, strides, padding)
 
-    z = PondPublicTensor(prot, z0, z1, x.is_scaled)
-    z = prot.truncate(z) if z.is_scaled else z
+    z = PondPublicTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
     return z
 
 
@@ -2045,7 +2033,6 @@ def _conv2d_masked_private(prot, x, y, strides, padding):
 def _conv2d_masked_masked(prot, x, y, strides, padding):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
-    assert x.is_scaled == y.is_scaled, "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
     b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
@@ -2059,7 +2046,6 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
             beta = beta_on_0
-            # TODO[koen]: check last term is really conv(alpha,beta) instead of other way around
             z0 = a_conv2d_b0 \
                 + a0.conv2d(beta, strides, padding) \
                 + alpha.conv2d(b0, strides, padding) \
@@ -2072,8 +2058,8 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
                 + a1.conv2d(beta, strides, padding) \
                 + alpha.conv2d(b1, strides, padding)
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled)
-    z = prot.truncate(z) if z.is_scaled else z
+    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
     return z
 
 
