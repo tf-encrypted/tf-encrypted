@@ -1,6 +1,6 @@
 from .protocol import memoize
 from ..protocol.pond import (
-    Pond, PondTensor
+    Pond, PondTensor, M
 )
 from ..player import Player
 
@@ -14,6 +14,11 @@ class SecureNN(Pond):
         server_2: Player,
         **kwargs
     ) -> None:
+        if M % 2 != 1:
+            # NOTE: this is only for use with an odd-modulus CRTTensor
+            #       NativeTensor will use an even modulus and will require share_convert
+            raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
+                            'but it was initialized with an even one.')
         super(SecureNN, self).__init__(
             server_0=server_0,
             server_1=server_1,
@@ -47,7 +52,6 @@ class SecureNN(Pond):
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
-        # TODO assert that we're actually using an odd modulus
         return self.lsb(x * 2)
 
     def lsb(self, x: PondTensor) -> PondTensor:
