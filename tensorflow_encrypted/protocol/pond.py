@@ -21,7 +21,7 @@ from ..tensor.helpers import (
 )
 from ..io import InputProvider, OutputReceiver
 from ..player import Player
-from .protocol import Protocol, _global_cache_updators, memoize, _nodes
+from .protocol import Protocol, global_cache_updators, memoize, nodes
 
 TFEData = Union[np.ndarray, tf.Tensor]
 TFEVariable = Union['PondPublicVariable', 'PondPrivateVariable', tf.Variable]
@@ -298,7 +298,7 @@ class Pond(Protocol):
         assert variable.is_scaled == value.is_scaled, "Scaling must match: {}, {}".format(variable.is_scaled, value.is_scaled)
 
         node_key = ('assign', variable, value)
-        op = _nodes.get(node_key, None)
+        op = nodes.get(node_key, None)
 
         if op is not None:
             return op
@@ -315,7 +315,7 @@ class Pond(Protocol):
                 op1 = var1.assign_from_same(val1)
 
         op = tf.group(op0, op1)
-        _nodes[node_key] = op
+        nodes[node_key] = op
 
         return op
 
@@ -371,7 +371,7 @@ class Pond(Protocol):
 
     def sum(self, x, axis, keepdims):
         node_key = ('sum', x)
-        z = _nodes.get(node_key, None)
+        z = nodes.get(node_key, None)
 
         if z is not None:
             return z
@@ -388,7 +388,7 @@ class Pond(Protocol):
             raise TypeError("Don't know how to sum {}".format(type(x)))
 
         z = func(self, x, axis, keepdims)
-        _nodes[node_key] = z
+        nodes[node_key] = z
 
         return z
 
@@ -404,7 +404,7 @@ class Pond(Protocol):
             return [self.mask(xi) for xi in x]
 
         node_key = ('mask', x)
-        x_masked = _nodes.get(node_key, None)
+        x_masked = nodes.get(node_key, None)
 
         if x_masked is not None:
             return x_masked
@@ -415,7 +415,7 @@ class Pond(Protocol):
         else:
             raise TypeError("Don't know how to mask {}".format(type(x)))
 
-        _nodes[node_key] = x_masked
+        nodes[node_key] = x_masked
         return x_masked
 
     @memoize
@@ -438,7 +438,7 @@ class Pond(Protocol):
     def transpose(self, x: 'PondTensor', perm=None):
 
         node_key = ('transpose', x)
-        x_t = _nodes.get(node_key, None)
+        x_t = nodes.get(node_key, None)
 
         if x_t is not None:
             return x_t
@@ -455,14 +455,14 @@ class Pond(Protocol):
         else:
             raise TypeError("Don't know how to transpose {}".format(type(x)))
 
-        _nodes[node_key] = x_t
+        nodes[node_key] = x_t
 
         return x_t
 
     def reshape(self, x: 'PondTensor', shape: List[int]):
 
         node_key = ('reshape', x)
-        x_reshaped = _nodes.get(node_key, None)
+        x_reshaped = nodes.get(node_key, None)
 
         if x_reshaped is not None:
             return x_reshaped
@@ -475,19 +475,19 @@ class Pond(Protocol):
 
         elif isinstance(x, PondMaskedTensor):
             x_reshaped = _reshape_masked(self, x, shape)
-            _nodes[('reshape', x.unmasked)] = x_reshaped.unmasked
+            nodes[('reshape', x.unmasked)] = x_reshaped.unmasked
 
         else:
             raise TypeError("Don't know how to reshape {}".format(type(x)))
 
-        _nodes[node_key] = x_reshaped
+        nodes[node_key] = x_reshaped
 
         return x_reshaped
 
     def expand_dims(self, x: 'PondTensor', axis=None):
 
         node_key = ('expand', x)
-        x_e = _nodes.get(node_key, None)
+        x_e = nodes.get(node_key, None)
 
         if x_e is not None:
             return x_e
@@ -500,19 +500,19 @@ class Pond(Protocol):
 
         elif isinstance(x, PondMaskedTensor):
             x_e = _expand_dims_masked(self, x, axis=axis)
-            _nodes[('expand', x.unmasked)] = x_e.unmasked
+            nodes[('expand', x.unmasked)] = x_e.unmasked
 
         else:
             raise TypeError("Don't know how to expand dims {}".format(type(x)))
 
-        _nodes[node_key] = x_e
+        nodes[node_key] = x_e
 
         return x_e
 
     def squeeze(self, x: 'PondTensor', axis: List[int]):
 
         node_key = ('squeeze', x)
-        x_squeezed = _nodes.get(node_key, None)
+        x_squeezed = nodes.get(node_key, None)
 
         if x_squeezed is not None:
             return x_squeezed
@@ -525,12 +525,12 @@ class Pond(Protocol):
 
         elif isinstance(x, PondMaskedTensor):
             x_squeezed = _squeeze_masked(self, x, axis)
-            _nodes[('sqeeze', x.unmasked)] = x_squeezed.unmasked
+            nodes[('sqeeze', x.unmasked)] = x_squeezed.unmasked
 
         else:
             raise TypeError("Don't know how to squeeze {}".format(type(x)))
 
-        _nodes[node_key] = x_squeezed
+        nodes[node_key] = x_squeezed
 
         return x_squeezed
 
@@ -539,7 +539,7 @@ class Pond(Protocol):
 
         node_key = ('strided_slice', x)
 
-        x_sliced = _nodes.get(node_key, None)
+        x_sliced = nodes.get(node_key, None)
 
         if x_sliced is not None:
             return x_sliced
@@ -550,18 +550,18 @@ class Pond(Protocol):
             x_sliced = _strided_slice_private(self, x, args, kwargs)
         elif isinstance(x, PondMaskedTensor):
             x_sliced = _strided_slice_masked(self, x, args, kwargs)
-            _nodes[('strided_slice', x.unmasked)] = x_sliced.unmasked
+            nodes[('strided_slice', x.unmasked)] = x_sliced.unmasked
         else:
             raise TypeError("Don't know how to do a strided slice {}".format(type(x)))
 
-        _nodes[node_key] = x_sliced
+        nodes[node_key] = x_sliced
 
         return x_sliced
 
     def stack(self, xs: List['PondTensor'], axis: int = 0):
 
         node_key = ('stack', tuple(xs))
-        xs_stack = _nodes.get(node_key, None)
+        xs_stack = nodes.get(node_key, None)
 
         if xs_stack is not None:
             return xs_stack
@@ -576,12 +576,12 @@ class Pond(Protocol):
             xs_stack = _stack_masked(self, xs, axis=axis)
 
             unmasked = [x.unmasked for x in xs_stack]
-            _nodes[('stack', unmasked)] = unmasked
+            nodes[('stack', unmasked)] = unmasked
 
         else:
             raise TypeError("Don't know how to do a stack {}".format(type(xs)))
 
-        _nodes[node_key] = xs_stack
+        nodes[node_key] = xs_stack
 
         return xs_stack
 
@@ -657,7 +657,7 @@ class Pond(Protocol):
             return [self.cache(xi) for xi in x]
 
         node_key = ('cache', x)
-        cached = _nodes.get(node_key, None)
+        cached = nodes.get(node_key, None)
 
         if cached is not None:
             return cached
@@ -672,14 +672,14 @@ class Pond(Protocol):
             raise TypeError("Don't know how to cache {}".format(type(x)))
 
         cached = func(self, x)
-        _nodes[node_key] = cached
+        nodes[node_key] = cached
 
         return cached
 
     def conv2d(self, x, w, strides, padding):
 
         node_key = ('conv2d', x, w, strides, padding)
-        z = _nodes.get(node_key, None)
+        z = nodes.get(node_key, None)
 
         if z is not None:
             return z
@@ -701,13 +701,13 @@ class Pond(Protocol):
             raise TypeError("Don't know how to conv2d {} and {}".format(type(x), type(w)))
 
         z = func(self, x, w, strides, padding)
-        _nodes[node_key] = z
+        nodes[node_key] = z
 
         return z
 
     def avgpool2d(self, x, pool_size, strides, padding):
         node_key = ('avgpool2d', x, tuple(pool_size), tuple(strides), padding)
-        z = _nodes.get(node_key, None)
+        z = nodes.get(node_key, None)
 
         if z is not None:
             return z
@@ -723,7 +723,7 @@ class Pond(Protocol):
             raise TypeError("Don't know how to avgpool2d {}".format(type(x)))
 
         z = func(self, x, pool_size, strides, padding)
-        _nodes[node_key] = z
+        nodes[node_key] = z
 
         return z
 
@@ -1191,7 +1191,7 @@ def _cache_public(prot, x):
 
         updator = tf.group(updator0, updator1)
 
-    _global_cache_updators.append(updator)
+    global_cache_updators.append(updator)
     return PondCachedPublicTensor(
         prot,
         x_on_0_cached,
@@ -1216,7 +1216,7 @@ def _cache_private(prot, x):
 
         updator = tf.group(updator0, updator1)
 
-    _global_cache_updators.append(updator)
+    global_cache_updators.append(updator)
     return PondCachedPrivateTensor(
         prot,
         x0_cached,
@@ -1246,7 +1246,7 @@ def _cache_masked(prot, x):
         updator = tf.group(updator_cp, updator0, updator1)
         unmasked_cached = prot.cache(unmasked)
 
-    _global_cache_updators.append(updator)
+    global_cache_updators.append(updator)
     return PondCachedMaskedTensor(
         prot,
         unmasked_cached,
