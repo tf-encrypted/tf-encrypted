@@ -66,10 +66,10 @@ class Pond(Protocol):
         with tf.name_scope('constant{}'.format('-' + name if name else '')):
 
             with tf.device(self.server_0.device_name):
-                x_on_0 = BackingConstant.from_int100(v)
+                x_on_0 = BackingConstant.from_same(v)
 
             with tf.device(self.server_1.device_name):
-                x_on_1 = BackingConstant.from_int100(v)
+                x_on_1 = BackingConstant.from_same(v)
 
         x = PondConstant(self, x_on_0, x_on_1)
         return x
@@ -125,10 +125,10 @@ class Pond(Protocol):
                     "Don't know how to turn {} into public variable".format(type(initial_value)))
 
             with tf.device(self.server_0.device_name):
-                x_on_0 = BackingVariable.from_int100(v_on_0)
+                x_on_0 = BackingVariable.from_same(v_on_0)
 
             with tf.device(self.server_1.device_name):
-                x_on_1 = BackingVariable.from_int100(v_on_1)
+                x_on_1 = BackingVariable.from_same(v_on_1)
 
         x = PondPublicVariable(self, x_on_0, x_on_1)
         _initializers.append(x.initializer)
@@ -165,10 +165,10 @@ class Pond(Protocol):
                     "Don't know how to turn {} into private variable".format(type(initial_value)))
 
             with tf.device(self.server_0.device_name):
-                x0 = BackingVariable.from_int100(v0)
+                x0 = BackingVariable.from_same(v0)
 
             with tf.device(self.server_1.device_name):
-                x1 = BackingVariable.from_int100(v1)
+                x1 = BackingVariable.from_same(v1)
 
         x = PondPrivateVariable(self, x0, x1)
         _initializers.append(x.initializer)
@@ -217,8 +217,8 @@ class Pond(Protocol):
             assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(
                 name if name else '', provider.player.name)
 
-            v = _encode(v, apply_scaling)
-            x0, x1 = _share(v)
+            val = _encode(v, apply_scaling)
+            x0, x1 = _share(val)
             x = PondPrivateTensor(self, x0, x1)
 
             if not masked:
@@ -227,7 +227,7 @@ class Pond(Protocol):
                 with tf.name_scope('local_mask'):
                     a = BackingTensor.sample_uniform(v.shape)
                     a0, a1 = _share(a)
-                    alpha = v - a
+                    alpha = val - a
                 return PondMaskedTensor(self, x, a, a0, a1, alpha, alpha)
 
         with tf.name_scope('private-input{}'.format('-' + name if name else '')):
@@ -259,7 +259,7 @@ class Pond(Protocol):
         name: Optional[str]=None
     ) -> tf.Operation:
 
-        def helper(x: 'PondPrivateTensor'):
+        def helper(x: 'PondPrivateTensor') -> tf.Tensor:
             assert isinstance(x, PondPrivateTensor), type(x)
             x0, x1 = x.unwrapped
             v: BackingTensor = _reconstruct(x0, x1)
@@ -309,10 +309,10 @@ class Pond(Protocol):
         with tf.name_scope('assign'):
 
             with tf.device(self.server_0.device_name):
-                op0 = var0.assign_from_int100(val0)
+                op0 = var0.assign_from_same(val0)
 
             with tf.device(self.server_1.device_name):
-                op1 = var1.assign_from_int100(val1)
+                op1 = var1.assign_from_same(val1)
 
         op = tf.group(op0, op1)
         _nodes[node_key] = op
@@ -1187,7 +1187,6 @@ def _encode(rationals, apply_scaling) -> BackingTensor:
     """ Encode tensor of rational numbers into tensor of ring elements """
 
     with tf.name_scope('encode'):
-
         scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
 
         if isinstance(rationals, np.ndarray):
@@ -1277,7 +1276,7 @@ def _cache_wrap_helper(sources):
         for source in sources
     ]
     updator = tf.group(*[
-        var.assign_from_int100(val)
+        var.assign_from_same(val)
         for var, val in zip(variables, sources)
     ])
     return variables, updator
