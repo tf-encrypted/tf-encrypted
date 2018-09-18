@@ -38,11 +38,18 @@ Two servers and a crypto producer are doing the actual computation on encrypted 
 
 With Tensorflow Encrypted, you can very easily make private predictions with a pre-trained model saved as a [protobuf](https://www.tensorflow.org/extend/tool_developers/) file.
 
-1. Run the following line of code in your terminal to train a convolution network on MNIST dataset, then save the model as a protobuf file : `python3 examples/mnist_cnn.py`. If you prefer to skip this step, we have saved the trained model here: `examples/test_data/FourLayerCNN_tensorflow.pb`.
+1. In the [`examples/`](./examples/) folder run the following line of code in your terminal to train a convolution network on MNIST dataset, then save the model as a protobuf file :
+```bash
+python3 mnist_deep_cnn.py
+```
+If you prefer to skip this step, we have saved the trained model `mnist_model.pb` in [`examples/test_data/`](./examples/test_data/).
 
-2. Make private predictiosn on an MNIST input by running the following code snippet: `./bin/run examples/test_data/FourLayerCNN_tensorflow.pb examples/test_data/mnist_input_batch100.npy`
+2. Make private prediction on an MNIST input by running the following code snippet:
+```bash
+../bin/run test_data/mnist_model.pb test_data/mnist_input.npy
+```
 
-You should see the following output. You have just made a prediction without revealing anything about the input!
+You have just made a prediction without revealing anything about the input!
 
 ### b. GCP
 
@@ -52,4 +59,4 @@ You can make private predictions with GCP as well. You can find a great example 
 
 ## Making Private Trainings
 
-[NOTE] We currently don't have an example. We are planning to train/create a simple logistic regression during the hackathon.
+[NOTE] We currently don't have an example. We are planning to train/create a simple logistic regression as a demo..
