@@ -152,6 +152,9 @@ class TensorShape:
     def is_fully_defined(self) -> bool:
         ...
 
+    def __len__(self) -> int:
+        ...
+
 
 class ClusterSpec:
     ...

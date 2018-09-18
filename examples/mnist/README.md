@@ -91,6 +91,13 @@ gcloud compute ssh master --command='python3 tf-encrypted/examples/mnist/run.py 
 ```
 which will use the master as an access point to the other players.
 
+The prediction will be returned to the prediction-client. To visualize the output, run the following command in a different terminal:
+```shell
+gcloud compute ssh prediction-client
+screen -r
+```
+To leave the screen, just do `Ctrl+a` then `d`.
+
 To optionally write debugging and profiling information run the following instead
 ```shell
 gcloud compute ssh master --command='rm -rf /tmp/tensorboard'
