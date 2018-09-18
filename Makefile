@@ -125,6 +125,13 @@ docker: Dockerfile dockercheck
 DOCKER_TAG=docker tag mortendahl/tf-encrypted:latest mortendahl/tf-encrypted:$(1)
 DOCKER_PUSH=docker push mortendahl/tf-encrypted:$(1)
 
+docker-logincheck:
+ifeq (,$(DOCKER_USERNAME))
+ifeq (,$(DOCKER_PASSWORD))
+	$(error "Docker login DOCKER_USERNAME and DOCKER_PASSWORD environment variables missing")
+endif
+endif
+
 docker-tag: dockercheck
 	$(call DOCKER_TAG,$(VERSION))
 
@@ -136,8 +143,9 @@ docker-push-latest: dockercheck
 
 # Rely on DOCKER_USERNAME and DOCKER_PASSWORD being set inside CI or equivalent
 # environment
-docker-login: dockercheck
-	docker login -u="$(DOCKER_USERNAME)" -p="$(DOCKER_PASSWORD)"
+docker-login: dockercheck docker-logincheck
+	@echo "Attempting to log into docker hub"
+	@docker login -u="$(DOCKER_USERNAME)" -p="$(DOCKER_PASSWORD)"
 
 .PHONY: docker-login docker-push-lateset docker-push-tag docker-tag
 
@@ -153,15 +161,49 @@ docker-login: dockercheck
 docker-push-master: docker
 
 # For all builds onthe master branch, with an rc tag
-docker-push-release-candidate: docker-push-master docker-login docker-tag docker-push-tag
+docker-push-release-candidate: releasecheck docker-push-master docker-login docker-tag docker-push-tag
 
 # For all builds on the master branch with a release tag
-docker-push-release: releasecheck docker-push-release-candidate docker-push-latest
+docker-push-release: docker-push-release-candidate docker-push-latest
 
 # This command calls the right docker push rule based on the derived push type
 docker-push: docker-push-$(PUSHTYPE)
 
 .PHONY: docker-push docker-push-release docker-push-release-candidate docker-push-master
+
+# ###############################################
+# Targets for publishing to pypi
+#
+# These targets required a PYPI_USERNAME and PYPI_PASSWORD environment
+# variables to be set to be executed properly.
+# ##############################################
+
+pypicheck: pipcheck pythoncheck
+ifeq (,$(PYPI_USERNAME))
+ifeq (,$(PYPI_PASSWORD))
+	$(error "Missing PYPI_USERNAME and PYPI_PASSWORD environment variables")
+endif
+endif
+
+pypi-version-check:
+ifeq (,$(shell grep -e $(VERSION) setup.py))
+	$(error "Version specified in setup.py does not match $(VERSION)")
+endif
+
+pypi-push-master: pypicheck pypi-version-check
+	pip install --user --upgrade setuptools wheel twine
+	rm -rf dist
+	python setup.py sdist bdist_wheel
+
+pypi-push-release-candidate: releasecheck pypi-push-master
+	@echo "Attempting to upload to pypi"
+	@PATH=\$PATH:~/.local/bin twine upload -u="$(PYPI_USERNAME)" -p="$(PYPI_PASSWORD)" dist/*
+
+pypi-push-release: pypi-push-release-candidate
+
+pypi-push: pypi-push-$(PUSHTYPE)
+
+.PHONY: pypi-push-master pypi-push-release-candidate pypi-push-release pypi-push pypicheck pypi-version-check
 
 # ###############################################
 # Pushing Artifacts for a Release
@@ -172,5 +214,7 @@ docker-push: docker-push-$(PUSHTYPE)
 push:
 	@echo "Attempting to build and push $(VERSION) with push type $(PUSHTYPE) - $(EXACT_TAG)"
 	make docker-push
+	make pypi-push
+	@echo "Done building and pushing artifacts for $(VERSION)"
 
 .PHONY: push
