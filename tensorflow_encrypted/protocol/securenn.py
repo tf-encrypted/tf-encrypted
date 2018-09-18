@@ -1,6 +1,7 @@
+import random
 from .protocol import memoize
 from ..protocol.pond import (
-    Pond, PondTensor, M
+    Pond, PondTensor, M, p, share
 )
 from ..player import Player
 
@@ -49,13 +50,16 @@ class SecureNN(Pond):
         assert not y.is_scaled, "Input is not supposed to be scaled"
         return x + y - self.bitwise_and(x, y) * 2
 
+    def binarize(self, x: PondTensor) -> PondTensor:
+        raise NotImplementedError
+
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
         return self.lsb(x * 2)
 
     def lsb(self, x: PondTensor) -> PondTensor:
-        raise NotImplementedError
+        return self.dispatch('lsb', x)
 
     @memoize
     def negative(self, x: PondTensor) -> PondTensor:
@@ -85,7 +89,7 @@ class SecureNN(Pond):
     def select_share(self, x, y):
         raise NotImplementedError
 
-    def private_compare(self, x, r, beta):
+    def private_compare(self, x: PondTensor, r: PondTensor, beta: PondTensor) -> PondTensor:
         raise NotImplementedError
 
     def share_convert(self, x):
@@ -104,3 +108,55 @@ class SecureNN(Pond):
 
     def dmax_pool_efficient(self, x):
         raise NotImplementedError
+
+
+def _lsb_private(prot: SecureNN, y: PrivatePondTensor):
+    with tf.name_scope('lsb_mask'):
+        with tf.device(prot.crypto_producer.device_name):
+            x = BackingTensor.sample_uniform(y.shape)  # FIXME: better way to generate mask
+            xbits = x.binarize()
+            xlsb = xbits[..., 0]  # FIXME: __getitem__ for BackingTensors
+            xlsb0, xlsb1 = share(xlsb, p)
+            x = PondPrivateTensor(prot, *share(x), is_scaled=True)
+            xbits = PondPrivateTensor(prot, *share(xbits), is_scaled=False)
+            # TODO: Generate zero mask
+
+        devices = [prot.server0.device_name, prot.server1.device_name]
+        bits_device = random.choice(devices)
+        with tf.device(bits_device):
+            b = _generate_random_bits(y.shape)
+            b0, b1 = beta.unwrapped
+
+    with tf.name_scope('lsb'):
+        r = (y + x).reveal()
+        rbits0, rbits1 = prot.binarize(r).unwrapped
+        rlsb0, rlsb1 = rbits0[..., 0], rbits1[..., 0]
+
+
+        bp = prot.private_compare(xbits, r, b)
+        bp0, bp1 = bp.unwrapped
+
+        with tf.device(prot.server0.device_name):
+            gamma_on_0 = bp0 + b0 * bp0 * (-2)
+            delta_on_0 = xlsb0 + rlsb0 * xlsb0 * (-2)
+
+        with tf.device(prot.server1.device_name):
+            gamma_on_1 = bp1 + b1 * (bp1 * (-2) + 1)
+            delta_on_1 = xlsb1 + rlsb1 * (xlsb1 * (-2) + 1)
+
+        gamma = PondPrivateTensor(prot, gamma_on_0, gamma_on_1, is_scaled=False)
+        delta = PondPrivateTensor(prot, delta_on_0, delta_on_1, is_scaled=False)
+        theta = gamma * delta
+
+        alpha = gamma + delta + theta * (-2)  # TODO: add zero mask
+
+        return alpha
+
+
+def _lsb_masked(prot: SecureNN, x: MaskedPondTensor):
+    return prot.lsb(x.unmasked)
+
+
+def _generate_random_bits(prot: SecureNN, shape: List[int]):
+    backing = BackingTensor.sample_bounded(y.shape)
+    return PondPublicTensor(prot, backing, backing, is_scaled=False)  # FIXME: better way to generate bits

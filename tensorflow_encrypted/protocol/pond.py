@@ -90,7 +90,7 @@ class Pond(Protocol):
     def define_private_placeholder(self, shape, apply_scaling: bool=True, name: Optional[str]=None):
 
         pl = BackingPlaceholder(shape)
-        v0, v1 = _share(pl)
+        v0, v1 = share(pl)
         assert type(v0) is BackingTensor, type(v0)
         assert type(v1) is BackingTensor, type(v1)
 
@@ -147,7 +147,7 @@ class Pond(Protocol):
 
             if isinstance(initial_value, (np.ndarray, tf.Tensor)):
                 v: BackingTensor = _encode(initial_value, apply_scaling)
-                v0, v1 = _share(v)
+                v0, v1 = share(v)
 
             elif isinstance(initial_value, PondPublicTensor):
                 v_on_0, _ = initial_value.unwrapped
@@ -155,7 +155,7 @@ class Pond(Protocol):
                     # NOTE[Morten]
                     # we can alternatively avoid transfer of v1 from server0 and server1
                     # by having the crypto producer (pre-)generate sharings of zero
-                    v0, v1 = _share(v_on_0)
+                    v0, v1 = share(v_on_0)
 
             elif isinstance(initial_value, PondPrivateTensor):
                 v0, v1 = initial_value.unwrapped
@@ -218,7 +218,7 @@ class Pond(Protocol):
                 name if name else '', provider.player.name)
 
             val = _encode(v, apply_scaling)
-            x0, x1 = _share(val)
+            x0, x1 = share(val)
             x = PondPrivateTensor(self, x0, x1, apply_scaling)
 
             if not masked:
@@ -226,7 +226,7 @@ class Pond(Protocol):
             else:
                 with tf.name_scope('local_mask'):
                     a = BackingTensor.sample_uniform(v.shape)
-                    a0, a1 = _share(a)
+                    a0, a1 = share(a)
                     alpha = val - a
                 return PondMaskedTensor(self, x, a, a0, a1, alpha, alpha, apply_scaling)
 
@@ -1126,10 +1126,10 @@ def _decode(elements: BackingTensor, is_scaled: bool) -> Union[tf.Tensor, np.nda
         return ((elements + BOUND).to_int32() - BOUND) / scaling_factor
 
 
-def _share(secret: BackingTensor) -> Tuple[BackingTensor, BackingTensor]:
+def share(secret: BackingTensor, modulus: int = M) -> Tuple[BackingTensor, BackingTensor]:
 
     with tf.name_scope('share'):
-        share0 = BackingTensor.sample_uniform(secret.shape)
+        share0 = BackingTensor.sample_uniform(secret.shape, modulus=modulus)
         share1 = secret - share0
         return share0, share1
 
@@ -1779,7 +1779,7 @@ def _mul_masked_masked(prot, x, y):
 
         with tf.device(prot.crypto_producer.device_name):
             ab = a * b
-            ab0, ab1 = _share(ab)
+            ab0, ab1 = share(ab)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -1833,7 +1833,7 @@ def _square_masked(prot, x):
 
         with tf.device(prot.crypto_producer.device_name):
             aa = a * a
-            aa0, aa1 = _share(aa)
+            aa0, aa1 = share(aa)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -1960,7 +1960,7 @@ def _dot_masked_masked(prot, x, y):
 
         with tf.device(prot.crypto_producer.device_name):
             ab = a.dot(b)
-            ab0, ab1 = _share(ab)
+            ab0, ab1 = share(ab)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -2048,7 +2048,7 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
 
         with tf.device(prot.crypto_producer.device_name):
             a_conv2d_b = a.conv2d(b, strides, padding)
-            a_conv2d_b0, a_conv2d_b1 = _share(a_conv2d_b)
+            a_conv2d_b0, a_conv2d_b1 = share(a_conv2d_b)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -2386,7 +2386,7 @@ def _mask_private(prot, x: PondPrivateTensor) -> PondMaskedTensor:
 
         with tf.device(prot.crypto_producer.device_name):
             a = BackingTensor.sample_uniform(shape)
-            a0, a1 = _share(a)
+            a0, a1 = share(a)
 
         with tf.device(prot.server_0.device_name):
             alpha0 = x0 - a0
