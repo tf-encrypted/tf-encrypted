@@ -1,6 +1,6 @@
 # TensorFlow Encrypted
 
-![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg) [GitHub](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg) ![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)
+![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg) ![GitHub](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg) ![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)
 
 This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/), with the aim of making it easy for researchers and practitioners to experiment with private machine learning using familiar tools and without being an expert in both machine learning and cryptography. To this end the code is structured into roughly three modules:
 
