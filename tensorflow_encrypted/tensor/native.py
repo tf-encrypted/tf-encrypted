@@ -35,6 +35,9 @@ class NativeTensor(object):
              tag: Optional[str]=None) -> 'NativeTensor':
         return NativeTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
 
+    def __getitem__(self, slice):
+        return self.value[slice]
+
     def __repr__(self) -> str:
         return 'NativeTensor({})'.format(self.shape)
 

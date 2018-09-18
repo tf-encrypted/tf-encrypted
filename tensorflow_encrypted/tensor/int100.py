@@ -106,6 +106,9 @@ class Int100Tensor(object):
     def sample_bounded(shape: List[int], bitlength: int) -> 'Int100Tensor':
         return _sample_bounded(shape, bitlength)
 
+    def __getitem__(self, slice):
+        return self.from_decomposed([x[slice] for x in self.decomposed_value])
+
     def __repr__(self) -> str:
         return 'Int100Tensor({})'.format(self.shape)
 
