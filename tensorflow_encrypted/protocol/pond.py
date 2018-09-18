@@ -7,7 +7,6 @@ import math
 import numpy as np
 import tensorflow as tf
 
-<<<<<<< HEAD
 # from ..tensor import int100 as tensor_type
 # BackingTensor = tensor_type.Int100Tensor
 # BackingConstant = tensor_type.Int100Constant
@@ -22,20 +21,6 @@ BackingVariable = tensor_type.Variable
 BackingPlaceholder = tensor_type.Placeholder
 
 from ..tensor.helpers import *
-=======
-from ..tensor.int100 import (
-    Int100Tensor as BackingTensor,
-    Int100Constant as BackingConstant,
-    Int100Variable as BackingVariable,
-    Int100Placeholder as BackingPlaceholder,
-    stack,
-)
-from ..tensor.helpers import (
-    log2,
-    gcd,
-    inverse
-)
->>>>>>> master
 from ..io import InputProvider, OutputReceiver
 from ..player import Player
 from .protocol import Protocol, global_cache_updators, memoize, nodes
@@ -55,14 +40,8 @@ STATISTICAL_SECURITY = 40  # number of bit for statistical security TODO[Morten]
 # modulus
 M = BackingTensor.modulus
 
-<<<<<<< HEAD
-# assert log2(BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) <= log2(BOUND)
-# assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
-# assert gcd(K, M) == 1
-=======
 assert log2(BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) <= log2(BOUND)
 assert log2(M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
->>>>>>> master
 
 _initializers: List = list()
 _thismodule = sys.modules[__name__]
@@ -112,12 +91,6 @@ class Pond(Protocol):
 
     def define_private_placeholder(self, shape, apply_scaling: bool=True, name: Optional[str]=None):
 
-<<<<<<< HEAD
-    def define_private_placeholder(self, shape, name=None):
-        
-        # run on master
-=======
->>>>>>> master
         pl = BackingPlaceholder(shape)
         v0, v1 = _share(pl)
         
