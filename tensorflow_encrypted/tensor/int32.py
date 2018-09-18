@@ -21,12 +21,13 @@ class Tensor(object):
         return Tensor(value)
     
     @staticmethod
-    def from_same(value: Tensor) -> 'Tensor':
+    def from_same(value: 'Tensor') -> 'Tensor':
         assert isinstance(value, Tensor), type(value)
         return Tensor(value)
 
     def eval(self, sess: tf.Session, feed_dict: Dict[Any,Any]={}, tag: Optional[str]=None) -> 'Tensor':
-        return Tensor(run(sess, self.value, feed_dict=feed_dict, tag=tag))
+        concrete_value = run(sess, self.value, feed_dict=feed_dict, tag=tag)
+        return Tensor.from_native(concrete_value)
 
     def to_int32(self) -> Union[tf.Tensor,np.ndarray]:
         return self.value
@@ -147,6 +148,9 @@ def _lift(x):
 
 
 class Constant(Tensor):
+
+    def __init__(self, value) -> None:
+        super(Constant, self).__init__(tf.constant(value, dtype=tf.int32))
 
     @staticmethod
     def from_native(value: np.ndarray) -> 'Constant':
