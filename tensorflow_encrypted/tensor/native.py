@@ -7,6 +7,8 @@ from typing import Union, Optional, List, Dict, Any, Tuple
 from ..config import run
 
 INT_TYPE = tf.int32
+bits = 31
+p = 67
 
 
 class NativeTensor(object):
@@ -32,6 +34,9 @@ class NativeTensor(object):
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
              tag: Optional[str]=None) -> 'NativeTensor':
         return NativeTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
+
+    def to_int32(self) -> Union[tf.Tensor, np.ndarray]:
+        return self.value
 
     def __repr__(self) -> str:
         return 'NativeTensor({})'.format(self.shape)
@@ -89,6 +94,28 @@ class NativeTensor(object):
 
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'NativeTensor':
         return NativeTensor(tf.reshape(self.value, axes), self.modulus)
+
+    def binarize(self) -> 'NativeTensor':
+        """Computes bit decomposition of tensor
+         tensor: ndarray of shape (x0, ..., xn)
+        returns: a binary tensor of shape (x0, ..., xn, bits) equivalent to tensor
+        """
+        if isinstance(self.value, np.ndarray):
+            bitwidths = np.arange(bits, dtype=np.int64)
+            for i in range(len(self.shape)):
+                bitwidths = np.expand_dims(bitwidths, 0)
+            val = np.expand_dims(self.value, -1)
+            val = np.right_shift(val, bitwidths) & 1
+
+            return NativeTensor.from_native(val, p)
+        elif isinstance(self.value, tf.Tensor):
+            bitwidths = np.arange(bits, dtype=np.int64)
+            for i in range(len(self.shape)):
+                bitwidths = np.expand_dims(bitwidths, 0)
+            val = tf.expand_dims(self.value, -1)
+            val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
+
+            return NativeTensor.from_native(val, p)
 
 
 def _lift(x: Union['NativeTensor', int], modulus: int) -> 'NativeTensor':
@@ -151,7 +178,7 @@ class NativeConstant(NativeTensor):
         return NativeConstant(value, modulus)
 
     @staticmethod
-    def from_backing(value: NativeTensor, modulus: int) -> 'NativeConstant':
+    def from_same(value: NativeTensor, modulus: int) -> 'NativeConstant':
         assert type(value) in [NativeTensor], type(value)
         return NativeConstant(value.value, modulus)
 
@@ -172,7 +199,7 @@ class NativePlaceholder(NativeTensor):
             self.placeholder: value
         }
 
-    def feed_from_backing(self, value: 'NativeTensor') -> Dict[tf.Tensor, np.ndarray]:
+    def feed_from_same(self, value: 'NativeTensor') -> Dict[tf.Tensor, np.ndarray]:
         assert type(value) in [NativeTensor], type(value)
         assert isinstance(value.value, np.ndarray)
 
@@ -199,7 +226,7 @@ class NativeVariable(NativeTensor):
         return NativeVariable(initial_value, modulus)
 
     @staticmethod
-    def from_backing(initial_value: 'NativeTensor', modulus: int) -> 'NativeVariable':
+    def from_same(initial_value: 'NativeTensor', modulus: int) -> 'NativeVariable':
         assert type(initial_value) in [NativeTensor], type(initial_value)
         return NativeVariable(initial_value.value, modulus)
 
@@ -210,6 +237,6 @@ class NativeVariable(NativeTensor):
         assert type(value) in [np.ndarray], type(value)
         return tf.assign(self.variable, value).op
 
-    def assign_from_backing(self, value: NativeTensor) -> tf.Operation:
+    def assign_from_same(self, value: NativeTensor) -> tf.Operation:
         assert isinstance(value, (NativeTensor,)), type(value)
         return tf.assign(self.variable, value.value).op

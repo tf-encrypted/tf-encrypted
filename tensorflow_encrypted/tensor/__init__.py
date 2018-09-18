@@ -11,7 +11,7 @@ from .native import (
     NativeTensor,
     NativePlaceholder,
     NativeVariable,
-    NativeConstant
+    NativeConstant,
 )
 
 __all__ = [
@@ -22,5 +22,5 @@ __all__ = [
     'NativeTensor',
     'NativePlaceholder',
     'NativeVariable',
-    'NativeConstant'
+    'NativeConstant',
 ]
