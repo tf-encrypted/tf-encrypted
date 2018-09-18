@@ -1,5 +1,4 @@
 import sys
-import time
 from typing import List
 
 import tensorflow as tf
@@ -25,7 +24,7 @@ config = tfe.LocalConfig([
 
 if len(sys.argv) > 1:
     if isinstance(config, tfe.LocalConfig):
-        raise Exception("You can launch a configured server only wit ha remote config")
+        raise Exception("You can launch a configured server only with a remote configuration")
     #
     # assume we're running as a server
     #
@@ -41,6 +40,7 @@ else:
     # assume we're running as master
     #
 
+    input_shape = [1, 3, 192, 192]
     conv11_fshape: List = [3, 3, 3, 64]
     conv12_fshape: List = [3, 3, 64, 64]
     pool1_shape: List = [1, 1, 64, 64]
@@ -156,7 +156,7 @@ else:
 
     class PredictionInputProvider(tfe.io.InputProvider):
         def provide_input(self) -> tf.Tensor:
-            x = tf.random_normal(shape=[1, 3, 192, 192], dtype=tf.float32)
+            x = tf.random_normal(shape=input_shape, dtype=tf.float32)
             return tf.Print(x, [x], message="x:")
 
     class PredictionOutputReceiver(tfe.io.OutputReceiver):
@@ -199,113 +199,114 @@ else:
 
         print("Define Block 1")
         # Block 1
-        conv11 = Conv2D(conv11_fshape, 1, "SAME")
+        conv11 = Conv2D(input_shape, conv11_fshape, 1, "SAME")
         initial_w_conv11 = prot.define_private_input(weights_conv11)
-        conv11.initialize((1, 3, 192, 192), initial_w_conv11)
+        conv11.initialize(initial_w_conv11)
         x = conv11.forward(x)
-        x = Sigmoid().forward(x)
-        conv12 = Conv2D(conv12_fshape, 1, "SAME")
+        x = Sigmoid(conv11.get_output_shape()).forward(x)
+        conv12 = Conv2D(conv11.get_output_shape(), conv12_fshape, 1, "SAME")
         initial_w_conv12 = prot.define_private_input(weights_conv12)
-        conv12.initialize((1, 64, 192, 192), initial_w_conv12)
+        conv12.initialize(initial_w_conv12)
         x = conv12.forward(x)
-        x = Sigmoid().forward(x)
-        fake_pool1 = Conv2D(pool1_shape, 2, "SAME")
+        x = Sigmoid(conv12.get_output_shape()).forward(x)
+        fake_pool1 = Conv2D(conv12.get_output_shape(), pool1_shape, 2, "SAME")
         initial_w_pool1 = prot.define_private_input(weights_pool1)
-        fake_pool1.initialize((1, 64, 192, 192), initial_w_pool1)
+        fake_pool1.initialize(initial_w_pool1)
         x = fake_pool1.forward(x)
 
         print("Define Block 2")
         # Block 2
-        conv21 = Conv2D(conv21_fshape, 1, "SAME")
+        conv21 = Conv2D(fake_pool1.get_output_shape(), conv21_fshape, 1, "SAME")
         initial_w_conv21 = prot.define_private_input(weights_conv21)
-        conv21.initialize((1, 64, 96, 96), initial_w_conv21)
+        conv21.initialize(initial_w_conv21)
         x = conv21.forward(x)
-        x = Sigmoid().forward(x)
-        conv22 = Conv2D(conv22_fshape, 1, "SAME")
+        x = Sigmoid(conv21.get_output_shape()).forward(x)
+        conv22 = Conv2D(conv21.get_output_shape(), conv22_fshape, 1, "SAME")
         initial_w_conv22 = prot.define_private_input(weights_conv22)
-        conv22.initialize((1, 128, 96, 96), initial_w_conv22)
+        conv22.initialize(initial_w_conv22)
         x = conv22.forward(x)
-        x = Sigmoid().forward(x)
-        fake_pool2 = Conv2D(pool2_shape, 2, "SAME")
+        x = Sigmoid(conv22.get_output_shape()).forward(x)
+        fake_pool2 = Conv2D(conv22.get_output_shape(), pool2_shape, 2, "SAME")
         initial_w_pool2 = prot.define_private_input(weights_pool2)
-        fake_pool2.initialize((1, 128, 96, 96), initial_w_pool2)
+        fake_pool2.initialize(initial_w_pool2)
         x = fake_pool2.forward(x)
 
         print("Define Block 3")
         # Block 3
-        conv31 = Conv2D(conv31_fshape, 1, "SAME")
+        conv31 = Conv2D(fake_pool2.get_output_shape(), conv31_fshape, 1, "SAME")
         initial_w_conv31 = prot.define_private_input(weights_conv31)
-        conv31.initialize((1, 128, 48, 48), initial_w_conv31)
+        conv31.initialize(initial_w_conv31)
         x = conv31.forward(x)
-        x = Sigmoid().forward(x)
-        conv32 = Conv2D(conv32_fshape, 1, "SAME")
+        x = Sigmoid(conv31.get_output_shape()).forward(x)
+        conv32 = Conv2D(conv31.get_output_shape(), conv32_fshape, 1, "SAME")
         initial_w_conv32 = prot.define_private_input(weights_conv32)
-        conv32.initialize((1, 256, 48, 48), initial_w_conv32)
+        conv32.initialize(initial_w_conv32)
         x = conv32.forward(x)
-        x = Sigmoid().forward(x)
-        conv33 = Conv2D(conv33_fshape, 1, "SAME")
+        x = Sigmoid(conv32.get_output_shape()).forward(x)
+        conv33 = Conv2D(conv32.get_output_shape(), conv33_fshape, 1, "SAME")
         initial_w_conv33 = prot.define_private_input(weights_conv33)
-        conv33.initialize((1, 256, 48, 48), initial_w_conv33)
+        conv33.initialize(initial_w_conv33)
         x = conv33.forward(x)
-        x = Sigmoid().forward(x)
-        fake_pool3 = Conv2D(pool3_shape, 2, "SAME")
+        x = Sigmoid(conv33.get_output_shape()).forward(x)
+        fake_pool3 = Conv2D(conv33.get_output_shape(), pool3_shape, 2, "SAME")
         initial_w_pool3 = prot.define_private_input(weights_pool3)
-        fake_pool3.initialize((1, 256, 48, 48), initial_w_pool3)
+        fake_pool3.initialize(initial_w_pool3)
         x = fake_pool3.forward(x)
 
         print("Define Block 4")
         # Block 4
-        conv41 = Conv2D(conv41_fshape, 1, "SAME")
+        conv41 = Conv2D(fake_pool3.get_output_shape(), conv41_fshape, 1, "SAME")
         initial_w_conv41 = prot.define_private_input(weights_conv41)
-        conv41.initialize((1, 256, 24, 24), initial_w_conv41)
+        conv41.initialize(initial_w_conv41)
         x = conv41.forward(x)
-        x = Sigmoid().forward(x)
-        conv42 = Conv2D(conv42_fshape, 1, "SAME")
+        x = Sigmoid(conv41.get_output_shape()).forward(x)
+        conv42 = Conv2D(conv41.get_output_shape(), conv42_fshape, 1, "SAME")
         initial_w_conv42 = prot.define_private_input(weights_conv42)
-        conv42.initialize((1, 512, 24, 24), initial_w_conv42)
+        conv42.initialize(initial_w_conv42)
         x = conv42.forward(x)
-        x = Sigmoid().forward(x)
-        conv43 = Conv2D(conv43_fshape, 1, "SAME")
+        x = Sigmoid(conv42.get_output_shape()).forward(x)
+        conv43 = Conv2D(conv42.get_output_shape(), conv43_fshape, 1, "SAME")
         initial_w_conv43 = prot.define_private_input(weights_conv43)
-        conv43.initialize((1, 512, 24, 24), initial_w_conv43)
+        conv43.initialize(initial_w_conv43)
         x = conv43.forward(x)
-        x = Sigmoid().forward(x)
-        fake_pool4 = Conv2D(pool4_shape, 2, "SAME")
+        x = Sigmoid(conv43.get_output_shape()).forward(x)
+        fake_pool4 = Conv2D(conv43.get_output_shape(), pool4_shape, 2, "SAME")
         initial_w_pool4 = prot.define_private_input(weights_pool4)
-        fake_pool4.initialize((1, 512, 24, 24), initial_w_pool4)
+        fake_pool4.initialize(initial_w_pool4)
         x = fake_pool4.forward(x)
 
         print("Define Block 5")
         # Block 5
-        conv51 = Conv2D(conv51_fshape, 1, "SAME")
+        conv51 = Conv2D(fake_pool4.get_output_shape(), conv51_fshape, 1, "SAME")
         initial_w_conv51 = prot.define_private_input(weights_conv51)
-        conv51.initialize((1, 512, 12, 12), initial_w_conv51)
+        conv51.initialize(initial_w_conv51)
         x = conv51.forward(x)
-        x = Sigmoid().forward(x)
-        conv52 = Conv2D(conv52_fshape, 1, "SAME")
+        x = Sigmoid(conv51.get_output_shape()).forward(x)
+        conv52 = Conv2D(conv51.get_output_shape(), conv52_fshape, 1, "SAME")
         initial_w_conv52 = prot.define_private_input(weights_conv52)
-        conv52.initialize((1, 512, 12, 12), initial_w_conv52)
+        conv52.initialize(initial_w_conv52)
         x = conv52.forward(x)
-        x = Sigmoid().forward(x)
-        conv53 = Conv2D(conv53_fshape, 1, "SAME")
+        x = Sigmoid(conv52.get_output_shape()).forward(x)
+        conv53 = Conv2D(conv52.get_output_shape(), conv53_fshape, 1, "SAME")
         initial_w_conv53 = prot.define_private_input(weights_conv53)
-        conv53.initialize((1, 512, 12, 12), initial_w_conv53)
+        conv53.initialize(initial_w_conv53)
         x = conv53.forward(x)
-        x = Sigmoid().forward(x)
-        fake_pool5 = Conv2D(pool5_shape, 2, "SAME")
+        x = Sigmoid(conv53.get_output_shape()).forward(x)
+        fake_pool5 = Conv2D(conv53.get_output_shape(), pool5_shape, 2, "SAME")
         initial_w_pool5 = prot.define_private_input(weights_pool5)
-        fake_pool5.initialize((1, 512, 12, 12), initial_w_pool5)
+        fake_pool5.initialize(initial_w_pool5)
         x = fake_pool5.forward(x)
 
         print("Define Reshape")
-        x = Reshape(shape=[1, -1]).forward(x)
+        reshape1 = Reshape(fake_pool5.get_output_shape(), [1, -1])
+        x = reshape1.forward(x)
 
         print("Define 2-layer FC")
-        dense1 = Dense(512*6*6, 512)
+        dense1 = Dense(reshape1.get_output_shape(), 512)
         dense1.initialize()
         x = dense1.forward(x)
-        x = Sigmoid().forward(x)
-        dense2 = Dense(512, 2)
+        x = Sigmoid(dense1.get_output_shape()).forward(x)
+        dense2 = Dense(dense1.get_output_shape(), 2)
         dense2.initialize()
         y = dense2.forward(x)
 
@@ -318,8 +319,4 @@ else:
 
             print("Predict")
 
-            start = time.time()
-            for i in range(1):
-                tfe.run(sess, prediction_op, tag='prediction')
-            end = time.time()
-            print((end - start)/5)
+            tfe.run(sess, prediction_op, tag='prediction')

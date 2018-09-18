@@ -7,11 +7,11 @@ In particular, we here have a separate *model trainer* that provides encrypted w
 Concretely, a `ModelTrainer` and `PredictionClient` class represent the two parties above, both extending `tfe.io.InputProvider` and the latter also `tfe.io.OutputReceiver`. When private values are needed from either their `provide_input()` methods are executed *locally* on their associated host, and the resulting `tf.Tensors` are encrypted before sending them to the servers. This input and output behaviour is then connected with the secure computation simply by
 ```python
 w0, b0, w1, b1 = prot.define_private_input(model_trainer)
-x, = prot.define_private_input(prediction_client)
+x = prot.define_private_input(prediction_client)
 ```
 and
 ```python
-prediction_op = prot.define_output([prediction], prediction_client)
+prediction_op = prot.define_output(prediction, prediction_client)
 ```
 where `prediction` is the encrypted result of the prediction on `x`.
 
@@ -31,7 +31,13 @@ which will place the converted files in the `./data` subdirectory. Next, to exec
 ```shell
 python3 ./examples/mnist/run.py
 ```
-again from the project root directory. This will also put debugging and profiling data in `/tmp/tensorboard` which can be inspected using TensorBoard, e.g.
+again from the project root directory.
+
+To get debugging and profiling data on the run use
+```shell
+TFE_STATS=1 python3 ./examples/mnist/run.py
+```
+instead, which will write files to `/tmp/tensorboard` that can be inspected using TensorBoard, e.g.
 ```shell
 tensorboard --logdir=/tmp/tensorboard
 ```
@@ -80,12 +86,16 @@ which will launch a TensorFlow server on all of them.
 
 With the above in place we can finally run the example using
 ```shell
-gcloud compute ssh master --command='rm -rf /tmp/tensorboard'
 gcloud compute ssh master --command='python3 tf-encrypted/examples/mnist/run.py config.json'
 ```
-that will (optionally) first clear any TensorBoard logs on the master that was previously recorded.
+which will use the master as an access point to the other players.
 
-Once completely, the logs may optionally be pulled down from the master
+To optionally write debugging and profiling information run the following instead
+```shell
+gcloud compute ssh master --command='rm -rf /tmp/tensorboard'
+gcloud compute ssh master --command='TFE_STATS=1 python3 tf-encrypted/examples/mnist/run.py config.json'
+```
+that will first clear any TensorBoard logs that was previously recorded. Once completely the logs can be pulled down from the master
 ```shell
 rm -rf /tmp/tensorboard
 gcloud compute scp --recurse master:/tmp/tensorboard /tmp/tensorboard

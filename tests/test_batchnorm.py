@@ -5,9 +5,12 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 
 from tensorflow_encrypted.layers import Batchnorm
-from tensorflow_encrypted.protocol import Pond
+
 
 class TestBatchnorm(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
     def test_forward(self) -> None:
 
         batch_size, channels_in, img_height, img_width = (32, 3, 28, 28)
@@ -32,8 +35,8 @@ class TestBatchnorm(unittest.TestCase):
         with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
             batchnorm_input = prot.define_private_variable(input_batchnorm)
 
-            batchnorm_layer = Batchnorm(mean, variance, scale, offset)
-            batchnorm_layer.initialize(input_shape=input_shape)
+            batchnorm_layer = Batchnorm(input_shape, mean, variance, scale, offset)
+            batchnorm_layer.initialize()
             batchnorm_out_pond = batchnorm_layer.forward(batchnorm_input)
 
             with config.session() as sess:
@@ -46,8 +49,7 @@ class TestBatchnorm(unittest.TestCase):
             with tf.Session() as sess:
                 x = tf.Variable(input_batchnorm, dtype=tf.float32)
 
-                batchnorm_out_tf = tf.nn.batch_normalization(
-                        x, mean, variance, offset, scale, variance_epsilon)
+                batchnorm_out_tf = tf.nn.batch_normalization(x, mean, variance, offset, scale, variance_epsilon)
 
                 sess.run(tf.global_variables_initializer())
 

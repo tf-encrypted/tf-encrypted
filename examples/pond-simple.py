@@ -1,5 +1,4 @@
 import numpy as np
-import tensorflow as tf
 import tensorflow_encrypted as tfe
 from tensorflow_encrypted.protocol import Pond
 

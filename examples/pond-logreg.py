@@ -25,7 +25,7 @@ y = prot.sigmoid(w.dot(x) + b).reveal()
 
 
 def sigmoid(x):
-    return 1/(1 + np.exp(-x))
+    return 1 / (1 + np.exp(-x))
 
 
 with config.session() as sess:

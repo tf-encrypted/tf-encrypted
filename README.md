@@ -1,5 +1,7 @@
 # TensorFlow Encrypted
 
+![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg) [GitHub](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg) ![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)
+
 This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/), with the aim of making it easy for researchers and practitioners to experiment with private machine learning using familiar tools and without being an expert in both machine learning and cryptography. To this end the code is structured into roughly three modules:
 
 - secure operations for computing on encrypted tensors
@@ -8,7 +10,7 @@ This library provides a layer on top of TensorFlow for doing machine learning on
 
 that are all exposed through Python interfaces, and all resulting in ordinary TensorFlow graphs for easy integration with other TensorFlow mechanisms and efficient execution.
 
-Several contributors have put resources into the development of this library, most notably [Dropout Labs](FIXME) and members of the [OpenMined](https://www.openmined.org/) community (see below for [details](#contributions)).
+Several contributors have put resources into the development of this library, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community (see below for [details](#contributions)).
 
 **Important**: this is experimental software that should not be used in production for security reasons.
 
@@ -35,7 +37,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     result_op = prot.define_output([result], result_receiver)
 
     with config.session() as sess:
-        tfe.run(sess, tf.global_variables_initializer())            
+        tfe.run(sess, tf.global_variables_initializer())
         tfe.run(sess, result_op, tag='average')
 ```
 
@@ -107,6 +109,10 @@ Please see [`tools/gcp/`](./tools/gcp/) for further information about setting up
 
 Please see [`DEVELOP`](./DEVELOP.md) for guidelines and further instructions for setting up the project for development.
 
+# License
+
+Licensed under Apache License, Version 2.0 (see [LICENSE](./LICENSE) or http://www.apache.org/licenses/LICENSE-2.0). Copyright as specified in [NOTICE](./NOTICE).
+
 # Contributions
 
 Several people have had an impact on the development of this library (in alphabetical order):
@@ -116,7 +122,7 @@ Several people have had an impact on the development of this library (in alphabe
 
 and several companies have invested significant resources (in alphabetical order):
 
-- [Dropout Labs](FIXME) continues to sponsor a large amount of both research and engineering
+- [Dropout Labs](https://dropoutlabs.com/) continues to sponsor a large amount of both research and engineering
 - [OpenMined](https://openmined.org) was the breeding ground for the initial idea and continues to support discussions and guidance
 
 ## Reported uses

@@ -1,13 +1,10 @@
 from __future__ import absolute_import
 
-import math
 import numpy as np
 import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any
 
-from .helpers import prod, log2
 from ..config import run
-from typing import Any, List, Tuple
 
 
 class Tensor(object):
@@ -38,6 +35,9 @@ class Tensor(object):
 
     @property
     def shape(self) -> List[int]:
+        if self.value is None:
+            raise Exception("Can't call 'shape' on a empty tensor")
+
         return self.value.shape
 
     def __add__(self, other:'Tensor') -> 'Tensor':
@@ -52,11 +52,11 @@ class Tensor(object):
     def __mod__(self, k:int) -> 'Tensor':
         return self.mod(k)
 
-    def add(self, other):
+    def add(self, other: 'Tensor') -> 'Tensor':
         x, y = _lift(self), _lift(other)
         return Tensor(x.value + y.value)
 
-    def sub(self, other):
+    def sub(self, other: 'Tensor') -> 'Tensor':
         x, y = _lift(self), _lift(other)
         return Tensor(x.value - y.value)
 
@@ -97,8 +97,6 @@ def _lift(x):
         return Tensor.from_native(np.array([x]))
 
     raise TypeError("Unsupported type {}".format(type(x)))
-
-
 
 
 # TODO
@@ -199,10 +197,10 @@ class Variable(Tensor):
     def __repr__(self):
         return 'int32.Variable(shape={})'.format(self.shape)
 
-    def assign_from_native(self, value:np.ndarray):
+    def assign_from_native(self, value: np.ndarray):
         assert type(value) in [np.ndarray], type(value)
         return tf.assign(self.variable, value).op
 
     def assign_from_same(self, value:Tensor):
-        assert isinstance(value, (Tensor,)), type(value)
+        assert isinstance(value, Tensor), type(value)
         return tf.assign(self.variable, value.value).op

@@ -1,18 +1,37 @@
-from typing import Dict, List, Optional, Any, Union, Tuple, NamedTuple
+import os
+import json
+from abc import ABC, abstractmethod
+from typing import Dict, List, Optional, Any, Union, Tuple
 from collections import defaultdict
 
-import json
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+from tensorflow.python import debug as tf_debug
 from tensorflow.python.client import timeline
-from abc import ABC, abstractmethod
 
 from .player import Player
 
 
+__TFE_DEBUG__ = bool(os.getenv('TFE_DEBUG', False))
+__TFE_STATS__ = bool(os.getenv('TFE_STATS', False))
+__TFE_TRACE__ = bool(os.getenv('TFE_TRACE', False))
+__TENSORBOARD_DIR__ = str(os.getenv('TFE_STATS_DIR', '/tmp/tensorboard'))
+
+_run_counter: Any = defaultdict(int)
+
+
 class Config(ABC):
+
     @abstractmethod
     def players(self) -> List[Player]:
+        pass
+
+    @abstractmethod
+    def get_player(self, name: str) -> Player:
+        pass
+
+    @abstractmethod
+    def to_dict(self) -> Dict:
         pass
 
 
@@ -23,28 +42,27 @@ class LocalConfig(Config):
     Intended mostly for development/debugging use.
     """
 
-    def __init__(self, player_names:List[str], job_name:str='localhost') -> None:
+    def __init__(self, player_names: List[str], job_name: str='localhost') -> None:
         self._job_name = job_name
         self._players = {
             name: Player(
                 name=name,
-                index=index+1,
+                index=index,
                 device_name='/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'.format(
                     job_name=job_name,
-                    # shift by one to allow for master to be `CPU:0`
-                    cpu_id=index+1
+                    cpu_id=index
                 )
             )
             for index, name in enumerate(player_names)
         }
 
     @staticmethod
-    def from_dict(params) -> Optional['LocalConfig']:
+    def from_dict(params: Dict) -> Optional['LocalConfig']:
         if not params.get('type', None) == 'local':
             return None
 
         return LocalConfig(
-            player_names=params['player_names'], 
+            player_names=params['player_names'],
             job_name=params['job_name']
         )
 
@@ -52,37 +70,50 @@ class LocalConfig(Config):
         params = {
             'type': 'local',
             'job_name': self._job_name,
-            'player_names': [p.name for p in sorted(self._players.values(), keyfunc=lambda p: p.index)]
+            'player_names': [p.name for p in sorted(self._players.values(), key=lambda p: p.index)]
         }
         return params
 
     @property
     def players(self) -> List[Player]:
-        return self._players.values()
+        return list(self._players.values())
 
-    def get_player(self, name:str) -> Player:
+    def get_player(self, name: str) -> Player:
         return self._players[name]
 
-    def get_players(self, names:Union[List[str], str]) -> List[Player]:
+    def get_players(self, names: Union[List[str], str]) -> List[Player]:
         if isinstance(names, str):
             names = [name.strip() for name in names.split(',')]
         assert isinstance(names, list)
         return [player for name, player in self._players.items() if name in names]
 
-    def session(self, log_device_placement:bool=False) -> tf.Session:
-        # reserve one CPU for the player executing the script, to avoid
-        # default pinning of operations to one of the actual players
-        return tf.Session(
+    def session(
+        self,
+        master: Optional[Union[int, str]] = None,
+        log_device_placement: bool = False
+    ) -> tf.Session:
+
+        if master is not None:
+            print("WARNING: master '{}' is ignored, always using first player".format(master))
+
+        sess = tf.Session(
             '',
             None,
             config=tf.ConfigProto(
                 log_device_placement=log_device_placement,
                 allow_soft_placement=False,
-                device_count={"CPU": len(self._players) + 1},
+                device_count={"CPU": len(self._players)},
                 inter_op_parallelism_threads=1,
                 intra_op_parallelism_threads=1
             )
         )
+
+        global __TFE_DEBUG__
+        if __TFE_DEBUG__:
+            print('Session in debug mode')
+            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+
+        return sess
 
 
 class RemoteConfig(Config):
@@ -91,133 +122,167 @@ class RemoteConfig(Config):
     """
 
     def __init__(self,
-                 player_hostmap: Union[List[Tuple[str,str]], Dict[str, str]],
-                 master_host: Optional[str]=None,
-                 job_name: str='tfe') -> None:
+                 hostmap: Union[List[Tuple[str, str]], Dict[str, str]],
+                 master: Optional[Union[int, str]] = None,
+                 job_name: str = 'tfe') -> None:
+
+        if isinstance(hostmap, dict):
+            # ensure consistent ordering of the players across all instances
+            hostmap = list(sorted(hostmap.items()))
 
         self._job_name = job_name
-
-        if isinstance(player_hostmap, dict):
-            # ensure consistent ordering of the players across all instances
-            player_hostmap = list(sorted(player_hostmap.items()))
-
-        player_names, player_hosts = zip(*player_hostmap)
-
-        if master_host is None:
-            # use first player as master so don't add any
-            self._master_host = master_host
-            self._offset = 0
-            self._hostmap = player_hosts
-            self._target = 'grpc://{}'.format(player_hosts[0])
-        else:
-            # add explicit master to cluster as first host
-            self._master_host = master_host
-            self._offset = 1
-            self._hostmap = (master_host,) + player_hosts
-            self._target = 'grpc://{}'.format(master_host)
-
+        self._master = master
+        self._hosts = [entry[1] for entry in hostmap]
         self._players = {
             name: Player(
                 name=name,
-                index=index+self._offset,
+                index=index,
                 device_name='/job:{job_name}/replica:0/task:{task_id}/cpu:0'.format(
                     job_name=job_name,
-                    task_id=index+self._offset
+                    task_id=index
                 ),
                 host=host
             )
-            for index, (name, host) in enumerate(zip(player_names, player_hosts))
+            for index, (name, host) in enumerate(hostmap)
         }
 
     @staticmethod
-    def from_dict(params) -> Optional['RemoteConfig']:
+    def from_dict(params: Dict) -> Optional['RemoteConfig']:
         if not params.get('type', None) == 'remote':
             return None
 
         return RemoteConfig(
-            player_hostmap=params['player_hostmap'],
+            hostmap=params['hostmap'],
             job_name=params['job_name'],
-            master_host=params.get('master_host', None)
+            master=params.get('master', None)
         )
 
     def to_dict(self) -> Dict:
         params = {
             'type': 'remote',
             'job_name': self._job_name,
-            'player_hostmap': [(p.name, p.host) for p in sorted(self._players.values(), key=lambda p: p.index)]
+            'hostmap': [(p.name, p.host) for p in sorted(self._players.values(), key=lambda p: p.index)]
         }
 
-        if self._master_host is not None:
-            params['master_host'] = self._master_host
+        if self._master is not None:
+            params['master'] = self._master
 
         return params
 
     @property
     def players(self) -> List[Player]:
-        return self._players.values()
+        return list(self._players.values())
 
-    def get_player(self, name:str) -> Player:
+    def get_player(self, name: str) -> Player:
         return self._players[name]
 
-    def get_players(self, names:Union[List[str], str]) -> List[Player]:
+    def get_players(self, names: Union[List[str], str]) -> List[Player]:
         if isinstance(names, str):
             names = [name.strip() for name in names.split(',')]
         assert isinstance(names, list)
         return [player for name, player in self._players.items() if name in names]
 
-    def server(self, name:str) -> tf.train.Server:
+    def server(self, name: str) -> tf.train.Server:
         player = self.get_player(name)
-        cluster = tf.train.ClusterSpec({self._job_name: self._hostmap})
-        return tf.train.Server(
-            cluster,
-            job_name=self._job_name,
-            task_index=player.index
-        )
+        cluster = tf.train.ClusterSpec({self._job_name: self._hosts})
+        server = tf.train.Server(cluster, job_name=self._job_name, task_index=player.index)
+        print("Hi, I'm node '{name}' running as device '{device}' and with session target '{target}'".format(
+            name=name,
+            device=player.device_name,
+            target=server.target
+        ))
+        return server
 
-    def session(self, log_device_placement:bool=False) -> tf.Session:
+    def _compute_target(self, master: Optional[Union[int, str]]) -> str:
+
+        # if no specific master is given then fall back to the default
+        if master is None:
+            # ... and if no default master is given then use first player
+            master = self._master if self._master is not None else 0
+
+        if isinstance(master, int):
+            # interpret as index
+            master_host = self._hosts[master]
+
+        elif isinstance(master, str):
+            # is it a player name?
+            player = self._players.get(master, None)
+            if player is not None and player.host is not None:
+                # ... yes it was so use its host
+                master_host = player.host
+            else:
+                # ... no it wasn't so just assume it's an URI
+                master_host = master
+
+        else:
+            raise TypeError("Don't know how to turn '{}' into a target".format(master))
+
+        target = 'grpc://{}'.format(master_host)
+        return target
+
+    def session(
+        self,
+        master: Optional[Union[int, str]] = None,
+        log_device_placement: bool = False
+    ) -> tf.Session:
+
+        target = self._compute_target(master)
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
             allow_soft_placement=False,
         )
-        return tf.Session(
-            self._target,
-            config=config
-        )
+        print("Starting session on target '{}' using config {}".format(target, config))
+        sess = tf.Session(target, config=config)
 
+        global __TFE_DEBUG__
+        if __TFE_DEBUG__:
+            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
 
-def load(filename) -> Config:
+        return sess
+
+def load(filename: str) -> Config:
     with open(filename, 'r') as f:
         params = json.load(f)
 
-    for config_cls in [LocalConfig, RemoteConfig]:
-        config = config_cls.from_dict(params)
-        if config is not None:
-            return config
+    config_type = params.get('type', None)
+    if config_type == 'remote':
+        return RemoteConfig.from_dict(params)
+    elif config_type == 'local':
+        return LocalConfig.from_dict(params)
 
     raise ValueError("Failed to parse config file")
 
 
-def save(config, filename) -> None:
+def save(config: Config, filename: str) -> None:
     with open(filename, 'w') as f:
         json.dump(config.to_dict(), f)
 
 
-TENSORBOARD_DIR = '/tmp/tensorboard'
-IGNORE_STATS = False
-DEBUG = True
+def setTFEDebugFlag(debug: bool = False) -> None:
+    global __TFE_DEBUG__
+    if debug is True:
+        print("Tensorflow encrypted is running in DEBUG mode")
 
-_run_counter: Any = defaultdict(int)
+    __TFE_DEBUG__ = debug
+
+
+def setMonitorStatsFlag(monitor_stats: bool = False) -> None:
+    global __TFE_STATS__
+    if monitor_stats is True:
+        print("Tensorflow encrypted is monitoring statistics for each session.run() call using a tag")
+
+    __TFE_STATS__ = monitor_stats
 
 
 def run(
     sess: tf.Session,
     fetches: Any,
-    feed_dict: Dict[str, np.ndarray]={},
-    tag: Optional[str]=None,
-    write_trace: bool=True
+    feed_dict: Dict[str, np.ndarray] = {},
+    tag: Optional[str] = None,
+    write_trace: bool = False
 ) -> Any:
 
-    if not DEBUG and (tag is None or IGNORE_STATS):
+    if not __TFE_STATS__ or tag is None:
 
         return sess.run(
             fetches,
@@ -225,10 +290,8 @@ def run(
         )
 
     else:
-
-        session_tag = '{}{}'.format(tag, _run_counter[tag])
-        # run_tag = TENSORBOARD_DIR + ('/' + tag if tag is not None else '')
-        run_tag = TENSORBOARD_DIR + ('/' + session_tag)
+        session_tag = "{}{}".format(tag, _run_counter[tag])
+        run_tag = os.path.join(__TENSORBOARD_DIR__, session_tag)
         _run_counter[tag] += 1
 
         writer = tf.summary.FileWriter(run_tag, sess.graph)
@@ -243,10 +306,11 @@ def run(
         )
 
         writer.add_run_metadata(run_metadata, session_tag)
+        writer.close()
 
-        if write_trace:
+        if __TFE_TRACE__ or write_trace:
             chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
-            with open('{}/{}.ctr'.format(TENSORBOARD_DIR, session_tag), 'w') as f:
+            with open('{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag), 'w') as f:
                 f.write(chrome_trace)
 
         return results

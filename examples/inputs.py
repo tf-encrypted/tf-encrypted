@@ -1,5 +1,4 @@
 import sys
-from typing import List
 
 import numpy as np
 import tensorflow as tf
@@ -40,19 +39,19 @@ else:
     #
 
     class WeightsInputProvider(tfe.io.InputProvider):
-        def provide_input(self):
-            raw_w = np.array([4, 3, 2, 1]).reshape((2,2))
-            w = tf.convert_to_tensor(raw_w)
-            return [w]
+        def provide_input(self) -> tf.Tensor:
+            raw_w = np.array([5, 5, 5, 5]).reshape((2, 2))
+            w = tf.constant(raw_w)
+            return tf.Print(w, [w])
 
     class PredictionInputProvider(tfe.io.InputProvider):
-        def provide_input(self):
-            x = tf.constant([1, 2, 3, 4], shape=(2,2), dtype=tf.float32)
-            return [x]
+        def provide_input(self) -> tf.Tensor:
+            x = tf.constant([1, 2, 3, 4], shape=(2, 2), dtype=tf.float32)
+            return tf.Print(x, [x])
 
     class PredictionOutputReceiver(tfe.io.OutputReceiver):
-        def receive_output(self, tensors):
-            return tf.Print([], tensors, summarize=4)
+        def receive_output(self, prediction):
+            return tf.Print([], [prediction], summarize=4)
 
     weights_input = WeightsInputProvider(config.get_player('weights_provider'))
     prediction_input = PredictionInputProvider(config.get_player('prediction_client'))
@@ -61,19 +60,16 @@ else:
     with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
 
         # treat weights as private
-        w, = prot.define_private_input(weights_input)
-
-        # # treat weights as public
-        # w, = prot.define_private_input(weights_input)
+        w = prot.define_private_input(weights_input)
 
         # load input for prediction
-        x, = prot.define_private_input(prediction_input)
+        x = prot.define_private_input(prediction_input)
 
         # compute prediction
         y = prot.dot(x, w)
 
         # send output
-        prediction_op = prot.define_output([y], prediction_output)
+        prediction_op = prot.define_output(y, prediction_output)
 
         with config.session() as sess:
             tfe.run(sess, tf.global_variables_initializer(), tag='init')

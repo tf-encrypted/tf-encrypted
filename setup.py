@@ -1,19 +1,34 @@
-from setuptools import setup
+import setuptools
 
-setup(
-    name='tf-encrypted',
-    version='0.0.1rc',
-    packages=['tensorflow_encrypted',],
-    python_requires='>=3.6',
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+setuptools.setup(
+    name="tf-encrypted",
+    version="0.0.1-rc0",
+    packages=setuptools.find_packages(),
+    python_requires=">=3.6",
     install_requires=[
-        'tensorflow>=1.10.0',
-        'numpy>=1.14.0',
+        "tensorflow>=1.10.0",
+        "numpy>=1.14.0"
     ],
     extra_requires={
-        'tf': ["tensorflow>=1.0.0"],
-        'tf_gpu': ["tensorflow-gpu>=1.0.0"],
+        "tf": ["tensorflow>=1.10.0"],
+        "tf_gpu": ["tensorflow-gpu>=1.10.0"]
     },
-    license='Apache License 2.0',
+    license="Apache License 2.0",
     url="https://github.com/mortendahl/tf-encrypted",
-    description='Layer on top of TensorFlow for doing machine learning on encrypted data.',
+    description="Layer on top of TensorFlow for doing machine learning on encrypted data.",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    author="Morten Dahl",
+    author_email="morten@dropoutlabs.com",
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: Apache Software License",
+        "Development Status :: 2 - Pre-Alpha",
+        "Operating System :: OS Independent",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Security :: Cryptography"
+    ]
 )
