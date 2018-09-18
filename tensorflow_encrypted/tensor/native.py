@@ -2,16 +2,62 @@ from __future__ import absolute_import
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Tuple
+from typing import Union, Optional, List, Dict, Any, Tuple, Type
 
 from ..config import run
+from .factory import AbstractFactory
+from .tensor import AbstractTensor
 
 INT_TYPE = tf.int32
 bits = 31
 p = 67
 
 
-class NativeTensor(object):
+def native_factory(modulus: int) -> Any:
+    class TensorWrap(AbstractTensor):
+        @staticmethod
+        def from_native(x: Union[tf.Tensor, np.ndarray]) -> 'NativeTensor':
+            return NativeTensor.from_native(x, modulus)
+
+        @staticmethod
+        def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape]) -> 'NativeTensor':
+            return NativeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=modulus), modulus)
+
+    class ConstantWrap(TensorWrap):
+        @staticmethod
+        def from_native(x: Union[tf.Tensor, np.ndarray]) -> 'NativeTensor':
+            return NativeConstant.from_native(x, modulus)
+
+        @staticmethod
+        def from_same(initial_value: 'NativeTensor') -> 'NativeConstant':
+            assert type(initial_value) in [NativeTensor], type(initial_value)
+            return NativeConstant(initial_value.value, modulus)
+
+    class VariableWrap(TensorWrap):
+        @staticmethod
+        def from_native(x: Union[tf.Tensor, np.ndarray]) -> 'NativeTensor':
+            return NativeVariable.from_native(x, modulus)
+
+    class Factory(AbstractFactory):
+        @property
+        def Tensor(self) -> Type[TensorWrap]:
+            return TensorWrap
+
+        @property
+        def Constant(self) -> Type[ConstantWrap]:
+            return ConstantWrap
+
+        @property
+        def Variable(self) -> Type[VariableWrap]:
+            return VariableWrap
+
+        def Placeholder(self, shape: List[int]) -> 'NativePlaceholder':
+            return NativePlaceholder(shape, modulus)
+
+    return Factory()
+
+
+class NativeTensor(AbstractTensor):
     int_type = INT_TYPE
 
     def __init__(self, value: Union[np.ndarray, tf.Tensor], modulus: int) -> None:
@@ -166,7 +212,7 @@ class NativeConstant(NativeTensor):
         return NativeConstant(value, modulus)
 
     @staticmethod
-    def from_backing(value: NativeTensor, modulus: int) -> 'NativeConstant':
+    def from_same(value: NativeTensor, modulus: int) -> 'NativeConstant':
         assert type(value) in [NativeTensor], type(value)
         return NativeConstant(value.value, modulus)
 
@@ -214,7 +260,7 @@ class NativeVariable(NativeTensor):
         return NativeVariable(initial_value, modulus)
 
     @staticmethod
-    def from_backing(initial_value: 'NativeTensor', modulus: int) -> 'NativeVariable':
+    def from_same(initial_value: 'NativeTensor', modulus: int) -> 'NativeVariable':
         assert type(initial_value) in [NativeTensor], type(initial_value)
         return NativeVariable(initial_value.value, modulus)
 
