@@ -7,6 +7,8 @@ from typing import Union, Optional, List, Dict, Any, Tuple
 from ..config import run
 
 INT_TYPE = tf.int32
+bits = 31
+p = 67
 
 
 class NativeTensor(object):
@@ -32,6 +34,9 @@ class NativeTensor(object):
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
              tag: Optional[str]=None) -> 'NativeTensor':
         return NativeTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
+
+    def __getitem__(self, slice):
+        return self.value[slice]
 
     def __repr__(self) -> str:
         return 'NativeTensor({})'.format(self.shape)
@@ -89,6 +94,19 @@ class NativeTensor(object):
 
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'NativeTensor':
         return NativeTensor(tf.reshape(self.value, axes), self.modulus)
+
+    def binarize(self) -> 'NativeTensor':
+        """Computes bit decomposition of tensor
+         tensor: ndarray of shape (x0, ..., xn)
+        returns: a binary tensor of shape (x0, ..., xn, bits) equivalent to tensor
+        """
+        bitwidths = tf.range(bits, dtype=INT_TYPE)
+        for i in range(len(self.shape)):
+            bitwidths = tf.expand_dims(bitwidths, 0)
+        val = tf.expand_dims(self.value, -1)
+        val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
+
+        return NativeTensor.from_native(val, p)
 
 
 def _lift(x: Union['NativeTensor', int], modulus: int) -> 'NativeTensor':

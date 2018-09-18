@@ -11,6 +11,7 @@ services:
       TFE_SERVER1_ADDRESS: server1:4440
       TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
       TFE_WEIGHTS_PROVIDER_ADDRESS: provider:4440
+      TFE_MASTER_ADDRESS: master:4440
 
   server1:
     image: mortendahl/tf-encrypted:latest
@@ -22,6 +23,7 @@ services:
       TFE_SERVER1_ADDRESS: 0.0.0.0:4440
       TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
       TFE_WEIGHTS_PROVIDER_ADDRESS: provider:4440
+      TFE_MASTER_ADDRESS: master:4440
 
   producer:
     image: mortendahl/tf-encrypted:latest
@@ -33,6 +35,7 @@ services:
       TFE_SERVER1_ADDRESS: server1:4440
       TFE_CRYPTO_PRODUCER_ADDRESS: 0.0.0.0:4440
       TFE_WEIGHTS_PROVIDER_ADDRESS: provider:4440
+      TFE_MASTER_ADDRESS: master:4440
 
   provider:
     image: mortendahl/tf-encrypted:latest
@@ -44,6 +47,7 @@ services:
       TFE_SERVER1_ADDRESS: server1:4440
       TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
       TFE_WEIGHTS_PROVIDER_ADDRESS: 0.0.0.0:4440
+      TFE_MASTER_ADDRESS: master:4440
 
   master:
     image: mortendahl/tf-encrypted:latest
@@ -57,6 +61,7 @@ services:
       TFE_SERVER1_ADDRESS: server1:4440
       TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
       TFE_WEIGHTS_PROVIDER_ADDRESS: provider:4440
+      TFE_MASTER_ADDRESS: 0.0.0.0:4440
       TFE_API_PORT: 8080
       TFE_MONITOR_STATS: null
       TFE_DEBUG: null
@@ -70,6 +75,6 @@ services:
       - "-u"
       - "bin/serve"
       - "--model_name"
-      - "2inputs"
+      - "2lfc"
     # volumes:
     #   - /tmp/tensorboard:/tmp/tensorboard
