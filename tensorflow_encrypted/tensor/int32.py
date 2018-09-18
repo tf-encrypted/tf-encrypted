@@ -16,8 +16,13 @@ class Tensor(object):
         self.value = value
 
     @staticmethod
-    def from_native(value:Union[np.ndarray,tf.Tensor]) -> 'Tensor':
+    def from_native(value: Union[np.ndarray,tf.Tensor]) -> 'Tensor':
         assert isinstance(value, (np.ndarray,tf.Tensor)), type(value)
+        return Tensor(value)
+    
+    @staticmethod
+    def from_same(value: Tensor) -> 'Tensor':
+        assert isinstance(value, Tensor), type(value)
         return Tensor(value)
 
     def eval(self, sess:tf.Session, feed_dict:Dict[Any,Any]={}, tag:Optional[str]=None) -> 'Tensor':

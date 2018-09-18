@@ -1,11 +1,11 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow_encrypted.tensor.int32 import (
-    Int32Tensor,
-    Int32Constant,
-    Int32Variable,
-    Int32Placeholder
-)
+import tensorflow_encrypted.tensor.int32 as tensor_type
+
+Int32Tensor = tensor_type.Tensor
+Int32Constant = tensor_type.Constant
+Int32Variable = tensor_type.Variable
+Int32Placeholder = tensor_type.Placeholder
 
 x = Int32Tensor(np.array([1, 2, 3]))
 y = Int32Tensor(np.array([1, 2, 3]))
