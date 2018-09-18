@@ -240,6 +240,7 @@ class RemoteConfig(Config):
 
         return sess
 
+
 def load(filename: str) -> Config:
     with open(filename, 'r') as f:
         params = json.load(f)

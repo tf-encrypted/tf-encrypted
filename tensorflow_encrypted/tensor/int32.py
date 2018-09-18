@@ -25,14 +25,14 @@ class Tensor(object):
         assert isinstance(value, Tensor), type(value)
         return Tensor(value)
 
-    def eval(self, sess:tf.Session, feed_dict:Dict[Any,Any]={}, tag:Optional[str]=None) -> 'Tensor':
+    def eval(self, sess: tf.Session, feed_dict: Dict[Any,Any]={}, tag: Optional[str]=None) -> 'Tensor':
         return Tensor(run(sess, self.value, feed_dict=feed_dict, tag=tag))
 
     def to_int32(self) -> Union[tf.Tensor,np.ndarray]:
         return self.value
 
     @staticmethod
-    def sample_uniform(shape:List[int]) -> 'Tensor':
+    def sample_uniform(shape: List[int]) -> 'Tensor':
         return Tensor(tf.random_uniform(shape=shape, dtype=tf.int32, maxval=2**31-1)) # TODO[Morten] what should maxval be (account for negative numbers)?
 
     def __repr__(self) -> str:
@@ -45,13 +45,13 @@ class Tensor(object):
 
         return self.value.shape
 
-    def __add__(self, other:'Tensor') -> 'Tensor':
+    def __add__(self, other: 'Tensor') -> 'Tensor':
         return self.add(other)
 
-    def __sub__(self, other:'Tensor') -> 'Tensor':
+    def __sub__(self, other: 'Tensor') -> 'Tensor':
         return self.sub(other)
 
-    def __mul__(self, other:'Tensor') -> 'Tensor':
+    def __mul__(self, other: 'Tensor') -> 'Tensor':
         return self.mul(other)
 
     def __mod__(self, k:int) -> 'Tensor':
@@ -65,11 +65,11 @@ class Tensor(object):
         x, y = _lift(self), _lift(other)
         return Tensor(x.value - y.value)
 
-    def mul(self, other:'Tensor') -> 'Tensor':
+    def mul(self, other: 'Tensor') -> 'Tensor':
         x, y = _lift(self), _lift(other)
         return Tensor(x.value * y.value)
 
-    def dot(self, other:'Tensor') -> 'Tensor':
+    def dot(self, other: 'Tensor') -> 'Tensor':
         x, y = _lift(self), _lift(other)
         return Tensor(tf.matmul(x.value, y.value))
 
@@ -79,13 +79,13 @@ class Tensor(object):
     # def conv2d(self, other, strides, padding='SAME') -> 'Tensor':
     #     return _conv2d(self, other, strides, padding)
 
-    def mod(self, k:int) -> 'Tensor':
+    def mod(self, k: int) -> 'Tensor':
         return Tensor(self.value % k)
 
     def transpose(self, *axes) -> 'Tensor':
         return Tensor(tf.transpose(self.value, axes))
 
-    def strided_slice(self, args:Any, kwargs:Any):
+    def strided_slice(self, args: Any, kwargs: Any):
         return Tensor(tf.strided_slice(self.value, *args, **kwargs))
 
     def reshape(self, *axes) -> 'Tensor':
@@ -149,12 +149,12 @@ def _lift(x):
 class Constant(Tensor):
 
     @staticmethod
-    def from_native(value:np.ndarray) -> 'Constant':
+    def from_native(value: np.ndarray) -> 'Constant':
         assert type(value) in [np.ndarray], type(value)
         return Constant(value)
 
     @staticmethod
-    def from_same(value:Tensor) -> 'Constant':
+    def from_same(value: Tensor) -> 'Constant':
         assert type(value) in [Tensor], type(value)
         return Constant(value.value)
 
@@ -206,6 +206,6 @@ class Variable(Tensor):
         assert type(value) in [np.ndarray], type(value)
         return tf.assign(self.variable, value).op
 
-    def assign_from_same(self, value:Tensor):
+    def assign_from_same(self, value: Tensor):
         assert isinstance(value, Tensor), type(value)
         return tf.assign(self.variable, value.value).op

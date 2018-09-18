@@ -20,7 +20,7 @@ BackingConstant = tensor_type.Constant
 BackingVariable = tensor_type.Variable
 BackingPlaceholder = tensor_type.Placeholder
 
-from ..tensor.helpers import *
+from ..tensor.helpers import log2, gcd, inverse
 from ..io import InputProvider, OutputReceiver
 from ..player import Player
 from .protocol import Protocol, global_cache_updators, memoize, nodes
@@ -98,6 +98,9 @@ class Pond(Protocol):
         assert type(v1) is BackingTensor, type(v1)
 
         with tf.name_scope('private-placeholder{}'.format('-' + name if name else '')):
+
+            # TODO[Morten] not sure the below does anything;
+            # should we more explicitly move the values to the servers?
 
             with tf.device(self.server_0.device_name):
                 x0 = BackingTensor.from_same(v0)
