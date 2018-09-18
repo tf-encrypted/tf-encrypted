@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tf-encrypted",
-    version="0.0.1-rc0",
+    version="0.1.0-rc0",
     packages=setuptools.find_packages(),
     python_requires=">=3.6",
     install_requires=[
