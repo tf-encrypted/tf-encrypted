@@ -32,18 +32,3 @@ with config.session() as sess:
     tfe.run(sess, prot.assign(w, z), tag='assign')
 
     print(w.reveal().eval(sess, tag='reveal'))
-
-    # g.eval(sess, tag='g')
-
-    # sess.run(prot.assign(d, f))
-    # sess.run(prot.assign(e, e))
-
-    # print(f.reveal().eval(sess))
-
-    # g = prot.sigmoid(d)
-    # print(g.reveal().eval(sess))
-
-    # b = prot.define_private_placeholder(shape)
-
-    # c = prot.define_private_variable()
-    # d = prot.define_public_variable()

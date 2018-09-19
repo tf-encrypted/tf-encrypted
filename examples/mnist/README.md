@@ -1,4 +1,3 @@
-
 # Overview
 
 This example not only illustrates how MNIST digit predictions can be done on encrypted data, but also how TensorFlow Encrypted can be integrated with ordinary TensorFlow.
