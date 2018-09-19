@@ -647,6 +647,33 @@ class Pond(Protocol):
         return z
 
     @memoize
+    def tanh(self, x: 'PondTensor'):
+        assert isinstance(x, PondTensor), type(x)
+
+        w0 = 0.
+        w1 = 0.852721056
+        w3 = -0.12494112
+        w5 = 0.010654528
+        w7 = -0.000423424
+
+        with tf.name_scope('relu'):
+
+            x1 = x
+            x2 = x.square()
+            x3 = x2 * x1
+            x5 = x2 * x3
+            x7 = x2 * x5
+
+            y1 = x1 * w1
+            y3 = x3 * w3
+            y5 = x5 * w5
+            y7 = x7 * w7
+
+            z = y7 + y5 + y3 + y1 + w0
+
+        return z
+
+    @memoize
     def reveal(self, x):
         return self.dispatch('reveal', x)
 
