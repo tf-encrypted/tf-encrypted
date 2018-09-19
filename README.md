@@ -30,17 +30,13 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     # get input from inputters as private values
     inputs = [prot.define_private_input(inputter) for inputter in inputters]
 
-    # get count inverse as a public value
-      cnt_inv = prot.define_public_variable(np.array([1 / len(inputs)]))
-
-    # sum all inputs and multiply by count inverse
-      result = reduce(lambda x, y: x + y, inputs) * cnt_inv
+    # sum all inputs and multiply by count inverse (ie divide)
+    result = reduce(lambda x, y: x + y, inputs) * (1 / len(inputs))
 
     # send result to receiver who can finally decrypt
     result_op = prot.define_output([result], result_receiver)
 
     with config.session() as sess:
-        tfe.run(sess, tf.global_variables_initializer())
         tfe.run(sess, result_op, tag='average')
 ```
 
