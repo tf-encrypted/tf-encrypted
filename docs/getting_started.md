@@ -2,11 +2,13 @@
 
 This guide assumes that you have followed the installation instructions in [README](https://github.com/mortendahl/tf-encrypted).
 
+## Contents
+
 - [Introduction to Tensorflow Encrypted API](#introduction-to-tensorflow-encrypted-api)
-- [Making private predictions](#make-private-prediction)
-  - [Locally](#locally)
-  - [With GCP](#with-gcp)
-- [Making private trainings](#make-private-training)
+- [Making private predictions](#making-private-predictions)
+  - [Locally](#a-locally)
+  - [With GCP](#b-gcp)
+- [Making private trainings](#making-private-trainings)
 
 ## Introduction to TensorFlow Encrypted API
 
