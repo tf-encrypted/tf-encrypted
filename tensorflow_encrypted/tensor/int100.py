@@ -76,7 +76,7 @@ class Int100Tensor(object):
         return Int100Tensor(value, None)
 
     @staticmethod
-    def from_same(value:'Int100Tensor') -> 'Int100Tensor':
+    def from_same(value: 'Int100Tensor') -> 'Int100Tensor':
         return Int100Tensor.from_decomposed(value.backing)
 
     @staticmethod

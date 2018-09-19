@@ -12,29 +12,30 @@ class Tensor(object):
     modulus = 2**31
     int_type = tf.int32
 
-    def __init__(self, value:Union[np.ndarray,tf.Tensor]) -> None:
+    def __init__(self, value: Union[np.ndarray, tf.Tensor]) -> None:
         self.value = value
 
     @staticmethod
-    def from_native(value: Union[np.ndarray,tf.Tensor]) -> 'Tensor':
-        assert isinstance(value, (np.ndarray,tf.Tensor)), type(value)
+    def from_native(value: Union[np.ndarray, tf.Tensor]) -> 'Tensor':
+        assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
         return Tensor(value)
-    
+
     @staticmethod
     def from_same(value: 'Tensor') -> 'Tensor':
         assert isinstance(value, Tensor), type(value)
         return Tensor(value)
 
-    def eval(self, sess: tf.Session, feed_dict: Dict[Any,Any]={}, tag: Optional[str]=None) -> 'Tensor':
+    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Tensor':
         concrete_value = run(sess, self.value, feed_dict=feed_dict, tag=tag)
         return Tensor.from_native(concrete_value)
 
-    def to_int32(self) -> Union[tf.Tensor,np.ndarray]:
+    def to_int32(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Tensor':
-        return Tensor(tf.random_uniform(shape=shape, dtype=tf.int32, maxval=2**31-1)) # TODO[Morten] what should maxval be (account for negative numbers)?
+        # TODO[Morten] what should maxval be (account for negative numbers)?
+        return Tensor(tf.random_uniform(shape=shape, dtype=tf.int32, maxval=2**31 - 1))
 
     def __repr__(self) -> str:
         return 'int32.Tensor(shape={})'.format(self.shape)
@@ -55,7 +56,7 @@ class Tensor(object):
     def __mul__(self, other: 'Tensor') -> 'Tensor':
         return self.mul(other)
 
-    def __mod__(self, k:int) -> 'Tensor':
+    def __mod__(self, k: int) -> 'Tensor':
         return self.mod(k)
 
     def add(self, other: 'Tensor') -> 'Tensor':
