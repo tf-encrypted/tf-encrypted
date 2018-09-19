@@ -24,7 +24,6 @@ gcloud compute ssh tfe-template < debian-install.sh
 Then, to create the image, we run
 ```shell
 gcloud compute instances stop tfe-template
-gcloud compute images delete tfe-image --quiet
 gcloud compute images create tfe-image --source-disk tfe-template
 ```
 and can optionally finally [delete the template instance](#cleaning-up) to save on cost.
@@ -51,3 +50,4 @@ If we wish to clean up fully the base image can also be deleted with
 ```shell
 gcloud compute images delete tfe-image --quiet
 ```
+If you encountered an error when creating the image tfe-image from the tfe-template, it's probably because you already had the image tfe-image created. For this reason you might have to run the command above as well. 
