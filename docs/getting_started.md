@@ -28,6 +28,7 @@ We indicate tf-encrypted to perform secure computation with the Pond protocol as
 
 Finally we can make a prediction as follows:
 <img src="./images/model.png" width="720" height="400" />
+
 Two servers and a crypto producer are doing the actual computation on encrypted data, with only the client being able to decrypt the final result.
 
 
@@ -53,10 +54,10 @@ You have just made a prediction without revealing anything about the input!
 
 ### b. GCP
 
-[NOTE] It would be great to have an example as above with GCP where we import a protobuf file and run a prediction.
+**NOTE** It would be great to have an example as above with GCP where we import a protobuf file and run a prediction.
 
 You can make private predictions with GCP as well. You can find a great example [here](https://github.com/mortendahl/tf-encrypted/tree/master/examples/mnist#remotely-on-gcp).
 
 ## Making Private Trainings
 
-[NOTE] We currently don't have an example. We are planning to train/create a simple logistic regression as a demo..
+**NOTE** We currently don't have an example. We are planning to train/create a simple logistic regression as a demo..

@@ -162,13 +162,10 @@ def main(_):
 
 
 def export_to_pb(sess, x, filename):
-    pred_node_names = ['output']
-    pred = [tf.identity(x, name=pred_node_names[0])]
+    pred_names = ['output']
+    tf.identity(x, name=pred_node_names[0])
 
-    graph = graph_util.convert_variables_to_constants(
-                                                    sess,
-                                                    sess.graph.as_graph_def(),
-                                                    pred_node_names)
+    graph = graph_util.convert_variables_to_constants(sess, sess.graph.as_graph_def(), pred_names)
 
     graph = graph_util.remove_training_nodes(graph)
     path = graph_io.write_graph(graph, ".", filename, as_text=False)
