@@ -7,20 +7,18 @@ import math
 import numpy as np
 import tensorflow as tf
 
-# from ..tensor import int100 as tensor_type
-# BackingTensor = tensor_type.Int100Tensor
-# BackingConstant = tensor_type.Int100Constant
-# BackingVariable = tensor_type.Int100Variable
-# BackingPlaceholder = tensor_type.Int100Placeholder
-# from ..tensor.int100 import stack
-
-from ..tensor import int32 as tensor_type
-BackingTensor = tensor_type.Tensor
-BackingConstant = tensor_type.Constant
-BackingVariable = tensor_type.Variable
-BackingPlaceholder = tensor_type.Placeholder
-
-from ..tensor.helpers import log2, gcd, inverse
+from ..tensor.int100 import (
+    Int100Tensor as BackingTensor,
+    Int100Constant as BackingConstant,
+    Int100Variable as BackingVariable,
+    Int100Placeholder as BackingPlaceholder,
+    stack,
+)
+from ..tensor.helpers import (
+    log2,
+    gcd,
+    inverse
+)
 from ..io import InputProvider, OutputReceiver
 from ..player import Player
 from .protocol import Protocol, global_cache_updators, memoize, nodes
@@ -93,20 +91,16 @@ class Pond(Protocol):
 
         pl = BackingPlaceholder(shape)
         v0, v1 = _share(pl)
-        
         assert type(v0) is BackingTensor, type(v0)
         assert type(v1) is BackingTensor, type(v1)
 
         with tf.name_scope('private-placeholder{}'.format('-' + name if name else '')):
 
-            # TODO[Morten] not sure the below does anything;
-            # should we more explicitly move the values to the servers?
-
             with tf.device(self.server_0.device_name):
-                x0 = BackingTensor.from_same(v0)
+                x0 = BackingTensor.from_decomposed(v0.backing)
 
             with tf.device(self.server_1.device_name):
-                x1 = BackingTensor.from_same(v1)
+                x1 = BackingTensor.from_decomposed(v1.backing)
 
         return PondPrivatePlaceholder(self, pl, x0, x1, apply_scaling)
 
@@ -852,8 +846,8 @@ class PondPublicTensor(PondTensor):
     def unwrapped(self):
         return (self.value_on_0, self.value_on_1)
 
-    def eval(self, sess, feed_dict={}, tag=None):
-        concrete_value = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
+    def eval(self, sess, feed_dict={}, tag=None) -> np.ndarray:
+        value: BackingTensor = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
         return _decode(value, self.is_scaled)
 
 
@@ -998,7 +992,7 @@ class PondPrivatePlaceholder(PondPrivateTensor):
         assert tensor0.shape == tensor1.shape
 
         super(PondPrivatePlaceholder, self).__init__(prot, tensor0, tensor1, is_scaled)
-        self.placeholder = placeholder
+        self.placeholders = placeholder.backing
         self.tensor0 = tensor0
         self.tensor1 = tensor1
 
@@ -1007,8 +1001,11 @@ class PondPrivatePlaceholder(PondPrivateTensor):
 
     def feed_from_native(self, value):
         assert type(value) in [np.ndarray], type(value)
-        v: BackingTensor = _encode(value, apply_scaling)
-        return self.placeholder.feed_from_same(v)
+
+        v = _encode(value, self.is_scaled)
+        return {
+            p: v for p, v in zip(self.placeholders, v.backing)
+        }
 
 
 class PondPublicVariable(PondPublicTensor):
