@@ -163,7 +163,7 @@ def main(_):
 
 def export_to_pb(sess, x, filename):
     pred_names = ['output']
-    tf.identity(x, name=pred_node_names[0])
+    tf.identity(x, name=pred_names[0])
 
     graph = graph_util.convert_variables_to_constants(sess, sess.graph.as_graph_def(), pred_names)
 
