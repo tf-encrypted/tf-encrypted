@@ -224,7 +224,7 @@ def _conv2d_bw(x, d_y, w_shape, strides, padding):
     x_col = x.im2col(h_filter, w_filter, padding, strides)
     dout_reshaped = d_y.transpose((1, 2, 3, 0)).reshape([n_filters, -1])
     d_w = dout_reshaped.dot(x_col.transpose())
-    d_w = d_w.reshape(w_shape)
+    d_w = d_w.reshape([n_filters, d_filters, h_filter, w_filter]).transpose([2,3,1,0])
     return d_w
 
 def _mod(x, k):
