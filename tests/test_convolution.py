@@ -1,11 +1,9 @@
 import unittest
-import itertools
 
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-np.random.seed(1)
 
 class TestConv2D(unittest.TestCase):
     def setUp(self):
@@ -50,19 +48,18 @@ class TestConv2D(unittest.TestCase):
         with tf.Session() as sess:
             # conv input
             x = tf.Variable(input_conv, dtype=tf.float32)
-            x_NHWC = tf.transpose(x, (0, 2, 3, 1))
+            x_nhwc = tf.transpose(x, (0, 2, 3, 1))
 
             # convolution Tensorflow
             filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
-            conv_out_tf = tf.nn.conv2d(x_NHWC, filters_tf, strides=[1, strides, strides, 1],
+            conv_out_tf = tf.nn.conv2d(x_nhwc, filters_tf, strides=[1, strides, strides, 1],
                                        padding="SAME")
 
             sess.run(tf.global_variables_initializer())
             out_tensorflow = sess.run(conv_out_tf).transpose(0, 3, 1, 2)
 
         np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=3)
-
 
     def test_backward(self) -> None:
         batch_size, channels_in, channels_out = 8, 3, 4
@@ -114,8 +111,7 @@ class TestConv2D(unittest.TestCase):
             filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
             # forward
-            conv_out = tf.nn.conv2d(x_nhwc, filters_tf, strides=[1, strides, strides, 1],
-                                       padding="SAME")
+            conv_out = tf.nn.conv2d(x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME")
             conv_out_nchw = tf.transpose(conv_out, (0, 3, 1, 2))
 
             # multiply conv output with some matrix
@@ -130,6 +126,7 @@ class TestConv2D(unittest.TestCase):
 
         # match derivative of weights
         np.testing.assert_array_almost_equal(d_w_tensorflow, d_w_pond, decimal=2)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -703,7 +703,6 @@ class Pond(Protocol):
 
         return cached
 
-
     def im2col(self, x, h_filter, w_filter, padding, strides):
 
         node_key = ('im2col', x, h_filter, w_filter, padding, strides)
@@ -711,7 +710,6 @@ class Pond(Protocol):
 
         if z is not None:
             return z
-
 
         dispatch = {
             PondPublicTensor: _im2col_public,
@@ -727,7 +725,6 @@ class Pond(Protocol):
         nodes[node_key] = z
 
         return z
-
 
     def conv2d(self, x, w, strides, padding):
 
@@ -758,7 +755,6 @@ class Pond(Protocol):
 
         return z
 
-
     def conv2d_bw(self, x, d_y, w_shape, strides, padding):
         node_key = ('conv2d', x, d_y, w_shape)
         z = nodes.get(node_key, None)
@@ -767,15 +763,15 @@ class Pond(Protocol):
             return z
 
         dispatch = {
-            (PondPublicTensor,  PondPublicTensor):  _conv2d_bw_public_public,
-            (PondPublicTensor,  PondPrivateTensor): _conv2d_bw_public_private,
-            (PondPublicTensor,  PondMaskedTensor):  _conv2d_bw_public_masked,
-            (PondPrivateTensor, PondPublicTensor):  _conv2d_bw_private_public,
+            (PondPublicTensor, PondPublicTensor): _conv2d_bw_public_public,
+            (PondPublicTensor, PondPrivateTensor): _conv2d_bw_public_private,
+            (PondPublicTensor, PondMaskedTensor): _conv2d_bw_public_masked,
+            (PondPrivateTensor, PondPublicTensor): _conv2d_bw_private_public,
             (PondPrivateTensor, PondPrivateTensor): _conv2d_bw_private_private,
-            (PondPrivateTensor, PondMaskedTensor):  _conv2d_bw_private_masked,
-            (PondMaskedTensor,  PondPublicTensor):  _conv2d_bw_masked_public,
-            (PondMaskedTensor,  PondPrivateTensor): _conv2d_bw_masked_private,
-            (PondMaskedTensor,  PondMaskedTensor):  _conv2d_bw_masked_masked
+            (PondPrivateTensor, PondMaskedTensor): _conv2d_bw_private_masked,
+            (PondMaskedTensor, PondPublicTensor): _conv2d_bw_masked_public,
+            (PondMaskedTensor, PondPrivateTensor): _conv2d_bw_masked_private,
+            (PondMaskedTensor, PondMaskedTensor): _conv2d_bw_masked_masked
         }
 
         func = dispatch.get((_type(x), _type(d_y)), None)
@@ -1503,6 +1499,7 @@ def _im2col_public(prot, x, h_filter, w_filter, padding, strides):
     x_col = PondPublicTensor(prot, x_on_0_col, x_on_1_col, x.is_scaled)
     return x_col
 
+
 def _im2col_private(prot, x, h_filter, w_filter, padding, strides):
     assert isinstance(x, PondPrivateTensor), type(x)
     x_on_0, x_on_1 = x.unwrapped
@@ -1518,8 +1515,9 @@ def _im2col_private(prot, x, h_filter, w_filter, padding, strides):
 
     return x_col
 
+
 def _im2col_masked(prot, x_masked, h_filter, w_filter, padding, strides):
-    assert isinstance(x_masked, PondPublicTensor), type(x)
+    assert isinstance(x_masked, PondPublicTensor), type(x_masked)
     a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
 
     with tf.name_scope('im2col'):
@@ -2314,39 +2312,47 @@ def _avgpool2d_masked(prot: Pond,
 def _conv2d_bw_public_public(prot, x, d_y, w_shape, strides, padding):
     raise NotImplementedError()
 
+
 def _conv2d_bw_public_private(prot, x, d_y, w_shape, strides, padding):
     raise NotImplementedError()
+
 
 def _conv2d_bw_public_masked(prot, x, d_y, w_shape, strides, padding):
     raise NotImplementedError()
 
+
 def _conv2d_bw_private_public(prot, x, d_y, w_shape, strides, padding):
     raise NotImplementedError()
+
 
 def _conv2d_bw_private_private(prot, x, d_y, w_shape, strides, padding):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(d_y, PondPrivateTensor), type(d_y)
     return prot.conv2d_bw(prot.mask(x), prot.mask(d_y), w_shape, strides, padding)
 
+
 def _conv2d_bw_private_masked(prot, x, d_y, w_shape, strides, padding):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(d_y, PondMaskedTensor), type(d_y)
     return prot.conv2d_bw(prot.mask(x), d_y, w_shape, strides, padding)
 
+
 def _conv2d_bw_masked_public(prot, x, d_y, w_shape, strides, padding):
     raise NotImplementedError()
+
 
 def _conv2d_bw_masked_private(prot, x, d_y, w_shape, strides, padding):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(d_y, PondPrivateTensor), type(d_y)
     return prot.conv2d_bw(x, prot.mask(d_y), w_shape, strides, padding)
 
+
 def _conv2d_bw_masked_masked(prot, x, d_y, w_shape, strides, padding):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(d_y, PondMaskedTensor), type(d_y)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
-    b, b0, b1,  beta_on_0,  beta_on_1 = d_y.unwrapped
+    b, b0, b1, beta_on_0, beta_on_1 = d_y.unwrapped
 
     with tf.name_scope('conv2d'):
 
@@ -2357,17 +2363,15 @@ def _conv2d_bw_masked_masked(prot, x, d_y, w_shape, strides, padding):
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
             beta = beta_on_0
-            z0 = a_conv2d_b0 \
-                 + a0.conv2d_bw(beta, w_shape, strides, padding) \
-                 + alpha.conv2d_bw(b0, w_shape, strides, padding) \
-                 + alpha.conv2d_bw(beta, w_shape, strides, padding)
+            z0 = a_conv2d_b0 + a0.conv2d_bw(beta, w_shape, strides, padding) +\
+                alpha.conv2d_bw(b0, w_shape, strides, padding) +\
+                alpha.conv2d_bw(beta, w_shape, strides, padding)
 
         with tf.device(prot.server_1.device_name):
             alpha = alpha_on_1
             beta = beta_on_1
-            z1 = a_conv2d_b1 \
-                 + a1.conv2d_bw(beta, w_shape, strides, padding) \
-                 + alpha.conv2d_bw(b1, w_shape, strides, padding)
+            z1 = a_conv2d_b1 + a1.conv2d_bw(beta, w_shape, strides, padding)\
+                + alpha.conv2d_bw(b1, w_shape, strides, padding)
 
     z = PondPrivateTensor(prot, z0, z1, x.is_scaled or d_y.is_scaled)
     z = prot.truncate(z) if x.is_scaled and d_y.is_scaled else z
@@ -2376,6 +2380,7 @@ def _conv2d_bw_masked_masked(prot, x, d_y, w_shape, strides, padding):
 #
 # transpose helpers
 #
+
 
 def _transpose_public(prot, x, perm=None):
     assert isinstance(x, PondPublicTensor)

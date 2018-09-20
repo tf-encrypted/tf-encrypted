@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
+
 def get_im2col_indices(x_shape, field_height, field_width, padding=1, stride=1):
     # First figure out what the size of the output should be
     N, C, H, W = x_shape
@@ -39,12 +40,13 @@ def im2col_indices(x, field_height, field_width, padding=1, strides=1):
     cols = cols.transpose(1, 2, 0).reshape(field_height * field_width * C, -1)
     return cols
 
+
 class TestIm2col(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
 
     def test_forward(self):
-        batch_size, channels_in, channels_out = 4, 3, 16
+        batch_size, channels_in = 4, 3
         img_height, img_width = 10, 10
         h_filter, w_filter, strides = 2, 2, 2
         padding = 'SAME'
