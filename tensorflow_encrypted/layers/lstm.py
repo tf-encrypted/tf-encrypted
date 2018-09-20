@@ -43,7 +43,7 @@ class LSTM(core.Layer):
         new_h = tanh_layer.forward(new_c) * sigmoid_o
 
         # How to eval tuples with tf-encrypted
-        return new_h
+        return new_h, new_c
 
 
     def backward(self) -> None:

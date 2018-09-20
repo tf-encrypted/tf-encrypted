@@ -55,7 +55,8 @@ class TestLstm(unittest.TestCase):
 
             with config.session() as sess:
                 sess.run(tf.global_variables_initializer())
-                out_pond = lstm_out_pond.reveal().eval(sess)
+                h, c = lstm_out_pond[0],lstm_out_pond[1]
+                h_out_pond, c_out_pond = h.reveal().eval(sess), c.reveal().eval(sess)
 
             res = []
 
@@ -79,7 +80,8 @@ class TestLstm(unittest.TestCase):
                   h.name: 0.1 * np.asarray([[2, 3]]),
                 })
 
-            np.testing.assert_array_almost_equal(out_pond, res[1].h, decimal=1)
+            np.testing.assert_array_almost_equal(h_out_pond, res[1].h, decimal=1)
+            np.testing.assert_array_almost_equal(c_out_pond, res[1].c, decimal=1)
 
 
 if __name__ == '__main__':
