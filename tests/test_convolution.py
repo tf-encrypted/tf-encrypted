@@ -131,17 +131,15 @@ class TestConv2D(unittest.TestCase):
             conv_out_tf = sess.run(conv_out_nchw)
             d_conv_tf = sess.run(d_conv)
 
-
-
         # match output conv
         np.testing.assert_array_almost_equal(conv_out_tf, conv_out_pond, decimal=2)
         # match derivative up to conv layer
         np.testing.assert_array_almost_equal(d_conv_pond, d_conv_tf, decimal=2)
+        # match whether values match of derivative match (not order)
+        assert(all([x in np.round(d_w_tensorflow, 2) for x in np.round(d_w_pond, 2).flatten()]))
         # match derivative of weights
         np.testing.assert_array_almost_equal(d_w_tensorflow, d_w_pond, decimal=2)
 
-        # match derivative of input
-        # np.testing.assert_array_almost_equal(d_x_tensorflow, d_x_pond, decimal=2)
 
 
 if __name__ == '__main__':

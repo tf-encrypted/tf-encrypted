@@ -221,20 +221,10 @@ def _conv2d_bw(x, d_y, w_shape, strides, padding):
     assert isinstance(d_y, Int100Tensor), type(d_y)
 
     h_filter, w_filter, d_filters, n_filters = tuple(map(int, w_shape))
-    # (patch_size == (channels (d_filters) * h * w), n_patches)
-    # (patch_size, n_patches)
     x_col = x.im2col(h_filter, w_filter, padding, strides)
-
-    # d_y: (batch_size, n_filters, h_out, w_out)
-    # d_out_ reshaped: (n_filters, h_out * w_out * batch_size) ==
-    # (n_filters, n_patches)
     dout_reshaped = d_y.transpose((1, 2, 3, 0)).reshape([n_filters, -1])
-    # (n_filters, n_patches) dot (n_patches, patch_size)
-    # (n_filters, h_out * w_out * batch_size) dot (? , patch_size)
     d_w = dout_reshaped.dot(x_col.transpose())
-    d_w = d_w.transpose().reshape([h_filter, w_filter, d_filters, n_filters]).transpose([0,1,2,3])
-    # (n_filters, patch_size) -> (h_filter, w_filter, d_filters, n_filters)
-    # d_w = d_w.reshape([n_filters, h_filter, w_filter, d_filters]).transpose((2,1,3,0))
+    d_w = d_w.reshape(w_shape)
     return d_w
 
 def _mod(x, k):
