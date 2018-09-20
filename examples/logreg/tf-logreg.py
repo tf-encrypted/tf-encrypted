@@ -1,43 +1,18 @@
-from typing import Tuple
-
-import numpy as np
 import tensorflow as tf
 
+from data import gen_training_input, gen_test_input
 
 # Parameters
-learning_rate = 0.001
+learning_rate = 0.01
+training_set_size = 1000
+test_set_size = 100
 training_epochs = 10
-train_batch_size = 100
-test_batch_size = 100
+batch_size = 100
 nb_feats = 5
 
 
-def norm(x: tf.Tensor, y: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-    return tf.cast(x, tf.float32), tf.expand_dims(y, 0)
-
-
-x_np = np.random.uniform(-1 / 2, 1 / 2, size=[10000, nb_feats])
-y_np = np.array(x_np.mean(axis=1) > 0, np.float32)
-train_set = tf.data.Dataset.from_tensor_slices((x_np, y_np)) \
-                           .map(norm) \
-                           .shuffle(buffer_size=100) \
-                           .repeat() \
-                           .batch(train_batch_size)
-train_set_iterator = train_set.make_one_shot_iterator()
-x, y = train_set_iterator.get_next()
-x = tf.reshape(x, [train_batch_size, nb_feats])
-y = tf.reshape(y, [train_batch_size, 1])
-
-
-x_test_np = np.random.uniform(-1 / 2, 1 / 2, size=[100, nb_feats])
-y_test_np = np.array(x_test_np.mean(axis=1) > 0, np.float32)
-test_set = tf.data.Dataset.from_tensor_slices((x_test_np, y_test_np)) \
-                          .map(norm) \
-                          .batch(test_batch_size)
-test_set_iterator = test_set.make_one_shot_iterator()
-x_test, y_test = test_set_iterator.get_next()
-x_test = tf.reshape(x_test, [train_batch_size, nb_feats])
-y_test = tf.reshape(y_test, [train_batch_size, 1])
+x, y = gen_training_input(training_set_size, nb_feats, batch_size)
+x_test, y_test, _ = gen_test_input(test_set_size, nb_feats, batch_size)
 
 
 W = tf.Variable(tf.random_uniform([nb_feats, 1], -0.01, 0.01))
@@ -72,7 +47,7 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 
 # Start training
-total_batch = int(len(x_np) / train_batch_size)
+total_batch = training_set_size // batch_size
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
 

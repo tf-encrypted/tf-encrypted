@@ -1,10 +1,11 @@
-from typing import Tuple, Union
-
-
+from typing import Union
 import numpy as np
+
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 from tensorflow_encrypted.protocol.pond import PondPrivateTensor
+
+from data import gen_training_input, gen_test_input
 
 
 config = tfe.LocalConfig([
@@ -25,39 +26,16 @@ def consume(v: Union[np.ndarray, tf.Tensor], prot: tfe.protocol.Pond) -> PondPri
 
 
 # Parameters
-learning_rate = 0.001
+learning_rate = 0.01
+training_set_size = 1000
+test_set_size = 100
 training_epochs = 10
-train_batch_size = 100
-test_batch_size = 100
+batch_size = 100
 nb_feats = 5
 
 
-def norm(x: tf.Tensor, y: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-    return tf.cast(x, tf.float32), tf.expand_dims(y, 0)
-
-
-x_np = np.random.uniform(-1 / 2, 1 / 2, size=[10000, nb_feats])
-y_np = np.array(x_np.mean(axis=1) > 0, np.float32)
-train_set = tf.data.Dataset.from_tensor_slices((x_np, y_np)) \
-                           .map(norm) \
-                           .shuffle(buffer_size=100) \
-                           .repeat() \
-                           .batch(train_batch_size)
-train_set_iterator = train_set.make_one_shot_iterator()
-x, y = train_set_iterator.get_next()
-x = tf.reshape(x, [train_batch_size, nb_feats])
-y = tf.reshape(y, [train_batch_size, 1])
-
-
-x_test_np = np.random.uniform(-1 / 2, 1 / 2, size=[100, nb_feats])
-y_test_np = np.array(x_test_np.mean(axis=1) > 0, np.float32)
-test_set = tf.data.Dataset.from_tensor_slices((x_test_np, y_test_np)) \
-                          .map(norm) \
-                          .batch(test_batch_size)
-test_set_iterator = test_set.make_one_shot_iterator()
-x_test, y_test = test_set_iterator.get_next()
-x_test = tf.reshape(x_test, [train_batch_size, nb_feats])
-y_test = tf.reshape(y_test, [train_batch_size, 1])
+x, y = gen_training_input(training_set_size, nb_feats, batch_size)
+x_test, y_test, y_np_out = gen_test_input(test_set_size, nb_feats, batch_size)
 
 
 with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
@@ -77,7 +55,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     # Backprop
     dc_out = pred - yp
     dW = prot.dot(prot.transpose(xp), dc_out)
-    db = prot.sum(dc_out * 1.0, axis=0, keepdims=False)
+    db = prot.sum(1. * dc_out, axis=0, keepdims=False)
     ops = [
         prot.assign(W, W - dW * learning_rate),
         prot.assign(b, b - db * learning_rate)
@@ -88,7 +66,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     yp_test = consume(y_test, prot)
     pred_test = prot.sigmoid(prot.dot(xp_test, W) + b)
 
-    total_batch = int(len(x_np) / train_batch_size)
+    total_batch = training_set_size // batch_size
     with config.session() as sess:
         tfe.run(sess, prot.initializer, tag='init')
 
@@ -110,5 +88,5 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
         print("Optimization Finished!")
 
         out_test = pred_test.reveal().eval(sess)
-        acc = np.mean(np.round(out_test) == y_test_np)
+        acc = np.mean(np.round(out_test) == y_np_out)
         print("Accuracy:", acc)
