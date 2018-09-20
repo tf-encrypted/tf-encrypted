@@ -1,12 +1,12 @@
 from __future__ import absolute_import
 import sys
-import math
 from typing import List
+import math
 
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-from examples.mnist.convert import decode
+from examples.securenn.conv_convert import decode
 
 
 if len(sys.argv) >= 2:
@@ -24,13 +24,41 @@ else:
     ])
 
 
+def weight_variable(shape, gain):
+    """weight_variable generates a weight variable of a given shape."""
+    if len(shape) == 2:
+        fan_in, fan_out = shape
+    elif len(shape) == 4:
+        h, w, c_in, c_out = shape
+        fan_in = h * w * c_in
+        fan_out = h * w * c_out
+    r = gain * math.sqrt(6 / (fan_in + fan_out))
+    initial = tf.random_uniform(shape, minval=-r, maxval=r)
+    return tf.Variable(initial)
+
+
+def bias_variable(shape):
+    """bias_variable generates a bias variable of a given shape."""
+    initial = tf.constant(0., shape=shape)
+    return tf.Variable(initial)
+
+
+conv2d = lambda x, w, s: tf.nn.conv2d(x, w, strides=[1, s, s, 1], padding='VALID')
+pooling = lambda x: tf.nn.avg_pool(x, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+
+
 class ModelTrainer(tfe.io.InputProvider):
 
     BATCH_SIZE = 32
     ITERATIONS = 60000 // BATCH_SIZE
     EPOCHS = 15
-    IN_N = 28 * 28
-    HIDDEN_N = 128
+    IN_DIM = 28
+    KERNEL = 5
+    STRIDE = 1
+    IN_CHANNELS = 1
+    HIDDEN_CHANNELS = 16
+    HIDDEN_FC1 = 256
+    HIDDEN_FC2 = 100
     OUT_N = 10
 
     def build_data_pipeline(self):
@@ -50,21 +78,23 @@ class ModelTrainer(tfe.io.InputProvider):
         return iterator
 
     def build_training_graph(self, training_data) -> List[tf.Tensor]:
-        j = self.IN_N
-        k = self.HIDDEN_N
-        m = self.OUT_N
-        r_in = math.sqrt(12 / (j + k))
-        r_hid = math.sqrt(12 / (2 * k))
-        r_out = math.sqrt(12 / (k + m))
 
         # model parameters and initial values
-        w0 = tf.Variable(tf.random_uniform([j, k], minval=-r_in, maxval=r_in))
-        b0 = tf.Variable(tf.zeros([k]))
-        w1 = tf.Variable(tf.random_uniform([k, k], minval=-r_hid, maxval=r_hid))
-        b1 = tf.Variable(tf.zeros([k]))
-        w2 = tf.Variable(tf.random_uniform([k, m], minval=-r_out, maxval=r_out))
-        b2 = tf.Variable(tf.zeros([m]))
-        params = [w0, b0, w1, b1, w2, b2]
+        Wconv1 = weight_variable([self.KERNEL,
+                                  self.KERNEL,
+                                  self.IN_CHANNELS,
+                                  self.HIDDEN_CHANNELS], 1.)
+        bconv1 = bias_variable([1, 1, self.HIDDEN_CHANNELS])
+        Wconv2 = weight_variable([self.KERNEL,
+                                  self.KERNEL,
+                                  self.HIDDEN_CHANNELS,
+                                  self.HIDDEN_CHANNELS], 1.)
+        bconv2 = bias_variable([1, 1, self.HIDDEN_CHANNELS])
+        Wfc1 = weight_variable([self.HIDDEN_FC1, self.HIDDEN_FC2], 1.)
+        bfc1 = bias_variable([self.HIDDEN_FC2])
+        Wfc2 = weight_variable([self.HIDDEN_FC2, self.OUT_N], 1.)
+        bfc2 = bias_variable([self.OUT_N])
+        params = [Wconv1, bconv1, Wconv2, bconv2, Wfc1, bfc1, Wfc2, bfc2]
 
         # optimizer and data pipeline
         optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
@@ -76,13 +106,14 @@ class ModelTrainer(tfe.io.InputProvider):
             x, y = training_data.get_next()
 
             # model construction
-            layer0 = x
-            layer1 = tf.nn.relu(tf.matmul(layer0, w0) + b0)
-            layer2 = tf.nn.relu(tf.matmul(layer1, w1) + b1)
-            layer3 = tf.matmul(layer2, w2) + b2
-            predictions = layer3
+            x = tf.reshape(x, [-1, self.IN_DIM, self.IN_DIM, 1])
+            layer1 = pooling(tf.nn.relu(conv2d(x, Wconv1, self.STRIDE) + bconv1))
+            layer2 = pooling(tf.nn.relu(conv2d(layer1, Wconv2, self.STRIDE) + bconv2))
+            layer2 = tf.reshape(layer2, [-1, self.HIDDEN_FC1])
+            layer3 = tf.nn.relu(tf.matmul(layer2, Wfc1) + bfc1)
+            logits = tf.matmul(layer3, Wfc2) + bfc2
 
-            loss = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(logits=predictions, labels=y))
+            loss = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(logits=logits, labels=y))
             with tf.control_dependencies([optimizer.minimize(loss)]):
                 return i + 1
 
@@ -106,6 +137,7 @@ class ModelTrainer(tfe.io.InputProvider):
 class PredictionClient(tfe.io.InputProvider, tfe.io.OutputReceiver):
 
     BATCH_SIZE = 20
+    HIDDEN_FC1 = 256
 
     def build_data_pipeline(self):
 
@@ -128,7 +160,7 @@ class PredictionClient(tfe.io.InputProvider, tfe.io.OutputReceiver):
             prediction_input = tf.Print(prediction_input, [expected_result], summarize=self.BATCH_SIZE, message="EXPECT ")
 
         with tf.name_scope('pre-processing'):
-            prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 28 * 28))
+            prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 1, 28, 28))
 
         return [prediction_input]
 
@@ -158,16 +190,22 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     # get prediction input from client
     x, = prot.define_private_input(prediction_client, masked=True)  # pylint: disable=E0632
 
+    # helpers
+    conv = lambda x, w: prot.conv2d(x, w, 1, 'VALID')
+    pool = lambda x: prot.avgpool2d(x, (2, 2), (2, 2), 'VALID')
+
     # compute prediction
-    w0, b0, w1, b1, w2, b2 = params
-    layer0 = x
-    layer1 = prot.relu((prot.dot(layer0, w0) + b0))
-    layer2 = prot.relu((prot.dot(layer1, w1) + b1))
-    layer3 = prot.dot(layer2, w2) + b2
-    prediction = layer3
+    Wconv1, bconv1, Wconv2, bconv2, Wfc1, bfc1, Wfc2, bfc2 = params
+    bconv1 = prot.reshape(bconv1, [-1, 1, 1])
+    bconv2 = prot.reshape(bconv2, [-1, 1, 1])
+    layer1 = pool(prot.relu(conv(x, Wconv1) + bconv1))
+    layer2 = pool(prot.relu(conv(layer1, Wconv2) + bconv2))
+    layer2 = prot.reshape(layer2, [-1, ModelTrainer.HIDDEN_FC1])
+    layer3 = prot.dot(layer2, Wfc1) + bfc1
+    logits = prot.dot(layer3, Wfc2) + bfc2
 
     # send prediction output back to client
-    prediction_op = prot.define_output([prediction], prediction_client)
+    prediction_op = prot.define_output([logits], prediction_client)
 
 
 with config.session() as sess:
