@@ -28,7 +28,8 @@ def register() -> Dict[str, Any]:
         'Mul': mul,
         'ExpandDims': expand_dims,
         'AvgPool': avgpool,
-        'Squeeze': squeeze
+        'Squeeze': squeeze,
+        'ConcatV2': concat,
         # 'Pack': pack,
         # 'BiasAdd': bias_add,
         # 'MaxPool': maxpool,
@@ -323,6 +324,14 @@ def avgpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return out
 
 
+def concat(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input0 = converter.outputs[inputs[0]]
+    input1 = converter.outputs[inputs[1]]
+    axis = converter.outputs[inputs[2]]
+
+    return converter.protocol.concat([input0, input1], axis.attr["value"].tensor.int_val[0])
+
+
 def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
     dtype = x.attr["dtype"].type
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
@@ -340,3 +349,17 @@ def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
     x_public = converter.protocol.define_public_input(provider)
 
     return x_public
+
+
+def nodef_to_numpy_array(x: Any) -> np.ndarray:
+    dtype = x.attr["dtype"].type
+    x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
+
+    if dtype == tf.float32:
+        nums = array.array('f', x.attr["value"].tensor.tensor_content)
+    elif dtype == tf.float64:
+        nums = array.array('d', x.attr["value"].tensor.tensor_content)
+    else:
+        raise TypeError("Unsupported dtype")
+
+    return np.array(nums).reshape(x_shape)

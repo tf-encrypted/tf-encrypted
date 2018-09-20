@@ -13,6 +13,7 @@ from ..tensor.int100 import (
     Int100Variable as BackingVariable,
     Int100Placeholder as BackingPlaceholder,
     stack,
+    concat,
 )
 from ..tensor.helpers import (
     log2,
@@ -584,6 +585,33 @@ class Pond(Protocol):
         nodes[node_key] = xs_stack
 
         return xs_stack
+
+    def concat(self, xc: List['PondTensor'], axis):
+
+        node_key = ('concat', tuple(xc))
+        xc_concat = nodes.get(node_key, None)
+
+        if xc_concat is not None:
+            return xc_concat
+
+        if all([isinstance(x, PondPublicTensor) for x in xc]):
+            xc_concat = _concat_shared(self, xc, axis=axis)
+
+        elif all([isinstance(x, PondPrivateTensor) for x in xc]):
+            xc_concat = _concat_shared(self, xc, axis=axis)
+
+        elif all([isinstance(x, PondMaskedTensor) for x in xc]):
+            xc_concat = _concat_masked(self, xc, axis=axis)
+
+            unmasked = [x.unmasked for x in xc_concat]
+            nodes[('concat', unmasked)] = unmasked
+
+        else:
+            raise TypeError("Don't know how to do a concat {}".format(type(xc)))
+
+        nodes[node_key] = xc_concat
+
+        return xc_concat
 
     @memoize
     def sigmoid(self, x: 'PondTensor'):
@@ -2368,6 +2396,57 @@ def _stack_masked(prot, xs: List[PondMaskedTensor], axis: int=0):
         alpha_on_0_stacked,
         alpha_on_1_stacked,
         xs[0].is_scaled
+    )
+
+
+def _concat_shared(prot, xc: Union[List[PondPublicTensor], List[PondPrivateTensor]], axis):
+    assert all([x.is_scaled for x in xc])
+
+    xc_on_0, xc_on_1 = zip(*(x.unwrapped for x in xc))
+
+    with tf.name_scope('stack'):
+
+        with tf.device(prot.server_0.device_name):
+            x_on_0_concat = concat(xc_on_0, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            x_on_1_concat = concat(xc_on_1, axis=axis)
+
+    if isinstance(xc[0], PondPrivateTensor):
+        return PondPrivateTensor(prot, x_on_0_concat, x_on_1_concat, xc[0].is_scaled)
+    else:
+        return PondPublicTensor(prot, x_on_0_concat, x_on_1_concat, xc[0].is_scaled)
+
+
+def _concat_masked(prot, xc: List[PondMaskedTensor], axis: int=0):
+    assert all([x.is_scaled for x in xc])
+
+    a, a0, a1, alpha_on_0, alpha_on_1 = zip(*(x.unwrapped for x in xc))
+
+    with tf.name_scope('stack'):
+
+        with tf.device(prot.crypto_producer.device_name):
+            a_stacked = stack(a, axis=axis)
+
+        with tf.device(prot.server_0.device_name):
+            a0_stacked = stack(a0, axis=axis)
+            alpha_on_0_stacked = stack(alpha_on_0, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            a1_stacked = stack(a1, axis=axis)
+            alpha_on_1_stacked = stack(alpha_on_1, axis=axis)
+
+        x_unmasked_stacked = prot.stack([x.unmasked for x in xc], axis=axis)
+
+    return PondMaskedTensor(
+        prot,
+        x_unmasked_stacked,
+        a_stacked,
+        a0_stacked,
+        a1_stacked,
+        alpha_on_0_stacked,
+        alpha_on_1_stacked,
+        xc[0].is_scaled
     )
 
 
