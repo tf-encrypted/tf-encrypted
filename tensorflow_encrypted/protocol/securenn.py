@@ -1,6 +1,6 @@
 from .protocol import memoize
 from ..protocol.pond import (
-    Pond, PondTensor
+    Pond, PondTensor, PondPrivateTensor
 )
 from ..player import Player
 
@@ -83,8 +83,12 @@ class SecureNN(Pond):
     def greater_equal(self, x: PondTensor, y: PondTensor) -> PondTensor:
         return self.bitwise_not(self.less(x, y))
 
-    def select_share(self, x, y):
-        raise NotImplementedError
+    @memoize
+    def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
+        w = y - x
+        c = bit * w
+
+        return x + c + PondPrivateTensor.zero(x.prot, x.shape)
 
     def private_compare(self, x, r, beta):
         raise NotImplementedError

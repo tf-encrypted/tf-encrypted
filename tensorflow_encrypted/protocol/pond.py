@@ -972,6 +972,11 @@ class PondPrivateTensor(PondTensor):
     def reveal(self):
         return self.prot.reveal(self)
 
+    @staticmethod
+    def zero(prot: Protocol, shape: List[int]) -> 'PondPrivateTensor':
+        zero = np.zeros(shape=shape)
+        return prot.define_private_variable(zero)
+
 
 class PondMaskedTensor(PondTensor):
     """
