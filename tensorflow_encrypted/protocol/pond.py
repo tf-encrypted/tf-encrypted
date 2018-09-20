@@ -2460,7 +2460,7 @@ def _reshape_masked(prot, x: PondMaskedTensor, shape: List[int]) -> PondMaskedTe
             a1_reshaped = a1.reshape(shape)
             alpha_on_1_reshaped = alpha_on_1.reshape(shape)
 
-        x_unmasked_reshaped = prot.reshape(x.unmasked)
+        x_unmasked_reshaped = prot.reshape(x.unmasked, shape)
 
     return PondMaskedTensor(
         prot,
