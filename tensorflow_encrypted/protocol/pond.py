@@ -882,6 +882,9 @@ class PondTensor(abc.ABC):
     def __mul__(self, other):
         return self.prot.mul(self, other)
 
+    def __rmul__(self, other):
+        return self.prot.mul(self, other)
+
     def square(self):
         return self.prot.square(self)
 
