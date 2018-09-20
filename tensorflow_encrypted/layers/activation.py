@@ -37,3 +37,20 @@ class Relu(core.Layer):
     # TODO Approximate Relu derivate to implement backward
     def backward(self, d_y, *args):
         raise NotImplementedError
+
+
+class Tanh(core.Layer):
+    def get_output_shape(self) -> List[int]:
+        return self.input_shape
+
+    def initialize(self, *args, **kwargs) -> None:
+        pass
+
+    def forward(self, x):
+        y = self.prot.tanh(x)
+        self.layer_output = y
+        return y
+
+    # TODO Approximate Relu derivate to implement backward
+    def backward(self, d_y, *args):
+        raise NotImplementedError

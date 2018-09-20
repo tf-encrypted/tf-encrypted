@@ -263,7 +263,7 @@ class RemoteConfig(Config):
         return sess
 
 
-def load(filename: str) -> Optional[Config]:
+def load(filename: str) -> Config:
     with open(filename, 'r') as f:
         params = json.load(f)
 
@@ -273,7 +273,7 @@ def load(filename: str) -> Optional[Config]:
     elif config_type == 'local':
         return LocalConfig.from_dict(params)
 
-    return None
+    raise ValueError("Failed to parse config file")
 
 
 def save(config: Config, filename: str) -> None:
@@ -301,7 +301,8 @@ def run(
     sess: tf.Session,
     fetches: Any,
     feed_dict: Dict[str, np.ndarray] = {},
-    tag: Optional[str] = None
+    tag: Optional[str] = None,
+    write_trace: bool = False
 ) -> Any:
 
     if not __TFE_STATS__ or tag is None:
@@ -330,7 +331,7 @@ def run(
         writer.add_run_metadata(run_metadata, session_tag)
         writer.close()
 
-        if __TFE_TRACE__:
+        if __TFE_TRACE__ or write_trace:
             chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
             with open('{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag), 'w') as f:
                 f.write(chrome_trace)

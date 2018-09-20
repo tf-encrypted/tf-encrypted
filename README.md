@@ -30,14 +30,13 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     # get input from inputters as private values
     inputs = [prot.define_private_input(inputter) for inputter in inputters]
 
-    # securely sum all inputs and divide by count
-    result = reduce(lambda x,y: x+y, inputs) / len(inputs)
+    # sum all inputs and multiply by count inverse (ie divide)
+    result = reduce(lambda x, y: x + y, inputs) * (1 / len(inputs))
 
     # send result to receiver who can finally decrypt
     result_op = prot.define_output([result], result_receiver)
 
     with config.session() as sess:
-        tfe.run(sess, tf.global_variables_initializer())
         tfe.run(sess, result_op, tag='average')
 ```
 
@@ -78,6 +77,8 @@ Finally, we also loaded the pre-specified hostmap configuration from file using.
 # load host map configuration from file
 config = tfe.config.load('config.json')
 ```
+
+Take a look at [`/tools/gcp/link`](./tools/gcp/link) as an example to generate the config file for gcp. If you run it locally, you can use simply `tfe.LocalConfig`. You can find an example [here](./examples/federated-average/run.py).
 
 See [`examples/federated-average/`](./examples/federated-average/) for ready-to-run code and further details, and see the [`examples`](./examples/) directory for additional and more advanced examples.
 

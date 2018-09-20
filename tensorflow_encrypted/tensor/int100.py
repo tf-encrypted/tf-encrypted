@@ -76,6 +76,10 @@ class Int100Tensor(object):
         return Int100Tensor(value, None)
 
     @staticmethod
+    def from_same(value: 'Int100Tensor') -> 'Int100Tensor':
+        return Int100Tensor.from_decomposed(value.backing)
+
+    @staticmethod
     def from_decomposed(value: Union[List[np.ndarray], List[tf.Tensor]]) -> 'Int100Tensor':
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
