@@ -575,10 +575,6 @@ class Pond(Protocol):
 
         elif all([isinstance(x, PondMaskedTensor) for x in xs]):
             xs_stack = _stack_masked(self, xs, axis=axis)
-
-            unmasked = [x.unmasked for x in xs_stack]
-            nodes[('stack', unmasked)] = unmasked
-
         else:
             raise TypeError("Don't know how to do a stack {}".format(type(xs)))
 
@@ -602,10 +598,6 @@ class Pond(Protocol):
 
         elif all([isinstance(x, PondMaskedTensor) for x in xc]):
             xc_concat = _concat_masked(self, xc, axis=axis)
-
-            unmasked = [x.unmasked for x in xc_concat]
-            nodes[('concat', unmasked)] = unmasked
-
         else:
             raise TypeError("Don't know how to do a concat {}".format(type(xc)))
 
@@ -2331,11 +2323,11 @@ def _strided_slice_masked(prot, x: PondMaskedTensor, args: Any, kwargs: Any):
 
 
 #
-# strided slice helpers
+# stack helpers
 #
 
 
-def _stack_public(prot, xs: List[PondPublicTensor], axis: int=0):
+def _stack_public(prot: Pond, xs: List[PondPublicTensor], axis: int=0) -> PondPublicTensor:
     assert all([x.is_scaled for x in xs])
 
     xs_on_0, xs_on_1 = zip(*(x.unwrapped for x in xs))
@@ -2351,7 +2343,7 @@ def _stack_public(prot, xs: List[PondPublicTensor], axis: int=0):
     return PondPublicTensor(prot, x_on_0_stacked, x_on_1_stacked, xs[0].is_scaled)
 
 
-def _stack_private(prot, xs: List[PondPrivateTensor], axis: int=0):
+def _stack_private(prot: Pond, xs: List[PondPrivateTensor], axis: int=0) -> PondPrivateTensor:
     assert all([x.is_scaled for x in xs])
 
     xs0, xs1 = zip(*(x.unwrapped for x in xs))
@@ -2367,7 +2359,7 @@ def _stack_private(prot, xs: List[PondPrivateTensor], axis: int=0):
     return PondPrivateTensor(prot, x0_stacked, x1_stacked, xs[0].is_scaled)
 
 
-def _stack_masked(prot, xs: List[PondMaskedTensor], axis: int=0):
+def _stack_masked(prot: Pond, xs: List[PondMaskedTensor], axis: int=0) -> PondMaskedTensor:
     assert all([x.is_scaled for x in xs])
 
     a, a0, a1, alpha_on_0, alpha_on_1 = zip(*(x.unwrapped for x in xs))
@@ -2399,12 +2391,13 @@ def _stack_masked(prot, xs: List[PondMaskedTensor], axis: int=0):
     )
 
 
-def _concat_shared(prot, xc: Union[List[PondPublicTensor], List[PondPrivateTensor]], axis):
+def _concat_shared(prot: Pond, xc: Union[List[PondPublicTensor], List[PondPrivateTensor]],
+                   axis: int) -> Union[PondPublicTensor, PondPrivateTensor]:
     assert all([x.is_scaled for x in xc])
 
     xc_on_0, xc_on_1 = zip(*(x.unwrapped for x in xc))
 
-    with tf.name_scope('stack'):
+    with tf.name_scope('concat'):
 
         with tf.device(prot.server_0.device_name):
             x_on_0_concat = concat(xc_on_0, axis=axis)
@@ -2418,12 +2411,12 @@ def _concat_shared(prot, xc: Union[List[PondPublicTensor], List[PondPrivateTenso
         return PondPublicTensor(prot, x_on_0_concat, x_on_1_concat, xc[0].is_scaled)
 
 
-def _concat_masked(prot, xc: List[PondMaskedTensor], axis: int=0):
+def _concat_masked(prot: Pond, xc: List[PondMaskedTensor], axis: int) -> PondMaskedTensor:
     assert all([x.is_scaled for x in xc])
 
     a, a0, a1, alpha_on_0, alpha_on_1 = zip(*(x.unwrapped for x in xc))
 
-    with tf.name_scope('stack'):
+    with tf.name_scope('concat'):
 
         with tf.device(prot.crypto_producer.device_name):
             a_stacked = stack(a, axis=axis)
