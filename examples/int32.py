@@ -1,14 +1,14 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow_encrypted.tensor.int100 import (
-    Int100Tensor,
-    Int100Constant,
-    Int100Variable,
-    Int100Placeholder
-)
+import tensorflow_encrypted.tensor.int32 as tensor_type
 
-x = Int100Tensor(np.array([1, 2, 3]))
-y = Int100Tensor(np.array([1, 2, 3]))
+Int32Tensor = tensor_type.Tensor
+Int32Constant = tensor_type.Constant
+Int32Variable = tensor_type.Variable
+Int32Placeholder = tensor_type.Placeholder
+
+x = Int32Tensor(np.array([1, 2, 3]))
+y = Int32Tensor(np.array([1, 2, 3]))
 
 z = x + y
 print(z)
@@ -19,9 +19,9 @@ print(z)
 z = x * y
 print(z)
 
-c = Int100Constant(np.array([4, 4, 4]))
-v = Int100Variable(np.array([1, 1, 1]))
-p = Int100Placeholder((3, ))
+c = Int32Constant(np.array([4, 4, 4]))
+v = Int32Variable(np.array([1, 1, 1]))
+p = Int32Placeholder((3, ))
 
 with tf.Session() as sess:
 
@@ -38,4 +38,4 @@ with tf.Session() as sess:
     print('Assignment')
     w = c - p
     sess.run(v.assign_from_same(w), feed_dict=p.feed_from_native(np.array([5, 5, 5])))
-    print(v.eval(sess).to_bigint() - Int100Tensor.modulus)
+    print(v.eval(sess).to_int32())

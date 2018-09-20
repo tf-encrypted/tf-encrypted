@@ -9,7 +9,7 @@ from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_mod,
     gen_crt_sum, gen_crt_im2col,
-    gen_crt_sample_uniform, gen_crt_sample_bounded
+    gen_crt_sample_uniform, gen_crt_sample_bounded, crt_matmul_split
 )
 from .helpers import prod, log2
 from ..config import run
@@ -32,6 +32,8 @@ M = prod(m)
 for mi in m:
     assert 2 * log2(mi) + log2(1024) < log2(INT_TYPE.max)
 
+DOT_THRESHOLD = 1024
+
 _crt_decompose = gen_crt_decompose(m)
 _crt_recombine_lagrange = gen_crt_recombine_lagrange(m)
 _crt_recombine_explicit = gen_crt_recombine_explicit(m, INT_TYPE)
@@ -52,6 +54,7 @@ class Int100Tensor(object):
 
     modulus = M
     int_type = INT_TYPE
+    backing: Union[List[np.ndarray], List[tf.Tensor]]
 
     def __init__(
         self,
@@ -73,9 +76,21 @@ class Int100Tensor(object):
         return Int100Tensor(value, None)
 
     @staticmethod
+    def from_same(value: 'Int100Tensor') -> 'Int100Tensor':
+        return Int100Tensor.from_decomposed(value.backing)
+
+    @staticmethod
     def from_decomposed(value: Union[List[np.ndarray], List[tf.Tensor]]) -> 'Int100Tensor':
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
+
+    @staticmethod
+    def zero() -> 'Int100Tensor':
+        return Int100Tensor.from_decomposed([0] * len(m))
+
+    @staticmethod
+    def one() -> 'Int100Tensor':
+        return Int100Tensor.from_decomposed([1] * len(m))
 
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int100Tensor':
         evaluated_backing = run(sess, self.backing, feed_dict=feed_dict, tag=tag)
@@ -94,6 +109,9 @@ class Int100Tensor(object):
     @staticmethod
     def sample_bounded(shape: List[int], bitlength: int) -> 'Int100Tensor':
         return _sample_bounded(shape, bitlength)
+
+    def __getitem__(self, slice):
+        return self.from_decomposed([x[slice] for x in self.decomposed_value])
 
     def __repr__(self) -> str:
         return 'Int100Tensor({})'.format(self.shape)
@@ -144,8 +162,12 @@ class Int100Tensor(object):
     def squeeze(self, axis: List[int]) -> 'Int100Tensor':
         return _squeeze(self, axis)
 
+    def negative(self) -> 'Int100Tensor':
+        # TODO[Morten] there's probably a more efficient way
+        return Int100Tensor.zero() - self
 
-def _lift(x):
+
+def _lift(x: Union[Int100Tensor, int]) -> Int100Tensor:
     # TODO[Morten] support other types of `x`
 
     if isinstance(x, Int100Tensor):
@@ -180,9 +202,20 @@ def _mul(x, y):
     return Int100Tensor.from_decomposed(z_backing)
 
 
-def _dot(x, y):
+def _dot(x: Union[Int100Tensor, int], y: Union[Int100Tensor, int]) -> Int100Tensor:
     x, y = _lift(x), _lift(y)
-    z_backing = _crt_dot(x.backing, y.backing)
+
+    if x.shape[1] > DOT_THRESHOLD:
+        split_backing = crt_matmul_split(x.backing, y.backing, DOT_THRESHOLD)
+
+        backings = [_crt_dot(xi, yi) for xi, yi in split_backing]
+
+        z_backing = backings[0]
+        for i in range(1, len(backings)):
+            z_backing = _crt_add(z_backing, backings[i])
+    else:
+        z_backing = _crt_dot(x.backing, y.backing)
+
     return Int100Tensor.from_decomposed(z_backing)
 
 
@@ -272,15 +305,21 @@ def _squeeze(x, axis=None):
     return Int100Tensor.from_decomposed(backing)
 
 
-def stack(x: List[Int100Tensor], axis: int = 0):
-    assert all([isinstance(i, Int100Tensor) for i in x])
+def stack(xs: List[Int100Tensor], axis: int = 0):
+    assert all(isinstance(x, Int100Tensor) for x in xs)
+    backing = [
+        tf.stack([x.backing[i] for x in xs], axis=axis)
+        for i in range(len(xs[0].backing))
+    ]
+    return Int100Tensor.from_decomposed(backing)
 
-    backing = []
-    for i in range(len(x[0].backing)):
-        stacked = [j.backing[i] for j in x]
 
-        backing.append(tf.stack(stacked, axis=axis))
-
+def concat(xs: List[Int100Tensor], axis: int = 0):
+    assert all(isinstance(x, Int100Tensor) for x in xs)
+    backing = [
+        tf.concat([x.backing[i] for x in xs], axis=axis)
+        for i in range(len(xs[0].backing))
+    ]
     return Int100Tensor.from_decomposed(backing)
 
 
@@ -302,7 +341,7 @@ class Int100Constant(Int100Tensor):
         return Int100Constant(value, None)
 
     @staticmethod
-    def from_int100(value: Int100Tensor) -> 'Int100Constant':
+    def from_same(value: Int100Tensor) -> 'Int100Constant':
         assert type(value) in [Int100Tensor], type(value)
         return Int100Constant(None, value)
 
@@ -322,7 +361,7 @@ class Int100Placeholder(Int100Tensor):
         assert type(value) in [np.ndarray], type(value)
         return _feed(self, value, None)
 
-    def feed_from_int100(self, value):
+    def feed_from_same(self, value):
         assert type(value) in [Int100Tensor], type(value)
         return _feed(self, None, value)
 
@@ -350,7 +389,8 @@ class Int100Variable(Int100Tensor):
 
         assert type(int100_initial_value) in [Int100Tensor], type(int100_initial_value)
 
-        variables = [tf.Variable(vi, dtype=Int100Tensor.int_type, trainable=False) for vi in int100_initial_value.backing]
+        variables = [tf.Variable(vi, dtype=Int100Tensor.int_type, trainable=False)
+                     for vi in int100_initial_value.backing]
         backing = [vi.read_value() for vi in variables]
 
         super(Int100Variable, self).__init__(None, backing)
@@ -363,7 +403,7 @@ class Int100Variable(Int100Tensor):
         return Int100Variable(initial_value, None)
 
     @staticmethod
-    def from_int100(initial_value):
+    def from_same(initial_value):
         assert type(initial_value) in [Int100Tensor], type(initial_value)
         return Int100Variable(None, initial_value)
 
@@ -374,7 +414,7 @@ class Int100Variable(Int100Tensor):
         assert type(value) in [np.ndarray], type(value)
         return _assign(self, value, None)
 
-    def assign_from_int100(self, value):
+    def assign_from_same(self, value):
         assert isinstance(value, Int100Tensor), type(value)
         return _assign(self, None, value)
 

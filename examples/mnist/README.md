@@ -1,4 +1,3 @@
-
 # Overview
 
 This example not only illustrates how MNIST digit predictions can be done on encrypted data, but also how TensorFlow Encrypted can be integrated with ordinary TensorFlow.
@@ -8,11 +7,11 @@ In particular, we here have a separate *model trainer* that provides encrypted w
 Concretely, a `ModelTrainer` and `PredictionClient` class represent the two parties above, both extending `tfe.io.InputProvider` and the latter also `tfe.io.OutputReceiver`. When private values are needed from either their `provide_input()` methods are executed *locally* on their associated host, and the resulting `tf.Tensors` are encrypted before sending them to the servers. This input and output behaviour is then connected with the secure computation simply by
 ```python
 w0, b0, w1, b1 = prot.define_private_input(model_trainer)
-x, = prot.define_private_input(prediction_client)
+x = prot.define_private_input(prediction_client)
 ```
 and
 ```python
-prediction_op = prot.define_output([prediction], prediction_client)
+prediction_op = prot.define_output(prediction, prediction_client)
 ```
 where `prediction` is the encrypted result of the prediction on `x`.
 
@@ -90,6 +89,13 @@ With the above in place we can finally run the example using
 gcloud compute ssh master --command='python3 tf-encrypted/examples/mnist/run.py config.json'
 ```
 which will use the master as an access point to the other players.
+
+The prediction will be returned to the prediction-client. To visualize the output, run the following command in a different terminal:
+```shell
+gcloud compute ssh prediction-client
+screen -r
+```
+To leave the screen, just do `Ctrl+a` then `d`.
 
 To optionally write debugging and profiling information run the following instead
 ```shell
