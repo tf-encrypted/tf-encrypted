@@ -52,18 +52,18 @@ class ModelTrainer(tfe.io.InputProvider):
     def build_training_graph(self, training_data) -> List[tf.Tensor]:
         j = self.IN_N
         k = self.HIDDEN_N
-        l = self.OUT_N
+        m = self.OUT_N
         r_in = math.sqrt(12 / (j + k))
         r_hid = math.sqrt(12 / (2 * k))
-        r_out = math.sqrt(12 / (k + l))
+        r_out = math.sqrt(12 / (k + m))
 
         # model parameters and initial values
         w0 = tf.Variable(tf.random_uniform([j, k], minval=-r_in, maxval=r_in))
         b0 = tf.Variable(tf.zeros([k]))
         w1 = tf.Variable(tf.random_uniform([k, k], minval=-r_hid, maxval=r_hid))
         b1 = tf.Variable(tf.zeros([k]))
-        w2 = tf.Variable(tf.random_uniform([k, 10], minval=-r_out, maxval=r_out))
-        b2 = tf.Variable(tf.zeros([10]))
+        w2 = tf.Variable(tf.random_uniform([k, m], minval=-r_out, maxval=r_out))
+        b2 = tf.Variable(tf.zeros([m]))
         params = [w0, b0, w1, b1, w2, b2]
 
         # optimizer and data pipeline

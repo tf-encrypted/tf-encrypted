@@ -200,7 +200,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     bconv2 = prot.reshape(bconv2, [-1, 1, 1])
     layer1 = pool(prot.relu(conv(x, Wconv1) + bconv1))
     layer2 = pool(prot.relu(conv(layer1, Wconv2) + bconv2))
-    layer2 = prot.reshape(layer2, [-1, self.HIDDEN_FC1])
+    layer2 = prot.reshape(layer2, [-1, ModelTrainer.HIDDEN_FC1])
     layer3 = prot.dot(layer2, Wfc1) + bfc1
     logits = prot.dot(layer3, Wfc2) + bfc2
 
