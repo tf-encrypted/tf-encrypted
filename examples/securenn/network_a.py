@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import sys
+import math
 from typing import List
 
 import tensorflow as tf
@@ -25,14 +26,18 @@ else:
 
 class ModelTrainer(tfe.io.InputProvider):
 
-    BATCH_SIZE = 30
+    BATCH_SIZE = 32
     ITERATIONS = 60000 // BATCH_SIZE
-    EPOCHS = 10
+    EPOCHS = 15
+    IN_N = 28 * 28
+    HIDDEN_N = 128
+    OUT_N = 10
 
     def build_data_pipeline(self):
 
         def normalize(image, label):
-            image = tf.cast(image, tf.float32) / 255.0
+            x = tf.cast(image, tf.float32) / 255.
+            image = (x - 0.1307) / 0.3081  # image = (x - mean) / std
             return image, label
 
         dataset = tf.data.TFRecordDataset(["./data/train.tfrecord"])
@@ -45,13 +50,19 @@ class ModelTrainer(tfe.io.InputProvider):
         return iterator
 
     def build_training_graph(self, training_data) -> List[tf.Tensor]:
+        j = self.IN_N
+        k = self.HIDDEN_N
+        l = self.OUT_N
+        r_in = math.sqrt(12 / (j + k))
+        r_hid = math.sqrt(12 / (2 * k))
+        r_out = math.sqrt(12 / (k + l))
 
         # model parameters and initial values
-        w0 = tf.Variable(tf.random_normal([28 * 28, 128]))
-        b0 = tf.Variable(tf.zeros([128]))
-        w1 = tf.Variable(tf.random_normal([128, 128]))
-        b1 = tf.Variable(tf.zeros([128]))
-        w2 = tf.Variable(tf.random_normal([128, 10]))
+        w0 = tf.Variable(tf.random_uniform([j, k], minval=-r_in, maxval=r_in))
+        b0 = tf.Variable(tf.zeros([k]))
+        w1 = tf.Variable(tf.random_uniform([k, k], minval=-r_hid, maxval=r_hid))
+        b1 = tf.Variable(tf.zeros([k]))
+        w2 = tf.Variable(tf.random_uniform([k, 10], minval=-r_out, maxval=r_out))
         b2 = tf.Variable(tf.zeros([10]))
         params = [w0, b0, w1, b1, w2, b2]
 
@@ -66,8 +77,8 @@ class ModelTrainer(tfe.io.InputProvider):
 
             # model construction
             layer0 = x
-            layer1 = tf.nn.sigmoid(tf.matmul(layer0, w0) + b0)
-            layer2 = tf.nn.sigmoid(tf.matmul(layer1, w1) + b1)
+            layer1 = tf.nn.relu(tf.matmul(layer0, w0) + b0)
+            layer2 = tf.nn.relu(tf.matmul(layer1, w1) + b1)
             layer3 = tf.matmul(layer2, w2) + b2
             predictions = layer3
 
@@ -99,7 +110,8 @@ class PredictionClient(tfe.io.InputProvider, tfe.io.OutputReceiver):
     def build_data_pipeline(self):
 
         def normalize(image, label):
-            image = tf.cast(image, tf.float32) / 255.0
+            x = tf.cast(image, tf.float32) / 255.
+            image = (x - 0.1307) / 0.3081  # image = (x - mean) / std
             return image, label
 
         dataset = tf.data.TFRecordDataset(["./data/test.tfrecord"])
@@ -149,8 +161,8 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     # compute prediction
     w0, b0, w1, b1, w2, b2 = params
     layer0 = x
-    layer1 = prot.sigmoid((prot.dot(layer0, w0) + b0))  # input normalized to avoid large values
-    layer2 = prot.sigmoid((prot.dot(layer1, w1) + b1))  # input normalized to avoid large values
+    layer1 = prot.relu((prot.dot(layer0, w0) + b0))
+    layer2 = prot.relu((prot.dot(layer1, w1) + b1))
     layer3 = prot.dot(layer2, w2) + b2
     prediction = layer3
 
