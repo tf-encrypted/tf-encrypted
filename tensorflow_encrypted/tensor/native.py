@@ -6,7 +6,7 @@ from typing import Union, Optional, List, Dict, Any, Tuple, Type
 
 from ..config import run
 from .factory import AbstractFactory
-from .tensor import AbstractTensor
+from .tensor import AbstractTensor, AbstractConstant, AbstractVariable
 
 INT_TYPE = tf.int32
 bits = 31
@@ -23,7 +23,7 @@ def native_factory(modulus: int) -> Any:
         def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape]) -> 'NativeTensor':
             return NativeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=modulus), modulus)
 
-    class ConstantWrap(TensorWrap):
+    class ConstantWrap(TensorWrap, AbstractConstant):
         @staticmethod
         def from_native(x: Union[tf.Tensor, np.ndarray]) -> 'NativeTensor':
             return NativeConstant.from_native(x, modulus)
@@ -33,7 +33,7 @@ def native_factory(modulus: int) -> Any:
             assert type(initial_value) in [NativeTensor], type(initial_value)
             return NativeConstant(initial_value.value, modulus)
 
-    class VariableWrap(TensorWrap):
+    class VariableWrap(TensorWrap, AbstractVariable):
         @staticmethod
         def from_native(x: Union[tf.Tensor, np.ndarray]) -> 'NativeTensor':
             return NativeVariable.from_native(x, modulus)
@@ -51,8 +51,12 @@ def native_factory(modulus: int) -> Any:
         def Variable(self) -> Type[VariableWrap]:
             return VariableWrap
 
-        def Placeholder(self, shape: List[int]) -> 'NativePlaceholder':
+        def Placeholder(self, shape: List[int]) -> 'NativePlaceholder':  # type: ignore
             return NativePlaceholder(shape, modulus)
+
+        @property
+        def modulus(self) -> int:
+            return modulus
 
     return Factory()
 
@@ -77,9 +81,28 @@ class NativeTensor(AbstractTensor):
     def sample_bounded(shape: List[int], bitlength: int) -> 'NativeTensor':
         raise NotImplementedError()
 
+    @staticmethod
+    def stack(x: List['NativeTensor'], axis: int = 0) -> 'NativeTensor':
+        assert all([isinstance(i, NativeTensor) for i in x])
+
+        backing = [v.value for v in x]
+
+        return NativeTensor.from_native(tf.stack(backing, axis=axis), x[0].modulus)
+
+    @staticmethod
+    def concat(x: List['NativeTensor'], axis: int) -> 'NativeTensor':
+        assert all([isinstance(i, NativeTensor) for i in x])
+
+        backing = [v.value for v in x]
+
+        return NativeTensor.from_native(tf.concat(backing, axis=axis), x[0].modulus)
+
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
              tag: Optional[str]=None) -> 'NativeTensor':
         return NativeTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
+
+    def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
+        return self.value[slice]
 
     def __repr__(self) -> str:
         return 'NativeTensor({})'.format(self.shape)
@@ -190,14 +213,6 @@ def _lift(x: Union['NativeTensor', int], modulus: int) -> 'NativeTensor':
 #     out = out.transpose(3, 0, 1, 2)
 
 #     return out
-
-
-def stack(x: List[NativeTensor], axis: int = 0) -> 'NativeTensor':
-    assert all([isinstance(i, NativeTensor) for i in x])
-
-    backing = [v.value for v in x]
-
-    return NativeTensor.from_native(tf.stack(backing, axis=axis), x[0].modulus)
 
 
 class NativeConstant(NativeTensor):

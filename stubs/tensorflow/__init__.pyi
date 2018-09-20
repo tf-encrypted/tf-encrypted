@@ -140,6 +140,9 @@ class Tensor:
     def __mod__(self, other):
         ...
 
+    def __getitem__(self, slice):
+        ...
+
 
 class SparseTensor:
     ...

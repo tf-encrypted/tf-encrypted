@@ -1,18 +1,21 @@
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from typing import Type, List
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 
 
 class AbstractFactory(ABC):
-    @abstractproperty
+    @property
+    @abstractmethod
     def Tensor(self) -> Type[AbstractTensor]:
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def Constant(self) -> Type[AbstractConstant]:
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def Variable(self) -> Type[AbstractVariable]:
         pass
 
@@ -20,10 +23,7 @@ class AbstractFactory(ABC):
     def Placeholder(self, shape: List[int]) -> AbstractPlaceholder:
         pass
 
-    @abstractproperty
-    def modulus(self) -> int:
-        pass
-
+    @property
     @abstractmethod
-    def stack(self, xs: List[AbstractTensor], axis: int=0) -> AbstractTensor:
+    def modulus(self) -> int:
         pass

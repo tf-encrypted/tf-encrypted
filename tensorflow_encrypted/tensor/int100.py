@@ -78,9 +78,31 @@ class Int100Tensor(AbstractTensor):
         return Int100Tensor(value, None)
 
     @staticmethod
+    def from_same(value: 'Int100Tensor') -> 'Int100Tensor':
+        return Int100Tensor.from_decomposed(value.backing)
+
+    @staticmethod
     def from_decomposed(value: Union[List[np.ndarray], List[tf.Tensor], List[int]]) -> 'Int100Tensor':
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
+
+    @staticmethod
+    def stack(xs: List['Int100Tensor'], axis: int=0) -> 'Int100Tensor':
+        assert all(isinstance(x, Int100Tensor) for x in xs)
+        backing = [
+            tf.stack([x.backing[i] for x in xs], axis=axis)
+            for i in range(len(xs[0].backing))
+        ]
+        return Int100Tensor.from_decomposed(backing)
+
+    @staticmethod
+    def concat(xs: List['Int100Tensor'], axis: int = 0) -> 'Int100Tensor':
+        assert all(isinstance(x, Int100Tensor) for x in xs)
+        backing = [
+            tf.concat([x.backing[i] for x in xs], axis=axis)
+            for i in range(len(xs[0].backing))
+        ]
+        return Int100Tensor.from_decomposed(backing)
 
     @staticmethod
     def zero() -> 'Int100Tensor':
@@ -107,6 +129,9 @@ class Int100Tensor(AbstractTensor):
     @staticmethod
     def sample_bounded(shape: List[int], bitlength: int) -> 'Int100Tensor':
         return _sample_bounded(shape, bitlength)
+
+    def __getitem__(self, slice):
+        return self.from_decomposed([x[slice] for x in self.decomposed_value])
 
     def __repr__(self) -> str:
         return 'Int100Tensor({})'.format(self.shape)
@@ -285,15 +310,6 @@ def _squeeze(x: Int100Tensor, axis: Optional[List[int]]=None) -> Int100Tensor:
     return Int100Tensor.from_decomposed(backing)
 
 
-def concat(xs: List[Int100Tensor], axis: int = 0):
-    assert all(isinstance(x, Int100Tensor) for x in xs)
-    backing = [
-        tf.concat([x.backing[i] for x in xs], axis=axis)
-        for i in range(len(xs[0].backing))
-    ]
-    return Int100Tensor.from_decomposed(backing)
-
-
 class Int100Constant(Int100Tensor, AbstractConstant):
 
     def __init__(self, native_value: Optional[Union[np.ndarray, tf.Tensor]],
@@ -421,11 +437,3 @@ class Int100Factory(AbstractFactory):
     @property
     def modulus(self) -> int:
         return M
-
-    def stack(self, xs: List[Int100Tensor], axis: int=0) -> AbstractTensor:
-        assert all(isinstance(x, Int100Tensor) for x in xs)
-        backing = [
-            tf.stack([x.backing[i] for x in xs], axis=axis)
-            for i in range(len(xs[0].backing))
-        ]
-        return Int100Tensor.from_decomposed(backing)

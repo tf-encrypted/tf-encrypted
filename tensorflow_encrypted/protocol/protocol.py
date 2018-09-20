@@ -41,7 +41,7 @@ def memoize(func):
 
     @functools.wraps(func)
     def cache_nodes(self, *args, **kwargs):
-
+        args = tuple(tuple(x) if isinstance(x, list) else x for x in args)
         node_key = (func.__name__, args, tuple(sorted(kwargs.items())))
 
         cached_result = nodes.get(node_key, None)

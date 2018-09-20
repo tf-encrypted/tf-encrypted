@@ -1,4 +1,3 @@
-
 # Overview
 
 This example not only illustrates how MNIST digit predictions can be done on encrypted data, but also how TensorFlow Encrypted can be integrated with ordinary TensorFlow.
@@ -90,6 +89,13 @@ With the above in place we can finally run the example using
 gcloud compute ssh master --command='python3 tf-encrypted/examples/mnist/run.py config.json'
 ```
 which will use the master as an access point to the other players.
+
+The prediction will be returned to the prediction-client. To visualize the output, run the following command in a different terminal:
+```shell
+gcloud compute ssh prediction-client
+screen -r
+```
+To leave the screen, just do `Ctrl+a` then `d`.
 
 To optionally write debugging and profiling information run the following instead
 ```shell
