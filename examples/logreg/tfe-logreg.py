@@ -1,9 +1,11 @@
 from typing import Tuple, Union
 
+
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 from tensorflow_encrypted.protocol.pond import PondPrivateTensor
+
 
 config = tfe.LocalConfig([
     'server0',
@@ -14,11 +16,13 @@ server0 = config.get_player('server0')
 server1 = config.get_player('server1')
 crypto_producer = config.get_player('crypto_producer')
 
+
 def consume(v: Union[np.ndarray, tf.Tensor], prot: tfe.protocol.Pond) -> PondPrivateTensor:
     val = tfe.protocol.pond._encode(v, True)
     x0, x1 = tfe.protocol.pond._share(val)
     x = PondPrivateTensor(prot, x0, x1, True)
     return x
+
 
 # Parameters
 learning_rate = 0.001
@@ -27,10 +31,12 @@ train_batch_size = 100
 test_batch_size = 100
 nb_feats = 5
 
+
 def norm(x: tf.Tensor, y: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
     return tf.cast(x, tf.float32), tf.expand_dims(y, 0)
 
-x_np = np.random.uniform(-1/2, 1/2, size=[10000, nb_feats])
+
+x_np = np.random.uniform(-1 / 2, 1 / 2, size=[10000, nb_feats])
 y_np = np.array(x_np.mean(axis=1) > 0, np.float32)
 train_set = tf.data.Dataset.from_tensor_slices((x_np, y_np)) \
                            .map(norm) \
@@ -42,7 +48,8 @@ x, y = train_set_iterator.get_next()
 x = tf.reshape(x, [train_batch_size, nb_feats])
 y = tf.reshape(y, [train_batch_size, 1])
 
-x_test_np = np.random.uniform(-1/2, 1/2, size=[100, nb_feats])
+
+x_test_np = np.random.uniform(-1 / 2, 1 / 2, size=[100, nb_feats])
 y_test_np = np.array(x_test_np.mean(axis=1) > 0, np.float32)
 test_set = tf.data.Dataset.from_tensor_slices((x_test_np, y_test_np)) \
                           .map(norm) \
@@ -52,12 +59,13 @@ x_test, y_test = test_set_iterator.get_next()
 x_test = tf.reshape(x_test, [train_batch_size, nb_feats])
 y_test = tf.reshape(y_test, [train_batch_size, 1])
 
+
 with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     assert(isinstance(prot, tfe.protocol.Pond))
 
     W = prot.define_private_variable(tf.random_uniform([nb_feats, 1], -0.01, 0.01))
     b = prot.define_private_variable(tf.zeros([1]))
-    xp = consume(x, prot) # We secure our inputs
+    xp = consume(x, prot)  # We secure our inputs
     yp = consume(y, prot)
 
     # Training model
@@ -67,16 +75,16 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     # cost = -prot.sum(y * prot.log(pred) + (1 - y) * prot.log(1 - pred)) * (1/train_batch_size)
 
     # Backprop
-    dout = pred - yp
-    dW = prot.dot(prot.transpose(xp), dout) # [nb_feats, 1] <- [nb_feats, bs].[bs, 1]
-    db = prot.sum(dout * 1.0, axis=0, keepdims=False)
+    dc_out = pred - yp
+    dW = prot.dot(prot.transpose(xp), dc_out)
+    db = prot.sum(dc_out * 1.0, axis=0, keepdims=False)
     ops = [
         prot.assign(W, W - dW * learning_rate),
         prot.assign(b, b - db * learning_rate)
     ]
 
     # Testing model
-    xp_test = consume(x_test, prot) # We secure our inputs
+    xp_test = consume(x_test, prot)  # We secure our inputs
     yp_test = consume(y_test, prot)
     pred_test = prot.sigmoid(prot.dot(xp_test, W) + b)
 
@@ -97,7 +105,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
                 c = -np.mean(y_out * np.log(p_out) + (1 - y_out) * np.log(1 - p_out))
                 avg_cost += c / total_batch
 
-            print("Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost))
+            print("Epoch:", '%04d' % (epoch + 1), "cost=", "{:.9f}".format(avg_cost))
 
         print("Optimization Finished!")
 
