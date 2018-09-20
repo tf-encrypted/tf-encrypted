@@ -2419,26 +2419,26 @@ def _concat_masked(prot: Pond, xc: List[PondMaskedTensor], axis: int) -> PondMas
     with tf.name_scope('concat'):
 
         with tf.device(prot.crypto_producer.device_name):
-            a_stacked = stack(a, axis=axis)
+            a_concat = concat(a, axis=axis)
 
         with tf.device(prot.server_0.device_name):
-            a0_stacked = stack(a0, axis=axis)
-            alpha_on_0_stacked = stack(alpha_on_0, axis=axis)
+            a0_concat = concat(a0, axis=axis)
+            alpha_on_0_concat = concat(alpha_on_0, axis=axis)
 
         with tf.device(prot.server_1.device_name):
-            a1_stacked = stack(a1, axis=axis)
-            alpha_on_1_stacked = stack(alpha_on_1, axis=axis)
+            a1_concat = concat(a1, axis=axis)
+            alpha_on_1_concat = concat(alpha_on_1, axis=axis)
 
-        x_unmasked_stacked = prot.stack([x.unmasked for x in xc], axis=axis)
+        x_unmasked_concat = prot.concat([x.unmasked for x in xc], axis=axis)
 
     return PondMaskedTensor(
         prot,
-        x_unmasked_stacked,
-        a_stacked,
-        a0_stacked,
-        a1_stacked,
-        alpha_on_0_stacked,
-        alpha_on_1_stacked,
+        x_unmasked_concat,
+        a_concat,
+        a0_concat,
+        a1_concat,
+        alpha_on_0_concat,
+        alpha_on_1_concat,
         xc[0].is_scaled
     )
 
