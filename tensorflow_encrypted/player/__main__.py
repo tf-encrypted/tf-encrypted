@@ -1,3 +1,5 @@
+from ..config import RemoteConfig
+
 if __name__ == '__main__':
 
     import argparse
@@ -11,7 +13,7 @@ if __name__ == '__main__':
     config = tfe.config.load(args.config)
 
     # pylint: disable=E1101
-    server = config.server(args.name)
-    server.start()
-    server.join()
-    
+    if isinstance(config, RemoteConfig):
+        server = config.server(args.name)
+        server.start()
+        server.join()

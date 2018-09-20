@@ -1,0 +1,207 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import uuid
+from threading import Thread
+from typing import Dict, Any, Tuple, Callable
+
+import argparse
+import tensorflow as tf
+from tensorflow.python.platform import gfile
+from flask import Flask, request, jsonify  # type: ignore
+from flask_cors import CORS  # type: ignore
+
+import tensorflow_encrypted as tfe
+
+node_name = os.environ.get('TFE_NODE_NAME')
+server0_address = os.environ.get('TFE_SERVER0_ADDRESS')
+server1_address = os.environ.get('TFE_SERVER1_ADDRESS')
+producer_address = os.environ.get('TFE_CRYPTO_PRODUCER_ADDRESS')
+provider_address = os.environ.get('TFE_WEIGHTS_PROVIDER_ADDRESS')
+port = int(os.environ.get('TFE_API_PORT', "8080"))
+enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
+enable_debug = os.environ.get('TFE_DEBUG') is not None
+
+if node_name is None:
+    print("The node_name of this node must be provided via the 'TFE_NODE_NAME' environment variable")
+    sys.exit(1)
+
+if server0_address is None:
+    print("The address for server 0 must be provided via the 'TFE_SERVER0_ADDRESS' environment variable")
+    sys.exit(1)
+
+if server1_address is None:
+    print("The address for server 1 must be provided via the 'TFE_SERVER1_ADDRESS' environment variable")
+    sys.exit(1)
+
+
+if producer_address is None:
+
+    print("The address for the producer must be provided via the 'TFE_CRYPTO_PRODUCER_ADRESS' environment variable")
+    sys.exit(1)
+
+if provider_address is None:
+    print("The address for the weights provider must be provided via the 'TFE_WEIGHTS_PROVIDER_ADDRESS' environment variable")
+    sys.exit(1)
+
+tfe.setMonitorStatsFlag(enable_stats_monitor)
+tfe.setTFEDebugFlag(enable_debug)
+
+if node_name == 'master':
+    master_host = '0.0.0.0:4440'
+else:
+    master_host = 'master:4440'
+
+remote_config = tfe.RemoteConfig(
+    {
+        'master': master_host,
+        'server0': server0_address,
+        'server1': server1_address,
+        'crypto_producer': producer_address,
+        'weights_provider': provider_address
+    },
+    master='master'
+)
+
+server = remote_config.server(node_name)
+if node_name != 'master':
+    server.join()
+else:
+    _global_memory: Dict[str, Any] = {}
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--model_name", type=str, default="2lfc", help="increase output verbosity")
+    config = parser.parse_args()
+
+    print('Loading model: %s' % config.model_name)
+    model_file = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        "..",
+        "models",
+        "%s.pb" % config.model_name,
+    )
+
+    tf.reset_default_graph()
+
+    input_spec = []
+    with gfile.FastGFile(model_file, 'rb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+
+        for node in graph_def.node:
+            if node.op != "Placeholder":
+                continue
+
+            input_spec.append({
+                'name': node.name,
+                'dtype': node.attr['dtype'].type,
+                'shape': [int(d.size) for d in node.attr['shape'].shape.dim]
+            })
+
+    sess = remote_config.session()
+
+    with tfe.protocol.Pond(*remote_config.get_players('server0, server1, crypto_producer')) as prot:
+        assert isinstance(prot, tfe.protocol.Pond)
+
+        inputs = []
+        for i, spec in enumerate(input_spec):
+            def scope(i: int) -> Callable[[], tf.Tensor]:
+                def provide_input() -> tf.Tensor:
+                    pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
+                    return pl
+
+                return provide_input
+
+            x = tfe.io.InputProvider(remote_config.get_player('master'), scope(i))
+            inputs.append(x)
+
+        print('Securing computation')
+        c = tfe.convert.convert.Converter(remote_config, prot, remote_config.get_player('weights_provider'))
+        y = c.convert(graph_def, inputs, tfe.convert.register())
+
+        # TODO: do not reveal on the master server
+        y = y.reveal()
+        if isinstance(prot, tfe.protocol.Pond):
+            tfe.run(sess, prot.initializer, tag='init')
+
+    pls = []
+    for i in range(len(input_spec)):
+        if i == 0:
+            name = "private-input/api/{}:0".format(i)
+        else:
+            name = "private-input_{}/api/{}:0".format(i, i)
+        pls.append(
+            tf.get_default_graph().get_tensor_by_name(name)
+        )
+
+    def predict(request_id: str, input_data: Tuple[Any]) -> None:
+        feed_dict = {
+            pl: input_data[i] for i, pl in enumerate(pls)
+        }
+        output_data = y.eval(
+            sess=sess,
+            feed_dict=feed_dict,
+            tag='prediction',
+        )
+
+        _global_memory[request_id] = output_data[0].tolist()
+
+    print('Serving model: %s' % config.model_name)
+
+    # define the app
+    app = Flask(__name__)
+    CORS(app)  # needed for cross-domain requests, allow everything by default
+
+    @app.route('/input_spec')  # type: ignore
+    def api_input_spec() -> str:
+        return jsonify(input_spec)
+
+    @app.route('/predict', methods=['POST'])  # type: ignore
+    def api_predict() -> str:
+        input_data = request.json
+        app.logger.info("api_predict_input: " + str(input_data))
+
+        request_id = str(uuid.uuid4())
+        thread = Thread(target=predict, kwargs={
+            'request_id': request_id,
+            'input_data': input_data
+        })
+        thread.start()
+
+        app.logger.info("api_predict_output: " + request_id)
+
+        data = {'request_id': request_id}
+        return jsonify(data)
+
+    @app.route('/poll', methods=['POST'])  # type: ignore
+    def api_poll() -> str:
+        request_id = request.json
+        app.logger.info("api_poll_input: " + str(request_id))
+
+        output_data = _global_memory.pop(request_id, None)
+
+        app.logger.info("api_poll_output: " + str(output_data))
+        response = jsonify(output_data)
+        return response
+
+    @app.route('/')  # type: ignore
+    def index() -> str:
+        return "Welcome to PartyDB! An crypto-friendly production environment for serving machine learning models"
+
+    # HTTP Errors handlers
+    @app.errorhandler(404)  # type: ignore
+    def url_error(e: str) -> Tuple[str, int]:
+        return """
+        Wrong URL!
+        <pre>{}</pre>""".format(e), 404
+
+    @app.errorhandler(500)  # type: ignore
+    def server_error(e: str) -> Tuple[str, int]:
+        return """
+        An internal error occurred: <pre>{}</pre>
+        See logs for full stacktrace.
+        """.format(e), 500
+
+    app.run(host='0.0.0.0', debug=True, use_reloader=False, port=port)

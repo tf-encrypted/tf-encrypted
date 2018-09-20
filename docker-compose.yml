@@ -1,0 +1,75 @@
+version: '3'
+
+services:
+  server0:
+    image: mortendahl/tf-encrypted:latest
+    ports:
+      - 4440:4440
+    environment:
+      TFE_NODE_NAME: server0
+      TFE_SERVER0_ADDRESS: 0.0.0.0:4440
+      TFE_SERVER1_ADDRESS: server1:4440
+      TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
+      TFE_WEIGHTS_PROVIDER_ADDRESS: provider:4440
+
+  server1:
+    image: mortendahl/tf-encrypted:latest
+    ports:
+      - 4441:4440
+    environment:
+      TFE_NODE_NAME: server1
+      TFE_SERVER0_ADDRESS: server0:4440
+      TFE_SERVER1_ADDRESS: 0.0.0.0:4440
+      TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
+      TFE_WEIGHTS_PROVIDER_ADDRESS: provider:4440
+
+  producer:
+    image: mortendahl/tf-encrypted:latest
+    ports:
+      - 4442:4440
+    environment:
+      TFE_NODE_NAME: crypto_producer
+      TFE_SERVER0_ADDRESS: server0:4440
+      TFE_SERVER1_ADDRESS: server1:4440
+      TFE_CRYPTO_PRODUCER_ADDRESS: 0.0.0.0:4440
+      TFE_WEIGHTS_PROVIDER_ADDRESS: provider:4440
+
+  provider:
+    image: mortendahl/tf-encrypted:latest
+    ports:
+      - 4443:4440
+    environment:
+      TFE_NODE_NAME: weights_provider
+      TFE_SERVER0_ADDRESS: server0:4440
+      TFE_SERVER1_ADDRESS: server1:4440
+      TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
+      TFE_WEIGHTS_PROVIDER_ADDRESS: 0.0.0.0:4440
+
+  master:
+    image: mortendahl/tf-encrypted:latest
+    ports:
+      - 4444:4440
+      - 5000:5000
+      - 8080:8080
+    environment:
+      TFE_NODE_NAME: master
+      TFE_SERVER0_ADDRESS: server0:4440
+      TFE_SERVER1_ADDRESS: server1:4440
+      TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440
+      TFE_WEIGHTS_PROVIDER_ADDRESS: provider:4440
+      TFE_API_PORT: 8080
+      TFE_MONITOR_STATS: null
+      TFE_DEBUG: null
+    depends_on:
+      - server0
+      - server1
+      - producer
+      - provider
+    entrypoint:
+      - "python"
+      - "-u"
+      - "bin/serve"
+      - "--model_name"
+      - "2inputs"
+    # volumes:
+    #   - /tmp/tensorboard:/tmp/tensorboard

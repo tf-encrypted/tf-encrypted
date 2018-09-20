@@ -1,6 +1,6 @@
-import numpy as np
 from ..protocol import Pond
 from ..protocol.pond import _nodes, _lift, _type
+
 
 class SecureNN(Pond):
 
@@ -10,7 +10,7 @@ class SecureNN(Pond):
     def private_compare(self, x, y):
         raise NotImplementedError
 
-    def share_convert(self,x ,y):
+    def share_convert(self, x, y):
         raise NotImplementedError
 
     def compute_msb(self, x, y):
@@ -87,10 +87,3 @@ class SecureNN(Pond):
         _nodes[node_key] = z
 
         return z
-
-
-
-
-
-
-
