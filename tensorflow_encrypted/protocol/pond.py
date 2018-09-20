@@ -582,13 +582,9 @@ class Pond(Protocol):
 
         return xs_stack
 
+    @memoize
     def concat(self, xc: List['PondTensor'], axis):
-
-        node_key = ('concat', tuple(xc))
-        xc_concat = nodes.get(node_key, None)
-
-        if xc_concat is not None:
-            return xc_concat
+        xc_concat: Union[PondPublicTensor, PondPrivateTensor, PondMaskedTensor]
 
         if all([isinstance(x, PondPublicTensor) for x in xc]):
             xc_concat = _concat_shared(self, xc, axis=axis)
@@ -600,8 +596,6 @@ class Pond(Protocol):
             xc_concat = _concat_masked(self, xc, axis=axis)
         else:
             raise TypeError("Don't know how to do a concat {}".format(type(xc)))
-
-        nodes[node_key] = xc_concat
 
         return xc_concat
 
