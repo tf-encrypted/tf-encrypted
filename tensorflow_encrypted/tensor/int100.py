@@ -61,7 +61,7 @@ class Int100Tensor(AbstractTensor):
     def __init__(
         self,
         native_value: Optional[Union[np.ndarray, tf.Tensor]],
-        decomposed_value: Optional[Union[List[np.ndarray], List[tf.Tensor], List[int]]] = None
+        decomposed_value: Optional[Union[List[np.ndarray], List[tf.Tensor]]] = None
     ) -> None:
         if decomposed_value is None:
             decomposed_value = _crt_decompose(native_value)
@@ -82,7 +82,7 @@ class Int100Tensor(AbstractTensor):
         return Int100Tensor.from_decomposed(value.backing)
 
     @staticmethod
-    def from_decomposed(value: Union[List[np.ndarray], List[tf.Tensor], List[int]]) -> 'Int100Tensor':
+    def from_decomposed(value: Union[List[np.ndarray], List[tf.Tensor]]) -> 'Int100Tensor':
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
 
@@ -106,11 +106,11 @@ class Int100Tensor(AbstractTensor):
 
     @staticmethod
     def zero() -> 'Int100Tensor':
-        return Int100Tensor.from_decomposed([0] * len(m))
+        return Int100Tensor.from_decomposed(np.array([0]) * len(m))
 
     @staticmethod
     def one() -> 'Int100Tensor':
-        return Int100Tensor.from_decomposed([1] * len(m))
+        return Int100Tensor.from_decomposed(np.array([1]) * len(m))
 
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int100Tensor':
         evaluated_backing = run(sess, self.backing, feed_dict=feed_dict, tag=tag)
@@ -167,7 +167,7 @@ class Int100Tensor(AbstractTensor):
     def transpose(self, perm=None) -> 'Int100Tensor':
         return _transpose(self, perm=perm)
 
-    def strided_slice(self, args: Any, kwargs: Any):
+    def strided_slice(self, args: Any, kwargs: Any) -> 'Int100Tensor':
         return _strided_slice(self, args, kwargs)
 
     def reshape(self, axes: List[int]) -> 'Int100Tensor':
@@ -298,7 +298,7 @@ def _reshape(x: Int100Tensor, axes: List[int]) -> Int100Tensor:
     return Int100Tensor.from_decomposed(backing)
 
 
-def _expand_dims(x: Int100Tensor, axis: Optional[List[int]]=None) -> Int100Tensor:
+def _expand_dims(x: Int100Tensor, axis: Optional[int]=None) -> Int100Tensor:
     assert isinstance(x, Int100Tensor), type(x)
     backing = [tf.expand_dims(xi, axis) for xi in x.backing]
     return Int100Tensor.from_decomposed(backing)
