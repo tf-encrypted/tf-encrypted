@@ -2,16 +2,66 @@ from __future__ import absolute_import
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Tuple
+from typing import Union, Optional, List, Dict, Any, Tuple, Type
 
 from ..config import run
+from .factory import AbstractFactory
+from .tensor import AbstractTensor, AbstractConstant, AbstractVariable
 
 INT_TYPE = tf.int32
 bits = 31
 p = 67
 
 
-class NativeTensor(object):
+def native_factory(modulus: int) -> Any:
+    class TensorWrap(AbstractTensor):
+        @staticmethod
+        def from_native(x: Union[tf.Tensor, np.ndarray]) -> 'NativeTensor':
+            return NativeTensor.from_native(x, modulus)
+
+        @staticmethod
+        def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape]) -> 'NativeTensor':
+            return NativeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=modulus), modulus)
+
+    class ConstantWrap(TensorWrap, AbstractConstant):
+        @staticmethod
+        def from_native(x: Union[tf.Tensor, np.ndarray]) -> 'NativeTensor':
+            return NativeConstant.from_native(x, modulus)
+
+        @staticmethod
+        def from_same(initial_value: 'NativeTensor') -> 'NativeConstant':
+            assert type(initial_value) in [NativeTensor], type(initial_value)
+            return NativeConstant(initial_value.value, modulus)
+
+    class VariableWrap(TensorWrap, AbstractVariable):
+        @staticmethod
+        def from_native(x: Union[tf.Tensor, np.ndarray]) -> 'NativeTensor':
+            return NativeVariable.from_native(x, modulus)
+
+    class Factory(AbstractFactory):
+        @property
+        def Tensor(self) -> Type[TensorWrap]:
+            return TensorWrap
+
+        @property
+        def Constant(self) -> Type[ConstantWrap]:
+            return ConstantWrap
+
+        @property
+        def Variable(self) -> Type[VariableWrap]:
+            return VariableWrap
+
+        def Placeholder(self, shape: List[int]) -> 'NativePlaceholder':  # type: ignore
+            return NativePlaceholder(shape, modulus)
+
+        @property
+        def modulus(self) -> int:
+            return modulus
+
+    return Factory()
+
+
+class NativeTensor(AbstractTensor):
     int_type = INT_TYPE
 
     def __init__(self, value: Union[np.ndarray, tf.Tensor], modulus: int) -> None:
@@ -31,11 +81,27 @@ class NativeTensor(object):
     def sample_bounded(shape: List[int], bitlength: int) -> 'NativeTensor':
         raise NotImplementedError()
 
+    @staticmethod
+    def stack(x: List['NativeTensor'], axis: int = 0) -> 'NativeTensor':
+        assert all([isinstance(i, NativeTensor) for i in x])
+
+        backing = [v.value for v in x]
+
+        return NativeTensor.from_native(tf.stack(backing, axis=axis), x[0].modulus)
+
+    @staticmethod
+    def concat(x: List['NativeTensor'], axis: int) -> 'NativeTensor':
+        assert all([isinstance(i, NativeTensor) for i in x])
+
+        backing = [v.value for v in x]
+
+        return NativeTensor.from_native(tf.concat(backing, axis=axis), x[0].modulus)
+
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
              tag: Optional[str]=None) -> 'NativeTensor':
         return NativeTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
 
-    def __getitem__(self, slice):
+    def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
         return self.value[slice]
 
     def __repr__(self) -> str:
@@ -149,14 +215,6 @@ def _lift(x: Union['NativeTensor', int], modulus: int) -> 'NativeTensor':
 #     return out
 
 
-def stack(x: List[NativeTensor], axis: int = 0) -> 'NativeTensor':
-    assert all([isinstance(i, NativeTensor) for i in x])
-
-    backing = [v.value for v in x]
-
-    return NativeTensor.from_native(tf.stack(backing, axis=axis), x[0].modulus)
-
-
 class NativeConstant(NativeTensor):
 
     def __init__(self, value: Union[tf.Tensor, np.ndarray], modulus: int) -> None:
@@ -169,7 +227,7 @@ class NativeConstant(NativeTensor):
         return NativeConstant(value, modulus)
 
     @staticmethod
-    def from_backing(value: NativeTensor, modulus: int) -> 'NativeConstant':
+    def from_same(value: NativeTensor, modulus: int) -> 'NativeConstant':
         assert type(value) in [NativeTensor], type(value)
         return NativeConstant(value.value, modulus)
 
@@ -217,7 +275,7 @@ class NativeVariable(NativeTensor):
         return NativeVariable(initial_value, modulus)
 
     @staticmethod
-    def from_backing(initial_value: 'NativeTensor', modulus: int) -> 'NativeVariable':
+    def from_same(initial_value: 'NativeTensor', modulus: int) -> 'NativeVariable':
         assert type(initial_value) in [NativeTensor], type(initial_value)
         return NativeVariable(initial_value.value, modulus)
 

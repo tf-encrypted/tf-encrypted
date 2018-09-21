@@ -1,7 +1,7 @@
 import random
 from .protocol import memoize
 from ..protocol.pond import (
-    Pond, PondTensor, M, p, share
+    Pond, PondTensor, PondPrivateTensor
 )
 from ..player import Player
 
@@ -15,17 +15,18 @@ class SecureNN(Pond):
         server_2: Player,
         **kwargs
     ) -> None:
-        if M % 2 != 1:
-            # NOTE: this is only for use with an odd-modulus CRTTensor
-            #       NativeTensor will use an even modulus and will require share_convert
-            raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
-                            'but it was initialized with an even one.')
         super(SecureNN, self).__init__(
             server_0=server_0,
             server_1=server_1,
             crypto_producer=server_2,
             **kwargs
         )
+
+        if self.M % 2 != 1:
+            # NOTE: this is only for use with an odd-modulus CRTTensor
+            #       NativeTensor will use an even modulus and will require share_convert
+            raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
+                            'but it was initialized with an even one.')
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
@@ -86,8 +87,12 @@ class SecureNN(Pond):
     def greater_equal(self, x: PondTensor, y: PondTensor) -> PondTensor:
         return self.bitwise_not(self.less(x, y))
 
-    def select_share(self, x, y):
-        raise NotImplementedError
+    @memoize
+    def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
+        w = y - x
+        c = bit * w
+
+        return x + c + PondPrivateTensor.zero(x.prot, x.shape)
 
     def private_compare(self, x: PondTensor, r: PondTensor, beta: PondTensor) -> PondTensor:
         raise NotImplementedError
@@ -113,12 +118,12 @@ class SecureNN(Pond):
 def _lsb_private(prot: SecureNN, y: PrivatePondTensor):
     with tf.name_scope('lsb_mask'):
         with tf.device(prot.crypto_producer.device_name):
-            x = BackingTensor.sample_uniform(y.shape)  # FIXME: better way to generate mask
+            x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
             xbits = x.binarize()
-            xlsb = xbits[..., 0]  # FIXME: __getitem__ for BackingTensors
-            xlsb0, xlsb1 = share(xlsb, p)
-            x = PondPrivateTensor(prot, *share(x), is_scaled=True)
-            xbits = PondPrivateTensor(prot, *share(xbits), is_scaled=False)
+            xlsb = xbits[..., 0]
+            xlsb0, xlsb1 = prot.share(xlsb, p)
+            x = PondPrivateTensor(prot, *prot.share(x), is_scaled=True)
+            xbits = PondPrivateTensor(prot, *prot.share(xbits), is_scaled=False)
             # TODO: Generate zero mask
 
         devices = [prot.server0.device_name, prot.server1.device_name]
