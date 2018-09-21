@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.int32 import Int32Factory
+from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
 
 
 class TestInt32Tensor(unittest.TestCase):
@@ -26,6 +26,19 @@ class TestInt32Tensor(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
                 out = z.reveal().eval(sess)
                 np.testing.assert_array_almost_equal(out, [4, 4], decimal=3)
+
+    def test_binarize(self) -> None:
+        x = Int32Tensor(tf.constant([2**31 + 2**31 + 3, 3], dtype=np.int32))
+
+        y = x.binarize()
+
+        expected = [[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+
+        with tf.Session() as sess:
+            actual = sess.run(y.value)
+
+        np.testing.assert_array_equal(actual, expected)
 
 
 if __name__ == '__main__':

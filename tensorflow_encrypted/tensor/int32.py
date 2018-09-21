@@ -5,8 +5,12 @@ import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .factory import AbstractFactory
+from .native import NativeTensor
 
 from ..config import run
+
+bits = 31
+p = 67
 
 
 class Int32Tensor(AbstractTensor):
@@ -110,6 +114,19 @@ class Int32Tensor(AbstractTensor):
         backing = [v.value for v in x]
 
         return Int32Tensor.from_native(tf.concat(backing, axis=axis))
+
+    def binarize(self) -> NativeTensor:
+        """Computes bit decomposition of tensor
+         tensor: ndarray of shape (x0, ..., xn)
+        returns: a binary tensor of shape (x0, ..., xn, bits) equivalent to tensor
+        """
+        bitwidths = tf.range(bits, dtype=tf.int32)
+        for i in range(len(self.shape)):
+            bitwidths = tf.expand_dims(bitwidths, 0)
+        val = tf.expand_dims(self.value, -1)
+        val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
+
+        return NativeTensor.from_native(val, p)
 
 
 def _lift(x: Union[Int32Tensor, int]) -> Int32Tensor:
