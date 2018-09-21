@@ -7,6 +7,7 @@ from ..protocol.pond import (
     Pond, PondTensor, PondPrivateTensor, PondMaskedTensor
 )
 from ..player import Player
+from ..tensor.native import p
 
 
 _thismodule = sys.modules[__name__]
@@ -26,12 +27,6 @@ class SecureNN(Pond):
             crypto_producer=server_2,
             **kwargs
         )
-
-        if self.M % 2 != 1:
-            # NOTE: this is only for use with an odd-modulus CRTTensor
-            #       NativeTensor will use an even modulus and will require share_convert
-            raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
-                            'but it was initialized with an even one.')
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
@@ -62,6 +57,11 @@ class SecureNN(Pond):
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
+        if self.M % 2 != 1:
+            # NOTE: this is only for use with an odd-modulus CRTTensor
+            #       NativeTensor will use an even modulus and will require share_convert
+            raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
+                            'but it was initialized with an even one.')
         return self.lsb(x * 2)
 
     def lsb(self, x: PondTensor) -> PondTensor:
@@ -126,9 +126,9 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
             x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
             xbits = x.binarize()
             xlsb = xbits[..., 0]
-            xlsb0, xlsb1 = prot.share(xlsb, p)
-            x = PondPrivateTensor(prot, *prot.share(x), is_scaled=True)
-            xbits = PondPrivateTensor(prot, *prot.share(xbits), is_scaled=False)
+            xlsb0, xlsb1 = prot._share(xlsb, p)
+            x = PondPrivateTensor(prot, *prot._share(x), is_scaled=True)
+            xbits = PondPrivateTensor(prot, *prot._share(xbits), is_scaled=False)
             # TODO: Generate zero mask?
 
         devices = [prot.server0.device_name, prot.server1.device_name]

@@ -38,6 +38,11 @@ def native_factory(modulus: int) -> Any:
         def from_native(x: Union[tf.Tensor, np.ndarray]) -> 'NativeTensor':
             return NativeVariable.from_native(x, modulus)
 
+        @staticmethod
+        def from_same(initial_value: 'NativeTensor') -> 'NativeVariable':
+            assert type(initial_value) in [NativeTensor], type(initial_value)
+            return NativeVariable(initial_value.value, modulus)
+
     class Factory(AbstractFactory):
         @property
         def Tensor(self) -> Type[TensorWrap]:
@@ -260,7 +265,7 @@ class NativePlaceholder(NativeTensor):
         return 'NativePlaceholder({})'.format(self.shape)
 
 
-class NativeVariable(NativeTensor):
+class NativeVariable(NativeTensor, AbstractVariable):
     def __init__(self, initial_value: Union[tf.Tensor, np.ndarray], modulus: int) -> None:
         variable = tf.Variable(initial_value, dtype=INT_TYPE, trainable=False)
         value: Union[tf.Tensor, np.ndarray] = variable.read_value()
