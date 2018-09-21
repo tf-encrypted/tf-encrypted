@@ -2,12 +2,14 @@ from __future__ import absolute_import
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any
+from typing import Union, Optional, List, Dict, Any, Tuple, Type
+from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
+from .factory import AbstractFactory
 
 from ..config import run
 
 
-class Tensor(object):
+class Tensor(AbstractTensor):
 
     modulus = 2**31
     int_type = tf.int32
@@ -15,15 +17,15 @@ class Tensor(object):
     def __init__(self, value: Union[np.ndarray, tf.Tensor]) -> None:
         self.value = value
 
-    @staticmethod
-    def from_native(value: Union[np.ndarray, tf.Tensor]) -> 'Tensor':
+    @classmethod
+    def from_native(cls, value: Union[np.ndarray, tf.Tensor]) -> 'Tensor':
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
-        return Tensor(value)
+        return cls(value)
 
-    @staticmethod
-    def from_same(value: 'Tensor') -> 'Tensor':
+    @classmethod
+    def from_same(cls, value: 'Tensor') -> 'Tensor':
         assert isinstance(value, Tensor), type(value)
-        return Tensor(value)
+        return cls(value.value)
 
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Tensor':
         concrete_value = run(sess, self.value, feed_dict=feed_dict, tag=tag)
@@ -41,7 +43,7 @@ class Tensor(object):
         return 'int32.Tensor(shape={})'.format(self.shape)
 
     @property
-    def shape(self) -> List[int]:
+    def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
         if self.value is None:
             raise Exception("Can't call 'shape' on a empty tensor")
 
@@ -84,17 +86,33 @@ class Tensor(object):
     def mod(self, k: int) -> 'Tensor':
         return Tensor(self.value % k)
 
-    def transpose(self, *axes) -> 'Tensor':
-        return Tensor(tf.transpose(self.value, axes))
+    def transpose(self, perm: Union[List[int], Tuple[int]]) -> 'Tensor':
+        return Tensor(tf.transpose(self.value, perm))
 
-    def strided_slice(self, args: Any, kwargs: Any):
+    def strided_slice(self, args: Any, kwargs: Any) -> 'Tensor':
         return Tensor(tf.strided_slice(self.value, *args, **kwargs))
 
-    def reshape(self, *axes) -> 'Tensor':
+    def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'Tensor':
         return Tensor(tf.reshape(self.value, axes))
 
+    @staticmethod
+    def stack(x: List['Tensor'], axis: int = 0) -> 'Tensor':
+        assert all([isinstance(i, Tensor) for i in x])
 
-def _lift(x):
+        backing = [v.value for v in x]
+
+        return Tensor.from_native(tf.stack(backing, axis=axis))
+
+    @staticmethod
+    def concat(x: List['Tensor'], axis: int) -> 'Tensor':
+        assert all([isinstance(i, Tensor) for i in x])
+
+        backing = [v.value for v in x]
+
+        return Tensor.from_native(tf.concat(backing, axis=axis))
+
+
+def _lift(x: Union[Tensor, int]) -> Tensor:
     # TODO[Morten] support other types of `x`
 
     if isinstance(x, Tensor):
@@ -135,58 +153,36 @@ def _lift(x):
 
 #     return out
 
-# TODO
-# def stack(x: List[Int100Tensor], axis: int = 0):
-#     assert all([isinstance(i, Int100Tensor) for i in x])
 
-#     backing = []
-#     for i in range(len(x[0].backing)):
-#         stacked = [j.backing[i] for j in x]
+class Constant(Tensor, AbstractConstant):
 
-#         backing.append(tf.stack(stacked, axis=axis))
-
-#     return Int100Tensor.from_decomposed(backing)
-
-
-class Constant(Tensor):
-
-    def __init__(self, value) -> None:
+    def __init__(self, value: Union[tf.Tensor, np.ndarray]) -> None:
         super(Constant, self).__init__(tf.constant(value, dtype=tf.int32))
-
-    @staticmethod
-    def from_native(value: np.ndarray) -> 'Constant':
-        assert type(value) in [np.ndarray], type(value)
-        return Constant(value)
-
-    @staticmethod
-    def from_same(value: Tensor) -> 'Constant':
-        assert type(value) in [Tensor], type(value)
-        return Constant(value.value)
 
     def __repr__(self) -> str:
         return 'int32.Constant(shape={})'.format(self.shape)
 
 
-class Placeholder(Tensor):
+class Placeholder(Tensor, AbstractPlaceholder):
 
-    def __init__(self, shape):
+    def __init__(self, shape: List[int]) -> None:
         placeholder = tf.placeholder(tf.int32, shape=shape)
         super(Placeholder, self).__init__(placeholder)
         self.placeholder = placeholder
 
-    def feed_from_native(self, value):
+    def feed_from_native(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
         assert type(value) in [np.ndarray], type(value)
         return {
             self.placeholder: value
         }
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'int32.Placeholder(shape={})'.format(self.shape)
 
 
-class Variable(Tensor):
+class Variable(Tensor, AbstractVariable):
 
-    def __init__(self, initial_value):
+    def __init__(self, initial_value: Union[tf.Tensor, np.ndarray]) -> None:
         variable = tf.Variable(initial_value, dtype=tf.int32, trainable=False)
         value = variable.read_value()
 
@@ -194,23 +190,41 @@ class Variable(Tensor):
         self.variable = variable
         self.initializer = variable.initializer
 
-    @staticmethod
-    def from_native(initial_value):
-        assert type(initial_value) in [np.ndarray, tf.Tensor], type(initial_value)
-        return Variable(initial_value)
-
-    @staticmethod
-    def from_same(initial_value):
-        assert type(initial_value) in [Tensor], type(initial_value)
-        return Variable(initial_value.value)
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'int32.Variable(shape={})'.format(self.shape)
 
-    def assign_from_native(self, value: np.ndarray):
+    def assign_from_native(self, value: np.ndarray) -> tf.Operation:
         assert type(value) in [np.ndarray], type(value)
         return tf.assign(self.variable, value).op
 
-    def assign_from_same(self, value: Tensor):
+    def assign_from_same(self, value: Tensor) -> tf.Operation:
         assert isinstance(value, Tensor), type(value)
         return tf.assign(self.variable, value.value).op
+
+
+# type managling to make the below factory work
+Int32Tensor = Tensor
+Int32Constant = Constant
+Int32Variable = Variable
+Int32Placeholder = Placeholder
+
+
+class Int32Factory(AbstractFactory):
+    @property
+    def Tensor(self) -> Type[Int32Tensor]:
+        return Tensor
+
+    @property
+    def Constant(self) -> Type[Int32Constant]:
+        return Constant
+
+    @property
+    def Variable(self) -> Type[Int32Variable]:
+        return Variable
+
+    def Placeholder(self, shape: List[int]) -> Int32Placeholder:
+        return Placeholder(shape)
+
+    @property
+    def modulus(self) -> int:
+        return Tensor.modulus

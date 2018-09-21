@@ -41,13 +41,13 @@ _thismodule = sys.modules[__name__]
 class Pond(Protocol):
 
     def __init__(
-        self,
-        server_0: Player,
-        server_1: Player,
-        crypto_producer: Player,
-        use_noninteractive_truncation: bool=False,
-        tensor_factory: AbstractFactory=Int100Factory()
-    ) -> None:
+            self,
+            server_0: Player,
+            server_1: Player,
+            crypto_producer: Player,
+            use_noninteractive_truncation: bool=False,
+            tensor_factory: AbstractFactory=Int100Factory(),
+            verify_precision: bool=True) -> None:
         self.server_0 = server_0
         self.server_1 = server_1
         self.crypto_producer = crypto_producer
@@ -57,18 +57,19 @@ class Pond(Protocol):
         # modulus
         self.M = tensor_factory.modulus
 
-        assert log2(BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) <= log2(BOUND)
-        assert log2(self.M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
-
         # truncation factor for going from double to single precision
         self.K = 2 ** BITPRECISION_FRACTIONAL
-        assert gcd(self.K, self.M) == 1
 
         self.K_inv_wrapped = self.tensor_factory.Tensor.from_native(np.array([inverse(self.K, self.M)]))
 
         self.M_wrapped = self.tensor_factory.Tensor.from_native(np.array([self.M]))
 
-    def define_constant(self, value: np.ndarray, apply_scaling: bool=True, name: Optional[str]=None) -> 'PondConstant':
+        if verify_precision:
+            assert log2(BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) <= log2(BOUND)
+            assert log2(self.M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
+            assert gcd(self.K, self.M) == 1
+
+    def define_constant(self, value: np.ndarray, apply_scaling: bool = True, name: Optional[str] = None) -> 'PondConstant':
         assert isinstance(value, (np.ndarray,)), type(value)
 
         v = self._encode(value, apply_scaling)
@@ -84,7 +85,7 @@ class Pond(Protocol):
         x = PondConstant(self, x_on_0, x_on_1, apply_scaling)
         return x
 
-    def define_public_placeholder(self, shape, apply_scaling: bool=True, name: Optional[str]=None):
+    def define_public_placeholder(self, shape, apply_scaling: bool = True, name: Optional[str] = None):
 
         with tf.name_scope('public-placeholder{}'.format('-' + name if name else '')):
 
@@ -96,7 +97,7 @@ class Pond(Protocol):
 
         return PondPublicPlaceholder(self, x_on_0, x_on_1, apply_scaling)
 
-    def define_private_placeholder(self, shape, apply_scaling: bool=True, name: Optional[str]=None):
+    def define_private_placeholder(self, shape, apply_scaling: bool = True, name: Optional[str] = None):
 
         pl = self.tensor_factory.Placeholder(shape)
         v0, v1 = self._share(pl)
@@ -116,8 +117,8 @@ class Pond(Protocol):
     def define_public_variable(
         self,
         initial_value,
-        apply_scaling: bool=True,
-        name: Optional[str]=None
+        apply_scaling: bool = True,
+        name: Optional[str] = None
     ) -> 'PondPublicVariable':
         assert isinstance(initial_value, (np.ndarray, tf.Tensor, PondPublicTensor)), type(initial_value)
 
@@ -146,8 +147,8 @@ class Pond(Protocol):
     def define_private_variable(
         self,
         initial_value,
-        apply_scaling: bool=True,
-        name: Optional[str]=None
+        apply_scaling: bool = True,
+        name: Optional[str] = None
     ) -> 'PondPrivateVariable':
         assert isinstance(initial_value, (np.ndarray, tf.Tensor, PondPublicTensor,
                                           PondPrivateTensor)), type(initial_value)
