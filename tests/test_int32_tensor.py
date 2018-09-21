@@ -6,7 +6,7 @@ import tensorflow_encrypted as tfe
 from tensorflow_encrypted.tensor.int32 import Int32Factory
 
 
-class TestNativeTensor(unittest.TestCase):
+class TestInt32Tensor(unittest.TestCase):
     def test_pond(self) -> None:
         config = tfe.LocalConfig([
             'server0',
