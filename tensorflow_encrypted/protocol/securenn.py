@@ -4,13 +4,13 @@ import sys
 import tensorflow as tf
 from .protocol import memoize
 from ..protocol.pond import (
-    Pond, PondTensor, PondPrivateTensor, PondMaskedTensor
+    Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 )
 from ..player import Player
 from ..tensor.native import p
 
-
 _thismodule = sys.modules[__name__]
+
 
 class SecureNN(Pond):
 
@@ -135,13 +135,12 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
         bits_device = random.choice(devices)
         with tf.device(bits_device):
             b = _generate_random_bits(y.shape)
-            b0, b1 = beta.unwrapped
+            b0, b1 = b.unwrapped
 
     with tf.name_scope('lsb'):
         r = (y + x).reveal()
         rbits0, rbits1 = prot.binarize(r).unwrapped
         rlsb0, rlsb1 = rbits0[..., 0], rbits1[..., 0]
-
 
         bp = prot.private_compare(xbits, r, b)
         bp0, bp1 = bp.unwrapped
@@ -168,5 +167,5 @@ def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):
 
 
 def _generate_random_bits(prot: SecureNN, shape: List[int]):
-    backing = prot.tensor_factory.Tensor.sample_bounded(y.shape)
+    backing = prot.tensor_factory.Tensor.sample_bounded(shape)
     return PondPublicTensor(prot, backing, backing, is_scaled=False)  # FIXME: better way to generate bits
