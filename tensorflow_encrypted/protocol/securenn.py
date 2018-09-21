@@ -1,6 +1,6 @@
 from .protocol import memoize
 from ..protocol.pond import (
-    Pond, PondTensor, PondPrivateTensor, M
+    Pond, PondTensor, PondPrivateTensor
 )
 from ..player import Player
 
@@ -14,17 +14,18 @@ class SecureNN(Pond):
         server_2: Player,
         **kwargs
     ) -> None:
-        if M % 2 != 1:
-            # NOTE: this is only for use with an odd-modulus CRTTensor
-            #       NativeTensor will use an even modulus and will require share_convert
-            raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
-                            'but it was initialized with an even one.')
         super(SecureNN, self).__init__(
             server_0=server_0,
             server_1=server_1,
             crypto_producer=server_2,
             **kwargs
         )
+
+        if self.M % 2 != 1:
+            # NOTE: this is only for use with an odd-modulus CRTTensor
+            #       NativeTensor will use an even modulus and will require share_convert
+            raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
+                            'but it was initialized with an even one.')
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
