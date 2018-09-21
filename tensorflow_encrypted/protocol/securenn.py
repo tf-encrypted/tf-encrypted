@@ -1,10 +1,15 @@
+from typing import List
 import random
+import sys
+import tensorflow as tf
 from .protocol import memoize
 from ..protocol.pond import (
-    Pond, PondTensor, PondPrivateTensor
+    Pond, PondTensor, PondPrivateTensor, PondMaskedTensor
 )
 from ..player import Player
 
+
+_thismodule = sys.modules[__name__]
 
 class SecureNN(Pond):
 
@@ -60,7 +65,7 @@ class SecureNN(Pond):
         return self.lsb(x * 2)
 
     def lsb(self, x: PondTensor) -> PondTensor:
-        return self.dispatch('lsb', x)
+        return self.dispatch('lsb', x, container=_thismodule)
 
     @memoize
     def negative(self, x: PondTensor) -> PondTensor:
@@ -115,7 +120,7 @@ class SecureNN(Pond):
         raise NotImplementedError
 
 
-def _lsb_private(prot: SecureNN, y: PrivatePondTensor):
+def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
     with tf.name_scope('lsb_mask'):
         with tf.device(prot.crypto_producer.device_name):
             x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
@@ -124,7 +129,7 @@ def _lsb_private(prot: SecureNN, y: PrivatePondTensor):
             xlsb0, xlsb1 = prot.share(xlsb, p)
             x = PondPrivateTensor(prot, *prot.share(x), is_scaled=True)
             xbits = PondPrivateTensor(prot, *prot.share(xbits), is_scaled=False)
-            # TODO: Generate zero mask
+            # TODO: Generate zero mask?
 
         devices = [prot.server0.device_name, prot.server1.device_name]
         bits_device = random.choice(devices)
@@ -153,15 +158,15 @@ def _lsb_private(prot: SecureNN, y: PrivatePondTensor):
         delta = PondPrivateTensor(prot, delta_on_0, delta_on_1, is_scaled=False)
         theta = gamma * delta
 
-        alpha = gamma + delta + theta * (-2)  # TODO: add zero mask
+        alpha = gamma + delta + theta * (-2)  # TODO: add zero mask? # TODO: __rmul__
 
         return alpha
 
 
-def _lsb_masked(prot: SecureNN, x: MaskedPondTensor):
+def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):
     return prot.lsb(x.unmasked)
 
 
 def _generate_random_bits(prot: SecureNN, shape: List[int]):
-    backing = BackingTensor.sample_bounded(y.shape)
+    backing = prot.tensor_factory.Tensor.sample_bounded(y.shape)
     return PondPublicTensor(prot, backing, backing, is_scaled=False)  # FIXME: better way to generate bits
