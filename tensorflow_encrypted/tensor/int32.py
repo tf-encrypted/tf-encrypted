@@ -5,7 +5,7 @@ import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .factory import AbstractFactory
-from .native import NativeTensor
+from .prime import PrimeTensor
 
 from ..config import run
 
@@ -115,7 +115,7 @@ class Int32Tensor(AbstractTensor):
 
         return Int32Tensor.from_native(tf.concat(backing, axis=axis))
 
-    def binarize(self) -> NativeTensor:
+    def binarize(self) -> PrimeTensor:
         bitwidths = tf.range(bits, dtype=tf.int32)
 
         final_shape = [1] * len(self.shape)
@@ -125,7 +125,7 @@ class Int32Tensor(AbstractTensor):
         val = tf.expand_dims(self.value, -1)
         val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
 
-        return NativeTensor.from_native(val, p)
+        return PrimeTensor.from_native(val, p)
 
 
 def _lift(x: Union[Int32Tensor, int]) -> Int32Tensor:
