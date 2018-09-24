@@ -4,10 +4,13 @@ import sys
 import os
 import uuid
 import time
+import re
+import argparse
+from pathlib import Path
+from urllib import request as urlDownloader
 from threading import Thread
 from typing import Dict, Any, Tuple, Callable, List
 
-import argparse
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 import numpy as np
@@ -73,21 +76,38 @@ else:
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--model_name", type=str, default="2lfc", help="increase output verbosity")
+        "--model_name", type=str, default='', help="Model name")
+    parser.add_argument(
+        "--model_url", type=str, default='', help="Model's public URL")
     config = parser.parse_args()
 
-    print('Loading model: %s' % config.model_name)
     model_file = os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
         "..",
         "models",
-        "%s.pb" % config.model_name,
+        "{}.pb".format(config.model_name),
     )
+    model_path = Path(model_file)
+    if not model_path.is_file() and config.model_url is not '':
+        regex = re.compile(
+            r'^(?:http|ftp)s?://'  # http:// or https://
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
+            r'localhost|'  # localhost...
+            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+            r'(?::\d+)?'  # optional port
+            r'(?:/?|[/?]\S+)$', re.IGNORECASE
+        )
+        if re.match(regex, config.model_url) is not None:
+            print('Downloading model')
+            model_file, _ = urlDownloader.urlretrieve(config.model_url)
+        else:
+            raise Exception('Invalid URL given: {}'.format(config.model_url))
 
     tf.reset_default_graph()
 
     input_spec = []
     with gfile.FastGFile(model_file, 'rb') as f:
+        print('Loading model: {}'.format(model_file))
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
 
@@ -119,13 +139,24 @@ else:
             inputs.append(x)
 
         print('Securing computation')
+        secure_start = time.time()
+
         c = tfe.convert.convert.Converter(remote_config, prot, remote_config.get_player('weights_provider'))
         y = c.convert(graph_def, inputs, tfe.convert.register())
-
         # TODO: do not reveal on the master server
         y = y.reveal()
+
+        secure_end = time.time()
+        print("Graph secured in {}".format(secure_end - secure_start))
+
         if isinstance(prot, tfe.protocol.Pond):
+            print('Initializing variables')
+            init_start = time.time()
+
             tfe.run(sess, prot.initializer, tag='init')
+
+            init_end = time.time()
+            print("Graph initialized in {}".format(init_end - init_start))
 
     pls = []
     for i in range(len(input_spec)):
@@ -157,8 +188,8 @@ else:
         )
     warmup_start = time.time()
     predict("warm-up-id", warmup_data)
-    warmup_end = time.time()
     _global_memory.pop("warm-up-id")
+    warmup_end = time.time()
     print("Graph warmed up in {}".format(warmup_end - warmup_start))
 
     print('Serving model: %s' % config.model_name)

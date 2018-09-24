@@ -1,6 +1,7 @@
 import os
 import json
 import math
+import multiprocessing
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any, Union, Tuple
 from collections import defaultdict
@@ -37,20 +38,21 @@ class Config(ABC):
         pass
 
 
-def get_cpu_quota_within_docker() -> Optional[int]:
-    cpu_cores = None
+def get_cpu_quota() -> int:
+    cpu_cores = multiprocessing.cpu_count()
 
+    # Check for quotas if we are in a linux container
     cfs_period = Path("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
     cfs_quota = Path("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
 
     if cfs_period.exists() and cfs_quota.exists():
-        # we are in a linux container with cpu quotas!
         with cfs_period.open('rb') as p, cfs_quota.open('rb') as q:
             p_int, q_int = int(p.read()), int(q.read())
 
             # get the cores allocated by dividing the quota
             # in microseconds by the period in microseconds
-            cpu_cores = math.ceil(q_int / p_int) if q_int > 0 and p_int > 0 else None
+            if q_int > 0 and p_int > 0:
+                cpu_cores = math.ceil(q_int / p_int)
 
     return cpu_cores
 
@@ -245,13 +247,15 @@ class RemoteConfig(Config):
         master: Optional[Union[int, str]] = None,
         log_device_placement: bool = False
     ) -> tf.Session:
-        # cpu_cores = get_cpu_quota_within_docker() or multiprocessing.cpu_count()
+        cpu_cores = get_cpu_quota()
         target = self._compute_target(master)
+        # If you witness memory leaks while doing multiple predictions
+        # see https://github.com/tensorflow/tensorflow/issues/22098
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
             allow_soft_placement=False,
-            # inter_op_parallelism_threads=cpu_cores,  # see https://github.com/tensorflow/tensorflow/issues/22098
-            # intra_op_parallelism_threads=cpu_cores
+            inter_op_parallelism_threads=cpu_cores,
+            intra_op_parallelism_threads=cpu_cores
         )
         print("Starting session on target '{}' using config {}".format(target, config))
         sess = tf.Session(target, config=config)
