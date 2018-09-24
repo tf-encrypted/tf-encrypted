@@ -7,11 +7,11 @@ from .int100 import (
     Int100Tensor
 )
 
-from .native import (
-    NativeTensor,
-    NativePlaceholder,
-    NativeVariable,
-    NativeConstant
+from .prime import (
+    PrimeTensor,
+    PrimePlaceholder,
+    PrimeVariable,
+    PrimeConstant
 )
 
 __all__ = [
@@ -19,8 +19,8 @@ __all__ = [
     'Int100Placeholder',
     'Int100Variable',
     'Int100Tensor',
-    'NativeTensor',
-    'NativePlaceholder',
-    'NativeVariable',
-    'NativeConstant'
+    'PrimeTensor',
+    'PrimePlaceholder',
+    'PrimeVariable',
+    'PrimeConstant'
 ]
