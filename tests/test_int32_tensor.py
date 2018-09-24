@@ -7,6 +7,9 @@ from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
 
 
 class TestInt32Tensor(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
     def test_pond(self) -> None:
         config = tfe.LocalConfig([
             'server0',
@@ -39,6 +42,22 @@ class TestInt32Tensor(unittest.TestCase):
             actual = sess.run(y.value)
 
         np.testing.assert_array_equal(actual, expected)
+
+    def test_random_binarize(self) -> None:
+        input = np.random.uniform(high=2**31 - 1, size=2000).astype('int32').tolist()
+        x = Int32Tensor(tf.constant(input, dtype=tf.int32))
+
+        y = x.binarize()
+
+        with tf.Session() as sess:
+            actual = sess.run(y.value)
+
+        j = 0
+        for i in input:
+            binary = bin(i)[2:].zfill(32)[::-1][:31]
+            bin_list = np.array(list(binary)).astype('int32')
+            np.testing.assert_equal(actual[j], bin_list)
+            j += 1
 
 
 if __name__ == '__main__':
