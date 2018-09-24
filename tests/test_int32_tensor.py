@@ -31,12 +31,16 @@ class TestInt32Tensor(unittest.TestCase):
                 np.testing.assert_array_almost_equal(out, [4, 4], decimal=3)
 
     def test_binarize(self) -> None:
-        x = Int32Tensor(tf.constant([2**31 + 2**31 + 3, 3], dtype=np.int32))
+        x = Int32Tensor(tf.constant([2**31 + 2**31 + 3, 3, 3, 3], shape=[2, 2], dtype=np.int32))
 
         y = x.binarize()
 
-        expected = [[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+        expected = np.array([[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+
+        expected = np.reshape(expected, [2, 2, 31])
 
         with tf.Session() as sess:
             actual = sess.run(y.value)

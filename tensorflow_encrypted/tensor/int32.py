@@ -116,13 +116,12 @@ class Int32Tensor(AbstractTensor):
         return Int32Tensor.from_native(tf.concat(backing, axis=axis))
 
     def binarize(self) -> NativeTensor:
-        """Computes bit decomposition of tensor
-         tensor: ndarray of shape (x0, ..., xn)
-        returns: a binary tensor of shape (x0, ..., xn, bits) equivalent to tensor
-        """
         bitwidths = tf.range(bits, dtype=tf.int32)
-        for i in range(len(self.shape)):
-            bitwidths = tf.expand_dims(bitwidths, 0)
+
+        final_shape = [1] * len(self.shape)
+        final_shape.append(bits)
+
+        bitwidths = tf.reshape(bitwidths, final_shape)
         val = tf.expand_dims(self.value, -1)
         val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
 
