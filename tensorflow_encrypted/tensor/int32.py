@@ -5,7 +5,6 @@ import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .factory import AbstractFactory
-from .prime import PrimeTensor
 
 from ..config import run
 
@@ -106,30 +105,9 @@ class Int32Tensor(AbstractTensor):
         assert all(isinstance(x, Int32Tensor) for x in xs)
         return Int32Tensor(tf.concat([x.value for x in xs], axis=axis))
 
-    def binarize(self, prime=37) -> PrimeTensor:
-        BITS = 32
-        assert prime > BITS, prime
-
-        final_shape = [1] * len(self.shape) + [BITS]
-        bitwidths = tf.range(BITS, dtype=tf.int32)
-        bitwidths = tf.reshape(bitwidths, final_shape)
-
-        val = tf.expand_dims(self.value, -1)
-        val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
-
-        return PrimeTensor.from_native(val, prime)
-
 
 def _lift(x: Union[Int32Tensor, int]) -> Int32Tensor:
-    # TODO[Morten] support other types of `x`
-
-    if isinstance(x, Int32Tensor):
-        return x
-
-    if type(x) is int:
-        return Int32Tensor.from_native(np.array([x]))
-
-    raise TypeError("Unsupported type {}".format(type(x)))
+    return Int32Tensor.lift(x)
 
 
 class Int32Constant(Int32Tensor, AbstractConstant):
