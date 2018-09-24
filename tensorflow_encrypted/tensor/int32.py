@@ -9,7 +9,7 @@ from .native import NativeTensor
 
 from ..config import run
 
-bits = 31
+bits = 32
 p = 67
 
 

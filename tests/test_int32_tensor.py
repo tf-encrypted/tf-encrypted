@@ -35,12 +35,12 @@ class TestInt32Tensor(unittest.TestCase):
 
         y = x.binarize()
 
-        expected = np.array([[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+        expected = np.array([[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
 
-        expected = np.reshape(expected, [2, 2, 31])
+        expected = np.reshape(expected, [2, 2, 32])
 
         with tf.Session() as sess:
             actual = sess.run(y.value)
@@ -48,7 +48,7 @@ class TestInt32Tensor(unittest.TestCase):
         np.testing.assert_array_equal(actual, expected)
 
     def test_random_binarize(self) -> None:
-        input = np.random.uniform(high=2**31 - 1, size=2000).astype('int32').tolist()
+        input = np.random.uniform(low=2**31 + 1, high=2**31 - 1, size=2000).astype('int32').tolist()
         x = Int32Tensor(tf.constant(input, dtype=tf.int32))
 
         y = x.binarize()
@@ -58,7 +58,11 @@ class TestInt32Tensor(unittest.TestCase):
 
         j = 0
         for i in input:
-            binary = bin(i)[2:].zfill(32)[::-1][:31]
+            if i < 0:
+                binary = bin(((1 << 32) - 1) & i)[2:][::-1]
+            else:
+                binary = bin(i)
+                binary = binary[2:].zfill(32)[::-1]
             bin_list = np.array(list(binary)).astype('int32')
             np.testing.assert_equal(actual[j], bin_list)
             j += 1
