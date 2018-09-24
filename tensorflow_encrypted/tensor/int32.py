@@ -9,9 +9,6 @@ from .native import NativeTensor
 
 from ..config import run
 
-bits = 31
-p = 67
-
 
 class Int32Tensor(AbstractTensor):
 
@@ -81,11 +78,11 @@ class Int32Tensor(AbstractTensor):
         x, y = _lift(self), _lift(other)
         return Int32Tensor(tf.matmul(x.value, y.value))
 
-    # def im2col(self, h_filter, w_filter, padding, strides) -> 'Int32Tensor':
-    #     return _im2col(self, h_filter, w_filter, padding, strides)
+    def im2col(self, h_filter, w_filter, padding, strides) -> 'Int32Tensor':
+        raise NotImplementedError()
 
-    # def conv2d(self, other, strides, padding='SAME') -> 'Int32Tensor':
-    #     return _conv2d(self, other, strides, padding)
+    def conv2d(self, other, strides, padding='SAME') -> 'Int32Tensor':
+        raise NotImplementedError()
 
     def mod(self, k: int) -> 'Int32Tensor':
         return Int32Tensor(self.value % k)
@@ -100,32 +97,27 @@ class Int32Tensor(AbstractTensor):
         return Int32Tensor(tf.reshape(self.value, axes))
 
     @staticmethod
-    def stack(x: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':
-        assert all([isinstance(i, Int32Tensor) for i in x])
-
-        backing = [v.value for v in x]
-
-        return Int32Tensor.from_native(tf.stack(backing, axis=axis))
+    def stack(xs: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':
+        assert all(isinstance(x, Int32Tensor) for x in xs)
+        return Int32Tensor(tf.stack([x.value for x in xs], axis=axis))
 
     @staticmethod
-    def concat(x: List['Int32Tensor'], axis: int) -> 'Int32Tensor':
-        assert all([isinstance(i, Int32Tensor) for i in x])
+    def concat(xs: List['Int32Tensor'], axis: int) -> 'Int32Tensor':
+        assert all(isinstance(x, Int32Tensor) for x in xs)
+        return Int32Tensor(tf.concat([x.value for x in xs], axis=axis))
 
-        backing = [v.value for v in x]
+    def binarize(self, prime=37) -> NativeTensor:
+        BITS = 32
+        assert prime > BITS, prime
 
-        return Int32Tensor.from_native(tf.concat(backing, axis=axis))
-
-    def binarize(self) -> NativeTensor:
-        bitwidths = tf.range(bits, dtype=tf.int32)
-
-        final_shape = [1] * len(self.shape)
-        final_shape.append(bits)
-
+        final_shape = [1] * len(self.shape) + [BITS]
+        bitwidths = tf.range(BITS, dtype=tf.int32)
         bitwidths = tf.reshape(bitwidths, final_shape)
+
         val = tf.expand_dims(self.value, -1)
         val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
 
-        return NativeTensor.from_native(val, p)
+        return NativeTensor.from_native(val, prime)
 
 
 def _lift(x: Union[Int32Tensor, int]) -> Int32Tensor:
@@ -138,36 +130,6 @@ def _lift(x: Union[Int32Tensor, int]) -> Int32Tensor:
         return Int32Tensor.from_native(np.array([x]))
 
     raise TypeError("Unsupported type {}".format(type(x)))
-
-
-# TODO
-# def _im2col(x, h_filter, w_filter, padding, strides):
-#     assert isinstance(x, Int100Tensor), type(x)
-#     backing = _crt_im2col(x.backing, h_filter, w_filter, padding, strides)
-#     return Int100Tensor.from_decomposed(backing)
-
-# TODO
-# def _conv2d(x, y, strides, padding):
-#     assert isinstance(x, Int100Tensor), type(x)
-#     assert isinstance(y, Int100Tensor), type(y)
-
-#     h_filter, w_filter, d_filters, n_filters = map(int, y.shape)
-#     n_x, d_x, h_x, w_x = map(int, x.shape)
-#     if padding == "SAME":
-#         h_out = int(math.ceil(float(h_x) / float(strides)))
-#         w_out = int(math.ceil(float(w_x) / float(strides)))
-#     if padding == "VALID":
-#         h_out = int(math.ceil(float(h_x - h_filter + 1) / float(strides)))
-#         w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
-
-#     X_col = x.im2col(h_filter, w_filter, padding, strides)
-#     W_col = y.transpose(3, 2, 0, 1).reshape(int(n_filters), -1)
-#     out = W_col.dot(X_col)
-
-#     out = out.reshape(n_filters, h_out, w_out, n_x)
-#     out = out.transpose(3, 0, 1, 2)
-
-#     return out
 
 
 class Int32Constant(Int32Tensor, AbstractConstant):
