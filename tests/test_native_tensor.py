@@ -6,6 +6,9 @@ from tensorflow_encrypted.tensor.native import NativeTensor
 
 
 class TestNativeTensor(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
     def setUpIndexing(self):
         M = 2 ** 31
         self.np_fix1d = np.arange(24)
