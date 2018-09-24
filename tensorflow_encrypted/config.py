@@ -1,7 +1,6 @@
 import os
 import json
 import math
-import multiprocessing
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any, Union, Tuple
 from collections import defaultdict
@@ -38,8 +37,8 @@ class Config(ABC):
         pass
 
 
-def get_cpu_quota() -> int:
-    cpu_cores = multiprocessing.cpu_count()
+def get_docker_cpu_quota() -> Optional[int]:
+    cpu_cores = None
 
     # Check for quotas if we are in a linux container
     cfs_period = Path("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
@@ -247,9 +246,9 @@ class RemoteConfig(Config):
         master: Optional[Union[int, str]] = None,
         log_device_placement: bool = False
     ) -> tf.Session:
-        cpu_cores = get_cpu_quota()
+        cpu_cores = get_docker_cpu_quota()
         target = self._compute_target(master)
-        # If you witness memory leaks while doing multiple predictions
+        # If you witness memory leaks while doing multiple predictions using docker
         # see https://github.com/tensorflow/tensorflow/issues/22098
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
