@@ -477,6 +477,9 @@ class Pond(Protocol):
     def dot(self, x, y):
         return self.dispatch('dot', x, y)
 
+    def matmul(self, x, y):
+        return self.dot(x, y)
+
     @memoize
     def truncate(self, x: 'PondTensor'):
         return self.dispatch('truncate', x)
@@ -887,6 +890,9 @@ class PondTensor(abc.ABC):
 
     def dot(self, other):
         return self.prot.dot(self, other)
+
+    def matmul(self, other):
+        return self.dot(self, other)
 
     def tranpose(self):
         return self.prot.transpose(self)
