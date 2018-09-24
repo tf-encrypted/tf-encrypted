@@ -23,6 +23,7 @@ class Sigmoid(core.Layer):
 
 
 class Relu(core.Layer):
+
     def get_output_shape(self) -> List[int]:
         return self.input_shape
 
@@ -40,6 +41,7 @@ class Relu(core.Layer):
 
 
 class Tanh(core.Layer):
+
     def get_output_shape(self) -> List[int]:
         return self.input_shape
 

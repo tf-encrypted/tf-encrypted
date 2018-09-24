@@ -56,7 +56,6 @@ class Int100Tensor(AbstractTensor):
 
     modulus = M
     int_type = INT_TYPE
-    backing: Union[List[np.ndarray], List[tf.Tensor]]
 
     def __init__(
         self,
@@ -131,7 +130,7 @@ class Int100Tensor(AbstractTensor):
         return _sample_bounded(shape, bitlength)
 
     def __getitem__(self, slice):
-        return self.from_decomposed([x[slice] for x in self.decomposed_value])
+        return self.from_decomposed([x[slice] for x in self.backing])
 
     def __repr__(self) -> str:
         return 'Int100Tensor({})'.format(self.shape)
