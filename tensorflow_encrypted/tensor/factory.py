@@ -4,6 +4,7 @@ from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, Abstract
 
 
 class AbstractFactory(ABC):
+
     @property
     @abstractmethod
     def Tensor(self) -> Type[AbstractTensor]:

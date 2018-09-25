@@ -11,7 +11,7 @@ from ..config import run
 
 class Int32Tensor(AbstractTensor):
 
-    modulus = 2**31
+    modulus = 2**32
     int_type = tf.int32
 
     def __init__(self, value: Union[np.ndarray, tf.Tensor]) -> None:
@@ -36,52 +36,48 @@ class Int32Tensor(AbstractTensor):
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int32Tensor':
-        # TODO[Morten] what should maxval be (account for negative numbers)?
-        return Int32Tensor(tf.random_uniform(shape=shape, dtype=tf.int32, maxval=2**31 - 1))
+        return Int32Tensor(tf.random_uniform(shape=shape, dtype=tf.int32, minval=tf.int32.min, maxval=tf.int32.max))
 
     def __repr__(self) -> str:
         return 'int32.Tensor(shape={})'.format(self.shape)
 
     @property
     def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
-        if self.value is None:
-            raise Exception("Can't call 'shape' on a empty tensor")
-
         return self.value.shape
 
-    def __add__(self, other: 'Int32Tensor') -> 'Int32Tensor':
+    def __add__(self, other) -> 'Int32Tensor':
         return self.add(other)
 
-    def __sub__(self, other: 'Int32Tensor') -> 'Int32Tensor':
+    def __sub__(self, other) -> 'Int32Tensor':
         return self.sub(other)
 
-    def __mul__(self, other: 'Int32Tensor') -> 'Int32Tensor':
+    def __mul__(self, other) -> 'Int32Tensor':
         return self.mul(other)
 
     def __mod__(self, k: int) -> 'Int32Tensor':
         return self.mod(k)
 
-    def add(self, other: 'Int32Tensor') -> 'Int32Tensor':
-        x, y = _lift(self), _lift(other)
+    def add(self, other) -> 'Int32Tensor':
+        x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value + y.value)
 
-    def sub(self, other: 'Int32Tensor') -> 'Int32Tensor':
-        x, y = _lift(self), _lift(other)
+    def sub(self, other) -> 'Int32Tensor':
+        x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value - y.value)
 
-    def mul(self, other: 'Int32Tensor') -> 'Int32Tensor':
-        x, y = _lift(self), _lift(other)
+    def mul(self, other) -> 'Int32Tensor':
+        x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value * y.value)
 
-    def dot(self, other: 'Int32Tensor') -> 'Int32Tensor':
-        x, y = _lift(self), _lift(other)
+    def dot(self, other) -> 'Int32Tensor':
+        x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(tf.matmul(x.value, y.value))
 
-    # def im2col(self, h_filter, w_filter, padding, strides) -> 'Int32Tensor':
-    #     return _im2col(self, h_filter, w_filter, padding, strides)
+    def im2col(self, h_filter, w_filter, padding, strides) -> 'Int32Tensor':
+        raise NotImplementedError()
 
-    # def conv2d(self, other, strides, padding='SAME') -> 'Int32Tensor':
-    #     return _conv2d(self, other, strides, padding)
+    def conv2d(self, other, strides, padding='SAME') -> 'Int32Tensor':
+        raise NotImplementedError()
 
     def mod(self, k: int) -> 'Int32Tensor':
         return Int32Tensor(self.value % k)
@@ -96,62 +92,14 @@ class Int32Tensor(AbstractTensor):
         return Int32Tensor(tf.reshape(self.value, axes))
 
     @staticmethod
-    def stack(x: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':
-        assert all([isinstance(i, Int32Tensor) for i in x])
-
-        backing = [v.value for v in x]
-
-        return Int32Tensor.from_native(tf.stack(backing, axis=axis))
+    def stack(xs: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':
+        assert all(isinstance(x, Int32Tensor) for x in xs)
+        return Int32Tensor(tf.stack([x.value for x in xs], axis=axis))
 
     @staticmethod
-    def concat(x: List['Int32Tensor'], axis: int) -> 'Int32Tensor':
-        assert all([isinstance(i, Int32Tensor) for i in x])
-
-        backing = [v.value for v in x]
-
-        return Int32Tensor.from_native(tf.concat(backing, axis=axis))
-
-
-def _lift(x: Union[Int32Tensor, int]) -> Int32Tensor:
-    # TODO[Morten] support other types of `x`
-
-    if isinstance(x, Int32Tensor):
-        return x
-
-    if type(x) is int:
-        return Int32Tensor.from_native(np.array([x]))
-
-    raise TypeError("Unsupported type {}".format(type(x)))
-
-
-# TODO
-# def _im2col(x, h_filter, w_filter, padding, strides):
-#     assert isinstance(x, Int100Tensor), type(x)
-#     backing = _crt_im2col(x.backing, h_filter, w_filter, padding, strides)
-#     return Int100Tensor.from_decomposed(backing)
-
-# TODO
-# def _conv2d(x, y, strides, padding):
-#     assert isinstance(x, Int100Tensor), type(x)
-#     assert isinstance(y, Int100Tensor), type(y)
-
-#     h_filter, w_filter, d_filters, n_filters = map(int, y.shape)
-#     n_x, d_x, h_x, w_x = map(int, x.shape)
-#     if padding == "SAME":
-#         h_out = int(math.ceil(float(h_x) / float(strides)))
-#         w_out = int(math.ceil(float(w_x) / float(strides)))
-#     if padding == "VALID":
-#         h_out = int(math.ceil(float(h_x - h_filter + 1) / float(strides)))
-#         w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
-
-#     X_col = x.im2col(h_filter, w_filter, padding, strides)
-#     W_col = y.transpose(3, 2, 0, 1).reshape(int(n_filters), -1)
-#     out = W_col.dot(X_col)
-
-#     out = out.reshape(n_filters, h_out, w_out, n_x)
-#     out = out.transpose(3, 0, 1, 2)
-
-#     return out
+    def concat(xs: List['Int32Tensor'], axis: int) -> 'Int32Tensor':
+        assert all(isinstance(x, Int32Tensor) for x in xs)
+        return Int32Tensor(tf.concat([x.value for x in xs], axis=axis))
 
 
 class Int32Constant(Int32Tensor, AbstractConstant):
@@ -203,6 +151,7 @@ class Int32Variable(Int32Tensor, AbstractVariable):
 
 
 class Int32Factory(AbstractFactory):
+
     @property
     def Tensor(self) -> Type[Int32Tensor]:
         return Int32Tensor
