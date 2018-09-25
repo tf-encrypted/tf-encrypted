@@ -247,9 +247,11 @@ def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
         x = 1 / np.sqrt(np.array(nums).reshape(shape))
     else:
-        hi = converter.protocol._decode(input.value_on_0, True)
+        # XXX this is a little weird but the input into rsqrt is public and
+        # being used only for batchnorm at the moment
+        decoded = converter.protocol._decode(input.value_on_0, True)
 
-        x = tf.rsqrt(hi)
+        x = tf.rsqrt(decoded)
 
     provider = ConvertInputProvider(converter.weights_provider, x)
 
