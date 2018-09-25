@@ -98,7 +98,7 @@ else:
             r'(?:/?|[/?]\S+)$', re.IGNORECASE
         )
         if re.match(regex, config.model_url) is not None:
-            print('Downloading model')
+            print('Downloading model from URL: {}'.format(config.model_url))
             model_file, _ = urlDownloader.urlretrieve(config.model_url)
         else:
             raise Exception('Invalid URL given: {}'.format(config.model_url))
@@ -118,7 +118,7 @@ else:
             input_spec.append({
                 'name': node.name,
                 'dtype': node.attr['dtype'].type,
-                'shape': [int(d.size) for d in node.attr['shape'].shape.dim]
+                'shape': [int(d.size) if d.size > 0 else 1 for d in node.attr['shape'].shape.dim]
             })
 
     sess = remote_config.session()
