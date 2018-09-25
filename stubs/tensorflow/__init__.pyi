@@ -160,6 +160,9 @@ class TensorShape:
     def __len__(self) -> int:
         ...
 
+    def __getitem__(self, slice):
+        ...
+
 
 class ClusterSpec:
     ...
@@ -455,7 +458,7 @@ def group(
 
 def reshape(
     tensor: Any,
-    shape: Union[Tensor, List[int]],
+    shape: Union[Tensor, List[int], Tuple[int, ...]],
     name: Optional[str] = None
 ) -> Tensor:
     ...
@@ -542,7 +545,7 @@ def assign(
 
 
 def transpose(
-    a: Union[np.ndarray, Tensor],
+    a: Union[np.ndarray, Tensor, Variable],
     perm: Optional[Union[List[int], Tuple[int, ...]]]=None,
     name: str='transpose',
     conjugate: bool=False

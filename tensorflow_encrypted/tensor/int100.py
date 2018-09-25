@@ -115,7 +115,7 @@ class Int100Tensor(AbstractTensor):
         evaluated_backing = run(sess, self.backing, feed_dict=feed_dict, tag=tag)
         return Int100Tensor.from_decomposed(evaluated_backing)
 
-    def to_int32(self) -> Union[tf.Tensor, np.ndarray]:
+    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return _crt_recombine_explicit(self.backing, 2**31)
 
     def to_bigint(self) -> np.ndarray:

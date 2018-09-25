@@ -3,11 +3,11 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
+from tensorflow_encrypted.tensor.int64 import Int64Factory, Int64Tensor
 from tensorflow_encrypted.tensor.native_shared import binarize
 
 
-class TestInt32Tensor(unittest.TestCase):
+class TestInt64Tensor(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
 
@@ -19,7 +19,7 @@ class TestInt32Tensor(unittest.TestCase):
         ])
 
         with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer'),
-                               tensor_factory=Int32Factory(), use_noninteractive_truncation=True,
+                               tensor_factory=Int64Factory(), use_noninteractive_truncation=True,
                                verify_precision=False) as prot:
             x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
             y = prot.define_public_variable(np.array([2, 2]), apply_scaling=False)
@@ -32,21 +32,25 @@ class TestInt32Tensor(unittest.TestCase):
                 np.testing.assert_array_almost_equal(out, [4, 4], decimal=3)
 
     def test_binarize(self) -> None:
-        x = Int32Tensor(tf.constant([
-            2**32 + 3,  # == 3
-            2**31 - 1,  # max
-            2**31,  # min
+        x = Int64Tensor(tf.constant([
+            2**62 + 3,
+            2**63 - 1,
+            2**63 - 2,
             -3
-        ], shape=[2, 2], dtype=np.int32))
+        ], shape=[2, 2], dtype=np.int64))
 
-        y = binarize(x)
+        y = binarize(x, prime=67)
 
         expected = np.array([
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-        ]).reshape([2, 2, 32])
+            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ]).reshape([2, 2, 64])
 
         with tf.Session() as sess:
             actual = sess.run(y.value)
@@ -54,10 +58,10 @@ class TestInt32Tensor(unittest.TestCase):
         np.testing.assert_array_equal(actual, expected)
 
     def test_random_binarize(self) -> None:
-        input = np.random.uniform(low=2**31 + 1, high=2**31 - 1, size=2000).astype('int32').tolist()
-        x = Int32Tensor(tf.constant(input, dtype=tf.int32))
+        input = np.random.uniform(low=2**63 + 1, high=2**63 - 1, size=2000).astype(np.int64).tolist()
+        x = Int64Tensor(tf.constant(input, dtype=tf.int64))
 
-        y = binarize(x)
+        y = binarize(x, prime=67)
 
         with tf.Session() as sess:
             actual = sess.run(y.value)
@@ -65,11 +69,11 @@ class TestInt32Tensor(unittest.TestCase):
         j = 0
         for i in input:
             if i < 0:
-                binary = bin(((1 << 32) - 1) & i)[2:][::-1]
+                binary = bin(((1 << 64) - 1) & i)[2:][::-1]
             else:
                 binary = bin(i)
-                binary = binary[2:].zfill(32)[::-1]
-            bin_list = np.array(list(binary)).astype(np.int32)
+                binary = binary[2:].zfill(64)[::-1]
+            bin_list = np.array(list(binary)).astype(np.int64)
             np.testing.assert_equal(actual[j], bin_list)
             j += 1
 
@@ -83,15 +87,15 @@ class TestConv2D(unittest.TestCase):
         batch_size, channels_in, channels_out = 32, 3, 64
         img_height, img_width = 28, 28
         input_shape = (batch_size, channels_in, img_height, img_width)
-        input_conv = np.random.normal(size=input_shape).astype(np.int32)
+        input_conv = np.random.normal(size=input_shape).astype(np.int64)
 
         # filters
         h_filter, w_filter, strides = 2, 2, 2
         filter_shape = (h_filter, w_filter, channels_in, channels_out)
-        filter_values = np.random.normal(size=filter_shape).astype(np.int32)
+        filter_values = np.random.normal(size=filter_shape).astype(np.int64)
 
-        inp = Int32Tensor(input_conv)
-        out = inp.conv2d(Int32Tensor(filter_values), strides)
+        inp = Int64Tensor(input_conv)
+        out = inp.conv2d(Int64Tensor(filter_values), strides)
         with tf.Session() as sess:
             actual = sess.run(out.value)
 

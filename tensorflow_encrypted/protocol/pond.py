@@ -323,7 +323,7 @@ class Pond(Protocol):
             scaling_factor = 2 ** BITPRECISION_FRACTIONAL if is_scaled else 1
 
             # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
-            return ((elements + BOUND).to_int32() - BOUND) / scaling_factor
+            return ((elements + BOUND).to_native() - BOUND) / scaling_factor
 
     def _share(self, secret: AbstractTensor) -> Tuple[AbstractTensor, AbstractTensor]:
         with tf.name_scope('share'):

@@ -5,6 +5,7 @@ import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .factory import AbstractFactory
+from .native_shared import conv2d
 
 from ..config import run
 
@@ -31,7 +32,7 @@ class Int32Tensor(AbstractTensor):
         concrete_value = run(sess, self.value, feed_dict=feed_dict, tag=tag)
         return Int32Tensor.from_native(concrete_value)
 
-    def to_int32(self) -> Union[tf.Tensor, np.ndarray]:
+    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
 
     @staticmethod
@@ -45,39 +46,37 @@ class Int32Tensor(AbstractTensor):
     def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
         return self.value.shape
 
-    def __add__(self, other) -> 'Int32Tensor':
+    def __add__(self, other: Any) -> 'Int32Tensor':
         return self.add(other)
 
-    def __sub__(self, other) -> 'Int32Tensor':
+    def __sub__(self, other: Any) -> 'Int32Tensor':
         return self.sub(other)
 
-    def __mul__(self, other) -> 'Int32Tensor':
+    def __mul__(self, other: Any) -> 'Int32Tensor':
         return self.mul(other)
 
     def __mod__(self, k: int) -> 'Int32Tensor':
         return self.mod(k)
 
-    def add(self, other) -> 'Int32Tensor':
+    def add(self, other: Any) -> 'Int32Tensor':
         x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value + y.value)
 
-    def sub(self, other) -> 'Int32Tensor':
+    def sub(self, other: Any) -> 'Int32Tensor':
         x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value - y.value)
 
-    def mul(self, other) -> 'Int32Tensor':
+    def mul(self, other: Any) -> 'Int32Tensor':
         x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value * y.value)
 
-    def dot(self, other) -> 'Int32Tensor':
+    def dot(self, other: Any) -> 'Int32Tensor':
         x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(tf.matmul(x.value, y.value))
 
-    def im2col(self, h_filter, w_filter, padding, strides) -> 'Int32Tensor':
-        raise NotImplementedError()
-
-    def conv2d(self, other, strides, padding='SAME') -> 'Int32Tensor':
-        raise NotImplementedError()
+    def conv2d(self, other: Any, strides: int, padding: str='SAME') -> 'Int32Tensor':
+        x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
+        return conv2d(x, y, strides, padding)  # type: ignore
 
     def mod(self, k: int) -> 'Int32Tensor':
         return Int32Tensor(self.value % k)
