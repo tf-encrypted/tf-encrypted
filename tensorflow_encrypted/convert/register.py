@@ -336,15 +336,26 @@ def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
     dtype = x.attr["dtype"].type
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
-    if dtype == tf.float32:
-        nums = array.array('f', x.attr["value"].tensor.tensor_content)
-    elif dtype == tf.float64:
-        nums = array.array('d', x.attr["value"].tensor.tensor_content)
-    else:
-        raise TypeError("Unsupported dtype")
+    if len(x_shape)==0:
+        if dtype == tf.float32:
+            nums = x.attr["value"].tensor.float_val
+        elif dtype == tf.float64:
+            nums = x.attr["value"].tensor.float_val
+        else:
+            raise TypeError("Unsupported dtype")
 
-    provider = ConvertInputProvider(converter.weights_provider,
-                                    np.array(nums).reshape(x_shape))
+        provider = ConvertInputProvider(converter.weights_provider,
+                                        np.array(nums).reshape(1,1))
+    else:
+        if dtype == tf.float32:
+            nums = array.array('f', x.attr["value"].tensor.tensor_content)
+        elif dtype == tf.float64:
+            nums = array.array('d', x.attr["value"].tensor.tensor_content)
+        else:
+            raise TypeError("Unsupported dtype")
+
+        provider = ConvertInputProvider(converter.weights_provider,
+                                        np.array(nums).reshape(x_shape))
 
     x_public = converter.protocol.define_public_input(provider)
 
