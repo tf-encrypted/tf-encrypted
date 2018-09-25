@@ -13,7 +13,7 @@ def binarize(tensor: AbstractTensor, prime: int=37) -> PrimeTensor:
         assert prime > BITS, prime
 
         final_shape = [1] * len(tensor.shape) + [BITS]
-        bitwidths = tf.range(BITS, dtype=tf.int32)
+        bitwidths = tf.range(BITS, dtype=tensor.value.dtype)
         bitwidths = tf.reshape(bitwidths, final_shape)
 
         val = tf.expand_dims(tensor.value, -1)
