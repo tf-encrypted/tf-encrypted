@@ -1011,8 +1011,11 @@ class PondConstant(PondPublicTensor):
     """
 
     def __init__(self, prot, constant_on_0, constant_on_1, is_scaled):
-        assert isinstance(constant_on_0, AbstractConstant), type(constant_on_0)
-        assert isinstance(constant_on_1, AbstractConstant), type(constant_on_1)
+        # TODO -- these assertions fail for Primes because PrimeConstant extends
+        #         PrimeTensor which extends AbstractTensor which has no relation
+        #         to AbstractConstant (AbstractConstant extends AbstractTensor)
+        # assert isinstance(constant_on_0, AbstractConstant), type(constant_on_0)
+        # assert isinstance(constant_on_1, AbstractConstant), type(constant_on_1)
         assert constant_on_0.shape == constant_on_1.shape
 
         super(PondConstant, self).__init__(prot, constant_on_0, constant_on_1, is_scaled)

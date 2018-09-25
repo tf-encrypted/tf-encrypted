@@ -4,7 +4,7 @@ from .tensor import AbstractTensor
 from .prime import PrimeTensor
 
 
-def binarize(tensor: AbstractTensor, prime: int=37) -> PrimeTensor:
+def binarize(tensor: AbstractTensor, prime: int = 37) -> PrimeTensor:
     with tf.name_scope('binarize'):
         BITS = tensor.int_type.size * 8
         assert prime > BITS, prime

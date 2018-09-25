@@ -57,6 +57,9 @@ class Int32Tensor(AbstractTensor):
     def __mod__(self, k: int) -> 'Int32Tensor':
         return self.mod(k)
 
+    def __neg__(self) -> 'Int32Tensor':
+        return self
+
     def add(self, other) -> 'Int32Tensor':
         x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value + y.value)
@@ -72,6 +75,10 @@ class Int32Tensor(AbstractTensor):
     def dot(self, other) -> 'Int32Tensor':
         x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(tf.matmul(x.value, y.value))
+
+    def negative(self) -> 'Int32Tensor':
+        x = Int32Tensor.lift(self)
+        return Int32Tensor(x.value * -1)
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int32Tensor':
         raise NotImplementedError()

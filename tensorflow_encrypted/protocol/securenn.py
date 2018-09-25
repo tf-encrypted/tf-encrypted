@@ -3,10 +3,11 @@ import numpy as np
 
 from .protocol import memoize
 from ..protocol.pond import (
-    Pond, PondTensor
+    Pond, PondTensor, PondPrivateTensor, PondPublicTensor
 )
 from ..player import Player
 from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
+from tensorflow_encrypted.tensor.native_shared import binarize
 
 bits = 32
 
@@ -93,23 +94,62 @@ class SecureNN(Pond):
     def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
         return x + bit * (y - x)
 
-    def private_compare(self, x, r, beta):
+    def private_compare(self, input: PondPrivateTensor, rho: PondPublicTensor, beta: PondPublicTensor):
 
         # TODO -- the broadcasting step for r & beta
         #         the test currently has them in same shape
         #         as the input so it is not needed yet
 
-        # t = (r + 1) % (2 ** bits)
+        # TODO -- can't make t :(
+        # t = (rho + 1) % (2 ** bits)
+        # return t
         # print(f'T: {type(t)} ')
 
-        with tf.name_scope('private_compare'):
-            r_binary = r.binarize()
-            # t_binary = t.binarize()
-            input = x.binarize()
+        # jr[i] - x[i] + j
 
-            for server in [self.server_0, self.server_1]:
-                with tf.device(server.device_name):
-                    c = Int32Tensor(np.zeros(shape=input.shape))
+        with tf.name_scope('private_compare'):
+            w = self.bitwise_xor(input, rho)
+
+            # is this the same as jr[i] - x[i] + j??
+            c = rho - input + PondPublicTensor(self, value_on_0=Int32Tensor(np.array([1])), value_on_1=Int32Tensor(np.array([1])), is_scaled=False)
+            return c
+
+        #
+        # print(f'shares: {share_0} {share_1}')
+        #
+        # # i = PondPrivateTensor(self, share0=)
+        # #
+        # # print(f'hi: {i}')
+        #
+        # with tf.name_scope('private_compare'):
+        #     with tf.device(self.server_0.device_name):
+        #         z_0 = input + r + beta
+        #
+        #     with tf.device(self.server_1.device_name):
+        #         z_1 = input + r + beta
+        #
+        #     return z_0 + z_1
+
+
+
+            # r_binary = binarize(r)
+            # # t_binary = t.binarize()
+            # input = binarize(x)
+            #
+            # for server in [self.server_0, self.server_1]:
+            #     with tf.device(server.device_name):
+            #         # c = Int32Tensor(np.zeros(shape=input.shape))
+            #         c = tf.zeros(shape=input.shape)
+            #         zero_indices = tf.where(beta == 0)[0]
+            #         one_indices = tf.where(beta == 1)[0]
+            #         edge_indices = tf.where(r == 2 ** bits - 1)[0]
+            #         one_indices = tf.setdiff1d(one_indices, edge_indices)
+            #
+            #         print(f'result! {zero_indices} {one_indices} {edge_indices}')
+            #
+            # return zero_indices, one_indices, edge_indices
+
+
 
 
         """
@@ -158,7 +198,7 @@ class SecureNN(Pond):
 
     return np.max(res == 0, axis=-1)
     """
-        return 0
+        # return 0
 
     def share_convert(self, x):
         raise NotImplementedError
