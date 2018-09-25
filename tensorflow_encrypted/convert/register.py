@@ -234,23 +234,11 @@ def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
     if isinstance(input, tf.NodeDef):
         input_out = nodef_to_public_pond(converter, input)
+        x = 1 / np.sqrt(np.array(input_out))
     else:
-        input_out = input
+        hi = converter.protocol._decode(input.value_on_0, True)
 
-    # tensor = input.attr["value"].tensor
-    # shape = [i.size for i in tensor.tensor_shape.dim]
-    #
-    # dtype = input.attr["dtype"].type
-    # if dtype == tf.float32:
-    #     nums = array.array('f', tensor.tensor_content)
-    # elif dtype == tf.float64:
-    #     nums = array.array('d', tensor.tensor_content)
-    # else:
-    #     raise TypeError("Unsupported dtype for rsqrt")
-
-    #x = 1 / np.sqrt(np.array(nums).reshape(shape))
-
-    x = 1 / np.sqrt(np.array(input_out))
+        x = tf.rsqrt(hi)
 
     provider = ConvertInputProvider(converter.weights_provider, x)
 
@@ -343,7 +331,7 @@ def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
     dtype = x.attr["dtype"].type
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
-    if len(x_shape)==0:
+    if len(x_shape) == 0:
         if dtype == tf.float32:
             nums = x.attr["value"].tensor.float_val
         elif dtype == tf.float64:
@@ -352,7 +340,7 @@ def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
             raise TypeError("Unsupported dtype")
 
         provider = ConvertInputProvider(converter.weights_provider,
-                                        np.array(nums).reshape(1,1))
+                                        np.array(nums).reshape(1, 1))
     else:
         if dtype == tf.float32:
             nums = array.array('f', x.attr["value"].tensor.tensor_content)
