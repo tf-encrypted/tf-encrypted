@@ -9,59 +9,10 @@ from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable
 
 INT_TYPE = tf.int32
-bits = 31
-p = 67
-
-
-def prime_factory(modulus: int) -> Any:
-    class TensorWrap(AbstractTensor):
-        @staticmethod
-        def from_native(x: Union[tf.Tensor, np.ndarray]) -> 'PrimeTensor':
-            return PrimeTensor.from_native(x, modulus)
-
-        @staticmethod
-        def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape]) -> 'PrimeTensor':
-            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=modulus), modulus)
-
-    class ConstantWrap(TensorWrap, AbstractConstant):
-        @staticmethod
-        def from_native(x: Union[tf.Tensor, np.ndarray]) -> 'PrimeTensor':
-            return PrimeConstant.from_native(x, modulus)
-
-        @staticmethod
-        def from_same(initial_value: 'PrimeTensor') -> 'PrimeConstant':
-            assert type(initial_value) in [PrimeTensor], type(initial_value)
-            return PrimeConstant(initial_value.value, modulus)
-
-    class VariableWrap(TensorWrap, AbstractVariable):
-        @staticmethod
-        def from_native(x: Union[tf.Tensor, np.ndarray]) -> 'PrimeTensor':
-            return PrimeVariable.from_native(x, modulus)
-
-    class Factory(AbstractFactory):
-        @property
-        def Tensor(self) -> Type[TensorWrap]:
-            return TensorWrap
-
-        @property
-        def Constant(self) -> Type[ConstantWrap]:
-            return ConstantWrap
-
-        @property
-        def Variable(self) -> Type[VariableWrap]:
-            return VariableWrap
-
-        def Placeholder(self, shape: List[int]) -> 'PrimePlaceholder':  # type: ignore
-            return PrimePlaceholder(shape, modulus)
-
-        @property
-        def modulus(self) -> int:
-            return modulus
-
-    return Factory()
 
 
 class PrimeTensor(AbstractTensor):
+
     int_type = INT_TYPE
 
     def __init__(self, value: Union[np.ndarray, tf.Tensor], modulus: int) -> None:
@@ -75,7 +26,7 @@ class PrimeTensor(AbstractTensor):
 
     @staticmethod
     def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int) -> 'PrimeTensor':
-        return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=modulus), modulus)
+        return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=modulus), modulus)
 
     @staticmethod
     def sample_bounded(shape: List[int], bitlength: int) -> 'PrimeTensor':
@@ -83,14 +34,12 @@ class PrimeTensor(AbstractTensor):
 
     @staticmethod
     def stack(x: List['PrimeTensor'], axis: int = 0) -> 'PrimeTensor':
-        assert all([isinstance(i, PrimeTensor) for i in x])
-
+        assert all(isinstance(i, PrimeTensor) for i in x)
         return PrimeTensor.from_native(tf.stack([v.value for v in x], axis=axis), x[0].modulus)
 
     @staticmethod
     def concat(x: List['PrimeTensor'], axis: int) -> 'PrimeTensor':
-        assert all([isinstance(i, PrimeTensor) for i in x])
-
+        assert all(isinstance(i, PrimeTensor) for i in x)
         return PrimeTensor.from_native(tf.concat([v.value for v in x], axis=axis), x[0].modulus)
 
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
@@ -101,13 +50,10 @@ class PrimeTensor(AbstractTensor):
         return self.value[slice]
 
     def __repr__(self) -> str:
-        return 'PrimeTensor({})'.format(self.shape)
+        return 'PrimeTensor(shape={}, modulus={})'.format(self.shape, self.modulus)
 
     @property
     def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
-        if self.value is None:
-            raise Exception("Can't call 'shape' on a empty tensor")
-
         return self.value.shape
 
     def __add__(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
@@ -157,19 +103,6 @@ class PrimeTensor(AbstractTensor):
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'PrimeTensor':
         return PrimeTensor(tf.reshape(self.value, axes), self.modulus)
 
-    def binarize(self) -> 'PrimeTensor':
-        bitwidths = tf.range(bits, dtype=INT_TYPE)
-
-        final_shape = [1] * len(self.shape)
-        final_shape.append(bits)
-
-        bitwidths = tf.reshape(bitwidths, final_shape)
-
-        val = tf.expand_dims(self.value, -1)
-        val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
-
-        return PrimeTensor.from_native(val, p)
-
 
 def _lift(x: Union['PrimeTensor', int], modulus: int) -> 'PrimeTensor':
     if isinstance(x, PrimeTensor):
@@ -217,7 +150,6 @@ class PrimePlaceholder(PrimeTensor):
     def feed_from_backing(self, value: 'PrimeTensor') -> Dict[tf.Tensor, np.ndarray]:
         assert type(value) in [PrimeTensor], type(value)
         assert isinstance(value.value, np.ndarray)
-
         return {
             self.placeholder: value.value
         }
@@ -227,6 +159,7 @@ class PrimePlaceholder(PrimeTensor):
 
 
 class PrimeVariable(PrimeTensor):
+
     def __init__(self, initial_value: Union[tf.Tensor, np.ndarray], modulus: int) -> None:
         variable = tf.Variable(initial_value, dtype=INT_TYPE, trainable=False)
         value: Union[tf.Tensor, np.ndarray] = variable.read_value()
@@ -255,3 +188,52 @@ class PrimeVariable(PrimeTensor):
     def assign_from_backing(self, value: PrimeTensor) -> tf.Operation:
         assert isinstance(value, (PrimeTensor,)), type(value)
         return tf.assign(self.variable, value.value).op
+
+
+def prime_factory(modulus: int) -> Any:
+
+    class TensorWrap(AbstractTensor):
+        @staticmethod
+        def from_native(x: Union[tf.Tensor, np.ndarray]) -> PrimeTensor:
+            return PrimeTensor.from_native(x, modulus)
+
+        @staticmethod
+        def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape]) -> PrimeTensor:
+            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=modulus), modulus)
+
+    class ConstantWrap(TensorWrap, AbstractConstant):
+        @staticmethod
+        def from_native(x: Union[tf.Tensor, np.ndarray]) -> PrimeTensor:
+            return PrimeConstant.from_native(x, modulus)
+
+        @staticmethod
+        def from_same(initial_value: PrimeTensor) -> PrimeConstant:
+            assert type(initial_value) in [PrimeTensor], type(initial_value)
+            return PrimeConstant(initial_value.value, modulus)
+
+    class VariableWrap(TensorWrap, AbstractVariable):
+        @staticmethod
+        def from_native(x: Union[tf.Tensor, np.ndarray]) -> PrimeTensor:
+            return PrimeVariable.from_native(x, modulus)
+
+    class Factory(AbstractFactory):
+        @property
+        def Tensor(self) -> Type[TensorWrap]:
+            return TensorWrap
+
+        @property
+        def Constant(self) -> Type[ConstantWrap]:
+            return ConstantWrap
+
+        @property
+        def Variable(self) -> Type[VariableWrap]:
+            return VariableWrap
+
+        def Placeholder(self, shape: List[int]) -> PrimePlaceholder:  # type: ignore
+            return PrimePlaceholder(shape, modulus)
+
+        @property
+        def modulus(self) -> int:
+            return modulus
+
+    return Factory()

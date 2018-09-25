@@ -39,7 +39,7 @@ class AbstractTensor(ABC):
         pass
 
     @classmethod
-    def lift(cls, x: Union['AbstractTensor', int]) -> Union['AbstractTensor']:
+    def lift(cls, x: Union['AbstractTensor', int]) -> 'AbstractTensor':
         # TODO[Morten] support other types of `x`
 
         if isinstance(x, AbstractTensor):

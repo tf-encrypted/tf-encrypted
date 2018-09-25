@@ -11,7 +11,7 @@ from ..config import run
 
 class Int64Tensor(AbstractTensor):
 
-    modulus = 2**63
+    modulus = 2**64
     int_type = tf.int64
 
     def __init__(self, value: Union[np.ndarray, tf.Tensor]) -> None:
@@ -36,45 +36,41 @@ class Int64Tensor(AbstractTensor):
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int64Tensor':
-        # TODO[Morten] what should maxval be (account for negative numbers)?
-        return Int64Tensor(tf.random_uniform(shape=shape, dtype=tf.int64, maxval=2**31 - 1))
+        return Int64Tensor(tf.random_uniform(shape=shape, dtype=tf.int64, minval=tf.int64.min, maxval=tf.int64.max))
 
     def __repr__(self) -> str:
         return 'int64.Tensor(shape={})'.format(self.shape)
 
     @property
     def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
-        if self.value is None:
-            raise Exception("Can't call 'shape' on a empty tensor")
-
         return self.value.shape
 
-    def __add__(self, other: 'Int64Tensor') -> 'Int64Tensor':
+    def __add__(self, other) -> 'Int64Tensor':
         return self.add(other)
 
-    def __sub__(self, other: 'Int64Tensor') -> 'Int64Tensor':
+    def __sub__(self, other) -> 'Int64Tensor':
         return self.sub(other)
 
-    def __mul__(self, other: 'Int64Tensor') -> 'Int64Tensor':
+    def __mul__(self, other) -> 'Int64Tensor':
         return self.mul(other)
 
     def __mod__(self, k: int) -> 'Int64Tensor':
         return self.mod(k)
 
-    def add(self, other: 'Int64Tensor') -> 'Int64Tensor':
-        x, y = _lift(self), _lift(other)
+    def add(self, other) -> 'Int64Tensor':
+        x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
         return Int64Tensor(x.value + y.value)
 
-    def sub(self, other: 'Int64Tensor') -> 'Int64Tensor':
-        x, y = _lift(self), _lift(other)
+    def sub(self, other) -> 'Int64Tensor':
+        x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
         return Int64Tensor(x.value - y.value)
 
-    def mul(self, other: 'Int64Tensor') -> 'Int64Tensor':
-        x, y = _lift(self), _lift(other)
+    def mul(self, other) -> 'Int64Tensor':
+        x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
         return Int64Tensor(x.value * y.value)
 
-    def dot(self, other: 'Int64Tensor') -> 'Int64Tensor':
-        x, y = _lift(self), _lift(other)
+    def dot(self, other) -> 'Int64Tensor':
+        x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
         return Int64Tensor(tf.matmul(x.value, y.value))
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int64Tensor':
@@ -104,10 +100,6 @@ class Int64Tensor(AbstractTensor):
     def concat(xs: List['Int64Tensor'], axis: int) -> 'Int64Tensor':
         assert all(isinstance(x, Int64Tensor) for x in xs)
         return Int64Tensor(tf.concat([x.value for x in xs], axis=axis))
-
-
-def _lift(x: Union[Int64Tensor, int]) -> Int64Tensor:
-    return Int64Tensor.lift(x)
 
 
 class Int64Constant(Int64Tensor, AbstractConstant):

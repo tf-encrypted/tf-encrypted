@@ -11,7 +11,7 @@ from ..config import run
 
 class Int32Tensor(AbstractTensor):
 
-    modulus = 2**31
+    modulus = 2**32
     int_type = tf.int32
 
     def __init__(self, value: Union[np.ndarray, tf.Tensor]) -> None:
@@ -36,45 +36,41 @@ class Int32Tensor(AbstractTensor):
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int32Tensor':
-        # TODO[Morten] what should maxval be (account for negative numbers)?
-        return Int32Tensor(tf.random_uniform(shape=shape, dtype=tf.int32, maxval=2**31 - 1))
+        return Int32Tensor(tf.random_uniform(shape=shape, dtype=tf.int32, minval=tf.int32.min, maxval=tf.int32.max))
 
     def __repr__(self) -> str:
         return 'int32.Tensor(shape={})'.format(self.shape)
 
     @property
     def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
-        if self.value is None:
-            raise Exception("Can't call 'shape' on a empty tensor")
-
         return self.value.shape
 
-    def __add__(self, other: 'Int32Tensor') -> 'Int32Tensor':
+    def __add__(self, other) -> 'Int32Tensor':
         return self.add(other)
 
-    def __sub__(self, other: 'Int32Tensor') -> 'Int32Tensor':
+    def __sub__(self, other) -> 'Int32Tensor':
         return self.sub(other)
 
-    def __mul__(self, other: 'Int32Tensor') -> 'Int32Tensor':
+    def __mul__(self, other) -> 'Int32Tensor':
         return self.mul(other)
 
     def __mod__(self, k: int) -> 'Int32Tensor':
         return self.mod(k)
 
-    def add(self, other: 'Int32Tensor') -> 'Int32Tensor':
-        x, y = _lift(self), _lift(other)
+    def add(self, other) -> 'Int32Tensor':
+        x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value + y.value)
 
-    def sub(self, other: 'Int32Tensor') -> 'Int32Tensor':
-        x, y = _lift(self), _lift(other)
+    def sub(self, other) -> 'Int32Tensor':
+        x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value - y.value)
 
-    def mul(self, other: 'Int32Tensor') -> 'Int32Tensor':
-        x, y = _lift(self), _lift(other)
+    def mul(self, other) -> 'Int32Tensor':
+        x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value * y.value)
 
-    def dot(self, other: 'Int32Tensor') -> 'Int32Tensor':
-        x, y = _lift(self), _lift(other)
+    def dot(self, other) -> 'Int32Tensor':
+        x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(tf.matmul(x.value, y.value))
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int32Tensor':
@@ -104,10 +100,6 @@ class Int32Tensor(AbstractTensor):
     def concat(xs: List['Int32Tensor'], axis: int) -> 'Int32Tensor':
         assert all(isinstance(x, Int32Tensor) for x in xs)
         return Int32Tensor(tf.concat([x.value for x in xs], axis=axis))
-
-
-def _lift(x: Union[Int32Tensor, int]) -> Int32Tensor:
-    return Int32Tensor.lift(x)
 
 
 class Int32Constant(Int32Tensor, AbstractConstant):
@@ -159,6 +151,7 @@ class Int32Variable(Int32Tensor, AbstractVariable):
 
 
 class Int32Factory(AbstractFactory):
+
     @property
     def Tensor(self) -> Type[Int32Tensor]:
         return Int32Tensor
