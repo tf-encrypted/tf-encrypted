@@ -474,6 +474,22 @@ class Pond(Protocol):
         return self.dispatch('square', x)
 
     @memoize
+    def mod(self, x, y):
+
+        x_on_0, x_on_1 = x.unwrapped
+
+        with tf.name_scope('mod'):
+            with tf.device(self.server_0.device_name):
+                z_on_0 = x_on_0 % y
+
+            with tf.device(self.server_0.device_name):
+                z_on_1 = x_on_1 % y
+
+        z = PondPublicTensor(self, z_on_0, z_on_1, x.is_scaled or y.is_scaled)
+        print(f'vaue: {z}')
+        return z
+
+    @memoize
     def dot(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
         return self.dispatch('dot', x, y)
 
@@ -887,6 +903,9 @@ class PondTensor(abc.ABC):
 
     def __rmul__(self, other):
         return self.prot.mul(self, other)
+
+    def __mod__(self, other):
+        return self.prot.mod(self, other)
 
     def square(self):
         return self.prot.square(self)
@@ -1844,6 +1863,28 @@ def _mul_masked_masked(prot, x, y):
 
     z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
     z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+    return z
+
+#
+# mod helpers
+#
+
+
+def _mod_public_public(prot, x, y):
+    x_on_0, x_on_1 = x.unwrapped
+    y_on_0, y_on_1 = y.unwrapped
+
+    with tf.name_scope('mod'):
+        with tf.device(prot.server_0.device_name):
+            print(f'y_on_0 {y_on_0}')
+            z_on_0 = x_on_0 % y_on_0
+
+        with tf.device(prot.server_0.device_name):
+            z_on_1 = x_on_1 % y_on_1
+
+
+    z = PondPublicTensor(prot, z_on_0, z_on_1, x.is_scaled or y.is_scaled)
+    print(f'vaue: {z}')
     return z
 
 

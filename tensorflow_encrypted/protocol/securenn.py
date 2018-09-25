@@ -1,8 +1,14 @@
+import tensorflow as tf
+import numpy as np
+
 from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor, PondPrivateTensor
 )
 from ..player import Player
+from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
+
+bits = 32
 
 
 class SecureNN(Pond):
@@ -91,7 +97,71 @@ class SecureNN(Pond):
         return x + c + PondPrivateTensor.zero(x.prot, x.shape)
 
     def private_compare(self, x, r, beta):
-        raise NotImplementedError
+
+        # TODO -- the broadcasting step for r & beta
+        #         the test currently has them in same shape
+        #         as the input so it is not needed yet
+
+        # t = (r + 1) % (2 ** bits)
+        # print(f'T: {type(t)} ')
+
+        with tf.name_scope('private_compare'):
+            r_binary = r.binarize()
+            # t_binary = t.binarize()
+            input = x.binarize()
+
+            for server in [self.server_0, self.server_1]:
+                with tf.device(server.device_name):
+                    c = Int32Tensor(np.zeros(shape=input.shape))
+
+
+        """
+        r = np.broadcast_to(np.array(r), tensor.shape[0])
+    beta = np.broadcast_to(np.array(beta), tensor.shape[0])
+
+    # t = t = ((r + 1) % -np.iinfo(np.int64).max - 1) + np.iinfo(np.int64).max + 1
+    t = (r + 1) % (2 ** bits)
+
+    r_binary = binarize(r)
+    t_binary = binarize(t)
+
+    t0 = tensor.shares0
+    t1 = tensor.shares1
+
+    c0 = np.zeros(shape=t1.shape)
+    c1 = np.zeros(shape=t1.shape)
+
+    zero_indices = np.where(beta == 0)[0]
+    one_indices = np.where(beta == 1)[0]
+    edge_indices = np.where(r == 2 ** bits - 1)[0]
+    one_indices = np.setdiff1d(one_indices, edge_indices)
+
+    c0_zero, c1_zero = _private_compare_beta0(r_binary.take(zero_indices, axis=0),
+                                              t0.take(zero_indices, axis=0),
+                                              t1.take(zero_indices, axis=0))
+    c0_one, c1_one = _private_compare_beta1(r_binary.take(one_indices, axis=0),
+                                            t_binary.take(one_indices, axis=0),
+                                            t0.take(one_indices, axis=0),
+                                            t1.take(one_indices, axis=0))
+    c0_edge, c1_edge = _private_compare_edge()
+
+    zero_indices = np.expand_dims(zero_indices, 1)
+    one_indices = np.expand_dims(one_indices, 1)
+    edge_indices = np.expand_dims(edge_indices, 1)
+
+    np.put_along_axis(c0, zero_indices, c0_zero, axis=0)
+    np.put_along_axis(c0, one_indices, c0_one, axis=0)
+    np.put_along_axis(c0, edge_indices, c0_edge, axis=0)
+
+    np.put_along_axis(c1, zero_indices, c1_zero, axis=0)
+    np.put_along_axis(c1, one_indices, c1_one, axis=0)
+    np.put_along_axis(c1, edge_indices, c1_edge, axis=0)
+
+    res = PrivateTensor(values=None, shares0=c0, shares1=c1, modulus=p).reconstruct().values
+
+    return np.max(res == 0, axis=-1)
+    """
+        return 0
 
     def share_convert(self, x):
         raise NotImplementedError
