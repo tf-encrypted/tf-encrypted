@@ -123,9 +123,9 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
             x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
             xbits = x.binarize()
             xlsb = xbits[..., 0]
-            xlsb0, xlsb1 = prot._share(xlsb, p)
             x = PondPrivateTensor(prot, *prot._share(x), is_scaled=True)
             xbits = PondPrivateTensor(prot, *prot._share(xbits), is_scaled=False)
+            xlsb = PondPrivateTensor(prot, *prot._share(xlsb, p), is_scaled=False)
             # TODO: Generate zero mask?
 
         devices = [prot.server0.device_name, prot.server1.device_name]
@@ -136,25 +136,15 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
 
     with tf.name_scope('lsb'):
         r = (y + x).reveal()
-        rbits0, rbits1 = prot.binarize(r).unwrapped
-        rlsb0, rlsb1 = rbits0[..., 0], rbits1[..., 0]
+        rbits = prot.binarize(r)
+        rlsb = rbits[..., 0]
 
         bp = prot.private_compare(xbits, r, b)
-        bp0, bp1 = bp.unwrapped
 
-        with tf.device(prot.server0.device_name):
-            gamma_on_0 = bp0 + b0 * bp0 * (-2)
-            delta_on_0 = xlsb0 + rlsb0 * xlsb0 * (-2)
+        gamma = prot.bitwise_xor(bp, b)
+        delta = prot.bitwise_xor(xlsb, rlsb)
 
-        with tf.device(prot.server1.device_name):
-            gamma_on_1 = bp1 + b1 * (bp1 * (-2) + 1)
-            delta_on_1 = xlsb1 + rlsb1 * (xlsb1 * (-2) + 1)
-
-        gamma = PondPrivateTensor(prot, gamma_on_0, gamma_on_1, is_scaled=False)
-        delta = PondPrivateTensor(prot, delta_on_0, delta_on_1, is_scaled=False)
-        theta = gamma * delta
-
-        alpha = gamma + delta + theta * (-2)  # TODO: add zero mask? # TODO: __rmul__
+        alpha = prot.bitwise_xor(gamma, delta)  # TODO: add zero mask?
 
         return alpha
 
@@ -165,4 +155,4 @@ def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):
 
 def _generate_random_bits(prot: SecureNN, shape: List[int]):
     backing = prot.tensor_factory.Tensor.sample_bounded(shape)
-    return PondPublicTensor(prot, backing, backing, is_scaled=False)  # FIXME: better way to generate bits
+    return PondPublicTensor(prot, backing, backing, is_scaled=False)
