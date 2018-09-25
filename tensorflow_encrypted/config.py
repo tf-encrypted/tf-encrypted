@@ -19,7 +19,7 @@ __TFE_STATS__ = bool(os.getenv('TFE_STATS', False))
 __TFE_TRACE__ = bool(os.getenv('TFE_TRACE', False))
 __TENSORBOARD_DIR__ = str(os.getenv('TFE_STATS_DIR', '/tmp/tensorboard'))
 
-_run_counter: Any = defaultdict(int)
+_run_counter = defaultdict(int)  # type: Any
 
 
 class Config(ABC):

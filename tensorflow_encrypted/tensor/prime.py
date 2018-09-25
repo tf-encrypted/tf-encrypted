@@ -162,7 +162,7 @@ class PrimeVariable(PrimeTensor):
 
     def __init__(self, initial_value: Union[tf.Tensor, np.ndarray], modulus: int) -> None:
         variable = tf.Variable(initial_value, dtype=INT_TYPE, trainable=False)
-        value: Union[tf.Tensor, np.ndarray] = variable.read_value()
+        value = variable.read_value()
 
         super(PrimeVariable, self).__init__(value, modulus)
         self.variable = variable
