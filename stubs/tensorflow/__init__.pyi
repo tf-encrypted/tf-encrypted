@@ -497,8 +497,8 @@ def constant(
 
 
 def matmul(
-    a: Union[np.ndarray, Tensor],
-    b: Union[np.ndarray, Tensor],
+    a: Union[np.ndarray, Tensor, Variable],
+    b: Union[np.ndarray, Tensor, Variable],
     transpose_a=False,
     transpose_b=False,
     adjoint_a=False,
@@ -511,11 +511,19 @@ def matmul(
 
 
 def random_uniform(
-    shape: Union[Tuple[int, ...], TensorShape],
+    shape: Union[List[int], Tuple[int, ...], TensorShape],
     minval: Any = 0,
     maxval: Optional[Any] = None,
     dtype: Optional[TFTypes] = float32,
     seed: Optional[int] = None,
+    name: Optional[str] = None
+) -> Tensor:
+    ...
+
+
+def zeros(
+    shape: Union[List[int], Tuple[int, ...], TensorShape],
+    dtype: Optional[TFTypes] = float32,
     name: Optional[str] = None
 ) -> Tensor:
     ...
@@ -544,5 +552,22 @@ def stack(
     values: List[Union[np.ndarray, Tensor]],
     axis: int=0,
     name: str='stack'
+) -> Tensor:
+    ...
+
+
+def cast(
+    x: Union[np.ndarray, Tensor],
+    dtype: Optional[TFTypes] = float32,
+    name: Optional[str] = None
+) -> Tensor:
+    ...
+
+
+def expand_dims(
+    input: Tensor,
+    axis: int=0,
+    name: Optional[str] = None,
+    dim: Optional[int] = None
 ) -> Tensor:
     ...

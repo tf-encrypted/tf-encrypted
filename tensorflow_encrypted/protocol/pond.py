@@ -24,7 +24,7 @@ from .protocol import Protocol, global_cache_updators, memoize, nodes
 TFEData = Union[np.ndarray, tf.Tensor]
 TFEVariable = Union['PondPublicVariable', 'PondPrivateVariable', tf.Variable]
 TFEPublicTensor = NewType('TFEPublicTensor', 'PondPublicTensor')
-TFETensor = Union[TFEPublicTensor, 'PondPrivateTensor']
+TFETensor = Union[TFEPublicTensor, 'PondPrivateTensor', 'PondMaskedTensor']
 
 # the assumption in encoding/decoding is that encoded numbers will fit into signed int32
 BITPRECISION_INTEGRAL = 14
@@ -474,8 +474,11 @@ class Pond(Protocol):
         return self.dispatch('square', x)
 
     @memoize
-    def dot(self, x, y):
+    def dot(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
         return self.dispatch('dot', x, y)
+
+    def matmul(self, x, y):
+        return self.dot(x, y)
 
     @memoize
     def truncate(self, x: 'PondTensor'):
@@ -882,11 +885,17 @@ class PondTensor(abc.ABC):
     def __mul__(self, other):
         return self.prot.mul(self, other)
 
+    def __rmul__(self, other):
+        return self.prot.mul(self, other)
+
     def square(self):
         return self.prot.square(self)
 
     def dot(self, other):
         return self.prot.dot(self, other)
+
+    def matmul(self, other):
+        return self.dot(self, other)
 
     def tranpose(self):
         return self.prot.transpose(self)
@@ -1188,7 +1197,6 @@ class PondCachedMaskedTensor(PondMaskedTensor):
 
     def __repr__(self) -> str:
         return 'PondCachedMaskedTensor(shape={})'.format(self.shape)
-
 
 #
 # helpers
