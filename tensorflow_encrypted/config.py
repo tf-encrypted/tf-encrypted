@@ -250,12 +250,18 @@ class RemoteConfig(Config):
         target = self._compute_target(master)
         # If you witness memory leaks while doing multiple predictions using docker
         # see https://github.com/tensorflow/tensorflow/issues/22098
-        config = tf.ConfigProto(
-            log_device_placement=log_device_placement,
-            allow_soft_placement=False,
-            inter_op_parallelism_threads=cpu_cores,
-            intra_op_parallelism_threads=cpu_cores
-        )
+        if cpu_cores is None:
+            config = tf.ConfigProto(
+                log_device_placement=log_device_placement,
+                allow_soft_placement=False
+            )
+        else:
+            config = tf.ConfigProto(
+                log_device_placement=log_device_placement,
+                allow_soft_placement=False,
+                inter_op_parallelism_threads=cpu_cores,
+                intra_op_parallelism_threads=cpu_cores
+            )
         print("Starting session on target '{}' using config {}".format(target, config))
         sess = tf.Session(target, config=config)
 
