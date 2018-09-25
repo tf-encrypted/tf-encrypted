@@ -281,5 +281,14 @@ def gen_crt_sum(m):
     return crt_sum
 
 
+def gen_crt_rsqrt(m):
+
+    def crt_rsqrt(x):
+        with tf.name_scope('crt_rsqrt'):
+            return [tf.rsqrt(xi) % mi for xi, mi in zip(x, m)]
+
+    return crt_rsqrt
+
+
 class CrtTensor(object):
     pass
