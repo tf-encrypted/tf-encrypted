@@ -634,12 +634,12 @@ class Pond(Protocol):
     def relu(self, x: 'PondTensor'):
         assert isinstance(x, PondTensor), type(x)
 
-        w0 = 0.44015372000819103
+        w0 = 0.146717906
         w1 = 0.500000000
-        w2 = 0.11217537671414643
-        w4 = -0.0013660836712429923
-        w6 = 9.009136367360004e-06
-        w8 = -2.1097433984e-08
+        w2 = 0.336526130
+        w4 = -0.036884259
+        w6 = 0.002189220
+        w8 = -0.000046140
 
         with tf.name_scope('relu'):
 
