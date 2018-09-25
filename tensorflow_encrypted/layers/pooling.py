@@ -49,8 +49,8 @@ class AveragePooling2D(core.Layer):
             _, H_in, W_in, channels = self.input_shape
 
         if self.padding == "SAME":
-            H_out: int = math.ceil(H_in / self.strides[0])
-            W_out: int = math.ceil(W_in / self.strides[1])
+            H_out = math.ceil(H_in / self.strides[0])
+            W_out = math.ceil(W_in / self.strides[1])
         else:
             H_out = math.ceil((H_in - self.pool_size[0] + 1) / self.strides[0])
             W_out = math.ceil((W_in - self.pool_size[1] + 1) / self.strides[1])
