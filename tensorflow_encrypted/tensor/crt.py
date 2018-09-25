@@ -136,8 +136,8 @@ def crt_matmul_split(x: TFEData, y: TFEData, threshold: int) -> List[Tuple[TFEDa
             left = i * threshold
             right = (i + 1) * threshold
 
-            inner_x: List[Union[tf.Tensor, np.ndarray]] = []
-            inner_y: List[Union[tf.Tensor, np.ndarray]] = []
+            inner_x = []  # type: List[Union[tf.Tensor, np.ndarray]]
+            inner_y = []  # type: List[Union[tf.Tensor, np.ndarray]]
 
             for xi, yi in zip(x, y):
                 inner_x.append(xi[:, left:right])

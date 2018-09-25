@@ -3,7 +3,7 @@ import numpy as np
 
 from .protocol import memoize
 from ..protocol.pond import (
-    Pond, PondTensor, PondPrivateTensor
+    Pond, PondTensor
 )
 from ..player import Player
 from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
@@ -91,10 +91,7 @@ class SecureNN(Pond):
 
     @memoize
     def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
-        w = y - x
-        c = bit * w
-
-        return x + c + PondPrivateTensor.zero(x.prot, x.shape)
+        return x + bit * (y - x)
 
     def private_compare(self, x, r, beta):
 

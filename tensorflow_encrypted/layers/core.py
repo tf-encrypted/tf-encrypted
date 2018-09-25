@@ -9,13 +9,10 @@ from ..protocol.pond import TFEVariable
 
 
 class Layer(ABC):
-    input_shape: List[int]
-    output_shape: List[int]
 
     def __init__(self, input_shape: List[int]) -> None:
         self.input_shape = input_shape
         self.output_shape = self.get_output_shape()
-
         self.layer_output = None
 
     @abstractmethod

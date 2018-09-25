@@ -5,6 +5,7 @@ from . import errors
 from . import python
 from . import summary
 from . import train
+from . import bitwise
 import numpy as np
 
 __all__ = [
@@ -12,7 +13,8 @@ __all__ = [
     'errors',
     'python',
     'summary',
-    'train'
+    'train',
+    'bitwise'
 ]
 
 GraphElement = Union[
@@ -67,11 +69,11 @@ class int16(signedinteger):
 
 
 class int32(signedinteger):
-    ...
+    size: int
 
 
 class int64(signedinteger):
-    ...
+    size: int
 
 
 class unsignedinteger(integer):
@@ -565,9 +567,14 @@ def cast(
 
 
 def expand_dims(
-    input: Tensor,
+    input: Union[Tensor, np.ndarray],
     axis: int=0,
     name: Optional[str] = None,
     dim: Optional[int] = None
 ) -> Tensor:
+    ...
+
+
+def range(limit: int, delta: int=1, dtype: Optional[TFTypes]=None,
+          name: Optional[str]='range') -> Tensor:
     ...
