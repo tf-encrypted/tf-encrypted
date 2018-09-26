@@ -457,10 +457,6 @@ class Pond(Protocol):
         return self.dispatch('square', x)
 
     @memoize
-    def rsqrt(self, x):
-        return self.dispatch('rsqrt', x)
-
-    @memoize
     def dot(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
         return self.dispatch('dot', x, y)
 
