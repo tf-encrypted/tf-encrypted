@@ -35,6 +35,7 @@ for mi in m:
     assert 2 * log2(mi) + log2(1024) < log2(INT_TYPE.max)
 
 DOT_THRESHOLD = 1024
+SUM_THRESHOLD = 2**9
 
 _crt_decompose = gen_crt_decompose(m)
 _crt_recombine_lagrange = gen_crt_recombine_lagrange(m)
@@ -201,7 +202,8 @@ def _add(x, y):
     return Int100Tensor.from_decomposed(z_backing)
 
 
-def _sum(x, axis, keepdims):
+def _sum(x, axis=None, keepdims=None):
+    x = _lift(x)
     y_backing = _crt_sum(x.backing, axis, keepdims)
     return Int100Tensor.from_decomposed(y_backing)
 
