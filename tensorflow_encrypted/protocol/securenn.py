@@ -7,9 +7,9 @@ from ..protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 )
 from ..player import Player
-from ..tensor.native import p
 
 _thismodule = sys.modules[__name__]
+p = 67
 
 
 class SecureNN(Pond):
@@ -118,33 +118,34 @@ class SecureNN(Pond):
 
 
 def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
-    with tf.name_scope('lsb_mask'):
-        with tf.device(prot.crypto_producer.device_name):
-            x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
-            xbits = x.binarize()
-            xlsb = xbits[..., 0]
-            x = PondPrivateTensor(prot, *prot._share(x), is_scaled=False)
-            xbits = PondPrivateTensor(prot, *prot._share(xbits), is_scaled=False)
-            xlsb = PondPrivateTensor(prot, *prot._share(xlsb, p), is_scaled=False)
-
-        devices = [prot.server0.device_name, prot.server1.device_name]
-        bits_device = random.choice(devices)
-        with tf.device(bits_device):
-            b = _generate_random_bits(y.shape)
-
     with tf.name_scope('lsb'):
-        r = (y + x).reveal()
-        rbits = prot.binarize(r)
-        rlsb = rbits[..., 0]
+        with tf.name_scope('lsb_mask'):
+            with tf.device(prot.crypto_producer.device_name):
+                x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
+                xbits = x.binarize()
+                xlsb = xbits[..., 0]
+                x = PondPrivateTensor(prot, *prot._share(x), is_scaled=False)
+                xbits = PondPrivateTensor(prot, *prot._share(xbits), is_scaled=False)
+                xlsb = PondPrivateTensor(prot, *prot._share(xlsb, p), is_scaled=False)
 
-        bp = prot.private_compare(xbits, r, b)
+            devices = [prot.server0.device_name, prot.server1.device_name]
+            bits_device = random.choice(devices)
+            with tf.device(bits_device):
+                b = _generate_random_bits(y.shape)
 
-        gamma = prot.bitwise_xor(bp, b)
-        delta = prot.bitwise_xor(xlsb, rlsb)
+        with tf.name_scope('lsb_ops'):
+            r = (y + x).reveal()
+            rbits = prot.binarize(r)
+            rlsb = rbits[..., 0]
 
-        alpha = prot.bitwise_xor(gamma, delta)
+            bp = prot.private_compare(xbits, r, b)
 
-        return alpha
+            gamma = prot.bitwise_xor(bp, b)
+            delta = prot.bitwise_xor(xlsb, rlsb)
+
+            alpha = prot.bitwise_xor(gamma, delta)
+
+            return alpha
 
 
 def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):
