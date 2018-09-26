@@ -9,13 +9,12 @@ from tensorflow_encrypted.tensor.prime import prime_factory
 class TestShare(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
-        self.config = config = tfe.LocalConfig([
+        self.config = tfe.LocalConfig([
             'server0',
             'server1',
             'crypto_producer'
         ])
         self.tensor = [[1, 2, 3], [4, 5, 6]]
-
 
     def test_share(self):
 
