@@ -7,7 +7,7 @@ from typing import Union, Optional, List, Dict, Any, Type
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_mod,
-    gen_crt_sum,
+    gen_crt_sum, gen_crt_rsqrt,
     gen_crt_sample_uniform, gen_crt_sample_bounded, crt_matmul_split
 )
 from .helpers import prod, log2
