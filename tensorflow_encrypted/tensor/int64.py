@@ -5,7 +5,7 @@ import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .factory import AbstractFactory
-from .native_shared import conv2d
+from .shared import conv2d, im2col
 
 from ..config import run
 
@@ -76,6 +76,9 @@ class Int64Tensor(AbstractTensor):
         print(x.value.dtype)
 
         return Int64Tensor(tf.matmul(x.value, y.value))
+
+    def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int) -> 'Int32Tensor':
+        return im2col(self, h_filter, w_filter, padding, strides)
 
     def conv2d(self, other: Any, strides: int, padding: str='SAME') -> 'Int64Tensor':
         x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
