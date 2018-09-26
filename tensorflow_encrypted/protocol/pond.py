@@ -756,7 +756,7 @@ class Pond(Protocol):
         return z
 
     def conv2d_bw(self, x, d_y, w_shape, strides, padding):
-        node_key = ('conv2d', x, d_y, w_shape)
+        node_key = ('conv2d_bw', x, d_y, w_shape)
         z = nodes.get(node_key, None)
 
         if z is not None:
@@ -1533,7 +1533,7 @@ def _im2col_masked(prot, x_masked, h_filter, w_filter, padding, strides):
             a1_col = a1.im2col(h_filter, w_filter, padding, strides)
             alpha_on_1_col = alpha_on_1.im2col(h_filter, w_filter, padding, strides)
 
-    x_unmasked_col = prot.im2col(x_masked.unmasked, h_filter, w_filter, padding, strides)
+        x_unmasked_col = prot.im2col(x_masked.unmasked, h_filter, w_filter, padding, strides)
     x_col = PondMaskedTensor(prot, x_unmasked_col, a_col, a0_col, a1_col, alpha_on_0_col,
                              alpha_on_1_col, x_masked.is_scaled)
     return x_col
