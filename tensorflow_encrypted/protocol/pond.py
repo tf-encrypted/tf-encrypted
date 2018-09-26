@@ -336,7 +336,7 @@ class Pond(Protocol):
             return share0 + share1
 
     @memoize
-    def assign(self, variable, value):
+    def assign(self, variable: 'PondPrivateVariable', value) -> tf.Operation:
         assert isinstance(variable, PondPrivateVariable), type(variable)
         assert isinstance(value, PondPrivateTensor), type(value)
         assert variable.is_scaled == value.is_scaled, "Scaling must match: {}, {}".format(variable.is_scaled, value.is_scaled)
@@ -407,7 +407,7 @@ class Pond(Protocol):
             raise TypeError("Don't know how to lift {}, {}".format(type(x), type(y)))
 
     @memoize
-    def sum(self, x, axis, keepdims):
+    def sum(self, x, axis=0, keepdims=False):
         x = self.lift(x)
 
         dispatch = {
@@ -420,6 +420,9 @@ class Pond(Protocol):
             raise TypeError("Don't know how to sum {}".format(type(x)))
 
         return func(self, x, axis, keepdims)
+
+    def reduce_sum(self, x, axis=0, keepdims=False):
+        return self.sum(x, axis=0, keepdims=False)
 
     @memoize
     def sub(self, x, y):
@@ -818,8 +821,11 @@ class PondTensor(abc.ABC):
     def __add__(self, other):
         return self.prot.add(self, other)
 
-    def sum(self, axis, keepdims=False):
+    def sum(self, axis=0, keepdims=False):
         return self.prot.sum(self, axis, keepdims)
+
+    def reduce_sum(self, axis=0, keepdims=False):
+        return self.sum(self, axis, keepdims)
 
     def sub(self, other):
         return self.prot.sub(self, other)
