@@ -5,6 +5,7 @@ from . import errors
 from . import python
 from . import summary
 from . import train
+from . import bitwise
 import numpy as np
 
 __all__ = [
@@ -12,7 +13,8 @@ __all__ = [
     'errors',
     'python',
     'summary',
-    'train'
+    'train',
+    'bitwise'
 ]
 
 GraphElement = Union[
@@ -67,11 +69,11 @@ class int16(signedinteger):
 
 
 class int32(signedinteger):
-    ...
+    size: int
 
 
 class int64(signedinteger):
-    ...
+    size: int
 
 
 class unsignedinteger(integer):
@@ -140,6 +142,9 @@ class Tensor:
     def __mod__(self, other):
         ...
 
+    def __getitem__(self, slice):
+        ...
+
 
 class SparseTensor:
     ...
@@ -153,6 +158,9 @@ class TensorShape:
         ...
 
     def __len__(self) -> int:
+        ...
+
+    def __getitem__(self, slice):
         ...
 
 
@@ -450,7 +458,7 @@ def group(
 
 def reshape(
     tensor: Any,
-    shape: Union[Tensor, List[int]],
+    shape: Union[Tensor, List[int], Tuple[int, ...]],
     name: Optional[str] = None
 ) -> Tensor:
     ...
@@ -494,8 +502,8 @@ def constant(
 
 
 def matmul(
-    a: Union[np.ndarray, Tensor],
-    b: Union[np.ndarray, Tensor],
+    a: Union[np.ndarray, Tensor, Variable],
+    b: Union[np.ndarray, Tensor, Variable],
     transpose_a=False,
     transpose_b=False,
     adjoint_a=False,
@@ -508,11 +516,19 @@ def matmul(
 
 
 def random_uniform(
-    shape: Union[Tuple[int, ...], TensorShape],
+    shape: Union[List[int], Tuple[int, ...], TensorShape],
     minval: Any = 0,
     maxval: Optional[Any] = None,
     dtype: Optional[TFTypes] = float32,
     seed: Optional[int] = None,
+    name: Optional[str] = None
+) -> Tensor:
+    ...
+
+
+def zeros(
+    shape: Union[List[int], Tuple[int, ...], TensorShape],
+    dtype: Optional[TFTypes] = float32,
     name: Optional[str] = None
 ) -> Tensor:
     ...
@@ -529,7 +545,7 @@ def assign(
 
 
 def transpose(
-    a: Union[np.ndarray, Tensor],
+    a: Union[np.ndarray, Tensor, Variable],
     perm: Optional[Union[List[int], Tuple[int, ...]]]=None,
     name: str='transpose',
     conjugate: bool=False
@@ -542,4 +558,26 @@ def stack(
     axis: int=0,
     name: str='stack'
 ) -> Tensor:
+    ...
+
+
+def cast(
+    x: Union[np.ndarray, Tensor],
+    dtype: Optional[TFTypes] = float32,
+    name: Optional[str] = None
+) -> Tensor:
+    ...
+
+
+def expand_dims(
+    input: Union[Tensor, np.ndarray],
+    axis: int=0,
+    name: Optional[str] = None,
+    dim: Optional[int] = None
+) -> Tensor:
+    ...
+
+
+def range(limit: int, delta: int=1, dtype: Optional[TFTypes]=None,
+          name: Optional[str]='range') -> Tensor:
     ...

@@ -1,6 +1,6 @@
 # TensorFlow Encrypted
 
-[![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master) [![GitHub](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg)](./LICENSE) [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/)
+![Status](https://img.shields.io/badge/status-alpha-blue.svg)  [![License](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg)](./LICENSE)  [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master)
 
 This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/), with the aim of making it easy for researchers and practitioners to experiment with private machine learning using familiar tools and without being an expert in both machine learning and cryptography. To this end the code is structured into roughly three modules:
 
@@ -92,7 +92,7 @@ cd tf-encrypted
 pip install -e .
 ```
 
-Note however that currently **only Python 3.6 is supported**; to manage this we recommend using a package manager like pip or conda.
+Note however that currently **only Python 3.5 and 3.6 are supported**; to manage this we recommend using a package manager like pip or conda.
 
 After successful installation you should be able to e.g. run the examples
 

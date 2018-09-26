@@ -6,6 +6,7 @@ from . import core
 
 
 class Conv2D(core.Layer):
+
     def __init__(self,
                  input_shape: List[int], filter_shape: List[int],
                  strides: int = 1, padding: str = "SAME",

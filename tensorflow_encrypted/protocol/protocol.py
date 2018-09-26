@@ -1,13 +1,15 @@
 import functools
-from typing import Optional, Type, List, Dict
+from typing import Optional, Type, Any
 from types import TracebackType
 
 import tensorflow as tf
 
+from ..tensor.tensor import AbstractTensor
+
 
 _current_prot = None
-global_cache_updators: List = []
-nodes: Dict = {}
+global_cache_updators = list()
+nodes = dict()
 
 
 class Protocol(object):
@@ -40,8 +42,8 @@ def global_caches_updator():
 def memoize(func):
 
     @functools.wraps(func)
-    def cache_nodes(self, *args, **kwargs):
-
+    def cache_nodes(self: Protocol, *args: Any, **kwargs: Any) -> AbstractTensor:
+        args = tuple(tuple(x) if isinstance(x, list) else x for x in args)
         node_key = (func.__name__, args, tuple(sorted(kwargs.items())))
 
         cached_result = nodes.get(node_key, None)

@@ -10,27 +10,25 @@ from ..config import Config
 
 
 class ConvertInputProvider(InputProvider):
-    input: np.ndarray
 
-    def __init__(self, player: Player, input: np.ndarray) -> None:
+    def __init__(self, player: Player, input: Union[np.ndarray, tf.Tensor]) -> None:
         self.input = input
         self.player = player
 
     def provide_input(self) -> tf.Tensor:
+        if isinstance(self.input, tf.Tensor):
+            return self.input
         return tf.constant(self.input)
 
 
 class Converter():
-    config: Config
-    protocol: Pond
-    outputs: Dict[str, Any] = {}
-    weights_provider: Player
 
     def __init__(self, config: Config, protocol: Pond,
                  weights_provider: Player) -> None:
         self.config = config
         self.protocol = protocol
         self.weights_provider = weights_provider
+        self.outputs = {}
 
     def convert(self, graph_def: Any, input: Union[List[InputProvider], InputProvider],
                 register: Dict[str, Any]) -> Any:
@@ -78,7 +76,7 @@ def extract_graph_summary(graph_def: Any) -> Tuple[Dict[str, List[str]],
     name_to_node = {}  # Keyed by node name.
 
     for node in graph_def.node:
-        name: str = node.name
+        name = node.name
         n = node_name(name)
         name_to_node[n] = node
         name_to_input_name[n] = [node_name(x) for x in node.input]

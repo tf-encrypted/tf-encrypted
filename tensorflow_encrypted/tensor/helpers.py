@@ -1,6 +1,6 @@
 from functools import reduce
 from math import log
-from typing import Tuple, List, Callable
+from typing import Tuple
 
 
 def egcd(a: int, b: int) -> Tuple[int, int, int]:
@@ -21,5 +21,5 @@ def inverse(a: int, m: int) -> int:
     return b % m
 
 
-log2: Callable[[int], float] = lambda x: log(x) / log(2)
-prod: Callable[[List[int]], int] = lambda xs: reduce(lambda x, y: x * y, xs)
+log2 = lambda x: log(x) / log(2)
+prod = lambda xs: reduce(lambda x, y: x * y, xs)
