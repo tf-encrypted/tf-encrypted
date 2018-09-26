@@ -84,8 +84,8 @@ class SecureNN(Pond):
         return self.bitwise_not(self.less(x, y))
 
     @memoize
-    def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
-        return x + bit * (y - x)
+    def select_share(self, x: PondTensor, y: PondTensor, choice_bit: PondTensor) -> PondTensor:
+        return x + (y - x) * choice_bit
 
     def private_compare(self, x, r, beta):
         raise NotImplementedError

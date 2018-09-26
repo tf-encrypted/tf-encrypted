@@ -211,7 +211,7 @@ def gen_crt_sample_bounded(m, int_type):
 
         with tf.name_scope('sample_bounded'):
             q, r = bitlength // CHUNK_MAX_BITLENGTH, bitlength % CHUNK_MAX_BITLENGTH
-            chunk_sizes = [CHUNK_MAX_BITLENGTH] * q + [r]
+            chunk_sizes = [CHUNK_MAX_BITLENGTH] * q + ([r] if r > 0 else [])
 
             result = decompose(0)
             for chunk_size in chunk_sizes:
@@ -232,7 +232,6 @@ def gen_crt_mod(m, int_type):
     # outer precomputation
     M = prod(m)
     q = [inverse(M // mi, mi) for mi in m]
-    redecompose = gen_crt_decompose(m)
 
     def crt_mod(x, k):
         assert type(k) in [int], type(k)
@@ -252,7 +251,7 @@ def gen_crt_mod(m, int_type):
             u = tf.reduce_sum([ti * bi for ti, bi in zip(t, b)], axis=0)
             v = tf.cast(alpha, int_type) * B
             w = u - v
-            return redecompose(w % k)
+            return w % k
 
     return crt_mod
 
