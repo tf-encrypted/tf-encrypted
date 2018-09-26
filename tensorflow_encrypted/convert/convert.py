@@ -11,11 +11,13 @@ from ..config import Config
 
 class ConvertInputProvider(InputProvider):
 
-    def __init__(self, player: Player, input: np.ndarray) -> None:
+    def __init__(self, player: Player, input: Union[np.ndarray, tf.Tensor]) -> None:
         self.input = input
         self.player = player
 
     def provide_input(self) -> tf.Tensor:
+        if isinstance(self.input, tf.Tensor):
+            return self.input
         return tf.constant(self.input)
 
 
