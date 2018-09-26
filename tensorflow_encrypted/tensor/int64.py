@@ -5,7 +5,7 @@ import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .factory import AbstractFactory
-from .shared import conv2d, im2col
+from .native_shared import conv2d, im2col
 
 from ..config import run
 
