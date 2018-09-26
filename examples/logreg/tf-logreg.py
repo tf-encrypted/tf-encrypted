@@ -4,25 +4,31 @@ from data import gen_training_input, gen_test_input
 
 # Parameters
 learning_rate = 0.01
+reg_rate = 10.  # Force weights to stay in [-1 ,1] range
 training_set_size = 1000
 test_set_size = 100
-training_epochs = 10
+training_epochs = 5
 batch_size = 100
-nb_feats = 5
+nb_feats = 10
 
 
 x, y = gen_training_input(training_set_size, nb_feats, batch_size)
 x_test, y_test, _ = gen_test_input(test_set_size, nb_feats, batch_size)
 
 
-W = tf.Variable(tf.random_uniform([nb_feats, 1], -0.01, 0.01))
+W = tf.Variable(tf.random_uniform([nb_feats, 1], -.1, .1))
 b = tf.Variable(tf.zeros([1]))
 
 
 # Training model
 out = tf.matmul(x, W) + b
 pred = tf.sigmoid(out)
-cost = -tf.reduce_mean(y * tf.log(pred) + (1 - y) * tf.log(1 - pred))
+l2_reg = .5 * (
+    tf.reduce_mean(tf.reduce_sum(tf.square(W), axis=1)) \
+    + tf.reduce_mean(tf.square(b))
+)
+
+cost = -tf.reduce_mean(y * tf.log(pred) + (1 - y) * tf.log(1 - pred)) + reg_rate * l2_reg
 
 
 # Backprop
@@ -32,8 +38,8 @@ cost = -tf.reduce_mean(y * tf.log(pred) + (1 - y) * tf.log(1 - pred))
 # dc_out = pred * (1 - pred) * dc_pred
 # equivalent to:
 dc_out = pred - y
-dW = tf.matmul(tf.transpose(x), dc_out)
-db = tf.reduce_sum(1. * dc_out, axis=0)
+dW = tf.matmul(tf.transpose(x), dc_out) + reg_rate * W
+db = tf.reduce_sum(1. * dc_out, axis=0) + reg_rate * b
 ops = [
     tf.assign(W, W - dW * learning_rate),
     tf.assign(b, b - db * learning_rate)

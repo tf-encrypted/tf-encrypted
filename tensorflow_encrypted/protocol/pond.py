@@ -217,7 +217,7 @@ class Pond(Protocol):
 
     def define_private_input(
         self,
-        provider: InputProvider,
+        provider: Union[InputProvider, tf.Tensor],
         apply_scaling: bool=True,
         name: str=None,
         masked: bool=False
@@ -241,10 +241,17 @@ class Pond(Protocol):
                 return PondMaskedTensor(self, x, a, a0, a1, alpha, alpha, apply_scaling)
 
         with tf.name_scope('private-input{}'.format('-' + name if name else '')):
+            if isinstance(provider, tf.Tensor):
+                device_name = None
+                print("Warning: Using a TensorFlow tensor as input directly make your tensor visible by the computer running this script")
+            else:
+                device_name = provider.player.device_name
 
-            with tf.device(provider.player.device_name):
-
-                inputs = provider.provide_input()
+            with tf.device(device_name):
+                if isinstance(provider, tf.Tensor):
+                    inputs = provider
+                else:
+                    inputs = provider.provide_input()
 
                 if isinstance(inputs, tf.Tensor):
                     # single input -> single output
@@ -338,7 +345,7 @@ class Pond(Protocol):
         with tf.name_scope('reconstruct'):
             return share0 + share1
 
-    def assign(self, variable, value):
+    def assign(self, variable: 'PondPrivateVariable', value) -> tf.Operation:
         assert isinstance(variable, PondPrivateVariable), type(variable)
         assert isinstance(value, PondPrivateTensor), type(value)
         assert variable.is_scaled == value.is_scaled, "Scaling must match: {}, {}".format(variable.is_scaled, value.is_scaled)
@@ -415,7 +422,7 @@ class Pond(Protocol):
 
             raise TypeError("Don't know how to lift {}, {}".format(type(x), type(y)))
 
-    def sum(self, x, axis, keepdims):
+    def sum(self, x, axis=0, keepdims=False):
         node_key = ('sum', x)
         z = nodes.get(node_key, None)
 
@@ -437,6 +444,9 @@ class Pond(Protocol):
         nodes[node_key] = z
 
         return z
+
+    def reduce_sum(self, x, axis=0, keepdims=False):
+        return self.sum(x, axis=0, keepdims=False)
 
     @memoize
     def sub(self, x, y):
@@ -870,8 +880,11 @@ class PondTensor(abc.ABC):
     def __add__(self, other):
         return self.prot.add(self, other)
 
-    def sum(self, axis, keepdims=False):
+    def sum(self, axis=0, keepdims=False):
         return self.prot.sum(self, axis, keepdims)
+
+    def reduce_sum(self, axis=0, keepdims=False):
+        return self.sum(self, axis, keepdims)
 
     def sub(self, other):
         return self.prot.sub(self, other)

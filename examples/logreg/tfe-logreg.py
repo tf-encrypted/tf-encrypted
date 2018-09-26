@@ -1,9 +1,6 @@
-from typing import Union
 import numpy as np
-
 import tensorflow as tf
 import tensorflow_encrypted as tfe
-from tensorflow_encrypted.protocol.pond import PondPrivateTensor
 
 from data import gen_training_input, gen_test_input
 
@@ -18,20 +15,14 @@ server1 = config.get_player('server1')
 crypto_producer = config.get_player('crypto_producer')
 
 
-def consume(v: Union[np.ndarray, tf.Tensor], prot: tfe.protocol.Pond) -> PondPrivateTensor:
-    val = tfe.protocol.pond._encode(v, True)
-    x0, x1 = tfe.protocol.pond._share(val)
-    x = PondPrivateTensor(prot, x0, x1, True)
-    return x
-
-
 # Parameters
 learning_rate = 0.01
+reg_rate = 10.  # Force weights to stay in [-1 ,1] range
 training_set_size = 1000
 test_set_size = 100
-training_epochs = 10
+training_epochs = 5
 batch_size = 100
-nb_feats = 5
+nb_feats = 10
 
 
 x, y = gen_training_input(training_set_size, nb_feats, batch_size)
@@ -43,27 +34,31 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
 
     W = prot.define_private_variable(tf.random_uniform([nb_feats, 1], -0.01, 0.01))
     b = prot.define_private_variable(tf.zeros([1]))
-    xp = consume(x, prot)  # We secure our inputs
-    yp = consume(y, prot)
+    xp = prot.define_private_input(x)  # We secure our inputs
+    yp = prot.define_private_input(y)
 
     # Training model
-    out = prot.dot(xp, W) + b
+    out = prot.matmul(xp, W) + b
     pred = prot.sigmoid(out)
+    # l2_reg = .5 * (
+    #     prot.reduce_sum(prot.square(W), axis=1) * (1/training_set_size) \
+    #     + prot.reduce_sum(prot.square(b))
+    # )
     # Due to missing log function approximation, we need to compute the cost in numpy
-    # cost = -prot.sum(y * prot.log(pred) + (1 - y) * prot.log(1 - pred)) * (1/train_batch_size)
+    # cost = -prot.reduce_sum(y * prot.log(pred) + (1 - y) * prot.log(1 - pred)) * (1/train_batch_size)
 
     # Backprop
     dc_out = pred - yp
-    dW = prot.dot(prot.transpose(xp), dc_out)
-    db = prot.sum(1. * dc_out, axis=0, keepdims=False)
+    dW = prot.matmul(prot.transpose(xp), dc_out)
+    db = prot.reduce_sum(1. * dc_out, axis=0)
     ops = [
         prot.assign(W, W - dW * learning_rate),
         prot.assign(b, b - db * learning_rate)
     ]
 
     # Testing model
-    xp_test = consume(x_test, prot)  # We secure our inputs
-    yp_test = consume(y_test, prot)
+    xp_test = prot.define_private_input(x_test)  # We secure our inputs
+    yp_test = prot.define_private_input(y_test)
     pred_test = prot.sigmoid(prot.dot(xp_test, W) + b)
 
     total_batch = training_set_size // batch_size

@@ -29,6 +29,7 @@ def gen_test_input(total_size: int, nb_feats: int, bs: int) -> Tuple[tf.Tensor, 
     y_test_np = np.array(x_test_np.mean(axis=1) > 0, np.float32)
     test_set = tf.data.Dataset.from_tensor_slices((x_test_np, y_test_np)) \
                               .map(norm) \
+                              .repeat() \
                               .batch(bs)
     test_set_iterator = test_set.make_one_shot_iterator()
     x_test, y_test = test_set_iterator.get_next()
