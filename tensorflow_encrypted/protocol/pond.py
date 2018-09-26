@@ -323,7 +323,7 @@ class Pond(Protocol):
             scaling_factor = 2 ** BITPRECISION_FRACTIONAL if is_scaled else 1
 
             # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
-            return ((elements + BOUND).to_int32() - BOUND) / scaling_factor
+            return ((elements + BOUND).to_native() - BOUND) / scaling_factor
 
     def _share(self, secret: AbstractTensor) -> Tuple[AbstractTensor, AbstractTensor]:
         with tf.name_scope('share'):
@@ -455,10 +455,6 @@ class Pond(Protocol):
     @memoize
     def square(self, x):
         return self.dispatch('square', x)
-
-    @memoize
-    def rsqrt(self, x):
-        return self.dispatch('rsqrt', x)
 
     @memoize
     def dot(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
@@ -1845,32 +1841,6 @@ def _square_masked(prot, x):
     y = PondPrivateTensor(prot, y0, y1, x.is_scaled)
     y = prot.truncate(y) if y.is_scaled else y
     return y
-
-
-def _rsqrt_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
-    assert isinstance(x, PondPublicTensor), type(x)
-
-    x_on_0, x_on_1 = x.unwrapped
-
-    with tf.name_scope('rsqrt'):
-
-        with tf.device(prot.server_0.device_name):
-            y_on_0 = x_on_0.rsqrt()
-
-        with tf.device(prot.server_1.device_name):
-            y_on_1 = x_on_1.rsqrt()
-
-    y = PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
-    y = prot.truncate(y) if y.is_scaled else y
-    return y
-
-
-def _rsqrt_private(prot, x):
-    raise NotImplementedError()
-
-
-def _rsqrt_masked(prot, x):
-    raise NotImplementedError()
 
 
 #

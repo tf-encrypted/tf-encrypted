@@ -5,6 +5,7 @@ import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .factory import AbstractFactory
+from .native_shared import conv2d, im2col
 
 from ..config import run
 
@@ -31,7 +32,7 @@ class Int64Tensor(AbstractTensor):
         concrete_value = run(sess, self.value, feed_dict=feed_dict, tag=tag)
         return Int64Tensor.from_native(concrete_value)
 
-    def to_int64(self) -> Union[tf.Tensor, np.ndarray]:
+    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
 
     @staticmethod
@@ -45,39 +46,41 @@ class Int64Tensor(AbstractTensor):
     def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
         return self.value.shape
 
-    def __add__(self, other) -> 'Int64Tensor':
+    def __add__(self, other: Any) -> 'Int64Tensor':
         return self.add(other)
 
-    def __sub__(self, other) -> 'Int64Tensor':
+    def __sub__(self, other: Any) -> 'Int64Tensor':
         return self.sub(other)
 
-    def __mul__(self, other) -> 'Int64Tensor':
+    def __mul__(self, other: Any) -> 'Int64Tensor':
         return self.mul(other)
 
     def __mod__(self, k: int) -> 'Int64Tensor':
         return self.mod(k)
 
-    def add(self, other) -> 'Int64Tensor':
+    def add(self, other: Any) -> 'Int64Tensor':
         x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
         return Int64Tensor(x.value + y.value)
 
-    def sub(self, other) -> 'Int64Tensor':
+    def sub(self, other: Any) -> 'Int64Tensor':
         x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
         return Int64Tensor(x.value - y.value)
 
-    def mul(self, other) -> 'Int64Tensor':
+    def mul(self, other: Any) -> 'Int64Tensor':
         x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
         return Int64Tensor(x.value * y.value)
 
-    def dot(self, other) -> 'Int64Tensor':
+    def dot(self, other: Any) -> 'Int64Tensor':
         x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
+
         return Int64Tensor(tf.matmul(x.value, y.value))
 
-    def im2col(self, h_filter, w_filter, padding, strides) -> 'Int64Tensor':
-        raise NotImplementedError()
+    def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int) -> 'Int64Tensor':
+        return im2col(self, h_filter, w_filter, padding, strides)
 
-    def conv2d(self, other, strides, padding='SAME') -> 'Int64Tensor':
-        raise NotImplementedError()
+    def conv2d(self, other: Any, strides: int, padding: str='SAME') -> 'Int64Tensor':
+        x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
+        return conv2d(x, y, strides, padding)  # type: ignore
 
     def mod(self, k: int) -> 'Int64Tensor':
         return Int64Tensor(self.value % k)
