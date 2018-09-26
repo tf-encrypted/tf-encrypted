@@ -45,5 +45,6 @@ class TestShare(unittest.TestCase):
 
             np.testing.assert_array_equal(final.value, self.primetensor.value)
 
+
 if __name__ == '__main__':
     unittest.main()
