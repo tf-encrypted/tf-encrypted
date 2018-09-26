@@ -1843,32 +1843,6 @@ def _square_masked(prot, x):
     return y
 
 
-def _rsqrt_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
-    assert isinstance(x, PondPublicTensor), type(x)
-
-    x_on_0, x_on_1 = x.unwrapped
-
-    with tf.name_scope('rsqrt'):
-
-        with tf.device(prot.server_0.device_name):
-            y_on_0 = x_on_0.rsqrt()
-
-        with tf.device(prot.server_1.device_name):
-            y_on_1 = x_on_1.rsqrt()
-
-    y = PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
-    y = prot.truncate(y) if y.is_scaled else y
-    return y
-
-
-def _rsqrt_private(prot, x):
-    raise NotImplementedError()
-
-
-def _rsqrt_masked(prot, x):
-    raise NotImplementedError()
-
-
 #
 # dot helpers
 #
