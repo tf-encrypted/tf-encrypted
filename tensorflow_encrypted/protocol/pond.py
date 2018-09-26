@@ -327,10 +327,8 @@ class Pond(Protocol):
 
     def _share(self, secret: AbstractTensor, factory: Optional[AbstractFactory]=None) -> Tuple[AbstractTensor, AbstractTensor]:
         with tf.name_scope('share'):
-            if factory is not None:
-                share0 = factory.Tensor.sample_uniform(secret.shape)
-            else:
-                share0 = self.tensor_factory.Tensor.sample_uniform(secret.shape)
+            factory = factory or self.tensor_factory
+            share0 = factory.Tensor.sample_uniform(secret.shape)
             share1 = secret - share0
         return share0, share1
 
