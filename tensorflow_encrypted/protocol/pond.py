@@ -325,9 +325,12 @@ class Pond(Protocol):
             # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
             return ((elements + BOUND).to_native() - BOUND) / scaling_factor
 
-    def _share(self, secret: AbstractTensor) -> Tuple[AbstractTensor, AbstractTensor]:
+    def _share(self, secret: AbstractTensor, factory: Optional[AbstractFactory] = None) -> Tuple[AbstractTensor, AbstractTensor]:
         with tf.name_scope('share'):
-            share0 = self.tensor_factory.Tensor.sample_uniform(secret.shape)
+            if factory is not None:
+                share0 = factory.Tensor.sample_uniform(secret.shape)
+            else:
+                share0 = self.tensor_factory.Tensor.sample_uniform(secret.shape)
             share1 = secret - share0
         return share0, share1
 
