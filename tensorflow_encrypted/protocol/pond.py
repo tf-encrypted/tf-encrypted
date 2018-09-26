@@ -1562,9 +1562,7 @@ def _sum_masked(prot: Pond,
                 x: PondMaskedTensor,
                 axis: Optional[int] = None,
                 keepdims: Optional[bool] = None) -> PondPrivateTensor:
-    # y_on_0, y_on_1 = _sum_core(prot, x.unmasked, axis, keepdims)
-    # return PondPrivateTensor(prot, y_on_0, y_on_1)
-    raise NotImplementedError
+    return prot.sum(x.unmasked, axis, keepdims)
 
 
 #
