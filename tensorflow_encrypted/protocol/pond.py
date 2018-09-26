@@ -2318,19 +2318,21 @@ def _conv2d_bw_masked_masked(prot, x, d_y, w_shape, strides, padding):
 
         with tf.device(prot.crypto_producer.device_name):
             a_conv2d_b = a.conv2d_bw(b, w_shape, strides, padding)
-            a_conv2d_b0, a_conv2d_b1 = _share(a_conv2d_b)
+            a_conv2d_b0, a_conv2d_b1 = prot._share(a_conv2d_b)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
             beta = beta_on_0
-            z0 = a_conv2d_b0 + a0.conv2d_bw(beta, w_shape, strides, padding) +\
-                alpha.conv2d_bw(b0, w_shape, strides, padding) +\
-                alpha.conv2d_bw(beta, w_shape, strides, padding)
+            z0 = a_conv2d_b0 \
+                + a0.conv2d_bw(beta, w_shape, strides, padding) \
+                + alpha.conv2d_bw(b0, w_shape, strides, padding) \
+                + alpha.conv2d_bw(beta, w_shape, strides, padding)
 
         with tf.device(prot.server_1.device_name):
             alpha = alpha_on_1
             beta = beta_on_1
-            z1 = a_conv2d_b1 + a1.conv2d_bw(beta, w_shape, strides, padding)\
+            z1 = a_conv2d_b1 \
+                + a1.conv2d_bw(beta, w_shape, strides, padding) \
                 + alpha.conv2d_bw(b1, w_shape, strides, padding)
 
     z = PondPrivateTensor(prot, z0, z1, x.is_scaled or d_y.is_scaled)
