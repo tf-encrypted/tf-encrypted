@@ -123,16 +123,14 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
             x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
             xbits = x.binarize()
             xlsb = xbits[..., 0]
-            x = PondPrivateTensor(prot, *prot._share(x), is_scaled=True)
+            x = PondPrivateTensor(prot, *prot._share(x), is_scaled=False)
             xbits = PondPrivateTensor(prot, *prot._share(xbits), is_scaled=False)
             xlsb = PondPrivateTensor(prot, *prot._share(xlsb, p), is_scaled=False)
-            # TODO: Generate zero mask?
 
         devices = [prot.server0.device_name, prot.server1.device_name]
         bits_device = random.choice(devices)
         with tf.device(bits_device):
             b = _generate_random_bits(y.shape)
-            b0, b1 = b.unwrapped
 
     with tf.name_scope('lsb'):
         r = (y + x).reveal()
@@ -144,7 +142,7 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
         gamma = prot.bitwise_xor(bp, b)
         delta = prot.bitwise_xor(xlsb, rlsb)
 
-        alpha = prot.bitwise_xor(gamma, delta)  # TODO: add zero mask?
+        alpha = prot.bitwise_xor(gamma, delta)
 
         return alpha
 
@@ -154,5 +152,5 @@ def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):
 
 
 def _generate_random_bits(prot: SecureNN, shape: List[int]):
-    backing = prot.tensor_factory.Tensor.sample_bounded(shape)
+    backing = prot.tensor_factory.Tensor.sample_bounded(shape, bitlength=1)
     return PondPublicTensor(prot, backing, backing, is_scaled=False)
