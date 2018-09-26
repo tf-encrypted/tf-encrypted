@@ -73,11 +73,9 @@ class Int64Tensor(AbstractTensor):
     def dot(self, other: Any) -> 'Int64Tensor':
         x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
 
-        print(x.value.dtype)
-
         return Int64Tensor(tf.matmul(x.value, y.value))
 
-    def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int) -> 'Int32Tensor':
+    def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int) -> 'Int64Tensor':
         return im2col(self, h_filter, w_filter, padding, strides)
 
     def conv2d(self, other: Any, strides: int, padding: str='SAME') -> 'Int64Tensor':
