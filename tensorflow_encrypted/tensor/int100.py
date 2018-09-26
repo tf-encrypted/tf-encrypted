@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import math
 import numpy as np
 import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Type
@@ -8,13 +7,14 @@ from typing import Union, Optional, List, Dict, Any, Type
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_mod,
-    gen_crt_sum, gen_crt_im2col, gen_crt_rsqrt,
+    gen_crt_sum,
     gen_crt_sample_uniform, gen_crt_sample_bounded, crt_matmul_split
 )
 from .helpers import prod, log2
 from ..config import run
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
+from .shared import conv2d, im2col
 
 
 #
@@ -45,7 +45,6 @@ _crt_sum = gen_crt_sum(m)
 _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_dot = gen_crt_dot(m)
-_crt_im2col = gen_crt_im2col(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE)
 _crt_rsqrt = gen_crt_rsqrt(m)
 
@@ -112,6 +111,10 @@ class Int100Tensor(AbstractTensor):
     def one() -> 'Int100Tensor':
         return Int100Tensor.from_decomposed(np.array([1]) * len(m))
 
+    @property
+    def value(self) -> Union[List[tf.Tensor], List[np.ndarray]]:
+        return self.backing
+
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int100Tensor':
         evaluated_backing = run(sess, self.backing, feed_dict=feed_dict, tag=tag)
         return Int100Tensor.from_decomposed(evaluated_backing)
@@ -159,7 +162,7 @@ class Int100Tensor(AbstractTensor):
         return _dot(self, other)
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int100Tensor':
-        return _im2col(self, h_filter, w_filter, padding, strides)
+        return im2col(self, h_filter, w_filter, padding, strides)
 
     def conv2d(self, other, strides, padding='SAME') -> 'Int100Tensor':
         return _conv2d(self, other, strides, padding)
@@ -244,33 +247,8 @@ def _dot(x: Union[Int100Tensor, int], y: Union[Int100Tensor, int]) -> Int100Tens
     return Int100Tensor.from_decomposed(z_backing)
 
 
-def _im2col(x, h_filter, w_filter, padding, strides):
-    assert isinstance(x, Int100Tensor), type(x)
-    backing = _crt_im2col(x.backing, h_filter, w_filter, padding, strides)
-    return Int100Tensor.from_decomposed(backing)
-
-
 def _conv2d(x, y, strides, padding):
-    assert isinstance(x, Int100Tensor), type(x)
-    assert isinstance(y, Int100Tensor), type(y)
-
-    h_filter, w_filter, d_filters, n_filters = map(int, y.shape)
-    n_x, d_x, h_x, w_x = map(int, x.shape)
-    if padding == "SAME":
-        h_out = int(math.ceil(float(h_x) / float(strides)))
-        w_out = int(math.ceil(float(w_x) / float(strides)))
-    if padding == "VALID":
-        h_out = int(math.ceil(float(h_x - h_filter + 1) / float(strides)))
-        w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
-
-    X_col = x.im2col(h_filter, w_filter, padding, strides)
-    W_col = y.transpose(perm=(3, 2, 0, 1)).reshape([int(n_filters), -1])
-    out = W_col.dot(X_col)
-
-    out = out.reshape([n_filters, h_out, w_out, n_x])
-    out = out.transpose(perm=(3, 0, 1, 2))
-
-    return out
+    return conv2d(x, y, strides, padding)
 
 
 def _mod(x: Int100Tensor, k: int) -> Int100Tensor:

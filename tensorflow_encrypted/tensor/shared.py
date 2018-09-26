@@ -1,7 +1,7 @@
 import math
-from typing import List, Union
 
 import tensorflow as tf
+import numpy as np
 
 from .tensor import AbstractTensor
 from .prime import PrimeTensor
@@ -22,13 +22,13 @@ def binarize(tensor: AbstractTensor, prime: int=37) -> PrimeTensor:
         return PrimeTensor.from_native(val, prime)
 
 
-def im2col(tensor: Union[List[tf.Tensor], AbstractTensor], h_filter: int, w_filter: int,
-           padding: str, strides: int) -> Union[List[tf.Tensor], tf.Tensor]:
+def im2col(tensor: AbstractTensor, h_filter: int, w_filter: int, padding: str,
+           strides: int) -> AbstractTensor:
 
-    if isinstance(tensor, AbstractTensor):
+    if isinstance(tensor.value, tf.Tensor) or isinstance(tensor.value, np.ndarray):
         x = [tensor.value]
     else:
-        x = tensor
+        x = tensor.value
 
     with tf.name_scope('im2col'):
         # we need NHWC because tf.extract_image_patches expects this
@@ -64,10 +64,10 @@ def im2col(tensor: Union[List[tf.Tensor], AbstractTensor], h_filter: int, w_filt
             for x_col_NHWC in patch_tensors_NCHW
         ]
 
-        if isinstance(tensor, AbstractTensor):
+        if isinstance(tensor.value, tf.Tensor) or isinstance(tensor.value, np.ndarray):
             return type(tensor)(x_col_tensors[0])
 
-        return x_col_tensors
+        return type(tensor).from_decomposed(x_col_tensors)
 
 
 def conv2d(x: AbstractTensor, y: AbstractTensor, strides: int, padding: str) -> AbstractTensor:
