@@ -7,7 +7,7 @@ from typing import Union, Optional, List, Dict, Any, Type
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_mod,
-    gen_crt_sum, gen_crt_rsqrt,
+    gen_crt_sum, gen_crt_im2col,
     gen_crt_sample_uniform, gen_crt_sample_bounded, crt_matmul_split
 )
 from .helpers import prod, log2
@@ -46,7 +46,6 @@ _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_dot = gen_crt_dot(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE)
-_crt_rsqrt = gen_crt_rsqrt(m)
 
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
 _crt_sample_bounded = gen_crt_sample_bounded(m, INT_TYPE)
@@ -149,9 +148,6 @@ class Int100Tensor(AbstractTensor):
     def sum(self, axis, keepdims=None):
         return _sum(self, axis, keepdims)
 
-    def rsqrt(self):
-        return _rsqrt(self)
-
     def __sub__(self, other: 'Int100Tensor') -> 'Int100Tensor':
         return _sub(self, other)
 
@@ -210,11 +206,6 @@ def _add(x, y):
 
 def _sum(x, axis, keepdims):
     y_backing = _crt_sum(x.backing, axis, keepdims)
-    return Int100Tensor.from_decomposed(y_backing)
-
-
-def _rsqrt(x):
-    y_backing = _crt_rsqrt(x.backing)
     return Int100Tensor.from_decomposed(y_backing)
 
 
