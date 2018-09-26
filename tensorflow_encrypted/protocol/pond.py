@@ -446,7 +446,7 @@ class Pond(Protocol):
         return z
 
     def reduce_sum(self, x, axis=0, keepdims=False):
-        return self.sum(x, axis=0, keepdims=False)
+        return self.sum(x, axis=axis, keepdims=False)
 
     @memoize
     def sub(self, x, y):

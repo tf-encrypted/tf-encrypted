@@ -5,7 +5,7 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 
 
-class Testconcat(unittest.TestCase):
+class TestReduceSum(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
 
