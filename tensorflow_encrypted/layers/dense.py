@@ -46,7 +46,7 @@ class Dense(core.Layer):
         d_x = d_y.dot(self.weights.transpose())
 
         d_weights = x.transpose().dot(d_y)
-        d_bias = d_y.sum(axis=0)
+        d_bias = d_y.reduce_sum(axis=0)
 
         self.weights.assign((d_weights * learning_rate).neg() + self.weights)
         self.bias.assign((d_bias * learning_rate).neg() + self.bias)

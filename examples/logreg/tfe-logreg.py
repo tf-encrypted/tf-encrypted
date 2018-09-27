@@ -55,7 +55,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     # Backprop
     dc_out = pred - yp
     dW = prot.dot(prot.transpose(xp), dc_out)
-    db = prot.sum(1. * dc_out, axis=0, keepdims=False)
+    db = prot.reduce_sum(1. * dc_out, axis=0, keepdims=False)
     ops = [
         prot.assign(W, W - dW * learning_rate),
         prot.assign(b, b - db * learning_rate)

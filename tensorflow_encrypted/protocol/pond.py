@@ -408,7 +408,7 @@ class Pond(Protocol):
             raise TypeError("Don't know how to lift {}, {}".format(type(x), type(y)))
 
     @memoize
-    def sum(self, x, axis=None, keepdims=None):
+    def reduce_sum(self, x, axis=None, keepdims=None):
         x = self.lift(x)
 
         dispatch = {
@@ -422,8 +422,8 @@ class Pond(Protocol):
 
         return func(self, x, axis, keepdims)
 
-    def reduce_sum(self, x, axis=None, keepdims=None):
-        return self.sum(x, axis, keepdims)
+    def sum(self, x, axis=None, keepdims=None):
+        return self.reduce_sum(x, axis, keepdims)
 
     @memoize
     def sub(self, x, y):
@@ -818,11 +818,11 @@ class PondTensor(abc.ABC):
     def __add__(self, other):
         return self.prot.add(self, other)
 
-    def sum(self, axis=None, keepdims=None):
-        return self.prot.sum(self, axis, keepdims)
-
     def reduce_sum(self, axis=None, keepdims=None):
-        return self.sum(self, axis, keepdims)
+        return self.prot.reduce_sum(self, axis, keepdims)
+
+    def sum(self, axis=None, keepdims=None):
+        return self.reduce_sum(self, axis, keepdims)
 
     def sub(self, other):
         return self.prot.sub(self, other)
@@ -1517,11 +1517,11 @@ def _add_masked_masked(prot, x, y):
 
 
 #
-# sum helpers
+# reduce_sum helpers
 #
 
 
-def _sum_core(prot: Pond,
+def _reduce_sum_core(prot: Pond,
               x: PondTensor,
               axis: Optional[int] = None,
               keepdims: Optional[bool] = None) -> Tuple[AbstractTensor, AbstractTensor]:
@@ -1531,35 +1531,35 @@ def _sum_core(prot: Pond,
     with tf.name_scope('sum'):
 
         with tf.device(prot.server_0.device_name):
-            y_on_0 = x_on_0.sum(axis, keepdims)
+            y_on_0 = x_on_0.reduce_sum(axis, keepdims)
 
         with tf.device(prot.server_1.device_name):
-            y_on_1 = x_on_1.sum(axis, keepdims)
+            y_on_1 = x_on_1.reduce_sum(axis, keepdims)
 
     return y_on_0, y_on_1
 
 
-def _sum_public(prot: Pond,
+def _reduce_sum_public(prot: Pond,
                 x: PondPublicTensor,
                 axis: Optional[int] = None,
                 keepdims: Optional[bool] = None) -> PondPublicTensor:
-    y_on_0, y_on_1 = _sum_core(prot, x, axis, keepdims)
+    y_on_0, y_on_1 = _reduce_sum_core(prot, x, axis, keepdims)
     return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
 
-def _sum_private(prot: Pond,
+def _reduce_sum_private(prot: Pond,
                  x: PondPrivateTensor,
                  axis: Optional[int] = None,
                  keepdims: Optional[bool] = None) -> PondPrivateTensor:
-    y_on_0, y_on_1 = _sum_core(prot, x, axis, keepdims)
+    y_on_0, y_on_1 = _reduce_sum_core(prot, x, axis, keepdims)
     return PondPrivateTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
 
-def _sum_masked(prot: Pond,
+def _reduce_sum_masked(prot: Pond,
                 x: PondMaskedTensor,
                 axis: Optional[int] = None,
                 keepdims: Optional[bool] = None) -> PondPrivateTensor:
-    return prot.sum(x.unmasked, axis, keepdims)
+    return prot.reduce_sum(x.unmasked, axis, keepdims)
 
 
 #
@@ -2104,7 +2104,7 @@ def _avgpool2d_reshape_reduce(x: AbstractTensor,
                             pool_height,
                             W // pool_width,
                             pool_width])
-    return x_reshaped.sum(axis=3).sum(axis=4)
+    return x_reshaped.reduce_sum(axis=3).reduce_sum(axis=4)
 
 
 def _avgpool2d_im2col_reduce(x: AbstractTensor,
@@ -2123,7 +2123,7 @@ def _avgpool2d_im2col_reduce(x: AbstractTensor,
 
     x_split = x.reshape((batch * channels, 1, height, width))
     x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
-    x_cols_sum = x_cols.sum(axis=0)
+    x_cols_sum = x_cols.reduce_sum(axis=0)
     out = x_cols_sum.reshape([out_height, out_width, batch, channels]).transpose([2, 3, 0, 1])
     return out
 

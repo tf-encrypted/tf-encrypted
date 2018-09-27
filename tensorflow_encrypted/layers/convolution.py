@@ -93,7 +93,7 @@ class Conv2D(core.Layer):
                                                       stride=self.strides)
 
         d_w = self.prot.conv2d_bw(x, d_y, self.weights.shape, self.strides, self.padding)
-        d_bias = d_y.sum(axis=0)
+        d_bias = d_y.reduce_sum(axis=0)
 
         self.weights.assign((d_w * learning_rate).neg() + self.weights)
         self.bias.assign((d_bias * learning_rate).neg() + self.bias)
