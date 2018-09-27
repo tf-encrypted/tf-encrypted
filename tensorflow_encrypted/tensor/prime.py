@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import math
+
 import numpy as np
 import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
