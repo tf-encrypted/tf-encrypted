@@ -96,8 +96,7 @@ class SecureNN(Pond):
 
     def _private_compare_beta0(self, input: PondPrivateTensor, rho: PondPublicTensor):
         with tf.device(self.server_0.device_name):
-            wa = 2 * rho * input
-            w = input - wa
+            w = self.bitwise_xor(input, rho)
 
             w0_sum = tf.zeros(shape=w.shape)
             # for i in range(bits-1, -1, -1):
@@ -105,7 +104,7 @@ class SecureNN(Pond):
             # sum = tf.reduce_sum(w[:, i + 1:], axis=1)
             # w0_sum[:, i] = sum % p
 
-            c0 = (input * -1) + w0_sum
+            c0 = rho - input + 1 + w0_sum
 
         with tf.device(self.server_1.device_name):
             wa = 2 * rho * input
@@ -124,8 +123,7 @@ class SecureNN(Pond):
 
     def _private_compare_beta1(self, input: PondPrivateTensor, theta: PondPublicTensor):
         with tf.device(self.server_0.device_name):
-            wa = 2 * theta * input
-            w = input - wa
+            w = self.bitwise_xor(input, theta)
 
             w0_sum = tf.zeros(shape=w.shape)
             # for i in range(bits-1, -1, -1):
@@ -133,7 +131,7 @@ class SecureNN(Pond):
             # sum = tf.reduce_sum(w[:, i + 1:], axis=1)
             # w0_sum[:, i] = sum % p
 
-            c0 = (input * -1) + w0_sum
+            c0 = input - theta + 1 + w0_sum
 
         with tf.device(self.server_1.device_name):
             wa = 2 * rho * input
@@ -152,8 +150,8 @@ class SecureNN(Pond):
 
     def _private_compare_edge(self):
         random_values_u = self.tensor_factory.Tensor.sample_random_tensor((bits,), modulus=p - 1) + 1
-        c0 = (random_values_u + 1) % p
-        c1 = (-random_values_u) % p
+        c0 = (random_values_u + 1)
+        c1 = (-random_values_u)
 
         c0[0] = random_values_u[0]
 
