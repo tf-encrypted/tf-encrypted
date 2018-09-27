@@ -49,6 +49,7 @@ class AbstractTensor(ABC):
             return cls.from_native(np.array([x]))
 
         raise TypeError("Unsupported type {}".format(type(x)))
+        
 
 
 class AbstractConstant(AbstractTensor):

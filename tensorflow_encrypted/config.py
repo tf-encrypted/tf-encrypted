@@ -1,6 +1,7 @@
 import os
 import json
 import math
+from collections import Iterable
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any, Union, Tuple
 from collections import defaultdict
@@ -54,6 +55,103 @@ def get_docker_cpu_quota() -> Optional[int]:
                 cpu_cores = math.ceil(q_int / p_int)
 
     return cpu_cores
+
+
+class TFESession():
+    """
+    Wrap a Tensorflow Session
+    """
+
+    def __init__(self, sess: tf.Session) -> None:
+        self.sess = sess
+
+    def __enter__(self):
+        self.sess = self.sess.__enter__()
+        return self
+
+    def __exit__(self, exec_type, exec_value, exec_tb):
+        self.sess.__exit__(exec_type, exec_value, exec_tb)
+
+    def sanitize_fetches(self, fetches: Any) -> List[Union[tf.Tensor, tf.Operation]]:
+        if not isinstance(fetches, Iterable) or isinstance(fetches, tf.Tensor):
+            fetches = [fetches]
+
+        sanitized_fetches = []
+        for idx, fetch in enumerate(fetches):
+            if isinstance(fetch, Iterable) and not isinstance(fetch, tf.Tensor):
+                sanitized_fetches.append([])
+                for sub_idx, sub_fetch in enumerate(fetch):
+                    if not isinstance(sub_fetch, tf.Tensor) and not isinstance(sub_fetch, tf.Operation):
+                        sanitized_fetches[idx].append(sub_fetch.value_on_0.backing)
+                    else:
+                        sanitized_fetches[idx].append(sub_fetch)
+            else:
+                if not isinstance(fetch, tf.Tensor) and not isinstance(fetch, tf.Operation):
+                    sanitized_fetches.append(fetch.value_on_0.backing)
+                else:
+                    sanitized_fetches.append(fetch)
+
+        return sanitized_fetches
+
+    def decode_fetches(self, fetches: Any, fetches_out: Any) -> List[Union[tf.Tensor, tf.Operation]]:
+        if not isinstance(fetches, Iterable) or isinstance(fetches, tf.Tensor):
+            fetches = [fetches]
+
+        for idx, fetch in enumerate(fetches):
+            if isinstance(fetch, Iterable) and not isinstance(fetch, tf.Tensor):
+                for sub_idx, sub_fetch in enumerate(fetch):
+                    if not isinstance(sub_fetch, tf.Tensor) and not isinstance(sub_fetch, tf.Operation):
+                        decoder = fetches[idx][sub_idx]
+                        to_decode = decoder.value_on_0.from_decomposed(fetches_out[idx][sub_idx])
+                        fetches_out[idx][sub_idx] = decoder.prot._decode(to_decode, decoder.is_scaled)
+            else:
+                if not isinstance(fetch, tf.Tensor) and not isinstance(fetch, tf.Operation):
+                    decoder = fetches[idx]
+                    to_decode = decoder.value_on_0.from_decomposed(fetches_out[idx])
+                    fetches_out[idx] = decoder.prot._decode(to_decode, decoder.is_scaled)
+
+        return fetches_out
+
+    def run(
+        self,
+        fetches: Any,
+        feed_dict: Dict[str, np.ndarray] = {},
+        tag: Optional[str] = None,
+        write_trace: bool = False
+    ) -> Any:
+
+        sanitized_fetches = self.sanitize_fetches(fetches)
+
+        if not __TFE_STATS__ or tag is None:
+            fetches_out = self.sess.run(
+                sanitized_fetches,
+                feed_dict=feed_dict
+            )
+        else:
+            session_tag = "{}{}".format(tag, _run_counter[tag])
+            run_tag = os.path.join(__TENSORBOARD_DIR__, session_tag)
+            _run_counter[tag] += 1
+
+            writer = tf.summary.FileWriter(run_tag, self.sess.graph)
+            run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+            run_metadata = tf.RunMetadata()
+
+            fetches_out = self.sess.run(
+                sanitized_fetches,
+                feed_dict=feed_dict,
+                options=run_options,
+                run_metadata=run_metadata
+            )
+
+            writer.add_run_metadata(run_metadata, session_tag)
+            writer.close()
+
+            if __TFE_TRACE__ or write_trace:
+                chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
+                with open('{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag), 'w') as f:
+                    f.write(chrome_trace)
+
+        return self.decode_fetches(fetches, fetches_out)
 
 
 class LocalConfig(Config):
@@ -112,7 +210,7 @@ class LocalConfig(Config):
         self,
         master: Optional[Union[int, str]] = None,
         log_device_placement: bool = False
-    ) -> tf.Session:
+    ) -> TFESession:
 
         if master is not None:
             print("WARNING: master '{}' is ignored, always using first player".format(master))
@@ -134,7 +232,7 @@ class LocalConfig(Config):
             print('Session in debug mode')
             sess = tf_debug.LocalCLIDebugWrapperSession(sess)
 
-        return sess
+        return TFESession(sess)
 
 
 class RemoteConfig(Config):
@@ -245,7 +343,7 @@ class RemoteConfig(Config):
         self,
         master: Optional[Union[int, str]] = None,
         log_device_placement: bool = False
-    ) -> tf.Session:
+    ) -> TFESession:
         cpu_cores = get_docker_cpu_quota()
         target = self._compute_target(master)
         # If you witness memory leaks while doing multiple predictions using docker
@@ -269,7 +367,7 @@ class RemoteConfig(Config):
         if __TFE_DEBUG__:
             sess = tf_debug.LocalCLIDebugWrapperSession(sess)
 
-        return sess
+        return TFESession(sess)
 
 
 def load(filename: str) -> Config:
@@ -306,48 +404,6 @@ def setMonitorStatsFlag(monitor_stats: bool = False) -> None:
     __TFE_STATS__ = monitor_stats
 
 
-def run(
-    sess: tf.Session,
-    fetches: Any,
-    feed_dict: Dict[str, np.ndarray] = {},
-    tag: Optional[str] = None,
-    write_trace: bool = False
-) -> Any:
-
-    if not __TFE_STATS__ or tag is None:
-
-        return sess.run(
-            fetches,
-            feed_dict=feed_dict
-        )
-
-    else:
-        session_tag = "{}{}".format(tag, _run_counter[tag])
-        run_tag = os.path.join(__TENSORBOARD_DIR__, session_tag)
-        _run_counter[tag] += 1
-
-        writer = tf.summary.FileWriter(run_tag, sess.graph)
-        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-        run_metadata = tf.RunMetadata()
-
-        results = sess.run(
-            fetches,
-            feed_dict=feed_dict,
-            options=run_options,
-            run_metadata=run_metadata
-        )
-
-        writer.add_run_metadata(run_metadata, session_tag)
-        writer.close()
-
-        if __TFE_TRACE__ or write_trace:
-            chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
-            with open('{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag), 'w') as f:
-                f.write(chrome_trace)
-
-        return results
-
-
 __DEFAULT_CONFIG__ = LocalConfig([
     'input-provider',
     'server0',
@@ -360,5 +416,5 @@ def get_default_config() -> LocalConfig:
     return __DEFAULT_CONFIG__
 
 
-def Session() -> tf.Session:
+def Session() -> TFESession:
     return __DEFAULT_CONFIG__.session()

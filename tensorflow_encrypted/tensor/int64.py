@@ -8,7 +8,7 @@ from .factory import AbstractFactory
 from .prime import PrimeTensor
 from .shared import binarize, conv2d, im2col
 
-from ..config import run
+from ..config import TFESession
 
 
 class Int64Tensor(AbstractTensor):
@@ -29,8 +29,8 @@ class Int64Tensor(AbstractTensor):
         assert isinstance(value, Int64Tensor), type(value)
         return cls(value.value)
 
-    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int64Tensor':
-        concrete_value = run(sess, self.value, feed_dict=feed_dict, tag=tag)
+    def eval(self, sess: TFESession, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int64Tensor':
+        concrete_value = sess.run(self.value, feed_dict=feed_dict, tag=tag)
         return Int64Tensor.from_native(concrete_value)
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:

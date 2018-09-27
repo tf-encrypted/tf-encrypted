@@ -1,6 +1,7 @@
 from __future__ import absolute_import
+import tensorflow as tf
 
-from .config import run, LocalConfig, RemoteConfig, setTFEDebugFlag, setMonitorStatsFlag, get_default_config, Session
+from .config import LocalConfig, RemoteConfig, setTFEDebugFlag, setMonitorStatsFlag, get_default_config, Session
 from .protocol import global_caches_updator
 from .player import player
 from . import io
@@ -9,8 +10,11 @@ from . import layers
 from . import convert
 
 
+def set_random_seed(seed: int) -> None:
+    tf.set_random_seed(seed)
+
+
 __all__ = [
-    "run",
     "LocalConfig",
     "RemoteConfig",
     "setTFEDebugFlag",
