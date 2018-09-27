@@ -46,7 +46,7 @@ class PrimeTensor(AbstractTensor):
              tag: Optional[str]=None) -> 'PrimeTensor':
         return PrimeTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
 
-    def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
+    def __getitem__(self, slice: Any) -> 'PrimeTensor':
         return PrimeTensor.from_native(self.value[slice], self.modulus)
 
     def __repr__(self) -> str:
