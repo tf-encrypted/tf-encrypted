@@ -35,6 +35,7 @@ for mi in m:
     assert 2 * log2(mi) + log2(1024) < log2(INT_TYPE.max)
 
 DOT_THRESHOLD = 1024
+SUM_THRESHOLD = 2**9
 
 _crt_decompose = gen_crt_decompose(m)
 _crt_recombine_lagrange = gen_crt_recombine_lagrange(m)
@@ -115,7 +116,7 @@ class Int100Tensor(AbstractTensor):
         evaluated_backing = run(sess, self.backing, feed_dict=feed_dict, tag=tag)
         return Int100Tensor.from_decomposed(evaluated_backing)
 
-    def to_int32(self) -> Union[tf.Tensor, np.ndarray]:
+    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return _crt_recombine_explicit(self.backing, 2**31)
 
     def to_bigint(self) -> np.ndarray:
@@ -201,7 +202,8 @@ def _add(x, y):
     return Int100Tensor.from_decomposed(z_backing)
 
 
-def _sum(x, axis, keepdims):
+def _sum(x, axis=None, keepdims=None):
+    x = _lift(x)
     y_backing = _crt_sum(x.backing, axis, keepdims)
     return Int100Tensor.from_decomposed(y_backing)
 

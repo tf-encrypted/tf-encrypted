@@ -323,11 +323,12 @@ class Pond(Protocol):
             scaling_factor = 2 ** BITPRECISION_FRACTIONAL if is_scaled else 1
 
             # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
-            return ((elements + BOUND).to_int32() - BOUND) / scaling_factor
+            return ((elements + BOUND).to_native() - BOUND) / scaling_factor
 
-    def _share(self, secret: AbstractTensor) -> Tuple[AbstractTensor, AbstractTensor]:
+    def _share(self, secret: AbstractTensor, factory: Optional[AbstractFactory]=None) -> Tuple[AbstractTensor, AbstractTensor]:
         with tf.name_scope('share'):
-            share0 = self.tensor_factory.Tensor.sample_uniform(secret.shape)
+            factory = factory or self.tensor_factory
+            share0 = factory.Tensor.sample_uniform(secret.shape)
             share1 = secret - share0
         return share0, share1
 
@@ -336,7 +337,7 @@ class Pond(Protocol):
             return share0 + share1
 
     @memoize
-    def assign(self, variable, value):
+    def assign(self, variable: 'PondPrivateVariable', value) -> tf.Operation:
         assert isinstance(variable, PondPrivateVariable), type(variable)
         assert isinstance(value, PondPrivateTensor), type(value)
         assert variable.is_scaled == value.is_scaled, "Scaling must match: {}, {}".format(variable.is_scaled, value.is_scaled)
@@ -407,7 +408,7 @@ class Pond(Protocol):
             raise TypeError("Don't know how to lift {}, {}".format(type(x), type(y)))
 
     @memoize
-    def sum(self, x, axis, keepdims):
+    def sum(self, x, axis=None, keepdims=None):
         x = self.lift(x)
 
         dispatch = {
@@ -420,6 +421,9 @@ class Pond(Protocol):
             raise TypeError("Don't know how to sum {}".format(type(x)))
 
         return func(self, x, axis, keepdims)
+
+    def reduce_sum(self, x, axis=None, keepdims=None):
+        return self.sum(x, axis, keepdims)
 
     @memoize
     def sub(self, x, y):
@@ -830,8 +834,11 @@ class PondTensor(abc.ABC):
     def __add__(self, other):
         return self.prot.add(self, other)
 
-    def sum(self, axis, keepdims=False):
+    def sum(self, axis=None, keepdims=None):
         return self.prot.sum(self, axis, keepdims)
+
+    def reduce_sum(self, axis=None, keepdims=None):
+        return self.sum(self, axis, keepdims)
 
     def sub(self, other):
         return self.prot.sub(self, other)
@@ -1538,8 +1545,8 @@ def _add_masked_masked(prot, x, y):
 
 def _sum_core(prot: Pond,
               x: PondTensor,
-              axis: int,
-              keepdims: Optional[bool]) -> Tuple[AbstractTensor, AbstractTensor]:
+              axis: Optional[int] = None,
+              keepdims: Optional[bool] = None) -> Tuple[AbstractTensor, AbstractTensor]:
 
     x_on_0, x_on_1 = x.unwrapped
 
@@ -1556,27 +1563,25 @@ def _sum_core(prot: Pond,
 
 def _sum_public(prot: Pond,
                 x: PondPublicTensor,
-                axis: int,
-                keepdims: Optional[bool]) -> PondPublicTensor:
+                axis: Optional[int] = None,
+                keepdims: Optional[bool] = None) -> PondPublicTensor:
     y_on_0, y_on_1 = _sum_core(prot, x, axis, keepdims)
     return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
 
 def _sum_private(prot: Pond,
                  x: PondPrivateTensor,
-                 axis: int,
-                 keepdims: Optional[bool]) -> PondPrivateTensor:
+                 axis: Optional[int] = None,
+                 keepdims: Optional[bool] = None) -> PondPrivateTensor:
     y_on_0, y_on_1 = _sum_core(prot, x, axis, keepdims)
     return PondPrivateTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
 
 def _sum_masked(prot: Pond,
                 x: PondMaskedTensor,
-                axis: int,
-                keepdims: Optional[bool]) -> PondPrivateTensor:
-    # y_on_0, y_on_1 = _sum_core(prot, x.unmasked, axis, keepdims)
-    # return PondPrivateTensor(prot, y_on_0, y_on_1)
-    raise NotImplementedError
+                axis: Optional[int] = None,
+                keepdims: Optional[bool] = None) -> PondPrivateTensor:
+    return prot.sum(x.unmasked, axis, keepdims)
 
 
 #
