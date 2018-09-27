@@ -1,8 +1,18 @@
+from typing import List, Optional
+import random
+import sys
+import tensorflow as tf
 from .protocol import memoize
 from ..protocol.pond import (
-    Pond, PondTensor
+    Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 )
+from ..tensor.native_shared import binarize
+from ..tensor.prime import prime_factory
+from ..tensor.factory import AbstractFactory
 from ..player import Player
+
+_thismodule = sys.modules[__name__]
+p = 67
 
 
 class SecureNN(Pond):
@@ -12,6 +22,7 @@ class SecureNN(Pond):
         server_0: Player,
         server_1: Player,
         server_2: Player,
+        alt_factory: AbstractFactory=prime_factory(p),
         **kwargs
     ) -> None:
         super(SecureNN, self).__init__(
@@ -20,12 +31,7 @@ class SecureNN(Pond):
             crypto_producer=server_2,
             **kwargs
         )
-
-        if self.M % 2 != 1:
-            # NOTE: this is only for use with an odd-modulus CRTTensor
-            #       NativeTensor will use an even modulus and will require share_convert
-            raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
-                            'but it was initialized with an even one.')
+        self.alt_factory = alt_factory
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
@@ -50,13 +56,22 @@ class SecureNN(Pond):
         assert not y.is_scaled, "Input is not supposed to be scaled"
         return x + y - self.bitwise_and(x, y) * 2
 
+    def binarize(self, x: PondTensor, modulus: Optional[int]=None) -> PondTensor:
+        modulus = modulus or p
+        return binarize(x, modulus)
+
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
+        if self.M % 2 != 1:
+            # NOTE: this is only for use with an odd-modulus CRTTensor
+            #       NativeTensor will use an even modulus and will require share_convert
+            raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
+                            'but it was initialized with an even one.')
         return self.lsb(x * 2)
 
     def lsb(self, x: PondTensor) -> PondTensor:
-        raise NotImplementedError
+        return self.dispatch('lsb', x, container=_thismodule)
 
     @memoize
     def negative(self, x: PondTensor) -> PondTensor:
@@ -87,7 +102,7 @@ class SecureNN(Pond):
     def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
         return x + bit * (y - x)
 
-    def private_compare(self, x, r, beta):
+    def private_compare(self, x: PondTensor, r: PondTensor, beta: PondTensor) -> PondTensor:
         raise NotImplementedError
 
     def share_convert(self, x):
@@ -106,3 +121,43 @@ class SecureNN(Pond):
 
     def dmax_pool_efficient(self, x):
         raise NotImplementedError
+
+
+def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
+    with tf.name_scope('lsb'):
+        with tf.name_scope('lsb_mask'):
+            with tf.device(prot.crypto_producer.device_name):
+                x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
+                xbits = binarize(x, p)
+                xlsb = xbits[..., 0]
+                x = PondPrivateTensor(prot, *prot._share(x, prot.tensor_factory), is_scaled=False)
+                xbits = PondPrivateTensor(prot, *prot._share(xbits, prot.alt_factory), is_scaled=False)
+                xlsb = PondPrivateTensor(prot, *prot._share(xlsb, prot.tensor_factory), is_scaled=False)
+
+            devices = [prot.server_0.device_name, prot.server_1.device_name]
+            bits_device = random.choice(devices)
+            with tf.device(bits_device):
+                b = _generate_random_bits(prot, y.shape)
+
+        with tf.name_scope('lsb_ops'):
+            r = (y + x).reveal()
+            rbits = prot.binarize(r, p)
+            rlsb = rbits[..., 0]
+
+            bp = prot.private_compare(xbits, r, b)
+
+            gamma = prot.bitwise_xor(bp, b)
+            delta = prot.bitwise_xor(xlsb, rlsb)
+
+            alpha = prot.bitwise_xor(gamma, delta)
+
+            return alpha
+
+
+def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):
+    return prot.lsb(x.unmasked)
+
+
+def _generate_random_bits(prot: SecureNN, shape: List[int]):
+    backing = prot.tensor_factory.Tensor.sample_uniform(shape)
+    return PondPublicTensor(prot, backing, backing, is_scaled=False)
