@@ -8,21 +8,6 @@ from .tensor import AbstractTensor
 from .prime import PrimeTensor
 
 
-def binarize(tensor: AbstractTensor, prime: int) -> PrimeTensor:
-    with tf.name_scope('binarize'):
-        BITS = tensor.int_type.size * 8
-        assert prime > BITS, prime
-
-        final_shape = [1] * len(tensor.shape) + [BITS]
-        bitwidths = tf.range(BITS, dtype=tensor.value.dtype)
-        bitwidths = tf.reshape(bitwidths, final_shape)
-
-        val = tf.expand_dims(tensor.value, -1)
-        val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
-
-        return PrimeTensor.from_native(val, prime)
-
-
 def im2col(x: Union[tf.Tensor, np.ndarray], h_filter: int, w_filter: int, padding: str,
            strides: int) -> tf.Tensor:
 

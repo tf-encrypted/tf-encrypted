@@ -5,8 +5,8 @@ import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .factory import AbstractFactory
-# from .prime import PrimeTensor
-from .shared import binarize, conv2d, im2col
+from .prime import PrimeTensor
+from .shared import conv2d, im2col
 
 from ..config import run
 
@@ -37,7 +37,7 @@ class Int64Tensor(AbstractTensor):
         return self.value
 
     def to_bits(self, prime: int = 67) -> 'PrimeTensor':
-        return PrimeTensor.from_native(binarize(self.value), prime)
+        return PrimeTensor.from_native(PrimeTensor.binarize(self.value), prime)
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int64Tensor':

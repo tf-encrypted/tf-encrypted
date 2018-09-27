@@ -7,7 +7,6 @@ from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from ..config import run
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable
-from .shared import binarize
 
 INT_TYPE = tf.int32
 
@@ -26,7 +25,7 @@ class PrimeTensor(AbstractTensor):
         return PrimeTensor(value, modulus)
 
     def to_bits(self, prime: int = 37) -> 'PrimeTensor':
-        return PrimeTensor.from_native(binarize(self.value), prime)
+        return PrimeTensor.from_native(PrimeTensor.binarize(self.value, prime=prime), prime)
 
     @staticmethod
     def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int) -> 'PrimeTensor':
@@ -45,6 +44,21 @@ class PrimeTensor(AbstractTensor):
     def concat(x: List['PrimeTensor'], axis: int) -> 'PrimeTensor':
         assert all(isinstance(i, PrimeTensor) for i in x)
         return PrimeTensor.from_native(tf.concat([v.value for v in x], axis=axis), x[0].modulus)
+
+    @staticmethod
+    def binarize(tensor: AbstractTensor, prime: int) -> 'PrimeTensor':
+        with tf.name_scope('binarize'):
+            BITS = tensor.int_type.size * 8
+            assert prime > BITS, prime
+
+            final_shape = [1] * len(tensor.shape) + [BITS]
+            bitwidths = tf.range(BITS, dtype=tensor.value.dtype)
+            bitwidths = tf.reshape(bitwidths, final_shape)
+
+            val = tf.expand_dims(tensor.value, -1)
+            val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
+
+            return PrimeTensor.from_native(val, prime)
 
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
              tag: Optional[str]=None) -> 'PrimeTensor':
