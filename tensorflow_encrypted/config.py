@@ -37,6 +37,14 @@ class Config(ABC):
     def to_dict(self) -> Dict:
         pass
 
+    @abstractmethod
+    def session(
+        self,
+        master: Optional[Union[int, str]] = None,
+        log_device_placement: bool = False
+    ) -> 'TFESession':
+        pass
+
 
 def get_docker_cpu_quota() -> Optional[int]:
     cpu_cores = None
@@ -412,9 +420,12 @@ __DEFAULT_CONFIG__ = LocalConfig([
 ])
 
 
-def get_default_config() -> LocalConfig:
+def get_default_config() -> Config:
     return __DEFAULT_CONFIG__
 
 
-def Session() -> TFESession:
-    return __DEFAULT_CONFIG__.session()
+def Session(config: Optional[Config] = None) -> TFESession:
+    if config is not None:
+        return config.session()
+    else:
+        return __DEFAULT_CONFIG__.session()

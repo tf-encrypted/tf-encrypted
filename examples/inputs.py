@@ -12,6 +12,7 @@ config = tfe.LocalConfig([
     'prediction_client'
 ])
 
+
 # config = tfe.RemoteConfig([
 #     ('server0', 'localhost:4440'),
 #     ('server1', 'localhost:4441'),
@@ -71,8 +72,8 @@ else:
         # send output
         prediction_op = prot.define_output(y, prediction_output)
 
-        with config.session() as sess:
-            tfe.run(sess, tf.global_variables_initializer(), tag='init')
+        with tfe.Session(config) as sess:
+            sess.run(tf.global_variables_initializer(), tag='init')
 
             for _ in range(5):
-                tfe.run(sess, prediction_op, tag='prediction')
+                sess.run(prediction_op, tag='prediction')

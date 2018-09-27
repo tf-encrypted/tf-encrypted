@@ -27,6 +27,6 @@ with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer'))
     for _ in range(5):
         y = y.matmul(y)
 
-    with config.session() as sess:
-        tfe.run(sess, prot.initializer, tag='init')
+    with tfe.Session() as sess:
+        sess.run(prot.initializer, tag='init')
         print(y.reveal().eval(sess, tag='reveal'))

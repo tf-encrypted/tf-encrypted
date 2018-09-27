@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow as tf
+import tensorflow_encrypted as tfe
 from tensorflow_encrypted.tensor.int100 import (
     Int100Tensor,
     Int100Constant,
@@ -23,7 +23,7 @@ c = Int100Constant(np.array([4, 4, 4]))
 v = Int100Variable(np.array([1, 1, 1]))
 p = Int100Placeholder((3, ))
 
-with tf.Session() as sess:
+with tfe.Session() as sess:
 
     print('Constant')
     print(c.eval(sess).to_native())
