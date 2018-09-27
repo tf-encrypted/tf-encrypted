@@ -50,7 +50,7 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 # Start training
 total_batch = training_set_size // batch_size
-with tf.Session() as sess:
+with tfe.Session() as sess:
     sess.run(tf.global_variables_initializer())
 
     for epoch in range(training_epochs):

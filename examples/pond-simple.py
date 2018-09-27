@@ -27,8 +27,8 @@ w = prot.define_private_variable(np.zeros((2, 2)))
 with config.session() as sess:
     # print(c.eval(sess, tag='c'))
 
-    tfe.run(sess, prot.initializer, tag='init')
-    tfe.run(sess, prot.assign(w, z), tag='assign')
-    tfe.run(sess, prot.assign(w, z), tag='assign')
+    sess.run(prot.initializer, tag='init')
+    sess.run(prot.assign(w, z), tag='assign')
+    sess.run(prot.assign(w, z), tag='assign')
 
     print(w.reveal().eval(sess, tag='reveal'))

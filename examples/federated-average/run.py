@@ -53,4 +53,4 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
 
     with config.session() as sess:
         for _ in range(3):
-            tfe.run(sess, result_op, tag='average')
+            sess.run(result_op, tag='average')

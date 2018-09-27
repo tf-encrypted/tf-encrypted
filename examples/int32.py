@@ -23,7 +23,7 @@ c = Int32Constant(np.array([4, 4, 4]))
 v = Int32Variable(np.array([1, 1, 1]))
 p = Int32Placeholder((3, ))
 
-with tf.Session() as sess:
+with tfe.Session() as sess:
 
     print('Constant')
     print(c.eval(sess).to_int32())

@@ -29,7 +29,7 @@ def sigmoid(x):
 
 
 with config.session() as sess:
-    tfe.run(sess, prot.initializer, tag='init')
+    sess.run(prot.initializer, tag='init')
 
     np_x = np.array([.1, -.1, .2, -.2]).reshape(2, 2)
     feed_dict = x.feed_from_native(np_x)

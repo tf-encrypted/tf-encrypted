@@ -153,11 +153,11 @@ target = sys.argv[2] if len(sys.argv) > 2 else None
 with config.session(target) as sess:
 
     print("Init")
-    tfe.run(sess, tf.global_variables_initializer(), tag='init')
+    sess.run(tf.global_variables_initializer(), tag='init')
 
     print("Training")
-    tfe.run(sess, tfe.global_caches_updator(), tag='training')
+    sess.run(tfe.global_caches_updator(), tag='training')
 
     for _ in range(5):
         print("Predicting")
-        tfe.run(sess, prediction_op, tag='prediction')
+        sess.run(prediction_op, tag='prediction')

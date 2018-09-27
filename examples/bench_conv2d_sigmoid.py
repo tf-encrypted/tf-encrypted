@@ -315,8 +315,8 @@ else:
 
         with config.session() as sess:
             print("Initialize tensors")
-            tfe.run(sess, tf.global_variables_initializer(), tag='init')
+            sess.run(tf.global_variables_initializer(), tag='init')
 
             print("Predict")
 
-            tfe.run(sess, prediction_op, tag='prediction')
+            sess.run(prediction_op, tag='prediction')
