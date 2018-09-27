@@ -1,5 +1,5 @@
 import math
-from typing import List, Union
+from typing import List, Union, Optional
 
 import tensorflow as tf
 
@@ -7,19 +7,18 @@ from .tensor import AbstractTensor
 from .prime import PrimeTensor
 
 
-def binarize(tensor: AbstractTensor, prime: int=37) -> PrimeTensor:
+def binarize(tensor: Union[tf.int32, tf.int64], bitsize: Optional[int]=None) -> Union[tf.int32, tf.int64]:
     with tf.name_scope('binarize'):
-        BITS = tensor.int_type.size * 8
-        assert prime > BITS, prime
+        bitsize = bitsize or (tensor.size * 8)
 
-        final_shape = [1] * len(tensor.shape) + [BITS]
-        bitwidths = tf.range(BITS, dtype=tensor.value.dtype)
-        bitwidths = tf.reshape(bitwidths, final_shape)
+        bit_indices_shape = [1] * len(tensor.shape) + [bitsize]
+        bit_indices = tf.range(bitsize, dtype=tensor.dtype)
+        bit_indices = tf.reshape(bit_indices, bit_indices_shape)
 
-        val = tf.expand_dims(tensor.value, -1)
-        val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
+        val = tf.expand_dims(tensor, -1)
+        val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bit_indices), 1)
 
-        return PrimeTensor.from_native(val, prime)
+        return val
 
 
 def im2col(tensor: Union[List[tf.Tensor], AbstractTensor], h_filter: int, w_filter: int,
@@ -85,7 +84,7 @@ def conv2d(x: AbstractTensor, y: AbstractTensor, strides: int, padding: str) -> 
 
     X_col = im2col(x, h_filter, w_filter, padding, strides)
     W_col = y.transpose(perm=(3, 2, 0, 1)).reshape([int(n_filters), -1])
-    out = W_col.dot(X_col)
+    out = W_col.matmul(X_col)
 
     out = out.reshape([n_filters, h_out, w_out, n_x])
     out = out.transpose(perm=(3, 0, 1, 2))

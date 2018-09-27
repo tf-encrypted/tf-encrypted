@@ -8,7 +8,7 @@ from typing import Union, Optional, List, Dict, Any, Type
 
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
-    gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_mod,
+    gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_matmul, gen_crt_mod,
     gen_crt_reduce_sum, gen_crt_im2col, crt_matmul_split
     gen_crt_sample_uniform, gen_crt_sample_bounded
 )
@@ -16,11 +16,13 @@ from .helpers import prod, inverse
 from ..config import run
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
+from .prime import PrimeTensor
+from .native_shared import binarize
 
 
 #
 # 32 bit CRT
-# - we need this to do dot product as int32 is the only supported type for that
+# - we need this to do matmul as int32 is the only supported type for that
 # - tried tf.float64 but didn't work out of the box
 # - 10 components for modulus ~100 bits
 #
@@ -29,13 +31,14 @@ INT_TYPE = tf.int32
 
 m = [1201, 1433, 1217, 1237, 1321, 1103, 1129, 1367, 1093, 1039]
 M = prod(m)
+BITSIZE = math.ceil(math.log2(M))
 
 # make sure we have room for lazy reductions:
 # - 1 multiplication followed by 1024 additions
 for mi in m:
     assert 2 * math.log2(mi) + math.log2(1024) < math.log2(INT_TYPE.max)
 
-DOT_THRESHOLD = 1024
+MATMUL_THRESHOLD = 1024
 SUM_THRESHOLD = 2**9
 
 _crt_decompose = gen_crt_decompose(m)
@@ -46,7 +49,7 @@ _crt_add = gen_crt_add(m)
 _crt_reduce_sum = gen_crt_reduce_sum(m)
 _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
-_crt_dot = gen_crt_dot(m)
+_crt_matmul = gen_crt_matmul(m)
 _crt_im2col = gen_crt_im2col(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE)
 
@@ -120,6 +123,34 @@ class Int100Tensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return _crt_recombine_explicit(self.backing, 2**31)
 
+    def to_bits(self) -> PrimeTensor:
+
+        with tf.name_scope('to_bits'):
+
+            # we will extract the bits in chunks of 16 as that's reasonable for the explicit CRT
+            MAX_CHUNK_BITSIZE = 16
+            q, r = bitsize // MAX_CHUNK_BITSIZE, bitsize % MAX_CHUNK_BITSIZE
+            chunk_bitsizes = [MAX_CHUNK_BITSIZE] * q + ([r] if r > 0 else [])
+
+            # extract bits of chunks
+            chunks_bits = []  # type: List[INT_TYPE]
+            remaining = self
+            for chunk_bitsize in chunk_bitsizes:
+                # extract chunk from remaining
+                chunk = _crt_mod(remaining.backing, 2**chunk_bitsize)
+                assert type(chunk) is INT_TYPE, type(chunk)
+                # extract bits from chunk and save for concatenation later
+                chunks_bits.append(binarize(chunk, chunk_bitsize))
+                # perform right shift on remaining
+                remaining = (remaining - Int100Tensor.from_native(chunk)) * inverse(2**chunk_bitsize, self.modulus)
+
+            # combine bits of chunks
+            bits = tf.concat(chunks_bits, axis=-1)
+
+            # wrap in PrimeTensor
+            prime = 103; assert prime > BITSIZE
+            return PrimeTensor.from_native(bits, prime)
+
     def to_bigint(self) -> np.ndarray:
         return _crt_recombine_lagrange(self.backing)
 
@@ -182,15 +213,15 @@ class Int100Tensor(AbstractTensor):
         z_backing = _crt_mul(x.backing, y.backing)
         return Int100Tensor.from_decomposed(z_backing)
 
-    def dot(self, other) -> 'Int100Tensor':
+    def matmul(self, other) -> 'Int100Tensor':
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
 
-        if x.shape[1] <= DOT_THRESHOLD:
-            z_backing = _crt_dot(x.backing, y.backing)
+        if x.shape[1] <= MATMUL_THRESHOLD:
+            z_backing = _crt_matmul(x.backing, y.backing)
 
         else:
-            split_backing = crt_matmul_split(x.backing, y.backing, DOT_THRESHOLD)
-            split_products = [_crt_dot(xi, yi) for xi, yi in split_backing]
+            split_backing = crt_matmul_split(x.backing, y.backing, MATMUL_THRESHOLD)
+            split_products = [_crt_matmul(xi, yi) for xi, yi in split_backing]
             z_backing = reduce(_crt_add, split_products)
 
         return Int100Tensor.from_decomposed(z_backing)
@@ -224,7 +255,7 @@ class Int100Tensor(AbstractTensor):
 
         X_col = x.im2col(h_filter, w_filter, padding, strides)
         W_col = y.transpose(perm=(3, 2, 0, 1)).reshape([int(n_filters), -1])
-        out = W_col.dot(X_col)
+        out = W_col.matmul(X_col)
 
         out = out.reshape([n_filters, h_out, w_out, n_x])
         out = out.transpose(perm=(3, 0, 1, 2))
@@ -254,39 +285,6 @@ class Int100Tensor(AbstractTensor):
     def negative(self) -> 'Int100Tensor':
         # TODO[Morten] there's probably a more efficient way
         return Int100Tensor.zero() - self
-
-    def bits(self) -> PrimeTensor:
-        bit_length = math.ceil(math.log2(self.modulus))
-        prime = 109
-        # TODO[Morten] this assertion should be made only in SecureNN instead
-        assert prime > bit_length, prime
-
-        # we will extract the bits in chunks of 16 as that's reasonable for the explicit CRT
-        MAX_CHUNK_SIZE = 16
-        q, r = bit_length // MAX_CHUNK_SIZE, bit_length % MAX_CHUNK_SIZE
-        chunk_sizes = [MAX_CHUNK_SIZE] * q + ([r] if r > 0 else [])
-
-        chunks = []  # type: List[INT_TYPE]
-        remaining = self
-        for chunk_size in chunk_sizes:
-            # extract value of chunk as INT_TYPE
-            chunk = _crt_mod(remaining.backing, 2**chunk_size)
-            assert type(chunk) is INT_TYPE, type(chunk)
-            # save for below
-            chunks.append(chunk)
-            # perform right shift on remaining
-            remaining = (remaining - Int100Tensor.from_native(chunk)) * inverse(2**chunk_size, self.modulus)
-
-        chunks_bits = [binarize()]
-
-        bit_indices_shape = [1] * len(self.shape) + [BIT_LENGTH]
-        bit_indices = tf.range(BIT_LENGTH, dtype=tf.int32)
-        bit_indices = tf.reshape(bit_indices, bit_indices_shape)
-
-        val = tf.expand_dims(tensor.value, -1)
-        val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bit_indices), 1)
-
-        return PrimeTensor.from_native(val, prime)
 
 
 class Int100Constant(Int100Tensor, AbstractConstant):
