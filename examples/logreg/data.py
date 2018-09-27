@@ -3,6 +3,8 @@ from typing import Tuple
 import numpy as np
 import tensorflow as tf
 
+np.random.seed(1)
+
 
 def norm(x: tf.Tensor, y: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
     return tf.cast(x, tf.float32), tf.expand_dims(y, 0)
@@ -21,6 +23,7 @@ def gen_training_input(total_size: int, nb_feats: int, bs: int) -> Tuple[tf.Tens
     x = tf.reshape(x, [bs, nb_feats])
     y = tf.reshape(y, [bs, 1])
 
+    # return tf.Print(x, data=[x], message="x: ", summarize=6), y
     return x, y
 
 

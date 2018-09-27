@@ -1,23 +1,26 @@
+from __future__ import absolute_import
+from typing import Optional
 from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor
 )
 from ..player import Player
+from ..config import get_default_config
 
 
 class SecureNN(Pond):
 
     def __init__(
         self,
-        server_0: Player,
-        server_1: Player,
-        server_2: Player,
+        server_0: Optional[Player] = None,
+        server_1: Optional[Player] = None,
+        server_2: Optional[Player] = None,
         **kwargs
     ) -> None:
         super(SecureNN, self).__init__(
-            server_0=server_0,
-            server_1=server_1,
-            crypto_producer=server_2,
+            server_0=server_0 or get_default_config().get_player('server0'),
+            server_1=server_1 or get_default_config().get_player('server1'),
+            crypto_producer=server_2 or get_default_config().get_player('crypto_producer'),
             **kwargs
         )
 

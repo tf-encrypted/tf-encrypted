@@ -346,3 +346,19 @@ def run(
                 f.write(chrome_trace)
 
         return results
+
+
+__DEFAULT_CONFIG__ = LocalConfig([
+    'input-provider',
+    'server0',
+    'server1',
+    'crypto_producer'
+])
+
+
+def get_default_config() -> LocalConfig:
+    return __DEFAULT_CONFIG__
+
+
+def Session() -> tf.Session:
+    return __DEFAULT_CONFIG__.session()
