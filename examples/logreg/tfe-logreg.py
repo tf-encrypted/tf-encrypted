@@ -47,14 +47,14 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     yp = consume(y, prot)
 
     # Training model
-    out = prot.dot(xp, W) + b
+    out = prot.matmul(xp, W) + b
     pred = prot.sigmoid(out)
     # Due to missing log function approximation, we need to compute the cost in numpy
     # cost = -prot.sum(y * prot.log(pred) + (1 - y) * prot.log(1 - pred)) * (1/train_batch_size)
 
     # Backprop
     dc_out = pred - yp
-    dW = prot.dot(prot.transpose(xp), dc_out)
+    dW = prot.matmul(prot.transpose(xp), dc_out)
     db = prot.reduce_sum(1. * dc_out, axis=0, keepdims=False)
     ops = [
         prot.assign(W, W - dW * learning_rate),
@@ -64,7 +64,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     # Testing model
     xp_test = consume(x_test, prot)  # We secure our inputs
     yp_test = consume(y_test, prot)
-    pred_test = prot.sigmoid(prot.dot(xp_test, W) + b)
+    pred_test = prot.sigmoid(prot.matmul(xp_test, W) + b)
 
     total_batch = training_set_size // batch_size
     with config.session() as sess:

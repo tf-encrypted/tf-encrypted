@@ -38,14 +38,14 @@ class Dense(core.Layer):
 
     def forward(self, x):
         self.layer_input = x
-        y = x.dot(self.weights) + self.bias
+        y = x.matmul(self.weights) + self.bias
         return y
 
     def backward(self, d_y, learning_rate):
         x = self.layer_input
-        d_x = d_y.dot(self.weights.transpose())
+        d_x = d_y.matmul(self.weights.transpose())
 
-        d_weights = x.transpose().dot(d_y)
+        d_weights = x.transpose().matmul(d_y)
         d_bias = d_y.reduce_sum(axis=0)
 
         self.weights.assign((d_weights * learning_rate).neg() + self.weights)

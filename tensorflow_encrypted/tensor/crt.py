@@ -116,13 +116,13 @@ def gen_crt_mul(m):
     return crt_mul
 
 
-def gen_crt_dot(m):
+def gen_crt_matmul(m):
 
-    def crt_dot(x, y):
-        with tf.name_scope('crt_dot'):
+    def crt_matmul(x, y):
+        with tf.name_scope('crt_matmul'):
             return [tf.matmul(xi, yi) % mi for xi, yi, mi in zip(x, y, m)]
 
-    return crt_dot
+    return crt_matmul
 
 
 def crt_matmul_split(x: TFEData, y: TFEData, threshold: int) -> List[Tuple[TFEData, TFEData]]:

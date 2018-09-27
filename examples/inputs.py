@@ -66,7 +66,7 @@ else:
         x = prot.define_private_input(prediction_input)
 
         # compute prediction
-        y = prot.dot(x, w)
+        y = prot.matmul(x, w)
 
         # send output
         prediction_op = prot.define_output(y, prediction_output)

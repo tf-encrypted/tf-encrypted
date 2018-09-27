@@ -86,7 +86,7 @@ class Conv2D(core.Layer):
         if self.model.layers.index(self) != 0:
             W_reshaped = self.weights.reshape(n_filter, -1).transpose()
             dout_reshaped = d_y.transpose(1, 2, 3, 0).reshape(n_filter, -1)
-            dx = W_reshaped.dot(dout_reshaped).col2im(imshape=self.cached_input_shape,
+            dx = W_reshaped.matmul(dout_reshaped).col2im(imshape=self.cached_input_shape,
                                                       field_height=h_filter,
                                                       field_width=w_filter,
                                                       padding=self.padding,

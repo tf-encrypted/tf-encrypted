@@ -80,7 +80,7 @@ class PrimeTensor(AbstractTensor):
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
         return PrimeTensor(x.value * y.value % self.modulus, self.modulus)
 
-    def dot(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
+    def matmul(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
         return PrimeTensor(tf.matmul(x.value, y.value) % self.modulus, self.modulus)
 

@@ -140,9 +140,9 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     x = prot.define_private_input(prediction_client, masked=True)  # pylint: disable=E0632
 
     # compute prediction
-    layer0 = prot.dot(x, w0) + b0
+    layer0 = prot.matmul(x, w0) + b0
     layer1 = prot.sigmoid(layer0 * 0.1)  # input normalized to avoid large values
-    layer2 = prot.dot(layer1, w1) + b1
+    layer2 = prot.matmul(layer1, w1) + b1
     prediction = layer2
 
     # send prediction output back to client
