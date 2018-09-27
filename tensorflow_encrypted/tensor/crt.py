@@ -256,11 +256,11 @@ def gen_crt_mod(m, int_type):
     return crt_mod
 
 
-def gen_crt_sum(m):
-    def crt_sum(x, axis=None, keepdims=None):
-        with tf.name_scope('crt_sum'):
+def gen_crt_reduce_sum(m):
+    def crt_reduce_sum(x, axis=None, keepdims=None):
+        with tf.name_scope('crt_reduce_sum'):
             return [tf.reduce_sum(xi, axis, keepdims) % mi for xi, mi in zip(x, m)]
-    return crt_sum
+    return crt_reduce_sum
 
 
 class CrtTensor(object):

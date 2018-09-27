@@ -412,9 +412,9 @@ class Pond(Protocol):
         x = self.lift(x)
 
         dispatch = {
-            PondPublicTensor: _sum_public,
-            PondPrivateTensor: _sum_private,
-            PondMaskedTensor: _sum_masked
+            PondPublicTensor: _reduce_sum_public,
+            PondPrivateTensor: _reduce_sum_private,
+            PondMaskedTensor: _reduce_sum_masked
         }
         func = dispatch.get(_type(x), None)
         if func is None:
@@ -822,7 +822,7 @@ class PondTensor(abc.ABC):
         return self.prot.reduce_sum(self, axis, keepdims)
 
     def sum(self, axis=None, keepdims=None):
-        return self.reduce_sum(self, axis, keepdims)
+        return self.reduce_sum(axis, keepdims)
 
     def sub(self, other):
         return self.prot.sub(self, other)
@@ -1528,7 +1528,7 @@ def _reduce_sum_core(prot: Pond,
 
     x_on_0, x_on_1 = x.unwrapped
 
-    with tf.name_scope('sum'):
+    with tf.name_scope('reduce_sum'):
 
         with tf.device(prot.server_0.device_name):
             y_on_0 = x_on_0.reduce_sum(axis, keepdims)
