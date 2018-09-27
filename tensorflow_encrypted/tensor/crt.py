@@ -3,6 +3,7 @@ from math import ceil
 
 import numpy as np
 import tensorflow as tf
+from ..tensor.shared import im2col
 
 from .helpers import inverse, prod
 from typing import Union, List, Tuple
@@ -146,6 +147,11 @@ def crt_matmul_split(x: TFEData, y: TFEData, threshold: int) -> List[Tuple[TFEDa
             z_split.append((inner_x, inner_y))
 
     return z_split
+
+
+def crt_im2col(x: TFEData, h_filter: int, w_filter: int, padding: str,
+               strides: int) -> TFEData:
+    return [im2col(xi, h_filter, w_filter, padding, strides) for xi in x]
 
 
 def gen_crt_sample_uniform(m, int_type):

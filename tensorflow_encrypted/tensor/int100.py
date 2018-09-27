@@ -7,14 +7,14 @@ from typing import Union, Optional, List, Dict, Any, Type
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_mod,
-    gen_crt_sum,
-    gen_crt_sample_uniform, gen_crt_sample_bounded, crt_matmul_split
+    gen_crt_sum, gen_crt_sample_uniform, gen_crt_sample_bounded, crt_matmul_split,
+    crt_im2col
 )
 from .helpers import prod, log2
 from ..config import run
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
-from .shared import conv2d, im2col
+from .shared import conv2d
 
 
 #
@@ -111,10 +111,6 @@ class Int100Tensor(AbstractTensor):
     def one() -> 'Int100Tensor':
         return Int100Tensor.from_decomposed(np.array([1]) * len(m))
 
-    @property
-    def value(self) -> Union[List[tf.Tensor], List[np.ndarray]]:
-        return self.backing
-
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int100Tensor':
         evaluated_backing = run(sess, self.backing, feed_dict=feed_dict, tag=tag)
         return Int100Tensor.from_decomposed(evaluated_backing)
@@ -159,7 +155,7 @@ class Int100Tensor(AbstractTensor):
         return _dot(self, other)
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int100Tensor':
-        return im2col(self, h_filter, w_filter, padding, strides)
+        return _im2col(self, h_filter, w_filter, padding, strides)
 
     def conv2d(self, other, strides, padding='SAME') -> 'Int100Tensor':
         return _conv2d(self, other, strides, padding)
@@ -238,6 +234,11 @@ def _dot(x: Union[Int100Tensor, int], y: Union[Int100Tensor, int]) -> Int100Tens
         z_backing = _crt_dot(x.backing, y.backing)
 
     return Int100Tensor.from_decomposed(z_backing)
+
+
+def _im2col(x, h_filter, w_filter, padding, strides):
+    backing = crt_im2col(x.backing, h_filter, w_filter, padding, strides)
+    return Int100Tensor.from_decomposed(backing)
 
 
 def _conv2d(x, y, strides, padding):
