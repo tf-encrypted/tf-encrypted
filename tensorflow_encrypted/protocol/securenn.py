@@ -94,111 +94,105 @@ class SecureNN(Pond):
     def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
         return x + bit * (y - x)
 
+    def _private_compare_beta0(self, input: PondPrivateTensor, rho: PondPublicTensor):
+        with tf.device(self.server_0.device_name):
+            wa = 2 * rho * input
+            w = input - wa
+
+            w0_sum = tf.zeros(shape=w.shape)
+            # for i in range(bits-1, -1, -1):
+            # TODO -- subscripting
+            # sum = tf.reduce_sum(w[:, i + 1:], axis=1)
+            # w0_sum[:, i] = sum % p
+
+            c0 = (input * -1) + w0_sum
+
+        with tf.device(self.server_1.device_name):
+            wa = 2 * rho * input
+            wb = rho - wa
+            w = input + wb
+
+            w1_sum = tf.zeros(shape=w.shape)
+            # for i in range(bits-1, -1, -1):
+            # TODO -- subscripting
+            # sum = tf.reduce_sum(w[:, i + 1:], axis=1)
+            # w1_sum[:, i] = sum % p
+
+            c1 = rho + (input * -1) + 1 + w0_sum
+
+        return c0, c1
+
+    def _private_compare_beta1(self, input: PondPrivateTensor, theta: PondPublicTensor):
+        with tf.device(self.server_0.device_name):
+            wa = 2 * theta * input
+            w = input - wa
+
+            w0_sum = tf.zeros(shape=w.shape)
+            # for i in range(bits-1, -1, -1):
+            # TODO -- subscripting
+            # sum = tf.reduce_sum(w[:, i + 1:], axis=1)
+            # w0_sum[:, i] = sum % p
+
+            c0 = (input * -1) + w0_sum
+
+        with tf.device(self.server_1.device_name):
+            wa = 2 * rho * input
+            wb = rho - wa
+            w = input + wb
+
+            w1_sum = tf.zeros(shape=w.shape)
+            # for i in range(bits-1, -1, -1):
+            # TODO -- subscripting
+            # sum = tf.reduce_sum(w[:, i + 1:], axis=1)
+            # w1_sum[:, i] = sum % p
+
+            c1 = -theta + input + 1 + w0_sum
+
+        return c0, c1
+
+    def _private_compare_edge(self):
+        random_values_u = self.tensor_factory.Tensor.sample_random_tensor((bits,), modulus=p - 1) + 1
+        c0 = (random_values_u + 1) % p
+        c1 = (-random_values_u) % p
+
+        c0[0] = random_values_u[0]
+
+        return c0, c1
+
     def private_compare(self, input: PondPrivateTensor, rho: PondPublicTensor, beta: PondPublicTensor):
-
-        # TODO -- the broadcasting step for r & beta
-        #         the test currently has them in same shape
-        #         as the input so it is not needed yet
-
-        # TODO -- can't make t :(
-        # t = (rho + 1) % (2 ** bits)
-        # return t
-        # print(f'T: {type(t)} ')
-
-        # jr[i] - x[i] + j
-
         with tf.name_scope('private_compare'):
             w = self.bitwise_xor(input, rho)
+            j = PondPublicTensor(self, value_on_0=Int32Tensor(tf.constant(np.array([1]), dtype=tf.int32)), value_on_1=Int32Tensor(np.array([1])), is_scaled=False)
 
-            # is this the same as jr[i] - x[i] + j??
-            c = rho - input + PondPublicTensor(self, value_on_0=Int32Tensor(np.array([1])), value_on_1=Int32Tensor(np.array([1])), is_scaled=False)
-            return c
+            zeros = tf.where(beta == 0)[0]
+            ones = tf.where(beta == 1)[1]
+            edges = tf.where(r == 2 ** bits - 1)[0]
+            ones = np.setdiff1d(ones, edges)
 
-        #
-        # print(f'shares: {share_0} {share_1}')
-        #
-        # # i = PondPrivateTensor(self, share0=)
-        # #
-        # # print(f'hi: {i}')
-        #
-        # with tf.name_scope('private_compare'):
-        #     with tf.device(self.server_0.device_name):
-        #         z_0 = input + r + beta
-        #
-        #     with tf.device(self.server_1.device_name):
-        #         z_1 = input + r + beta
-        #
-        #     return z_0 + z_1
+            # TODO -- needs and equivalent of `take`
+            c0_zeros, c1_zeros = self._private_compare_beta0(input, rho)
+            c0_ones, c1_ones = self._private_compare_beta1(input, rho)
+            c0_edge, c1_edge = self._private_compare_edge()
 
+            """
+            zero_indices = np.expand_dims(zero_indices, 1)
+            one_indices = np.expand_dims(one_indices, 1)
+            edge_indices = np.expand_dims(edge_indices, 1)
 
+            np.put_along_axis(c0, zero_indices, c0_zero, axis=0)
+            np.put_along_axis(c0, one_indices, c0_one, axis=0)
+            np.put_along_axis(c0, edge_indices, c0_edge, axis=0)
 
-            # r_binary = binarize(r)
-            # # t_binary = t.binarize()
-            # input = binarize(x)
-            #
-            # for server in [self.server_0, self.server_1]:
-            #     with tf.device(server.device_name):
-            #         # c = Int32Tensor(np.zeros(shape=input.shape))
-            #         c = tf.zeros(shape=input.shape)
-            #         zero_indices = tf.where(beta == 0)[0]
-            #         one_indices = tf.where(beta == 1)[0]
-            #         edge_indices = tf.where(r == 2 ** bits - 1)[0]
-            #         one_indices = tf.setdiff1d(one_indices, edge_indices)
-            #
-            #         print(f'result! {zero_indices} {one_indices} {edge_indices}')
-            #
-            # return zero_indices, one_indices, edge_indices
+            np.put_along_axis(c1, zero_indices, c1_zero, axis=0)
+            np.put_along_axis(c1, one_indices, c1_one, axis=0)
+            np.put_along_axis(c1, edge_indices, c1_edge, axis=0)
+            """
 
+            # TODO - how to send to the third party? (crypto producer)
+            with tf.device(self.server_2.device_name):
+                answer = PondPrivateTensor(self, share0=c0, share1=c1).reveal()
 
-
-
-        """
-        r = np.broadcast_to(np.array(r), tensor.shape[0])
-    beta = np.broadcast_to(np.array(beta), tensor.shape[0])
-
-    # t = t = ((r + 1) % -np.iinfo(np.int64).max - 1) + np.iinfo(np.int64).max + 1
-    t = (r + 1) % (2 ** bits)
-
-    r_binary = binarize(r)
-    t_binary = binarize(t)
-
-    t0 = tensor.shares0
-    t1 = tensor.shares1
-
-    c0 = np.zeros(shape=t1.shape)
-    c1 = np.zeros(shape=t1.shape)
-
-    zero_indices = np.where(beta == 0)[0]
-    one_indices = np.where(beta == 1)[0]
-    edge_indices = np.where(r == 2 ** bits - 1)[0]
-    one_indices = np.setdiff1d(one_indices, edge_indices)
-
-    c0_zero, c1_zero = _private_compare_beta0(r_binary.take(zero_indices, axis=0),
-                                              t0.take(zero_indices, axis=0),
-                                              t1.take(zero_indices, axis=0))
-    c0_one, c1_one = _private_compare_beta1(r_binary.take(one_indices, axis=0),
-                                            t_binary.take(one_indices, axis=0),
-                                            t0.take(one_indices, axis=0),
-                                            t1.take(one_indices, axis=0))
-    c0_edge, c1_edge = _private_compare_edge()
-
-    zero_indices = np.expand_dims(zero_indices, 1)
-    one_indices = np.expand_dims(one_indices, 1)
-    edge_indices = np.expand_dims(edge_indices, 1)
-
-    np.put_along_axis(c0, zero_indices, c0_zero, axis=0)
-    np.put_along_axis(c0, one_indices, c0_one, axis=0)
-    np.put_along_axis(c0, edge_indices, c0_edge, axis=0)
-
-    np.put_along_axis(c1, zero_indices, c1_zero, axis=0)
-    np.put_along_axis(c1, one_indices, c1_one, axis=0)
-    np.put_along_axis(c1, edge_indices, c1_edge, axis=0)
-
-    res = PrivateTensor(values=None, shares0=c0, shares1=c1, modulus=p).reconstruct().values
-
-    return np.max(res == 0, axis=-1)
-    """
-        # return 0
+            return answer
 
     def share_convert(self, x):
         raise NotImplementedError

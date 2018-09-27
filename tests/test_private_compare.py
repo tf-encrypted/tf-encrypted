@@ -54,7 +54,7 @@ class TestPrivateCompare(unittest.TestCase):
 
         input = np.array([1, 1, 1, 1]).astype(np.int32)
         rho = np.array([2, 0, 2, 0]).astype(np.int32)
-        beta = np.array([1, 0, 1, 0]).astype(np.int32)
+        beta = np.array([0, 0, 0, 0]).astype(np.int32)
 
         input = binarize(input)
         rho = binarize(rho)
@@ -66,9 +66,9 @@ class TestPrivateCompare(unittest.TestCase):
 
         with tfe.protocol.SecureNN(tensor_factory=prime_factory(67), use_noninteractive_truncation=True, verify_precision=False, *config.get_players('server0, server1, crypto_producer')) as prot:
 
-            input = PondPrivateTensor(prot, share0=Int32Tensor(i_0), share1=Int32Tensor(i_1), is_scaled=False)
-            rho = PondPublicTensor(prot, value_on_0=Int32Tensor(rho), value_on_1=Int32Tensor(rho), is_scaled=False)
-            beta = PondPublicTensor(prot, value_on_0=Int32Tensor(beta), value_on_1=Int32Tensor(beta), is_scaled=False)
+            input = PondPrivateTensor(prot, share0=Int32Tensor(tf.constant(i_0, dtype=tf.int32)), share1=Int32Tensor(tf.constant(i_1, dtype=tf.int32)), is_scaled=False)
+            rho = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(rho, dtype=tf.int32)), value_on_1=Int32Tensor(tf.constant(rho, dtype=tf.int32)), is_scaled=False)
+            beta = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(beta, dtype=tf.int32)), value_on_1=Int32Tensor(tf.constant(beta, dtype=tf.int32)), is_scaled=False)
 
             #
             # i = tf.placeholder(tf.int32)
@@ -87,6 +87,8 @@ class TestPrivateCompare(unittest.TestCase):
             with config.session() as sess:
                 sess.run(tf.global_variables_initializer())
                 answer = a.reveal().eval(sess)
+
+                print('answer', answer)
 
                 # sess.run(answer, feed_dict=)
 

@@ -52,6 +52,8 @@ class Int32Tensor(AbstractTensor):
         return self.sub(other)
 
     def __mul__(self, other) -> 'Int32Tensor':
+        print('mine', self.value)
+        print('theirs', other.value)
         return self.mul(other)
 
     def __mod__(self, k: int) -> 'Int32Tensor':
