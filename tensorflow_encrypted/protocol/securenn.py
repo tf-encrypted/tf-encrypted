@@ -6,13 +6,12 @@ from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 )
-from ..tensor.native_shared import binarize
 from ..tensor.prime import prime_factory
 from ..tensor.factory import AbstractFactory
 from ..player import Player
 
 _thismodule = sys.modules[__name__]
-p = 67
+p = 67  # TODO: import or choose based on factory kwarg to super.__init__()
 
 
 class SecureNN(Pond):
@@ -56,15 +55,11 @@ class SecureNN(Pond):
         assert not y.is_scaled, "Input is not supposed to be scaled"
         return x + y - self.bitwise_and(x, y) * 2
 
-    def binarize(self, x: PondTensor, modulus: Optional[int]=None) -> PondTensor:
-        modulus = modulus or p
-        return binarize(x, modulus)
-
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
         if self.M % 2 != 1:
-            # NOTE: this is only for use with an odd-modulus CRTTensor
+            # NOTE: this is currently only for use with an odd-modulus CRTTensor
             #       NativeTensor will use an even modulus and will require share_convert
             raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
                             'but it was initialized with an even one.')
@@ -128,7 +123,7 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
         with tf.name_scope('lsb_mask'):
             with tf.device(prot.crypto_producer.device_name):
                 x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
-                xbits = binarize(x, p)
+                xbits = x.to_bits()
                 xlsb = xbits[..., 0]
                 x = PondPrivateTensor(prot, *prot._share(x, prot.tensor_factory), is_scaled=False)
                 xbits = PondPrivateTensor(prot, *prot._share(xbits, prot.alt_factory), is_scaled=False)
@@ -141,7 +136,7 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
 
         with tf.name_scope('lsb_ops'):
             r = (y + x).reveal()
-            rbits = prot.binarize(r, p)
+            rbits = r.value.to_bits()
             rlsb = rbits[..., 0]
 
             bp = prot.private_compare(xbits, r, b)

@@ -7,6 +7,7 @@ from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from ..config import run
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable
+from .shared import binarize
 
 INT_TYPE = tf.int32
 
@@ -23,6 +24,9 @@ class PrimeTensor(AbstractTensor):
     def from_native(value: Union[np.ndarray, tf.Tensor], modulus: int) -> 'PrimeTensor':
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
         return PrimeTensor(value, modulus)
+
+    def to_bits(self, prime: int = 37) -> 'PrimeTensor':
+        return PrimeTensor.from_native(binarize(self.value), prime)
 
     @staticmethod
     def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int) -> 'PrimeTensor':
