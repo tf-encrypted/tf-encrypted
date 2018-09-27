@@ -41,7 +41,6 @@ if server1_address is None:
     print("The address for server 1 must be provided via the 'TFE_SERVER1_ADDRESS' environment variable")
     sys.exit(1)
 
-
 if producer_address is None:
     print("The address for the producer must be provided via the 'TFE_CRYPTO_PRODUCER_ADRESS' environment variable")
     sys.exit(1)
