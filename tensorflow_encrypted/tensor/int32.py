@@ -103,6 +103,9 @@ class Int32Tensor(AbstractTensor):
         assert all(isinstance(x, Int32Tensor) for x in xs)
         return Int32Tensor(tf.concat([x.value for x in xs], axis=axis))
 
+    def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
+        return Int32Tensor(tf.cast(self.value + y.value >= modulus, dtype=tf.int32))
+
 
 class Int32Constant(Int32Tensor, AbstractConstant):
 

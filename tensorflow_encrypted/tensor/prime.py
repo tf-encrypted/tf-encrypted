@@ -103,6 +103,9 @@ class PrimeTensor(AbstractTensor):
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'PrimeTensor':
         return PrimeTensor(tf.reshape(self.value, axes), self.modulus)
 
+    def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
+        return PrimeTensor(tf.cast(self.value + y.value >= modulus, dtype=tf.int32), self.modulus)
+
 
 def _lift(x: Union['PrimeTensor', int], modulus: int) -> 'PrimeTensor':
     if isinstance(x, PrimeTensor):

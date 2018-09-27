@@ -104,6 +104,9 @@ class Int64Tensor(AbstractTensor):
         assert all(isinstance(x, Int64Tensor) for x in xs)
         return Int64Tensor(tf.concat([x.value for x in xs], axis=axis))
 
+    def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
+        return self.value + y.value >= modulus
+
 
 class Int64Constant(Int64Tensor, AbstractConstant):
 
