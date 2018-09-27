@@ -70,10 +70,14 @@ class int16(signedinteger):
 
 class int32(signedinteger):
     size: int
+    max: int
+    min: int
 
 
 class int64(signedinteger):
     size: int
+    max: int
+    min: int
 
 
 class unsignedinteger(integer):

@@ -2,17 +2,17 @@ from typing import List, Tuple, Optional
 import random
 import sys
 import tensorflow as tf
+import numpy as np
+
 from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 )
 from ..tensor.native_shared import binarize
-from ..tensor.prime import prime_factory
+from ..tensor.prime import prime_factory, PrimeTensor
 from ..tensor.factory import AbstractFactory
 from ..player import Player
-from ..tensor.prime import prime_factory, PrimeTensor
 from ..tensor.tensor import AbstractTensor
-from ..tensor.native_shared import binarize
 
 _thismodule = sys.modules[__name__]
 p = 67
@@ -59,9 +59,9 @@ class SecureNN(Pond):
         assert not y.is_scaled, "Input is not supposed to be scaled"
         return x + y - self.bitwise_and(x, y) * 2
 
-    def binarize(self, x: PondTensor, modulus: Optional[int]=None) -> PondTensor:
+    def binarize(self, x: PondPublicTensor, modulus: Optional[int]=None) -> PondTensor:
         modulus = modulus or p
-        return binarize(x, modulus)
+        return binarize(x.value_on_0, modulus)
 
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
@@ -110,23 +110,27 @@ class SecureNN(Pond):
 
     def share_convert(self, x: PondPrivateTensor) -> PondPrivateTensor:
         L = self.tensor_factory.Tensor.modulus
+        lminusfactory = prime_factory(tf.int32.max - 1)
+        print(tf.int32.max - 1)
 
         if L > 2**64:
             raise Exception('SecureNN share convert only support moduli of less than 2 ** 64.')
 
         # P2
-        bitmask = _generate_random_bits(self, [1])
-        sharemask = prime_factory(L - 1).Tensor.sample_uniform(x.shape) + 1
+        with tf.device(self.crypto_producer.device_name):
+            bitmask = _generate_random_bits(self, [1])
+            sharemask = lminusfactory.Tensor.sample_uniform(x.shape) + 1
 
-        sharemask0, sharemask1, alpha_wrap = share_with_wrap(self, sharemask, L)
+            sharemask0, sharemask1, alpha_wrap = share_with_wrap(self, sharemask, L)
+
         alpha_wrap_t = PondPublicTensor(self, alpha_wrap, alpha_wrap, is_scaled=False)
         pvt_sharemask = PondPrivateTensor(self, sharemask0, sharemask1, is_scaled=False)
 
         # P0, P1
-        with tf.device(self.server0.device_name):
+        with tf.device(self.server_0.device_name):
             beta_wrap_0 = x.share0.compute_wrap(sharemask0, L)
 
-        with tf.device(self.server1.device_name):
+        with tf.device(self.server_1.device_name):
             beta_wrap_1 = x.share1.compute_wrap(sharemask1, L)
 
         beta_wrap = PondPrivateTensor(self, beta_wrap_0, beta_wrap_1, is_scaled=False)
@@ -139,26 +143,40 @@ class SecureNN(Pond):
             x_pub_masked = masked.reveal()
 
             xbits = binarize(x_pub_masked.value_on_0)
-            share0, share1 = self._share(xbits, prime_factory(p))
-
+            share0, share1 = self._share(xbits, self.alt_factory)
             bitshares = PondPrivateTensor(self, share0, share1, is_scaled=False)
-            deltashares = self._share(delta_wrap, prime_factory(L - 1))
 
-        outbit = self.private_compare(bitshares, pvt_sharemask.reveal().value_on_0 - 1, bitmask)
+            share0, share1 = self._share(delta_wrap, lminusfactory)
+            deltashares = PondPrivateTensor(self, share0, share1, is_scaled=False)
 
-        with tf.device(self.crypto_producer.device_name):
-            compared0, compared1 = self._share(outbit.value_on_0, prime_factory(L - 1))
+            # outbit = self.private_compare(bitshares, pvt_sharemask.reveal().value_on_0 - 1, bitmask)
+            inp = PrimeTensor(np.array([0]), p)
+            outbit = PondPublicTensor(self, inp, inp, is_scaled=False)
+
+            compared0, compared1 = self._share(outbit.value_on_0, lminusfactory)
 
         compared = PondPrivateTensor(self, compared0, compared1, is_scaled=False)
 
         # P0, P1
-        with tf.device(self.server0.device_name):
-            preconverter = ((compared + bitmask) + -2 * bitmask * compared)
-            final_share0 = ((beta_wrap + (-1 * alpha_wrap_t - 1)) + deltashares) + preconverter
+        compared0 = compared.share0
+        compared1 = compared.share1
 
-        with tf.device(self.server1.device_name):
-            preconverter = ((compared) + -2 * bitmask * compared)
-            final_share1 = ((beta_wrap) + deltashares) + preconverter
+        bitmask0 = bitmask.value_on_0
+        bitmask1 = bitmask.value_on_1
+
+        beta_wrap0 = beta_wrap.share0
+        beta_wrap1 = beta_wrap.share1
+
+        deltashares0 = deltashares.share0
+        deltashares1 = deltashares.share1
+
+        with tf.device(self.server_0.device_name):
+            preconverter = ((compared0 + bitmask0) + -2 * bitmask0 * compared0)
+            final_share0 = ((beta_wrap0 + (-alpha_wrap_t.value_on_0 - 1)) + deltashares0) + preconverter
+
+        with tf.device(self.server_1.device_name):
+            preconverter = ((compared1) + -2 * bitmask1 * compared1)
+            final_share1 = ((beta_wrap1) + deltashares1) + preconverter
 
         return PondPrivateTensor(self, final_share0, final_share1, is_scaled=False)
 
@@ -219,6 +237,6 @@ def _generate_random_bits(prot: SecureNN, shape: List[int]):
 
 def share_with_wrap(prot: SecureNN, sample: PrimeTensor,
                     modulus: int) -> Tuple[AbstractTensor, AbstractTensor, AbstractTensor]:
-    x, y = prot._share(sample, prime_factory(modulus))
+    x, y = prot._share(sample)
     kappa = x.compute_wrap(y, modulus)
     return x, y, kappa

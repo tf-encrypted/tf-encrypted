@@ -65,6 +65,12 @@ class PrimeTensor(AbstractTensor):
     def __mul__(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
         return self.mul(other)
 
+    def __rmul__(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
+        return self.mul(other)
+
+    def __neg__(self) -> 'PrimeTensor':
+        return self.mul(-1)
+
     def __mod__(self, k: int) -> 'PrimeTensor':
         return self.mod(k)
 
@@ -107,9 +113,12 @@ class PrimeTensor(AbstractTensor):
         return PrimeTensor(tf.cast(self.value + y.value >= modulus, dtype=tf.int32), self.modulus)
 
 
-def _lift(x: Union['PrimeTensor', int], modulus: int) -> 'PrimeTensor':
+def _lift(x: Union['PrimeTensor', 'AbstractTensor', int], modulus: int) -> 'PrimeTensor':
     if isinstance(x, PrimeTensor):
         return x
+
+    if isinstance(x, AbstractTensor):
+        return PrimeTensor(x.value, modulus)
 
     if type(x) is int:
         return PrimeTensor.from_native(np.array([x]), modulus)
@@ -202,7 +211,13 @@ def prime_factory(modulus: int) -> Any:
 
         @staticmethod
         def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape]) -> PrimeTensor:
-            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=modulus), modulus)
+            minval = 0
+            maxval = modulus
+            if modulus > INT_TYPE.max:
+                maxval = INT_TYPE.max
+                minval = modulus - INT_TYPE.max
+
+            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=minval, maxval=maxval), modulus)
 
     class ConstantWrap(TensorWrap, AbstractConstant):
         @staticmethod
