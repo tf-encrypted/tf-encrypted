@@ -461,22 +461,6 @@ class Pond(Protocol):
         return self.dispatch('square', x)
 
     @memoize
-    def mod(self, x, y):
-
-        x_on_0, x_on_1 = x.unwrapped
-
-        with tf.name_scope('mod'):
-            with tf.device(self.server_0.device_name):
-                z_on_0 = x_on_0 % y
-
-            with tf.device(self.server_0.device_name):
-                z_on_1 = x_on_1 % y
-
-        z = PondPublicTensor(self, z_on_0, z_on_1, x.is_scaled or y.is_scaled)
-        print(f'vaue: {z}')
-        return z
-
-    @memoize
     def dot(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
         return self.dispatch('dot', x, y)
 
