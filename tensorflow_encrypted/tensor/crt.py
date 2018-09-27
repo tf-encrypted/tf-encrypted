@@ -3,6 +3,7 @@ from math import ceil
 
 import numpy as np
 import tensorflow as tf
+from ..tensor.shared import im2col
 
 from .helpers import inverse, prod
 from typing import Union, List, Tuple
@@ -148,47 +149,9 @@ def crt_matmul_split(x: TFEData, y: TFEData, threshold: int) -> List[Tuple[TFEDa
     return z_split
 
 
-def gen_crt_im2col(m):
-
-    def im2col(x, h_filter, w_filter, padding, strides):
-        with tf.name_scope('crt_im2col'):
-
-            # we need NHWC because tf.extract_image_patches expects this
-            NHWC_tensors = [tf.transpose(xi, [0, 2, 3, 1]) for xi in x]
-            channels = int(NHWC_tensors[0].shape[3])
-            # extract patches
-            patch_tensors = [
-                tf.extract_image_patches(
-                    xi,
-                    ksizes=[1, h_filter, w_filter, 1],
-                    strides=[1, strides, strides, 1],
-                    rates=[1, 1, 1, 1],
-                    padding=padding
-                )
-                for xi in NHWC_tensors
-            ]
-
-            # change back to NCHW
-            patch_tensors_NCHW = [
-                tf.reshape(
-                    tf.transpose(patches, [3, 1, 2, 0]),
-                    (h_filter, w_filter, channels, -1)
-                )
-                for patches in patch_tensors
-            ]
-
-            # reshape to x_col
-            x_col_tensors = [
-                tf.reshape(
-                    tf.transpose(x_col_NHWC, [2, 0, 1, 3]),
-                    (channels * h_filter * w_filter, -1)
-                )
-                for x_col_NHWC in patch_tensors_NCHW
-            ]
-
-            return x_col_tensors
-
-    return im2col
+def crt_im2col(x: TFEData, h_filter: int, w_filter: int, padding: str,
+               strides: int) -> TFEData:
+    return [im2col(xi, h_filter, w_filter, padding, strides) for xi in x]
 
 
 def gen_crt_sample_uniform(m, int_type):
