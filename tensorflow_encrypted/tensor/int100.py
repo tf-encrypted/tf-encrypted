@@ -3,12 +3,12 @@ from __future__ import absolute_import
 import math
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Type
+from typing import Union, Optional, List, Dict, Any, Tuple, Type
 
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_mod,
-    gen_crt_sum, gen_crt_im2col,
+    gen_crt_sum, gen_crt_im2col, gen_crt_col2im,
     gen_crt_sample_uniform, gen_crt_sample_bounded, crt_matmul_split
 )
 from .helpers import prod, log2
@@ -46,6 +46,7 @@ _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_dot = gen_crt_dot(m)
 _crt_im2col = gen_crt_im2col(m)
+_crt_col2im = gen_crt_col2im(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE)
 
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
@@ -157,6 +158,10 @@ class Int100Tensor(AbstractTensor):
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int100Tensor':
         return _im2col(self, h_filter, w_filter, padding, strides)
 
+    def col2im(self, output_shape: Union[List[int], Tuple[int]], h_filter: int, w_filter: int,
+               padding: str, strides: int) -> 'Int32Tensor':
+        return _col2im(self, output_shape, h_filter, w_filter, padding, strides)
+
     def conv2d(self, other, strides, padding='SAME') -> 'Int100Tensor':
         return _conv2d(self, other, strides, padding)
 
@@ -241,6 +246,12 @@ def _dot(x: Union[Int100Tensor, int], y: Union[Int100Tensor, int]) -> Int100Tens
 def _im2col(x, h_filter, w_filter, padding, strides):
     assert isinstance(x, Int100Tensor), type(x)
     backing = _crt_im2col(x.backing, h_filter, w_filter, padding, strides)
+    return Int100Tensor.from_decomposed(backing)
+
+
+def _col2im(x, output_shape, h_filter, w_filter, padding, strides):
+    assert isinstance(x, Int100Tensor), type(x)
+    backing = _crt_col2im(x.backing, output_shape, h_filter, w_filter, padding, strides)
     return Int100Tensor.from_decomposed(backing)
 
 

@@ -191,6 +191,14 @@ def gen_crt_im2col(m):
     return im2col
 
 
+def gen_crt_col2im(m):
+
+    def col2im(x, output_shape, h_filter, w_filter, padding, strides):
+        with tf.name_scope('crt_im2col'):
+            raise NotImplementedError()
+    return col2im
+
+
 def gen_crt_sample_uniform(m, int_type):
 
     def crt_sample_uniform(shape):

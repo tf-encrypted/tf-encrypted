@@ -1,5 +1,5 @@
 import math
-from typing import List, Union
+from typing import List, Union, Tuple
 
 import tensorflow as tf
 
@@ -68,6 +68,18 @@ def im2col(tensor: Union[List[tf.Tensor], AbstractTensor], h_filter: int, w_filt
             return type(tensor)(x_col_tensors[0])
 
         return x_col_tensors
+
+
+def col2im(tensor: Union[List[tf.Tensor], AbstractTensor], output_shape: Union[List[int],
+           Tuple[int]], h_filter: int, w_filter: int, padding: str, strides: int) -> 'Int32Tensor':
+
+    if isinstance(tensor, AbstractTensor):
+        x = [tensor.value]
+    else:
+        x = tensor
+
+    with tf.name_scope('col2im'):
+        raise NotImplementedError()
 
 
 def conv2d(x: AbstractTensor, y: AbstractTensor, strides: int, padding: str) -> AbstractTensor:

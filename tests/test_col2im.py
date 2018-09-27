@@ -26,48 +26,52 @@ def get_im2col_indices(x_shape, field_height, field_width, padding=1, stride=1):
     return (k, i, j)
 
 
-def im2col_indices(x, field_height, field_width, padding=1, strides=1):
-    # Zero-pad the input
-    p = padding
-    if padding > 0:
-        x_padded = np.pad(x, ((0, 0), (0, 0), (p, p), (p, p)), mode='constant')
-    else:
-        x_padded = x
-    k, i, j = get_im2col_indices(x.shape, field_height, field_width, padding,
-                                 strides)
-    cols = x_padded[:, k, i, j]
-    C = x.shape[1]
-    cols = cols.transpose(1, 2, 0).reshape(field_height * field_width * C, -1)
-    return cols
+def col2im_indices(cols, x_shape, field_height, field_width, padding=1,
+                   stride=1):
+    """ An implementation of col2im based on fancy indexing and np.add.at """
+    N, C, H, W = x_shape
+    H_padded, W_padded = H + 2 * padding, W + 2 * padding
+    x_padded = np.zeros((N, C, H_padded, W_padded))
+    k, i, j = get_im2col_indices(x_shape, field_height, field_width, padding,
+                                 stride)
+    cols_reshaped = cols.reshape(C * field_height * field_width, -1, N)
+    cols_reshaped = cols_reshaped.transpose(2, 0, 1)
+    np.add.at(x_padded, (slice(None), k, i, j), cols_reshaped)
+    if padding == 0:
+        return x_padded
+    return x_padded[:, :, padding:-padding, padding:-padding]
 
 
-class TestIm2col(unittest.TestCase):
+class TestCol2im(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
 
-    def test_im2col(self):
+    def test_col2im(self):
         batch_size, channels_in = 4, 3
         img_height, img_width = 10, 10
         h_filter, w_filter, strides = 2, 2, 2
         padding = 'SAME'
-        input_shape = (batch_size, channels_in, img_height, img_width)
-        input_im2col = np.random.normal(size=input_shape).astype(np.float32)
+        patch_size = 12
+        n_patches = 100
+        col_shape = (patch_size, n_patches)
+        x_im_shape = (batch_size, channels_in, img_height, img_width)
+        input_col2im = np.random.normal(size=col_shape).astype(np.float32)
 
         config = tfe.LocalConfig(['server0', 'server1', 'crypto_producer'])
 
-        # im2col pond
+        # col2im pond
         with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
-            x = prot.define_private_variable(input_im2col)
-            x_col = prot.im2col(x, h_filter, w_filter, padding, strides)
+            x_col = prot.define_private_variable(input_col2im)
+            x_im = prot.col2im(x_col, x_im_shape, h_filter, w_filter, padding, strides)
 
             with config.session() as sess:
                 sess.run(tf.global_variables_initializer())
-                x_col_pond = x_col.reveal().eval(sess)
+                x_im_pond = x_im.reveal().eval(sess)
 
-        # im2col numpy
-        x_col_np = im2col_indices(input_im2col, h_filter, w_filter, padding=0, strides=strides)
+        # col2im numpy
+        x_im_np = col2im_indices(input_col2im, x_im_shape, h_filter, w_filter, padding=0, stride=strides)
 
-        assert(np.isclose(x_col_pond, x_col_np, atol=0.001).all())
+        assert(np.isclose(x_im_pond, x_im_np, atol=0.001).all())
 
 
 if __name__ == '__main__':

@@ -735,6 +735,29 @@ class Pond(Protocol):
 
         return z
 
+    def col2im(self, x, output_shape, h_filter, w_filter, padding, strides):
+
+        node_key = ('im2col', x, output_shape, h_filter, w_filter, padding, strides)
+        z = nodes.get(node_key, None)
+
+        if z is not None:
+            return z
+
+        dispatch = {
+            PondPublicTensor: _col2im_public,
+            PondPrivateTensor: _col2im_private,
+            PondMaskedTensor: _col2im_masked
+        }
+
+        func = dispatch.get(_type(x), None)
+        if func is None:
+            raise TypeError("Don't know how to col2im {}".format(type(x)))
+
+        z = func(self, x, output_shape, h_filter, w_filter, padding, strides)
+        nodes[node_key] = z
+
+        return z
+
     def conv2d(self, x, w, strides, padding):
 
         node_key = ('conv2d', x, w, strides, padding)
@@ -1453,6 +1476,7 @@ def _reveal_masked(prot, x):
 # im2col helpers
 #
 
+
 def _im2col_public(prot, x, h_filter, w_filter, padding, strides):
     assert isinstance(x, PondPublicTensor), type(x)
     x_on_0, x_on_1 = x.unwrapped
@@ -1502,6 +1526,65 @@ def _im2col_masked(prot, x_masked, h_filter, w_filter, padding, strides):
             alpha_on_1_col = alpha_on_1.im2col(h_filter, w_filter, padding, strides)
 
         x_unmasked_col = prot.im2col(x_masked.unmasked, h_filter, w_filter, padding, strides)
+    x_col = PondMaskedTensor(prot, x_unmasked_col, a_col, a0_col, a1_col, alpha_on_0_col,
+                             alpha_on_1_col, x_masked.is_scaled)
+    return x_col
+
+
+#
+# col2im helpers
+#
+
+
+def _col2im_public(prot, x, output_shape, h_filter, w_filter, padding, strides):
+    assert isinstance(x, PondPublicTensor), type(x)
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope('col2im'):
+        with tf.device(prot.server_0.device_name):
+            x_on_0_col = x_on_0.col2im(output_shape, h_filter, w_filter, padding, strides)
+
+        with tf.device(prot.server_1.device_name):
+            x_on_1_col = x_on_1.col2im(output_shape, h_filter, w_filter, padding, strides)
+
+    x_col = PondPublicTensor(prot, x_on_0_col, x_on_1_col, x.is_scaled)
+    return x_col
+
+
+def _col2im_private(prot, x, output_shape, h_filter, w_filter, padding, strides):
+    assert isinstance(x, PondPrivateTensor), type(x)
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope('col2im'):
+        with tf.device(prot.server_0.device_name):
+            x_on_0_col = x_on_0.col2im(output_shape, h_filter, w_filter, padding, strides)
+
+        with tf.device(prot.server_1.device_name):
+            x_on_1_col = x_on_1.col2im(output_shape, h_filter, w_filter, padding, strides)
+
+    x_col = PondPrivateTensor(prot, x_on_0_col, x_on_1_col, x.is_scaled)
+
+    return x_col
+
+
+def _col2im_masked(prot, x_masked, output_shape, h_filter, w_filter, padding, strides):
+    assert isinstance(x_masked, PondPublicTensor), type(x_masked)
+    a, a0, a1, alpha_on_0, alpha_on_1 = x_masked.unwrapped
+
+    with tf.name_scope('col2im'):
+
+        with tf.device(prot.crypto_producer.device_name):
+            a_col = a.col2im(output_shape, h_filter, w_filter, padding, strides)
+
+        with tf.device(prot.server_0.device_name):
+            a0_col = a0.col2im(output_shape, h_filter, w_filter, padding, strides)
+            alpha_on_0_col = alpha_on_0.col2im(output_shape, h_filter, w_filter, padding, strides)
+
+        with tf.device(prot.server_1.device_name):
+            a1_col = a1.col2im(output_shape, h_filter, w_filter, padding, strides)
+            alpha_on_1_col = alpha_on_1.col2im(output_shape, h_filter, w_filter, padding, strides)
+
+        x_unmasked_col = prot.col2im(x_masked.unmasked, h_filter, w_filter, padding, strides)
     x_col = PondMaskedTensor(prot, x_unmasked_col, a_col, a0_col, a1_col, alpha_on_0_col,
                              alpha_on_1_col, x_masked.is_scaled)
     return x_col
