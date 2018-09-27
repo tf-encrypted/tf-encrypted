@@ -32,6 +32,9 @@ class PrimeTensor(AbstractTensor):
     def sample_bounded(shape: List[int], bitlength: int) -> 'PrimeTensor':
         raise NotImplementedError()
 
+    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
+        return self.value
+
     @staticmethod
     def stack(x: List['PrimeTensor'], axis: int = 0) -> 'PrimeTensor':
         assert all(isinstance(i, PrimeTensor) for i in x)

@@ -28,10 +28,6 @@ from .int64 import (
     Int64Constant
 )
 
-from .native_shared import (
-    binarize,
-)
-
 __all__ = [
     'Int100Constant',
     'Int100Placeholder',
@@ -49,5 +45,4 @@ __all__ = [
     'Int64Placeholder',
     'Int64Variable',
     'Int64Constant',
-    'binarize',
 ]

@@ -1521,10 +1521,12 @@ def _add_masked_masked(prot, x, y):
 #
 
 
-def _reduce_sum_core(prot: Pond,
-              x: PondTensor,
-              axis: Optional[int] = None,
-              keepdims: Optional[bool] = None) -> Tuple[AbstractTensor, AbstractTensor]:
+def _reduce_sum_core(
+    prot: Pond,
+    x: PondTensor,
+    axis: Optional[int] = None,
+    keepdims: Optional[bool] = None
+) -> Tuple[AbstractTensor, AbstractTensor]:
 
     x_on_0, x_on_1 = x.unwrapped
 
@@ -1539,26 +1541,32 @@ def _reduce_sum_core(prot: Pond,
     return y_on_0, y_on_1
 
 
-def _reduce_sum_public(prot: Pond,
-                x: PondPublicTensor,
-                axis: Optional[int] = None,
-                keepdims: Optional[bool] = None) -> PondPublicTensor:
+def _reduce_sum_public(
+    prot: Pond,
+    x: PondPublicTensor,
+    axis: Optional[int] = None,
+    keepdims: Optional[bool] = None
+) -> PondPublicTensor:
     y_on_0, y_on_1 = _reduce_sum_core(prot, x, axis, keepdims)
     return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
 
-def _reduce_sum_private(prot: Pond,
-                 x: PondPrivateTensor,
-                 axis: Optional[int] = None,
-                 keepdims: Optional[bool] = None) -> PondPrivateTensor:
+def _reduce_sum_private(
+    prot: Pond,
+    x: PondPrivateTensor,
+    axis: Optional[int] = None,
+    keepdims: Optional[bool] = None
+) -> PondPrivateTensor:
     y_on_0, y_on_1 = _reduce_sum_core(prot, x, axis, keepdims)
     return PondPrivateTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
 
-def _reduce_sum_masked(prot: Pond,
-                x: PondMaskedTensor,
-                axis: Optional[int] = None,
-                keepdims: Optional[bool] = None) -> PondPrivateTensor:
+def _reduce_sum_masked(
+    prot: Pond,
+    x: PondMaskedTensor,
+    axis: Optional[int] = None,
+    keepdims: Optional[bool] = None
+) -> PondPrivateTensor:
     return prot.reduce_sum(x.unmasked, axis, keepdims)
 
 

@@ -9,7 +9,7 @@ from typing import Union, Optional, List, Dict, Any, Type
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_matmul, gen_crt_mod,
-    gen_crt_reduce_sum, gen_crt_im2col, crt_matmul_split
+    gen_crt_reduce_sum, gen_crt_im2col, crt_matmul_split,
     gen_crt_sample_uniform, gen_crt_sample_bounded
 )
 from .helpers import prod, inverse
@@ -90,6 +90,13 @@ class Int100Tensor(AbstractTensor):
         assert type(value) in [tuple, list], type(value)
         return Int100Tensor(None, value)
 
+    def convert_to_tensor(self) -> 'Int100Tensor':
+        converted_backing = [
+            tf.convert_to_tensor(xi, dtype=self.int_type)
+            for xi in self.backing
+        ]
+        return Int100Tensor.from_decomposed(converted_backing)
+
     @staticmethod
     def stack(xs: List['Int100Tensor'], axis: int=0) -> 'Int100Tensor':
         assert all(isinstance(x, Int100Tensor) for x in xs)
@@ -123,13 +130,13 @@ class Int100Tensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return _crt_recombine_explicit(self.backing, 2**31)
 
-    def to_bits(self) -> PrimeTensor:
+    def to_bits(self, prime: int = 107) -> PrimeTensor:
 
         with tf.name_scope('to_bits'):
 
             # we will extract the bits in chunks of 16 as that's reasonable for the explicit CRT
             MAX_CHUNK_BITSIZE = 16
-            q, r = bitsize // MAX_CHUNK_BITSIZE, bitsize % MAX_CHUNK_BITSIZE
+            q, r = BITSIZE // MAX_CHUNK_BITSIZE, BITSIZE % MAX_CHUNK_BITSIZE
             chunk_bitsizes = [MAX_CHUNK_BITSIZE] * q + ([r] if r > 0 else [])
 
             # extract bits of chunks
@@ -138,9 +145,10 @@ class Int100Tensor(AbstractTensor):
             for chunk_bitsize in chunk_bitsizes:
                 # extract chunk from remaining
                 chunk = _crt_mod(remaining.backing, 2**chunk_bitsize)
-                assert type(chunk) is INT_TYPE, type(chunk)
+                assert chunk.dtype is INT_TYPE, chunk.dtype
                 # extract bits from chunk and save for concatenation later
-                chunks_bits.append(binarize(chunk, chunk_bitsize))
+                chunk_bits = binarize(chunk, chunk_bitsize)
+                chunks_bits.append(chunk_bits)
                 # perform right shift on remaining
                 remaining = (remaining - Int100Tensor.from_native(chunk)) * inverse(2**chunk_bitsize, self.modulus)
 
@@ -148,7 +156,6 @@ class Int100Tensor(AbstractTensor):
             bits = tf.concat(chunks_bits, axis=-1)
 
             # wrap in PrimeTensor
-            prime = 103; assert prime > BITSIZE
             return PrimeTensor.from_native(bits, prime)
 
     def to_bigint(self) -> np.ndarray:

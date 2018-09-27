@@ -4,12 +4,11 @@ from typing import List, Union, Optional
 import tensorflow as tf
 
 from .tensor import AbstractTensor
-from .prime import PrimeTensor
 
 
-def binarize(tensor: Union[tf.int32, tf.int64], bitsize: Optional[int]=None) -> Union[tf.int32, tf.int64]:
+def binarize(tensor: tf.Tensor, bitsize: Optional[int]=None) -> tf.Tensor:
     with tf.name_scope('binarize'):
-        bitsize = bitsize or (tensor.size * 8)
+        bitsize = bitsize or (tensor.dtype.size * 8)
 
         bit_indices_shape = [1] * len(tensor.shape) + [bitsize]
         bit_indices = tf.range(bitsize, dtype=tensor.dtype)

@@ -36,8 +36,8 @@ class Int64Tensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
 
-    def to_bits(self) -> PrimeTensor:
-        return PrimeTensor.from_native(binarize(self.value), 67)
+    def to_bits(self, prime: int = 67) -> PrimeTensor:
+        return PrimeTensor.from_native(binarize(self.value), prime)
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int64Tensor':
