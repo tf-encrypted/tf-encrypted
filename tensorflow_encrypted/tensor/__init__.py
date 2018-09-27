@@ -28,7 +28,7 @@ from .int64 import (
     Int64Constant
 )
 
-from .native_shared import (
+from .shared import (
     binarize,
 )
 

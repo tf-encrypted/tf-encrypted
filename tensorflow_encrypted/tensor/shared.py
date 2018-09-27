@@ -1,7 +1,8 @@
 import math
-from typing import List, Union
+from typing import Union
 
 import tensorflow as tf
+import numpy as np
 
 from .tensor import AbstractTensor
 from .prime import PrimeTensor
@@ -22,52 +23,28 @@ def binarize(tensor: AbstractTensor, prime: int=37) -> PrimeTensor:
         return PrimeTensor.from_native(val, prime)
 
 
-def im2col(tensor: Union[List[tf.Tensor], AbstractTensor], h_filter: int, w_filter: int,
-           padding: str, strides: int) -> Union[List[tf.Tensor], tf.Tensor]:
-
-    if isinstance(tensor, AbstractTensor):
-        x = [tensor.value]
-    else:
-        x = tensor
+def im2col(x: Union[tf.Tensor, np.ndarray], h_filter: int, w_filter: int, padding: str,
+           strides: int) -> tf.Tensor:
 
     with tf.name_scope('im2col'):
         # we need NHWC because tf.extract_image_patches expects this
-        NHWC_tensors = [tf.transpose(xi, [0, 2, 3, 1]) for xi in x]
-        channels = int(NHWC_tensors[0].shape[3])
+        NHWC_tensor = tf.transpose(x, [0, 2, 3, 1])
+        channels = int(NHWC_tensor.shape[3])
         # extract patches
-        patch_tensors = [
-            tf.extract_image_patches(
-                xi,
-                ksizes=[1, h_filter, w_filter, 1],
-                strides=[1, strides, strides, 1],
-                rates=[1, 1, 1, 1],
-                padding=padding
-            )
-            for xi in NHWC_tensors
-        ]
+        patch_tensor = tf.extract_image_patches(NHWC_tensor, ksizes=[1, h_filter, w_filter, 1],
+                                                strides=[1, strides, strides, 1],
+                                                rates=[1, 1, 1, 1],
+                                                padding=padding)
 
         # change back to NCHW
-        patch_tensors_NCHW = [
-            tf.reshape(
-                tf.transpose(patches, [3, 1, 2, 0]),
-                (h_filter, w_filter, channels, -1)
-            )
-            for patches in patch_tensors
-        ]
+        patch_tensor_NCHW = tf.reshape(tf.transpose(patch_tensor, [3, 1, 2, 0]),
+                                       (h_filter, w_filter, channels, -1))
 
         # reshape to x_col
-        x_col_tensors = [
-            tf.reshape(
-                tf.transpose(x_col_NHWC, [2, 0, 1, 3]),
-                (channels * h_filter * w_filter, -1)
-            )
-            for x_col_NHWC in patch_tensors_NCHW
-        ]
+        x_col_tensor = tf.reshape(tf.transpose(patch_tensor_NCHW, [2, 0, 1, 3]),
+                                  (channels * h_filter * w_filter, -1))
 
-        if isinstance(tensor, AbstractTensor):
-            return type(tensor)(x_col_tensors[0])
-
-        return x_col_tensors
+        return x_col_tensor
 
 
 def conv2d(x: AbstractTensor, y: AbstractTensor, strides: int, padding: str) -> AbstractTensor:
@@ -83,7 +60,7 @@ def conv2d(x: AbstractTensor, y: AbstractTensor, strides: int, padding: str) -> 
         h_out = int(math.ceil(float(h_x - h_filter + 1) / float(strides)))
         w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
 
-    X_col = im2col(x, h_filter, w_filter, padding, strides)
+    X_col = x.im2col(h_filter, w_filter, padding, strides)
     W_col = y.transpose(perm=(3, 2, 0, 1)).reshape([int(n_filters), -1])
     out = W_col.dot(X_col)
 
