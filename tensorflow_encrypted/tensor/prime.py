@@ -47,7 +47,7 @@ class PrimeTensor(AbstractTensor):
         return PrimeTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
 
     def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
-        return self.value[slice]
+        return PrimeTensor.from_native(self.value[slice], self.modulus)
 
     def __repr__(self) -> str:
         return 'PrimeTensor(shape={}, modulus={})'.format(self.shape, self.modulus)
@@ -158,7 +158,7 @@ class PrimePlaceholder(PrimeTensor):
         return 'PrimePlaceholder({})'.format(self.shape)
 
 
-class PrimeVariable(PrimeTensor):
+class PrimeVariable(PrimeTensor, AbstractVariable):
 
     def __init__(self, initial_value: Union[tf.Tensor, np.ndarray], modulus: int) -> None:
         variable = tf.Variable(initial_value, dtype=INT_TYPE, trainable=False)
@@ -208,13 +208,16 @@ def prime_factory(modulus: int) -> Any:
 
         @staticmethod
         def from_same(initial_value: PrimeTensor) -> PrimeConstant:
-            assert type(initial_value) in [PrimeTensor], type(initial_value)
-            return PrimeConstant(initial_value.value, modulus)
+            return PrimeConstant.from_same(initial_value.value, modulus)
 
     class VariableWrap(TensorWrap, AbstractVariable):
         @staticmethod
         def from_native(x: Union[tf.Tensor, np.ndarray]) -> PrimeTensor:
             return PrimeVariable.from_native(x, modulus)
+
+        @staticmethod
+        def from_same(initial_value: PrimeTensor) -> PrimeVariable:
+            return PrimeVariable.from_same(initial_value, modulus)
 
     class Factory(AbstractFactory):
         @property

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import random
 import sys
 import tensorflow as tf
@@ -6,6 +6,9 @@ from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 )
+from ..tensor.native_shared import binarize
+from ..tensor.prime import prime_factory
+from ..tensor.factory import AbstractFactory
 from ..player import Player
 
 _thismodule = sys.modules[__name__]
@@ -19,6 +22,7 @@ class SecureNN(Pond):
         server_0: Player,
         server_1: Player,
         server_2: Player,
+        alt_factory: AbstractFactory=prime_factory(p),
         **kwargs
     ) -> None:
         super(SecureNN, self).__init__(
@@ -27,6 +31,7 @@ class SecureNN(Pond):
             crypto_producer=server_2,
             **kwargs
         )
+        self.alt_factory = alt_factory
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
@@ -51,8 +56,9 @@ class SecureNN(Pond):
         assert not y.is_scaled, "Input is not supposed to be scaled"
         return x + y - self.bitwise_and(x, y) * 2
 
-    def binarize(self, x: PondTensor) -> PondTensor:
-        raise NotImplementedError
+    def binarize(self, x: PondTensor, modulus: Optional[int]=None) -> PondTensor:
+        modulus = modulus or p
+        return binarize(x, modulus)
 
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
@@ -122,20 +128,20 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
         with tf.name_scope('lsb_mask'):
             with tf.device(prot.crypto_producer.device_name):
                 x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
-                xbits = x.binarize()
+                xbits = binarize(x, p)
                 xlsb = xbits[..., 0]
-                x = PondPrivateTensor(prot, *prot._share(x), is_scaled=False)
-                xbits = PondPrivateTensor(prot, *prot._share(xbits), is_scaled=False)
-                xlsb = PondPrivateTensor(prot, *prot._share(xlsb, p), is_scaled=False)
+                x = PondPrivateTensor(prot, *prot._share(x, prot.tensor_factory), is_scaled=False)
+                xbits = PondPrivateTensor(prot, *prot._share(xbits, prot.alt_factory), is_scaled=False)
+                xlsb = PondPrivateTensor(prot, *prot._share(xlsb, prot.tensor_factory), is_scaled=False)
 
-            devices = [prot.server0.device_name, prot.server1.device_name]
+            devices = [prot.server_0.device_name, prot.server_1.device_name]
             bits_device = random.choice(devices)
             with tf.device(bits_device):
-                b = _generate_random_bits(y.shape)
+                b = _generate_random_bits(prot, y.shape)
 
         with tf.name_scope('lsb_ops'):
             r = (y + x).reveal()
-            rbits = prot.binarize(r)
+            rbits = prot.binarize(r, p)
             rlsb = rbits[..., 0]
 
             bp = prot.private_compare(xbits, r, b)
@@ -153,5 +159,5 @@ def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):
 
 
 def _generate_random_bits(prot: SecureNN, shape: List[int]):
-    backing = prot.tensor_factory.Tensor.sample_bounded(shape, bitlength=1)
+    backing = prot.tensor_factory.Tensor.sample_uniform(shape)
     return PondPublicTensor(prot, backing, backing, is_scaled=False)
