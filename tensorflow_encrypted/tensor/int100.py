@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import math
 import numpy as np
 import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Type
@@ -8,13 +7,14 @@ from typing import Union, Optional, List, Dict, Any, Type
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_dot, gen_crt_mod,
-    gen_crt_sum, gen_crt_im2col,
+    gen_crt_sum, crt_im2col,
     gen_crt_sample_uniform, gen_crt_sample_bounded, crt_matmul_split
 )
 from .helpers import prod, log2
 from ..config import run
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
+from .shared import conv2d
 
 
 #
@@ -35,6 +35,7 @@ for mi in m:
     assert 2 * log2(mi) + log2(1024) < log2(INT_TYPE.max)
 
 DOT_THRESHOLD = 1024
+SUM_THRESHOLD = 2**9
 
 _crt_decompose = gen_crt_decompose(m)
 _crt_recombine_lagrange = gen_crt_recombine_lagrange(m)
@@ -45,7 +46,6 @@ _crt_sum = gen_crt_sum(m)
 _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_dot = gen_crt_dot(m)
-_crt_im2col = gen_crt_im2col(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE)
 
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
@@ -201,7 +201,8 @@ def _add(x, y):
     return Int100Tensor.from_decomposed(z_backing)
 
 
-def _sum(x, axis, keepdims):
+def _sum(x, axis=None, keepdims=None):
+    x = _lift(x)
     y_backing = _crt_sum(x.backing, axis, keepdims)
     return Int100Tensor.from_decomposed(y_backing)
 
@@ -236,32 +237,12 @@ def _dot(x: Union[Int100Tensor, int], y: Union[Int100Tensor, int]) -> Int100Tens
 
 
 def _im2col(x, h_filter, w_filter, padding, strides):
-    assert isinstance(x, Int100Tensor), type(x)
-    backing = _crt_im2col(x.backing, h_filter, w_filter, padding, strides)
+    backing = crt_im2col(x.backing, h_filter, w_filter, padding, strides)
     return Int100Tensor.from_decomposed(backing)
 
 
 def _conv2d(x, y, strides, padding):
-    assert isinstance(x, Int100Tensor), type(x)
-    assert isinstance(y, Int100Tensor), type(y)
-
-    h_filter, w_filter, d_filters, n_filters = map(int, y.shape)
-    n_x, d_x, h_x, w_x = map(int, x.shape)
-    if padding == "SAME":
-        h_out = int(math.ceil(float(h_x) / float(strides)))
-        w_out = int(math.ceil(float(w_x) / float(strides)))
-    if padding == "VALID":
-        h_out = int(math.ceil(float(h_x - h_filter + 1) / float(strides)))
-        w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
-
-    X_col = x.im2col(h_filter, w_filter, padding, strides)
-    W_col = y.transpose(perm=(3, 2, 0, 1)).reshape([int(n_filters), -1])
-    out = W_col.dot(X_col)
-
-    out = out.reshape([n_filters, h_out, w_out, n_x])
-    out = out.transpose(perm=(3, 0, 1, 2))
-
-    return out
+    return conv2d(x, y, strides, padding)
 
 
 def _mod(x: Int100Tensor, k: int) -> Int100Tensor:

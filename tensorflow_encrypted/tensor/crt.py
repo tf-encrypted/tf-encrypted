@@ -3,6 +3,7 @@ from math import ceil
 
 import numpy as np
 import tensorflow as tf
+from ..tensor.shared import im2col
 
 from .helpers import inverse, prod
 from typing import Union, List, Tuple
@@ -148,47 +149,9 @@ def crt_matmul_split(x: TFEData, y: TFEData, threshold: int) -> List[Tuple[TFEDa
     return z_split
 
 
-def gen_crt_im2col(m):
-
-    def im2col(x, h_filter, w_filter, padding, strides):
-        with tf.name_scope('crt_im2col'):
-
-            # we need NHWC because tf.extract_image_patches expects this
-            NHWC_tensors = [tf.transpose(xi, [0, 2, 3, 1]) for xi in x]
-            channels = int(NHWC_tensors[0].shape[3])
-            # extract patches
-            patch_tensors = [
-                tf.extract_image_patches(
-                    xi,
-                    ksizes=[1, h_filter, w_filter, 1],
-                    strides=[1, strides, strides, 1],
-                    rates=[1, 1, 1, 1],
-                    padding=padding
-                )
-                for xi in NHWC_tensors
-            ]
-
-            # change back to NCHW
-            patch_tensors_NCHW = [
-                tf.reshape(
-                    tf.transpose(patches, [3, 1, 2, 0]),
-                    (h_filter, w_filter, channels, -1)
-                )
-                for patches in patch_tensors
-            ]
-
-            # reshape to x_col
-            x_col_tensors = [
-                tf.reshape(
-                    tf.transpose(x_col_NHWC, [2, 0, 1, 3]),
-                    (channels * h_filter * w_filter, -1)
-                )
-                for x_col_NHWC in patch_tensors_NCHW
-            ]
-
-            return x_col_tensors
-
-    return im2col
+def crt_im2col(x: TFEData, h_filter: int, w_filter: int, padding: str,
+               strides: int) -> TFEData:
+    return [im2col(xi, h_filter, w_filter, padding, strides) for xi in x]
 
 
 def gen_crt_sample_uniform(m, int_type):
@@ -258,26 +221,9 @@ def gen_crt_mod(m, int_type):
 
 
 def gen_crt_sum(m):
-    def crt_sum(x, axis, keepdims=None):
+    def crt_sum(x, axis=None, keepdims=None):
         with tf.name_scope('crt_sum'):
-            dims = x[0].shape.dims.copy()
-            ax_len = dims.pop(axis)
-            begins = [0] * len(dims)
-            ends = [x.value for x in dims]
-            perm = [axis, *[i for i in range(len(dims) + 1) if i != axis]]
-            x = [tf.transpose(xi, perm=perm) for xi in x]
-            y = [tf.zeros(dims, dtype=xi.dtype) for xi in x]
-            for i in range(ax_len):
-                for j in range(len(x)):
-                    sl = x[j][i]
-                    y[j] += sl
-                    y[j] %= m[j]
-                begins[0] += 1
-                ends[0] += 1
-            if keepdims:
-                return [tf.expand_dims(yi, axis) for yi in y]
-            return y
-
+            return [tf.reduce_sum(xi, axis, keepdims) % mi for xi, mi in zip(x, m)]
     return crt_sum
 
 
