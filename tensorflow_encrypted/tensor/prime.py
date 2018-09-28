@@ -25,7 +25,7 @@ class PrimeTensor(AbstractTensor):
         return PrimeTensor(value, modulus)
 
     def to_bits(self, prime: int = 37) -> 'PrimeTensor':
-        return PrimeTensor.from_native(PrimeTensor.binarize(self.value, prime=prime), prime)
+        return PrimeTensor.binarize(self, prime=prime)
 
     @staticmethod
     def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int) -> 'PrimeTensor':
@@ -47,6 +47,7 @@ class PrimeTensor(AbstractTensor):
 
     @staticmethod
     def binarize(tensor: AbstractTensor, prime: int) -> 'PrimeTensor':
+        print(type(tensor))
         with tf.name_scope('binarize'):
             BITS = tensor.int_type.size * 8
             assert prime > BITS, prime

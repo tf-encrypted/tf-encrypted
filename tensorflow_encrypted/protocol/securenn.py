@@ -123,6 +123,7 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
         with tf.name_scope('lsb_mask'):
             with tf.device(prot.crypto_producer.device_name):
                 x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
+                print('lsbp', type(x))
                 xbits = x.to_bits()
                 xlsb = xbits[..., 0]
                 x = PondPrivateTensor(prot, *prot._share(x, prot.tensor_factory), is_scaled=False)
@@ -134,19 +135,20 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
             with tf.device(bits_device):
                 b = _generate_random_bits(prot, y.shape)
 
-        with tf.name_scope('lsb_ops'):
-            r = (y + x).reveal()
-            rbits = r.value.to_bits()
-            rlsb = rbits[..., 0]
+        r = (y + x).reveal()
+        r0, r1 = r.unwrapped
+        rbits0, rbits1 = r0.to_bits(), r1.to_bits()
+        rbits = PondPublicTensor(prot, rbits0, rbits1, is_scaled=False)
+        rlsb = rbits[..., 0]
 
-            bp = prot.private_compare(xbits, r, b)
+        bp = prot.private_compare(xbits, r, b)
 
-            gamma = prot.bitwise_xor(bp, b)
-            delta = prot.bitwise_xor(xlsb, rlsb)
+        gamma = prot.bitwise_xor(bp, b)
+        delta = prot.bitwise_xor(xlsb, rlsb)
 
-            alpha = prot.bitwise_xor(gamma, delta)
+        alpha = prot.bitwise_xor(gamma, delta)
 
-            return alpha
+        return alpha
 
 
 def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):

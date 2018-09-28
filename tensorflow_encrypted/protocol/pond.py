@@ -898,6 +898,9 @@ class PondPublicTensor(PondTensor):
         value = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
         return self.prot._decode(value, self.is_scaled)
 
+    def __getitem__(self, slice: slice) -> 'PondPublicTensor':
+        return PondPublicTensor(self, self.value_on_0[slice], self.value_on_1[slice], is_scaled=self.is_scaled)
+
 
 class PondPrivateTensor(PondTensor):
     """
@@ -939,6 +942,9 @@ class PondPrivateTensor(PondTensor):
     def zero(prot: Pond, shape: List[int]) -> 'PondPrivateTensor':
         zero = np.zeros(shape=shape)
         return prot.define_private_variable(zero)
+
+    def __getitem__(self, slice: slice) -> 'PondPrivateTensor':
+        return PondPrivateTensor(self, self.share0[slice], self.share1[slice], self.is_scaled)
 
 
 class PondMaskedTensor(PondTensor):
