@@ -38,6 +38,8 @@ class TestInt100Tensor(unittest.TestCase):
 
     def test_binarize(self) -> None:
 
+        tf.enable_eager_execution()
+
         def as_bits(x: int, min_bitlength):
             bits = [int(b) for b in '{0:b}'.format(x)]
             bits = [0] * (min_bitlength - len(bits)) + bits
@@ -45,11 +47,10 @@ class TestInt100Tensor(unittest.TestCase):
 
         x = Int100Tensor(np.array([
             0,
-            6616464272061971915798970247351,
-            6616464272061971915798970247351 - 1,
-            6616464272061971915798970247351 - 2
-        ]).reshape(4, 1))
-        print(x.modulus)
+            -1,
+            123456789,
+            -123456789,
+        ]).reshape([2, 2]))
 
         with tf.Session() as sess:
             actual = sess.run(
@@ -57,14 +58,11 @@ class TestInt100Tensor(unittest.TestCase):
             )
 
         expected = np.array([
-            as_bits(0, 103),
-            as_bits((2**103 + x.modulus) % 2**103, 103),
-            as_bits((2**103 + x.modulus - 1) % 2**103, 103),
-            as_bits((2**103 + x.modulus - 2) % 2**103, 103)
-        ]).reshape(4, 103)
-
-        print("actual  \n", actual)
-        print("expected\n", expected)
+            as_bits((2**103 + (0)) % 2**103, 103),  # == as_bits(0, 103)
+            as_bits((2**103 + (-1)) % 2**103, 103),
+            as_bits((2**103 + (123456789)) % 2**103, 103),  # == as_bits(123456789, 103)
+            as_bits((2**103 + (-123456789)) % 2**103, 103),
+        ]).reshape([2, 2, 103])
 
         np.testing.assert_array_equal(actual, expected)
 

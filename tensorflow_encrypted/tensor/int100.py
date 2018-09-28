@@ -145,7 +145,6 @@ class Int100Tensor(AbstractTensor):
             for chunk_bitsize in chunk_bitsizes:
                 # extract chunk from remaining
                 chunk = _crt_mod(remaining.backing, 2**chunk_bitsize)
-                assert chunk.dtype is INT_TYPE, chunk.dtype
                 # extract bits from chunk and save for concatenation later
                 chunk_bits = binarize(chunk, chunk_bitsize)
                 chunks_bits.append(chunk_bits)
