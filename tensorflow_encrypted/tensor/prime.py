@@ -4,7 +4,9 @@ import math
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Tuple, Type
+from typing import Union, Optional, List, Dict, Any, Tuple, Type, NewType
+from ..types import Ellipse, Slice
+
 
 from ..config import run
 from .factory import AbstractFactory
@@ -66,7 +68,7 @@ class PrimeTensor(AbstractTensor):
              tag: Optional[str]=None) -> 'PrimeTensor':
         return PrimeTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
 
-    def __getitem__(self, slice: Any) -> 'PrimeTensor':
+    def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'PrimeTensor':
         return PrimeTensor.from_native(self.value[slice], self.modulus)
 
     def __repr__(self) -> str:
