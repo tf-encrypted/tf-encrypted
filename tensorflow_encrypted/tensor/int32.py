@@ -55,6 +55,9 @@ class Int32Tensor(AbstractTensor):
     def __mul__(self, other: Any) -> 'Int32Tensor':
         return self.mul(other)
 
+    def __rmul__(self, other: Any) -> 'Int32Tensor':
+        return self.mul(other)
+
     def __mod__(self, k: int) -> 'Int32Tensor':
         return self.mod(k)
 

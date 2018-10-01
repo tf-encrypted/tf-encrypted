@@ -110,20 +110,22 @@ class SecureNN(Pond):
 
     def share_convert(self, x: PondPrivateTensor) -> PondPrivateTensor:
         L = self.tensor_factory.Tensor.modulus
-        lminusfactory = prime_factory(L - 1)
 
         if L > 2**64:
-            raise Exception('SecureNN share convert only support moduli of less than 2 ** 64.')
+            raise Exception('SecureNN share convert only support moduli of less or equal to 2 ** 64.')
 
-        # P2
-        with tf.device(self.crypto_producer.device_name):
+        # P0
+        with tf.device(self.server_0.device_name):
             bitmask = _generate_random_bits(self, [1])
-            sharemask = lminusfactory.Tensor.sample_uniform(x.shape) + 1
+            sharemask = self.tensor_factory.Tensor.sample_uniform(x.shape) + 1
 
             sharemask0, sharemask1, alpha_wrap = share_with_wrap(self, sharemask, L)
 
+            pvt_sharemask = PondPrivateTensor(self, sharemask0, sharemask1, is_scaled=False)
+
+            masked = x + pvt_sharemask
+
         alpha_wrap_t = PrimeTensor(-alpha_wrap.value - 1, p)
-        pvt_sharemask = PondPrivateTensor(self, sharemask0, sharemask1, is_scaled=False)
 
         # P0, P1
         with tf.device(self.server_0.device_name):
@@ -134,8 +136,6 @@ class SecureNN(Pond):
 
         beta_wrap = PondPrivateTensor(self, beta_wrap_0, beta_wrap_1, is_scaled=False)
 
-        masked = x + pvt_sharemask
-
         # P2
         with tf.device(self.crypto_producer.device_name):
             delta_wrap = masked.share0.compute_wrap(masked.share1, L)
@@ -145,15 +145,14 @@ class SecureNN(Pond):
             #share0, share1 = self._share(xbits, self.alt_factory)
             #bitshares = PondPrivateTensor(self, share0, share1, is_scaled=False)
 
-            share0, share1 = self._share(delta_wrap, lminusfactory)
+            share0, share1 = self._share(delta_wrap)
             deltashares = PondPrivateTensor(self, share0, share1, is_scaled=False)
 
             # outbit = self.private_compare(bitshares, pvt_sharemask.reveal().value_on_0 - 1, bitmask)
-            inp = lminusfactory.Tensor.from_native(np.array([1]))
+            inp = self.tensor_factory.Tensor.from_native(np.array([1]))
             outbit = PondPublicTensor(self, inp, inp, is_scaled=False)
 
-            compared0, compared1 = self._share(outbit.value_on_0, lminusfactory)
-            print(compared0.value, compared1.value)
+            compared0, compared1 = self._share(outbit.value_on_0)
 
         compared = PondPrivateTensor(self, compared0, compared1, is_scaled=False)
 
@@ -171,14 +170,15 @@ class SecureNN(Pond):
         deltashares1 = deltashares.share1
 
         with tf.device(self.server_0.device_name):
-            preconverter = ((compared0 + bitmask0) + -2 * bitmask0 * compared0)
-            final_share0 = (beta_wrap0 + alpha_wrap_t + deltashares0) + preconverter
-
+            preconverter = ((compared0 + bitmask0) + -2 * compared0 * bitmask0)
+            converter0 = deltashares0 + beta_wrap0 + alpha_wrap_t + preconverter
         with tf.device(self.server_1.device_name):
-            preconverter = ((compared1) + -2 * bitmask1 * compared1)
-            final_share1 = ((beta_wrap1) + deltashares1) + preconverter
+            preconverter = ((compared1) + -2 * compared1 * bitmask1)
+            converter1 = deltashares1 + beta_wrap1 + preconverter
 
-        return PondPrivateTensor(self, final_share0, final_share1, is_scaled=False)
+        converter = PondPrivateTensor(self, converter0, converter1, is_scaled=False)
+
+        return x - converter
 
     def divide(self, x, y):
         raise NotImplementedError
