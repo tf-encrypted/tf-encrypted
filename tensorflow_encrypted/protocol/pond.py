@@ -899,7 +899,11 @@ class PondPublicTensor(PondTensor):
         return self.prot._decode(value, self.is_scaled)
 
     def __getitem__(self, slice: slice) -> 'PondPublicTensor':
-        return PondPublicTensor(self, self.value_on_0[slice], self.value_on_1[slice], is_scaled=self.is_scaled)
+        with tf.device(prot.server0.device_name):
+            v0 = self.value_on_0[slice]
+        with tf.device(prot.server1.device_name):
+            v1 = self.value_on_1[slice]
+        return PondPublicTensor(self, v0, v1, is_scaled=self.is_scaled)
 
 
 class PondPrivateTensor(PondTensor):
@@ -944,7 +948,11 @@ class PondPrivateTensor(PondTensor):
         return prot.define_private_variable(zero)
 
     def __getitem__(self, slice: slice) -> 'PondPrivateTensor':
-        return PondPrivateTensor(self, self.share0[slice], self.share1[slice], self.is_scaled)
+        with tf.device(prot.server0.device_name):
+            s0 = self.share0[slice]
+        with tf.device(prot.server1.device_name):
+            s1 = self.share1[slice]
+        return PondPrivateTensor(self, s0, s1, self.is_scaled)
 
 
 class PondMaskedTensor(PondTensor):
@@ -990,6 +998,22 @@ class PondMaskedTensor(PondTensor):
     @property
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
         return (self.a, self.a0, self.a1, self.alpha_on_0, self.alpha_on_1)
+
+    def __getitem__(self, slice: slice) -> 'PondMaskedTensor':
+        with tf.device(prot.server0.device_name):
+            a0 = self.a0[slice]
+            alph0 = self.alpha_on_0[slice]
+        with tf.device(prot.server1.device_name):
+            a1 = self.a1[slice]
+            alph1 = self.alpha_on_1[slice]
+        return PondMaskedTensor(self,
+                                self.unmasked[slice],
+                                self.a[slice],
+                                a0,
+                                a1,
+                                alph0,
+                                alph1,
+                                self.is_scaled)
 
 
 #
