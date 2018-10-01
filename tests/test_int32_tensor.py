@@ -4,7 +4,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
-from tensorflow_encrypted.tensor.prime import PrimeTensor
 
 
 class TestInt32Tensor(unittest.TestCase):
