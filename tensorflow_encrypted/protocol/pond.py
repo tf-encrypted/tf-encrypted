@@ -48,7 +48,7 @@ class Pond(Protocol):
             crypto_producer: Optional[Player] = None,
             use_noninteractive_truncation: bool = False,
             tensor_factory: AbstractFactory = Int100Factory(),
-            verify_precision: bool=True) -> None:
+            verify_precision: bool = True) -> None:
         self.server_0 = server_0 or get_default_config().get_player('server0')
         self.server_1 = server_1 or get_default_config().get_player('server1')
         self.crypto_producer = crypto_producer or get_default_config().get_player('crypto_producer')
@@ -187,8 +187,8 @@ class Pond(Protocol):
     def define_public_input(
         self,
         provider: InputProvider,
-        apply_scaling: bool=True,
-        name: str=None
+        apply_scaling: bool = True,
+        name: str = None
     ) -> Union['PondPublicTensor', List['PondPublicTensor']]:
 
         def helper(v: tf.Tensor) -> 'PondPublicTensor':
@@ -218,9 +218,9 @@ class Pond(Protocol):
     def define_private_input(
         self,
         provider: InputProvider,
-        apply_scaling: bool=True,
-        name: str=None,
-        masked: bool=False
+        apply_scaling: bool = True,
+        name: str = None,
+        masked: bool = False
     ) -> Union['PondPrivateTensor', 'PondMaskedTensor', List['PondPrivateTensor'], List['PondMaskedTensor']]:
 
         def helper(v: tf.Tensor):
@@ -263,7 +263,7 @@ class Pond(Protocol):
         self,
         xs: Union['PondPrivateTensor', List['PondPrivateTensor']],
         receiver: OutputReceiver,
-        name: Optional[str]=None
+        name: Optional[str] = None
     ) -> tf.Operation:
 
         def helper(x: 'PondPrivateTensor') -> tf.Tensor:
@@ -326,7 +326,7 @@ class Pond(Protocol):
             # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
             return ((elements + BOUND).to_native() - BOUND) / scaling_factor
 
-    def _share(self, secret: AbstractTensor, factory: Optional[AbstractFactory]=None) -> Tuple[AbstractTensor, AbstractTensor]:
+    def _share(self, secret: AbstractTensor, factory: Optional[AbstractFactory] = None) -> Tuple[AbstractTensor, AbstractTensor]:
         with tf.name_scope('share'):
             factory = factory or self.tensor_factory
             share0 = factory.Tensor.sample_uniform(secret.shape)
@@ -543,7 +543,7 @@ class Pond(Protocol):
         raise TypeError("Don't know how to expand dims {}".format(type(x)))
 
     @memoize
-    def squeeze(self, x: 'PondTensor', axis: Optional[List[int]]=None):
+    def squeeze(self, x: 'PondTensor', axis: Optional[List[int]] = None):
 
         if isinstance(x, PondPublicTensor):
             return _squeeze_public(self, x, axis)
@@ -878,6 +878,9 @@ class PondTensor(abc.ABC):
 
     def expand_dims(self):
         return self.prot.expand_dims(self)
+
+    def reshape(self, shape: List[int]) -> 'PondTensor':
+        return self.prot.reshape(self, shape)
 
 
 class PondPublicTensor(PondTensor):
@@ -1859,7 +1862,6 @@ def _mod_public_public(prot, x, y):
         with tf.device(prot.server_0.device_name):
             z_on_1 = x_on_1 % y_on_1
 
-
     z = PondPublicTensor(prot, z_on_0, z_on_1, x.is_scaled or y.is_scaled)
     print(f'vaue: {z}')
     return z
@@ -2368,7 +2370,7 @@ def _strided_slice_masked(prot, x: PondMaskedTensor, args: Any, kwargs: Any):
 #
 
 
-def _stack_public(prot: Pond, xs: List[PondPublicTensor], axis: int=0) -> PondPublicTensor:
+def _stack_public(prot: Pond, xs: List[PondPublicTensor], axis: int = 0) -> PondPublicTensor:
     assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
 
     xs_on_0, xs_on_1 = zip(*(x.unwrapped for x in xs))
@@ -2384,7 +2386,7 @@ def _stack_public(prot: Pond, xs: List[PondPublicTensor], axis: int=0) -> PondPu
     return PondPublicTensor(prot, x_on_0_stacked, x_on_1_stacked, xs[0].is_scaled)
 
 
-def _stack_private(prot: Pond, xs: List[PondPrivateTensor], axis: int=0) -> PondPrivateTensor:
+def _stack_private(prot: Pond, xs: List[PondPrivateTensor], axis: int = 0) -> PondPrivateTensor:
     assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
 
     xs0, xs1 = zip(*(x.unwrapped for x in xs))
@@ -2400,7 +2402,7 @@ def _stack_private(prot: Pond, xs: List[PondPrivateTensor], axis: int=0) -> Pond
     return PondPrivateTensor(prot, x0_stacked, x1_stacked, xs[0].is_scaled)
 
 
-def _stack_masked(prot: Pond, xs: List[PondMaskedTensor], axis: int=0) -> PondMaskedTensor:
+def _stack_masked(prot: Pond, xs: List[PondMaskedTensor], axis: int = 0) -> PondMaskedTensor:
     assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = zip(*(x.unwrapped for x in xs))
@@ -2609,7 +2611,7 @@ def _reshape_masked(prot: Pond, x: PondMaskedTensor, shape: List[int]) -> PondMa
 #
 
 
-def _expand_dims_public(prot: Pond, x: PondPublicTensor, axis: Optional[int]=None) -> PondPublicTensor:
+def _expand_dims_public(prot: Pond, x: PondPublicTensor, axis: Optional[int] = None) -> PondPublicTensor:
     assert isinstance(x, PondPublicTensor)
 
     x_on_0, x_on_1 = x.unwrapped
@@ -2625,7 +2627,7 @@ def _expand_dims_public(prot: Pond, x: PondPublicTensor, axis: Optional[int]=Non
     return PondPublicTensor(prot, x_on_0_e, x_on_1_e, x.is_scaled)
 
 
-def _expand_dims_private(prot: Pond, x: PondPrivateTensor, axis: Optional[int]=None) -> PondPrivateTensor:
+def _expand_dims_private(prot: Pond, x: PondPrivateTensor, axis: Optional[int] = None) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
     x0, x1 = x.unwrapped
@@ -2641,7 +2643,7 @@ def _expand_dims_private(prot: Pond, x: PondPrivateTensor, axis: Optional[int]=N
     return PondPrivateTensor(prot, x0_e, x1_e, x.is_scaled)
 
 
-def _expand_dims_masked(prot: Pond, x: PondMaskedTensor, axis: Optional[int]=None) -> PondMaskedTensor:
+def _expand_dims_masked(prot: Pond, x: PondMaskedTensor, axis: Optional[int] = None) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
@@ -2678,7 +2680,7 @@ def _expand_dims_masked(prot: Pond, x: PondMaskedTensor, axis: Optional[int]=Non
 #
 
 
-def _squeeze_public(prot: Pond, x: PondPublicTensor, axis: Optional[int]=None) -> PondPublicTensor:
+def _squeeze_public(prot: Pond, x: PondPublicTensor, axis: Optional[int] = None) -> PondPublicTensor:
     assert isinstance(x, PondPublicTensor)
 
     x_on_0, x_on_1 = x.unwrapped
@@ -2694,7 +2696,7 @@ def _squeeze_public(prot: Pond, x: PondPublicTensor, axis: Optional[int]=None) -
     return PondPublicTensor(prot, x_on_0_squeezed, x_on_1_squeezed, x.is_scaled)
 
 
-def _squeeze_private(prot: Pond, x: PondPrivateTensor, axis: Optional[int]=None) -> PondPrivateTensor:
+def _squeeze_private(prot: Pond, x: PondPrivateTensor, axis: Optional[int] = None) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
     x0, x1 = x.unwrapped
@@ -2710,7 +2712,7 @@ def _squeeze_private(prot: Pond, x: PondPrivateTensor, axis: Optional[int]=None)
     return PondPrivateTensor(prot, x0_squeezed, x1_squeezed, x.is_scaled)
 
 
-def _squeeze_masked(prot: Pond, x: PondMaskedTensor, axis: Optional[int]=None) -> PondMaskedTensor:
+def _squeeze_masked(prot: Pond, x: PondMaskedTensor, axis: Optional[int] = None) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped

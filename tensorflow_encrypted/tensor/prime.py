@@ -42,8 +42,8 @@ class PrimeTensor(AbstractTensor):
         assert all(isinstance(i, PrimeTensor) for i in x)
         return PrimeTensor.from_native(tf.concat([v.value for v in x], axis=axis), x[0].modulus)
 
-    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
-             tag: Optional[str]=None) -> 'PrimeTensor':
+    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any] = {},
+             tag: Optional[str] = None) -> 'PrimeTensor':
         return PrimeTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
 
     def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
@@ -102,6 +102,10 @@ class PrimeTensor(AbstractTensor):
 
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'PrimeTensor':
         return PrimeTensor(tf.reshape(self.value, axes), self.modulus)
+
+    def expand_dims(self, axis: int) -> 'PrimeTensor':
+        expanded = tf.expand_dims(self.value, axis)
+        return PrimeTensor(expanded, self.modulus)
 
 
 def _lift(x: Union['PrimeTensor', int], modulus: int) -> 'PrimeTensor':

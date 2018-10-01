@@ -10,7 +10,7 @@ from ..protocol.pond import (
 from ..player import Player
 from ..config import get_default_config
 from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
-
+import numpy as np
 bits = 32
 
 
@@ -130,44 +130,53 @@ class SecureNN(Pond):
             w = self.bitwise_xor(input, rho)
 
             with tf.name_scope('find_zeros'):
-                a = self.equal(beta, 0)
-                zeros = self.where(a)[0]
+                print('zeros', beta.shape)
+                eq = self.equal(beta, 0)
+                print('zeros', eq.shape)
+                zeros = self.where(eq)
+                print('zeros', zeros.shape)
+                # return tf.Print(zeros.value_on_0.value, [zeros.value_on_0.value], message="Zeros tf tensor")
 
             with tf.name_scope('find_ones'):
-                ones = tf.where(beta == 1)[1]
+                eq = self.equal(beta, 1)
+                ones = self.where(eq)
 
             with tf.name_scope('find_edges'):
-                edges = tf.where(rho == 2 ** bits - 1)[0]
+                edges = self.where(self.equal(rho, 2 ** bits - 1))
 
             # with tf.name_scope('find_non_edge_ones'):
             #     ones = tf.setdiff1d(ones, edges)
-
-            c1 = tf.ones(shape=input.shape)
 
             # # TODO -- needs and equivalent of `take`
             pc_0 = self._private_compare_beta0(input, rho)
             pc_1 = self._private_compare_beta1(input, theta)
             # c0_edge, c1_edge = self._private_compare_edge()
 
-            zeros = tf.expand_dims(zeros, axis=1)
-            ones = tf.expand_dims(ones, axis=1)
+            pc_0 = pc_0.reshape([-1])
+            pc_1 = pc_1.reshape([-1])
 
             with tf.device(self.server_0.device_name):
-                c0 = tf.zeros(shape=input.shape)
-                print('infoooo', zeros.shape, pc_0.share0.value.shape, input.shape)
-                delta0 = tf.SparseTensor(zeros, pc_0.share0.value, input.shape)
-                delta1 = tf.SparseTensor(zeros, pc_1.share0.value, input.shape)
+                c0 = tf.zeros(shape=input.shape, dtype=tf.int32)
+                print('pc0', pc_0.shape)
+                print('types', zeros.value_on_0.value.shape, pc_0.share0.shape, input)
+
+                delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share0.value, input.shape)
+                delta1 = tf.SparseTensor(zeros.value_on_1.value, pc_1.share0.value, input.shape)
 
                 c0 = c0 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
+                c0 = Int32Tensor(c0)
 
             with tf.device(self.server_0.device_name):
-                c1 = tf.zeros(shape=input.shape)
-                delta0 = tf.SparseTensor(zeros, pc_0.share1.value, input.shape)
-                delta1 = tf.SparseTensor(zeros, pc_1.share1.value, input.shape)
+                c1 = tf.zeros(shape=input.shape, dtype=tf.int32)
+
+                delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share1.value, input.shape)
+                delta1 = tf.SparseTensor(zeros.value_on_1.value, pc_1.share1.value, input.shape)
 
                 c1 = c1 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
+                c1 = Int32Tensor(c1)
 
-            answer = PondPrivateTensor(self, share0=c0, share1=c1)
+            print('hi', c0)
+            answer = PondPrivateTensor(self, share0=c0, share1=c1, is_scaled=input.is_scaled)
             return answer
 
             """
