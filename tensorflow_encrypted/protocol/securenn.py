@@ -1,13 +1,15 @@
+from __future__ import absolute_import
+
 import tensorflow as tf
-import numpy as np
+from typing import Optional
 
 from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor, PondPrivateTensor, PondPublicTensor
 )
 from ..player import Player
+from ..config import get_default_config
 from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
-from tensorflow_encrypted.tensor.native_shared import binarize
 
 bits = 32
 
@@ -16,15 +18,15 @@ class SecureNN(Pond):
 
     def __init__(
         self,
-        server_0: Player,
-        server_1: Player,
-        server_2: Player,
+        server_0: Optional[Player] = None,
+        server_1: Optional[Player] = None,
+        server_2: Optional[Player] = None,
         **kwargs
     ) -> None:
         super(SecureNN, self).__init__(
-            server_0=server_0,
-            server_1=server_1,
-            crypto_producer=server_2,
+            server_0=server_0 or get_default_config().get_player('server0'),
+            server_1=server_1 or get_default_config().get_player('server1'),
+            crypto_producer=server_2 or get_default_config().get_player('crypto_producer'),
             **kwargs
         )
 
@@ -37,25 +39,29 @@ class SecureNN(Pond):
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
         assert not x.is_scaled, "Input is not supposed to be scaled"
-        return self.sub(1, x)
+        with tf.name_scope('bitwise_not'):
+            return self.sub(1, x)
 
     @memoize
     def bitwise_and(self, x: PondTensor, y: PondTensor) -> PondTensor:
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
-        return x * y
+        with tf.name_scope('bitwise_and'):
+            return x * y
 
     @memoize
     def bitwise_or(self, x: PondTensor, y: PondTensor) -> PondTensor:
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
-        return x + y - self.bitwise_and(x, y)
+        with tf.name_scope('bitwise_or'):
+            return x + y - self.bitwise_and(x, y)
 
     @memoize
     def bitwise_xor(self, x: PondTensor, y: PondTensor) -> PondTensor:
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
-        return x + y - self.bitwise_and(x, y) * 2
+        with tf.name_scope('bitwise_xor'):
+            return x + y - self.bitwise_and(x, y) * 2
 
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
@@ -95,58 +101,18 @@ class SecureNN(Pond):
         return x + bit * (y - x)
 
     def _private_compare_beta0(self, input: PondPrivateTensor, rho: PondPublicTensor):
-        with tf.device(self.server_0.device_name):
-            w = self.bitwise_xor(input, rho)
 
-            w0_sum = tf.zeros(shape=w.shape)
-            # for i in range(bits-1, -1, -1):
-            # TODO -- subscripting
-            # sum = tf.reduce_sum(w[:, i + 1:], axis=1)
-            # w0_sum[:, i] = sum % p
+        w = self.bitwise_xor(input, rho)
+        c = rho - input + 1  # + w0_sum
 
-            c0 = rho - input + 1 + w0_sum
-
-        with tf.device(self.server_1.device_name):
-            wa = 2 * rho * input
-            wb = rho - wa
-            w = input + wb
-
-            w1_sum = tf.zeros(shape=w.shape)
-            # for i in range(bits-1, -1, -1):
-            # TODO -- subscripting
-            # sum = tf.reduce_sum(w[:, i + 1:], axis=1)
-            # w1_sum[:, i] = sum % p
-
-            c1 = rho + (input * -1) + 1 + w0_sum
-
-        return c0, c1
+        return c
 
     def _private_compare_beta1(self, input: PondPrivateTensor, theta: PondPublicTensor):
-        with tf.device(self.server_0.device_name):
-            w = self.bitwise_xor(input, theta)
 
-            w0_sum = tf.zeros(shape=w.shape)
-            # for i in range(bits-1, -1, -1):
-            # TODO -- subscripting
-            # sum = tf.reduce_sum(w[:, i + 1:], axis=1)
-            # w0_sum[:, i] = sum % p
+        w = self.bitwise_xor(input, theta)
+        c = input - theta + 1  # + sum
 
-            c0 = input - theta + 1 + w0_sum
-
-        with tf.device(self.server_1.device_name):
-            wa = 2 * rho * input
-            wb = rho - wa
-            w = input + wb
-
-            w1_sum = tf.zeros(shape=w.shape)
-            # for i in range(bits-1, -1, -1):
-            # TODO -- subscripting
-            # sum = tf.reduce_sum(w[:, i + 1:], axis=1)
-            # w1_sum[:, i] = sum % p
-
-            c1 = -theta + input + 1 + w0_sum
-
-        return c0, c1
+        return c
 
     def _private_compare_edge(self):
         random_values_u = self.tensor_factory.Tensor.sample_random_tensor((bits,), modulus=p - 1) + 1
@@ -155,22 +121,54 @@ class SecureNN(Pond):
 
         c0[0] = random_values_u[0]
 
-        return c0, c1
+        return c0
 
     def private_compare(self, input: PondPrivateTensor, rho: PondPublicTensor, beta: PondPublicTensor):
         with tf.name_scope('private_compare'):
+            theta = (rho + 1)
+
             w = self.bitwise_xor(input, rho)
-            j = PondPublicTensor(self, value_on_0=Int32Tensor(tf.constant(np.array([1]), dtype=tf.int32)), value_on_1=Int32Tensor(np.array([1])), is_scaled=False)
 
-            zeros = tf.where(beta == 0)[0]
-            ones = tf.where(beta == 1)[1]
-            edges = tf.where(r == 2 ** bits - 1)[0]
-            ones = np.setdiff1d(ones, edges)
+            with tf.name_scope('find_zeros'):
+                zeros = tf.where(beta == 0)[0]
+                print('zeros are', zeros)
 
-            # TODO -- needs and equivalent of `take`
-            c0_zeros, c1_zeros = self._private_compare_beta0(input, rho)
-            c0_ones, c1_ones = self._private_compare_beta1(input, rho)
-            c0_edge, c1_edge = self._private_compare_edge()
+            with tf.name_scope('find_ones'):
+                ones = tf.where(beta == 1)[1]
+
+            with tf.name_scope('find_edges'):
+                edges = tf.where(rho == 2 ** bits - 1)[0]
+
+            # with tf.name_scope('find_non_edge_ones'):
+            #     ones = tf.setdiff1d(ones, edges)
+
+            c1 = tf.ones(shape=input.shape)
+
+            # # TODO -- needs and equivalent of `take`
+            pc_0 = self._private_compare_beta0(input, rho)
+            pc_1 = self._private_compare_beta1(input, theta)
+            # c0_edge, c1_edge = self._private_compare_edge()
+
+            zeros = tf.expand_dims(zeros, axis=1)
+            ones = tf.expand_dims(ones, axis=1)
+
+            with tf.device(self.server_0.device_name):
+                c0 = tf.zeros(shape=input.shape)
+                print('infoooo', zeros.shape, pc_0.share0.value.shape, input.shape)
+                delta0 = tf.SparseTensor(zeros, pc_0.share0.value, input.shape)
+                delta1 = tf.SparseTensor(zeros, pc_1.share0.value, input.shape)
+
+                c0 = c0 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
+
+            with tf.device(self.server_0.device_name):
+                c1 = tf.zeros(shape=input.shape)
+                delta0 = tf.SparseTensor(zeros, pc_0.share1.value, input.shape)
+                delta1 = tf.SparseTensor(zeros, pc_1.share1.value, input.shape)
+
+                c1 = c1 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
+
+            answer = PondPrivateTensor(self, share0=c0, share1=c1)
+            return answer
 
             """
             zero_indices = np.expand_dims(zero_indices, 1)
@@ -186,11 +184,11 @@ class SecureNN(Pond):
             np.put_along_axis(c1, edge_indices, c1_edge, axis=0)
             """
 
-            # TODO - how to send to the third party? (crypto producer)
-            with tf.device(self.server_2.device_name):
-                answer = PondPrivateTensor(self, share0=c0, share1=c1).reveal()
-
-            return answer
+            # # TODO - how to send to the third party? (crypto producer)
+            # with tf.device(self.crypto_producer.device_name):
+            #     answer = PondPrivateTensor(self, share0=c0, share1=c1).reveal()
+            #
+            # return answer
 
     def share_convert(self, x):
         raise NotImplementedError
