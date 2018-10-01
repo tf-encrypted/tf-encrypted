@@ -123,7 +123,6 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
         with tf.name_scope('lsb_mask'):
             with tf.device(prot.crypto_producer.device_name):
                 x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
-                print('lsbp', type(x))
                 xbits = x.to_bits()
                 xlsb = xbits[..., 0]
                 x = PondPrivateTensor(prot, *prot._share(x, prot.tensor_factory), is_scaled=False)

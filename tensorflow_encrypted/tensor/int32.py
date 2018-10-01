@@ -37,7 +37,7 @@ class Int32Tensor(AbstractTensor):
         return self.value
 
     def to_bits(self, prime: int = 37) -> 'PrimeTensor':
-        return PrimeTensor.from_native(PrimeTensor.binarize(self.value), prime)
+        return PrimeTensor.binarize(self, prime)
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int32Tensor':

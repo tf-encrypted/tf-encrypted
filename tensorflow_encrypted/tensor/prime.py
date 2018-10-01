@@ -47,7 +47,6 @@ class PrimeTensor(AbstractTensor):
 
     @staticmethod
     def binarize(tensor: AbstractTensor, prime: int) -> 'PrimeTensor':
-        print(type(tensor))
         with tf.name_scope('binarize'):
             BITS = tensor.int_type.size * 8
             assert prime > BITS, prime

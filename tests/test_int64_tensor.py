@@ -4,7 +4,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 from tensorflow_encrypted.tensor.int64 import Int64Factory, Int64Tensor
-from tensorflow_encrypted.tensor.shared import binarize
 
 
 class TestInt64Tensor(unittest.TestCase):
@@ -39,7 +38,7 @@ class TestInt64Tensor(unittest.TestCase):
             -3
         ], shape=[2, 2], dtype=np.int64))
 
-        y = binarize(x, prime=67)
+        y = x.to_bits()
 
         expected = np.array([
             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -61,7 +60,7 @@ class TestInt64Tensor(unittest.TestCase):
         input = np.random.uniform(low=2**63 + 1, high=2**63 - 1, size=2000).astype(np.int64).tolist()
         x = Int64Tensor(tf.constant(input, dtype=tf.int64))
 
-        y = binarize(x, prime=67)
+        y = x.to_bits()
 
         with tf.Session() as sess:
             actual = sess.run(y.value)

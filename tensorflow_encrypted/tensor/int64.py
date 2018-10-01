@@ -37,7 +37,7 @@ class Int64Tensor(AbstractTensor):
         return self.value
 
     def to_bits(self, prime: int = 67) -> 'PrimeTensor':
-        return PrimeTensor.from_native(PrimeTensor.binarize(self.value), prime)
+        return PrimeTensor.binarize(self, prime)
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int64Tensor':
