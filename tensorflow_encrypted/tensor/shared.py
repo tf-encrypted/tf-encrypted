@@ -5,7 +5,6 @@ import tensorflow as tf
 import numpy as np
 
 from .tensor import AbstractTensor
-from .prime import PrimeTensor
 
 
 def im2col(x: Union[tf.Tensor, np.ndarray], h_filter: int, w_filter: int, padding: str,
