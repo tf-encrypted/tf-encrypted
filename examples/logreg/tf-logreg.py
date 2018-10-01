@@ -2,6 +2,8 @@ import tensorflow as tf
 
 from data import gen_training_input, gen_test_input
 
+tf.set_random_seed(1)
+
 # Parameters
 learning_rate = 0.01
 training_set_size = 1000
@@ -29,11 +31,11 @@ cost = -tf.reduce_mean(y * tf.log(pred) + (1 - y) * tf.log(1 - pred))
 # optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost)
 # equivalent to:
 # dc_pred = - y / pred + (1 - y) / (1 - pred)
-# dc_out = pred * (1 - pred) * dc_pred
+# dc_dout = pred * (1 - pred) * dc_pred
 # equivalent to:
-dc_out = pred - y
-dW = tf.matmul(tf.transpose(x), dc_out)
-db = tf.reduce_sum(1. * dc_out, axis=0)
+dc_dout = pred - y
+dW = tf.matmul(tf.transpose(x), dc_dout) / batch_size
+db = tf.reduce_mean(1. * dc_dout, axis=0)
 ops = [
     tf.assign(W, W - dW * learning_rate),
     tf.assign(b, b - db * learning_rate)
