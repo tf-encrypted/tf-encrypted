@@ -26,7 +26,7 @@ class SecureNN(Pond):
         server_0: Player,
         server_1: Player,
         server_2: Player,
-        alt_factory: AbstractFactory=prime_factory(p),
+        alt_factory: AbstractFactory = prime_factory(p),
         **kwargs
     ) -> None:
         super(SecureNN, self).__init__(
@@ -106,14 +106,17 @@ class SecureNN(Pond):
     def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
         return x + bit * (y - x)
 
-    def _private_compare_beta0(self, input: PondPrivateTensor, rho: PondPublicTensor):
+    def _private_compare_beta0(self, zeros: PondPublicTensor, input: PondPrivateTensor, rho: PondPublicTensor):
+
+        input = self.prot.gather(input, zeros)
+        rho = self.prot.gather(rho, zeros)
 
         w = self.bitwise_xor(input, rho)
         c = rho - input + 1  # + w0_sum
 
         return c
 
-    def _private_compare_beta1(self, input: PondPrivateTensor, theta: PondPublicTensor):
+    def _private_compare_beta1(self, ones: PondPublicTensor, input: PondPrivateTensor, theta: PondPublicTensor):
 
         w = self.bitwise_xor(input, theta)
         c = input - theta + 1  # + sum
@@ -131,17 +134,14 @@ class SecureNN(Pond):
 
     def private_compare(self, input: PondPrivateTensor, rho: PondPublicTensor, beta: PondPublicTensor):
         with tf.name_scope('private_compare'):
+            print('type', rho)
             theta = (rho + 1)
 
             w = self.bitwise_xor(input, rho)
 
             with tf.name_scope('find_zeros'):
-                print('zeros', beta.shape)
                 eq = self.equal(beta, 0)
-                print('zeros', eq.shape)
                 zeros = self.where(eq)
-                print('zeros', zeros.shape)
-                # return tf.Print(zeros.value_on_0.value, [zeros.value_on_0.value], message="Zeros tf tensor")
 
             with tf.name_scope('find_ones'):
                 eq = self.equal(beta, 1)
@@ -153,9 +153,8 @@ class SecureNN(Pond):
             # with tf.name_scope('find_non_edge_ones'):
             #     ones = tf.setdiff1d(ones, edges)
 
-            # # TODO -- needs and equivalent of `take`
-            pc_0 = self._private_compare_beta0(input, rho)
-            pc_1 = self._private_compare_beta1(input, theta)
+            pc_0 = self._private_compare_beta0(zeros, input, rho)
+            pc_1 = self._private_compare_beta1(ones, input, theta)
             # c0_edge, c1_edge = self._private_compare_edge()
 
             pc_0 = pc_0.reshape([-1])
@@ -181,29 +180,8 @@ class SecureNN(Pond):
                 c1 = c1 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
                 c1 = Int32Tensor(c1)
 
-            print('hi', c0)
             answer = PondPrivateTensor(self, share0=c0, share1=c1, is_scaled=input.is_scaled)
             return answer
-
-            """
-            zero_indices = np.expand_dims(zero_indices, 1)
-            one_indices = np.expand_dims(one_indices, 1)
-            edge_indices = np.expand_dims(edge_indices, 1)
-
-            np.put_along_axis(c0, zero_indices, c0_zero, axis=0)
-            np.put_along_axis(c0, one_indices, c0_one, axis=0)
-            np.put_along_axis(c0, edge_indices, c0_edge, axis=0)
-
-            np.put_along_axis(c1, zero_indices, c1_zero, axis=0)
-            np.put_along_axis(c1, one_indices, c1_one, axis=0)
-            np.put_along_axis(c1, edge_indices, c1_edge, axis=0)
-            """
-
-            # # TODO - how to send to the third party? (crypto producer)
-            # with tf.device(self.crypto_producer.device_name):
-            #     answer = PondPrivateTensor(self, share0=c0, share1=c1).reveal()
-            #
-            # return answer
 
     def share_convert(self, x):
         raise NotImplementedError

@@ -428,6 +428,20 @@ class Pond(Protocol):
         return self.sum(x, axis, keepdims)
 
     @memoize
+    def gather(self, params, indices, validate_indices=None, name=None, axis=0):
+        with tf.name_scope('gather'):
+            p_on_0, p_on_1 = params.unwrapped
+            i_on_0, p_on_1 = indices.unwrapped
+
+            with tf.device(self.server_0.device_name):
+                z_on_0 = tf.gather(p_on_0, i_on_0, validate_indices, name, axis)
+
+            with tf.device(self.server_1.device_name):
+                z_on_0 = tf.gather(p_on_1, i_on_1, validate_indices, name, axis)
+
+            return PondPublicTensor(self, self.tensor_factory.Tensor.from_native(z_on_0), self.tensor_factory.Tensor.from_native(z_on_1), x.is_scaled)
+
+    @memoize
     def where(self, x):
         with tf.name_scope('where'):
             x_on_0, x_on_1 = x.unwrapped
