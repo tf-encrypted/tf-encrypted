@@ -28,32 +28,32 @@ class TestPrimeTensor(unittest.TestCase):
             n = len(np_fix.shape)
             for filler in [0, 1, -1]:
                 ixs = [filler for _ in range(n)]
-                np.testing.assert_equal(np_fix[ixs], prime_fix[ixs])
+                np.testing.assert_equal(np_fix[ixs], prime_fix[ixs].value)
 
     def test_slice_indexing(self):
         self.setUpIndexing()
         for np_fix, prime_fix in zip(self.np_fixtures, self.prime_fixtures):
             ndim = len(np_fix.shape)
             if ndim == 1:
-                np.testing.assert_equal(np_fix[2:5], prime_fix[2:5])
+                np.testing.assert_equal(np_fix[2:5], prime_fix[2:5].value)
                 continue
-            np.testing.assert_equal(np_fix[:, 0], prime_fix[:, 0])
-            np.testing.assert_equal(np_fix[:, 1], prime_fix[:, 1])
-            np.testing.assert_equal(np_fix[:, -1], prime_fix[:, -1])
+            np.testing.assert_equal(np_fix[:, 0], prime_fix[:, 0].value)
+            np.testing.assert_equal(np_fix[:, 1], prime_fix[:, 1].value)
+            np.testing.assert_equal(np_fix[:, -1], prime_fix[:, -1].value)
             if ndim > 2:
-                np.testing.assert_equal(np_fix[:, :-1, ...], prime_fix[:, :-1, ...])
-                np.testing.assert_equal(np_fix[:, :1, ...], prime_fix[:, :1, ...])
-                np.testing.assert_equal(np_fix[:, 1:, ...], prime_fix[:, 1:, ...])
+                np.testing.assert_equal(np_fix[:, :-1, ...], prime_fix[:, :-1, ...].value)
+                np.testing.assert_equal(np_fix[:, :1, ...], prime_fix[:, :1, ...].value)
+                np.testing.assert_equal(np_fix[:, 1:, ...], prime_fix[:, 1:, ...].value)
             elif ndim == 2:
-                np.testing.assert_equal(np_fix[:, :2], prime_fix[:, :-1])
-                np.testing.assert_equal(np_fix[:, 1:], prime_fix[:, 1:])
+                np.testing.assert_equal(np_fix[:, :2], prime_fix[:, :-1].value)
+                np.testing.assert_equal(np_fix[:, 1:], prime_fix[:, 1:].value)
 
     def test_ellipsis_indexing(self):
         self.setUpIndexing()
         for np_fix, prime_fix in zip(self.np_fixtures, self.prime_fixtures):
-            np.testing.assert_equal(np_fix[0, ...], prime_fix[0, ...])
-            np.testing.assert_equal(np_fix[1, ...], prime_fix[1, ...])
-            np.testing.assert_equal(np_fix[..., -1], prime_fix[..., -1])
+            np.testing.assert_equal(np_fix[0, ...], prime_fix[0, ...].value)
+            np.testing.assert_equal(np_fix[1, ...], prime_fix[1, ...].value)
+            np.testing.assert_equal(np_fix[..., -1], prime_fix[..., -1].value)
 
     def test_arithmetic(self) -> None:
         x = PrimeTensor(tf.constant([2**16, 2**16 + 1]), 2**16)

@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
+from .prime import PrimeTensor
 from .factory import AbstractFactory
 from .shared import conv2d, im2col
 
@@ -34,6 +35,9 @@ class Int32Tensor(AbstractTensor):
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
+
+    def to_bits(self, prime: int = 37) -> 'PrimeTensor':
+        return PrimeTensor.binarize(self, prime)
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int32Tensor':

@@ -2,7 +2,9 @@ from __future__ import absolute_import
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Tuple, Type
+from typing import Union, Optional, List, Dict, Any, Tuple, Type, NewType
+from ..types import Ellipse, Slice
+
 
 from ..config import run
 from .factory import AbstractFactory
@@ -24,6 +26,9 @@ class PrimeTensor(AbstractTensor):
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
         return PrimeTensor(value, modulus)
 
+    def to_bits(self, prime: int = 37) -> 'PrimeTensor':
+        return PrimeTensor.binarize(self, prime=prime)
+
     @staticmethod
     def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int) -> 'PrimeTensor':
         return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=modulus), modulus)
@@ -42,12 +47,27 @@ class PrimeTensor(AbstractTensor):
         assert all(isinstance(i, PrimeTensor) for i in x)
         return PrimeTensor.from_native(tf.concat([v.value for v in x], axis=axis), x[0].modulus)
 
-    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any] = {},
-             tag: Optional[str] = None) -> 'PrimeTensor':
+    @staticmethod
+    def binarize(tensor: AbstractTensor, prime: int) -> 'PrimeTensor':
+        with tf.name_scope('binarize'):
+            BITS = tensor.int_type.size * 8
+            assert prime > BITS, prime
+
+            final_shape = [1] * len(tensor.shape) + [BITS]
+            bitwidths = tf.range(BITS, dtype=tensor.value.dtype)
+            bitwidths = tf.reshape(bitwidths, final_shape)
+
+            val = tf.expand_dims(tensor.value, -1)
+            val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
+
+            return PrimeTensor.from_native(val, prime)
+
+    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
+             tag: Optional[str]=None) -> 'PrimeTensor':
         return PrimeTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
 
-    def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
-        return self.value[slice]
+    def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'PrimeTensor':
+        return PrimeTensor.from_native(self.value[slice], self.modulus)
 
     def __repr__(self) -> str:
         return 'PrimeTensor(shape={}, modulus={})'.format(self.shape, self.modulus)
@@ -162,7 +182,7 @@ class PrimePlaceholder(PrimeTensor):
         return 'PrimePlaceholder({})'.format(self.shape)
 
 
-class PrimeVariable(PrimeTensor):
+class PrimeVariable(PrimeTensor, AbstractVariable):
 
     def __init__(self, initial_value: Union[tf.Tensor, np.ndarray], modulus: int) -> None:
         variable = tf.Variable(initial_value, dtype=INT_TYPE, trainable=False)
@@ -212,13 +232,16 @@ def prime_factory(modulus: int) -> Any:
 
         @staticmethod
         def from_same(initial_value: PrimeTensor) -> PrimeConstant:
-            assert type(initial_value) in [PrimeTensor], type(initial_value)
-            return PrimeConstant(initial_value.value, modulus)
+            return PrimeConstant.from_same(initial_value.value, modulus)
 
     class VariableWrap(TensorWrap, AbstractVariable):
         @staticmethod
         def from_native(x: Union[tf.Tensor, np.ndarray]) -> PrimeTensor:
             return PrimeVariable.from_native(x, modulus)
+
+        @staticmethod
+        def from_same(initial_value: PrimeTensor) -> PrimeVariable:
+            return PrimeVariable.from_same(initial_value, modulus)
 
     class Factory(AbstractFactory):
         @property

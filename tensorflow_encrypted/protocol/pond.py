@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from typing import Tuple, List, Union, Optional, Any, NewType
+from ..types import Slice, Ellipse
 import abc
 import sys
 import math
@@ -490,6 +491,10 @@ class Pond(Protocol):
     def truncate(self, x: 'PondTensor'):
         return self.dispatch('truncate', x)
 
+    @memoize
+    def indexer(self, x: 'PondTensor', slice: Union[Slice, Ellipse]) -> 'PondTensor':
+        return self.dispatch('indexer', x, slice)
+
     def transpose(self, x: 'PondTensor', perm=None):
 
         node_key = ('transpose', x)
@@ -870,6 +875,9 @@ class PondTensor(abc.ABC):
     def matmul(self, other):
         return self.dot(self, other)
 
+    def indexer(self, slice):
+        return self.prot.indexer(self, slice)
+
     def tranpose(self):
         return self.prot.transpose(self)
 
@@ -924,6 +932,9 @@ class PondPublicTensor(PondTensor):
     def eval(self, sess, feed_dict={}, tag=None) -> np.ndarray:
         value = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
         return self.prot._decode(value, self.is_scaled)
+
+    def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'PondTensor':
+        return self.prot.indexer(self, slice)
 
 
 class PondPrivateTensor(PondTensor):
@@ -2231,6 +2242,49 @@ def _avgpool2d_masked(prot: Pond,
         y_on_0, y_on_1, scalar = _avgpool2d_core(prot, x.unmasked, pool_size, strides, padding)
         return PondPrivateTensor(prot, y_on_0, y_on_1, x.is_scaled) * scalar
 
+
+#
+# indexing helpers
+#
+
+
+def _indexer_public(prot: Pond,
+                    tensor: PondPublicTensor,
+                    slice: Union[Slice, Ellipse]) -> 'PondPublicTensor':
+    with tf.device(prot.server_0.device_name):
+        v0 = tensor.value_on_0[slice]
+    with tf.device(prot.server_1.device_name):
+        v1 = tensor.value_on_1[slice]
+    return PondPublicTensor(prot, v0, v1, tensor.is_scaled)
+
+
+def _indexer_private(prot: Pond,
+                     tensor: PondPrivateTensor,
+                     slice: Union[Slice, Ellipse]) -> 'PondPrivateTensor':
+    with tf.device(prot.server_0.device_name):
+        s0 = tensor.share0[slice]
+    with tf.device(prot.server_1.device_name):
+        s1 = tensor.share1[slice]
+    return PondPrivateTensor(prot, s0, s1, tensor.is_scaled)
+
+
+def _indexer_masked(prot: Pond,
+                    tensor: PondMaskedTensor,
+                    slice: Union[Slice, Ellipse]) -> 'PondMaskedTensor':
+    with tf.device(prot.server_0.device_name):
+        a0 = tensor.a0[slice]
+        alph0 = tensor.alpha_on_0[slice]
+    with tf.device(prot.server_1.device_name):
+        a1 = tensor.a1[slice]
+        alph1 = tensor.alpha_on_1[slice]
+    return PondMaskedTensor(prot,
+                            tensor.unmasked[slice],
+                            tensor.a[slice],
+                            a0,
+                            a1,
+                            alph0,
+                            alph1,
+                            tensor.is_scaled)
 
 #
 # transpose helpers
