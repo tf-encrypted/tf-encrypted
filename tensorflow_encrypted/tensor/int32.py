@@ -58,6 +58,12 @@ class Int32Tensor(AbstractTensor):
     def __mod__(self, k: int) -> 'Int32Tensor':
         return self.mod(k)
 
+    def __neg__(self) -> 'Int32Tensor':
+        return self.mul(-1)
+
+    def negative(self) -> 'Int32Tensor':
+        return self.mul(Int32Tensor(tf.constant(-1)))
+
     def add(self, other: Any) -> 'Int32Tensor':
         x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value + y.value)

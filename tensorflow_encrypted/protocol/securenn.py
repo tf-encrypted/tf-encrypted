@@ -130,7 +130,9 @@ class SecureNN(Pond):
             w = self.bitwise_xor(input, rho)
 
             with tf.name_scope('find_zeros'):
-                zeros = tf.where(beta == 0)[0]
+                a = tf.equal(beta, 0)
+                zeros = tf.where(a)[0]
+                return zeros
                 print('zeros are', zeros)
 
             with tf.name_scope('find_ones'):

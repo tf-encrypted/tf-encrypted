@@ -86,7 +86,8 @@ class TestPrivateCompare(unittest.TestCase):
             # sess = tf.Session()
             with config.session() as sess:
                 sess.run(tf.global_variables_initializer())
-                answer = a.reveal().eval(sess)
+                # answer = a.reveal().eval(sess)
+                answer = sess.run(a)
 
                 print('answer', answer)
 
