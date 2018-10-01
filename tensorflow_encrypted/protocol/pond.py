@@ -427,6 +427,24 @@ class Pond(Protocol):
         return self.sum(x, axis, keepdims)
 
     @memoize
+    def where(self, x):
+        with tf.name_scope('where'):
+            x_on_0, x_on_1 = x.unwrapped
+
+            with tf.device(self.server_0.device_name):
+                z_on_0 = tf.where(x_on_0.value)
+
+            with tf.device(self.server_1.device_name):
+                z_on_1 = tf.where(x_on_1.value)
+
+            return PondPublicTensor(self, self.tensor_factory.Tensor.from_native(z_on_0), self.tensor_factory.Tensor.from_native(z_on_1), x.is_scaled)
+
+    @memoize
+    def equal(self, x, y):
+        x, y = self.lift(x, y)
+        return self.dispatch('equal', x, y)
+
+    @memoize
     def sub(self, x, y):
         x, y = self.lift(x, y)
         return self.dispatch('sub', x, y)
@@ -878,7 +896,9 @@ class PondPublicTensor(PondTensor):
     ) -> None:
         assert isinstance(value_on_0, AbstractTensor), type(value_on_0)
         assert isinstance(value_on_1, AbstractTensor), type(value_on_1)
-        assert value_on_0.shape == value_on_1.shape
+
+        # as list is performed to compare partially unknown shapes (e.g. (?, 1) & (?, 1))
+        assert value_on_0.shape.as_list() == value_on_1.shape.as_list()
 
         super(PondPublicTensor, self).__init__(prot, is_scaled)
         self.value_on_0 = value_on_0
@@ -1562,6 +1582,26 @@ def _sum_masked(prot: Pond,
                 keepdims: Optional[bool] = None) -> PondPrivateTensor:
     return prot.sum(x.unmasked, axis, keepdims)
 
+
+#
+# equal helpers
+#
+
+def _equal_public_public(prot, x, y):
+    assert isinstance(x, PondPublicTensor), type(x)
+    assert isinstance(y, PondPublicTensor), type(y)
+
+    x_on_0, x_on_1 = x.unwrapped
+    y_on_0, y_on_1 = y.unwrapped
+
+    with tf.name_scope('equal'):
+        with tf.device(prot.server_0.device_name):
+            z_on_0 = tf.equal(x_on_0.value, y_on_0.value)
+
+        with tf.device(prot.server_1.device_name):
+            z_on_1 = tf.equal(x_on_1.value, y_on_1.value)
+
+    return PondPublicTensor(prot, prot.tensor_factory.Tensor.from_native(z_on_0), prot.tensor_factory.Tensor.from_native(z_on_1), x.is_scaled)
 
 #
 # sub helpers
