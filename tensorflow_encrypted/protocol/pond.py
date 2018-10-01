@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from typing import Tuple, List, Union, Optional, Any, NewType
+from ..types import Slice, Ellipse
 import abc
 import sys
 import math
@@ -472,7 +473,7 @@ class Pond(Protocol):
         return self.dispatch('truncate', x)
 
     @memoize
-    def indexer(self, x: 'PondTensor', slice: slice):
+    def indexer(self, x: 'PondTensor', slice: Union[Slice, Ellipse]) -> 'PondTensor':
         return self.dispatch('indexer', x, slice)
 
     def transpose(self, x: 'PondTensor', perm=None):
@@ -905,7 +906,7 @@ class PondPublicTensor(PondTensor):
         value = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
         return self.prot._decode(value, self.is_scaled)
 
-    def __getitem__(self, slice: slice) -> 'PondTensor':
+    def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'PondTensor':
         return self.prot.indexer(self, slice)
 
 
@@ -2175,7 +2176,10 @@ def _avgpool2d_masked(prot: Pond,
 # indexing helpers
 #
 
-def _indexer_public(prot, tensor, slice):
+
+def _indexer_public(prot: Pond,
+                    tensor: PondPublicTensor,
+                    slice: Union[Slice, Ellipse]) -> 'PondPublicTensor':
     with tf.device(prot.server_0.device_name):
         v0 = tensor.value_on_0[slice]
     with tf.device(prot.server_1.device_name):
@@ -2183,7 +2187,9 @@ def _indexer_public(prot, tensor, slice):
     return PondPublicTensor(prot, v0, v1, tensor.is_scaled)
 
 
-def _indexer_private(prot, tensor, slice):
+def _indexer_private(prot: Pond,
+                     tensor: PondPrivateTensor,
+                     slice: Union[Slice, Ellipse]) -> 'PondPrivateTensor':
     with tf.device(prot.server_0.device_name):
         s0 = tensor.share0[slice]
     with tf.device(prot.server_1.device_name):
@@ -2191,7 +2197,9 @@ def _indexer_private(prot, tensor, slice):
     return PondPrivateTensor(prot, s0, s1, tensor.is_scaled)
 
 
-def _indexer_masked(prot, tensor, slice):
+def _indexer_masked(prot: Pond,
+                    tensor: PondMaskedTensor,
+                    slice: Union[Slice, Ellipse]) -> 'PondMaskedTensor':
     with tf.device(prot.server_0.device_name):
         a0 = tensor.a0[slice]
         alph0 = tensor.alpha_on_0[slice]
