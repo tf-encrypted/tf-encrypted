@@ -1,6 +1,5 @@
 import glob
 import json
-import sys
 import argparse
 
 import numpy as np
@@ -37,6 +36,7 @@ def parse_tracefile(filename):
     min_ts = timestamps[0]
     max_ts = timestamps[-1]
     return max_ts[1] - min_ts[0]
+
 
 durations = []
 
