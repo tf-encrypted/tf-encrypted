@@ -157,26 +157,11 @@ class SecureNN(Pond):
         compared = PondPrivateTensor(self, compared0, compared1, is_scaled=False)
 
         # P0, P1
-        compared0 = compared.share0
-        compared1 = compared.share1
+        preconverter = self.bitwise_xor(compared, bitmask)
 
-        bitmask0 = bitmask.value_on_0
-        bitmask1 = bitmask.value_on_1
+        converter = deltashares + beta_wrap + preconverter
 
-        beta_wrap0 = beta_wrap.share0
-        beta_wrap1 = beta_wrap.share1
-
-        deltashares0 = deltashares.share0
-        deltashares1 = deltashares.share1
-
-        with tf.device(self.server_0.device_name):
-            preconverter = ((compared0 + bitmask0) + -2 * compared0 * bitmask0)
-            converter0 = deltashares0 + beta_wrap0 + alpha_wrap_t + preconverter
-        with tf.device(self.server_1.device_name):
-            preconverter = ((compared1) + -2 * compared1 * bitmask1)
-            converter1 = deltashares1 + beta_wrap1 + preconverter
-
-        converter = PondPrivateTensor(self, converter0, converter1, is_scaled=False)
+        converter.share0 += alpha_wrap_t
 
         return x - converter
 
