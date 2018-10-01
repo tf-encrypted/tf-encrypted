@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
-from tensorflow_encrypted.tensor.shared import binarize
+from tensorflow_encrypted.tensor.prime import PrimeTensor
 
 
 class TestInt32Tensor(unittest.TestCase):
@@ -39,7 +39,7 @@ class TestInt32Tensor(unittest.TestCase):
             -3
         ], shape=[2, 2], dtype=np.int32))
 
-        y = binarize(x)
+        y = x.to_bits()
 
         expected = np.array([
             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -57,7 +57,7 @@ class TestInt32Tensor(unittest.TestCase):
         input = np.random.uniform(low=2**31 + 1, high=2**31 - 1, size=2000).astype('int32').tolist()
         x = Int32Tensor(tf.constant(input, dtype=tf.int32))
 
-        y = binarize(x)
+        y = x.to_bits()
 
         with tf.Session() as sess:
             actual = sess.run(y.value)

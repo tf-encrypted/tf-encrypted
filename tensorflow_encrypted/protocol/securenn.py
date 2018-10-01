@@ -8,14 +8,13 @@ from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 )
-from ..tensor.shared import binarize
 from ..tensor.prime import prime_factory, PrimeTensor
 from ..tensor.factory import AbstractFactory
 from ..player import Player
 from ..tensor.tensor import AbstractTensor
 
 _thismodule = sys.modules[__name__]
-p = 67
+p = 67  # TODO: import or choose based on factory kwarg to super.__init__()
 
 
 class SecureNN(Pond):
@@ -59,15 +58,11 @@ class SecureNN(Pond):
         assert not y.is_scaled, "Input is not supposed to be scaled"
         return x + y - self.bitwise_and(x, y) * 2
 
-    def binarize(self, x: PondPublicTensor, modulus: Optional[int]=None) -> PondTensor:
-        modulus = modulus or p
-        return binarize(x.value_on_0, modulus)
-
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
         if self.M % 2 != 1:
-            # NOTE: this is only for use with an odd-modulus CRTTensor
+            # NOTE: this is currently only for use with an odd-modulus CRTTensor
             #       NativeTensor will use an even modulus and will require share_convert
             raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
                             'but it was initialized with an even one.')
@@ -141,13 +136,14 @@ class SecureNN(Pond):
             delta_wrap = masked.share0.compute_wrap(masked.share1, L)
             x_pub_masked = masked.reveal()
 
-            #xbits = binarize(x_pub_masked.value_on_0)
-            #share0, share1 = self._share(xbits, self.alt_factory)
-            #bitshares = PondPrivateTensor(self, share0, share1, is_scaled=False)
+            xbits = x_pub_masked.value_on_0.to_bits()
+            share0, share1 = self._share(xbits, self.alt_factory)
+            bitshares = PondPrivateTensor(self, share0, share1, is_scaled=False)
 
             share0, share1 = self._share(delta_wrap)
             deltashares = PondPrivateTensor(self, share0, share1, is_scaled=False)
 
+        with tf.device(self.server_0.device_name):
             # outbit = self.private_compare(bitshares, pvt_sharemask.reveal().value_on_0 - 1, bitmask)
             inp = self.tensor_factory.Tensor.from_native(np.array([1]))
             outbit = PondPublicTensor(self, inp, inp, is_scaled=False)
@@ -185,7 +181,7 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
         with tf.name_scope('lsb_mask'):
             with tf.device(prot.crypto_producer.device_name):
                 x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
-                xbits = binarize(x, p)
+                xbits = x.to_bits()
                 xlsb = xbits[..., 0]
                 x = PondPrivateTensor(prot, *prot._share(x, prot.tensor_factory), is_scaled=False)
                 xbits = PondPrivateTensor(prot, *prot._share(xbits, prot.alt_factory), is_scaled=False)
@@ -196,19 +192,20 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
             with tf.device(bits_device):
                 b = _generate_random_bits(prot, y.shape)
 
-        with tf.name_scope('lsb_ops'):
-            r = (y + x).reveal()
-            rbits = prot.binarize(r, p)
-            rlsb = rbits[..., 0]
+        r = (y + x).reveal()
+        r0, r1 = r.unwrapped
+        rbits0, rbits1 = r0.to_bits(), r1.to_bits()
+        rbits = PondPublicTensor(prot, rbits0, rbits1, is_scaled=False)
+        rlsb = rbits[..., 0]
 
-            bp = prot.private_compare(xbits, r, b)
+        bp = prot.private_compare(xbits, r, b)
 
-            gamma = prot.bitwise_xor(bp, b)
-            delta = prot.bitwise_xor(xlsb, rlsb)
+        gamma = prot.bitwise_xor(bp, b)
+        delta = prot.bitwise_xor(xlsb, rlsb)
 
-            alpha = prot.bitwise_xor(gamma, delta)
+        alpha = prot.bitwise_xor(gamma, delta)
 
-            return alpha
+        return alpha
 
 
 def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):

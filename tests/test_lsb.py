@@ -28,7 +28,7 @@ class TestLSB(unittest.TestCase):
             x_in = prot.define_private_variable(self.x, apply_scaling=False)
             x_lsb = prot.lsb(x_in)
 
-            with config.session() as sess:
+            with self.config.session() as sess:
                 sess.run(tf.global_variables_initializer())
                 lsb = x_lsb.reveal().eval(sess)
 

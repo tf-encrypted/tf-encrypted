@@ -26,6 +26,9 @@ class PrimeTensor(AbstractTensor):
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
         return PrimeTensor(value, modulus)
 
+    def to_bits(self, prime: int = 37) -> 'PrimeTensor':
+        return PrimeTensor.binarize(self, prime=prime)
+
     @staticmethod
     def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int) -> 'PrimeTensor':
         return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=modulus), modulus)
@@ -44,11 +47,26 @@ class PrimeTensor(AbstractTensor):
         assert all(isinstance(i, PrimeTensor) for i in x)
         return PrimeTensor.from_native(tf.concat([v.value for v in x], axis=axis), x[0].modulus)
 
+    @staticmethod
+    def binarize(tensor: AbstractTensor, prime: int) -> 'PrimeTensor':
+        with tf.name_scope('binarize'):
+            BITS = tensor.int_type.size * 8
+            assert prime > BITS, prime
+
+            final_shape = [1] * len(tensor.shape) + [BITS]
+            bitwidths = tf.range(BITS, dtype=tensor.value.dtype)
+            bitwidths = tf.reshape(bitwidths, final_shape)
+
+            val = tf.expand_dims(tensor.value, -1)
+            val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
+
+            return PrimeTensor.from_native(val, prime)
+
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
              tag: Optional[str]=None) -> 'PrimeTensor':
         return PrimeTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
 
-    def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
+    def __getitem__(self, slice: Any) -> 'PrimeTensor':
         return PrimeTensor.from_native(self.value[slice], self.modulus)
 
     def __repr__(self) -> str:
