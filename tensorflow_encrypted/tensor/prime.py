@@ -1,16 +1,14 @@
 from __future__ import absolute_import
 
-import math
-
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Tuple, Type, NewType
+from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from ..types import Ellipse, Slice
-
 
 from ..config import run
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable
+from .odd_implicit import OddImplicitTensor
 
 INT_TYPE = tf.int32
 
@@ -63,6 +61,9 @@ class PrimeTensor(AbstractTensor):
             val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
 
             return PrimeTensor.from_native(val, prime)
+
+    def to_odd_modulus(self) -> OddImplicitTensor:
+        return OddImplicitTensor(self.value, dtype=INT_TYPE)
 
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
              tag: Optional[str]=None) -> 'PrimeTensor':

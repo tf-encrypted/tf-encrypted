@@ -7,6 +7,7 @@ from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, Abstract
 from .prime import PrimeTensor
 from .factory import AbstractFactory
 from .shared import conv2d, im2col
+from .odd_implicit import OddImplicitTensor
 
 from ..config import run
 
@@ -35,6 +36,9 @@ class Int32Tensor(AbstractTensor):
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
+
+    def to_odd_modulus(self) -> OddImplicitTensor:
+        return OddImplicitTensor(self.value, dtype=tf.int32)
 
     def to_bits(self, prime: int = 37) -> 'PrimeTensor':
         return PrimeTensor.binarize(self, prime)
