@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Tuple, Type
+from typing import Union, Optional, List, Dict, Any, Tuple
 
 from ..config import run
 from .tensor import AbstractTensor
