@@ -1522,12 +1522,12 @@ def _add_masked_masked(prot, x, y):
 #
 
 
-def _reduce_sum_core(
+def _reduce_sum_public(
     prot: Pond,
-    x: PondTensor,
+    x: PondPublicTensor,
     axis: Optional[int] = None,
     keepdims: Optional[bool] = None
-) -> Tuple[AbstractTensor, AbstractTensor]:
+) -> PondPublicTensor:
 
     x_on_0, x_on_1 = x.unwrapped
 
@@ -1539,16 +1539,6 @@ def _reduce_sum_core(
         with tf.device(prot.server_1.device_name):
             y_on_1 = x_on_1.reduce_sum(axis, keepdims)
 
-    return y_on_0, y_on_1
-
-
-def _reduce_sum_public(
-    prot: Pond,
-    x: PondPublicTensor,
-    axis: Optional[int] = None,
-    keepdims: Optional[bool] = None
-) -> PondPublicTensor:
-    y_on_0, y_on_1 = _reduce_sum_core(prot, x, axis, keepdims)
     return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
 
@@ -1558,8 +1548,18 @@ def _reduce_sum_private(
     axis: Optional[int] = None,
     keepdims: Optional[bool] = None
 ) -> PondPrivateTensor:
-    y_on_0, y_on_1 = _reduce_sum_core(prot, x, axis, keepdims)
-    return PondPrivateTensor(prot, y_on_0, y_on_1, x.is_scaled)
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope('reduce_sum'):
+
+        with tf.device(prot.server_0.device_name):
+            y0 = x0.reduce_sum(axis, keepdims)
+
+        with tf.device(prot.server_1.device_name):
+            y1 = x1.reduce_sum(axis, keepdims)
+
+    return PondPrivateTensor(prot, y0, y1, x.is_scaled)
 
 
 def _reduce_sum_masked(
