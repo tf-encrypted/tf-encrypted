@@ -150,6 +150,8 @@ class SecureNN(Pond):
 
         w = self.bitwise_xor(input, theta)
 
+        ## TODO -- need to gather the parts of input we will actually use based on where ones are (see todo above)
+
         with tf.device(self.server_0.device_name):
             w0_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
             for i in range(bits - 1, -1, -1):
@@ -213,12 +215,12 @@ class SecureNN(Pond):
             # with tf.name_scope('find_non_edge_ones'):
             #     ones = tf.setdiff1d(ones, edges)
 
-            pc_0 = self._private_compare_beta0(zeros, input, rho)
+            # pc_0 = self._private_compare_beta0(zeros, input, rho)
             pc_1 = self._private_compare_beta1(ones, input, theta)
 
             # c0_edge, c1_edge = self._private_compare_edge()
 
-            pc_0 = pc_0.reshape([-1])
+            # pc_0 = pc_0.reshape([-1])
             pc_1 = pc_1.reshape([-1])
 
             # convert ones/zeros/edges into (4,32) of the same values so it will
@@ -240,19 +242,19 @@ class SecureNN(Pond):
 
                 # return tf.Print(pc_1.share0.value, [pc_1.share0.value], 'zeros:', summarize=50)
 
-                delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share0.value, input.shape)
-                # delta1 = tf.SparseTensor(ones.value_on_0.value, pc_1.share0.value, input.shape)
+                # delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share0.value, input.shape)
+                delta1 = tf.SparseTensor(ones.value_on_0.value, pc_1.share0.value, input.shape)
 
-                c0 = c0 + tf.sparse_tensor_to_dense(delta0)  # + tf.sparse_tensor_to_dense(delta1)
+                c0 = c0 + tf.sparse_tensor_to_dense(delta1)  # + tf.sparse_tensor_to_dense(delta1)
                 c0 = Int32Tensor(c0)
 
             with tf.device(self.server_0.device_name):
                 c1 = tf.zeros(shape=input.shape, dtype=tf.int32)
 
-                delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share1.value, input.shape)
-                # delta1 = tf.SparseTensor(ones.value_on_1.value, pc_1.share1.value, input.shape)
+                # delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share1.value, input.shape)
+                delta1 = tf.SparseTensor(ones.value_on_1.value, pc_1.share1.value, input.shape)
 
-                c1 = c1 + tf.sparse_tensor_to_dense(delta0)  # + tf.sparse_tensor_to_dense(delta1)
+                c1 = c1 + tf.sparse_tensor_to_dense(delta1)  # + tf.sparse_tensor_to_dense(delta1)
                 c1 = Int32Tensor(c1)
 
             answer = PondPrivateTensor(self, share0=c0, share1=c1, is_scaled=input.is_scaled)
