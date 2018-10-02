@@ -9,16 +9,14 @@ class TestOddImplicitTensor(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
 
-    # TODO these tests are very robust
     def test_add(self) -> None:
-        modulus = 2**32
-
-        x = OddImplicitTensor(tf.constant([2 ** 32 - 1, 2 ** 32 - 2], dtype=tf.int32), modulus)
-        y = OddImplicitTensor(tf.constant([2, 3], dtype=tf.int32), modulus)
+        # regular, overflow, underflow
+        x = OddImplicitTensor(tf.constant([5, 2**31 - 1, -2147483643], dtype=tf.int32))
+        y = OddImplicitTensor(tf.constant([3, 5, -6], dtype=tf.int32))
 
         z = x + y
 
-        expected = np.array([2, 2])
+        expected = np.array([8, -2147483643, 2147483646])
 
         with tf.Session() as sess:
             actual = sess.run(z.value)
@@ -26,14 +24,13 @@ class TestOddImplicitTensor(unittest.TestCase):
             np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
     def test_sub(self) -> None:
-        modulus = 2**32
-
-        x = OddImplicitTensor(tf.constant([2 ** 32 + 300], dtype=tf.int32), modulus)
-        y = OddImplicitTensor(tf.constant([200], dtype=tf.int32), modulus)
+        # regular, overflow, underflow
+        x = OddImplicitTensor(tf.constant([10, 6, -6], dtype=tf.int32))
+        y = OddImplicitTensor(tf.constant([5, -2**31 + 1, -2**31 + 1], dtype=tf.int32))
 
         z = x - y
 
-        expected = np.array([101])
+        expected = np.array([5, -2147483642, 2147483641])
 
         with tf.Session() as sess:
             actual = sess.run(z.value)

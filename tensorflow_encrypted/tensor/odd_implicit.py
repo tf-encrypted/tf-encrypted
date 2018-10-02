@@ -9,22 +9,21 @@ from .tensor import AbstractTensor
 
 
 class OddImplicitTensor(AbstractTensor):
-    def __init__(self, value: Union[np.ndarray, tf.Tensor], modulus: int, dtype=tf.int32) -> None:
+    def __init__(self, value: Union[np.ndarray, tf.Tensor], dtype=tf.int32) -> None:
         if dtype is not tf.int32 and dtype is not tf.int64:
             raise Exception("Only int32 and int64 dtypes are allowed for the odd implicit tensor")
         self.value = value
         self.dtype = tf.int32
-        self.modulus = modulus
 
     @staticmethod
-    def from_native(value: Union[np.ndarray, tf.Tensor], modulus: int, dtype=tf.int32) -> 'OddImplicitTensor':
+    def from_native(value: Union[np.ndarray, tf.Tensor], dtype=tf.int32) -> 'OddImplicitTensor':
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
-        return OddImplicitTensor(value, modulus, dtype=dtype)
+        return OddImplicitTensor(value, dtype=dtype)
 
     @staticmethod
-    def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int, dtype=tf.int32) -> 'OddImplicitTensor':
+    def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], dtype=tf.int32) -> 'OddImplicitTensor':
         return OddImplicitTensor(tf.random_uniform(shape=shape, dtype=dtype,
-                                                   minval=dtype.min, maxval=dtype.max), modulus, dtype)
+                                                   minval=dtype.min, maxval=dtype.max), dtype)
 
     @staticmethod
     def sample_bounded(shape: List[int], bitlength: int) -> 'OddImplicitTensor':
@@ -33,22 +32,22 @@ class OddImplicitTensor(AbstractTensor):
     @staticmethod
     def stack(x: List['OddImplicitTensor'], axis: int = 0) -> 'OddImplicitTensor':
         assert all(isinstance(i, OddImplicitTensor) for i in x)
-        return OddImplicitTensor.from_native(tf.stack([v.value for v in x], axis=axis), x[0].modulus)
+        return OddImplicitTensor.from_native(tf.stack([v.value for v in x], axis=axis), dtype=x[0].dtype)
 
     @staticmethod
     def concat(x: List['OddImplicitTensor'], axis: int) -> 'OddImplicitTensor':
         assert all(isinstance(i, OddImplicitTensor) for i in x)
-        return OddImplicitTensor.from_native(tf.concat([v.value for v in x], axis=axis), x[0].modulus)
+        return OddImplicitTensor.from_native(tf.concat([v.value for v in x], axis=axis), dtype=x[0].dtype)
 
     def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
              tag: Optional[str]=None) -> 'OddImplicitTensor':
-        return OddImplicitTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
+        return OddImplicitTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), dtype=self.dtype)
 
     def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
         return self.value[slice]
 
     def __repr__(self) -> str:
-        return 'OddImplicitTensor(shape={}, modulus={})'.format(self.shape, self.modulus)
+        return 'OddImplicitTensor(shape={}, dtype={})'.format(self.shape, self.dtype)
 
     @property
     def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
@@ -67,28 +66,40 @@ class OddImplicitTensor(AbstractTensor):
         return self.mod(k)
 
     def add(self, other: Union['OddImplicitTensor', int]) -> 'OddImplicitTensor':
-        x, y = _lift(self, self.modulus, self.dtype), _lift(other, self.modulus, self.dtype)
+        x, y = _lift(self, self.dtype), _lift(other, self.dtype)
 
-        z = x.value + y.value
+        def func(vals):
+            x, y = vals
 
-        def func(val):
-            return tf.cond(val >= self.modulus, lambda: val + 1, lambda: val)
+            negative = lambda: tf.cond(x < tf.int32.min - y, lambda: x + y - 1, lambda: x + y)
 
-        ret = tf.map_fn(func, z)
+            maybe_negative = lambda: tf.cond(y < 0, negative, lambda: x + y)
 
-        return OddImplicitTensor(ret, self.modulus, dtype=self.dtype)
+            positive = lambda: tf.cond(x > tf.int32.max - y, lambda: x + y + 1, lambda: x + y)
+
+            return tf.cond(y > 0, positive, maybe_negative)
+
+        ret = tf.map_fn(func, (x.value, y.value), dtype=self.dtype)
+
+        return OddImplicitTensor(ret, dtype=self.dtype)
 
     def sub(self, other: Union['OddImplicitTensor', int]) -> 'OddImplicitTensor':
-        x, y = _lift(self, self.modulus, self.dtype), _lift(other, self.modulus, self.dtype)
+        x, y = _lift(self, self.dtype), _lift(other, self.dtype)
 
-        z = x.value - y.value
+        def func(vals):
+            x, y = vals
 
-        def func(val):
-            return tf.cond(val < self.modulus, lambda: val, lambda: val + 1)
+            positive = lambda: tf.cond(x < tf.int32.min + y, lambda: x - y - 1, lambda: x - y)
 
-        ret = tf.map_fn(func, z)
+            maybe_positive = lambda: tf.cond(y < 0, positive, lambda: x - y)
 
-        return OddImplicitTensor(ret, self.modulus, dtype=self.dtype)
+            negative = lambda: tf.cond(x > tf.int32.max + y, lambda: x - y + 1, lambda: x - y)
+
+            return tf.cond(y < 0, negative, maybe_positive)
+
+        ret = tf.map_fn(func, (x.value, y.value), dtype=self.dtype)
+
+        return OddImplicitTensor(ret, dtype=self.dtype)
 
     def mul(self, other: Union['OddImplicitTensor', int]) -> 'OddImplicitTensor':
         raise NotImplementedError()
@@ -103,24 +114,24 @@ class OddImplicitTensor(AbstractTensor):
         raise NotImplementedError()
 
     def mod(self, k: int) -> 'OddImplicitTensor':
-        x = _lift(self, self.modulus)
-        return OddImplicitTensor(x.value % k, self.modulus)
+        x = _lift(self, self.dtype)
+        return OddImplicitTensor(x.value % k, self.dtype)
 
     def transpose(self, perm: Union[List[int], Tuple[int]]) -> 'OddImplicitTensor':
-        return OddImplicitTensor(tf.transpose(self.value, perm), self.modulus)
+        return OddImplicitTensor(tf.transpose(self.value, perm), self.dtype)
 
     def strided_slice(self, args: Any, kwargs: Any) -> 'OddImplicitTensor':
-        return OddImplicitTensor(tf.strided_slice(self.value, *args, **kwargs), self.modulus)
+        return OddImplicitTensor(tf.strided_slice(self.value, *args, **kwargs), self.dtype)
 
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'OddImplicitTensor':
-        return OddImplicitTensor(tf.reshape(self.value, axes), self.modulus)
+        return OddImplicitTensor(tf.reshape(self.value, axes), self.dtype)
 
 
-def _lift(x: Union['OddImplicitTensor', int], modulus: int, dtype) -> 'OddImplicitTensor':
+def _lift(x: Union['OddImplicitTensor', int], dtype) -> 'OddImplicitTensor':
     if isinstance(x, OddImplicitTensor):
         return x
 
     if type(x) is int:
-        return OddImplicitTensor.from_native(np.array([x]), modulus, dtype=dtype)
+        return OddImplicitTensor.from_native(np.array([x]), dtype=dtype)
 
     raise TypeError("Unsupported type {}".format(type(x)))
