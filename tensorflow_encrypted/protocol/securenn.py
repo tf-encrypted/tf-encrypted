@@ -28,9 +28,9 @@ class SecureNN(Pond):
         **kwargs
     ) -> None:
         super(SecureNN, self).__init__(
-            server_0=server_0,
-            server_1=server_1,
-            crypto_producer=server_2,
+            server_0=server_0 or get_default_config().get_player('server0'),
+            server_1=server_1 or get_default_config().get_player('server1'),
+            crypto_producer=server_2 or get_default_config().get_player('crypto_producer'),
             **kwargs
         )
         self.alt_factory = alt_factory
