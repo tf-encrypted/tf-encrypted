@@ -88,7 +88,7 @@ class SecureNN(Pond):
 
     @memoize
     def select_share(self, x: PondTensor, y: PondTensor, choice_bit: PondTensor) -> PondTensor:
-        return x + (y - x) * choice_bit
+        return x + choice_bit * (y - x)
 
     def private_compare(self, x, r, beta):
         raise NotImplementedError
