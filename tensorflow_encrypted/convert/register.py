@@ -30,8 +30,8 @@ def register() -> Dict[str, Any]:
         'AvgPool': avgpool,
         'Squeeze': squeeze,
         'ConcatV2': concat,
+        'BiasAdd': bias_add,
         # 'Pack': pack,
-        # 'BiasAdd': bias_add,
         # 'MaxPool': maxpool,
     }
 
@@ -155,12 +155,20 @@ def pack(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 
 def bias_add(converter: Converter, node: Any, inputs: List[str]) -> Any:
-    raise NotImplementedError()
+    a = converter.outputs[inputs[0]]
+    b = converter.outputs[inputs[1]]
 
-    input = converter.outputs[inputs[0]]
-    bias = converter.outputs[inputs[1]]
+    if isinstance(a, tf.NodeDef):
+        a_out = nodef_to_private_pond(converter, a)
+    else:
+        a_out = a
 
-    return input + bias
+    if isinstance(b, tf.NodeDef):
+        b_out = nodef_to_private_pond(converter, b)
+    else:
+        b_out = b
+
+    return converter.protocol.add(a_out, b_out)
 
 
 def maxpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
@@ -368,6 +376,36 @@ def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
     x_public = converter.protocol.define_public_input(provider)
 
     return x_public
+
+
+def nodef_to_private_pond(converter: Converter, x: Any):
+    dtype = x.attr["dtype"].type
+    x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
+
+    if len(x_shape) == 0:
+        if dtype == tf.float32:
+            nums = x.attr["value"].tensor.float_val
+        elif dtype == tf.float64:
+            nums = x.attr["value"].tensor.float_val
+        else:
+            raise TypeError("Unsupported dtype")
+
+        provider = ConvertInputProvider(converter.weights_provider,
+                                        np.array(nums).reshape(1, 1))
+    else:
+        if dtype == tf.float32:
+            nums = array.array('f', x.attr["value"].tensor.tensor_content)
+        elif dtype == tf.float64:
+            nums = array.array('d', x.attr["value"].tensor.tensor_content)
+        else:
+            raise TypeError("Unsupported dtype")
+
+        provider = ConvertInputProvider(converter.weights_provider,
+                                        np.array(nums).reshape(x_shape))
+
+    x_private = converter.protocol.define_private_input(provider)
+
+    return x_private
 
 
 def nodef_to_numpy_array(x: Any) -> np.ndarray:

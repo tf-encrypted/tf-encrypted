@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from functools import reduce
 
-import math
 import numpy as np
 import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Type
@@ -17,7 +16,7 @@ from ..config import run
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 from .prime import PrimeTensor
-from .native_shared import binarize
+from .shared import conv2d
 
 
 #
