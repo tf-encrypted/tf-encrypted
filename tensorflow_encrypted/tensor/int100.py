@@ -9,7 +9,7 @@ from typing import Union, Optional, List, Dict, Any, Type
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_matmul, gen_crt_mod,
-    gen_crt_reduce_sum, crt_im2col, crt_matmul_split,
+    gen_crt_reduce_sum, crt_im2col, gen_crt_conv2d, crt_matmul_split,
     gen_crt_sample_uniform, gen_crt_sample_bounded
 )
 from .helpers import prod, inverse
@@ -51,6 +51,7 @@ _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_matmul = gen_crt_matmul(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE)
+_crt_conv2d = gen_crt_conv2d(m)
 
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
 _crt_sample_bounded = gen_crt_sample_bounded(m, INT_TYPE)
@@ -244,7 +245,8 @@ class Int100Tensor(AbstractTensor):
         return Int100Tensor.from_decomposed(backing)
 
     def conv2d(self, other, strides, padding='SAME') -> 'Int100Tensor':
-        raise NotImplementedError()
+        backing = _crt_conv2d(self.backing, other.backing, strides, padding)
+        return Int100Tensor.from_decomposed(backing)
 
     def transpose(self, perm: Optional[List[int]]=None) -> 'Int100Tensor':
         backing = [tf.transpose(xi, perm=perm) for xi in self.backing]

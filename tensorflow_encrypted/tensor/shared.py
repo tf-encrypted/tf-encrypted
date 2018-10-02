@@ -77,10 +77,10 @@ def conv2d(
         raise ValueError("Don't know padding method '{}'".format(padding))
 
     X_col = im2col(x, h_filter, w_filter, padding, strides)
-    W_col = y.transpose(perm=(3, 2, 0, 1)).reshape([int(n_filters), -1])
-    out = W_col.matmul(X_col)
+    W_col = tf.reshape(tf.transpose(y, [3, 2, 0, 1]), [int(n_filters), -1])
+    out = tf.matmul(W_col, X_col)
 
-    out = out.reshape([n_filters, h_out, w_out, n_x])
-    out = out.transpose(perm=(3, 0, 1, 2))
+    out = tf.reshape(out, [n_filters, h_out, w_out, n_x])
+    out = tf.transpose(out, [3, 0, 1, 2])
 
     return out
