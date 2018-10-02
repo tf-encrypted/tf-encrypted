@@ -429,17 +429,7 @@ class Pond(Protocol):
 
     @memoize
     def gather(self, params, indices, validate_indices=None, name=None, axis=0):
-        with tf.name_scope('gather'):
-            p_on_0, p_on_1 = params.unwrapped
-            i_on_0, p_on_1 = indices.unwrapped
-
-            with tf.device(self.server_0.device_name):
-                z_on_0 = tf.gather(p_on_0, i_on_0, validate_indices, name, axis)
-
-            with tf.device(self.server_1.device_name):
-                z_on_0 = tf.gather(p_on_1, i_on_1, validate_indices, name, axis)
-
-            return PondPublicTensor(self, self.tensor_factory.Tensor.from_native(z_on_0), self.tensor_factory.Tensor.from_native(z_on_1), x.is_scaled)
+        return self.dispatch('gather', params, indices, validate_indices, name, axis)
 
     @memoize
     def where(self, x):
@@ -967,7 +957,7 @@ class PondPrivateTensor(PondTensor):
     ) -> None:
         assert isinstance(share0, AbstractTensor), type(share0)
         assert isinstance(share1, AbstractTensor), type(share1)
-        assert share0.shape == share1.shape
+        # assert share0.shape == share1.shape
 
         super(PondPrivateTensor, self).__init__(prot, is_scaled)
         self.share0 = share0
@@ -975,6 +965,16 @@ class PondPrivateTensor(PondTensor):
 
     def __repr__(self) -> str:
         return 'PondPrivateTensor(shape={})'.format(self.shape)
+
+    def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'PondPrivateTensor':
+        with tf.device(self.prot.server_0.device_name):
+            slice_0 = self.share0[slice]
+
+        with tf.device(self.prot.server_1.device_name):
+            slice_1 = self.share1[slice]
+
+        return PondPrivateTensor(self.prot, slice_0, slice_1, self.is_scaled)
+
 
     @property
     def shape(self) -> List[int]:
@@ -1637,6 +1637,37 @@ def _equal_public_public(prot, x, y):
 
     return PondPublicTensor(prot, prot.tensor_factory.Tensor.from_native(z_on_0), prot.tensor_factory.Tensor.from_native(z_on_1), x.is_scaled)
 
+#
+# gather helpers
+#
+
+
+def _gather_public_public(prot, params, indices, validate_indices=None, name=None, axis=0):
+    with tf.name_scope('gather'):
+        p_on_0, p_on_1 = params.unwrapped
+        i_on_0, i_on_1 = indices.unwrapped
+
+        with tf.device(prot.server_0.device_name):
+            z_on_0 = tf.gather(p_on_0.value, i_on_0.value, validate_indices, name, axis)
+
+        with tf.device(prot.server_1.device_name):
+            z_on_1 = tf.gather(p_on_1.value, i_on_1.value, validate_indices, name, axis)
+
+        return PondPublicTensor(prot, prot.tensor_factory.Tensor.from_native(z_on_0), prot.tensor_factory.Tensor.from_native(z_on_1), params.is_scaled)
+
+
+def _gather_private_public(prot, params, indices, validate_indices=None, name=None, axis=0):
+    print('private one')
+    with tf.name_scope('gather'):
+        i_on_0, i_on_1 = indices.unwrapped
+
+        with tf.device(prot.server_0.device_name):
+            z_on_0 = tf.gather(params.share0.value, i_on_0.value, validate_indices, name, axis)
+
+        with tf.device(prot.server_1.device_name):
+            z_on_1 = tf.gather(params.share1.value, i_on_1.value, validate_indices, name, axis)
+
+        return PondPrivateTensor(prot, prot.tensor_factory.Tensor.from_native(z_on_0), prot.tensor_factory.Tensor.from_native(z_on_1), params.is_scaled)
 #
 # sub helpers
 #

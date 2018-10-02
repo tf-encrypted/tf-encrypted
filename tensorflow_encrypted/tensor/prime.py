@@ -100,6 +100,9 @@ class PrimeTensor(AbstractTensor):
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
         return PrimeTensor(x.value * y.value % self.modulus, self.modulus)
 
+    def negative(self) -> 'PrimeTensor':
+        return self.mul(-1)
+
     def dot(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
         return PrimeTensor(tf.matmul(x.value, y.value) % self.modulus, self.modulus)
@@ -232,7 +235,7 @@ def prime_factory(modulus: int) -> Any:
 
         @staticmethod
         def from_same(initial_value: PrimeTensor) -> PrimeConstant:
-            return PrimeConstant.from_same(initial_value.value, modulus)
+            return PrimeConstant.from_same(initial_value, modulus)
 
     class VariableWrap(TensorWrap, AbstractVariable):
         @staticmethod

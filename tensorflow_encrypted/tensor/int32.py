@@ -7,6 +7,7 @@ from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, Abstract
 from .prime import PrimeTensor
 from .factory import AbstractFactory
 from .shared import conv2d, im2col
+from ..types import Slice, Ellipse
 
 from ..config import run
 
@@ -65,6 +66,9 @@ class Int32Tensor(AbstractTensor):
     def __neg__(self) -> 'Int32Tensor':
         return self.mul(-1)
 
+    def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'Int32Tensor':
+        return Int32Tensor(self.value[slice])
+
     def negative(self) -> 'Int32Tensor':
         return self.mul(Int32Tensor(tf.constant(-1)))
 
@@ -102,6 +106,9 @@ class Int32Tensor(AbstractTensor):
 
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'Int32Tensor':
         return Int32Tensor(tf.reshape(self.value, axes))
+
+    def sum(self, axis, keepdims) -> 'Int32Tensor':
+        return Int32Tensor(tf.reduce_sum(self.value, axis, keepdims))
 
     @staticmethod
     def stack(xs: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':

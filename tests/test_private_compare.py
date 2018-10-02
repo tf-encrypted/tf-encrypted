@@ -56,15 +56,21 @@ class TestPrivateCompare(unittest.TestCase):
         rho = np.array([2, 0, 2, 0]).astype(np.int32)
         beta = np.array([0, 0, 0, 0]).astype(np.int32)
 
-        with tfe.protocol.SecureNN(tensor_factory=prime_factory(2 ** 31), use_noninteractive_truncation=True, verify_precision=False, *config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.SecureNN(tensor_factory=prime_factory(67), use_noninteractive_truncation=True, verify_precision=False, *config.get_players('server0, server1, crypto_producer')) as prot:
 
-            input = prot.define_private_variable(binarize(input), apply_scaling=False)
-            rho = prot.define_public_variable(binarize(rho), apply_scaling=False)
-            beta = prot.define_public_variable(binarize(beta), apply_scaling=False)
+            # input = prot.define_private_variable(binarize(input), apply_scaling=False)
+            # rho = prot.define_public_variable(binarize(rho), apply_scaling=False)
+            # beta = prot.define_public_variable(binarize(beta), apply_scaling=False)
 
-            # input = PondPrivateTensor(prot, share0=Int32Tensor(tf.constant(i_0, dtype=tf.int32)), share1=Int32Tensor(tf.constant(i_1, dtype=tf.int32)), is_scaled=False)
-            # rho = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(rho, dtype=tf.int32)), value_on_1=Int32Tensor(tf.constant(rho, dtype=tf.int32)), is_scaled=False)
-            # beta = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(beta, dtype=tf.int32)), value_on_1=Int32Tensor(tf.constant(beta, dtype=tf.int32)), is_scaled=False)
+            input = binarize(input)
+            rho = binarize(rho)
+            beta = binarize(beta)
+
+            i_0, i_1 = share(input)
+
+            input = PondPrivateTensor(prot, share0=Int32Tensor(tf.constant(i_0, dtype=tf.int32)), share1=Int32Tensor(tf.constant(i_1, dtype=tf.int32)), is_scaled=False)
+            rho = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(rho, dtype=tf.int32)), value_on_1=Int32Tensor(tf.constant(rho, dtype=tf.int32)), is_scaled=False)
+            beta = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(beta, dtype=tf.int32)), value_on_1=Int32Tensor(tf.constant(beta, dtype=tf.int32)), is_scaled=False)
 
             #
             # i = tf.placeholder(tf.int32)
