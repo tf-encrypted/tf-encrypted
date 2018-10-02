@@ -2,13 +2,13 @@ from __future__ import absolute_import
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Tuple, Type, NewType
+from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from ..types import Ellipse, Slice
 
 
 from ..config import run
 from .factory import AbstractFactory
-from .tensor import AbstractTensor, AbstractConstant, AbstractVariable
+from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 
 INT_TYPE = tf.int32
 
@@ -25,6 +25,9 @@ class PrimeTensor(AbstractTensor):
     def from_native(value: Union[np.ndarray, tf.Tensor], modulus: int) -> 'PrimeTensor':
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
         return PrimeTensor(value, modulus)
+
+    def to_native(self) -> Union[np.ndarray, tf.Tensor]:
+        return self.value
 
     def to_bits(self, prime: int = 37) -> 'PrimeTensor':
         return PrimeTensor.binarize(self, prime=prime)
@@ -134,7 +137,7 @@ def _lift(x: Union['PrimeTensor', int], modulus: int) -> 'PrimeTensor':
     raise TypeError("Unsupported type {}".format(type(x)))
 
 
-class PrimeConstant(PrimeTensor):
+class PrimeConstant(PrimeTensor, AbstractConstant):
 
     def __init__(self, value: Union[tf.Tensor, np.ndarray], modulus: int) -> None:
         v = tf.constant(value, dtype=INT_TYPE)
@@ -154,7 +157,7 @@ class PrimeConstant(PrimeTensor):
         return 'PrimeConstant({})'.format(self.shape)
 
 
-class PrimePlaceholder(PrimeTensor):
+class PrimePlaceholder(PrimeTensor, AbstractPlaceholder):
 
     def __init__(self, shape: List[int], modulus: int) -> None:
         placeholder = tf.placeholder(INT_TYPE, shape=shape)
@@ -228,7 +231,7 @@ def prime_factory(modulus: int) -> Any:
 
         @staticmethod
         def from_same(initial_value: PrimeTensor) -> PrimeConstant:
-            return PrimeConstant.from_same(initial_value.value, modulus)
+            return PrimeConstant.from_same(initial_value, modulus)
 
     class VariableWrap(TensorWrap, AbstractVariable):
         @staticmethod

@@ -853,7 +853,7 @@ class PondTensor(abc.ABC):
     def matmul(self, other):
         return self.dot(self, other)
 
-    def indexer(self, slice):
+    def __getitem__(self, slice):
         return self.prot.indexer(self, slice)
 
     def tranpose(self):
@@ -905,9 +905,6 @@ class PondPublicTensor(PondTensor):
     def eval(self, sess, feed_dict={}, tag=None) -> np.ndarray:
         value = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
         return self.prot._decode(value, self.is_scaled)
-
-    def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'PondTensor':
-        return self.prot.indexer(self, slice)
 
 
 class PondPrivateTensor(PondTensor):

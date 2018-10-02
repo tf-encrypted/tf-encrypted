@@ -14,7 +14,7 @@ class TestLSB(unittest.TestCase):
             'server1',
             'crypto_producer'
         ])
-        self.M = 2 ** 31
+        self.M = 2 ** 31 - 1
         x = np.random.choice(self.M, (10,))
         f_bin = np.vectorize(np.binary_repr)
         f_get = np.vectorize(lambda x, ix: x[ix])
@@ -25,12 +25,15 @@ class TestLSB(unittest.TestCase):
         with tfe.protocol.SecureNN(*self.config.get_players('server0, server1, crypto_producer'),
                                    tensor_factory=factory,
                                    verify_precision=False) as prot:
-            x_in = prot.define_private_variable(self.x, apply_scaling=False)
+            x_in = prot.define_private_variable(self.x, apply_scaling=False, name='test_lsb_input')
             x_lsb = prot.lsb(x_in)
 
             with self.config.session() as sess:
                 sess.run(tf.global_variables_initializer())
                 lsb = x_lsb.reveal().eval(sess)
+
+                print('expected', self.expected_lsb)
+                print('actual', lsb)
 
                 assert(np.array_equal(self.expected_lsb, lsb))
 

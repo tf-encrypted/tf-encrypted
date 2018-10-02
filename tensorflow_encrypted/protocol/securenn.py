@@ -11,7 +11,7 @@ from ..tensor.factory import AbstractFactory
 from ..player import Player
 
 _thismodule = sys.modules[__name__]
-p = 67  # TODO: import or choose based on factory kwarg to super.__init__()
+p = 37  # TODO: import or choose based on factory kwarg to super.__init__()
 
 
 class SecureNN(Pond):
@@ -97,8 +97,21 @@ class SecureNN(Pond):
     def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
         return x + bit * (y - x)
 
-    def private_compare(self, x: PondTensor, r: PondTensor, beta: PondTensor) -> PondTensor:
-        raise NotImplementedError
+    def private_compare(self,
+                        x: PondPrivateTensor,
+                        r: PondPublicTensor,
+                        beta: PondPublicTensor) -> PondPrivateTensor:
+        # this is a placeholder;
+        # it computes the functionality of private_compare in plain text
+        x = x.reveal()
+        xval = self._reconstruct(x.value_on_0, x.value_on_1)
+        rval = self._reconstruct(r.value_on_0, r.value_on_1)
+        bval = tf.cast(self._reconstruct(beta.value_on_0, beta.value_on_1).value, tf.int8)
+        tf_res = tf.cast(xval.value > rval.value, tf.int8)
+        xord = tf.bitwise.bitwise_xor(tf_res, bval)
+        val = self.tensor_factory.Tensor.from_native(tf.cast(xord, tf.int32))
+        share0, share1 = self._share(val)
+        return PondPrivateTensor(self, share0, share1, is_scaled=x.is_scaled)
 
     def share_convert(self, x):
         raise NotImplementedError
@@ -140,7 +153,8 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
         rbits = PondPublicTensor(prot, rbits0, rbits1, is_scaled=False)
         rlsb = rbits[..., 0]
 
-        bp = prot.private_compare(xbits, r, b)
+        # bp = prot.private_compare(xbits, r, b)
+        bp = prot.private_compare(x, r, b)
 
         gamma = prot.bitwise_xor(bp, b)
         delta = prot.bitwise_xor(xlsb, rlsb)
