@@ -66,51 +66,52 @@ class TestInt100Tensor(unittest.TestCase):
         np.testing.assert_array_equal(actual, expected)
 
 
-# class TestConv2D(unittest.TestCase):
+class TestConv2D(unittest.TestCase):
 
-#     def setUp(self):
-#         tf.reset_default_graph()
+    def setUp(self):
+        tf.reset_default_graph()
 
-#     def test_forward(self) -> None:
-#         # input
-#         batch_size, channels_in, channels_out = 32, 3, 64
-#         img_height, img_width = 28, 28
-#         input_shape = (batch_size, channels_in, img_height, img_width)
-#         input_conv = np.random.normal(size=input_shape).astype(np.int32)
+    def test_forward(self) -> None:
 
-#         # filters
-#         h_filter, w_filter, strides = 2, 2, 2
-#         filter_shape = (h_filter, w_filter, channels_in, channels_out)
-#         filter_values = np.random.normal(size=filter_shape).astype(np.int32)
+        # input
+        batch_size, channels_in, channels_out = 32, 3, 64
+        img_height, img_width = 28, 28
+        input_shape = (batch_size, channels_in, img_height, img_width)
+        input_conv = np.random.normal(size=input_shape).astype(np.int32)
 
-#         inp = Int100Tensor(input_conv)
-#         out = inp.conv2d(Int100Tensor(filter_values), strides)
-#         with tf.Session() as sess:
-#             actual = sess.run(out.to_native())
+        # filters
+        h_filter, w_filter, strides = 2, 2, 2
+        filter_shape = (h_filter, w_filter, channels_in, channels_out)
+        filter_values = np.random.normal(size=filter_shape).astype(np.int32)
 
-#         # reset graph
-#         tf.reset_default_graph()
+        inp = Int100Tensor(input_conv)
+        out = inp.conv2d(Int100Tensor(filter_values), strides)
+        with tf.Session() as sess:
+            actual = sess.run(out.to_native())
 
-#         # convolution tensorflow
-#         with tf.Session() as sess:
-#             # conv input
-#             x = tf.Variable(input_conv, dtype=tf.float32)
-#             x_NHWC = tf.transpose(x, (0, 2, 3, 1))
+        # reset graph
+        tf.reset_default_graph()
 
-#             # convolution Tensorflow
-#             filters_tf = tf.Variable(filter_values, dtype=tf.float32)
+        # convolution tensorflow
+        with tf.Session() as sess:
+            # conv input
+            x = tf.Variable(input_conv, dtype=tf.float32)
+            x_NHWC = tf.transpose(x, (0, 2, 3, 1))
 
-#             conv_out_tf = tf.nn.conv2d(
-#                 x_NHWC,
-#                 filters_tf,
-#                 strides=[1, strides, strides, 1],
-#                 padding="SAME"
-#             )
+            # convolution Tensorflow
+            filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
-#             sess.run(tf.global_variables_initializer())
-#             out_tensorflow = sess.run(conv_out_tf).transpose(0, 3, 1, 2)
+            conv_out_tf = tf.nn.conv2d(
+                x_NHWC,
+                filters_tf,
+                strides=[1, strides, strides, 1],
+                padding="SAME"
+            )
 
-#         np.testing.assert_array_almost_equal(actual, out_tensorflow, decimal=3)
+            sess.run(tf.global_variables_initializer())
+            expected = sess.run(conv_out_tf).transpose(0, 3, 1, 2)
+
+        np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
 
 if __name__ == '__main__':

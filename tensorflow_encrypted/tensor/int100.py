@@ -127,7 +127,7 @@ class Int100Tensor(AbstractTensor):
         return Int100Tensor.from_decomposed(evaluated_backing)
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
-        return _crt_recombine_explicit(self.backing, 2**31)
+        return _crt_recombine_explicit(self.backing, 2**32)
 
     def to_bits(self, prime: int = 107) -> PrimeTensor:
 
