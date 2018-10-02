@@ -83,7 +83,7 @@ class Int64Tensor(AbstractTensor):
 
     def conv2d(self, other: Any, strides: int, padding: str='SAME') -> 'Int64Tensor':
         x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
-        return conv2d(x, y, strides, padding)  # type: ignore
+        return Int64Tensor(conv2d(x.value, y.value, strides, padding))  # type: ignore
 
     def mod(self, k: int) -> 'Int64Tensor':
         return Int64Tensor(self.value % k)

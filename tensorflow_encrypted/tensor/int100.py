@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from functools import reduce
+import math
 
 import numpy as np
 import tensorflow as tf
@@ -8,7 +9,7 @@ from typing import Union, Optional, List, Dict, Any, Type
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_matmul, gen_crt_mod,
-    gen_crt_reduce_sum, gen_crt_im2col, crt_matmul_split,
+    gen_crt_reduce_sum, crt_im2col, crt_matmul_split,
     gen_crt_sample_uniform, gen_crt_sample_bounded
 )
 from .helpers import prod, inverse
@@ -16,7 +17,7 @@ from ..config import run
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 from .prime import PrimeTensor
-from .shared import conv2d
+from .shared import binarize
 
 
 #
@@ -49,7 +50,6 @@ _crt_reduce_sum = gen_crt_reduce_sum(m)
 _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_matmul = gen_crt_matmul(m)
-_crt_im2col = gen_crt_im2col(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE)
 
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
@@ -240,32 +240,11 @@ class Int100Tensor(AbstractTensor):
         return Int100Tensor.from_decomposed(y_backing)
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int100Tensor':
-        backing = _crt_im2col(self.backing, h_filter, w_filter, padding, strides)
+        backing = crt_im2col(self.backing, h_filter, w_filter, padding, strides)
         return Int100Tensor.from_decomposed(backing)
 
     def conv2d(self, other, strides, padding='SAME') -> 'Int100Tensor':
-        x, y = self, other
-
-        h_filter, w_filter, d_filters, n_filters = map(int, y.shape)
-        n_x, d_x, h_x, w_x = map(int, x.shape)
-
-        if padding == "SAME":
-            h_out = int(math.ceil(float(h_x) / float(strides)))
-            w_out = int(math.ceil(float(w_x) / float(strides)))
-        elif padding == "VALID":
-            h_out = int(math.ceil(float(h_x - h_filter + 1) / float(strides)))
-            w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
-        else:
-            raise ValueError("Don't know padding method '{}'".format(padding))
-
-        X_col = x.im2col(h_filter, w_filter, padding, strides)
-        W_col = y.transpose(perm=(3, 2, 0, 1)).reshape([int(n_filters), -1])
-        out = W_col.matmul(X_col)
-
-        out = out.reshape([n_filters, h_out, w_out, n_x])
-        out = out.transpose(perm=(3, 0, 1, 2))
-
-        return out
+        raise NotImplementedError()
 
     def transpose(self, perm: Optional[List[int]]=None) -> 'Int100Tensor':
         backing = [tf.transpose(xi, perm=perm) for xi in self.backing]

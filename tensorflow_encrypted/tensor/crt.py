@@ -1,14 +1,14 @@
 from __future__ import absolute_import
+from typing import Union, List, Tuple
 from math import ceil
 
 import numpy as np
 import tensorflow as tf
-from ..tensor.shared import im2col
 
+from ..tensor.shared import im2col, conv2d
 from .helpers import inverse, prod
-from typing import Union, List, Tuple
 
-TFEData = Union[List[tf.Tensor], List[np.ndarray]]
+Decomposed = Union[List[tf.Tensor], List[np.ndarray]]
 
 
 def gen_crt_decompose(m):
@@ -126,7 +126,12 @@ def gen_crt_matmul(m):
     return crt_matmul
 
 
-def crt_matmul_split(x: TFEData, y: TFEData, threshold: int) -> List[Tuple[TFEData, TFEData]]:
+def crt_matmul_split(
+    x: Decomposed,
+    y: Decomposed,
+    threshold: int
+) -> List[Tuple[Decomposed, Decomposed]]:
+
     with tf.name_scope('matmul_split'):
         z_split = []
 
@@ -149,9 +154,29 @@ def crt_matmul_split(x: TFEData, y: TFEData, threshold: int) -> List[Tuple[TFEDa
     return z_split
 
 
-def crt_im2col(x: TFEData, h_filter: int, w_filter: int, padding: str,
-               strides: int) -> TFEData:
-    return [im2col(xi, h_filter, w_filter, padding, strides) for xi in x]
+def crt_im2col(
+    x: Decomposed,
+    h_filter: int,
+    w_filter: int,
+    padding: str,
+    strides: int
+) -> Decomposed:
+    with tf.name_scope('crt_im2col'):
+        return [im2col(xi, h_filter, w_filter, padding, strides) for xi in x]
+
+
+def gen_crt_conv2d(m):
+
+    def crt_conv2d(
+        x: Decomposed,
+        y: Decomposed,
+        strides: int,
+        padding: str
+    ):
+        with tf.name_scope('crt_conv2d'):
+            return [conv2d(xi, yi, strides, padding) % mi for xi, yi, mi in zip(x, y, m)]
+
+    return crt_conv2d
 
 
 def gen_crt_sample_uniform(m, int_type):
@@ -220,9 +245,11 @@ def gen_crt_mod(m, int_type):
 
 
 def gen_crt_reduce_sum(m):
+
     def crt_reduce_sum(x, axis=None, keepdims=None):
         with tf.name_scope('crt_reduce_sum'):
             return [tf.reduce_sum(xi, axis, keepdims) % mi for xi, mi in zip(x, m)]
+
     return crt_reduce_sum
 
 

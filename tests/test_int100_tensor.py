@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.int100 import Int100Factory, Int100Tensor
+from tensorflow_encrypted.tensor.int100 import Int100Tensor, Int100Factory
 
 
 class TestInt100Tensor(unittest.TestCase):
@@ -11,34 +11,33 @@ class TestInt100Tensor(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
 
-    # def test_pond(self) -> None:
-    #     config = tfe.LocalConfig([
-    #         'server0',
-    #         'server1',
-    #         'crypto_producer'
-    #     ])
+    def test_pond(self) -> None:
+        config = tfe.LocalConfig([
+            'server0',
+            'server1',
+            'crypto_producer'
+        ])
 
-    #     with tfe.protocol.Pond(
-    #         *config.get_players('server0, server1, crypto_producer'),
-    #         tensor_factory=Int100Factory(),
-    #         use_noninteractive_truncation=True,
-    #         verify_precision=True) as prot:
+        with tfe.protocol.Pond(
+            *config.get_players('server0, server1, crypto_producer'),
+            tensor_factory=Int100Factory(),
+            use_noninteractive_truncation=True,
+            verify_precision=True
+        ) as prot:
 
-    #         x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
-    #         y = prot.define_public_variable(np.array([2, 2]), apply_scaling=False)
+            x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
+            y = prot.define_public_variable(np.array([2, 2]), apply_scaling=False)
 
-    #         z = x * y
+            z = x * y
 
-    #         with config.session() as sess:
-    #             sess.run(tf.global_variables_initializer())
-    #             actual = z.reveal().eval(sess)
-            
-    #         expected = np.array([4, 4])
-    #         np.testing.assert_array_almost_equal(actual, expected, decimal=3)
+            with config.session() as sess:
+                sess.run(tf.global_variables_initializer())
+                actual = z.reveal().eval(sess)
+
+            expected = np.array([4, 4])
+            np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
     def test_binarize(self) -> None:
-
-        tf.enable_eager_execution()
 
         def as_bits(x: int, min_bitlength):
             bits = [int(b) for b in '{0:b}'.format(x)]
