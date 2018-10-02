@@ -16,6 +16,7 @@ from ..tensor.helpers import (
 
 from ..tensor.factory import AbstractFactory
 from ..tensor.int100 import Int100Factory
+from ..tensor.int32 import Int32Tensor
 from ..tensor.tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 
 from ..io import InputProvider, OutputReceiver
@@ -438,9 +439,11 @@ class Pond(Protocol):
 
             with tf.device(self.server_0.device_name):
                 z_on_0 = tf.where(x_on_0.value)
+                print('ok', z_on_0)
 
             with tf.device(self.server_1.device_name):
                 z_on_1 = tf.where(x_on_1.value)
+                print('ok', z_on_1)
 
             return PondPublicTensor(self, self.tensor_factory.Tensor.from_native(z_on_0), self.tensor_factory.Tensor.from_native(z_on_1), x.is_scaled)
 
@@ -536,6 +539,7 @@ class Pond(Protocol):
             return _reshape_masked(self, x, shape)
 
         raise TypeError("Don't know how to reshape {}".format(type(x)))
+
 
     @memoize
     def expand_dims(self, x: 'PondTensor', axis=None):
@@ -893,6 +897,17 @@ class PondTensor(abc.ABC):
 
     def reshape(self, shape: List[int]) -> 'PondTensor':
         return self.prot.reshape(self, shape)
+
+    def broadcast(self, to: List[int]) -> 'PondTensor':
+        x_on_0, x_on_1 = self.unwrapped
+
+        with tf.device(self.prot.server_0.device_name):
+            x_on_0_broadcasted = tf.broadcast_to(x_on_0.value, to)
+
+        with tf.device(self.prot.server_1.device_name):
+            x_on_1_broadcasted = tf.broadcast_to(x_on_1.value, to)
+
+        return PondPublicTensor(self, Int32Tensor(x_on_0_broadcasted), Int32Tensor(x_on_1_broadcasted), self.is_scaled)
 
 
 class PondPublicTensor(PondTensor):

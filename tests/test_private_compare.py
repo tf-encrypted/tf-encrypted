@@ -59,12 +59,11 @@ class TestPrivateCompare(unittest.TestCase):
         with tfe.protocol.SecureNN(tensor_factory=prime_factory(67), use_noninteractive_truncation=True, verify_precision=False, *config.get_players('server0, server1, crypto_producer')) as prot:
 
             # input = prot.define_private_variable(binarize(input), apply_scaling=False)
-            # rho = prot.define_public_variable(binarize(rho), apply_scaling=False)
+            # rho = prot.define_public_va?riable(binarize(rho), apply_scaling=False)
             # beta = prot.define_public_variable(binarize(beta), apply_scaling=False)
 
             input = binarize(input)
             rho = binarize(rho)
-            beta = binarize(beta)
 
             i_0, i_1 = share(input)
 
@@ -84,6 +83,9 @@ class TestPrivateCompare(unittest.TestCase):
 
             writer = tf.summary.FileWriter('.')
             writer.add_graph(tf.get_default_graph())
+
+            eq = prot.equal(beta, 0)
+            ones = prot.where(eq)
 
             # sess = tf.Session()
             with config.session() as sess:
