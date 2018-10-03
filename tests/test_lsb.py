@@ -14,7 +14,9 @@ class TestLSB(unittest.TestCase):
             'server1',
             'crypto_producer'
         ])
-        self.M = 2 ** 31 - 1
+        # self.M = 2 ** 15 - 1  # this one works
+        self.M = 2 ** 15  # this one doesn't
+        # self.M = 2 ** 31 - 1  # this one definitely doesn't
         x = np.random.choice(self.M, (10,))
         f_bin = np.vectorize(np.binary_repr)
         f_get = np.vectorize(lambda x, ix: x[ix])
@@ -27,10 +29,11 @@ class TestLSB(unittest.TestCase):
                                    verify_precision=False) as prot:
             x_in = prot.define_private_variable(self.x, apply_scaling=False, name='test_lsb_input')
             x_lsb = prot.lsb(x_in)
+            x_lsb.share0.value = tf.Print(x_lsb.share0.value, [x_lsb.reveal().value_on_0.value], 'lsbo', summarize=10)
 
             with self.config.session() as sess:
                 sess.run(tf.global_variables_initializer())
-                lsb = x_lsb.reveal().eval(sess)
+                lsb = sess.run(x_lsb.reveal().value_on_0.value)
 
                 print('expected', self.expected_lsb)
                 print('actual', lsb)

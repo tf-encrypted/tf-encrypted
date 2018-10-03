@@ -31,7 +31,7 @@ class SecureNN(Pond):
             **kwargs
         )
         self.server_2 = server_2
-        self.prime_factory = prime_factory or gen_prime_factory(37)  # TODO: import or choose based on factory kwarg to super.__init__()
+        self.prime_factory = prime_factory or gen_prime_factory(67)  # TODO: import or choose based on factory kwarg to super.__init__()
         self.odd_factory = odd_factory or self.tensor_factory
 
     @memoize
@@ -55,7 +55,12 @@ class SecureNN(Pond):
     def bitwise_xor(self, x: PondTensor, y: PondTensor) -> PondTensor:
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
-        return x + y - self.bitwise_and(x, y) * 2
+        z = self.bitwise_and(x, y)
+        try:
+            x.share0.value = tf.Print(x.share0.value, [x.reveal().value_on_0.value, y.reveal().value_on_0.value, (x * y).reveal().value_on_0.value], 'xyxy', summarize=5)
+        except:
+            x.share0.value = tf.Print(x.share0.value, [x.reveal().value_on_0.value, y.value_on_0.value, z.reveal().value_on_0.value], 'xyz', summarize=5)
+        return x + y - 2 * z
 
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
@@ -110,16 +115,11 @@ class SecureNN(Pond):
         rval = r.value_on_1
         bval = tf.cast(beta.value_on_0.value, tf.int8)
         tf_res = tf.cast(xval.value > rval.value, tf.int8)
-        tf_res = tf.Print(tf_res, [xval.value, rval.value], 'x and r', summarize=10)
-        tf_res = tf.Print(tf_res, [tf_res], 'resu', summarize=10)
-        tf_res = tf.Print(tf_res, [bval], 'bval', summarize=10)
         xord = tf.bitwise.bitwise_xor(tf_res, bval)
-        xord = tf.Print(xord, [xord], 'xord', summarize=10)
         val = self.tensor_factory.Tensor.from_native(tf.cast(xord, tf.int32))
 
         share0, share1 = self._share(val)
-        shared = PondPrivateTensor(self, share0, share1, is_scaled=x.is_scaled)
-        shared.share0.value = tf.Print(shared.share0.value, [shared.reveal().value_on_0.value], 'shared res', summarize=10)
+        shared = PondPrivateTensor(self, share0, share1, is_scaled=False)
         return shared
 
     def share_convert(self, x):
@@ -154,6 +154,7 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
                 x = PondPrivateTensor(prot, *prot._share(x, factory=prot.odd_factory), is_scaled=False)
                 xbits = PondPrivateTensor(prot, *prot._share(xbits, factory=prot.prime_factory), is_scaled=False)
                 xlsb = PondPrivateTensor(prot, *prot._share(xlsb, factory=prot.tensor_factory), is_scaled=False)
+                # xlsb.share0.value = tf.Print(xlsb.share0.value, [xlsb.reveal().value_on_0.value], 'xlsb', summarize=10)
 
             devices = [prot.server_0.device_name, prot.server_1.device_name]
             bits_device = random.choice(devices)
@@ -176,11 +177,15 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
         rlsb = rbits[..., 0]
         # bp = prot.private_compare(xbits, r, beta)
         bp = prot.private_compare(x, r, beta)
+        # bp.share0.value = tf.Print(bp.share0.value, [bp.reveal().value_on_0.value], 'bpsh', summarize=10)
 
         gamma = prot.bitwise_xor(bp, beta)
+        gamma.share0.value = tf.Print(gamma.share0.value, [gamma.reveal().value_on_0.value], 'gamm', summarize=10)
         delta = prot.bitwise_xor(xlsb, rlsb)
+        delta.share0.value = tf.Print(delta.share0.value, [delta.reveal().value_on_0.value], 'delt', summarize=10)
         alpha = prot.bitwise_xor(gamma, delta)
-        return alpha
+        alpha.share0.value = tf.Print(alpha.share0.value, [alpha.reveal().value_on_0.value], 'alph', summarize=10)
+        return alpha * 1
 
 def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):
     return prot.lsb(x.unmasked)
