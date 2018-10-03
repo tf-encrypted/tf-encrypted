@@ -223,6 +223,8 @@ class PrimeVariable(PrimeTensor, AbstractVariable):
 def prime_factory(modulus: int) -> Any:
 
     class TensorWrap(AbstractTensor):
+        int_type = INT_TYPE
+
         @staticmethod
         def from_native(x: Union[tf.Tensor, np.ndarray]) -> PrimeTensor:
             return PrimeTensor.from_native(x, modulus)
