@@ -106,12 +106,7 @@ class SecureNN(Pond):
     def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
         return x + bit * (y - x)
 
-    def _private_compare_beta0(self, zeros: PondPublicTensor, input: PondPrivateTensor, rho: PondPublicTensor):
-
-        # TODO -- gather not working (runtime error)
-        #         not a probelm right now as the test is only using b == 0
-        input = self.gather_nd(input, zeros)
-        rho = self.gather_nd(rho, zeros)
+    def _private_compare_beta0(self, input: PondPrivateTensor, rho: PondPublicTensor):
 
         w = self.bitwise_xor(input, rho)
 
@@ -146,14 +141,9 @@ class SecureNN(Pond):
         c = rho - input + 1 + w_sum
         return c
 
-    def _private_compare_beta1(self, ones: PondPublicTensor, input: PondPrivateTensor, theta: PondPublicTensor):
+    def _private_compare_beta1(self, input: PondPrivateTensor, theta: PondPublicTensor):
 
         w = self.bitwise_xor(input, theta)
-
-        ## TODO -- need to gather the parts of input we will actually use based on where ones are (see todo above)
-        # input = self.gather_nd(input, zeros)
-        # rho = self.gather_nd(input, zeros)
-
 
         with tf.device(self.server_0.device_name):
             w0_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
@@ -213,44 +203,39 @@ class SecureNN(Pond):
             with tf.name_scope('find_edges'):
                 edges = self.where(self.equal(rho, 2 ** bits - 1))
 
-            # return tf.Print(zeros.value_on_1. alue, [zeros.value_on_1.value], 'ZEROS')
-            lol = self.gather_nd(input, zeros)
-            lol = lol.reshape(s)
-
-            return lol
-
-#
-            # return tf.Print(zeros.value_on_1.value, [zeros.value_on_1.value], 'ONES:', summarize=1000)
-
             # with tf.name_scope('find_non_edge_ones'):
             #     ones = tf.setdiff1d(ones, edges)
 
-            pc_0 = self._private_compare_beta0(zeros, input, rho)
-            # pc_1 = self._private_compare_beta1(ones, input, theta)
+            # return input
+            pc_0 = self._private_compare_beta0(input, rho)
+            pc_1 = self._private_compare_beta1(input, theta)
+
+            # return tf.Print(zeros.value_on_1.value, [zeros.value_on_1.value], 'ZEROS')
+
+            pc_0 = self.gather_nd(pc_0, zeros)
+            pc_1 = self.gather_nd(pc_1, ones)
 
             # c0_edge, c1_edge = self._private_compare_edge()
 
             pc_0 = pc_0.reshape([-1])
-            # pc_1 = pc_1.reshape([-1])
+            pc_1 = pc_1.reshape([-1])
 
             with tf.device(self.server_0.device_name):
                 c0 = tf.zeros(shape=input.shape, dtype=tf.int32)
 
-                # return tf.Print(pc_1.share0.value, [pc_1.share0.value], 'zeros:', summarize=50)
-
                 delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share0.value, input.shape)
-                # delta1 = tf.SparseTensor(ones.value_on_0.value, pc_1.share0.value, input.shape)
+                delta1 = tf.SparseTensor(ones.value_on_0.value, pc_1.share0.value, input.shape)
 
-                c0 = c0 + tf.sparse_tensor_to_dense(delta0)  # + tf.sparse_tensor_to_dense(delta1)
+                c0 = c0 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
                 c0 = Int32Tensor(c0)
 
             with tf.device(self.server_0.device_name):
                 c1 = tf.zeros(shape=input.shape, dtype=tf.int32)
 
                 delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share1.value, input.shape)
-                # delta1 = tf.SparseTensor(ones.value_on_1.value, pc_1.share1.value, input.shape)
+                delta1 = tf.SparseTensor(ones.value_on_1.value, pc_1.share1.value, input.shape)
 
-                c1 = c1 + tf.sparse_tensor_to_dense(delta0)  # + tf.sparse_tensor_to_dense(delta1)
+                c1 = c1 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
                 c1 = Int32Tensor(c1)
 
             answer = PondPrivateTensor(self, share0=c0, share1=c1, is_scaled=input.is_scaled)

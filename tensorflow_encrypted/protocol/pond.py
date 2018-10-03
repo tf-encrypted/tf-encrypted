@@ -438,11 +438,10 @@ class Pond(Protocol):
             x_on_0, x_on_1 = x.unwrapped
 
             with tf.device(self.server_0.device_name):
-                z_on_0 = tf.cast(tf.where(x_on_0.value), tf.int32)
+                z_on_0 = tf.where(x_on_0.value)
 
             with tf.device(self.server_1.device_name):
-                z_on_1 = tf.cast(tf.where(x_on_1.value), tf.int32)
-
+                z_on_1 = tf.where(x_on_1.value)
 
             return PondPublicTensor(self, self.tensor_factory.Tensor.from_native(z_on_0), self.tensor_factory.Tensor.from_native(z_on_1), x.is_scaled)
 
