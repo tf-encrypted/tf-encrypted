@@ -11,7 +11,6 @@ from ..tensor.factory import AbstractFactory
 from ..player import Player
 
 _thismodule = sys.modules[__name__]
-p = 37  # TODO: import or choose based on factory kwarg to super.__init__()
 
 
 class SecureNN(Pond):
@@ -21,7 +20,8 @@ class SecureNN(Pond):
         server_0: Player,
         server_1: Player,
         server_2: Player,
-        alt_factory: AbstractFactory=prime_factory(p),
+        prime_factory: AbstractFactory=None,
+        odd_factory: AbstractFactory=None,
         **kwargs
     ) -> None:
         super(SecureNN, self).__init__(
@@ -30,7 +30,9 @@ class SecureNN(Pond):
             crypto_producer=server_2,
             **kwargs
         )
-        self.alt_factory = alt_factory
+        self.server_2 = server_2
+        self.prime_factory = prime_factory or prime_factory(37)  # TODO: import or choose based on factory kwarg to super.__init__()
+        self.odd_factory = odd_factory or self.tensor_factory
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
@@ -132,42 +134,46 @@ class SecureNN(Pond):
 
 
 def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
+
     with tf.name_scope('lsb'):
+
         with tf.name_scope('lsb_mask'):
-            with tf.device(prot.crypto_producer.device_name):
+
+            with tf.device(prot.server_2.device_name):
                 x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
                 xbits = x.to_bits()
                 xlsb = xbits[..., 0]
-                x = PondPrivateTensor(prot, *prot._share(x, prot.tensor_factory), is_scaled=False)
-                xbits = PondPrivateTensor(prot, *prot._share(xbits, prot.alt_factory), is_scaled=False)
-                xlsb = PondPrivateTensor(prot, *prot._share(xlsb, prot.tensor_factory), is_scaled=False)
+
+                x = PondPrivateTensor(prot, *prot._share(x, factory=prot.odd_factory), is_scaled=False)
+                xbits = PondPrivateTensor(prot, *prot._share(xbits, factory=prot.prime_factory), is_scaled=False)
+                xlsb = PondPrivateTensor(prot, *prot._share(xlsb, factory=prot.tensor_factory), is_scaled=False)
 
             devices = [prot.server_0.device_name, prot.server_1.device_name]
             bits_device = random.choice(devices)
             with tf.device(bits_device):
-                b = _generate_random_bits(prot, y.shape)
+                # TODO[Morten] pull this out as a separate `sample_bits` method on tensors (optimized for bits only)
+                backing = prot.tensor_factory.Tensor.sample_bounded(y.shape, 1)
+                beta = PondPublicTensor(prot, backing, backing, is_scaled=False)
 
         r = (y + x).reveal()
         r0, r1 = r.unwrapped
-        rbits0, rbits1 = r0.to_bits(), r1.to_bits()
+
+        # TODO[Morten] wrap this in a `to_bits()` on public tensors?
+        with tf.device(prot.server_0.device_name):
+            rbits0 = r0.to_bits()
+
+        with tf.device(prot.server_1.device_name):
+            rbits1 = r1.to_bits()
+
         rbits = PondPublicTensor(prot, rbits0, rbits1, is_scaled=False)
         rlsb = rbits[..., 0]
+        # bp = prot.private_compare(xbits, rbits, beta)
+        bp = prot.private_compare(x, r, beta)
 
-        # bp = prot.private_compare(xbits, r, b)
-        bp = prot.private_compare(x, r, b)
-
-        gamma = prot.bitwise_xor(bp, b)
+        gamma = prot.bitwise_xor(bp, beta)
         delta = prot.bitwise_xor(xlsb, rlsb)
-
         alpha = prot.bitwise_xor(gamma, delta)
-
         return alpha
-
 
 def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):
     return prot.lsb(x.unmasked)
-
-
-def _generate_random_bits(prot: SecureNN, shape: List[int]):
-    backing = prot.tensor_factory.Tensor.sample_uniform(shape)
-    return PondPublicTensor(prot, backing, backing, is_scaled=False)
