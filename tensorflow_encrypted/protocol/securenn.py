@@ -6,7 +6,7 @@ from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 )
-from ..tensor.prime import prime_factory
+from ..tensor.prime import prime_factory as gen_prime_factory
 from ..tensor.factory import AbstractFactory
 from ..player import Player
 
@@ -31,7 +31,7 @@ class SecureNN(Pond):
             **kwargs
         )
         self.server_2 = server_2
-        self.prime_factory = prime_factory or prime_factory(37)  # TODO: import or choose based on factory kwarg to super.__init__()
+        self.prime_factory = prime_factory or gen_prime_factory(37)  # TODO: import or choose based on factory kwarg to super.__init__()
         self.odd_factory = odd_factory or self.tensor_factory
 
     @memoize
