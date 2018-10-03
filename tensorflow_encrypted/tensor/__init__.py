@@ -45,5 +45,4 @@ __all__ = [
     'Int64Placeholder',
     'Int64Variable',
     'Int64Constant',
-    'binarize',
 ]

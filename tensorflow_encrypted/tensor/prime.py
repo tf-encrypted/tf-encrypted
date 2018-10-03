@@ -42,6 +42,9 @@ class PrimeTensor(AbstractTensor):
         maxval = 2 ** bitlength
         return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=maxval))
 
+    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
+        return self.value
+
     @staticmethod
     def stack(x: List['PrimeTensor'], axis: int = 0) -> 'PrimeTensor':
         assert all(isinstance(i, PrimeTensor) for i in x)
@@ -117,7 +120,7 @@ class PrimeTensor(AbstractTensor):
     def negative(self) -> 'PrimeTensor':
         return self.mul(-1)
 
-    def dot(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
+    def matmul(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
         return PrimeTensor(tf.matmul(x.value, y.value) % self.modulus, self.modulus)
 

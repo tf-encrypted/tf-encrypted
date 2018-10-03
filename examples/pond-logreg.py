@@ -21,7 +21,7 @@ b = prot.define_private_variable(np_b)
 x = prot.define_private_placeholder((2, 2))
 
 # prediction
-y = prot.sigmoid(w.dot(x) + b).reveal()
+y = prot.sigmoid(w.matmul(x) + b).reveal()
 
 
 def sigmoid(x):
