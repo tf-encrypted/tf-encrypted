@@ -14,7 +14,6 @@ training_epochs = 10
 batch_size = 100
 nb_feats = 5
 
-input_provider = tfe.get_config().get_player('input-provider')
 with tfe.protocol.Pond() as prot:
     assert(isinstance(prot, tfe.protocol.Pond))
 
@@ -22,10 +21,10 @@ with tfe.protocol.Pond() as prot:
     x_test, y_test, y_np_out = gen_test_input(test_set_size, nb_feats, batch_size)
 
     xp = prot.define_private_input(
-        tfe.io.InputProvider(input_provider, lambda: gen_training_input(training_set_size, nb_feats, batch_size)[0])
+        tfe.io.InputProvider('input-provider', lambda: gen_training_input(training_set_size, nb_feats, batch_size)[0])
     )
     yp = prot.define_private_input(
-        tfe.io.InputProvider(input_provider, lambda: gen_training_input(training_set_size, nb_feats, batch_size)[1])
+        tfe.io.InputProvider('input-provider', lambda: gen_training_input(training_set_size, nb_feats, batch_size)[1])
     )
 
     W = prot.define_private_variable(tf.random_uniform([nb_feats, 1], -0.01, 0.01))
@@ -48,10 +47,10 @@ with tfe.protocol.Pond() as prot:
 
     # Testing model
     xp_test = prot.define_private_input(
-        tfe.io.InputProvider(input_provider, lambda: gen_test_input(training_set_size, nb_feats, batch_size)[0])
+        tfe.io.InputProvider('input-provider', lambda: gen_test_input(training_set_size, nb_feats, batch_size)[0])
     )
     yp_test = prot.define_private_input(
-        tfe.io.InputProvider(input_provider, lambda: gen_test_input(training_set_size, nb_feats, batch_size)[1])
+        tfe.io.InputProvider('input-provider', lambda: gen_test_input(training_set_size, nb_feats, batch_size)[1])
     )
     pred_test = prot.sigmoid(prot.matmul(xp_test, W) + b)
 

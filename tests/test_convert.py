@@ -48,24 +48,16 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider'
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.ones(input_shape))
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -96,24 +88,16 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider'
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.ones(input_shape))
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -144,24 +128,16 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider'
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.ones(input_shape))
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -192,24 +168,16 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider'
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.ones(input_shape))
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -240,24 +208,16 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider'
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.ones(input_shape))
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -288,24 +248,16 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider'
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.ones(input_shape))
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -335,24 +287,16 @@ class TestConvert(unittest.TestCase):
         actual = run_expand_dims(input_shape)
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider'
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.ones(input_shape))
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -383,24 +327,16 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider'
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.ones(input_shape))
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -431,24 +367,16 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider'
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.ones(input_shape))
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -479,24 +407,16 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider'
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape))
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -529,15 +449,7 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider',
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
@@ -546,9 +458,9 @@ class TestConvert(unittest.TestCase):
                                         [[3, 3, 3], [4, 4, 4]],
                                         [[5, 5, 5], [6, 6, 6]]])
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -579,24 +491,16 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider',
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.ones(input_shape))
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -627,24 +531,16 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider',
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
                 def provide_input(self):
                     return tf.constant(np.ones(input_shape))
 
-            input = PredictionClient(config.get_player('prediction_client'))
+            input = PredictionClient('input-provider')
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
@@ -677,15 +573,7 @@ class TestConvert(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer',
-            'prediction_client',
-            'weights_provider',
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
             class PredictionClient(tfe.io.InputProvider):
@@ -694,16 +582,16 @@ class TestConvert(unittest.TestCase):
                 def provide_input(self):
                     return tf.constant(self.input)
 
-            i1 = PredictionClient(config.get_player('prediction_client'))
+            i1 = PredictionClient('input-provider')
             i1.input = input1
-            i2 = PredictionClient(config.get_player('prediction_client'))
+            i2 = PredictionClient('input-provider')
             i2.input = input2
-            i3 = PredictionClient(config.get_player('prediction_client'))
+            i3 = PredictionClient('input-provider')
             i3.input = input3
 
             input = [i1, i2, i3]
 
-            converter = Converter(config, prot, config.get_player('weights_provider'))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
 
             x = converter.convert(graph_def, input, register())
 
