@@ -114,6 +114,9 @@ class PrimeTensor(AbstractTensor):
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
         return PrimeTensor(x.value * y.value % self.modulus, self.modulus)
 
+    def negative(self) -> 'PrimeTensor':
+        return self.mul(-1)
+
     def dot(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
         return PrimeTensor(tf.matmul(x.value, y.value) % self.modulus, self.modulus)
@@ -139,6 +142,10 @@ class PrimeTensor(AbstractTensor):
 
     def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
         return PrimeTensor(tf.cast(self.value + y.value >= modulus, dtype=tf.int32), self.modulus)
+
+    def expand_dims(self, axis: int) -> 'PrimeTensor':
+        expanded = tf.expand_dims(self.value, axis)
+        return PrimeTensor(expanded, self.modulus)
 
 
 def _lift(x: Union['PrimeTensor', 'AbstractTensor', int], modulus: int) -> 'PrimeTensor':
