@@ -206,7 +206,6 @@ class SecureNN(Pond):
 
     def private_compare(self, input: PondPrivateTensor, rho: PondPublicTensor, theta: PondPublicTensor, beta: PondPublicTensor):
         with tf.name_scope('private_compare'):
-
             beta = beta.reshape([beta.shape.as_list()[0], 1])
             beta = beta.broadcast([beta.shape.as_list()[0], 32])
 

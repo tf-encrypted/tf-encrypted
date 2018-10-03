@@ -56,6 +56,11 @@ class TestPrivateCompare(unittest.TestCase):
         rho = np.array([1, 7, 7, 4, 1, 2, 0, 99]).astype(np.int32)
         beta = np.array([0, 1, 0, 1, 0, 1, 0, 0]).astype(np.int32)
 
+        print('INPUTS')
+        print('x:   ', input)
+        print('rho: ', rho)
+        print('beta:', beta)
+
         with tfe.protocol.SecureNN(tensor_factory=prime_factory(67), use_noninteractive_truncation=True, verify_precision=False, *config.get_players('server0, server1, crypto_producer')) as prot:
 
             # input = prot.define_private_variable(binarize(input), apply_scaling=False)
@@ -80,8 +85,6 @@ class TestPrivateCompare(unittest.TestCase):
             #
 
             a = prot.private_compare(input, rho, theta, beta)
-
-            print('returned', a)
 
             writer = tf.summary.FileWriter('.')
             writer.add_graph(tf.get_default_graph())
