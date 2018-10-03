@@ -14,9 +14,10 @@ from ..player import Player
 from ..tensor.tensor import AbstractTensor
 from ..config import get_default_config
 from ..tensor.odd_implicit import OddImplicitTensor
+from ..tensor.int32 import Int32Tensor
 
 _thismodule = sys.modules[__name__]
-p = 67  # TODO: import or choose based on factory kwarg to super.__init__()
+p = 37  # TODO: import or choose based on factory kwarg to super.__init__()
 
 
 class SecureNN(Pond):
@@ -115,8 +116,21 @@ class SecureNN(Pond):
     def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
         return x + bit * (y - x)
 
-    def private_compare(self, x: PondTensor, r: PondTensor, beta: PondTensor) -> PondTensor:
-        raise NotImplementedError()
+    def private_compare(self,
+                        x: PondPrivateTensor,
+                        r: PondPublicTensor,
+                        beta: PondPublicTensor) -> PondPrivateTensor:
+        # this is a placeholder;
+        # it computes the functionality of private_compare in plain text
+        x = x.reveal()
+        xval = self._reconstruct(x.value_on_0, x.value_on_1)
+        rval = self._reconstruct(r.value_on_0, r.value_on_1)
+        bval = tf.cast(self._reconstruct(beta.value_on_0, beta.value_on_1).value, tf.int8)
+        tf_res = tf.cast(xval.value > rval.value, tf.int8)
+        xord = tf.bitwise.bitwise_xor(tf_res, bval)
+        val = self.tensor_factory.Tensor.from_native(tf.cast(xord, tf.int32))
+        share0, share1 = self._share(val)
+        return PondPrivateTensor(self, share0, share1, is_scaled=x.is_scaled)
 
     def share_convert(self, x: PondPrivateTensor) -> PondPrivateTensor:
         L = self.tensor_factory.Tensor.modulus
@@ -127,7 +141,7 @@ class SecureNN(Pond):
         # P0
         with tf.device(self.server_0.device_name):
             bitmask = _generate_random_bits(self, x.shape)
-            sharemask = self.tensor_factory.Tensor.sample_uniform(x.shape) + 1
+            sharemask = self.tensor_factory.Tensor.sample_uniform(x.shape)
 
             sharemask0, sharemask1, alpha_wrap = share_with_wrap(self, sharemask, L)
 
@@ -137,7 +151,7 @@ class SecureNN(Pond):
 
         alpha_wrap_t = PrimeTensor(-alpha_wrap.value - 1, p)
         zero = PrimeTensor(np.zeros(alpha_wrap.shape, dtype=np.int32), p)
-        alpha = PondPrivateTensor(self, alpha_wrap_t, zero, is_scaled=False)
+        alpha = PondPublicTensor(self, alpha_wrap_t, zero, is_scaled=False)
 
         # P0, P1
         with tf.device(self.server_0.device_name):
@@ -146,39 +160,54 @@ class SecureNN(Pond):
         with tf.device(self.server_1.device_name):
             beta_wrap_1 = x.share1.compute_wrap(sharemask1, L)
 
-        beta_wrap = PondPrivateTensor(self, beta_wrap_0, beta_wrap_1, is_scaled=False)
+        beta_wrap = PondPublicTensor(self, beta_wrap_0, beta_wrap_1, is_scaled=False)
 
         # P2
         with tf.device(self.crypto_producer.device_name):
             delta_wrap = masked.share0.compute_wrap(masked.share1, L)
             x_pub_masked = masked.reveal()
 
-            xbits = x_pub_masked.value_on_0.to_bits()
+            xbits = x_pub_masked.value_on_0  # .to_bits()
 
         deltashare0, deltashare1 = self._share(delta_wrap)
-        bitshare0, bitshare1 = self._share(xbits, self.alt_factory)
+        bitshare0, bitshare1 = self._share(xbits)
 
         bitshares = PondPrivateTensor(self, bitshare0, bitshare1, is_scaled=False)
         deltashares = PondPrivateTensor(self, deltashare0, deltashare1, is_scaled=False)
 
         with tf.device(self.server_0.device_name):
-            # outbit = self.private_compare(bitshares, pvt_sharemask.reveal().value_on_0 - 1, bitmask)
-            inp = self.tensor_factory.Tensor.from_native(np.ones(x.shape))
-            outbit = PondPublicTensor(self, inp, inp, is_scaled=False)
+            compared = self.private_compare(bitshares, pvt_sharemask.reveal() - 1, bitmask)
 
-        compared0, compared1 = self._share(outbit.value_on_0)
-
-        compared = PondPrivateTensor(self, compared0, compared1, is_scaled=False)
+        with tf.device(self.server_1.device_name):
+            compared.share1.value = tf.identity(compared.share1.value)
 
         # P0, P1
+        print(bitmask.value_on_0.value)
+        print(alpha.value_on_0.value)
+        print(beta_wrap.value_on_0.value)
         preconverter = self.odd_modulus_bitwise_xor(compared, bitmask)
 
         deltashares = self.to_odd_modulus(deltashares)
         beta_wrap = self.to_odd_modulus(beta_wrap)
 
-        converter = beta_wrap + preconverter + deltashares
+        # print(deltashares.share0.value, deltashares.share1.value)
+        # print(preconverter.share0.value, preconverter.share1.value)
+        #
+        # one = deltashares.share0.value + preconverter.share0.value
+        # two = deltashares.share1.value + preconverter.share1.value
+        #
+        # print(one)
+        # print(two)
+
+        # print(beta_wrap.value_on_0.value)
+        # print(alpha.value_on_0.value)
+
+        converter = preconverter + deltashares + beta_wrap
 
         converter = converter + self.to_odd_modulus(alpha)
+
+        # print(x.share0.value)
+        # print(x.share1.value)
 
         return self.to_odd_modulus(x) - converter
 
@@ -196,14 +225,23 @@ class SecureNN(Pond):
     def dmax_pool_efficient(self, x):
         raise NotImplementedError
 
-    def to_odd_modulus(self, x: PondPrivateTensor):
-        with tf.device(self.server_0.device_name):
-            share0 = x.share0.to_odd_modulus()
+    def to_odd_modulus(self, x: PondTensor):
+        if isinstance(x, PondPrivateTensor):
+            with tf.device(self.server_0.device_name):
+                share0 = x.share0.to_odd_modulus()
 
-        with tf.device(self.server_1.device_name):
-            share1 = x.share1.to_odd_modulus()
+            with tf.device(self.server_1.device_name):
+                share1 = x.share1.to_odd_modulus()
 
-        return PondPrivateTensor(self, share0, share1, is_scaled=False)
+            return PondPrivateTensor(self, share0, share1, is_scaled=False)
+        elif isinstance(x, PondPublicTensor):
+            with tf.device(self.server_0.device_name):
+                share0 = x.value_on_0.to_odd_modulus()
+
+            with tf.device(self.server_1.device_name):
+                share1 = x.value_on_1.to_odd_modulus()
+
+            return PondPublicTensor(self, share0, share1, is_scaled=False)
 
 
 def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
@@ -228,7 +266,8 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
         rbits = PondPublicTensor(prot, rbits0, rbits1, is_scaled=False)
         rlsb = rbits[..., 0]
 
-        bp = prot.private_compare(xbits, r, b)
+        # bp = prot.private_compare(xbits, r, b)
+        bp = prot.private_compare(x, r, b)
 
         gamma = prot.bitwise_xor(bp, b)
         delta = prot.bitwise_xor(xlsb, rlsb)

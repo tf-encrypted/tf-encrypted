@@ -854,7 +854,7 @@ class PondTensor(abc.ABC):
     def matmul(self, other):
         return self.dot(self, other)
 
-    def indexer(self, slice):
+    def __getitem__(self, slice):
         return self.prot.indexer(self, slice)
 
     def tranpose(self):
@@ -906,9 +906,6 @@ class PondPublicTensor(PondTensor):
     def eval(self, sess, feed_dict={}, tag=None) -> np.ndarray:
         value = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
         return self.prot._decode(value, self.is_scaled)
-
-    def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'PondTensor':
-        return self.prot.indexer(self, slice)
 
 
 class PondPrivateTensor(PondTensor):
@@ -2201,6 +2198,8 @@ def _indexer_private(prot: Pond,
 def _indexer_masked(prot: Pond,
                     tensor: PondMaskedTensor,
                     slice: Union[Slice, Ellipse]) -> 'PondMaskedTensor':
+    with tf.device(prot.crypto_producer.device_name):
+        a = tensor.a[slice]
     with tf.device(prot.server_0.device_name):
         a0 = tensor.a0[slice]
         alph0 = tensor.alpha_on_0[slice]
@@ -2209,7 +2208,7 @@ def _indexer_masked(prot: Pond,
         alph1 = tensor.alpha_on_1[slice]
     return PondMaskedTensor(prot,
                             tensor.unmasked[slice],
-                            tensor.a[slice],
+                            a,
                             a0,
                             a1,
                             alph0,
