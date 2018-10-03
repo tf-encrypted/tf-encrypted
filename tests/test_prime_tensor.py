@@ -75,6 +75,26 @@ class TestPrimeTensor(unittest.TestCase):
 
             np.testing.assert_array_equal(z2, np.array([65534, 65535]))
 
+    def test_binarize(self) -> None:
+        p = 1001
+        x = PrimeTensor(tf.constant([
+            3,  # == 3
+            -1,  # == p-1 == max
+            0  # min
+        ], shape=[3], dtype=np.int32), modulus=p)
+
+        y = x.to_bits()
+
+        expected = np.array([
+            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 1, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ]).reshape([3, 10])
+
+        with tf.Session() as sess:
+            actual = sess.run(y.value)
+
+        np.testing.assert_array_equal(actual, expected)
 
 if __name__ == '__main__':
     unittest.main()
