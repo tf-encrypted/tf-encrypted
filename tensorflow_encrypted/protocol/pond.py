@@ -16,9 +16,9 @@ from ..tensor.helpers import (
 
 from ..tensor.factory import AbstractFactory
 from ..tensor.int100 import Int100Factory
-from ..tensor.int32 import Int32Tensor, Int32Factory
-from ..tensor.prime import PrimeTensor, prime_factory
-from ..tensor.tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
+from ..tensor.int32 import Int32Tensor
+from ..tensor.prime import PrimeTensor
+from ..tensor.tensor import AbstractTensor, AbstractVariable, AbstractPlaceholder
 
 from ..io import InputProvider, OutputReceiver
 from ..player import Player
@@ -74,11 +74,6 @@ class Pond(Protocol):
             assert gcd(self.K, self.M) == 1
 
     def factory_from_type(self, type: str) -> AbstractFactory:
-        if type == 'prime':
-            return prime_factory(37)
-        elif type == 'int32':
-            return Int32Factory()
-
         return self.tensor_factory
 
     def define_constant(self, value: np.ndarray, apply_scaling: bool = True, name: Optional[str] = None, factory=None) -> 'PondConstant':
@@ -553,7 +548,6 @@ class Pond(Protocol):
 
         raise TypeError("Don't know how to reshape {}".format(type(x)))
 
-
     @memoize
     def expand_dims(self, x: 'PondTensor', axis=None):
 
@@ -1016,8 +1010,8 @@ class PondPrivateTensor(PondTensor):
     def type(self) -> str:
         if isinstance(self.share0, PrimeTensor):
             return 'prime'
-        elif isinstance(self.share0, Int32Tensor):
-            return 'int32'
+        elif isinstance(self.share0, AbstractTensor):
+            return 'abstract'
         else:
             raise Exception('Invalid tensor backing')
 
@@ -1698,6 +1692,7 @@ def _equal_public_public(prot, x, y):
 # gather helpers
 #
 
+
 def _gather_nd_public_public(prot, params, indices, validate_indices=None, name=None, axis=0):
     with tf.name_scope('gather_nd'):
         p_on_0, p_on_1 = indices.unwrapped
@@ -1708,7 +1703,6 @@ def _gather_nd_public_public(prot, params, indices, validate_indices=None, name=
 
         with tf.device(prot.server_1.device_name):
             z_on_1 = tf.gather_nd(p_on_1.value, i_on_1.value)
-
 
         print('hrmmm', z_on_0, z_on_1)
         return PondPrivateTensor(prot, Int32Tensor(z_on_0), Int32Tensor(z_on_1), params.is_scaled)

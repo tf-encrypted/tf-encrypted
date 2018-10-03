@@ -7,7 +7,7 @@ import random
 
 from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
 from tensorflow_encrypted.protocol.pond import PondPrivateTensor, PondPublicTensor
-from tensorflow_encrypted.tensor.prime import prime_factory, PrimeTensor
+from tensorflow_encrypted.tensor.prime import prime_factory
 
 bits = 32
 Q = 2 ** bits
@@ -69,8 +69,10 @@ class TestPrivateCompare(unittest.TestCase):
             i_0, i_1 = prot._share(input, factory=prot.alt_factory)
 
             input = PondPrivateTensor(prot, share0=i_0, share1=i_1, is_scaled=False)
-            rho = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(rho, dtype=tf.int32)), value_on_1=Int32Tensor(tf.constant(rho, dtype=tf.int32)), is_scaled=False)
-            beta = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(beta, dtype=tf.int32)), value_on_1=Int32Tensor(tf.constant(beta, dtype=tf.int32)), is_scaled=False)
+            rho = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(rho, dtype=tf.int32)),
+                                   value_on_1=Int32Tensor(tf.constant(rho, dtype=tf.int32)), is_scaled=False)
+            beta = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(beta, dtype=tf.int32)),
+                                    value_on_1=Int32Tensor(tf.constant(beta, dtype=tf.int32)), is_scaled=False)
 
             #
             # i = tf.placeholder(tf.int32)

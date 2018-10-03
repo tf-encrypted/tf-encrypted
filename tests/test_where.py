@@ -4,9 +4,8 @@ import tensorflow as tf
 import tensorflow_encrypted as tfe
 import numpy as np
 
-from tensorflow_encrypted.protocol.pond import PondPrivateTensor, PondPublicTensor
+from tensorflow_encrypted.protocol.pond import PondPublicTensor
 from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
-from tensorflow_encrypted.tensor.prime import prime_factory
 
 
 class TestPondPublicEqual(unittest.TestCase):

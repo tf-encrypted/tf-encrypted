@@ -11,8 +11,7 @@ from ..tensor.prime import prime_factory
 from ..tensor.factory import AbstractFactory
 from ..player import Player
 from ..config import get_default_config
-from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
-import numpy as np
+from tensorflow_encrypted.tensor.int32 import Int32Tensor
 bits = 32
 
 _thismodule = sys.modules[__name__]
@@ -106,6 +105,12 @@ class SecureNN(Pond):
     def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
         return x + bit * (y - x)
 
+    def factory_from_type(self, type: str) -> AbstractFactory:
+        if type == 'prime':
+            return self.alt_factory
+
+        return self.tensor_factory
+
     def _private_compare_beta0(self, input: PondPrivateTensor, rho: PondPublicTensor):
 
         w = self.bitwise_xor(input, rho)
@@ -113,7 +118,7 @@ class SecureNN(Pond):
         with tf.device(self.server_0.device_name):
             w0_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
             for i in range(bits - 1, -1, -1):
-                sum = self.sum(w[:, i+1:], axis=1)
+                sum = self.sum(w[:, i + 1:], axis=1)
                 indices = []
 
                 for j in range(0, w.shape.as_list()[0]):
@@ -126,7 +131,7 @@ class SecureNN(Pond):
         with tf.device(self.server_1.device_name):
             w1_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
             for i in range(bits - 1, -1, -1):
-                sum = self.sum(w[:, i+1:], axis=1)
+                sum = self.sum(w[:, i + 1:], axis=1)
                 indices = []
 
                 for j in range(0, w.shape.as_list()[0]):
@@ -148,7 +153,7 @@ class SecureNN(Pond):
         with tf.device(self.server_0.device_name):
             w0_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
             for i in range(bits - 1, -1, -1):
-                sum = self.sum(w[:, i+1:], axis=1)
+                sum = self.sum(w[:, i + 1:], axis=1)
                 indices = []
 
                 for j in range(0, w.shape.as_list()[0]):
@@ -161,7 +166,7 @@ class SecureNN(Pond):
         with tf.device(self.server_1.device_name):
             w1_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
             for i in range(bits - 1, -1, -1):
-                sum = self.sum(w[:, i+1:], axis=1)
+                sum = self.sum(w[:, i + 1:], axis=1)
                 indices = []
 
                 for j in range(0, w.shape.as_list()[0]):
