@@ -39,9 +39,9 @@ else:
         def receive_output(self, prediction):
             return tf.Print([], [prediction], summarize=4)
 
-    weights_input = WeightsInputProvider(config.get_player('model-provider'))
-    prediction_input = PredictionInputProvider(config.get_player('input-provider'))
-    prediction_output = PredictionOutputReceiver(config.get_player('input-provider'))
+    weights_input = WeightsInputProvider('model-provider')
+    prediction_input = PredictionInputProvider('input-provider')
+    prediction_output = PredictionOutputReceiver('input-provider')
 
     with tfe.protocol.Pond() as prot:
 
