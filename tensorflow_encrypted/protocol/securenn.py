@@ -158,8 +158,8 @@ class SecureNN(Pond):
 
             masked = x + pvt_sharemask
 
-        alpha_wrap_t = PrimeTensor(-alpha_wrap.value - 1, p)
-        zero = PrimeTensor(np.zeros(alpha_wrap.shape, dtype=np.int32), p)
+        alpha_wrap_t = Int32Tensor(-alpha_wrap.value - 1)
+        zero = Int32Tensor(np.zeros(alpha_wrap.shape, dtype=np.int32))
         alpha = PondPublicTensor(self, alpha_wrap_t, zero, is_scaled=False)
 
         # P0, P1
@@ -178,17 +178,14 @@ class SecureNN(Pond):
 
             xbits = x_pub_masked.value_on_0  # .to_bits()
 
-        deltashare0, deltashare1 = self._share(delta_wrap)
-        bitshare0, bitshare1 = self._share(xbits)
+            deltashare0, deltashare1 = self._share(delta_wrap)
+            bitshare0, bitshare1 = self._share(xbits)
 
         bitshares = PondPrivateTensor(self, bitshare0, bitshare1, is_scaled=False)
         deltashares = PondPrivateTensor(self, deltashare0, deltashare1, is_scaled=False)
 
         with tf.device(self.server_0.device_name):
             compared = self.private_compare(bitshares, pvt_sharemask.reveal() - 1, bitmask)
-
-        with tf.device(self.server_1.device_name):
-            compared.share1.value = tf.identity(compared.share1.value)
 
         # P0, P1
         print(bitmask.value_on_0.value)
