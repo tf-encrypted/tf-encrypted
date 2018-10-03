@@ -17,7 +17,7 @@ __TENSORBOARD_DIR__ = str(os.getenv('TFE_STATS_DIR', '/tmp/tensorboard'))
 _run_counter = defaultdict(int)  # type: Any
 
 
-class Session():
+class Session(tf.Session):
     """
     Wrap a Tensorflow Session
     """
@@ -34,41 +34,27 @@ class Session():
 
         if isinstance(config, RemoteConfig):
             print("Starting session on target '{}' using config {}".format(target, configProto))
-        self.sess = tf.Session(target, graph, configProto)
+        super(Session, self).__init__(target, graph, configProto)
+        # self.sess = tf.Session(target, graph, configProto)
 
         global __TFE_DEBUG__
         if __TFE_DEBUG__:
             print('Session in debug mode')
-            self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
-
-    def __enter__(self) -> 'Session':
-        self.sess = self.sess.__enter__()
-        return self
-
-    def __exit__(self, exec_type, exec_value, exec_tb):
-        self.sess.__exit__(exec_type, exec_value, exec_tb)
+            self = tf_debug.LocalCLIDebugWrapperSession(self)
 
     def sanitize_fetches(self, fetches: Any) -> Union[List[Any], tf.Tensor, tf.Operation]:
         if not isinstance(fetches, Iterable) or isinstance(fetches, tf.Tensor):
             if not isinstance(fetches, tf.Tensor) and not isinstance(fetches, tf.Operation):
+                # decoder = fetches
+                # to_decode = fetches.value_on_0.from_decomposed(fetches.value_on_0.backing)
+                # return decoder.prot._decode(to_decode, decoder.is_scaled)
                 return fetches.value_on_0.backing
             else:
                 return fetches
 
         sanitized_fetches: List[Any] = []
         for idx, fetch in enumerate(fetches):
-            if isinstance(fetch, Iterable) and not isinstance(fetch, tf.Tensor):
-                sanitized_fetches.append([])
-                for sub_idx, sub_fetch in enumerate(fetch):
-                    if not isinstance(sub_fetch, tf.Tensor) and not isinstance(sub_fetch, tf.Operation):
-                        sanitized_fetches[idx].append(sub_fetch.value_on_0.backing)
-                    else:
-                        sanitized_fetches[idx].append(sub_fetch)
-            else:
-                if not isinstance(fetch, tf.Tensor) and not isinstance(fetch, tf.Operation):
-                    sanitized_fetches.append(fetch.value_on_0.backing)
-                else:
-                    sanitized_fetches.append(fetch)
+            sanitized_fetches.append(self.sanitize_fetches(fetch))
 
         return sanitized_fetches
 
@@ -82,17 +68,7 @@ class Session():
                 return fetches_out
 
         for idx, fetch in enumerate(fetches):
-            if isinstance(fetch, Iterable) and not isinstance(fetch, tf.Tensor):
-                for sub_idx, sub_fetch in enumerate(fetch):
-                    if not isinstance(sub_fetch, tf.Tensor) and not isinstance(sub_fetch, tf.Operation):
-                        decoder = fetches[idx][sub_idx]
-                        to_decode = decoder.value_on_0.from_decomposed(fetches_out[idx][sub_idx])
-                        fetches_out[idx][sub_idx] = decoder.prot._decode(to_decode, decoder.is_scaled)
-            else:
-                if not isinstance(fetch, tf.Tensor) and not isinstance(fetch, tf.Operation):
-                    decoder = fetches[idx]
-                    to_decode = decoder.value_on_0.from_decomposed(fetches_out[idx])
-                    fetches_out[idx] = decoder.prot._decode(to_decode, decoder.is_scaled)
+            fetches_out[idx] = self.decode_fetches(fetch, fetches_out[idx])
 
         return fetches_out
 
@@ -107,7 +83,7 @@ class Session():
         sanitized_fetches = self.sanitize_fetches(fetches)
 
         if not __TFE_STATS__ or tag is None:
-            fetches_out = self.sess.run(
+            fetches_out = super(Session, self).run(
                 sanitized_fetches,
                 feed_dict=feed_dict
             )
@@ -116,11 +92,11 @@ class Session():
             run_tag = os.path.join(__TENSORBOARD_DIR__, session_tag)
             _run_counter[tag] += 1
 
-            writer = tf.summary.FileWriter(run_tag, self.sess.graph)
+            writer = tf.summary.FileWriter(run_tag, self.graph)
             run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
             run_metadata = tf.RunMetadata()
 
-            fetches_out = self.sess.run(
+            fetches_out = super(Session, self).run(
                 sanitized_fetches,
                 feed_dict=feed_dict,
                 options=run_options,
@@ -135,6 +111,7 @@ class Session():
                 with open('{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag), 'w') as f:
                     f.write(chrome_trace)
 
+        # return fetches_out
         return self.decode_fetches(fetches, fetches_out)
 
 
