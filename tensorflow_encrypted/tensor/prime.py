@@ -18,7 +18,7 @@ class PrimeTensor(AbstractTensor):
     int_type = INT_TYPE
 
     def __init__(self, value: Union[np.ndarray, tf.Tensor], modulus: int) -> None:
-        self.value = value
+        self.value = value % modulus
         self.modulus = modulus
 
     @staticmethod
@@ -129,6 +129,9 @@ class PrimeTensor(AbstractTensor):
     def expand_dims(self, axis: int) -> 'PrimeTensor':
         expanded = tf.expand_dims(self.value, axis)
         return PrimeTensor(expanded, self.modulus)
+
+    def sum(self, axis, keepdims) -> 'PrimeTensor':
+        return PrimeTensor(tf.reduce_sum(self.value, axis, keepdims), self.modulus)
 
 
 def _lift(x: Union['PrimeTensor', int], modulus: int) -> 'PrimeTensor':

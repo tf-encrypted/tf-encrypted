@@ -136,7 +136,7 @@ class SecureNN(Pond):
 
             w1_sum = w1_sum + tf.sparse_tensor_to_dense(update_1)
 
-        w_sum = PondPrivateTensor(self, Int32Tensor(w0_sum), Int32Tensor(w1_sum), w.is_scaled)
+        w_sum = PondPrivateTensor(self, self.alt_factory.Tensor.from_native(w0_sum), self.alt_factory.Tensor.from_native(w1_sum), w.is_scaled)
 
         c = rho - input + 1 + w_sum
         return c
@@ -171,7 +171,7 @@ class SecureNN(Pond):
 
             w1_sum = w1_sum + tf.sparse_tensor_to_dense(update_1)
 
-        w_sum = PondPrivateTensor(self, Int32Tensor(w0_sum), Int32Tensor(w1_sum), w.is_scaled)
+        w_sum = PondPrivateTensor(self, self.alt_factory.Tensor.from_native(w0_sum), self.alt_factory.Tensor.from_native(w1_sum), w.is_scaled)
 
         c = input - theta + 1 + w_sum
         return c
@@ -185,7 +185,12 @@ class SecureNN(Pond):
 
         return c0
 
-    def private_compare(self, input: PondPrivateTensor, rho: PondPublicTensor, theta: PondPublicTensor, beta: PondPublicTensor):
+    def private_compare(self, input: PondPrivateTensor, rho: PondPublicTensor, beta: PondPublicTensor):
+        theta = rho + 1
+
+        rho = rho.to_bits()
+        theta = theta.to_bits()
+
         with tf.name_scope('private_compare'):
             beta = beta.reshape([beta.shape.as_list()[0], 1])
             beta = beta.broadcast([beta.shape.as_list()[0], 32])
@@ -225,7 +230,7 @@ class SecureNN(Pond):
                 delta1 = tf.SparseTensor(ones.value_on_0.value, pc_1.share0.value, input.shape)
 
                 c0 = c0 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
-                c0 = Int32Tensor(c0)
+                c0 = self.alt_factory.Tensor.from_native(c0)
 
             with tf.device(self.server_0.device_name):
                 c1 = tf.zeros(shape=input.shape, dtype=tf.int32)
@@ -234,7 +239,7 @@ class SecureNN(Pond):
                 delta1 = tf.SparseTensor(ones.value_on_1.value, pc_1.share1.value, input.shape)
 
                 c1 = c1 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
-                c1 = Int32Tensor(c1)
+                c1 = self.alt_factory.Tensor.from_native(c1)
 
             with tf.device(self.crypto_producer.device_name):
                 answer = PondPrivateTensor(self, share0=c0, share1=c1, is_scaled=input.is_scaled).reveal()

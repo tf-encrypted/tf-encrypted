@@ -16,7 +16,8 @@ from ..tensor.helpers import (
 
 from ..tensor.factory import AbstractFactory
 from ..tensor.int100 import Int100Factory
-from ..tensor.int32 import Int32Tensor
+from ..tensor.int32 import Int32Tensor, Int32Factory
+from ..tensor.prime import PrimeTensor, prime_factory
 from ..tensor.tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 
 from ..io import InputProvider, OutputReceiver
@@ -72,18 +73,29 @@ class Pond(Protocol):
             assert log2(self.M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
             assert gcd(self.K, self.M) == 1
 
-    def define_constant(self, value: np.ndarray, apply_scaling: bool = True, name: Optional[str] = None) -> 'PondConstant':
+    def factory_from_type(self, type: str) -> AbstractFactory:
+        if type == 'prime':
+            return prime_factory(37)
+        elif type == 'int32':
+            return Int32Factory()
+
+        return self.tensor_factory
+
+    def define_constant(self, value: np.ndarray, apply_scaling: bool = True, name: Optional[str] = None, factory=None) -> 'PondConstant':
         assert isinstance(value, (np.ndarray,)), type(value)
 
-        v = self._encode(value, apply_scaling)
+        if factory is None:
+            factory = self.tensor_factory
+
+        v = self._encode(value, apply_scaling, factory)
 
         with tf.name_scope('constant{}'.format('-' + name if name else '')):
 
             with tf.device(self.server_0.device_name):
-                x_on_0 = self.tensor_factory.Constant.from_same(v)
+                x_on_0 = factory.Constant.from_same(v)
 
             with tf.device(self.server_1.device_name):
-                x_on_1 = self.tensor_factory.Constant.from_same(v)
+                x_on_1 = factory.Constant.from_same(v)
 
         return PondConstant(self, x_on_0, x_on_1, apply_scaling)
 
@@ -302,8 +314,11 @@ class Pond(Protocol):
     def clear_initializers(self) -> None:
         del _initializers[:]
 
-    def _encode(self, rationals, apply_scaling) -> AbstractTensor:
+    def _encode(self, rationals, apply_scaling, factory: AbstractFactory = None) -> AbstractTensor:
         """ Encode tensor of rational numbers into tensor of ring elements """
+
+        if factory is None:
+            factory = self.tensor_factory
 
         with tf.name_scope('encode'):
             scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
@@ -317,7 +332,7 @@ class Pond(Protocol):
             else:
                 raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
-        return self.tensor_factory.Tensor.from_native(scaled)
+        return factory.Tensor.from_native(scaled)
 
     def _decode(self, elements: AbstractTensor, is_scaled: bool) -> Union[tf.Tensor, np.ndarray]:
         """ Decode tensor of ring elements into tensor of rational numbers """
@@ -398,9 +413,9 @@ class Pond(Protocol):
                 raise TypeError("Don't know how to lift {}, {}".format(type(x), type(y)))
 
             if isinstance(x, PondTensor):
-
                 if isinstance(y, (int, float)):
-                    y = self.define_constant(np.array([y]), apply_scaling=x.is_scaled)
+                    factory = self.factory_from_type(x.type)
+                    y = self.define_constant(np.array([y]), apply_scaling=x.is_scaled, factory=factory)
                     return x, y
 
                 if isinstance(y, PondTensor):
@@ -939,6 +954,15 @@ class PondPublicTensor(PondTensor):
         return 'PondPublicTensor(shape={})'.format(self.shape)
 
     @property
+    def type(self) -> str:
+        if isinstance(self.value_on_0, PrimeTensor):
+            return 'prime'
+        elif isinstance(self.value_on_0, Int32Tensor):
+            return 'int32'
+        else:
+            raise Exception('Invalid tensor backing')
+
+    @property
     def shape(self) -> List[int]:
         return self.value_on_0.shape
 
@@ -952,6 +976,18 @@ class PondPublicTensor(PondTensor):
 
     def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'PondTensor':
         return self.prot.indexer(self, slice)
+
+    def to_bits(self) -> 'PondTensor':
+        value_on_0, value_on_1 = self.unwrapped
+
+        assert isinstance(value_on_0, Int32Tensor), type(value_on_0)
+        with tf.device(self.prot.server_0.device_name):
+            bits_0 = value_on_0.to_bits()
+
+        with tf.device(self.prot.server_1.device_name):
+            bits_1 = value_on_1.to_bits()
+
+        return PondPublicTensor(self.prot, bits_0, bits_1, self.is_scaled)
 
 
 class PondPrivateTensor(PondTensor):
@@ -976,6 +1012,15 @@ class PondPrivateTensor(PondTensor):
         self.share0 = share0
         self.share1 = share1
 
+    @property
+    def type(self) -> str:
+        if isinstance(self.share0, PrimeTensor):
+            return 'prime'
+        elif isinstance(self.share0, Int32Tensor):
+            return 'int32'
+        else:
+            raise Exception('Invalid tensor backing')
+
     def __repr__(self) -> str:
         return 'PondPrivateTensor(shape={})'.format(self.shape)
 
@@ -987,7 +1032,6 @@ class PondPrivateTensor(PondTensor):
             slice_1 = self.share1[slice]
 
         return PondPrivateTensor(self.prot, slice_0, slice_1, self.is_scaled)
-
 
     @property
     def shape(self) -> List[int]:

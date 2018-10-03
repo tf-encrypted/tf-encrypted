@@ -7,7 +7,7 @@ import random
 
 from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
 from tensorflow_encrypted.protocol.pond import PondPrivateTensor, PondPublicTensor
-from tensorflow_encrypted.tensor.prime import prime_factory
+from tensorflow_encrypted.tensor.prime import prime_factory, PrimeTensor
 
 bits = 32
 Q = 2 ** bits
@@ -19,7 +19,7 @@ def binarize(tensor):
      tensor: ndarray of shape (x0, ..., xn)
     returns: a binary tensor of shape (x0, ..., xn, bits) equivalent to tensor
     """
-    bitwidths = np.arange(bits, dtype=np.int64)
+    bitwidths = np.arange(bits, dtype=np.int32)
     for i in range(len(tensor.shape)):
         bitwidths = np.expand_dims(bitwidths, 0)
     tensor = np.expand_dims(tensor, -1)
@@ -38,7 +38,7 @@ def sample_random_tensor(shape, modulus=Q):
 
 def share(secrets, modulus=Q):
     shares0 = sample_random_tensor(secrets.shape, modulus)
-    shares1 = (secrets - shares0) % modulus
+    shares1 = (secrets - shares0)  # % modulus
     return shares0, shares1
 
 
@@ -56,26 +56,20 @@ class TestPrivateCompare(unittest.TestCase):
         rho = np.array([1, 7, 7, 4, 1, 2, 0, 99]).astype(np.int32)
         beta = np.array([0, 1, 0, 1, 0, 1, 0, 0]).astype(np.int32)
 
-        print('INPUTS')
-        print('x:   ', input)
-        print('rho: ', rho)
-        print('beta:', beta)
-
-        with tfe.protocol.SecureNN(tensor_factory=prime_factory(67), use_noninteractive_truncation=True, verify_precision=False, *config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.SecureNN(tensor_factory=Int32Factory(), alt_factory=prime_factory(37), use_noninteractive_truncation=True, verify_precision=False, *config.get_players('server0, server1, crypto_producer')) as prot:
 
             # input = prot.define_private_variable(binarize(input), apply_scaling=False)
-            # rho = prot.define_public_va?riable(binarize(rho), apply_scaling=False)
+            # rho = prot.define_public_variable(binarize(rho), apply_scaling=False)
             # beta = prot.define_public_variable(binarize(beta), apply_scaling=False)
 
-            input = binarize(input)
-            theta = binarize(rho + 1)
-            rho = binarize(rho)
+            input = Int32Tensor(input).to_bits()
+            # theta = binarize(rho + 1)
+            # rho = binarize(rho)
 
-            i_0, i_1 = share(input)
+            i_0, i_1 = prot._share(input, factory=prot.alt_factory)
 
-            input = PondPrivateTensor(prot, share0=Int32Tensor(tf.constant(i_0, dtype=tf.int32)), share1=Int32Tensor(tf.constant(i_1, dtype=tf.int32)), is_scaled=False)
+            input = PondPrivateTensor(prot, share0=i_0, share1=i_1, is_scaled=False)
             rho = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(rho, dtype=tf.int32)), value_on_1=Int32Tensor(tf.constant(rho, dtype=tf.int32)), is_scaled=False)
-            theta = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(theta, dtype=tf.int32)), value_on_1=Int32Tensor(tf.constant(theta, dtype=tf.int32)), is_scaled=False)
             beta = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(beta, dtype=tf.int32)), value_on_1=Int32Tensor(tf.constant(beta, dtype=tf.int32)), is_scaled=False)
 
             #
@@ -84,13 +78,13 @@ class TestPrivateCompare(unittest.TestCase):
             # b = tf.placeholder(tf.int32)
             #
 
-            a = prot.private_compare(input, rho, theta, beta)
+            a = prot.private_compare(input, rho, beta)
 
             writer = tf.summary.FileWriter('.')
             writer.add_graph(tf.get_default_graph())
-
-            eq = prot.equal(beta, 0)
-            ones = prot.where(eq)
+            #
+            # eq = prot.equal(beta, 0)
+            # ones = prot.where(eq)
 
             # sess = tf.Session()
             with config.session() as sess:
