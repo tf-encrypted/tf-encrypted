@@ -4,7 +4,7 @@ import tensorflow_encrypted as tfe
 
 from data import gen_training_input, gen_test_input
 
-tfe.set_random_seed(1)
+tf.set_random_seed(1)
 
 # Parameters
 learning_rate = 0.01

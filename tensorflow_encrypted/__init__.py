@@ -1,5 +1,4 @@
 from __future__ import absolute_import
-import tensorflow as tf
 
 from .config import LocalConfig, RemoteConfig, get_config, set_config
 from .session import setTFEDebugFlag, setMonitorStatsFlag, Session
@@ -9,10 +8,6 @@ from . import io
 from . import protocol
 from . import layers
 from . import convert
-
-
-def set_random_seed(seed: int) -> None:
-    tf.set_random_seed(seed)
 
 
 __all__ = [
