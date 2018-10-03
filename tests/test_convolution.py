@@ -35,7 +35,7 @@ class TestConv2D(unittest.TestCase):
             conv_layer.initialize(initial_weights=filter_values)
             conv_out_pond = conv_layer.forward(conv_input)
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
 
                 sess.run(tf.global_variables_initializer())
                 # outputs

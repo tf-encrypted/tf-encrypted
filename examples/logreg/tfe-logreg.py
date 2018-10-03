@@ -14,7 +14,7 @@ training_epochs = 10
 batch_size = 100
 nb_feats = 5
 
-input_provider = tfe.get_default_config().get_player('input-provider')
+input_provider = tfe.get_config().get_player('input-provider')
 with tfe.protocol.Pond() as prot:
     assert(isinstance(prot, tfe.protocol.Pond))
 

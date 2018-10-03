@@ -28,7 +28,7 @@ class TestSelectShare(unittest.TestCase):
 
             select = prot.select_share(alice_input, bob_input, bit_input)
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 chosen = select.reveal().eval(sess)
 

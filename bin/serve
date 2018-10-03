@@ -120,7 +120,7 @@ else:
                 'shape': [int(d.size) if d.size > 0 else 1 for d in node.attr['shape'].shape.dim]
             })
 
-    sess = remote_config.session()
+    sess = remote_tfe.Session()
 
     with tfe.protocol.Pond(*remote_config.get_players('server0, server1, crypto_producer')) as prot:
         assert isinstance(prot, tfe.protocol.Pond)

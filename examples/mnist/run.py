@@ -150,7 +150,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
 
 
 target = sys.argv[2] if len(sys.argv) > 2 else None
-with config.session(target) as sess:
+with tfe.Session(target) as sess:
 
     print("Init")
     sess.run(tf.global_variables_initializer(), tag='init')

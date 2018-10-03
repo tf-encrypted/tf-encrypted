@@ -69,7 +69,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -117,7 +117,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -165,7 +165,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -213,7 +213,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -261,7 +261,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -309,7 +309,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -356,7 +356,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -404,7 +404,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -452,7 +452,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -500,7 +500,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -552,7 +552,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -600,7 +600,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -648,7 +648,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')
@@ -707,7 +707,7 @@ class TestConvert(unittest.TestCase):
 
             x = converter.convert(graph_def, input, register())
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
                 output = x.reveal().eval(sess, tag='reveal')

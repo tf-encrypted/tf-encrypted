@@ -36,7 +36,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     # send result to receiver who can finally decrypt
     result_op = prot.define_output([result], result_receiver)
 
-    with config.session() as sess:
+    with tfe.Session() as sess:
         tfe.run(sess, result_op, tag='average')
 ```
 

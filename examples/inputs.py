@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-config = tfe.get_default_config()
+config = tfe.get_config()
 
 if len(sys.argv) > 1:
 

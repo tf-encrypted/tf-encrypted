@@ -28,7 +28,7 @@ class TestMatMul(unittest.TestCase):
 
             out = prot.matmul(input_input, filter_filter)
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
 
                 out_pond = out.reveal().eval(sess)
@@ -66,7 +66,7 @@ class TestMatMul(unittest.TestCase):
 
             out = prot.matmul(input_input, filter_filter)
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
 
                 out_pond = out.reveal().eval(sess)

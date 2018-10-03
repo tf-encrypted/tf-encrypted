@@ -24,7 +24,7 @@ class TestTruncate(unittest.TestCase):
             use_noninteractive_truncation=False
         )
 
-        with config.session() as sess:
+        with tfe.Session() as sess:
 
             expected = np.array([12345.6789])
 
@@ -51,7 +51,7 @@ class TestTruncate(unittest.TestCase):
             use_noninteractive_truncation=True
         )
 
-        with config.session() as sess:
+        with tfe.Session() as sess:
 
             expected = np.array([12345.6789])
 

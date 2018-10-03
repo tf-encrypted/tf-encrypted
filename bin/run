@@ -43,7 +43,7 @@ with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer'))
     c = convert.Converter(config, prot, config.get_player('crypto_producer'))
     x = c.convert(graph_def, input, register())
 
-    with config.session() as sess:
+    with tfe.Session() as sess:
         print("initing!!!")
         tfe.run(sess, prot.initializer, tag='init')
 

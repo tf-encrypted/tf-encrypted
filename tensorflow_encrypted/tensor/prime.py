@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
 
-from ..config import TFESession
+from ..session import Session
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable
 
@@ -45,7 +45,7 @@ class PrimeTensor(AbstractTensor):
         assert all(isinstance(i, PrimeTensor) for i in x)
         return PrimeTensor.from_native(tf.concat([v.value for v in x], axis=axis), x[0].modulus)
 
-    def eval(self, sess: TFESession, feed_dict: Dict[Any, Any]={},
+    def eval(self, sess: Session, feed_dict: Dict[Any, Any]={},
              tag: Optional[str]=None) -> 'PrimeTensor':
         return PrimeTensor(sess.run(self.value, feed_dict=feed_dict, tag=tag), self.modulus)
 

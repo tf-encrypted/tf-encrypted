@@ -30,7 +30,7 @@ class Testconcat(unittest.TestCase):
 
             out = prot.concat([x, y], 0)
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 final = out.reveal().eval(sess)
 
@@ -57,7 +57,7 @@ class Testconcat(unittest.TestCase):
 
             out = prot.concat([x, y], 0)
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 final = out.unmasked.reveal().eval(sess)
 

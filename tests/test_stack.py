@@ -34,7 +34,7 @@ class TestStack(unittest.TestCase):
 
             out = prot.stack((x, y, z))
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 final = out.reveal().eval(sess)
 

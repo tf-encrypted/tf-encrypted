@@ -1,10 +1,13 @@
-from typing import Dict, List, Optional, Any, Union
 import os
+from typing import Dict, List, Optional, Any, Union
 from collections import Iterable, defaultdict
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import timeline
+from tensorflow.python import debug as tf_debug
+
+from .config import Config, RemoteConfig, get_config
 
 __TFE_STATS__ = bool(os.getenv('TFE_STATS', False))
 __TFE_TRACE__ = bool(os.getenv('TFE_TRACE', False))
@@ -14,15 +17,31 @@ __TENSORBOARD_DIR__ = str(os.getenv('TFE_STATS_DIR', '/tmp/tensorboard'))
 _run_counter = defaultdict(int)  # type: Any
 
 
-class TFESession():
+class Session():
     """
     Wrap a Tensorflow Session
     """
 
-    def __init__(self, sess: tf.Session) -> None:
-        self.sess = sess
+    def __init__(
+        self,
+        graph: Optional[tf.Graph]=None,
+        config: Optional[Config]=None
+    ) -> None:
+        if config is None:
+            config = get_config()
 
-    def __enter__(self) -> 'TFESession':
+        target, configProto = config.get_tf_config()
+
+        if isinstance(config, RemoteConfig):
+            print("Starting session on target '{}' using config {}".format(target, configProto))
+        self.sess = tf.Session(target, graph, configProto)
+
+        global __TFE_DEBUG__
+        if __TFE_DEBUG__:
+            print('Session in debug mode')
+            self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
+
+    def __enter__(self) -> 'Session':
         self.sess = self.sess.__enter__()
         return self
 

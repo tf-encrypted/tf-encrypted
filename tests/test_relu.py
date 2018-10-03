@@ -28,7 +28,7 @@ class TestRelu(unittest.TestCase):
 
             relu_out_pond = relu_layer.forward(relu_input)
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
 
                 sess.run(tf.global_variables_initializer())
                 # outputs
