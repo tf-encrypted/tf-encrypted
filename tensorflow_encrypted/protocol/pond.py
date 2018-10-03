@@ -1643,10 +1643,10 @@ def _equal_public_public(prot, x, y):
 
     with tf.name_scope('equal'):
         with tf.device(prot.server_0.device_name):
-            z_on_0 = tf.equal(x_on_0.value, y_on_0.value)
+            z_on_0 = tf.cast(tf.equal(x_on_0.value, y_on_0.value), prot.tensor_factory.Tensor.int_type)
 
         with tf.device(prot.server_1.device_name):
-            z_on_1 = tf.equal(x_on_1.value, y_on_1.value)
+            z_on_1 = tf.cast(tf.equal(x_on_1.value, y_on_1.value), prot.tensor_factory.Tensor.int_type)
 
     return PondPublicTensor(prot, prot.tensor_factory.Tensor.from_native(z_on_0), prot.tensor_factory.Tensor.from_native(z_on_1), x.is_scaled)
 
