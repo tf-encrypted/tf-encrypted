@@ -238,7 +238,12 @@ class SecureNN(Pond):
                 c1 = c1 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
                 c1 = Int32Tensor(c1)
 
-            answer = PondPrivateTensor(self, share0=c0, share1=c1, is_scaled=input.is_scaled)
+            with tf.device(self.crypto_producer.device_name):
+                answer = PondPrivateTensor(self, share0=c0, share1=c1, is_scaled=input.is_scaled).reveal()
+                reduced = tf.reduce_max(tf.cast(tf.equal(answer.value_on_0.value, 0), tf.int32), axis=-1)
+
+                answer = PondPublicTensor(self, Int32Tensor(reduced), Int32Tensor(reduced), is_scaled=answer.is_scaled)
+
             return answer
 
     def share_convert(self, x):
