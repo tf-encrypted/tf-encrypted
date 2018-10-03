@@ -1,8 +1,9 @@
 from __future__ import absolute_import
+from typing import Union, Optional, List, Dict, Any, Tuple, Type
+import math
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from ..types import Ellipse, Slice
 
 from ..config import run
@@ -18,7 +19,7 @@ class PrimeTensor(AbstractTensor):
     int_type = INT_TYPE
 
     def __init__(self, value: Union[np.ndarray, tf.Tensor], modulus: int) -> None:
-        self.value = value
+        self.value = value % modulus
         self.modulus = modulus
 
     @staticmethod
@@ -29,8 +30,8 @@ class PrimeTensor(AbstractTensor):
     def to_native(self) -> Union[np.ndarray, tf.Tensor]:
         return self.value
 
-    def to_bits(self, prime: int = 37) -> 'PrimeTensor':
-        return PrimeTensor.binarize(self, prime=prime)
+    def to_bits(self) -> 'PrimeTensor':
+        return PrimeTensor.binarize(self, prime=self.modulus)
 
     @staticmethod
     def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int) -> 'PrimeTensor':
@@ -38,7 +39,8 @@ class PrimeTensor(AbstractTensor):
 
     @staticmethod
     def sample_bounded(shape: List[int], bitlength: int) -> 'PrimeTensor':
-        raise NotImplementedError()
+        maxval = 2 ** bitlength
+        return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=maxval))
 
     @staticmethod
     def stack(x: List['PrimeTensor'], axis: int = 0) -> 'PrimeTensor':
@@ -53,7 +55,7 @@ class PrimeTensor(AbstractTensor):
     @staticmethod
     def binarize(tensor: AbstractTensor, prime: int) -> 'PrimeTensor':
         with tf.name_scope('binarize'):
-            BITS = tensor.int_type.size * 8
+            BITS = math.ceil(math.log2(prime))
             assert prime > BITS, prime
 
             final_shape = [1] * len(tensor.shape) + [BITS]
@@ -244,6 +246,10 @@ def prime_factory(modulus: int) -> Any:
                 minval = modulus - INT_TYPE.max
 
             return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=minval, maxval=maxval), modulus)
+
+        def sample_bounded(shape: Union[Tuple[int, ...], tf.TensorShape], bitlength: int) -> PrimeTensor:
+            maxval = 2 ** bitlength
+            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=maxval), modulus)
 
     class ConstantWrap(TensorWrap, AbstractConstant):
         @staticmethod
