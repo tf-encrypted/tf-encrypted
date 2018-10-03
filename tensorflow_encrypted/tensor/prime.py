@@ -32,6 +32,9 @@ class PrimeTensor(AbstractTensor):
     def sample_bounded(shape: List[int], bitlength: int) -> 'PrimeTensor':
         raise NotImplementedError()
 
+    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
+        return self.value
+
     @staticmethod
     def stack(x: List['PrimeTensor'], axis: int = 0) -> 'PrimeTensor':
         assert all(isinstance(i, PrimeTensor) for i in x)
@@ -80,7 +83,7 @@ class PrimeTensor(AbstractTensor):
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
         return PrimeTensor(x.value * y.value % self.modulus, self.modulus)
 
-    def dot(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
+    def matmul(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
         return PrimeTensor(tf.matmul(x.value, y.value) % self.modulus, self.modulus)
 

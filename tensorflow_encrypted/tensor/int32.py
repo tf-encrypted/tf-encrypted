@@ -5,7 +5,8 @@ import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .factory import AbstractFactory
-from .shared import conv2d, im2col
+from .prime import PrimeTensor
+from .shared import binarize, conv2d, im2col
 
 from ..config import run
 
@@ -34,6 +35,9 @@ class Int32Tensor(AbstractTensor):
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
+
+    def to_bits(self, prime: int = 37) -> PrimeTensor:
+        return PrimeTensor.from_native(binarize(self.value), prime)
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int32Tensor':
@@ -70,7 +74,7 @@ class Int32Tensor(AbstractTensor):
         x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value * y.value)
 
-    def dot(self, other: Any) -> 'Int32Tensor':
+    def matmul(self, other: Any) -> 'Int32Tensor':
         x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(tf.matmul(x.value, y.value))
 

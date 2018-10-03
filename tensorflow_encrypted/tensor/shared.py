@@ -1,70 +1,88 @@
 import math
-from typing import Union
+from typing import Union, Optional
 
 import tensorflow as tf
 import numpy as np
 
 from .tensor import AbstractTensor
-from .prime import PrimeTensor
 
 
-def binarize(tensor: AbstractTensor, prime: int=37) -> PrimeTensor:
+def binarize(tensor: tf.Tensor, bitsize: Optional[int]=None) -> tf.Tensor:
+
     with tf.name_scope('binarize'):
-        BITS = tensor.int_type.size * 8
-        assert prime > BITS, prime
+        bitsize = bitsize or (tensor.dtype.size * 8)
 
-        final_shape = [1] * len(tensor.shape) + [BITS]
-        bitwidths = tf.range(BITS, dtype=tensor.value.dtype)
-        bitwidths = tf.reshape(bitwidths, final_shape)
+        bit_indices_shape = [1] * len(tensor.shape) + [bitsize]
+        bit_indices = tf.range(bitsize, dtype=tensor.dtype)
+        bit_indices = tf.reshape(bit_indices, bit_indices_shape)
 
-        val = tf.expand_dims(tensor.value, -1)
-        val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
+        val = tf.expand_dims(tensor, -1)
+        val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bit_indices), 1)
 
-        return PrimeTensor.from_native(val, prime)
+        return val
 
 
-def im2col(x: Union[tf.Tensor, np.ndarray], h_filter: int, w_filter: int, padding: str,
-           strides: int) -> tf.Tensor:
+def im2col(
+    x: Union[tf.Tensor, np.ndarray],
+    h_filter: int,
+    w_filter: int,
+    padding: str,
+    strides: int
+) -> tf.Tensor:
 
     with tf.name_scope('im2col'):
+
         # we need NHWC because tf.extract_image_patches expects this
         NHWC_tensor = tf.transpose(x, [0, 2, 3, 1])
         channels = int(NHWC_tensor.shape[3])
+
         # extract patches
-        patch_tensor = tf.extract_image_patches(NHWC_tensor, ksizes=[1, h_filter, w_filter, 1],
-                                                strides=[1, strides, strides, 1],
-                                                rates=[1, 1, 1, 1],
-                                                padding=padding)
+        patch_tensor = tf.extract_image_patches(
+            NHWC_tensor,
+            ksizes=[1, h_filter, w_filter, 1],
+            strides=[1, strides, strides, 1],
+            rates=[1, 1, 1, 1],
+            padding=padding
+        )
 
         # change back to NCHW
-        patch_tensor_NCHW = tf.reshape(tf.transpose(patch_tensor, [3, 1, 2, 0]),
-                                       (h_filter, w_filter, channels, -1))
+        patch_tensor_NCHW = tf.reshape(
+            tf.transpose(patch_tensor, [3, 1, 2, 0]),
+            (h_filter, w_filter, channels, -1)
+        )
 
         # reshape to x_col
-        x_col_tensor = tf.reshape(tf.transpose(patch_tensor_NCHW, [2, 0, 1, 3]),
-                                  (channels * h_filter * w_filter, -1))
+        x_col_tensor = tf.reshape(
+            tf.transpose(patch_tensor_NCHW, [2, 0, 1, 3]),
+            (channels * h_filter * w_filter, -1)
+        )
 
         return x_col_tensor
 
 
-def conv2d(x: AbstractTensor, y: AbstractTensor, strides: int, padding: str) -> AbstractTensor:
-    assert isinstance(x, AbstractTensor), type(x)
-    assert isinstance(y, AbstractTensor), type(y)
+def conv2d(
+    x: AbstractTensor,
+    y: AbstractTensor,
+    strides: int,
+    padding: str
+) -> AbstractTensor:
 
     h_filter, w_filter, d_filters, n_filters = map(int, y.shape)
     n_x, d_x, h_x, w_x = map(int, x.shape)
-    if padding == "SAME":
+    if padding == 'SAME':
         h_out = int(math.ceil(float(h_x) / float(strides)))
         w_out = int(math.ceil(float(w_x) / float(strides)))
-    if padding == "VALID":
+    elif padding == 'VALID':
         h_out = int(math.ceil(float(h_x - h_filter + 1) / float(strides)))
         w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
+    else:
+        raise ValueError("Don't know padding method '{}'".format(padding))
 
     X_col = x.im2col(h_filter, w_filter, padding, strides)
-    W_col = y.transpose(perm=(3, 2, 0, 1)).reshape([int(n_filters), -1])
-    out = W_col.dot(X_col)
+    W_col = y.transpose([3, 2, 0, 1]).reshape([int(n_filters), -1])
+    out = W_col.matmul(X_col)
 
     out = out.reshape([n_filters, h_out, w_out, n_x])
-    out = out.transpose(perm=(3, 0, 1, 2))
+    out = out.transpose([3, 0, 1, 2])
 
     return out
