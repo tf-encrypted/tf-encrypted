@@ -429,8 +429,8 @@ class Pond(Protocol):
         return self.sum(x, axis, keepdims)
 
     @memoize
-    def gather(self, params, indices, validate_indices=None, name=None, axis=0):
-        return self.dispatch('gather', params, indices, validate_indices, name, axis)
+    def gather_nd(self, params, indices, validate_indices=None, name=None, axis=0):
+        return self.dispatch('gather_nd', params, indices, validate_indices, name, axis)
 
     @memoize
     def where(self, x):
@@ -438,12 +438,11 @@ class Pond(Protocol):
             x_on_0, x_on_1 = x.unwrapped
 
             with tf.device(self.server_0.device_name):
-                z_on_0 = tf.where(x_on_0.value)
-                print('ok', z_on_0)
+                z_on_0 = tf.cast(tf.where(x_on_0.value), tf.int32)
 
             with tf.device(self.server_1.device_name):
-                z_on_1 = tf.where(x_on_1.value)
-                print('ok', z_on_1)
+                z_on_1 = tf.cast(tf.where(x_on_1.value), tf.int32)
+
 
             return PondPublicTensor(self, self.tensor_factory.Tensor.from_native(z_on_0), self.tensor_factory.Tensor.from_native(z_on_1), x.is_scaled)
 
@@ -1656,19 +1655,33 @@ def _equal_public_public(prot, x, y):
 # gather helpers
 #
 
-
-def _gather_public_public(prot, params, indices, validate_indices=None, name=None, axis=0):
-    with tf.name_scope('gather'):
-        p_on_0, p_on_1 = params.unwrapped
+def _gather_nd_public_public(prot, params, indices, validate_indices=None, name=None, axis=0):
+    with tf.name_scope('gather_nd'):
+        p_on_0, p_on_1 = indices.unwrapped
         i_on_0, i_on_1 = indices.unwrapped
 
         with tf.device(prot.server_0.device_name):
-            z_on_0 = tf.gather(p_on_0.value, i_on_0.value, validate_indices, name, axis)
+            z_on_0 = tf.gather_nd(p_on_0.value, i_on_0.value)
 
         with tf.device(prot.server_1.device_name):
-            z_on_1 = tf.gather(p_on_1.value, i_on_1.value, validate_indices, name, axis)
+            z_on_1 = tf.gather_nd(p_on_1.value, i_on_1.value)
 
-        return PondPublicTensor(prot, prot.tensor_factory.Tensor.from_native(z_on_0), prot.tensor_factory.Tensor.from_native(z_on_1), params.is_scaled)
+
+        print('hrmmm', z_on_0, z_on_1)
+        return PondPrivateTensor(prot, Int32Tensor(z_on_0), Int32Tensor(z_on_1), params.is_scaled)
+
+
+def _gather_nd_private_public(prot, params, indices, validate_indices=None, name=None, axis=0):
+    with tf.name_scope('gather_nd'):
+        i_on_0, i_on_1 = indices.unwrapped
+
+        with tf.device(prot.server_0.device_name):
+            z_on_0 = tf.gather_nd(params.share0.value, i_on_0.value)
+
+        with tf.device(prot.server_1.device_name):
+            z_on_1 = tf.gather_nd(params.share1.value, i_on_1.value)
+
+        return PondPrivateTensor(prot, Int32Tensor(z_on_0), Int32Tensor(z_on_1), params.is_scaled)
 
 
 def _gather_private_public(prot, params, indices, validate_indices=None, name=None, axis=0):

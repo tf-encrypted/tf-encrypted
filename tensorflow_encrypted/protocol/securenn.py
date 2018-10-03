@@ -110,8 +110,8 @@ class SecureNN(Pond):
 
         # TODO -- gather not working (runtime error)
         #         not a probelm right now as the test is only using b == 0
-        # input = self.gather(input, zeros)
-        # rho = self.gather(rho, zeros)
+        input = self.gather_nd(input, zeros)
+        rho = self.gather_nd(rho, zeros)
 
         w = self.bitwise_xor(input, rho)
 
@@ -151,6 +151,9 @@ class SecureNN(Pond):
         w = self.bitwise_xor(input, theta)
 
         ## TODO -- need to gather the parts of input we will actually use based on where ones are (see todo above)
+        # input = self.gather_nd(input, zeros)
+        # rho = self.gather_nd(input, zeros)
+
 
         with tf.device(self.server_0.device_name):
             w0_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
@@ -210,51 +213,44 @@ class SecureNN(Pond):
             with tf.name_scope('find_edges'):
                 edges = self.where(self.equal(rho, 2 ** bits - 1))
 
+            # return tf.Print(zeros.value_on_1. alue, [zeros.value_on_1.value], 'ZEROS')
+            lol = self.gather_nd(input, zeros)
+            lol = lol.reshape(s)
+
+            return lol
+
+#
             # return tf.Print(zeros.value_on_1.value, [zeros.value_on_1.value], 'ONES:', summarize=1000)
 
             # with tf.name_scope('find_non_edge_ones'):
             #     ones = tf.setdiff1d(ones, edges)
 
-            # pc_0 = self._private_compare_beta0(zeros, input, rho)
-            pc_1 = self._private_compare_beta1(ones, input, theta)
+            pc_0 = self._private_compare_beta0(zeros, input, rho)
+            # pc_1 = self._private_compare_beta1(ones, input, theta)
 
             # c0_edge, c1_edge = self._private_compare_edge()
 
-            # pc_0 = pc_0.reshape([-1])
-            pc_1 = pc_1.reshape([-1])
-
-            # convert ones/zeros/edges into (4,32) of the same values so it will
-            # work with sparse tensor (e.g.)
-            #   [1, 0, 1, 0]
-            # will turn into
-            #   [[1,1,..,1], [0,0,..,0], [1,1,..,1], [0,0,..,0]]
-            # z_long = tf.ones(shape=(4, 32), dtype=tf.int32)
-            # zeros = beta.reshape([4, 1]) * PondPublicTensor(self, value_on_0=Int32Tensor(z_long), value_on_1=Int32Tensor(z_long), is_scaled=beta.is_scaled)
-            #
-            # o_long = tf.ones(shape=(4, 32), dtype=tf.int32)
-            # ones = beta.reshape([4, 1]) * PondPublicTensor(self, value_on_0=Int32Tensor(o_long), value_on_1=Int32Tensor(o_long), is_scaled=beta.is_scaled)
-
-
-            # return tf.Print(ones.value_on_1.value, [ones.value_on_1.value], 'ZEROS:', summarize=50)
+            pc_0 = pc_0.reshape([-1])
+            # pc_1 = pc_1.reshape([-1])
 
             with tf.device(self.server_0.device_name):
                 c0 = tf.zeros(shape=input.shape, dtype=tf.int32)
 
                 # return tf.Print(pc_1.share0.value, [pc_1.share0.value], 'zeros:', summarize=50)
 
-                # delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share0.value, input.shape)
-                delta1 = tf.SparseTensor(ones.value_on_0.value, pc_1.share0.value, input.shape)
+                delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share0.value, input.shape)
+                # delta1 = tf.SparseTensor(ones.value_on_0.value, pc_1.share0.value, input.shape)
 
-                c0 = c0 + tf.sparse_tensor_to_dense(delta1)  # + tf.sparse_tensor_to_dense(delta1)
+                c0 = c0 + tf.sparse_tensor_to_dense(delta0)  # + tf.sparse_tensor_to_dense(delta1)
                 c0 = Int32Tensor(c0)
 
             with tf.device(self.server_0.device_name):
                 c1 = tf.zeros(shape=input.shape, dtype=tf.int32)
 
-                # delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share1.value, input.shape)
-                delta1 = tf.SparseTensor(ones.value_on_1.value, pc_1.share1.value, input.shape)
+                delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share1.value, input.shape)
+                # delta1 = tf.SparseTensor(ones.value_on_1.value, pc_1.share1.value, input.shape)
 
-                c1 = c1 + tf.sparse_tensor_to_dense(delta1)  # + tf.sparse_tensor_to_dense(delta1)
+                c1 = c1 + tf.sparse_tensor_to_dense(delta0)  # + tf.sparse_tensor_to_dense(delta1)
                 c1 = Int32Tensor(c1)
 
             answer = PondPrivateTensor(self, share0=c0, share1=c1, is_scaled=input.is_scaled)
