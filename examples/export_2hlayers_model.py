@@ -43,7 +43,7 @@ y = tf.matmul(x, w3)
 pred_node_names = ["output"]
 pred = [tf.identity(y, name=pred_node_names[0])]
 
-sess = tfe.Session()
+sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
 constant_graph = graph_util.convert_variables_to_constants(

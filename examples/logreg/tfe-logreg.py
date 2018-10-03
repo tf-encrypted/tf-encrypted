@@ -6,9 +6,6 @@ from data import gen_training_input, gen_test_input
 
 tfe.set_random_seed(1)
 
-
-input_provider = tfe.get_default_config().get_player('input-provider')
-
 # Parameters
 learning_rate = 0.01
 training_set_size = 1000
@@ -17,20 +14,22 @@ training_epochs = 10
 batch_size = 100
 nb_feats = 5
 
+input_provider = tfe.get_default_config().get_player('input-provider')
 with tfe.protocol.Pond() as prot:
     assert(isinstance(prot, tfe.protocol.Pond))
 
     x, y = gen_training_input(training_set_size, nb_feats, batch_size)
     x_test, y_test, y_np_out = gen_test_input(test_set_size, nb_feats, batch_size)
 
-    W = prot.define_private_variable(tf.random_uniform([nb_feats, 1], -0.01, 0.01))
-    b = prot.define_private_variable(tf.zeros([1]))
     xp = prot.define_private_input(
         tfe.io.InputProvider(input_provider, lambda: gen_training_input(training_set_size, nb_feats, batch_size)[0])
     )
     yp = prot.define_private_input(
         tfe.io.InputProvider(input_provider, lambda: gen_training_input(training_set_size, nb_feats, batch_size)[1])
     )
+
+    W = prot.define_private_variable(tf.random_uniform([nb_feats, 1], -0.01, 0.01))
+    b = prot.define_private_variable(tf.zeros([1]))
 
     # Training model
     out = prot.matmul(xp, W) + b
@@ -54,7 +53,7 @@ with tfe.protocol.Pond() as prot:
     yp_test = prot.define_private_input(
         tfe.io.InputProvider(input_provider, lambda: gen_test_input(training_set_size, nb_feats, batch_size)[1])
     )
-    pred_test = prot.sigmoid(prot.dot(xp_test, W) + b)
+    pred_test = prot.sigmoid(prot.matmul(xp_test, W) + b)
 
     total_batch = training_set_size // batch_size
     with tfe.Session() as sess:

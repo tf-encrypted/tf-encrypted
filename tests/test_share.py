@@ -10,11 +10,7 @@ from tensorflow_encrypted.tensor.int100 import Int100Factory
 class TestShare(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
-        self.config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
+
         t = np.array([[1, 2, 3], [4, 5, 6]])
         int100factory = Int100Factory()
         self.prime_factory = prime_factory(67)
@@ -23,11 +19,11 @@ class TestShare(unittest.TestCase):
 
     def test_share(self):
 
-        with tfe.protocol.Pond(*self.config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond(tfe.get_default_config().get_players('server0, server1, crypto_producer')) as prot:
             shares = prot._share(self.int100tensor)
             out = prot._reconstruct(*shares)
 
-            with self.config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 final = out.eval(sess)
 
@@ -35,11 +31,11 @@ class TestShare(unittest.TestCase):
 
     def test_factory_share(self):
 
-        with tfe.protocol.Pond(*self.config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond(tfe.get_default_config().get_players('server0, server1, crypto_producer')) as prot:
             shares = prot._share(self.primetensor, factory=self.prime_factory)
             out = prot._reconstruct(*shares)
 
-            with self.config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 final = out.eval(sess)
 

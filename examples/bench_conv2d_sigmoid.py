@@ -313,7 +313,7 @@ else:
         # send output
         prediction_op = prot.define_output(y, prediction_output)
 
-        with config.session() as sess:
+        with tfe.Session(config) as sess:
             print("Initialize tensors")
             sess.run(tf.global_variables_initializer(), tag='init')
 

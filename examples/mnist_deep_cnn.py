@@ -132,7 +132,7 @@ def main(_):
         correct_prediction = tf.cast(correct_prediction, tf.float32)
         accuracy = tf.reduce_mean(correct_prediction)
 
-    with tfe.Session() as sess:
+    with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         for i in range(2000):
             batch = mnist.train.next_batch(50)

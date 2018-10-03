@@ -1,14 +1,7 @@
 import numpy as np
 import tensorflow_encrypted as tfe
-from tensorflow_encrypted.protocol import Pond
 
-config = tfe.LocalConfig([
-    'server0',
-    'server1',
-    'crypto_producer'
-])
-
-prot = Pond(*config.get_players('server0, server1, crypto_producer'))
+prot = tfe.protocol.Pond()
 
 # a = prot.define_constant(np.array([4, 3, 2, 1]).reshape(2,2))
 # b = prot.define_constant(np.array([4, 3, 2, 1]).reshape(2,2))
@@ -24,7 +17,7 @@ z = x + y
 
 w = prot.define_private_variable(np.zeros((2, 2)))
 
-with config.session() as sess:
+with tfe.Session() as sess:
     # print(c.eval(sess, tag='c'))
 
     sess.run(prot.initializer, tag='init')
