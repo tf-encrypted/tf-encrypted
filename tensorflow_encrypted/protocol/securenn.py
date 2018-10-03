@@ -6,7 +6,7 @@ from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 )
-from ..tensor.prime import prime_factory
+from ..tensor.prime import prime_factory as gen_prime_factory
 from ..tensor.factory import AbstractFactory
 from ..player import Player
 
@@ -31,7 +31,7 @@ class SecureNN(Pond):
             **kwargs
         )
         self.server_2 = server_2
-        self.prime_factory = prime_factory or prime_factory(37)  # TODO: import or choose based on factory kwarg to super.__init__()
+        self.prime_factory = prime_factory or gen_prime_factory(37)  # TODO: import or choose based on factory kwarg to super.__init__()
         self.odd_factory = odd_factory or self.tensor_factory
 
     @memoize
@@ -106,14 +106,21 @@ class SecureNN(Pond):
         # this is a placeholder;
         # it computes the functionality of private_compare in plain text
         x = x.reveal()
-        xval = self._reconstruct(x.value_on_0, x.value_on_1)
-        rval = self._reconstruct(r.value_on_0, r.value_on_1)
-        bval = tf.cast(self._reconstruct(beta.value_on_0, beta.value_on_1).value, tf.int8)
+        xval = x.value_on_0
+        rval = r.value_on_1
+        bval = tf.cast(beta.value_on_0.value, tf.int8)
         tf_res = tf.cast(xval.value > rval.value, tf.int8)
+        tf_res = tf.Print(tf_res, [xval.value, rval.value], 'x and r', summarize=10)
+        tf_res = tf.Print(tf_res, [tf_res], 'resu', summarize=10)
+        tf_res = tf.Print(tf_res, [bval], 'bval', summarize=10)
         xord = tf.bitwise.bitwise_xor(tf_res, bval)
+        xord = tf.Print(xord, [xord], 'xord', summarize=10)
         val = self.tensor_factory.Tensor.from_native(tf.cast(xord, tf.int32))
+
         share0, share1 = self._share(val)
-        return PondPrivateTensor(self, share0, share1, is_scaled=x.is_scaled)
+        shared = PondPrivateTensor(self, share0, share1, is_scaled=x.is_scaled)
+        shared.share0.value = tf.Print(shared.share0.value, [shared.reveal().value_on_0.value], 'shared res', summarize=10)
+        return shared
 
     def share_convert(self, x):
         raise NotImplementedError
@@ -167,7 +174,7 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
 
         rbits = PondPublicTensor(prot, rbits0, rbits1, is_scaled=False)
         rlsb = rbits[..., 0]
-        # bp = prot.private_compare(xbits, rbits, beta)
+        # bp = prot.private_compare(xbits, r, beta)
         bp = prot.private_compare(x, r, beta)
 
         gamma = prot.bitwise_xor(bp, beta)
