@@ -185,12 +185,11 @@ class SecureNN(Pond):
 
         return c0
 
-    def private_compare(self, input: PondPrivateTensor, rho: PondPublicTensor, beta: PondPublicTensor):
+    def private_compare(self, input: PondPrivateTensor, rho: PondPublicTensor, theta: PondPublicTensor, beta: PondPublicTensor):
         with tf.name_scope('private_compare'):
-            theta = (rho + 1)
 
-            beta = beta.reshape([4, 1])
-            beta = beta.broadcast([4, 32])
+            beta = beta.reshape([beta.shape.as_list()[0], 1])
+            beta = beta.broadcast([beta.shape.as_list()[0], 32])
 
             with tf.name_scope('find_zeros'):
                 eq = self.equal(beta, 0)
