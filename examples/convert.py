@@ -1,3 +1,4 @@
+import os
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 import tensorflow.keras as K
@@ -69,7 +70,9 @@ with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer'))
 
     prediction_op = prot.define_output(x, output)
 
-    with tfe.Session(config) as sess:
+    with tfe.Session(config=config) as sess:
         sess.run(prot.initializer, tag='init')
 
         sess.run(prediction_op, tag='prediction')
+
+os.remove(model_filename)
