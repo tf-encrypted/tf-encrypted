@@ -971,15 +971,22 @@ class PondPublicTensor(PondTensor):
     def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'PondTensor':
         return self.prot.indexer(self, slice)
 
-    def to_bits(self) -> 'PondTensor':
+    def to_bits(self, prime: int = None) -> 'PondTensor':
         value_on_0, value_on_1 = self.unwrapped
 
-        assert isinstance(value_on_0, Int32Tensor), type(value_on_0)
+        # assert isinstance(value_on_0, Int32Tensor), type(value_on_0)
         with tf.device(self.prot.server_0.device_name):
-            bits_0 = value_on_0.to_bits()
+            if isinstance(value_on_0, Int32Tensor):
+                print('this guy!!')
+                bits_0 = value_on_0.to_bits(prime)
+            else:
+                bits_0 = value_on_0.to_bits()
 
         with tf.device(self.prot.server_1.device_name):
-            bits_1 = value_on_1.to_bits()
+            if isinstance(value_on_0, Int32Tensor):
+                bits_1 = value_on_1.to_bits(prime)
+            else:
+                bits_1 = value_on_1.to_bits()
 
         return PondPublicTensor(self.prot, bits_0, bits_1, self.is_scaled)
 

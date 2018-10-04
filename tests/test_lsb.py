@@ -17,7 +17,8 @@ class TestLSB(unittest.TestCase):
         # self.M = 2 ** 15 - 1  # this one works
         self.M = 2 ** 15 + 27  # this one doesn't
         # self.M = 2 ** 31 - 3  # this one definitely doesn't
-        x = np.random.choice(self.M, (10,))
+        # x = np.random.choice(self.M, (1,))
+        x = np.array([5])
         f_bin = np.vectorize(np.binary_repr)
         f_get = np.vectorize(lambda x, ix: x[ix])
         self.expected_lsb = f_get(f_bin(x), -1).astype(np.int32)

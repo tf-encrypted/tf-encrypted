@@ -116,6 +116,19 @@ class SecureNN(Pond):
 
         w = self.bitwise_xor(input, rho)
 
+        y = w.reveal()
+        z = input.reveal()
+
+        w.share0.value = tf.Print(w.share0.value, [w.reveal().value_on_0.value], 'W after xor', summarize=50)
+        input.share0.value = tf.Print(input.share0.value, [input.reveal().value_on_0.value], 'input to xor', summarize=50)
+        #
+        # y.value_on_0.value = tf.Print(y.value_on_0.value, [y.value_on_0.value], 'W - after bitwise xor', summarize=100)
+        # z.value_on_0.value = tf.Print(z.value_on_0.value, [z.value_on_0.value], 'Z - after bitwise xor', summarize=100)
+        # rho.value_on_0.value = tf.Print(rho.value_on_0.value, [rho.value_on_0.value], 'rho - after bitwise xor', summarize=100)
+        # print(y.value_on_0.value, z.value_on_0.value, rho.value_on_0.value)
+        print(w)
+
+
         with tf.device(self.server_0.device_name):
             w0_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
             for i in range(bits - 1, -1, -1):
@@ -194,12 +207,13 @@ class SecureNN(Pond):
     def private_compare(self, input: PondPrivateTensor, rho: PondPublicTensor, beta: PondPublicTensor):
         theta = rho + 1
 
-        rho = rho.to_bits()
-        theta = theta.to_bits()
+        print('binarizing')
+        rho = rho.to_bits(self.prime_factory.modulus)
+        theta = theta.to_bits(self.prime_factory.modulus)
 
         with tf.name_scope('private_compare'):
             beta = beta.reshape([beta.shape.as_list()[0], 1])
-            beta = beta.broadcast([beta.shape.as_list()[0], 32])
+            beta = beta.broadcast([beta.shape.as_list()[0], 16])
 
             with tf.name_scope('find_zeros'):
                 eq = self.equal(beta, 0)
@@ -221,6 +235,8 @@ class SecureNN(Pond):
 
             # return tf.Print(zeros.value_on_1.value, [zeros.value_on_1.value], 'ZEROS')
 
+            print('shapes befoooorre', input, rho, theta)
+
             pc_0 = self.gather_nd(pc_0, zeros)
             pc_1 = self.gather_nd(pc_1, ones)
 
@@ -238,7 +254,7 @@ class SecureNN(Pond):
                 c0 = c0 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
                 c0 = self.prime_factory.Tensor.from_native(c0)
 
-            with tf.device(self.server_0.device_name):
+            with tf.device(self.server_1.device_name):
                 c1 = tf.zeros(shape=input.shape, dtype=tf.int32)
 
                 delta0 = tf.SparseTensor(zeros.value_on_1.value, pc_0.share1.value, input.shape)
@@ -248,10 +264,17 @@ class SecureNN(Pond):
                 c1 = self.prime_factory.Tensor.from_native(c1)
 
             with tf.device(self.crypto_producer.device_name):
+                c0.value = tf.Print(c0.value, [c0.value], 'PC-C0')
+                c1.value = tf.Print(c1.value, [c1.value], 'PC-C0')
                 answer = PondPrivateTensor(self, share0=c0, share1=c1, is_scaled=input.is_scaled).reveal()
                 reduced = tf.reduce_max(tf.cast(tf.equal(answer.value_on_0.value, 0), tf.int32), axis=-1)
 
-                answer = PondPublicTensor(self, Int32Tensor(reduced), Int32Tensor(reduced), is_scaled=answer.is_scaled)
+                r = self.tensor_factory.Tensor.from_native(reduced)
+
+                print(c0.value)
+                print(c1.value)
+
+                answer = PondPrivateTensor(self, *self._share(r, factory=self.prime_factory), is_scaled=answer.is_scaled)
 
             return answer
 
@@ -282,6 +305,9 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
             with tf.device(prot.server_2.device_name):
                 x = prot.tensor_factory.Tensor.sample_uniform(y.shape)
                 xbits = x.to_bits()
+
+                xbits.value = tf.Print(xbits.value, [xbits.value], 'X BITS!', summarize=50)
+
                 xlsb = xbits[..., 0]
 
                 x = PondPrivateTensor(prot, *prot._share(x, factory=prot.odd_factory), is_scaled=False)
@@ -308,8 +334,12 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
 
         rbits = PondPublicTensor(prot, rbits0, rbits1, is_scaled=False)
         rlsb = rbits[..., 0]
-        # bp = prot.private_compare(xbits, r, beta)
-        bp = prot.private_compare(x, r, beta)
+
+        print('backing tensor', xbits.share0)
+        xbits.share0.value = tf.Print(xbits.share0.value, [xbits.reveal().value_on_1.value], 'X BITS before PC!', summarize=50)
+        bp = prot.private_compare(xbits, r, beta)
+        print('inputs', x.share0, r, beta)
+        # bp = prot.private_compare(x, r, beta)
         # bp.share0.value = tf.Print(bp.share0.value, [bp.reveal().value_on_0.value], 'bpsh', summarize=10)
 
         gamma = prot.bitwise_xor(bp, beta)

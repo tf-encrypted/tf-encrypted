@@ -81,6 +81,7 @@ class TestPrivateCompare(unittest.TestCase):
             # b = tf.placeholder(tf.int32)
             #
 
+            print('inputs', input, rho, beta)
             a = prot.private_compare(input, rho, beta)
 
             writer = tf.summary.FileWriter('.')
@@ -92,33 +93,10 @@ class TestPrivateCompare(unittest.TestCase):
             # sess = tf.Session()
             with config.session() as sess:
                 sess.run(tf.global_variables_initializer())
-                answer = a.eval(sess)
+                answer = a.reveal().eval(sess)
                 # answer = sess.run(a)
 
                 print('answer', answer)
-
-                # sess.run(answer, feed_dict=)
-
-            # print(res)
-
-            #
-            # input = Int32Tensor(input)
-            # beta = Int32Tensor(beta)
-            # r = Int32Tensor(r)
-            #
-            # a, b, c = prot.private_compare(input, r, beta)
-            #
-            # writer = tf.summary.FileWriter('.')
-            # writer.add_graph(tf.get_default_graph())
-            #
-            # with config.session() as sess:
-            #     sess.run(tf.global_variables_initializer())
-            #     sess.run(a, feed_dict={})
-            #     # answer = a.eval(sess, feed_dict={})
-            #     print(f'answer: {answer}')
-                # chosen = compare.reveal().eval(sess)
-                #
-                # assert(np.array_equal(expected, compare))
 
 
 if __name__ == '__main__':

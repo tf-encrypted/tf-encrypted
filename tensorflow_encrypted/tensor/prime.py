@@ -59,6 +59,7 @@ class PrimeTensor(AbstractTensor):
     def binarize(tensor: AbstractTensor, prime: int) -> 'PrimeTensor':
         with tf.name_scope('binarize'):
             BITS = math.ceil(math.log2(prime))
+            print('prime/bits', prime, BITS)
             assert prime > BITS, prime
 
             final_shape = [1] * len(tensor.shape) + [BITS]
