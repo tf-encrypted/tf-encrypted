@@ -70,11 +70,13 @@ class OddImplicitTensor(AbstractTensor):
 
         z = x.value + y.value
 
+        # correct for overflow where needed
         z = z + tf.where(
             tf.logical_and(y.value > 0, x.value > tf.int32.max - y.value),
             tf.ones(z.shape, dtype=self.dtype),
             tf.zeros(z.shape, dtype=self.dtype)
         )
+
         # correct for underflow where needed
         z = z - tf.where(
             tf.logical_and(y.value < 0, x.value < tf.int32.min - y.value),
@@ -89,11 +91,13 @@ class OddImplicitTensor(AbstractTensor):
 
         z = x.value - y.value
 
+        # correct for overflow where needed
         z = z + tf.where(
             tf.logical_and(y.value < 0, x.value > tf.int32.max + y.value),
             tf.ones(z.shape, dtype=self.dtype),
             tf.zeros(z.shape, dtype=self.dtype)
         )
+
         # correct for underflow where needed
         z = z - tf.where(
             tf.logical_and(y.value > 0, x.value < tf.int32.min + y.value),
