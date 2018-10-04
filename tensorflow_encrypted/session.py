@@ -1,6 +1,6 @@
 import os
 from typing import Dict, List, Optional, Any, Union
-from collections import Iterable, defaultdict
+from collections import defaultdict
 
 import numpy as np
 import tensorflow as tf
