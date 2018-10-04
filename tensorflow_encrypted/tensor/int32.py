@@ -6,6 +6,7 @@ from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .prime import PrimeTensor
 from .factory import AbstractFactory
+from .prime import PrimeTensor
 from .shared import conv2d, im2col
 from ..types import Slice, Ellipse
 
@@ -84,7 +85,7 @@ class Int32Tensor(AbstractTensor):
         x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(x.value * y.value)
 
-    def dot(self, other: Any) -> 'Int32Tensor':
+    def matmul(self, other: Any) -> 'Int32Tensor':
         x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)
         return Int32Tensor(tf.matmul(x.value, y.value))
 

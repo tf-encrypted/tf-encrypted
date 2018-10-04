@@ -421,13 +421,13 @@ class Pond(Protocol):
             raise TypeError("Don't know how to lift {}, {}".format(type(x), type(y)))
 
     @memoize
-    def sum(self, x, axis=None, keepdims=None):
+    def reduce_sum(self, x, axis=None, keepdims=None):
         x = self.lift(x)
 
         dispatch = {
-            PondPublicTensor: _sum_public,
-            PondPrivateTensor: _sum_private,
-            PondMaskedTensor: _sum_masked
+            PondPublicTensor: _reduce_sum_public,
+            PondPrivateTensor: _reduce_sum_private,
+            PondMaskedTensor: _reduce_sum_masked
         }
         func = dispatch.get(_type(x), None)
         if func is None:
@@ -435,8 +435,8 @@ class Pond(Protocol):
 
         return func(self, x, axis, keepdims)
 
-    def reduce_sum(self, x, axis=None, keepdims=None):
-        return self.sum(x, axis, keepdims)
+    def sum(self, x, axis=None, keepdims=None):
+        return self.reduce_sum(x, axis, keepdims)
 
     @memoize
     def gather_nd(self, params, indices, validate_indices=None, name=None, axis=0):
@@ -496,11 +496,11 @@ class Pond(Protocol):
         return self.dispatch('square', x)
 
     @memoize
-    def dot(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
-        return self.dispatch('dot', x, y)
+    def matmul(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
+        return self.dispatch('matmul', x, y)
 
-    def matmul(self, x, y):
-        return self.dot(x, y)
+    def dot(self, x, y):
+        return self.matmul(x, y)
 
     @memoize
     def truncate(self, x: 'PondTensor'):
@@ -857,11 +857,11 @@ class PondTensor(abc.ABC):
     def __add__(self, other):
         return self.prot.add(self, other)
 
-    def sum(self, axis=None, keepdims=None):
-        return self.prot.sum(self, axis, keepdims)
-
     def reduce_sum(self, axis=None, keepdims=None):
-        return self.sum(self, axis, keepdims)
+        return self.prot.reduce_sum(self, axis, keepdims)
+
+    def sum(self, axis=None, keepdims=None):
+        return self.reduce_sum(axis, keepdims)
 
     def sub(self, other):
         return self.prot.sub(self, other)
@@ -884,11 +884,11 @@ class PondTensor(abc.ABC):
     def square(self):
         return self.prot.square(self)
 
-    def dot(self, other):
-        return self.prot.dot(self, other)
-
     def matmul(self, other):
-        return self.dot(self, other)
+        return self.prot.matmul(self, other)
+
+    def dot(self, other):
+        return self.matmul(other)
 
     def indexer(self, slice):
         return self.prot.indexer(self, slice)
@@ -1623,49 +1623,57 @@ def _add_masked_masked(prot, x, y):
 
 
 #
-# sum helpers
+# reduce_sum helpers
 #
 
 
-def _sum_core(prot: Pond,
-              x: PondTensor,
-              axis: Optional[int] = None,
-              keepdims: Optional[bool] = None) -> Tuple[AbstractTensor, AbstractTensor]:
+def _reduce_sum_public(
+    prot: Pond,
+    x: PondPublicTensor,
+    axis: Optional[int] = None,
+    keepdims: Optional[bool] = None
+) -> PondPublicTensor:
 
     x_on_0, x_on_1 = x.unwrapped
 
-    with tf.name_scope('sum'):
+    with tf.name_scope('reduce_sum'):
 
         with tf.device(prot.server_0.device_name):
-            y_on_0 = x_on_0.sum(axis, keepdims)
+            y_on_0 = x_on_0.reduce_sum(axis, keepdims)
 
         with tf.device(prot.server_1.device_name):
-            y_on_1 = x_on_1.sum(axis, keepdims)
+            y_on_1 = x_on_1.reduce_sum(axis, keepdims)
 
-    return y_on_0, y_on_1
-
-
-def _sum_public(prot: Pond,
-                x: PondPublicTensor,
-                axis: Optional[int] = None,
-                keepdims: Optional[bool] = None) -> PondPublicTensor:
-    y_on_0, y_on_1 = _sum_core(prot, x, axis, keepdims)
     return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
 
-def _sum_private(prot: Pond,
-                 x: PondPrivateTensor,
-                 axis: Optional[int] = None,
-                 keepdims: Optional[bool] = None) -> PondPrivateTensor:
-    y_on_0, y_on_1 = _sum_core(prot, x, axis, keepdims)
-    return PondPrivateTensor(prot, y_on_0, y_on_1, x.is_scaled)
+def _reduce_sum_private(
+    prot: Pond,
+    x: PondPrivateTensor,
+    axis: Optional[int] = None,
+    keepdims: Optional[bool] = None
+) -> PondPrivateTensor:
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope('reduce_sum'):
+
+        with tf.device(prot.server_0.device_name):
+            y0 = x0.reduce_sum(axis, keepdims)
+
+        with tf.device(prot.server_1.device_name):
+            y1 = x1.reduce_sum(axis, keepdims)
+
+    return PondPrivateTensor(prot, y0, y1, x.is_scaled)
 
 
-def _sum_masked(prot: Pond,
-                x: PondMaskedTensor,
-                axis: Optional[int] = None,
-                keepdims: Optional[bool] = None) -> PondPrivateTensor:
-    return prot.sum(x.unmasked, axis, keepdims)
+def _reduce_sum_masked(
+    prot: Pond,
+    x: PondMaskedTensor,
+    axis: Optional[int] = None,
+    keepdims: Optional[bool] = None
+) -> PondPrivateTensor:
+    return prot.reduce_sum(x.unmasked, axis, keepdims)
 
 
 #
@@ -2041,124 +2049,124 @@ def _square_masked(prot, x):
 
 
 #
-# dot helpers
+# matmul helpers
 #
 
 
-def _dot_public_public(prot, x: PondPublicTensor, y: PondPublicTensor) -> PondPublicTensor:
+def _matmul_public_public(prot, x: PondPublicTensor, y: PondPublicTensor) -> PondPublicTensor:
 
     x_on_0, x_on_1 = x.unwrapped
     y_on_0, y_on_1 = y.unwrapped
 
-    with tf.name_scope('dot'):
+    with tf.name_scope('matmul'):
 
         with tf.device(prot.server_0.device_name):
-            z_on_0 = x_on_0.dot(y_on_0)
+            z_on_0 = x_on_0.matmul(y_on_0)
 
         with tf.device(prot.server_1.device_name):
-            z_on_1 = x_on_1.dot(y_on_1)
+            z_on_1 = x_on_1.matmul(y_on_1)
 
-    z = PondPublicTensor(prot, z_on_0, z_on_1, x.is_scaled or y.is_scaled)
-    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
-    return z
+        z = PondPublicTensor(prot, z_on_0, z_on_1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
 
 
-def _dot_public_private(prot, x, y):
+def _matmul_public_private(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
 
     x_on_0, x_on_1 = x.unwrapped
     y0, y1 = y.unwrapped
 
-    with tf.name_scope('dot'):
+    with tf.name_scope('matmul'):
 
         with tf.device(prot.server_0.device_name):
-            z0 = x_on_0.dot(y0)
+            z0 = x_on_0.matmul(y0)
 
         with tf.device(prot.server_1.device_name):
-            z1 = x_on_1.dot(y1)
+            z1 = x_on_1.matmul(y1)
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
-    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
-    return z
+        z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
 
 
-def _dot_public_masked(prot, x, y):
+def _matmul_public_masked(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
-    return prot.dot(x, y.unmasked)
+    return prot.matmul(x, y.unmasked)
 
 
-def _dot_private_public(prot, x, y):
+def _matmul_private_public(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondPublicTensor), type(y)
 
     x0, x1 = x.unwrapped
     y_on_0, y_on_1 = y.unwrapped
 
-    with tf.name_scope('dot'):
+    with tf.name_scope('matmul'):
 
         with tf.device(prot.server_0.device_name):
-            z0 = x0.dot(y_on_0)
+            z0 = x0.matmul(y_on_0)
 
         with tf.device(prot.server_0.device_name):
-            z1 = x1.dot(y_on_1)
+            z1 = x1.matmul(y_on_1)
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
-    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
-    return z
+        z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
 
 
-def _dot_private_private(prot, x, y):
+def _matmul_private_private(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
-    return prot.dot(prot.mask(x), prot.mask(y))
+    return prot.matmul(prot.mask(x), prot.mask(y))
 
 
-def _dot_private_masked(prot, x, y):
+def _matmul_private_masked(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
-    return prot.dot(prot.mask(x), y)
+    return prot.matmul(prot.mask(x), y)
 
 
-def _dot_masked_public(prot, x, y):
+def _matmul_masked_public(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondPublicTensor), type(y)
-    return prot.dot(x.unmasked, y)
+    return prot.matmul(x.unmasked, y)
 
 
-def _dot_masked_private(prot, x, y):
+def _matmul_masked_private(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
-    return prot.dot(x, prot.mask(y))
+    return prot.matmul(x, prot.mask(y))
 
 
-def _dot_masked_masked(prot, x, y):
+def _matmul_masked_masked(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
     b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
 
-    with tf.name_scope('dot'):
+    with tf.name_scope('matmul'):
 
         with tf.device(prot.crypto_producer.device_name):
-            ab = a.dot(b)
+            ab = a.matmul(b)
             ab0, ab1 = prot._share(ab)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
             beta = beta_on_0
-            z0 = ab0 + a0.dot(beta) + alpha.dot(b0) + alpha.dot(beta)
+            z0 = ab0 + a0.matmul(beta) + alpha.matmul(b0) + alpha.matmul(beta)
 
         with tf.device(prot.server_1.device_name):
             alpha = alpha_on_1
             beta = beta_on_1
-            z1 = ab1 + a1.dot(beta) + alpha.dot(b1)
+            z1 = ab1 + a1.matmul(beta) + alpha.matmul(b1)
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
-    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
-    return z
+        z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
 
 
 #
@@ -2296,7 +2304,7 @@ def _avgpool2d_reshape_reduce(x: AbstractTensor,
                             pool_height,
                             W // pool_width,
                             pool_width])
-    return x_reshaped.sum(axis=3).sum(axis=4)
+    return x_reshaped.reduce_sum(axis=3).reduce_sum(axis=4)
 
 
 def _avgpool2d_im2col_reduce(x: AbstractTensor,
@@ -2315,7 +2323,7 @@ def _avgpool2d_im2col_reduce(x: AbstractTensor,
 
     x_split = x.reshape((batch * channels, 1, height, width))
     x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
-    x_cols_sum = x_cols.sum(axis=0)
+    x_cols_sum = x_cols.reduce_sum(axis=0)
     out = x_cols_sum.reshape([out_height, out_width, batch, channels]).transpose([2, 3, 0, 1])
     return out
 

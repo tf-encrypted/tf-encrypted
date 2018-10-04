@@ -74,9 +74,8 @@ class Int64Tensor(AbstractTensor):
         x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
         return Int64Tensor(x.value * y.value)
 
-    def dot(self, other: Any) -> 'Int64Tensor':
+    def matmul(self, other: Any) -> 'Int64Tensor':
         x, y = Int64Tensor.lift(self), Int64Tensor.lift(other)
-
         return Int64Tensor(tf.matmul(x.value, y.value))
 
     def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int) -> 'Int64Tensor':

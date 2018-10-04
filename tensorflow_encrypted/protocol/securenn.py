@@ -102,8 +102,8 @@ class SecureNN(Pond):
         return self.bitwise_not(self.less(x, y))
 
     @memoize
-    def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
-        return x + bit * (y - x)
+    def select_share(self, x: PondTensor, y: PondTensor, choice_bit: PondTensor) -> PondTensor:
+        return x + choice_bit * (y - x)
 
     def factory_from_type(self, type: str) -> AbstractFactory:
         if type == 'prime':
@@ -240,7 +240,7 @@ class SecureNN(Pond):
             with tf.device(self.server_0.device_name):
                 c1 = tf.zeros(shape=input.shape, dtype=tf.int32)
 
-                delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share1.value, input.shape)
+                delta0 = tf.SparseTensor(zeros.value_on_1.value, pc_0.share1.value, input.shape)
                 delta1 = tf.SparseTensor(ones.value_on_1.value, pc_1.share1.value, input.shape)
 
                 c1 = c1 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)

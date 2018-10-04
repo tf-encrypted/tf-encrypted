@@ -53,8 +53,9 @@ class TestPrivateCompare(unittest.TestCase):
         ])
 
         input = np.array([2, 8, 8, 5, 2, 5, 1, 100]).astype(np.int32)
-        rho = np.array([1, 7, 7, 4, 1, 2, 0, 99]).astype(np.int32)
-        beta = np.array([0, 1, 0, 1, 0, 1, 0, 0]).astype(np.int32)
+        rho = np.array(  [1, 7, 7, 4, 1, 2, 0, 99]).astype(np.int32)
+        beta = np.array( [0, 1, 0, 1, 0, 1, 0, 0]).astype(np.int32)
+                       # [1, 0, 1, 0, 1, 0, 1, 1]
 
         with tfe.protocol.SecureNN(tensor_factory=Int32Factory(), alt_factory=prime_factory(37), use_noninteractive_truncation=True, verify_precision=False, *config.get_players('server0, server1, crypto_producer')) as prot:
 

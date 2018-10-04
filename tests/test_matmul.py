@@ -26,14 +26,12 @@ class TestMatMul(unittest.TestCase):
             input_input = prot.define_private_variable(input)
             filter_filter = prot.define_private_variable(filter_values)
 
-            out = prot.dot(input_input, filter_filter)
-            out2 = prot.matmul(input_input, filter_filter)
+            out = prot.matmul(input_input, filter_filter)
 
             with config.session() as sess:
                 sess.run(tf.global_variables_initializer())
 
                 out_pond = out.reveal().eval(sess)
-                out_pond2 = out2.reveal().eval(sess)
 
         # reset graph
         tf.reset_default_graph()
@@ -48,7 +46,6 @@ class TestMatMul(unittest.TestCase):
             out_tensorflow = sess.run(out)
 
         np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=2)
-        np.testing.assert_array_almost_equal(out_pond2, out_tensorflow, decimal=2)
 
     def test_big_middle_matmul(self) -> None:
         config = tfe.LocalConfig([
@@ -67,7 +64,7 @@ class TestMatMul(unittest.TestCase):
             input_input = prot.define_private_variable(input)
             filter_filter = prot.define_private_variable(filter_values)
 
-            out = prot.dot(input_input, filter_filter)
+            out = prot.matmul(input_input, filter_filter)
 
             with config.session() as sess:
                 sess.run(tf.global_variables_initializer())
