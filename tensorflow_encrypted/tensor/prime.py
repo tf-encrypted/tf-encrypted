@@ -223,11 +223,12 @@ def prime_factory(modulus: int) -> Any:
 
         @staticmethod
         def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape]) -> PrimeTensor:
-            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=modulus), modulus)
+            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=modulus), modulus)
 
+        @staticmethod
         def sample_bounded(shape: Union[Tuple[int, ...], tf.TensorShape], bitlength: int) -> PrimeTensor:
             maxval = 2 ** bitlength
-            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=maxval), modulus)
+            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=maxval), modulus)
 
     class ConstantWrap(TensorWrap, AbstractConstant):
         @staticmethod

@@ -57,10 +57,11 @@ class SecureNN(Pond):
         assert not y.is_scaled, "Input is not supposed to be scaled"
         z = self.bitwise_and(x, y)
         try:
-            x.share0.value = tf.Print(x.share0.value, [x.reveal().value_on_0.value, y.reveal().value_on_0.value, (x * y).reveal().value_on_0.value], 'xyxy', summarize=5)
+            x.share0.value = tf.Print(x.share0.value, [x.reveal().value_on_0.value, y.reveal().value_on_0.value, (x * y).reveal().value_on_0.value], 'xyz', summarize=5)
         except:
             x.share0.value = tf.Print(x.share0.value, [x.reveal().value_on_0.value, y.value_on_0.value, z.reveal().value_on_0.value], 'xyz', summarize=5)
-        return x + y - 2 * z
+        print('bwxor xyz', x, y, z)
+        return x + y - self.bitwise_and(x, y) * 2
 
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
@@ -185,7 +186,9 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
         delta.share0.value = tf.Print(delta.share0.value, [delta.reveal().value_on_0.value], 'delt', summarize=10)
         alpha = prot.bitwise_xor(gamma, delta)
         alpha.share0.value = tf.Print(alpha.share0.value, [alpha.reveal().value_on_0.value], 'alph', summarize=10)
-        return alpha * 1
+        print(bp, beta, xlsb, rlsb)
+        print(gamma.share0, delta.share0, alpha.share0)
+        return alpha
 
 def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):
     return prot.lsb(x.unmasked)

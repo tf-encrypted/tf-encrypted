@@ -15,8 +15,8 @@ class TestLSB(unittest.TestCase):
             'crypto_producer'
         ])
         # self.M = 2 ** 15 - 1  # this one works
-        self.M = 2 ** 15  # this one doesn't
-        # self.M = 2 ** 31 - 1  # this one definitely doesn't
+        self.M = 2 ** 15 + 27  # this one doesn't
+        # self.M = 2 ** 31 - 3  # this one definitely doesn't
         x = np.random.choice(self.M, (10,))
         f_bin = np.vectorize(np.binary_repr)
         f_get = np.vectorize(lambda x, ix: x[ix])
