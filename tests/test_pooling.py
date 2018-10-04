@@ -64,9 +64,9 @@ class TestAveragePooling2D(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 if t_type in ['private', 'masked']:
-                    out_pond = pool_out_pond.reveal().eval(sess)
+                    out_pond = sess.run(pool_out_pond.reveal())
                 else:
-                    out_pond = pool_out_pond.eval(sess)
+                    out_pond = sess.run(pool_out_pond)
 
         # reset tf graph
         tf.reset_default_graph()

@@ -32,7 +32,7 @@ class TestRelu(unittest.TestCase):
 
                 sess.run(tf.global_variables_initializer())
                 # outputs
-                out_pond = relu_out_pond.reveal().eval(sess)
+                out_pond = sess.run(relu_out_pond.reveal())
 
             # reset graph
             tf.reset_default_graph()

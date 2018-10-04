@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Tuple
+from typing import Union, List, Any, Tuple
 
 from .tensor import AbstractTensor
 
@@ -37,10 +37,6 @@ class OddImplicitTensor(AbstractTensor):
     def concat(x: List['OddImplicitTensor'], axis: int) -> 'OddImplicitTensor':
         assert all(isinstance(i, OddImplicitTensor) for i in x)
         return OddImplicitTensor.from_native(tf.concat([v.value for v in x], axis=axis), dtype=x[0].dtype)
-
-    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
-             tag: Optional[str]=None) -> 'OddImplicitTensor':
-        return OddImplicitTensor(sess.run(self.value, feed_dict=feed_dict, tag=tag), dtype=self.dtype)
 
     def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
         return self.value[slice]

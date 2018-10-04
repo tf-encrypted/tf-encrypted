@@ -33,4 +33,4 @@ with tfe.protocol.Pond() as prot:
 
     with tfe.Session() as sess:
         sess.run(prot.initializer, tag='init')
-        print(y.reveal().eval(sess, tag='reveal'))
+        print(sess.run(y.reveal(), tag='reveal'))

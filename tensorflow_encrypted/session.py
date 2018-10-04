@@ -8,7 +8,8 @@ from tensorflow.python.client import timeline
 from tensorflow.python import debug as tf_debug
 
 from .config import Config, RemoteConfig, get_config
-# from .protocol.pond import PondPublicTensor  # TODO[Morten] can't do this because of circular import, should be fixed
+from .protocol.pond import PondPublicTensor
+from .tensor.tensor import AbstractTensor
 
 __TFE_STATS__ = bool(os.getenv('TFE_STATS', False))
 __TFE_TRACE__ = bool(os.getenv('TFE_TRACE', False))
@@ -47,15 +48,15 @@ class Session(tf.Session):
 
         if isinstance(fetches, (list, tuple)):
             return [self.sanitize_fetches(fetch) for fetch in fetches]
-
         else:
             if isinstance(fetches, (tf.Tensor, tf.Operation)):
                 return fetches
-            # elif isinstance(fetch, PondPublicTensor):
+            elif isinstance(fetches, PondPublicTensor):
+                return fetches.decode()
+            elif isinstance(fetches, AbstractTensor):
+                return fetches.to_native()
             else:
-                return fetches.prot.decode(fetches)
-            # else:
-            #     raise TypeError("Don't know how to fetch {}", type(fetches))
+                raise TypeError("Don't know how to fetch {}", type(fetches))
 
     def run(
         self,

@@ -25,9 +25,9 @@ class TestShare(unittest.TestCase):
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                final = out.eval(sess)
+                final = sess.run(out)
 
-        np.testing.assert_array_equal(final.to_native(), self.int100tensor.to_native())
+        np.testing.assert_array_equal(final, self.int100tensor.to_native())
 
     def test_factory_share(self):
 
@@ -37,9 +37,9 @@ class TestShare(unittest.TestCase):
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                final = out.eval(sess)
+                final = sess.run(out)
 
-            np.testing.assert_array_equal(final.value, self.primetensor.value)
+            np.testing.assert_array_equal(final, self.primetensor.value)
 
 
 if __name__ == '__main__':

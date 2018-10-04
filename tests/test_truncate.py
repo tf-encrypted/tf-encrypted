@@ -32,7 +32,7 @@ class TestTruncate(unittest.TestCase):
             v = prot.truncate(w)  # single precision
 
             sess.run(tf.global_variables_initializer())
-            actual = v.reveal().eval(sess, tag='foo')
+            actual = sess.run(v.reveal(), tag='foo')
 
             assert np.isclose(actual, expected).all(), actual
 
@@ -59,7 +59,7 @@ class TestTruncate(unittest.TestCase):
             v = prot.truncate(w)  # single precision
 
             sess.run(tf.global_variables_initializer())
-            actual = v.reveal().eval(sess, tag='foo')
+            actual = sess.run(v.reveal(), tag='foo')
 
             assert np.isclose(actual, expected).all(), actual
 

@@ -1,10 +1,11 @@
 from __future__ import absolute_import
+
 from functools import reduce
 import math
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Type
+from typing import Union, Optional, List, Any, Type
 
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
@@ -13,12 +14,10 @@ from .crt import (
     gen_crt_sample_uniform, gen_crt_sample_bounded
 )
 from .helpers import prod, inverse
-from ..session import Session
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 from .prime import PrimeTensor
 from .shared import binarize, conv2d
-
 
 #
 # 32 bit CRT
@@ -121,10 +120,6 @@ class Int100Tensor(AbstractTensor):
     @staticmethod
     def one() -> 'Int100Tensor':
         return Int100Tensor.from_decomposed(np.array([1]) * len(m))
-
-    def eval(self, sess: Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int100Tensor':
-        evaluated_backing = sess.run(self.backing, feed_dict=feed_dict, tag=tag)
-        return Int100Tensor.from_decomposed(evaluated_backing)
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return _crt_recombine_explicit(self.backing, 2**32)

@@ -1,10 +1,8 @@
 import unittest
 
 import time
-import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
-# from tensorflow_encrypted.protocol.pond import PondPublicTensor
 
 
 class TestPond(unittest.TestCase):
@@ -29,22 +27,19 @@ class TestPond(unittest.TestCase):
             fetches = pub_input.value_on_0.backing
 
             with tfe.Session() as sess:
-                decode_start = time.time()
+                for i in range(2):
+                    decode_start = time.time()
+                    fetches_out = sess.run(fetches)
+                    decoder = pub_input
+                    to_decode = decoder.value_on_0.from_decomposed(fetches_out)
+                    decoder.prot._decode(to_decode, decoder.is_scaled)
+                    total_decode_time = time.time() - decode_start
 
-                fetches_out = sess.run(fetches)
-                decoder = pub_input
-                to_decode = decoder.value_on_0.from_decomposed(fetches_out)
-                final_out = decoder.prot._decode(to_decode, decoder.is_scaled)
+                    decode_tf_start = time.time()
+                    sess.run(tf_tensor)
+                    total_decode_tf_time = time.time() - decode_tf_start
 
-                print("got {} in {} by decoding after fetching".format(final_out, time.time() - decode_start))
-
-                decode_tf_start = time.time()
-
-                final_out_2 = sess.run(tf_tensor)
-
-                print("got {} in {} by fetching after decoding".format(final_out_2, time.time() - decode_tf_start))
-
-        # np.testing.assert_array_equal(final.to_native(), self.int100tensor.to_native())
+                assert(abs(total_decode_time - total_decode_tf_time) < 0.01)
 
 
 if __name__ == '__main__':

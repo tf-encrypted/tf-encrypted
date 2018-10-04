@@ -74,6 +74,6 @@ with tfe.protocol.Pond() as prot:
 
         print("Optimization Finished!")
 
-        out_test = pred_test.reveal().eval(sess)
+        out_test = sess.run(pred_test.reveal())
         acc = np.mean(np.round(out_test) == y_np_out)
         print("Accuracy:", acc)

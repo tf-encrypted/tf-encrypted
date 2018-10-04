@@ -64,6 +64,7 @@ test: lint pythoncheck
 	python examples/inputs.py
 	python examples/matmul.py
 	python examples/pond-simple.py
+	python examples/federated-average/run.py 
 	python -m unittest discover
 
 lint: pythoncheck

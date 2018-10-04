@@ -48,5 +48,5 @@ with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer'))
         tfe.run(sess, prot.initializer, tag='init')
 
         print("running")
-        output = x.reveal().eval(sess, tag='prediction')
+        output = sess.run(x.reveal(), tag='prediction')
         print(output)

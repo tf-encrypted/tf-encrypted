@@ -27,7 +27,7 @@ class TestReduceSum(unittest.TestCase):
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                final = out.reveal().eval(sess)
+                final = sess.run(out.reveal())
 
         np.testing.assert_array_equal(final, actual)
 
@@ -49,7 +49,7 @@ class TestReduceSum(unittest.TestCase):
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                final = out.reveal().eval(sess)
+                final = sess.run(out.reveal())
 
         np.testing.assert_array_equal(final, actual)
 
@@ -71,7 +71,7 @@ class TestReduceSum(unittest.TestCase):
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                final = out.reveal().eval(sess)
+                final = sess.run(out.reveal())
 
         np.testing.assert_array_equal(final, actual)
 

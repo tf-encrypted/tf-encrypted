@@ -18,10 +18,10 @@ z = x + y
 w = prot.define_private_variable(np.zeros((2, 2)))
 
 with tfe.Session() as sess:
-    # print(c.eval(sess, tag='c'))
+    # print(sess.run(c, tag='c'))
 
     sess.run(prot.initializer, tag='init')
     sess.run(prot.assign(w, z), tag='assign')
     sess.run(prot.assign(w, z), tag='assign')
 
-    print(w.reveal().eval(sess, tag='reveal'))
+    print(sess.run(w.reveal(), tag='reveal'))

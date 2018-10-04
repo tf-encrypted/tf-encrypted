@@ -64,7 +64,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -104,7 +104,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -144,7 +144,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -184,7 +184,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -224,7 +224,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -264,7 +264,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
             np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -303,7 +303,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -343,7 +343,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -383,7 +383,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -423,7 +423,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -467,7 +467,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -507,7 +507,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -547,7 +547,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -598,7 +598,7 @@ class TestConvert(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
 
-                output = x.reveal().eval(sess, tag='reveal')
+                output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 

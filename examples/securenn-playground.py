@@ -13,4 +13,4 @@ with tfe.protocol.SecureNN(*config.get_players('server0, server1, crypto_produce
     z = (x * c) * y
 
     with tfe.Session() as sess:
-        print(z.eval(sess, tag='res'))
+        print(sess.run(z, tag='res'))

@@ -27,7 +27,7 @@ class TestInt100Tensor(unittest.TestCase):
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                actual = z.reveal().eval(sess)
+                actual = sess.run(z.reveal())
 
             expected = np.array([4, 4])
             np.testing.assert_array_almost_equal(actual, expected, decimal=3)

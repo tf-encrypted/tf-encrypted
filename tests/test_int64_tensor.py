@@ -27,7 +27,7 @@ class TestInt64Tensor(unittest.TestCase):
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                out = z.reveal().eval(sess)
+                out = sess.run(z.reveal())
                 np.testing.assert_array_almost_equal(out, [4, 4], decimal=3)
 
     def test_binarize(self) -> None:

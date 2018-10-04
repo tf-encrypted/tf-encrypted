@@ -26,16 +26,16 @@ p = Int100Placeholder((3, ))
 with tfe.Session() as sess:
 
     print('Constant')
-    print(c.eval(sess).to_native())
+    print(sess.run(c))
 
     print('Variable')
     sess.run(v.initializer)
-    print(v.eval(sess).to_native())
+    print(sess.run(v))
 
     print('Placeholder')
-    print(p.eval(sess, feed_dict=p.feed_from_native(np.array([5, 5, 5]))).to_native())
+    print(sess.run(p, feed_dict=p.feed_from_native(np.array([5, 5, 5]))))
 
     print('Assignment')
     w = c - p
     sess.run(v.assign_from_same(w), feed_dict=p.feed_from_native(np.array([5, 5, 5])))
-    print(v.eval(sess).to_bigint() - Int100Tensor.modulus)
+    print(sess.run(v))

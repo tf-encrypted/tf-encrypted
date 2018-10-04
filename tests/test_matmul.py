@@ -31,7 +31,7 @@ class TestMatMul(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
 
-                out_pond = out.reveal().eval(sess)
+                out_pond = sess.run(out.reveal())
 
         # reset graph
         tf.reset_default_graph()
@@ -69,7 +69,7 @@ class TestMatMul(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
 
-                out_pond = out.reveal().eval(sess)
+                out_pond = sess.run(out.reveal())
 
         # reset graph
         tf.reset_default_graph()

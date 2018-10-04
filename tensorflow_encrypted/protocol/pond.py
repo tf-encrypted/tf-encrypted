@@ -22,6 +22,7 @@ from ..player import Player
 from ..config import get_config
 from .protocol import Protocol, global_cache_updators, memoize, nodes
 
+
 TFEData = Union[np.ndarray, tf.Tensor]
 TFEVariable = Union['PondPublicVariable', 'PondPrivateVariable', tf.Variable]
 TFEPublicTensor = NewType('TFEPublicTensor', 'PondPublicTensor')
@@ -318,9 +319,6 @@ class Pond(Protocol):
         return self.tensor_factory.Tensor.from_native(scaled)
 
     @memoize
-    def decode(self, x: 'PondPublicTensor') -> Union[tf.Tensor, np.ndarray]:
-        return self._decode(x.value_on_0, x.is_scaled)
-
     def _decode(self, elements: AbstractTensor, is_scaled: bool) -> Union[tf.Tensor, np.ndarray]:
         """ Decode tensor of ring elements into tensor of rational numbers """
 
@@ -899,10 +897,8 @@ class PondPublicTensor(PondTensor):
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
         return (self.value_on_0, self.value_on_1)
 
-    # TODO[Morten] deprecated
-    def eval(self, sess, feed_dict={}, tag=None) -> np.ndarray:
-        value = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
-        return self.prot._decode(value, self.is_scaled)
+    def decode(self) -> Union[np.ndarray, tf.Tensor]:
+        return self.prot._decode(self.value_on_0, self.is_scaled)
 
 
 class PondPrivateTensor(PondTensor):
