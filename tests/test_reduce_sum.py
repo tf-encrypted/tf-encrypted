@@ -25,9 +25,9 @@ class TestReduceSum(unittest.TestCase):
             b = prot.define_private_variable(tf.constant(t))
             out = prot.reduce_sum(b)
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                final = out.reveal().eval(sess)
+                final = sess.run(out.reveal())
 
         np.testing.assert_array_equal(final, actual)
 
@@ -47,9 +47,9 @@ class TestReduceSum(unittest.TestCase):
             b = prot.define_private_variable(tf.constant(t))
             out = prot.reduce_sum(b, axis=1)
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                final = out.reveal().eval(sess)
+                final = sess.run(out.reveal())
 
         np.testing.assert_array_equal(final, actual)
 
@@ -69,9 +69,9 @@ class TestReduceSum(unittest.TestCase):
             b = prot.define_private_variable(tf.constant(t))
             out = prot.reduce_sum(b)
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                final = out.reveal().eval(sess)
+                final = sess.run(out.reveal())
 
         np.testing.assert_array_equal(final, actual)
 

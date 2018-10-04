@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
-from .config import run, LocalConfig, RemoteConfig, setTFEDebugFlag, setMonitorStatsFlag, get_default_config, Session
+from .config import LocalConfig, RemoteConfig, get_config, set_config
+from .session import setTFEDebugFlag, setMonitorStatsFlag, Session
 from .protocol import global_caches_updator
 from .player import player
 from . import io
@@ -10,12 +11,12 @@ from . import convert
 
 
 __all__ = [
-    "run",
     "LocalConfig",
     "RemoteConfig",
     "setTFEDebugFlag",
     "setMonitorStatsFlag",
-    "get_default_config",
+    "get_config",
+    "set_config",
     "Session",
     "io",
     "player",

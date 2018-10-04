@@ -2,11 +2,12 @@ import numpy as np
 import tensorflow_encrypted as tfe
 
 # use local config (for development/debugging)
-config = tfe.LocalConfig([
-    'server0',
-    'server1',
-    'crypto_producer'
-])
+# A default configuration exists if you don't want to
+# config = tfe.LocalConfig([
+#     'server0',
+#     'server1',
+#     'crypto_producer'
+# ])
 
 # use remote config
 # config = tfe.RemoteConfig([
@@ -18,7 +19,10 @@ config = tfe.LocalConfig([
 # use remote config from cluster file
 # config = tfe.RemoteConfig.from_file('cluster.json')
 
-with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+# Setting your custom configuration
+# tfe.set_config(config)
+
+with tfe.protocol.Pond() as prot:
 
     w = prot.define_private_variable(np.zeros((10, 10)))
     # x = prot.define_private_variable(np.zeros((1,100)))
@@ -27,6 +31,6 @@ with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer'))
     for _ in range(5):
         y = y.matmul(y)
 
-    with config.session() as sess:
-        tfe.run(sess, prot.initializer, tag='init')
-        print(y.reveal().eval(sess, tag='reveal'))
+    with tfe.Session() as sess:
+        sess.run(prot.initializer, tag='init')
+        print(sess.run(y.reveal(), tag='reveal'))

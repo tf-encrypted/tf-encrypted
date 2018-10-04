@@ -19,8 +19,9 @@ from ..tensor.tensor import AbstractTensor, AbstractConstant, AbstractVariable, 
 
 from ..io import InputProvider, OutputReceiver
 from ..player import Player
-from ..config import get_default_config
+from ..config import get_config
 from .protocol import Protocol, global_cache_updators, memoize, nodes
+
 
 TFEData = Union[np.ndarray, tf.Tensor]
 TFEVariable = Union['PondPublicVariable', 'PondPrivateVariable', tf.Variable]
@@ -49,9 +50,9 @@ class Pond(Protocol):
             use_noninteractive_truncation: bool = False,
             tensor_factory: AbstractFactory = Int100Factory(),
             verify_precision: bool=True) -> None:
-        self.server_0 = server_0 or get_default_config().get_player('server0')
-        self.server_1 = server_1 or get_default_config().get_player('server1')
-        self.crypto_producer = crypto_producer or get_default_config().get_player('crypto_producer')
+        self.server_0 = server_0 or get_config().get_player('server0')
+        self.server_1 = server_1 or get_config().get_player('server1')
+        self.crypto_producer = crypto_producer or get_config().get_player('crypto_producer')
         self.use_noninteractive_truncation = use_noninteractive_truncation
         self.tensor_factory = tensor_factory
 
@@ -317,6 +318,7 @@ class Pond(Protocol):
 
         return self.tensor_factory.Tensor.from_native(scaled)
 
+    @memoize
     def _decode(self, elements: AbstractTensor, is_scaled: bool) -> Union[tf.Tensor, np.ndarray]:
         """ Decode tensor of ring elements into tensor of rational numbers """
 
@@ -895,9 +897,8 @@ class PondPublicTensor(PondTensor):
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
         return (self.value_on_0, self.value_on_1)
 
-    def eval(self, sess, feed_dict={}, tag=None) -> np.ndarray:
-        value = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
-        return self.prot._decode(value, self.is_scaled)
+    def decode(self) -> Union[np.ndarray, tf.Tensor]:
+        return self.prot._decode(self.value_on_0, self.is_scaled)
 
 
 class PondPrivateTensor(PondTensor):

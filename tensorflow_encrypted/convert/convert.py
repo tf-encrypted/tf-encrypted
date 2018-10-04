@@ -6,14 +6,17 @@ import numpy as np
 from ..io import InputProvider
 from ..player import Player
 from ..protocol.pond import Pond
-from ..config import Config
+from ..config import Config, get_config
 
 
 class ConvertInputProvider(InputProvider):
 
-    def __init__(self, player: Player, input: Union[np.ndarray, tf.Tensor]) -> None:
+    def __init__(self, player: Union[str, Player], input: Union[np.ndarray, tf.Tensor]) -> None:
         self.input = input
-        self.player = player
+        if isinstance(player, str):
+            self.player = get_config().get_player(player)
+        else:
+            self.player = player
 
     def provide_input(self) -> tf.Tensor:
         if isinstance(self.input, tf.Tensor):
@@ -24,10 +27,13 @@ class ConvertInputProvider(InputProvider):
 class Converter():
 
     def __init__(self, config: Config, protocol: Pond,
-                 weights_provider: Player) -> None:
-        self.config = config
+                 player: Union[str, Player]) -> None:
+        self.config = config if config is not None else get_config()
         self.protocol = protocol
-        self.weights_provider = weights_provider
+        if isinstance(player, str):
+            self.model_provider = self.config.get_player(player)
+        else:
+            self.model_provider = player
         self.outputs = {}
 
     def convert(self, graph_def: Any, input: Union[List[InputProvider], InputProvider],
