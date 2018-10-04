@@ -161,9 +161,9 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     # compute prediction
     w0, b0, w1, b1, w2, b2 = params
     layer0 = x
-    layer1 = prot.relu((prot.dot(layer0, w0) + b0))
-    layer2 = prot.relu((prot.dot(layer1, w1) + b1))
-    layer3 = prot.dot(layer2, w2) + b2
+    layer1 = prot.relu((prot.matmul(layer0, w0) + b0))
+    layer2 = prot.relu((prot.matmul(layer1, w1) + b1))
+    layer3 = prot.matmul(layer2, w2) + b2
     prediction = layer3
 
     # send prediction output back to client

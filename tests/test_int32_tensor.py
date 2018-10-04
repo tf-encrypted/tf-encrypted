@@ -36,7 +36,7 @@ class TestInt32Tensor(unittest.TestCase):
             2**31 - 1,  # max
             2**31,  # min
             -3
-        ], shape=[2, 2], dtype=np.int32))
+        ], shape=[2, 2], dtype=tf.int32))
 
         y = x.to_bits()
 
@@ -48,7 +48,7 @@ class TestInt32Tensor(unittest.TestCase):
         ]).reshape([2, 2, 32])
 
         with tf.Session() as sess:
-            actual = sess.run(y.value)
+            actual = sess.run(y.to_native())
 
         np.testing.assert_array_equal(actual, expected)
 
@@ -59,7 +59,7 @@ class TestInt32Tensor(unittest.TestCase):
         y = x.to_bits()
 
         with tf.Session() as sess:
-            actual = sess.run(y.value)
+            actual = sess.run(y.to_native())
 
         j = 0
         for i in input:
@@ -92,7 +92,7 @@ class TestConv2D(unittest.TestCase):
         inp = Int32Tensor(input_conv)
         out = inp.conv2d(Int32Tensor(filter_values), strides)
         with tf.Session() as sess:
-            actual = sess.run(out.value)
+            actual = sess.run(out.to_native())
 
         # reset graph
         tf.reset_default_graph()

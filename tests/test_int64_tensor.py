@@ -36,7 +36,7 @@ class TestInt64Tensor(unittest.TestCase):
             2**63 - 1,
             2**63 - 2,
             -3
-        ], shape=[2, 2], dtype=np.int64))
+        ], shape=[2, 2], dtype=tf.int64))
 
         y = x.to_bits()
 
@@ -52,7 +52,7 @@ class TestInt64Tensor(unittest.TestCase):
         ]).reshape([2, 2, 64])
 
         with tf.Session() as sess:
-            actual = sess.run(y.value)
+            actual = sess.run(y.to_native())
 
         np.testing.assert_array_equal(actual, expected)
 
@@ -63,7 +63,7 @@ class TestInt64Tensor(unittest.TestCase):
         y = x.to_bits()
 
         with tf.Session() as sess:
-            actual = sess.run(y.value)
+            actual = sess.run(y.to_native())
 
         j = 0
         for i in input:
@@ -96,7 +96,7 @@ class TestInt64Tensor(unittest.TestCase):
 #         inp = Int64Tensor(input_conv)
 #         out = inp.conv2d(Int64Tensor(filter_values), strides)
 #         with tf.Session() as sess:
-#             actual = sess.run(out.value)
+#             actual = sess.run(out.to_native())
 #
 #         # reset graph
 #         tf.reset_default_graph()

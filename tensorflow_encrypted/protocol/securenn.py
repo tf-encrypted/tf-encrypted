@@ -15,6 +15,9 @@ from ..tensor.tensor import AbstractTensor
 from ..config import get_default_config
 from ..tensor.odd_implicit import OddImplicitTensor
 from ..tensor.int32 import Int32Tensor
+import numpy as np
+
+bits = 32
 
 _thismodule = sys.modules[__name__]
 
@@ -43,25 +46,29 @@ class SecureNN(Pond):
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
         assert not x.is_scaled, "Input is not supposed to be scaled"
-        return self.sub(1, x)
+        with tf.name_scope('bitwise_not'):
+            return self.sub(1, x)
 
     @memoize
     def bitwise_and(self, x: PondTensor, y: PondTensor) -> PondTensor:
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
-        return x * y
+        with tf.name_scope('bitwise_and'):
+            return x * y
 
     @memoize
     def bitwise_or(self, x: PondTensor, y: PondTensor) -> PondTensor:
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
-        return x + y - self.bitwise_and(x, y)
+        with tf.name_scope('bitwise_or'):
+            return x + y - self.bitwise_and(x, y)
 
     @memoize
     def bitwise_xor(self, x: PondTensor, y: PondTensor) -> PondTensor:
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
-        return x + y - self.bitwise_and(x, y) * 2
+        with tf.name_scope('bitwise_xor'):
+            return x + y - self.bitwise_and(x, y) * 2
 
     def odd_modulus_bitwise_xor(self, x: PondPrivateTensor, bits: PondPublicTensor) -> PondPrivateTensor:
         int_type = self.tensor_factory.Tensor.int_type
@@ -115,31 +122,146 @@ class SecureNN(Pond):
         return self.bitwise_not(self.less(x, y))
 
     @memoize
-    def select_share(self, x: PondTensor, y: PondTensor, bit: PondTensor) -> PondTensor:
-        return x + bit * (y - x)
+    def select_share(self, x: PondTensor, y: PondTensor, choice_bit: PondTensor) -> PondTensor:
+        return x + choice_bit * (y - x)
 
-    def private_compare(self,
-                        x: PondPrivateTensor,
-                        r: PondPublicTensor,
-                        beta: PondPublicTensor) -> PondPrivateTensor:
-        # this is a placeholder;
-        # it computes the functionality of private_compare in plain text
-        x = x.reveal()
-        xval = x.value_on_0
-        rval = r.value_on_1
-        bval = tf.cast(beta.value_on_0.value, tf.int8)
-        tf_res = tf.cast(xval.value > rval.value, tf.int8)
-        tf_res = tf.Print(tf_res, [xval.value, rval.value], 'x and r', summarize=10)
-        tf_res = tf.Print(tf_res, [tf_res], 'resu', summarize=10)
-        tf_res = tf.Print(tf_res, [bval], 'bval', summarize=10)
-        xord = tf.bitwise.bitwise_xor(tf_res, bval)
-        xord = tf.Print(xord, [xord], 'xord', summarize=10)
-        val = self.tensor_factory.Tensor.from_native(tf.cast(xord, tf.int32))
+    def _private_compare_beta0(self, input: PondPrivateTensor, rho: PondPublicTensor):
 
-        share0, share1 = self._share(val)
-        shared = PondPrivateTensor(self, share0, share1, is_scaled=x.is_scaled)
-        shared.share0.value = tf.Print(shared.share0.value, [shared.reveal().value_on_0.value], 'shared res', summarize=10)
-        return shared
+        w = self.bitwise_xor(input, rho)
+
+        with tf.device(self.server_0.device_name):
+            w0_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
+            for i in range(bits - 1, -1, -1):
+                sum = self.sum(w[:, i + 1:], axis=1)
+                indices = []
+
+                for j in range(0, w.shape.as_list()[0]):
+                    indices.append([j, i])
+
+                update_0 = tf.SparseTensor(indices, sum.share0.value, w.shape)
+
+            w0_sum = w0_sum + tf.sparse_tensor_to_dense(update_0)
+
+        with tf.device(self.server_1.device_name):
+            w1_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
+            for i in range(bits - 1, -1, -1):
+                sum = self.sum(w[:, i + 1:], axis=1)
+                indices = []
+
+                for j in range(0, w.shape.as_list()[0]):
+                    indices.append([j, i])
+
+                update_1 = tf.SparseTensor(indices, sum.share1.value, w.shape)
+
+            w1_sum = w1_sum + tf.sparse_tensor_to_dense(update_1)
+
+        w_sum = PondPrivateTensor(self, Int32Tensor(w0_sum), Int32Tensor(w1_sum), w.is_scaled)
+
+        c = rho - input + 1 + w_sum
+        return c
+
+    def _private_compare_beta1(self, input: PondPrivateTensor, theta: PondPublicTensor):
+
+        w = self.bitwise_xor(input, theta)
+
+        with tf.device(self.server_0.device_name):
+            w0_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
+            for i in range(bits - 1, -1, -1):
+                sum = self.sum(w[:, i + 1:], axis=1)
+                indices = []
+
+                for j in range(0, w.shape.as_list()[0]):
+                    indices.append([j, i])
+
+                update_0 = tf.SparseTensor(indices, sum.share0.value, w.shape)
+
+            w0_sum = w0_sum + tf.sparse_tensor_to_dense(update_0)
+
+        with tf.device(self.server_1.device_name):
+            w1_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
+            for i in range(bits - 1, -1, -1):
+                sum = self.sum(w[:, i + 1:], axis=1)
+                indices = []
+
+                for j in range(0, w.shape.as_list()[0]):
+                    indices.append([j, i])
+
+                update_1 = tf.SparseTensor(indices, sum.share1.value, w.shape)
+
+            w1_sum = w1_sum + tf.sparse_tensor_to_dense(update_1)
+
+        w_sum = PondPrivateTensor(self, Int32Tensor(w0_sum), Int32Tensor(w1_sum), w.is_scaled)
+
+        c = input - theta + 1 + w_sum
+        return c
+
+    def _private_compare_edge(self):
+        random_values_u = self.tensor_factory.Tensor.sample_random_tensor((bits,), modulus=p - 1) + 1
+        c0 = (random_values_u + 1)
+        c1 = (-random_values_u)
+
+        c0[0] = random_values_u[0]
+
+        return c0
+
+    def private_compare(self, input: PondPrivateTensor, rho: PondPublicTensor, theta: PondPublicTensor, beta: PondPublicTensor):
+        with tf.name_scope('private_compare'):
+            beta = beta.reshape([beta.shape.as_list()[0], 1])
+            beta = beta.broadcast([beta.shape.as_list()[0], 32])
+
+            with tf.name_scope('find_zeros'):
+                eq = self.equal(beta, 0)
+                zeros = self.where(eq)
+
+            with tf.name_scope('find_ones'):
+                eq = self.equal(beta, 1)
+                ones = self.where(eq)
+
+            with tf.name_scope('find_edges'):
+                edges = self.where(self.equal(rho, 2 ** bits - 1))
+
+            # with tf.name_scope('find_non_edge_ones'):
+            #     ones = tf.setdiff1d(ones, edges)
+
+            # return input
+            pc_0 = self._private_compare_beta0(input, rho)
+            pc_1 = self._private_compare_beta1(input, theta)
+
+            # return tf.Print(zeros.value_on_1.value, [zeros.value_on_1.value], 'ZEROS')
+
+            pc_0 = self.gather_nd(pc_0, zeros)
+            pc_1 = self.gather_nd(pc_1, ones)
+
+            # c0_edge, c1_edge = self._private_compare_edge()
+
+            pc_0 = pc_0.reshape([-1])
+            pc_1 = pc_1.reshape([-1])
+
+            with tf.device(self.server_0.device_name):
+                c0 = tf.zeros(shape=input.shape, dtype=tf.int32)
+
+                delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share0.value, input.shape)
+                delta1 = tf.SparseTensor(ones.value_on_0.value, pc_1.share0.value, input.shape)
+
+                c0 = c0 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
+                c0 = Int32Tensor(c0)
+
+            with tf.device(self.server_0.device_name):
+                c1 = tf.zeros(shape=input.shape, dtype=tf.int32)
+
+                delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share1.value, input.shape)
+                delta1 = tf.SparseTensor(ones.value_on_1.value, pc_1.share1.value, input.shape)
+
+                c1 = c1 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
+                c1 = Int32Tensor(c1)
+
+            with tf.device(self.crypto_producer.device_name):
+                answer = PondPrivateTensor(self, share0=c0, share1=c1, is_scaled=input.is_scaled).reveal()
+                reduced = tf.reduce_max(tf.cast(tf.equal(answer.value_on_0.value, 0), tf.int32), axis=-1)
+
+                answer = PondPublicTensor(self, Int32Tensor(reduced), Int32Tensor(reduced), is_scaled=answer.is_scaled)
+
+            return answer
 
     def share_convert(self, x: PondPrivateTensor) -> PondPrivateTensor:
         L = self.tensor_factory.Tensor.modulus

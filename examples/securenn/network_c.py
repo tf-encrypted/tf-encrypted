@@ -204,9 +204,9 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     layer1 = pool(prot.relu(conv(x, Wconv1) + bconv1))
     layer2 = pool(prot.relu(conv(layer1, Wconv2) + bconv2))
     layer2 = prot.reshape(layer2, [-1, ModelTrainer.HIDDEN_FC1])
-    layer3 = prot.dot(layer2, Wfc1) + bfc1
-    layer4 = prot.dot(layer3, Wfc2) + bfc2
-    logits = prot.dot(layer4, Wfc3) + bfc3
+    layer3 = prot.matmul(layer2, Wfc1) + bfc1
+    layer4 = prot.matmul(layer3, Wfc2) + bfc2
+    logits = prot.matmul(layer4, Wfc3) + bfc3
 
     # send prediction output back to client
     prediction_op = prot.define_output([logits], prediction_client)

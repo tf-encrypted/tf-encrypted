@@ -42,6 +42,9 @@ class PrimeTensor(AbstractTensor):
         maxval = 2 ** bitlength
         return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=maxval))
 
+    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
+        return self.value
+
     @staticmethod
     def stack(x: List['PrimeTensor'], axis: int = 0) -> 'PrimeTensor':
         assert all(isinstance(i, PrimeTensor) for i in x)
@@ -114,7 +117,10 @@ class PrimeTensor(AbstractTensor):
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
         return PrimeTensor(x.value * y.value % self.modulus, self.modulus)
 
-    def dot(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
+    def negative(self) -> 'PrimeTensor':
+        return self.mul(-1)
+
+    def matmul(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
         x, y = _lift(self, self.modulus), _lift(other, self.modulus)
         return PrimeTensor(tf.matmul(x.value, y.value) % self.modulus, self.modulus)
 
@@ -139,6 +145,10 @@ class PrimeTensor(AbstractTensor):
 
     def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
         return PrimeTensor(tf.cast(self.value + y.value >= modulus, dtype=tf.int32), self.modulus)
+
+    def expand_dims(self, axis: int) -> 'PrimeTensor':
+        expanded = tf.expand_dims(self.value, axis)
+        return PrimeTensor(expanded, self.modulus)
 
 
 def _lift(x: Union['PrimeTensor', 'AbstractTensor', int], modulus: int) -> 'PrimeTensor':
@@ -233,6 +243,8 @@ class PrimeVariable(PrimeTensor, AbstractVariable):
 def prime_factory(modulus: int) -> Any:
 
     class TensorWrap(AbstractTensor):
+        int_type = INT_TYPE
+
         @staticmethod
         def from_native(x: Union[tf.Tensor, np.ndarray]) -> PrimeTensor:
             return PrimeTensor.from_native(x, modulus)
