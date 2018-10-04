@@ -57,7 +57,7 @@ class TestPrivateCompare(unittest.TestCase):
         beta = np.array( [0, 1, 0, 1, 0, 1, 0, 0]).astype(np.int32)
                        # [1, 0, 1, 0, 1, 0, 1, 1]
 
-        with tfe.protocol.SecureNN(tensor_factory=Int32Factory(), alt_factory=prime_factory(37), use_noninteractive_truncation=True, verify_precision=False, *config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.SecureNN(tensor_factory=Int32Factory(), prime_factory=prime_factory(37), use_noninteractive_truncation=True, verify_precision=False, *config.get_players('server0, server1, crypto_producer')) as prot:
 
             # input = prot.define_private_variable(binarize(input), apply_scaling=False)
             # rho = prot.define_public_variable(binarize(rho), apply_scaling=False)
@@ -67,7 +67,7 @@ class TestPrivateCompare(unittest.TestCase):
             # theta = binarize(rho + 1)
             # rho = binarize(rho)
 
-            i_0, i_1 = prot._share(input, factory=prot.alt_factory)
+            i_0, i_1 = prot._share(input, factory=prot.prime_factory)
 
             input = PondPrivateTensor(prot, share0=i_0, share1=i_1, is_scaled=False)
             rho = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(rho, dtype=tf.int32)),

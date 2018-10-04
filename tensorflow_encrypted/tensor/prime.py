@@ -1,14 +1,15 @@
 from __future__ import absolute_import
+from typing import Union, Optional, List, Dict, Any, Tuple, Type
+import math
 
 import numpy as np
 import tensorflow as tf
 from typing import Union, Optional, List, Dict, Any, Tuple, Type
 from ..types import Ellipse, Slice
 
-
 from ..config import run
 from .factory import AbstractFactory
-from .tensor import AbstractTensor, AbstractConstant, AbstractVariable
+from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 
 INT_TYPE = tf.int32
 
@@ -26,8 +27,11 @@ class PrimeTensor(AbstractTensor):
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
         return PrimeTensor(value, modulus)
 
-    def to_bits(self, prime: int = 37) -> 'PrimeTensor':
-        return PrimeTensor.binarize(self, prime=prime)
+    def to_native(self) -> Union[np.ndarray, tf.Tensor]:
+        return self.value
+
+    def to_bits(self) -> 'PrimeTensor':
+        return PrimeTensor.binarize(self, prime=self.modulus)
 
     @staticmethod
     def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int) -> 'PrimeTensor':
@@ -35,7 +39,8 @@ class PrimeTensor(AbstractTensor):
 
     @staticmethod
     def sample_bounded(shape: List[int], bitlength: int) -> 'PrimeTensor':
-        raise NotImplementedError()
+        maxval = 2 ** bitlength
+        return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=maxval))
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
@@ -53,7 +58,7 @@ class PrimeTensor(AbstractTensor):
     @staticmethod
     def binarize(tensor: AbstractTensor, prime: int) -> 'PrimeTensor':
         with tf.name_scope('binarize'):
-            BITS = tensor.int_type.size * 8
+            BITS = math.ceil(math.log2(prime))
             assert prime > BITS, prime
 
             final_shape = [1] * len(tensor.shape) + [BITS]
@@ -151,7 +156,7 @@ def _lift(x: Union['PrimeTensor', int], modulus: int) -> 'PrimeTensor':
     raise TypeError("Unsupported type {}".format(type(x)))
 
 
-class PrimeConstant(PrimeTensor):
+class PrimeConstant(PrimeTensor, AbstractConstant):
 
     def __init__(self, value: Union[tf.Tensor, np.ndarray], modulus: int) -> None:
         v = tf.constant(value, dtype=INT_TYPE)
@@ -171,7 +176,7 @@ class PrimeConstant(PrimeTensor):
         return 'PrimeConstant({})'.format(self.shape)
 
 
-class PrimePlaceholder(PrimeTensor):
+class PrimePlaceholder(PrimeTensor, AbstractPlaceholder):
 
     def __init__(self, shape: List[int], modulus: int) -> None:
         placeholder = tf.placeholder(INT_TYPE, shape=shape)
@@ -238,7 +243,12 @@ def prime_factory(modulus: int) -> Any:
 
         @staticmethod
         def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape]) -> PrimeTensor:
-            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=modulus), modulus)
+            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=modulus), modulus)
+
+        @staticmethod
+        def sample_bounded(shape: Union[Tuple[int, ...], tf.TensorShape], bitlength: int) -> PrimeTensor:
+            maxval = 2 ** bitlength
+            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=maxval), modulus)
 
     class ConstantWrap(TensorWrap, AbstractConstant):
         @staticmethod
