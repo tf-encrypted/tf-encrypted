@@ -12,6 +12,12 @@ from . import protocol
 from . import layers
 from . import convert
 
+all_prot_funcs = protocol.get_all_funcs()
+
+
+def prot_func_not_implemented() -> None:
+    raise Exception("This function is not implemented in protocol {}".format(inspect.stack()[1][3]))
+
 
 def get_protocol_public_func(prot: protocol.Protocol) -> list:
     methods = inspect.getmembers(prot, predicate=inspect.ismethod)
@@ -21,18 +27,21 @@ def get_protocol_public_func(prot: protocol.Protocol) -> list:
 
 
 def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
-    previous_prot = get_protocol()
-    if previous_prot is not None:
-        funcs = get_protocol_public_func(previous_prot)
-        for func in funcs:
+    for func in all_prot_funcs:
+        if func[0] in globals():
             del globals()[func[0]]
 
     protocol.set_protocol(prot)
+
     if prot is not None:
         funcs = get_protocol_public_func(prot)
 
         for func in funcs:
             globals()[func[0]] = func[1]
+
+    for func in all_prot_funcs:
+        if func[0] not in globals():
+            globals()[func[0]] = prot_func_not_implemented
 
 
 def set_config(config: Config) -> None:
