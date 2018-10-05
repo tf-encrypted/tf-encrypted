@@ -11,13 +11,10 @@ x = Int32Tensor(np.array([1, 2, 3]))
 y = Int32Tensor(np.array([1, 2, 3]))
 
 z = x + y
-print(z)
 
 z = x - y
-print(z)
 
 z = x * y
-print(z)
 
 c = Int32Constant(np.array([4, 4, 4]))
 v = Int32Variable(np.array([1, 1, 1]))

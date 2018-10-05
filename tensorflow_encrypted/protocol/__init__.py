@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from .pond import Pond, TFEVariable, TFETensor
 from .securenn import SecureNN
 
-from .protocol import Protocol, global_caches_updator, memoize
+from .protocol import Protocol, global_caches_updator, memoize, set_protocol, get_protocol
 
 __all__ = [
     'Protocol',
@@ -15,4 +15,6 @@ __all__ = [
     'SecureNN',
     'TFEVariable',
     'TFETensor',
+    'set_protocol',
+    'get_protocol'
 ]

@@ -22,15 +22,17 @@ import tensorflow_encrypted as tfe
 # Setting your custom configuration
 # tfe.set_config(config)
 
-with tfe.protocol.Pond() as prot:
+# The default protocol is called pond, it's a 3 party computation protocol
+# But you can use your an other one like securreNN!
+# tfe.set_protocol(tfe.protocol.SecureNN())
 
-    w = prot.define_private_variable(np.zeros((10, 10)))
-    # x = prot.define_private_variable(np.zeros((1,100)))
+w = tfe.define_private_variable(np.zeros((10, 10)))
+# x = tfe.define_private_variable(np.zeros((1,100)))
 
-    y = w
-    for _ in range(5):
-        y = y.matmul(y)
+y = w
+for _ in range(5):
+    y = y.matmul(y)
 
-    with tfe.Session() as sess:
-        sess.run(prot.initializer, tag='init')
-        print(sess.run(y.reveal(), tag='reveal'))
+with tfe.Session() as sess:
+    sess.run(tfe.get_global_variables(), tag='init')
+    print(sess.run(y.reveal(), tag='reveal'))
