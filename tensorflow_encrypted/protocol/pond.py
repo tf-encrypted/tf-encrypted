@@ -1041,9 +1041,9 @@ class PondPrivatePlaceholder(PondPrivateTensor):
     """
 
     def __init__(self, prot, placeholder, tensor0, tensor1, is_scaled):
-        assert type(placeholder) is AbstractPlaceholder, type(placeholder)
-        assert type(tensor0) is AbstractTensor, type(tensor0)
-        assert type(tensor1) is AbstractTensor, type(tensor1)
+        assert isinstance(placeholder, AbstractPlaceholder), type(placeholder)
+        assert isinstance(tensor0, AbstractTensor), type(tensor0)
+        assert isinstance(tensor1, AbstractTensor), type(tensor1)
         assert tensor0.shape == tensor1.shape
 
         super(PondPrivatePlaceholder, self).__init__(prot, tensor0, tensor1, is_scaled)
