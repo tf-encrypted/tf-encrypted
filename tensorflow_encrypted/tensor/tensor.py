@@ -10,8 +10,6 @@ TFTypes = Union[
 
 
 class AbstractTensor(ABC):
-    int_type: TFTypes
-    value: Union[tf.Tensor, np.ndarray]
 
     @abstractmethod
     def __init__(self, value: Union[np.ndarray, tf.Tensor]) -> None:
