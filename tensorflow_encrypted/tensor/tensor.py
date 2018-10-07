@@ -1,12 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import List, Union, Type, Tuple
+from typing import List, Union, Tuple
+
 import numpy as np
 import tensorflow as tf
-
-TFTypes = Union[
-    Type['tf.int32'],
-    Type['tf.int64'],
-]
 
 
 class AbstractTensor(ABC):
