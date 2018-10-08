@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from typing import Optional
+from typing import Optional, Any
 import inspect
 import tensorflow as tf
 
@@ -15,7 +15,7 @@ from . import convert
 all_prot_funcs = protocol.get_all_funcs()
 
 
-def prot_func_not_implemented() -> None:
+def prot_func_not_implemented(*args: Any, **kwargs: Any) -> None:
     raise Exception("This function is not implemented in protocol {}".format(inspect.stack()[1][3]))
 
 
