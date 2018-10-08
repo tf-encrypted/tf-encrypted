@@ -46,6 +46,9 @@ for filename in glob.glob(trace_path):
         duration = parse_tracefile(filename)
         durations.append(duration)
 
+# Export duration for 100 predictions:
+np.save(trace_dir + "prediction_duration_100.npy", durations)
 print("Summary statistics for {} predictions:".format(len(durations)))
 print('Average Prediction Time:', float(sum(durations)) / len(durations) / 1000, "ms")
 print('Median Prediction Time:', np.median(durations) / 1000, "ms")
+print('Standard Deviation TIme:', np.std(durations) / 1000, "ms")
