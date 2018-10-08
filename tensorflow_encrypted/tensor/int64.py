@@ -97,6 +97,9 @@ class Int64Tensor(AbstractTensor):
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'Int64Tensor':
         return Int64Tensor(tf.reshape(self.value, axes))
 
+    def cumsum(self, axis, exclusive, reverse) -> 'Int64Tensor':
+        return Int64Tensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
+
     @staticmethod
     def stack(xs: List['Int64Tensor'], axis: int = 0) -> 'Int64Tensor':
         assert all(isinstance(x, Int64Tensor) for x in xs)

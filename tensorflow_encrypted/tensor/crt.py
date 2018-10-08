@@ -239,5 +239,17 @@ def gen_crt_reduce_sum(m):
     return crt_reduce_sum
 
 
+def gen_crt_cumsum(m):
+
+    def crt_cumsum(x, axis=None, exclusive=None, reverse=None):
+        with tf.name_scope('crt_cumsum'):
+            return [
+                tf.cumsum(xi, axis=axis, exclusive=exclusive, reverse=reverse) % mi
+                for xi, mi in zip(x, m)
+            ]
+
+    return crt_cumsum
+
+
 class CrtTensor(object):
     pass

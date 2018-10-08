@@ -140,11 +140,15 @@ class PrimeTensor(AbstractTensor):
         return PrimeTensor(expanded, self.modulus)
 
     def sum(self, axis, keepdims) -> 'PrimeTensor':
-        return PrimeTensor(tf.reduce_sum(self.value, axis, keepdims), self.modulus)
+        return self.reduce_sum(axis, keepdims)
 
     def reduce_sum(self, axis, keepdims) -> 'PrimeTensor':
-        return PrimeTensor(tf.reduce_sum(self.value, axis, keepdims), self.modulus)
+        value = tf.reduce_sum(self.value, axis, keepdims) % self.modulus
+        return PrimeTensor(value, self.modulus)
 
+    def cumsum(self, axis, exclusive, reverse) -> 'PrimeTensor':
+        value = tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse) % self.modulus
+        return PrimeTensor(value, self.modulus)
 
 
 def _lift(x: Union['PrimeTensor', int], modulus: int) -> 'PrimeTensor':

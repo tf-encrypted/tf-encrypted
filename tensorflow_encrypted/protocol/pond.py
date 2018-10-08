@@ -439,6 +439,20 @@ class Pond(Protocol):
         return self.reduce_sum(x, axis, keepdims)
 
     @memoize
+    def cumsum(self, x, axis=0, exclusive=False, reverse=False):
+
+        dispatch = {
+            PondPublicTensor: _cumsum_public,
+            PondPrivateTensor: _cumsum_private,
+            PondMaskedTensor: _cumsum_masked
+        }
+        func = dispatch.get(_type(x), None)
+        if func is None:
+            raise TypeError("Don't know how to cumsum {}".format(type(x)))
+
+        return func(self, x, axis=axis, exclusive=exclusive, reverse=reverse)
+
+    @memoize
     def gather_nd(self, params, indices, validate_indices=None, name=None, axis=0):
         return self.dispatch('gather_nd', params, indices, validate_indices, name, axis)
 
@@ -1684,8 +1698,66 @@ def _reduce_sum_masked(
 
 
 #
+# cumsum helpers
+#
+
+
+def _cumsum_public(
+    prot: Pond,
+    x: PondPublicTensor,
+    axis: Optional[int] = None,
+    exclusive: Optional[bool] = None,
+    reverse: Optional[bool] = None
+) -> PondPublicTensor:
+
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope('cumsum'):
+
+        with tf.device(prot.server_0.device_name):
+            y_on_0 = x_on_0.cumsum(axis=axis, exclusive=exclusive, reverse=reverse)
+
+        with tf.device(prot.server_1.device_name):
+            y_on_1 = x_on_1.cumsum(axis=axis, exclusive=exclusive, reverse=reverse)
+
+    return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
+
+
+def _cumsum_private(
+    prot: Pond,
+    x: PondPrivateTensor,
+    axis: Optional[int] = None,
+    exclusive: Optional[bool] = None,
+    reverse: Optional[bool] = None
+) -> PondPrivateTensor:
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope('cumsum'):
+
+        with tf.device(prot.server_0.device_name):
+            y0 = x0.cumsum(axis=axis, exclusive=exclusive, reverse=reverse)
+
+        with tf.device(prot.server_1.device_name):
+            y1 = x1.cumsum(axis=axis, exclusive=exclusive, reverse=reverse)
+
+    return PondPrivateTensor(prot, y0, y1, x.is_scaled)
+
+
+def _cumsum_masked(
+    prot: Pond,
+    x: PondMaskedTensor,
+    axis: Optional[int] = None,
+    exclusive: Optional[bool] = None,
+    reverse: Optional[bool] = None
+) -> PondPrivateTensor:
+    return prot.cumsum(x.unmasked, axis=axis, exclusive=exclusive, reverse=reverse)
+
+
+#
 # equal helpers
 #
+
 
 def _equal_public_public(prot, x, y):
     assert isinstance(x, PondPublicTensor), type(x)

@@ -1,13 +1,12 @@
 import unittest
+import random
 
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
-import random
-
 from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
 from tensorflow_encrypted.protocol.pond import PondPrivateTensor, PondPublicTensor
-from tensorflow_encrypted.tensor.prime import prime_factory
+from tensorflow_encrypted.tensor.prime import PrimeTensor, prime_factory
 
 bits = 32
 Q = 2 ** bits
@@ -44,59 +43,95 @@ def share(secrets, modulus=Q):
 
 class TestPrivateCompare(unittest.TestCase):
 
-    def test_privateCompare(self):
+    def test_private_compare_0(self):
 
         config = tfe.LocalConfig([
             'server0',
             'server1',
-            'crypto_producer'
+            'server2'
         ])
 
-        input = np.array([2, 8, 8, 5, 2, 5, 1, 100]).astype(np.int32)
-        rho = np.array(  [1, 7, 7, 4, 1, 2, 0, 99]).astype(np.int32)
-        beta = np.array( [0, 1, 0, 1, 0, 1, 0, 0]).astype(np.int32)
-                       # [1, 0, 1, 0, 1, 0, 1, 1]
+        x = tf.constant([
+            [1,0,0,1,1,0,1],
+            [1,0,0,1,1,0,1],
+            [0,0,0,1,1,0,1],
+            [0,0,0,0,0,0,1]], dtype=tf.int32)
+        
+        r = tf.constant([
+            [1,0,0,1,1,0,1],
+            [0,0,0,1,1,0,1],
+            [1,0,0,1,1,0,1],
+            [1,1,1,1,1,1,0]], dtype=tf.int32)
 
-        with tfe.protocol.SecureNN(tensor_factory=Int32Factory(), prime_factory=prime_factory(37), use_noninteractive_truncation=True, verify_precision=False, *config.get_players('server0, server1, crypto_producer')) as prot:
+        prot = tfe.protocol.SecureNN(
+            tensor_factory=Int32Factory(),
+            prime_factory=prime_factory(37),
+            use_noninteractive_truncation=True,
+            verify_precision=False,
+            *config.get_players('server0, server1, server2'))
 
-            # input = prot.define_private_variable(binarize(input), apply_scaling=False)
-            # rho = prot.define_public_variable(binarize(rho), apply_scaling=False)
-            # beta = prot.define_public_variable(binarize(beta), apply_scaling=False)
+        x = PondPrivateTensor(prot, *prot._share(PrimeTensor(x, 37), prime_factory(37)), False)
+        r = PondPublicTensor(prot, PrimeTensor(r, 37), PrimeTensor(r, 37), False)
 
-            input = Int32Tensor(input).to_bits()
-            # theta = binarize(rho + 1)
-            # rho = binarize(rho)
+        res = prot._private_compare_beta0(x, r)
 
-            i_0, i_1 = prot._share(input, factory=prot.prime_factory)
+        with config.session() as sess:
+            print(sess.run(res.reveal().value_on_0.value))
 
-            input = PondPrivateTensor(prot, share0=i_0, share1=i_1, is_scaled=False)
-            rho = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(rho, dtype=tf.int32)),
-                                   value_on_1=Int32Tensor(tf.constant(rho, dtype=tf.int32)), is_scaled=False)
-            beta = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(beta, dtype=tf.int32)),
-                                    value_on_1=Int32Tensor(tf.constant(beta, dtype=tf.int32)), is_scaled=False)
 
-            #
-            # i = tf.placeholder(tf.int32)
-            # r = tf.placeholder(tf.int32)
-            # b = tf.placeholder(tf.int32)
-            #
+    # def test_privateCompare(self):
 
-            print('inputs', input, rho, beta)
-            a = prot.private_compare(input, rho, beta)
+    #     config = tfe.LocalConfig([
+    #         'server0',
+    #         'server1',
+    #         'crypto_producer'
+    #     ])
 
-            writer = tf.summary.FileWriter('.')
-            writer.add_graph(tf.get_default_graph())
-            #
-            # eq = prot.equal(beta, 0)
-            # ones = prot.where(eq)
+    #     input = np.array([2, 8, 8, 5, 2, 5, 1, 100]).astype(np.int32)
+    #     rho = np.array([1, 7, 7, 4, 1, 2, 0, 99]).astype(np.int32)
+    #     beta = np.array( [0, 1, 0, 1, 0, 1, 0, 0]).astype(np.int32)
+    #                    # [1, 0, 1, 0, 1, 0, 1, 1]
 
-            # sess = tf.Session()
-            with config.session() as sess:
-                sess.run(tf.global_variables_initializer())
-                answer = a.reveal().eval(sess)
-                # answer = sess.run(a)
+    #     with tfe.protocol.SecureNN(tensor_factory=Int32Factory(), prime_factory=prime_factory(37), use_noninteractive_truncation=True, verify_precision=False, *config.get_players('server0, server1, crypto_producer')) as prot:
 
-                print('answer', answer)
+    #         # input = prot.define_private_variable(binarize(input), apply_scaling=False)
+    #         # rho = prot.define_public_variable(binarize(rho), apply_scaling=False)
+    #         # beta = prot.define_public_variable(binarize(beta), apply_scaling=False)
+
+    #         input = Int32Tensor(input).to_bits()
+    #         # theta = binarize(rho + 1)
+    #         # rho = binarize(rho)
+
+    #         i_0, i_1 = prot._share(input, factory=prot.prime_factory)
+
+    #         input = PondPrivateTensor(prot, share0=i_0, share1=i_1, is_scaled=False)
+    #         rho = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(rho, dtype=tf.int32)),
+    #                                value_on_1=Int32Tensor(tf.constant(rho, dtype=tf.int32)), is_scaled=False)
+    #         beta = PondPublicTensor(prot, value_on_0=Int32Tensor(tf.constant(beta, dtype=tf.int32)),
+    #                                 value_on_1=Int32Tensor(tf.constant(beta, dtype=tf.int32)), is_scaled=False)
+
+    #         #
+    #         # i = tf.placeholder(tf.int32)
+    #         # r = tf.placeholder(tf.int32)
+    #         # b = tf.placeholder(tf.int32)
+    #         #
+
+    #         print('inputs', input, rho, beta)
+    #         a = prot.private_compare(input, rho, beta)
+
+    #         writer = tf.summary.FileWriter('.')
+    #         writer.add_graph(tf.get_default_graph())
+    #         #
+    #         # eq = prot.equal(beta, 0)
+    #         # ones = prot.where(eq)
+
+    #         # sess = tf.Session()
+    #         with config.session() as sess:
+    #             sess.run(tf.global_variables_initializer())
+    #             answer = a.reveal().eval(sess)
+    #             # answer = sess.run(a)
+
+    #             print('answer', answer)
 
 
 if __name__ == '__main__':

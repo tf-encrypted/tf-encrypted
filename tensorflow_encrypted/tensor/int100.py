@@ -9,7 +9,7 @@ from typing import Union, Optional, List, Dict, Any, Type
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_matmul, gen_crt_mod,
-    gen_crt_reduce_sum, crt_im2col, crt_matmul_split,
+    gen_crt_reduce_sum, gen_crt_cumsum, crt_im2col, crt_matmul_split,
     gen_crt_sample_uniform, gen_crt_sample_bounded
 )
 from .helpers import prod, inverse
@@ -47,6 +47,7 @@ _crt_recombine_explicit = gen_crt_recombine_explicit(m, INT_TYPE)
 
 _crt_add = gen_crt_add(m)
 _crt_reduce_sum = gen_crt_reduce_sum(m)
+_crt_cumsum = gen_crt_cumsum(m)
 _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_matmul = gen_crt_matmul(m)
@@ -236,8 +237,12 @@ class Int100Tensor(AbstractTensor):
         return Int100Tensor.from_native(value)
 
     def reduce_sum(self, axis=None, keepdims=None) -> 'Int100Tensor':
-        y_backing = _crt_reduce_sum(self.backing, axis, keepdims)
-        return Int100Tensor.from_decomposed(y_backing)
+        backing = _crt_reduce_sum(self.backing, axis, keepdims)
+        return Int100Tensor.from_decomposed(backing)
+
+    def cumsum(self, axis, exclusive, reverse) -> 'Int100Tensor':
+        backing = _crt_cumsum(self.backing, axis=axis, exclusive=exclusive, reverse=reverse)
+        return Int100Tensor.from_decomposed(backing)
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int100Tensor':
         backing = crt_im2col(self.backing, h_filter, w_filter, padding, strides)

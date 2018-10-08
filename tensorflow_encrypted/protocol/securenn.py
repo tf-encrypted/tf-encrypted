@@ -7,6 +7,7 @@ from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 )
+from ..tensor import PrimeTensor
 from ..tensor.prime import prime_factory as gen_prime_factory
 from ..tensor.factory import AbstractFactory
 from ..player import Player
@@ -112,87 +113,30 @@ class SecureNN(Pond):
 
         return self.tensor_factory
 
-    def _private_compare_beta0(self, input: PondPrivateTensor, rho: PondPublicTensor):
+    def _private_compare_beta0(prot, x_bits: PondPrivateTensor, r_bits: PondPublicTensor):
+        assert isinstance(x_bits.share0, PrimeTensor) and x_bits.share0.modulus == 37
+        assert isinstance(r_bits.value_on_0, PrimeTensor) and r_bits.value_on_0.modulus == 37
 
-        w = self.bitwise_xor(input, rho)
+        w_bits = prot.bitwise_xor(x_bits, r_bits)
 
-        y = w.reveal()
-        z = input.reveal()
+        # s0 = tf.cumsum(w_bits.share0.value, axis=-1, reverse=True, exclusive=True)
+        # s1 = tf.cumsum(w_bits.share1.value, axis=-1, reverse=True, exclusive=True)
+        # s = PondPrivateTensor(prot, PrimeTensor(s0, 37), PrimeTensor(s1, 37), False)
 
-        w.share0.value = tf.Print(w.share0.value, [w.reveal().value_on_0.value], 'W after xor', summarize=50)
-        input.share0.value = tf.Print(input.share0.value, [input.reveal().value_on_0.value], 'input to xor', summarize=50)
-        #
-        # y.value_on_0.value = tf.Print(y.value_on_0.value, [y.value_on_0.value], 'W - after bitwise xor', summarize=100)
-        # z.value_on_0.value = tf.Print(z.value_on_0.value, [z.value_on_0.value], 'Z - after bitwise xor', summarize=100)
-        # rho.value_on_0.value = tf.Print(rho.value_on_0.value, [rho.value_on_0.value], 'rho - after bitwise xor', summarize=100)
-        # print(y.value_on_0.value, z.value_on_0.value, rho.value_on_0.value)
-        print(w)
-
-
-        with tf.device(self.server_0.device_name):
-            w0_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
-            for i in range(bits - 1, -1, -1):
-                sum = self.sum(w[:, i + 1:], axis=1)
-                indices = []
-
-                for j in range(0, w.shape.as_list()[0]):
-                    indices.append([j, i])
-
-                update_0 = tf.SparseTensor(indices, sum.share0.value, w.shape)
-
-            w0_sum = w0_sum + tf.sparse_tensor_to_dense(update_0)
-
-        with tf.device(self.server_1.device_name):
-            w1_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
-            for i in range(bits - 1, -1, -1):
-                sum = self.sum(w[:, i + 1:], axis=1)
-                indices = []
-
-                for j in range(0, w.shape.as_list()[0]):
-                    indices.append([j, i])
-
-                update_1 = tf.SparseTensor(indices, sum.share1.value, w.shape)
-
-            w1_sum = w1_sum + tf.sparse_tensor_to_dense(update_1)
-
-        w_sum = PondPrivateTensor(self, self.prime_factory.Tensor.from_native(w0_sum), self.prime_factory.Tensor.from_native(w1_sum), w.is_scaled)
-
-        c = rho - input + 1 + w_sum
+        c = r_bits - x_bits + 1 + prot.cumsum(w_bits, axis=-1, reverse=True, exclusive=True)
         return c
 
-    def _private_compare_beta1(self, input: PondPrivateTensor, theta: PondPublicTensor):
+    def _private_compare_beta1(prot, x_bits: PondPrivateTensor, t_bits: PondPublicTensor):
+        assert isinstance(x_bits.share0, PrimeTensor) and x_bits.share0.modulus == 37
+        assert isinstance(t_bits.value_on_0, PrimeTensor) and t_bits.value_on_0.modulus == 37
 
-        w = self.bitwise_xor(input, theta)
+        w_bits = prot.bitwise_xor(x_bits, t_bits)
 
-        with tf.device(self.server_0.device_name):
-            w0_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
-            for i in range(bits - 1, -1, -1):
-                sum = self.sum(w[:, i + 1:], axis=1)
-                indices = []
+        # s0 = tf.cumsum(w_bits.share0.value, axis=-1, reverse=True, exclusive=True)
+        # s1 = tf.cumsum(w_bits.share0.value, axis=-1, reverse=True, exclusive=True)
+        # s = PondPrivateTensor(prot, PrimeTensor(s0, 37), PrimeTensor(s1, 37), False)
 
-                for j in range(0, w.shape.as_list()[0]):
-                    indices.append([j, i])
-
-                update_0 = tf.SparseTensor(indices, sum.share0.value, w.shape)
-
-            w0_sum = w0_sum + tf.sparse_tensor_to_dense(update_0)
-
-        with tf.device(self.server_1.device_name):
-            w1_sum = tf.zeros(shape=w.shape, dtype=tf.int32)
-            for i in range(bits - 1, -1, -1):
-                sum = self.sum(w[:, i + 1:], axis=1)
-                indices = []
-
-                for j in range(0, w.shape.as_list()[0]):
-                    indices.append([j, i])
-
-                update_1 = tf.SparseTensor(indices, sum.share1.value, w.shape)
-
-            w1_sum = w1_sum + tf.sparse_tensor_to_dense(update_1)
-
-        w_sum = PondPrivateTensor(self, self.prime_factory.Tensor.from_native(w0_sum), self.prime_factory.Tensor.from_native(w1_sum), w.is_scaled)
-
-        c = input - theta + 1 + w_sum
+        c = x_bits - t_bits + 1 + prot.cumsum(w_bits, axis=-1, reverse=True, exclusive=True)
         return c
 
     def _private_compare_edge(self):
@@ -211,6 +155,8 @@ class SecureNN(Pond):
         rho = rho.to_bits(self.prime_factory.modulus)
         theta = theta.to_bits(self.prime_factory.modulus)
 
+        print("SHAPE", beta.shape, rho.shape, theta.shape)
+
         with tf.name_scope('private_compare'):
             beta = beta.reshape([beta.shape.as_list()[0], 1])
             beta = beta.broadcast([beta.shape.as_list()[0], 16])
@@ -225,6 +171,8 @@ class SecureNN(Pond):
 
             with tf.name_scope('find_edges'):
                 edges = self.where(self.equal(rho, 2 ** bits - 1))
+
+            print("FILTERED", zeros.shape, ones.shape, edges.shape)
 
             # with tf.name_scope('find_non_edge_ones'):
             #     ones = tf.setdiff1d(ones, edges)
