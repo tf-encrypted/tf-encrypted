@@ -4,7 +4,7 @@ import inspect
 import tensorflow as tf
 
 from .config import Config, LocalConfig, RemoteConfig, get_config
-from .session import setTFEDebugFlag, setMonitorStatsFlag, Session
+from .session import Session, setTFEDebugFlag, setMonitorStatsFlag, setTFETraceFlag
 from .protocol import global_caches_updator, Pond, get_protocol
 from .player import player
 from . import io
@@ -64,8 +64,9 @@ set_protocol(Pond())
 __all__ = [
     "LocalConfig",
     "RemoteConfig",
-    "setTFEDebugFlag",
     "setMonitorStatsFlag",
+    "setTFETraceFlag",
+    "setTFEDebugFlag",
     "get_config",
     "set_config",
     "get_protocol",

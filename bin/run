@@ -14,8 +14,10 @@ import numpy as np
 import tensorflow_encrypted as tfe
 
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
+enable_traces = os.environ.get('TFE_TRACE') is not None
 enable_debug = os.environ.get('TFE_DEBUG') is not None
 tfe.setMonitorStatsFlag(enable_stats_monitor)
+tfe.setTFETraceFlag(enable_traces)
 tfe.setTFEDebugFlag(enable_debug)
 
 parser = argparse.ArgumentParser()
@@ -92,11 +94,14 @@ for i in range(len(input_spec)):
         tf.get_default_graph().get_tensor_by_name(name)
     )
 
-input_data = []
-for spec in input_spec:
-    input_data.append(
-        np.random.standard_normal(spec['shape']).tolist()
-    )
+if config.input_file != '':
+    input_data = np.load(config.input_file)
+else:
+    input_data = []
+    for spec in input_spec:
+        input_data.append(
+            np.random.standard_normal(spec['shape']).tolist()
+        )
 
 with tfe.Session() as sess:
     print("initing!!!")

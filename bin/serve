@@ -27,6 +27,7 @@ provider_address = os.environ.get('TFE_WEIGHTS_PROVIDER_ADDRESS')
 master_address = os.environ.get('TFE_MASTER_ADDRESS')
 port = int(os.environ.get('TFE_API_PORT', "8080"))
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
+enable_traces = os.environ.get('TFE_TRACE') is not None
 enable_debug = os.environ.get('TFE_DEBUG') is not None
 
 if node_name is None:
@@ -54,6 +55,7 @@ if master_address is None:
     sys.exit(1)
 
 tfe.setMonitorStatsFlag(enable_stats_monitor)
+tfe.setTFETraceFlag(enable_traces)
 tfe.setTFEDebugFlag(enable_debug)
 
 remote_config = tfe.RemoteConfig(
@@ -120,7 +122,7 @@ else:
                 'shape': [int(d.size) if d.size > 0 else 1 for d in node.attr['shape'].shape.dim]
             })
 
-    sess = tfe.Session()
+    sess = tfe.Session(config=remote_config)
 
     with tfe.protocol.Pond(*remote_config.get_players('server0, server1, crypto_producer')) as prot:
         assert isinstance(prot, tfe.protocol.Pond)
