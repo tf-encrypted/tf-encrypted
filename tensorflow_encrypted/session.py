@@ -114,3 +114,11 @@ def setTFEDebugFlag(debug: bool = False) -> None:
         print("Tensorflow encrypted is running in DEBUG mode")
 
     __TFE_DEBUG__ = debug
+
+
+def setTFETraceFlag(trace: bool = False) -> None:
+    global __TFE_TRACE__
+    if trace is True:
+        print("Tensorflow encrypted is dumping computation traces")
+
+    __TFE_TRACE__ = trace
