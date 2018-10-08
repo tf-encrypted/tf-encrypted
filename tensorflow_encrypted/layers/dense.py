@@ -33,8 +33,8 @@ class Dense(core.Layer):
         if initial_bias is None:
             initial_bias = np.zeros((1, self.out_features))
 
-        self.weights = self.prot.define_private_variable(initial_weights)
-        self.bias = self.prot.define_private_variable(initial_bias)
+        self.weights = self.prot.cache(self.prot.mask(self.prot.define_private_variable(initial_weights)))
+        self.bias = self.prot.cache(self.prot.mask(self.prot.define_private_variable(initial_bias)))
 
     def forward(self, x):
         self.layer_input = x

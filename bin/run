@@ -107,6 +107,9 @@ with tfe.Session() as sess:
     print("initing!!!")
     sess.run(tfe.get_global_variables(), tag='init')
 
+    print("populating")
+    sess.run(tfe.global_caches_updator(), tag='populate')
+
     print("running")
     feed_dict = {
         pl: input_data[i] for i, pl in enumerate(pls)

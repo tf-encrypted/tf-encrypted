@@ -57,8 +57,8 @@ class Conv2D(core.Layer):
         if initial_weights is None:
             initial_weights = self.filter_init(self.fshape)
 
-        self.weights = self.prot.define_private_variable(initial_weights)
-        self.bias = self.prot.define_private_variable(np.zeros(self.output_shape[1:]))
+        self.weights = self.prot.cache(self.prot.mask(self.prot.define_private_variable(initial_weights)))
+        self.bias = self.prot.cache(self.prot.mask(self.prot.define_private_variable(np.zeros(self.output_shape[1:]))))
 
     def forward(self, x):
         self.cached_input_shape = x.shape

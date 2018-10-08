@@ -1703,9 +1703,9 @@ def _mul_public_public(prot, x, y):
         with tf.device(prot.server_1.device_name):
             z_on_1 = x_on_1 * y_on_1
 
-    z = PondPublicTensor(prot, z_on_0, z_on_1, x.is_scaled or y.is_scaled)
-    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
-    return z
+        z = PondPublicTensor(prot, z_on_0, z_on_1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
 
 
 def _mul_public_private(prot, x, y):
@@ -1723,9 +1723,9 @@ def _mul_public_private(prot, x, y):
         with tf.device(prot.server_1.device_name):
             z1 = x_on_1 * y1
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
-    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
-    return z
+        z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
 
 
 def _mul_public_masked(prot, x, y):
@@ -1749,9 +1749,9 @@ def _mul_private_public(prot, x, y):
         with tf.device(prot.server_1.device_name):
             z1 = x1 * y_on_1
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
-    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
-    return z
+        z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
 
 
 def _mul_private_private(prot, x, y):
@@ -1801,9 +1801,9 @@ def _mul_masked_masked(prot, x, y):
             beta = beta_on_1
             z1 = ab1 + (a1 * beta) + (alpha * b1)
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
-    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
-    return z
+        z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
 
 
 #
@@ -2000,9 +2000,9 @@ def _conv2d_public_public(prot, x, y, strides, padding):
         with tf.device(prot.server_1.device_name):
             z1 = x_1.conv2d(y_1, strides, padding)
 
-    z = PondPublicTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
-    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
-    return z
+        z = PondPublicTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
 
 
 def _conv2d_public_private(prot, x, y, strides, padding):
@@ -2067,9 +2067,9 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
                 + a1.conv2d(beta, strides, padding) \
                 + alpha.conv2d(b1, strides, padding)
 
-    z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
-    z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
-    return z
+        z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
 
 
 #
