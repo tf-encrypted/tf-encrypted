@@ -1,11 +1,11 @@
-from typing import Dict, Tuple, List, Any, Union
+from typing import Dict, Tuple, List, Any, Union, Optional
 import tensorflow as tf
 from collections import Iterable
 import numpy as np
 
 from ..io import InputProvider
 from ..player import Player
-from ..protocol.pond import Pond
+from ..protocol import Pond, get_protocol
 from ..config import Config, get_config
 
 
@@ -26,18 +26,29 @@ class ConvertInputProvider(InputProvider):
 
 class Converter():
 
-    def __init__(self, config: Config, protocol: Pond,
-                 player: Union[str, Player]) -> None:
+    def __init__(
+        self,
+        config: Optional[Config] = None,
+        protocol: Optional[Pond] = None,
+        player: Optional[Union[str, Player]] = None
+    ) -> None:
         self.config = config if config is not None else get_config()
-        self.protocol = protocol
-        if isinstance(player, str):
+        self.protocol = protocol if protocol is not None else get_protocol()
+        if player is None:
+            self.model_provider = self.config.get_player('model-provider')
+        elif isinstance(player, str):
             self.model_provider = self.config.get_player(player)
         else:
             self.model_provider = player
         self.outputs = {}
 
-    def convert(self, graph_def: Any, input: Union[List[InputProvider], InputProvider],
-                register: Dict[str, Any]) -> Any:
+    def convert(
+        self,
+        graph_def: Any,
+        input: Union[List[InputProvider], InputProvider],
+        register: Dict[str, Any]
+    ) -> Any:
+
         name_to_input_name, name_to_node = extract_graph_summary(graph_def)
 
         if isinstance(input, InputProvider):
