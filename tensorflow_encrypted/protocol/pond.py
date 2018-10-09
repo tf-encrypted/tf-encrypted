@@ -44,12 +44,16 @@ class Pond(Protocol):
 
     def __init__(
             self,
-            server_0: Optional[Player] = None,
-            server_1: Optional[Player] = None,
-            crypto_producer: Optional[Player] = None,
+            server_0: Optional['Player'] = None,
+            server_1: Optional['Player'] = None,
+            crypto_producer: Optional['Player'] = None,
             use_noninteractive_truncation: bool = False,
             tensor_factory: AbstractFactory = Int100Factory(),
             verify_precision: bool=True) -> None:
+
+        """
+        Construct a new isntance of Pond
+        """
         self.server_0 = server_0 or get_config().get_player('server0')
         self.server_1 = server_1 or get_config().get_player('server1')
         self.crypto_producer = crypto_producer or get_config().get_player('crypto_producer')
@@ -121,6 +125,17 @@ class Pond(Protocol):
         apply_scaling: bool = True,
         name: Optional[str] = None
     ) -> 'PondPublicVariable':
+        """
+        Define a public variable.
+
+        This is like defining a variable in tensorflow except it creates one that can be used by the protocol.
+
+        For most cases, you can think of this as the same as the one from tensorflow
+        and you don't generally need to consider the difference.
+
+        For those curious, under the hood, the major difference is that this function will pin your data to
+        a specific device which will be used to optimize the graph later on.
+        """
         assert isinstance(initial_value, (np.ndarray, tf.Tensor, PondPublicTensor)), type(initial_value)
 
         with tf.name_scope('public-var{}'.format('-' + name if name else '')):
@@ -151,6 +166,15 @@ class Pond(Protocol):
         apply_scaling: bool = True,
         name: Optional[str] = None
     ) -> 'PondPrivateVariable':
+        """
+        Define a private variable.
+
+        This will take the passed value and construct shares that will be split up between
+        those involved in the computationself.
+
+        For example, in a two party architecture, this will split the value into two sets of
+        shares and transfer them between each party in a secure manner.
+        """
         assert isinstance(initial_value, (np.ndarray, tf.Tensor, PondPublicTensor,
                                           PondPrivateTensor)), type(initial_value)
 
@@ -801,7 +825,7 @@ class PondTensor(abc.ABC):
     This class should never be instantiated on its own.
     """
 
-    def __init__(self, prot: Pond, is_scaled: bool) -> None:
+    def __init__(self, prot, is_scaled):
         self.prot = prot
         self.is_scaled = is_scaled
 
@@ -816,24 +840,62 @@ class PondTensor(abc.ABC):
         pass
 
     def add(self, other):
+        """
+        Add `other` to this PondTensor.  This can be another tensor with the same
+        backing or a primitive.
+
+        This function returns a new PondTensor and does not modify this one.
+
+        :param ~tensorflow_encrypted.protocol.pond.PondTensor other: a or primitive (e.g. a float)
+        :return: A new PondTensor with `other` added.
+        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        """
         return self.prot.add(self, other)
 
     def __add__(self, other):
+        """
+        See :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.add`
+        """
         return self.prot.add(self, other)
 
     def reduce_sum(self, axis=None, keepdims=None):
+        """
+        Like :meth:`tensorflow.reduce_sum`
+
+        :param int axis:  The axis to reduce along
+        :param bool keepdims: If true, retains reduced dimensions with length 1.
+        :return: A new PondTensor
+        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        """
         return self.prot.reduce_sum(self, axis, keepdims)
 
     def sum(self, axis=None, keepdims=None):
+        """
+        See :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.reduce_sum`
+        """
         return self.reduce_sum(axis, keepdims)
 
     def sub(self, other):
+        """
+        Subtract `other` from this tensor.
+
+        :param ~tensorflow_encrypted.protocol.pond.PondTensor other: to subtract
+        :return: A new PondTensor
+        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        """
         return self.prot.sub(self, other)
 
     def __sub__(self, other):
         return self.prot.sub(self, other)
 
     def mul(self, other):
+        """
+        Multiply this tensor with `other`
+
+        :param ~tensorflow_encrypted.protocol.pond.PondTensor other: to multiply
+        :return: A new PondTensor
+        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        """
         return self.prot.mul(self, other)
 
     def __mul__(self, other):
@@ -843,21 +905,64 @@ class PondTensor(abc.ABC):
         return self.prot.mul(self, other)
 
     def square(self):
+        """
+        Square this tensor.
+
+        :return: A new PondTensor
+        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        """
         return self.prot.square(self)
 
     def matmul(self, other):
+        """
+        MatMul this tensor with `other`.  This will perform matrix multiplication rather than elementwise like :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.mul`
+
+        :param ~tensorflow_encrypted.protocol.pond.PondTensor other: to subtract
+        :return: A new PondTensor
+        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        """
         return self.prot.matmul(self, other)
 
     def dot(self, other):
+        """
+        Alias for :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.matmul`
+
+        :return: A new PondTensor
+        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        """
         return self.matmul(other)
 
     def tranpose(self):
+        """
+        Transpose this tensor.
+
+        See :meth:`tensorflow.transpose`
+
+        :return: A new PondTensor
+        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        """
         return self.prot.transpose(self)
 
     def truncate(self):
+        """
+        Truncate this tensor.
+
+        `TODO`
+
+        :return: A new PondTensor
+        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        """
         return self.prot.truncate(self)
 
     def expand_dims(self):
+        """
+        Expand dims
+
+        `TODO`
+
+        :return: A new PondTensor
+        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        """
         return self.prot.expand_dims(self)
 
 

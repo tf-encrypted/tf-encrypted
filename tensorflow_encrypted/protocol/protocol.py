@@ -14,6 +14,9 @@ nodes = dict()
 
 
 class Protocol(ABC):
+    """
+    Protocol is the base class that other protocols in tf-encrypted will extend from.
+    """
 
     def __enter__(self) -> 'Protocol':
         set_protocol(self)
@@ -32,11 +35,17 @@ class Protocol(ABC):
 
 
 def set_protocol(prot: Optional[Protocol]) -> None:
+    """
+    Sets the global protocol.  E.g. secureNN or Pond.
+    """
     global __PROTOCOL__
     __PROTOCOL__ = prot
 
 
 def get_protocol() -> Optional[Protocol]:
+    """
+    Returns the global protocol.
+    """
     return __PROTOCOL__
 
 

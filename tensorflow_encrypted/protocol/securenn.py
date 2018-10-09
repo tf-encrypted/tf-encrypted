@@ -9,14 +9,21 @@ from ..config import get_config
 
 
 class SecureNN(Pond):
+    """Implementation of secureNN from the secureNN paper
+        https://eprint.iacr.org/2018/442.pdf
+
+    """
 
     def __init__(
         self,
-        server_0: Optional[Player] = None,
-        server_1: Optional[Player] = None,
-        server_2: Optional[Player] = None,
+        server_0: Optional['Player'] = None,
+        server_1: Optional['Player'] = None,
+        server_2: Optional['Player'] = None,
         **kwargs
     ) -> None:
+        """
+        Implement a new instance of the secureNN protocol
+        """
         super(SecureNN, self).__init__(
             server_0=server_0 or get_config().get_player('server0'),
             server_1=server_1 or get_config().get_player('server1'),
@@ -32,29 +39,65 @@ class SecureNN(Pond):
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
+        """
+        Computes the bitwise `NOT` of the input.
+            `(1 - x)`
+
+        :param x: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
+        :rtype: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
+        """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         return self.sub(1, x)
 
     @memoize
-    def bitwise_and(self, x: PondTensor, y: PondTensor) -> PondTensor:
+    def bitwise_and(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
+        """
+        Computes the bitwise `AND` of the given inputs.
+            `(x * y)`
+
+        :param x: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
+        :param y: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
+        :rtype: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
+        """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
         return x * y
 
     @memoize
-    def bitwise_or(self, x: PondTensor, y: PondTensor) -> PondTensor:
+    def bitwise_or(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
+        """
+        Computes the bitwise `OR` of the given inputs.
+            `(x + y) - (x * y)`
+
+        :param x: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
+        :param y: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
+        :rtype: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
+        """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
         return x + y - self.bitwise_and(x, y)
 
     @memoize
-    def bitwise_xor(self, x: PondTensor, y: PondTensor) -> PondTensor:
+    def bitwise_xor(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
+        """
+        Compute the bitwise `XOR` of the given inputs.
+            `(x + y) - (x * y * 2)`
+
+        :param x: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
+        :param y: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
+        :rtype: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
+        """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
         return x + y - self.bitwise_and(x, y) * 2
 
     @memoize
-    def msb(self, x: PondTensor) -> PondTensor:
+    def msb(self, x: 'PondTensor') -> 'PondTensor':
+        """
+        Computes the most significant bit of the provided tensor.
+
+        :param x: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
+        """
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
         return self.lsb(x * 2)
 
