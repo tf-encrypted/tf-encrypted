@@ -108,7 +108,7 @@ class Int32Tensor(AbstractTensor):
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'Int32Tensor':
         return Int32Tensor(tf.reshape(self.value, axes))
 
-    def sum(self, axis, keepdims) -> 'Int32Tensor':
+    def reduce_sum(self, axis, keepdims) -> 'Int32Tensor':
         return Int32Tensor(tf.reduce_sum(self.value, axis, keepdims))
 
     def cumsum(self, axis, exclusive, reverse) -> 'Int32Tensor':

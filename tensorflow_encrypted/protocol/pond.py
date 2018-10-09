@@ -434,34 +434,14 @@ class Pond(Protocol):
     @memoize
     def reduce_sum(self, x, axis=None, keepdims=None):
         x = self.lift(x)
-
-        dispatch = {
-            PondPublicTensor: _reduce_sum_public,
-            PondPrivateTensor: _reduce_sum_private,
-            PondMaskedTensor: _reduce_sum_masked
-        }
-        func = dispatch.get(_type(x), None)
-        if func is None:
-            raise TypeError("Don't know how to sum {}".format(type(x)))
-
-        return func(self, x, axis, keepdims)
+        return self.dispatch('reduce_sum', x, axis=axis, keepdims=keepdims)
 
     def sum(self, x, axis=None, keepdims=None):
         return self.reduce_sum(x, axis, keepdims)
 
     @memoize
     def cumsum(self, x, axis=0, exclusive=False, reverse=False):
-
-        dispatch = {
-            PondPublicTensor: _cumsum_public,
-            PondPrivateTensor: _cumsum_private,
-            PondMaskedTensor: _cumsum_masked
-        }
-        func = dispatch.get(_type(x), None)
-        if func is None:
-            raise TypeError("Don't know how to cumsum {}".format(type(x)))
-
-        return func(self, x, axis=axis, exclusive=exclusive, reverse=reverse)
+        return self.dispatch('cumsum', x, axis=axis, exclusive=exclusive, reverse=reverse)
 
     @memoize
     def sub(self, x, y):
@@ -951,15 +931,6 @@ class PondPublicTensor(PondTensor):
         return 'PondPublicTensor(shape={})'.format(self.shape)
 
     @property
-    def type(self) -> str:
-        if isinstance(self.value_on_0, PrimeTensor):
-            return 'prime'
-        elif isinstance(self.value_on_0, Int32Tensor):
-            return 'int32'
-        else:
-            raise Exception('Invalid tensor backing')
-
-    @property
     def shape(self) -> List[int]:
         return self.value_on_0.shape
 
@@ -973,25 +944,6 @@ class PondPublicTensor(PondTensor):
 
     def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'PondTensor':
         return self.prot.indexer(self, slice)
-
-    def to_bits(self, prime: int = None) -> 'PondTensor':
-        value_on_0, value_on_1 = self.unwrapped
-
-        # assert isinstance(value_on_0, Int32Tensor), type(value_on_0)
-        with tf.device(self.prot.server_0.device_name):
-            if isinstance(value_on_0, Int32Tensor):
-                print('this guy!!')
-                bits_0 = value_on_0.to_bits(prime)
-            else:
-                bits_0 = value_on_0.to_bits()
-
-        with tf.device(self.prot.server_1.device_name):
-            if isinstance(value_on_0, Int32Tensor):
-                bits_1 = value_on_1.to_bits(prime)
-            else:
-                bits_1 = value_on_1.to_bits()
-
-        return PondPublicTensor(self.prot, bits_0, bits_1, self.is_scaled)
 
 
 class PondPrivateTensor(PondTensor):
@@ -1015,15 +967,6 @@ class PondPrivateTensor(PondTensor):
         super(PondPrivateTensor, self).__init__(prot, is_scaled)
         self.share0 = share0
         self.share1 = share1
-
-    @property
-    def type(self) -> str:
-        if isinstance(self.share0, PrimeTensor):
-            return 'prime'
-        elif isinstance(self.share0, AbstractTensor):
-            return 'abstract'
-        else:
-            raise Exception('Invalid tensor backing')
 
     def __repr__(self) -> str:
         return 'PondPrivateTensor(shape={})'.format(self.shape)

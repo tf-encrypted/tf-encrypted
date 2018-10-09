@@ -1,8 +1,10 @@
 from __future__ import absolute_import
-from typing import List
+from typing import List, Optional
 import random
 import sys
+
 import tensorflow as tf
+
 from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
@@ -75,8 +77,13 @@ class SecureNN(Pond):
                             'but it was initialized with an even one.')
         return self.lsb(x * 2)
 
+    @memoize
     def lsb(self, x: PondTensor) -> PondTensor:
         return self.dispatch('lsb', x, container=_thismodule)
+
+    @memoize
+    def bits(self, x: PondTensor, prime: Optional[int] = None) -> 'PondTensor':
+        return self.dispatch('bits', x, container=_thismodule, prime=prime)
 
     @memoize
     def negative(self, x: PondTensor) -> PondTensor:
@@ -248,5 +255,23 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
         print(gamma.share0, delta.share0, alpha.share0)
         return alpha
 
+
 def _lsb_masked(prot: SecureNN, x: PondMaskedTensor):
     return prot.lsb(x.unmasked)
+
+
+def _bits_public(prot: SecureNN, x: PondPublicTensor, factory: Optional[AbstractFactory] = None) -> PondPublicTensor:
+
+    factory = factory or prot.prime_factory
+
+    with tf.name_scope('bits'):
+
+        x_on_0, x_on_1 = x.unwrapped
+
+        with tf.device(prot.server_0.device_name):
+            bits_on_0 = x_on_0.to_bits(factory)
+
+        with tf.device(prot.server_1.device_name):
+            bits_on_1 = x_on_1.to_bits(factory)
+
+        return PondPublicTensor(prot, bits_on_0, bits_on_1, x.is_scaled)

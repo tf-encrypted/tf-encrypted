@@ -60,7 +60,7 @@ class TestPrivateCompare(unittest.TestCase):
             21,
             21,
             21
-        ], dtype=np.int32).reshape(2,2,2)
+        ], dtype=np.int32).reshape(2, 2, 2)
 
         r = np.array([
             36,
@@ -71,7 +71,7 @@ class TestPrivateCompare(unittest.TestCase):
             20,
             21,
             22
-        ], dtype=np.int32).reshape(2,2,2)
+        ], dtype=np.int32).reshape(2, 2, 2)
 
         beta = np.array([
             0,
@@ -82,7 +82,7 @@ class TestPrivateCompare(unittest.TestCase):
             1,
             1,
             1
-        ], dtype=np.int32).reshape(2,2,2)
+        ], dtype=np.int32).reshape(2, 2, 2)
 
         expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
 
