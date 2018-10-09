@@ -73,14 +73,16 @@ class Pond(Protocol):
             assert log2(self.M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
             assert gcd(self.K, self.M) == 1
 
-    def factory_from_type(self, type: str) -> AbstractFactory:
-        return self.tensor_factory
-
-    def define_constant(self, value: np.ndarray, apply_scaling: bool = True, name: Optional[str] = None, factory=None) -> 'PondConstant':
+    def define_constant(
+        self,
+        value: np.ndarray,
+        apply_scaling: bool = True,
+        name: Optional[str] = None,
+        factory: Optional[AbstractFactory] = None
+    ) -> 'PondConstant':
         assert isinstance(value, (np.ndarray,)), type(value)
 
-        if factory is None:
-            factory = self.tensor_factory
+        factory = factory or self.tensor_factory
 
         v = self._encode(value, apply_scaling, factory)
 
@@ -94,7 +96,12 @@ class Pond(Protocol):
 
         return PondConstant(self, x_on_0, x_on_1, apply_scaling)
 
-    def define_public_placeholder(self, shape, apply_scaling: bool = True, name: Optional[str] = None):
+    def define_public_placeholder(
+        self,
+        shape,
+        apply_scaling: bool = True,
+        name: Optional[str] = None
+    ) -> 'PondPublicTensor':
 
         with tf.name_scope('public-placeholder{}'.format('-' + name if name else '')):
 
@@ -106,7 +113,12 @@ class Pond(Protocol):
 
         return PondPublicPlaceholder(self, x_on_0, x_on_1, apply_scaling)
 
-    def define_private_placeholder(self, shape, apply_scaling: bool = True, name: Optional[str] = None):
+    def define_private_placeholder(
+        self,
+        shape,
+        apply_scaling: bool = True,
+        name: Optional[str] = None
+    ) -> 'PondPrivateTensor':
 
         pl = self.tensor_factory.Placeholder(shape)
         v0, v1 = self._share(pl)
@@ -309,11 +321,10 @@ class Pond(Protocol):
     def clear_initializers(self) -> None:
         del _initializers[:]
 
-    def _encode(self, rationals, apply_scaling, factory: AbstractFactory = None) -> AbstractTensor:
+    def _encode(self, rationals, apply_scaling, factory: Optional[AbstractFactory] = None) -> AbstractTensor:
         """ Encode tensor of rational numbers into tensor of ring elements """
 
-        if factory is None:
-            factory = self.tensor_factory
+        factory = factory or self.tensor_factory
 
         with tf.name_scope('encode'):
             scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1

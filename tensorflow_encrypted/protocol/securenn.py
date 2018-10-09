@@ -170,10 +170,6 @@ class SecureNN(Pond):
                 return PondPrivateTensor(self, *self._share(rows_with_zeros, self.prime_factory), False)
 
     def equal_zero(self, x):
-
-        with tf.name_scope('equal_zero'):
-
-            
         # TODO[Morten] use devices, except to int100 etc
         value = x.value_on_0.equal_zero()
         return PondPublicTensor(self, value, value, False)
