@@ -26,6 +26,7 @@ producer_address = os.environ.get('TFE_CRYPTO_PRODUCER_ADDRESS')
 provider_address = os.environ.get('TFE_WEIGHTS_PROVIDER_ADDRESS')
 master_address = os.environ.get('TFE_MASTER_ADDRESS')
 port = int(os.environ.get('TFE_API_PORT', "8080"))
+batch_size = int(os.environ.get('TFE_BATCH_SIZE', 1))
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
 enable_debug = os.environ.get('TFE_DEBUG') is not None
@@ -119,7 +120,7 @@ else:
             input_spec.append({
                 'name': node.name,
                 'dtype': node.attr['dtype'].type,
-                'shape': [int(d.size) if d.size > 0 else 1 for d in node.attr['shape'].shape.dim]
+                'shape': [batch_size] + [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
             })
 
     sess = tfe.Session(config=remote_config)
@@ -180,7 +181,7 @@ else:
             tag='prediction',
         )
 
-        _global_memory[request_id] = output_data[0].tolist()
+        _global_memory[request_id] = output_data.tolist()
 
     print("Warming up the graph")
     warmup_data = []
