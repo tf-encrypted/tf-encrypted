@@ -1,19 +1,22 @@
-from typing import Dict, Tuple, List, Any, Union
+from typing import Dict, Tuple, List, Any, Union, Optional
 import tensorflow as tf
 from collections import Iterable
 import numpy as np
 
 from ..io import InputProvider
 from ..player import Player
-from ..protocol.pond import Pond
-from ..config import Config
+from ..protocol import Pond, get_protocol
+from ..config import Config, get_config
 
 
 class ConvertInputProvider(InputProvider):
 
-    def __init__(self, player: Player, input: Union[np.ndarray, tf.Tensor]) -> None:
+    def __init__(self, player: Union[str, Player], input: Union[np.ndarray, tf.Tensor]) -> None:
         self.input = input
-        self.player = player
+        if isinstance(player, str):
+            self.player = get_config().get_player(player)
+        else:
+            self.player = player
 
     def provide_input(self) -> tf.Tensor:
         if isinstance(self.input, tf.Tensor):
@@ -23,15 +26,29 @@ class ConvertInputProvider(InputProvider):
 
 class Converter():
 
-    def __init__(self, config: Config, protocol: Pond,
-                 weights_provider: Player) -> None:
-        self.config = config
-        self.protocol = protocol
-        self.weights_provider = weights_provider
+    def __init__(
+        self,
+        config: Optional[Config] = None,
+        protocol: Optional[Pond] = None,
+        player: Optional[Union[str, Player]] = None
+    ) -> None:
+        self.config = config if config is not None else get_config()
+        self.protocol = protocol if protocol is not None else get_protocol()
+        if player is None:
+            self.model_provider = self.config.get_player('model-provider')
+        elif isinstance(player, str):
+            self.model_provider = self.config.get_player(player)
+        else:
+            self.model_provider = player
         self.outputs = {}
 
-    def convert(self, graph_def: Any, input: Union[List[InputProvider], InputProvider],
-                register: Dict[str, Any]) -> Any:
+    def convert(
+        self,
+        graph_def: Any,
+        input: Union[List[InputProvider], InputProvider],
+        register: Dict[str, Any]
+    ) -> Any:
+
         name_to_input_name, name_to_node = extract_graph_summary(graph_def)
 
         if isinstance(input, InputProvider):

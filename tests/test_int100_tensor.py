@@ -12,14 +12,9 @@ class TestInt100Tensor(unittest.TestCase):
         tf.reset_default_graph()
 
     def test_pond(self) -> None:
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
 
         with tfe.protocol.Pond(
-            *config.get_players('server0, server1, crypto_producer'),
+            None,
             tensor_factory=Int100Factory(),
             use_noninteractive_truncation=True,
             verify_precision=True
@@ -30,9 +25,9 @@ class TestInt100Tensor(unittest.TestCase):
 
             z = x * y
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                actual = z.reveal().eval(sess)
+                actual = sess.run(z.reveal())
 
             expected = np.array([4, 4])
             np.testing.assert_array_almost_equal(actual, expected, decimal=3)

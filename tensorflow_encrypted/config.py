@@ -1,40 +1,12 @@
-import os
 import json
 import math
+from typing import Dict, List, Optional, Union, Tuple
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any, Union, Tuple
-from collections import defaultdict
 from pathlib import Path
 
-import numpy as np
 import tensorflow as tf
-from tensorflow.python import debug as tf_debug
-from tensorflow.python.client import timeline
 
 from .player import Player
-
-
-__TFE_DEBUG__ = bool(os.getenv('TFE_DEBUG', False))
-__TFE_STATS__ = bool(os.getenv('TFE_STATS', False))
-__TFE_TRACE__ = bool(os.getenv('TFE_TRACE', False))
-__TENSORBOARD_DIR__ = str(os.getenv('TFE_STATS_DIR', '/tmp/tensorboard'))
-
-_run_counter = defaultdict(int)  # type: Any
-
-
-class Config(ABC):
-
-    @abstractmethod
-    def players(self) -> List[Player]:
-        pass
-
-    @abstractmethod
-    def get_player(self, name: str) -> Player:
-        pass
-
-    @abstractmethod
-    def to_dict(self) -> Dict:
-        pass
 
 
 def get_docker_cpu_quota() -> Optional[int]:
@@ -56,6 +28,25 @@ def get_docker_cpu_quota() -> Optional[int]:
     return cpu_cores
 
 
+class Config(ABC):
+
+    @abstractmethod
+    def players(self) -> List[Player]:
+        pass
+
+    @abstractmethod
+    def get_player(self, name: str) -> Player:
+        pass
+
+    @abstractmethod
+    def to_dict(self) -> Dict:
+        pass
+
+    @abstractmethod
+    def get_tf_config(self) -> Tuple[str, tf.ConfigProto]:
+        pass
+
+
 class LocalConfig(Config):
     """
     Configure tf-encrypted to use threads on the local CPU
@@ -63,7 +54,15 @@ class LocalConfig(Config):
     Intended mostly for development/debugging use.
     """
 
-    def __init__(self, player_names: List[str], job_name: str='localhost') -> None:
+    def __init__(
+        self,
+        player_names: List[str],
+        master: Optional[Union[int, str]] = None,
+        job_name: str='localhost',
+        log_device_placement: bool=False
+    ) -> None:
+        self._master = master
+        self._log_device_placement = log_device_placement
         self._job_name = job_name
         self._players = {
             name: Player(
@@ -108,33 +107,20 @@ class LocalConfig(Config):
         assert isinstance(names, list)
         return [player for name, player in self._players.items() if name in names]
 
-    def session(
-        self,
-        master: Optional[Union[int, str]] = None,
-        log_device_placement: bool = False
-    ) -> tf.Session:
+    def get_tf_config(self) -> Tuple[str, tf.ConfigProto]:
+        if self._master is not None:
+            print("WARNING: master '{}' is ignored, always using first player".format(self._master))
 
-        if master is not None:
-            print("WARNING: master '{}' is ignored, always using first player".format(master))
-
-        sess = tf.Session(
-            '',
-            None,
-            config=tf.ConfigProto(
-                log_device_placement=log_device_placement,
-                allow_soft_placement=False,
-                device_count={"CPU": len(self._players)},
-                inter_op_parallelism_threads=1,
-                intra_op_parallelism_threads=1
-            )
+        target = ''
+        config = tf.ConfigProto(
+            log_device_placement=self._log_device_placement,
+            allow_soft_placement=False,
+            device_count={"CPU": len(self._players)},
+            inter_op_parallelism_threads=1,
+            intra_op_parallelism_threads=1
         )
 
-        global __TFE_DEBUG__
-        if __TFE_DEBUG__:
-            print('Session in debug mode')
-            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
-
-        return sess
+        return (target, config)
 
 
 class RemoteConfig(Config):
@@ -142,10 +128,13 @@ class RemoteConfig(Config):
     Configure tf-encrypted to use network hosts for the different players.
     """
 
-    def __init__(self,
-                 hostmap: Union[List[Tuple[str, str]], Dict[str, str]],
-                 master: Optional[Union[int, str]] = None,
-                 job_name: str = 'tfe') -> None:
+    def __init__(
+        self,
+        hostmap: Union[List[Tuple[str, str]], Dict[str, str]],
+        master: Optional[Union[int, str]] = None,
+        job_name: str = 'tfe',
+        log_device_placement: bool=False
+    ) -> None:
 
         if isinstance(hostmap, dict):
             # ensure consistent ordering of the players across all instances
@@ -153,6 +142,7 @@ class RemoteConfig(Config):
 
         self._job_name = job_name
         self._master = master
+        self._log_device_placement = log_device_placement
         self._hosts = [entry[1] for entry in hostmap]
         self._players = {
             name: Player(
@@ -241,35 +231,25 @@ class RemoteConfig(Config):
         target = 'grpc://{}'.format(master_host)
         return target
 
-    def session(
-        self,
-        master: Optional[Union[int, str]] = None,
-        log_device_placement: bool = False
-    ) -> tf.Session:
+    def get_tf_config(self) -> Tuple[str, tf.ConfigProto]:
         cpu_cores = get_docker_cpu_quota()
-        target = self._compute_target(master)
+        target = self._compute_target(self._master)
         # If you witness memory leaks while doing multiple predictions using docker
         # see https://github.com/tensorflow/tensorflow/issues/22098
         if cpu_cores is None:
             config = tf.ConfigProto(
-                log_device_placement=log_device_placement,
+                log_device_placement=self._log_device_placement,
                 allow_soft_placement=False
             )
         else:
             config = tf.ConfigProto(
-                log_device_placement=log_device_placement,
+                log_device_placement=self._log_device_placement,
                 allow_soft_placement=False,
                 inter_op_parallelism_threads=cpu_cores,
                 intra_op_parallelism_threads=cpu_cores
             )
-        print("Starting session on target '{}' using config {}".format(target, config))
-        sess = tf.Session(target, config=config)
 
-        global __TFE_DEBUG__
-        if __TFE_DEBUG__:
-            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
-
-        return sess
+        return (target, config)
 
 
 def load(filename: str) -> Config:
@@ -290,75 +270,19 @@ def save(config: Config, filename: str) -> None:
         json.dump(config.to_dict(), f)
 
 
-def setTFEDebugFlag(debug: bool = False) -> None:
-    global __TFE_DEBUG__
-    if debug is True:
-        print("Tensorflow encrypted is running in DEBUG mode")
-
-    __TFE_DEBUG__ = debug
-
-
-def setMonitorStatsFlag(monitor_stats: bool = False) -> None:
-    global __TFE_STATS__
-    if monitor_stats is True:
-        print("Tensorflow encrypted is monitoring statistics for each session.run() call using a tag")
-
-    __TFE_STATS__ = monitor_stats
-
-
-def run(
-    sess: tf.Session,
-    fetches: Any,
-    feed_dict: Dict[str, np.ndarray] = {},
-    tag: Optional[str] = None,
-    write_trace: bool = False
-) -> Any:
-
-    if not __TFE_STATS__ or tag is None:
-
-        return sess.run(
-            fetches,
-            feed_dict=feed_dict
-        )
-
-    else:
-        session_tag = "{}{}".format(tag, _run_counter[tag])
-        run_tag = os.path.join(__TENSORBOARD_DIR__, session_tag)
-        _run_counter[tag] += 1
-
-        writer = tf.summary.FileWriter(run_tag, sess.graph)
-        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-        run_metadata = tf.RunMetadata()
-
-        results = sess.run(
-            fetches,
-            feed_dict=feed_dict,
-            options=run_options,
-            run_metadata=run_metadata
-        )
-
-        writer.add_run_metadata(run_metadata, session_tag)
-        writer.close()
-
-        if __TFE_TRACE__ or write_trace:
-            chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
-            with open('{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag), 'w') as f:
-                f.write(chrome_trace)
-
-        return results
-
-
-__DEFAULT_CONFIG__ = LocalConfig([
+__CONFIG__ = LocalConfig([
     'input-provider',
+    'model-provider',
     'server0',
     'server1',
     'crypto_producer'
 ])
 
 
-def get_default_config() -> LocalConfig:
-    return __DEFAULT_CONFIG__
+def get_config() -> Config:
+    return __CONFIG__
 
 
-def Session() -> tf.Session:
-    return __DEFAULT_CONFIG__.session()
+def set_config(config: Config) -> None:
+    global __CONFIG__
+    __CONFIG__ = config

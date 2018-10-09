@@ -24,7 +24,7 @@ class TestTruncate(unittest.TestCase):
             use_noninteractive_truncation=False
         )
 
-        with config.session() as sess:
+        with tfe.Session() as sess:
 
             expected = np.array([12345.6789])
 
@@ -32,7 +32,7 @@ class TestTruncate(unittest.TestCase):
             v = prot.truncate(w)  # single precision
 
             sess.run(tf.global_variables_initializer())
-            actual = v.reveal().eval(sess, tag='foo')
+            actual = sess.run(v.reveal(), tag='foo')
 
             assert np.isclose(actual, expected).all(), actual
 
@@ -51,7 +51,7 @@ class TestTruncate(unittest.TestCase):
             use_noninteractive_truncation=True
         )
 
-        with config.session() as sess:
+        with tfe.Session() as sess:
 
             expected = np.array([12345.6789])
 
@@ -59,7 +59,7 @@ class TestTruncate(unittest.TestCase):
             v = prot.truncate(w)  # single precision
 
             sess.run(tf.global_variables_initializer())
-            actual = v.reveal().eval(sess, tag='foo')
+            actual = sess.run(v.reveal(), tag='foo')
 
             assert np.isclose(actual, expected).all(), actual
 

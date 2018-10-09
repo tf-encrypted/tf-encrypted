@@ -9,14 +9,14 @@ from .protocol import memoize
 from ..protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 )
-from ..tensor import PrimeTensor
+from ..tensor import PrimeTensor, Int32Tensor
 from ..tensor.prime import prime_factory as gen_prime_factory
 from ..tensor.factory import AbstractFactory
 from ..player import Player
-from ..config import get_default_config
-from tensorflow_encrypted.tensor.int32 import Int32Tensor
-bits = 32
+from ..config import get_config
 
+
+bits = 32
 _thismodule = sys.modules[__name__]
 
 
@@ -32,9 +32,9 @@ class SecureNN(Pond):
         **kwargs
     ) -> None:
         super(SecureNN, self).__init__(
-            server_0=server_0 or get_default_config().get_player('server0'),
-            server_1=server_1 or get_default_config().get_player('server1'),
-            crypto_producer=server_2 or get_default_config().get_player('crypto_producer'),
+            server_0=server_0 or get_config().get_player('server0'),
+            server_1=server_1 or get_config().get_player('server1'),
+            crypto_producer=server_2 or get_config().get_player('crypto_producer'),
             **kwargs
         )
         self.server_2 = server_2

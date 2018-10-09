@@ -22,8 +22,9 @@ from ..tensor.tensor import AbstractTensor, AbstractVariable, AbstractPlaceholde
 
 from ..io import InputProvider, OutputReceiver
 from ..player import Player
-from ..config import get_default_config
+from ..config import get_config
 from .protocol import Protocol, global_cache_updators, memoize, nodes
+
 
 TFEData = Union[np.ndarray, tf.Tensor]
 TFEVariable = Union['PondPublicVariable', 'PondPrivateVariable', tf.Variable]
@@ -52,9 +53,9 @@ class Pond(Protocol):
             use_noninteractive_truncation: bool = False,
             tensor_factory: AbstractFactory = Int100Factory(),
             verify_precision: bool = True) -> None:
-        self.server_0 = server_0 or get_default_config().get_player('server0')
-        self.server_1 = server_1 or get_default_config().get_player('server1')
-        self.crypto_producer = crypto_producer or get_default_config().get_player('crypto_producer')
+        self.server_0 = server_0 or get_config().get_player('server0')
+        self.server_1 = server_1 or get_config().get_player('server1')
+        self.crypto_producer = crypto_producer or get_config().get_player('crypto_producer')
         self.use_noninteractive_truncation = use_noninteractive_truncation
         self.tensor_factory = tensor_factory
 
@@ -340,6 +341,7 @@ class Pond(Protocol):
 
         return factory.Tensor.from_native(scaled)
 
+    @memoize
     def _decode(self, elements: AbstractTensor, is_scaled: bool) -> Union[tf.Tensor, np.ndarray]:
         """ Decode tensor of ring elements into tensor of rational numbers """
 
@@ -938,9 +940,8 @@ class PondPublicTensor(PondTensor):
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
         return (self.value_on_0, self.value_on_1)
 
-    def eval(self, sess, feed_dict={}, tag=None) -> np.ndarray:
-        value = self.value_on_0.eval(sess, feed_dict=feed_dict, tag=tag)
-        return self.prot._decode(value, self.is_scaled)
+    def decode(self) -> Union[np.ndarray, tf.Tensor]:
+        return self.prot._decode(self.value_on_0, self.is_scaled)
 
     def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'PondTensor':
         return self.prot.indexer(self, slice)
@@ -1098,9 +1099,9 @@ class PondPrivatePlaceholder(PondPrivateTensor):
     """
 
     def __init__(self, prot, placeholder, tensor0, tensor1, is_scaled):
-        assert type(placeholder) is AbstractPlaceholder, type(placeholder)
-        assert type(tensor0) is AbstractTensor, type(tensor0)
-        assert type(tensor1) is AbstractTensor, type(tensor1)
+        assert isinstance(placeholder, AbstractPlaceholder), type(placeholder)
+        assert isinstance(tensor0, AbstractTensor), type(tensor0)
+        assert isinstance(tensor1, AbstractTensor), type(tensor1)
         assert tensor0.shape == tensor1.shape
 
         super(PondPrivatePlaceholder, self).__init__(prot, tensor0, tensor1, is_scaled)

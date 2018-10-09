@@ -2,15 +2,13 @@ from __future__ import absolute_import
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Tuple, Type
+from typing import Union, List, Dict, Any, Tuple, Type
 from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .prime import PrimeTensor
 from .factory import AbstractFactory
 from .prime import PrimeTensor
 from .shared import conv2d, im2col
 from ..types import Slice, Ellipse
-
-from ..config import run
 
 
 class Int32Tensor(AbstractTensor):
@@ -30,10 +28,6 @@ class Int32Tensor(AbstractTensor):
     def from_same(cls, value: 'Int32Tensor') -> 'Int32Tensor':
         assert isinstance(value, Int32Tensor), type(value)
         return cls(value.value)
-
-    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={}, tag: Optional[str]=None) -> 'Int32Tensor':
-        concrete_value = run(sess, self.value, feed_dict=feed_dict, tag=tag)
-        return Int32Tensor.from_native(concrete_value)
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value

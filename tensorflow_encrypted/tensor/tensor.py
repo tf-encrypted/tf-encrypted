@@ -1,17 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import List, Union, Type, Tuple
+from typing import List, Union, Tuple
+
 import numpy as np
 import tensorflow as tf
 
-TFTypes = Union[
-    Type['tf.int32'],
-    Type['tf.int64'],
-]
-
 
 class AbstractTensor(ABC):
-    int_type: TFTypes
-    value: Union[tf.Tensor, np.ndarray]
 
     @abstractmethod
     def __init__(self, value: Union[np.ndarray, tf.Tensor]) -> None:

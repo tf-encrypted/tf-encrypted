@@ -67,7 +67,7 @@ def matmul(converter: Converter, node: Any, inputs: List[str]) -> Any:
     else:
         raise TypeError("Unsupported dtype for weights")
 
-    provider = ConvertInputProvider(converter.weights_provider,
+    provider = ConvertInputProvider(converter.model_provider,
                                     np.array(nums).reshape(b_shape))
     w = converter.protocol.define_private_input(provider)
 
@@ -98,7 +98,7 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
     else:
         raise TypeError("Unsupported dtype for weights")
 
-    provider = ConvertInputProvider(converter.weights_provider,
+    provider = ConvertInputProvider(converter.model_provider,
                                     np.array(nums).reshape(shape))
     w = converter.protocol.define_private_input(provider)
 
@@ -261,7 +261,7 @@ def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
         x = tf.rsqrt(decoded)
 
-    provider = ConvertInputProvider(converter.weights_provider, x)
+    provider = ConvertInputProvider(converter.model_provider, x)
 
     x = converter.protocol.define_public_input(provider)
 
@@ -360,7 +360,7 @@ def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
         else:
             raise TypeError("Unsupported dtype")
 
-        provider = ConvertInputProvider(converter.weights_provider,
+        provider = ConvertInputProvider(converter.model_provider,
                                         np.array(nums).reshape(1, 1))
     else:
         if dtype == tf.float32:
@@ -370,7 +370,7 @@ def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
         else:
             raise TypeError("Unsupported dtype")
 
-        provider = ConvertInputProvider(converter.weights_provider,
+        provider = ConvertInputProvider(converter.model_provider,
                                         np.array(nums).reshape(x_shape))
 
     x_public = converter.protocol.define_public_input(provider)
@@ -390,7 +390,7 @@ def nodef_to_private_pond(converter: Converter, x: Any):
         else:
             raise TypeError("Unsupported dtype")
 
-        provider = ConvertInputProvider(converter.weights_provider,
+        provider = ConvertInputProvider(converter.model_provider,
                                         np.array(nums).reshape(1, 1))
     else:
         if dtype == tf.float32:
@@ -400,7 +400,7 @@ def nodef_to_private_pond(converter: Converter, x: Any):
         else:
             raise TypeError("Unsupported dtype")
 
-        provider = ConvertInputProvider(converter.weights_provider,
+        provider = ConvertInputProvider(converter.model_provider,
                                         np.array(nums).reshape(x_shape))
 
     x_private = converter.protocol.define_private_input(provider)

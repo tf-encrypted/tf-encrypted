@@ -4,10 +4,8 @@ import math
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Tuple, Type
-from ..types import Ellipse, Slice
 
-from ..config import run
+from ..types import Ellipse, Slice
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 
@@ -55,28 +53,8 @@ class PrimeTensor(AbstractTensor):
         assert all(isinstance(i, PrimeTensor) for i in x)
         return PrimeTensor.from_native(tf.concat([v.value for v in x], axis=axis), x[0].modulus)
 
-    @staticmethod
-    def binarize(tensor: AbstractTensor, prime: int) -> 'PrimeTensor':
-        with tf.name_scope('binarize'):
-            BITS = math.ceil(math.log2(prime))
-            print('prime/bits', prime, BITS)
-            assert prime > BITS, prime
-
-            final_shape = [1] * len(tensor.shape) + [BITS]
-            bitwidths = tf.range(BITS, dtype=tensor.value.dtype)
-            bitwidths = tf.reshape(bitwidths, final_shape)
-
-            val = tf.expand_dims(tensor.value, -1)
-            val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bitwidths), 1)
-
-            return PrimeTensor.from_native(val, prime)
-
-    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
-             tag: Optional[str]=None) -> 'PrimeTensor':
-        return PrimeTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), self.modulus)
-
-    def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'PrimeTensor':
-        return PrimeTensor.from_native(self.value[slice], self.modulus)
+    def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
+        return self.value[slice]
 
     def __repr__(self) -> str:
         return 'PrimeTensor(shape={}, modulus={})'.format(self.shape, self.modulus)
