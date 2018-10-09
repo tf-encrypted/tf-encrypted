@@ -7,7 +7,7 @@ from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, Abstract
 from .prime import PrimeTensor
 from .factory import AbstractFactory
 from .prime import PrimeTensor
-from .shared import conv2d, im2col
+from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
 
 
@@ -32,8 +32,8 @@ class Int32Tensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
 
-    def to_bits(self, prime: int = 37) -> 'PrimeTensor':
-        return PrimeTensor.binarize(self, prime)
+    def to_bits(self, prime: int = 37) -> PrimeTensor:
+        return PrimeTensor.from_native(binarize(self.value), prime)
 
     @staticmethod
     def sample_uniform(shape: List[int]) -> 'Int32Tensor':
@@ -63,9 +63,6 @@ class Int32Tensor(AbstractTensor):
 
     def __getitem__(self, slice: Union[Slice, Ellipse]) -> 'Int32Tensor':
         return Int32Tensor(self.value[slice])
-
-    def negative(self) -> 'Int32Tensor':
-        return self.mul(Int32Tensor(tf.constant(-1)))
 
     def add(self, other: Any) -> 'Int32Tensor':
         x, y = Int32Tensor.lift(self), Int32Tensor.lift(other)

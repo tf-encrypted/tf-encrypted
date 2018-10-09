@@ -18,7 +18,7 @@ from .helpers import prod, inverse
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 from .prime import PrimeTensor
-from .shared import conv2d
+from .shared import binarize, conv2d
 
 #
 # 32 bit CRT

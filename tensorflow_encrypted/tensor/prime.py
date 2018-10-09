@@ -8,6 +8,7 @@ import tensorflow as tf
 from ..types import Ellipse, Slice
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
+from .shares import binarize
 
 INT_TYPE = tf.int32
 
@@ -28,8 +29,8 @@ class PrimeTensor(AbstractTensor):
     def to_native(self) -> Union[np.ndarray, tf.Tensor]:
         return self.value
 
-    def to_bits(self) -> 'PrimeTensor':
-        return PrimeTensor.binarize(self, prime=self.modulus)
+    def to_bits(self, prime: int = 37) -> 'PrimeTensor':
+        return PrimeTensor.from_native(binarize(self.value), prime)
 
     @staticmethod
     def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int, minval: Optional[int] = 0) -> 'PrimeTensor':
@@ -37,8 +38,7 @@ class PrimeTensor(AbstractTensor):
 
     @staticmethod
     def sample_bounded(shape: List[int], bitlength: int) -> 'PrimeTensor':
-        maxval = 2 ** bitlength
-        return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=maxval))
+        raise NotImplementedError()
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
@@ -117,12 +117,12 @@ class PrimeTensor(AbstractTensor):
         expanded = tf.expand_dims(self.value, axis)
         return PrimeTensor(expanded, self.modulus)
 
-    def sum(self, axis, keepdims) -> 'PrimeTensor':
-        return self.reduce_sum(axis, keepdims)
-
     def reduce_sum(self, axis, keepdims) -> 'PrimeTensor':
         value = tf.reduce_sum(self.value, axis, keepdims) % self.modulus
         return PrimeTensor(value, self.modulus)
+
+    def sum(self, axis, keepdims) -> 'PrimeTensor':
+        return self.reduce_sum(axis, keepdims)
 
     def cumsum(self, axis, exclusive, reverse) -> 'PrimeTensor':
         value = tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse) % self.modulus
