@@ -34,5 +34,5 @@ for _ in range(2):
     y = y.matmul(y)
 
 with tfe.Session() as sess:
-    sess.run(tfe.get_global_variables(), tag='init')
+    sess.run(tfe.global_variables_initializer(), tag='init')
     print(sess.run(y.reveal(), tag='reveal'))

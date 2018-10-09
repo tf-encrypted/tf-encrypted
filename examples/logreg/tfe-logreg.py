@@ -8,72 +8,60 @@ tf.set_random_seed(1)
 
 # Parameters
 learning_rate = 0.01
-training_set_size = 1000
+training_set_size = 2000
 test_set_size = 100
 training_epochs = 10
 batch_size = 100
-nb_feats = 5
+nb_feats = 10
 
-with tfe.protocol.Pond() as prot:
-    assert(isinstance(prot, tfe.protocol.Pond))
+xp, yp = tfe.define_private_input(
+    tfe.io.InputProvider('input-provider', lambda: gen_training_input(training_set_size, nb_feats, batch_size))
+)
+xp_test, yp_test = tfe.define_private_input(
+    tfe.io.InputProvider('input-provider', lambda: gen_test_input(training_set_size, nb_feats, batch_size))
+)
 
-    x, y = gen_training_input(training_set_size, nb_feats, batch_size)
-    x_test, y_test, y_np_out = gen_test_input(test_set_size, nb_feats, batch_size)
+W = tfe.define_private_variable(tf.random_uniform([nb_feats, 1], -0.01, 0.01))
+b = tfe.define_private_variable(tf.zeros([1]))
 
-    xp = prot.define_private_input(
-        tfe.io.InputProvider('input-provider', lambda: gen_training_input(training_set_size, nb_feats, batch_size)[0])
-    )
-    yp = prot.define_private_input(
-        tfe.io.InputProvider('input-provider', lambda: gen_training_input(training_set_size, nb_feats, batch_size)[1])
-    )
+# Training model
+out = tfe.matmul(xp, W) + b
+pred = tfe.sigmoid(out)
+# Due to missing log function approximation, we need to compute the cost in numpy
+# cost = -tfe.sum(y * tfe.log(pred) + (1 - y) * tfe.log(1 - pred)) * (1/train_batch_size)
 
-    W = prot.define_private_variable(tf.random_uniform([nb_feats, 1], -0.01, 0.01))
-    b = prot.define_private_variable(tf.zeros([1]))
+# Backprop
+dc_dout = pred - yp
+dW = tfe.matmul(tfe.transpose(xp), dc_dout) * (1 / batch_size)
+db = tfe.reduce_sum(1. * dc_dout, axis=0) * (1 / batch_size)
+ops = [
+    tfe.assign(W, W - dW * learning_rate),
+    tfe.assign(b, b - db * learning_rate)
+]
 
-    # Training model
-    out = prot.matmul(xp, W) + b
-    pred = prot.sigmoid(out)
-    # Due to missing log function approximation, we need to compute the cost in numpy
-    # cost = -prot.sum(y * prot.log(pred) + (1 - y) * prot.log(1 - pred)) * (1/train_batch_size)
+# Testing model
+pred_test = tfe.sigmoid(tfe.matmul(xp_test, W) + b)
 
-    # Backprop
-    dc_dout = pred - yp
-    dW = prot.matmul(prot.transpose(xp), dc_dout) * (1 / batch_size)
-    db = prot.reduce_sum(1. * dc_dout, axis=0) * (1 / batch_size)
-    ops = [
-        prot.assign(W, W - dW * learning_rate),
-        prot.assign(b, b - db * learning_rate)
-    ]
+total_batch = training_set_size // batch_size
+with tfe.Session() as sess:
+    sess.run(tfe.global_variables_initializer(), tag='init')
 
-    # Testing model
-    xp_test = prot.define_private_input(
-        tfe.io.InputProvider('input-provider', lambda: gen_test_input(training_set_size, nb_feats, batch_size)[0])
-    )
-    yp_test = prot.define_private_input(
-        tfe.io.InputProvider('input-provider', lambda: gen_test_input(training_set_size, nb_feats, batch_size)[1])
-    )
-    pred_test = prot.sigmoid(prot.matmul(xp_test, W) + b)
+    for epoch in range(training_epochs):
+        avg_cost = 0.
 
-    total_batch = training_set_size // batch_size
-    with tfe.Session() as sess:
-        sess.run(prot.initializer, tag='init')
+        for i in range(total_batch):
+            _, y_out, p_out = sess.run([ops, yp.reveal(), pred.reveal()], tag='optimize')
+            # Our sigmoid function is an approximation
+            # it can have values outside of the range [0, 1], we remove them and add/substract an epsilon to compute the cost
+            p_out = p_out * (p_out > 0) + 0.001
+            p_out = p_out * (p_out < 1) + (p_out >= 1) * 0.999
+            c = -np.mean(y_out * np.log(p_out) + (1 - y_out) * np.log(1 - p_out))
+            avg_cost += c / total_batch
 
-        for epoch in range(training_epochs):
-            avg_cost = 0.
+        print("Epoch:", '%04d' % (epoch + 1), "cost=", "{:.9f}".format(avg_cost))
 
-            for i in range(total_batch):
-                _, y_out, p_out = sess.run([ops, y, pred.reveal()], tag='optimize')
-                # Our sigmoid function is an approximation
-                # it can have values outside of the range [0, 1], we remove them and add/substract an epsilon to compute the cost
-                p_out = p_out * (p_out > 0) + 0.001
-                p_out = p_out * (p_out < 1) + (p_out >= 1) * 0.999
-                c = -np.mean(y_out * np.log(p_out) + (1 - y_out) * np.log(1 - p_out))
-                avg_cost += c / total_batch
+    print("Optimization Finished!")
 
-            print("Epoch:", '%04d' % (epoch + 1), "cost=", "{:.9f}".format(avg_cost))
-
-        print("Optimization Finished!")
-
-        out_test = sess.run(pred_test.reveal())
-        acc = np.mean(np.round(out_test) == y_np_out)
-        print("Accuracy:", acc)
+    y_np_out, out_test = sess.run([yp_test.reveal(), pred_test.reveal()])
+    acc = np.mean(np.round(out_test) == y_np_out)
+    print("Accuracy:", acc)

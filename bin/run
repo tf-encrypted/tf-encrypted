@@ -105,7 +105,7 @@ else:
 
 with tfe.Session() as sess:
     print("initing!!!")
-    sess.run(tfe.get_global_variables(), tag='init')
+    sess.run(tfe.global_variables_initializer(), tag='init')
 
     print("running")
     feed_dict = {

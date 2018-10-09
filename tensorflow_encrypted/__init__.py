@@ -51,7 +51,7 @@ def set_config(config: Config) -> None:
     set_protocol(None)
 
 
-def get_global_variables() -> Optional[tf.Operation]:
+def global_variables_initializer() -> Optional[tf.Operation]:
     prot = protocol.get_protocol()
     if prot is not None:
         return prot.initializer
@@ -78,5 +78,5 @@ __all__ = [
     "layers",
     "convert",
     "global_caches_updator",
-    "get_global_variables",
+    "global_variables_initializer",
 ]

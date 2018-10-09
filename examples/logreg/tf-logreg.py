@@ -6,20 +6,17 @@ tf.set_random_seed(1)
 
 # Parameters
 learning_rate = 0.01
-training_set_size = 1000
+training_set_size = 2000
 test_set_size = 100
 training_epochs = 10
 batch_size = 100
-nb_feats = 5
-
+nb_feats = 10
 
 x, y = gen_training_input(training_set_size, nb_feats, batch_size)
-x_test, y_test, _ = gen_test_input(test_set_size, nb_feats, batch_size)
-
+x_test, y_test = gen_test_input(test_set_size, nb_feats, batch_size)
 
 W = tf.Variable(tf.random_uniform([nb_feats, 1], -0.01, 0.01))
 b = tf.Variable(tf.zeros([1]))
-
 
 # Training model
 out = tf.matmul(x, W) + b
