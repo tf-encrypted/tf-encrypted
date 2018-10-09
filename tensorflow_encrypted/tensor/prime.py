@@ -8,7 +8,7 @@ import tensorflow as tf
 from ..types import Ellipse, Slice
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
-from .shares import binarize
+from .shared import binarize
 
 INT_TYPE = tf.int32
 
@@ -26,7 +26,7 @@ class PrimeTensor(AbstractTensor):
         assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
         return PrimeTensor(value, modulus)
 
-    def to_native(self) -> Union[np.ndarray, tf.Tensor]:
+    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
 
     def to_bits(self, prime: int = 37) -> 'PrimeTensor':
@@ -39,9 +39,6 @@ class PrimeTensor(AbstractTensor):
     @staticmethod
     def sample_bounded(shape: List[int], bitlength: int) -> 'PrimeTensor':
         raise NotImplementedError()
-
-    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
-        return self.value
 
     @staticmethod
     def stack(x: List['PrimeTensor'], axis: int = 0) -> 'PrimeTensor':
@@ -222,6 +219,7 @@ class PrimeVariable(PrimeTensor, AbstractVariable):
 def prime_factory(modulus: int) -> Any:
 
     class TensorWrap(AbstractTensor):
+
         int_type = INT_TYPE
 
         @staticmethod
@@ -238,6 +236,7 @@ def prime_factory(modulus: int) -> Any:
             return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=maxval), modulus)
 
     class ConstantWrap(TensorWrap, AbstractConstant):
+
         @staticmethod
         def from_native(x: Union[tf.Tensor, np.ndarray]) -> PrimeTensor:
             return PrimeConstant.from_native(x, modulus)
@@ -247,6 +246,7 @@ def prime_factory(modulus: int) -> Any:
             return PrimeConstant.from_same(initial_value, modulus)
 
     class VariableWrap(TensorWrap, AbstractVariable):
+
         @staticmethod
         def from_native(x: Union[tf.Tensor, np.ndarray]) -> PrimeTensor:
             return PrimeVariable.from_native(x, modulus)
@@ -256,8 +256,8 @@ def prime_factory(modulus: int) -> Any:
             return PrimeVariable.from_same(initial_value, modulus)
 
     class Factory(AbstractFactory):
-        @property
-        def Tensor(self) -> Type[TensorWrap]:
+
+        def tensor(self, value) -> PrimeTensor:
             return TensorWrap
 
         @property

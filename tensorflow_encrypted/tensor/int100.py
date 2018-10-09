@@ -17,7 +17,6 @@ from .crt import (
 from .helpers import prod, inverse
 from .factory import AbstractFactory
 from .tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
-from .prime import PrimeTensor
 from .shared import binarize, conv2d
 
 #
@@ -127,7 +126,7 @@ class Int100Tensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return _crt_recombine_explicit(self.backing, 2**32)
 
-    def to_bits(self, prime: int = 107) -> PrimeTensor:
+    def to_bits(self, factory) -> AbstractTensor:
 
         with tf.name_scope('to_bits'):
 
@@ -151,8 +150,7 @@ class Int100Tensor(AbstractTensor):
             # combine bits of chunks
             bits = tf.concat(chunks_bits, axis=-1)
 
-            # wrap in PrimeTensor
-            return PrimeTensor.from_native(bits, prime)
+            return factory.Tensor.from_native(bits)
 
     def to_bigint(self) -> np.ndarray:
         return _crt_recombine_lagrange(self.backing)

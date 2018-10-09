@@ -388,7 +388,7 @@ class Pond(Protocol):
         x, y = self.lift(x, y)
         return self.dispatch('add', x, y)
 
-    def lift(self, x, y=None):
+    def lift(self, x, y=None, apply_scaling=None, factory=None):
         """
         Convenience method for working with mixed typed tensors in programs:
         combining any of the Pond objects together with e.g. ints and floats
@@ -415,15 +415,20 @@ class Pond(Protocol):
                     return x, y
 
                 if isinstance(y, PondTensor):
-                    x = self.define_constant(np.array([x]), apply_scaling=y.is_scaled)
+                    x = self.define_constant(
+                        np.array([x]),
+                        apply_scaling=apply_scaling or y.is_scaled,
+                        factory=factory or y.factory)
                     return x, y
 
                 raise TypeError("Don't know how to lift {}, {}".format(type(x), type(y)))
 
             if isinstance(x, PondTensor):
                 if isinstance(y, (int, float)):
-                    factory = self.factory_from_type(x.type)
-                    y = self.define_constant(np.array([y]), apply_scaling=x.is_scaled, factory=factory)
+                    y = self.define_constant(
+                        np.array([y]),
+                        apply_scaling=apply_scaling or x.is_scaled,
+                        factory=factory or x.factory)
                     return x, y
 
                 if isinstance(y, PondTensor):
