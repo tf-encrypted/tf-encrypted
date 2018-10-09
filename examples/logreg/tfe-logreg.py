@@ -14,12 +14,8 @@ training_epochs = 10
 batch_size = 100
 nb_feats = 10
 
-xp, yp = tfe.define_private_input(
-    tfe.io.InputProvider('input-provider', lambda: gen_training_input(training_set_size, nb_feats, batch_size))
-)
-xp_test, yp_test = tfe.define_private_input(
-    tfe.io.InputProvider('input-provider', lambda: gen_test_input(training_set_size, nb_feats, batch_size))
-)
+xp, yp = tfe.define_private_input('input-provider', lambda: gen_training_input(training_set_size, nb_feats, batch_size))
+xp_test, yp_test = tfe.define_private_input('input-provider', lambda: gen_test_input(training_set_size, nb_feats, batch_size))
 
 W = tfe.define_private_variable(tf.random_uniform([nb_feats, 1], -0.01, 0.01))
 b = tfe.define_private_variable(tf.zeros([1]))
@@ -42,6 +38,15 @@ ops = [
 # Testing model
 pred_test = tfe.sigmoid(tfe.matmul(xp_test, W) + b)
 
+
+def print_accuracy(pred_test_tf, y_test_tf: tf.Tensor) -> tf.Operation:
+    correct_prediction = tf.equal(tf.round(pred_test_tf), y_test_tf)
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    return tf.Print(accuracy, data=[accuracy], message="Accuracy: ")
+
+
+print_acc_op = tfe.define_output('input-provider', [pred_test, yp_test], print_accuracy)
+
 total_batch = training_set_size // batch_size
 with tfe.Session() as sess:
     sess.run(tfe.global_variables_initializer(), tag='init')
@@ -62,6 +67,4 @@ with tfe.Session() as sess:
 
     print("Optimization Finished!")
 
-    y_np_out, out_test = sess.run([yp_test.reveal(), pred_test.reveal()])
-    acc = np.mean(np.round(out_test) == y_np_out)
-    print("Accuracy:", acc)
+    sess.run(print_acc_op)

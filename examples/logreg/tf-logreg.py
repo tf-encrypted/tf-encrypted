@@ -43,7 +43,7 @@ ops = [
 pred_test = tf.sigmoid(tf.matmul(x_test, W) + b)
 correct_prediction = tf.equal(tf.round(pred_test), y_test)
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
+print_acc_op = tf.Print(accuracy, data=[accuracy], message="Accuracy: ")
 
 # Start training
 total_batch = training_set_size // batch_size
@@ -61,4 +61,4 @@ with tf.Session() as sess:
 
     print("Optimization Finished!")
 
-    print("Accuracy:", accuracy.eval())
+    sess.run(print_acc_op)

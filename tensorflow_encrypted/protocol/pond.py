@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from typing import Tuple, List, Union, Optional, Any, NewType
+from typing import Tuple, List, Union, Optional, Any, NewType, Callable
 import abc
 import sys
 import math
@@ -187,21 +187,25 @@ class Pond(Protocol):
 
     def define_public_input(
         self,
-        provider: InputProvider,
+        player: Union[str, Player],
+        data_fn: Callable,
         apply_scaling: bool=True,
         name: str=None
     ) -> Union['PondPublicTensor', List['PondPublicTensor']]:
 
+        if type(player) is str:
+            player = get_config().get_player('input-provider')
+
         def helper(v: tf.Tensor) -> 'PondPublicTensor':
-            assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', provider.player.name)
+            assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', player.name)
             w = self._encode(v, apply_scaling)
             return PondPublicTensor(self, w, w, apply_scaling)
 
         with tf.name_scope('public-input{}'.format('-' + name if name else '')):
 
-            with tf.device(provider.player.device_name):
+            with tf.device(player.device_name):
 
-                inputs = provider.provide_input()
+                inputs = data_fn()
 
                 if isinstance(inputs, tf.Tensor):
                     # single input -> single output
@@ -218,14 +222,18 @@ class Pond(Protocol):
 
     def define_private_input(
         self,
-        provider: InputProvider,
+        player: Union[str, Player],
+        data_fn: Callable,
         apply_scaling: bool=True,
         name: str=None,
         masked: bool=False
     ) -> Union['PondPrivateTensor', 'PondMaskedTensor', List['PondPrivateTensor'], List['PondMaskedTensor']]:
 
+        if type(player) is str:
+            player = get_config().get_player('input-provider')
+
         def helper(v: tf.Tensor):
-            assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', provider.player.name)
+            assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', player.name)
             w = self._encode(v, apply_scaling)
             x0, x1 = self._share(w)
             x = PondPrivateTensor(self, x0, x1, apply_scaling)
@@ -241,9 +249,9 @@ class Pond(Protocol):
 
         with tf.name_scope('private-input{}'.format('-' + name if name else '')):
 
-            with tf.device(provider.player.device_name):
+            with tf.device(player.device_name):
 
-                inputs = provider.provide_input()
+                inputs = data_fn()
 
                 if isinstance(inputs, tf.Tensor):
                     # single input -> single output
@@ -262,10 +270,14 @@ class Pond(Protocol):
 
     def define_output(
         self,
+        player: Union[str, Player],
         xs: Union['PondPrivateTensor', List['PondPrivateTensor']],
-        receiver: OutputReceiver,
+        post_fn: Callable,
         name: Optional[str]=None
     ) -> tf.Operation:
+
+        if type(player) is str:
+            player = get_config().get_player('input-provider')
 
         def helper(x: 'PondPrivateTensor') -> tf.Tensor:
             assert isinstance(x, PondPrivateTensor), type(x)
@@ -276,15 +288,15 @@ class Pond(Protocol):
 
         with tf.name_scope('output{}'.format('-' + name if name else '')):
 
-            with tf.device(receiver.player.device_name):
+            with tf.device(player.device_name):
 
                 if isinstance(xs, PondPrivateTensor):
                     # single input -> single output
                     x = xs
-                    op = receiver.receive_output(helper(x))
+                    op = post_fn(helper(x))
 
                 elif isinstance(xs, (list, tuple)):
-                    op = receiver.receive_output([helper(x) for x in xs])
+                    op = post_fn(*[helper(x) for x in xs])
 
                 else:
                     raise TypeError("Don't know how to handle inputs of type {}".format(type(xs)))
