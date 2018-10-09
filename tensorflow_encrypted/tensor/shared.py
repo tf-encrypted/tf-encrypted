@@ -4,7 +4,7 @@ from typing import Union, Optional
 import tensorflow as tf
 import numpy as np
 
-from .tensor import AbstractTensor
+from .factory import AbstractTensor
 
 
 def binarize(tensor: tf.Tensor, bitsize: Optional[int]=None) -> tf.Tensor:

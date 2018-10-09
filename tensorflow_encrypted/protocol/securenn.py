@@ -10,7 +10,7 @@ from ..protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 )
 from ..tensor import PrimeTensor, Int32Tensor
-from ..tensor.prime import prime_factory as gen_prime_factory
+from ..tensor.prime import PrimeFactory
 from ..tensor.factory import AbstractFactory
 from ..player import Player
 from ..config import get_config
@@ -38,7 +38,7 @@ class SecureNN(Pond):
             **kwargs
         )
         self.server_2 = server_2
-        self.prime_factory = prime_factory or gen_prime_factory(107)
+        self.prime_factory = prime_factory or PrimeFactory(107)
         self.odd_factory = odd_factory or self.tensor_factory
 
     @memoize
@@ -216,7 +216,7 @@ class SecureNN(Pond):
             )
             edge_cases = self.expand_dims(edge_cases, axis=-1)
             c_edge_case_raw = tf.constant([0] + [1] * (bit_length-1), dtype=tf.int32, shape=(1, bit_length))
-            c_edge_case = PondPrivateTensor(self, *self._share(self.prime_factory.Tensor.from_native(c_edge_case_raw), self.prime_factory), False)
+            c_edge_case = PondPrivateTensor(self, *self._share(self.prime_factory.tensor(c_edge_case_raw), self.prime_factory), False)
             c = self.select(
                 edge_cases,
                 c_except_edge_case,

@@ -3,8 +3,7 @@ from __future__ import absolute_import
 import numpy as np
 import tensorflow as tf
 from typing import Union, List, Dict, Any, Tuple, Type
-from .tensor import AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
-from .factory import AbstractFactory
+from .factory import AbstractFactory, AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .shared import binarize, conv2d, im2col
 
 

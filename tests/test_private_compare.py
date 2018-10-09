@@ -4,9 +4,9 @@ import random
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
+from tensorflow_encrypted.tensor.int32 import int32factory
+from tensorflow_encrypted.tensor.prime import PrimeFactory
 from tensorflow_encrypted.protocol.pond import PondPrivateTensor, PondPublicTensor
-from tensorflow_encrypted.tensor.prime import PrimeTensor, prime_factory
 
 bits = 32
 Q = 2 ** bits
@@ -86,17 +86,30 @@ class TestPrivateCompare(unittest.TestCase):
 
         expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
 
+        prime_factory = PrimeFactory(37)
+
         prot = tfe.protocol.SecureNN(
-            tensor_factory=Int32Factory(),
-            prime_factory=prime_factory(37),
+            tensor_factory=int32factory,
+            prime_factory=prime_factory,
             use_noninteractive_truncation=True,
             verify_precision=False,
             *config.get_players('server0, server1, server2'))
 
         res = prot._private_compare(
-            x_bits = PondPrivateTensor(prot, *prot._share(PrimeTensor(tf.convert_to_tensor(x), 37).to_bits(), prime_factory(37)), False),
-            r = PondPublicTensor(prot, PrimeTensor(tf.convert_to_tensor(r), 37), PrimeTensor(tf.convert_to_tensor(r), 37), False),
-            beta = PondPublicTensor(prot, PrimeTensor(tf.convert_to_tensor(beta), 37), PrimeTensor(tf.convert_to_tensor(beta), 37), False)
+            x_bits = PondPrivateTensor(
+                prot,
+                *prot._share(prime_factory.tensor(tf.convert_to_tensor(x)).to_bits(), prime_factory),
+                False),
+            r = PondPublicTensor(
+                prot,
+                prime_factory.tensor(tf.convert_to_tensor(r)),
+                prime_factory.tensor(tf.convert_to_tensor(r)),
+                False),
+            beta = PondPublicTensor(
+                prot,
+                prime_factory.tensor(tf.convert_to_tensor(beta)),
+                prime_factory.tensor(tf.convert_to_tensor(beta)),
+                False)
         )
 
         with config.session() as sess:
