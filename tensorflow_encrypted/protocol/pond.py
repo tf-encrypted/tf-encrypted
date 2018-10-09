@@ -453,28 +453,6 @@ class Pond(Protocol):
         return func(self, x, axis=axis, exclusive=exclusive, reverse=reverse)
 
     @memoize
-    def gather_nd(self, params, indices, validate_indices=None, name=None, axis=0):
-        return self.dispatch('gather_nd', params, indices, validate_indices, name, axis)
-
-    @memoize
-    def where(self, x):
-        with tf.name_scope('where'):
-            x_on_0, x_on_1 = x.unwrapped
-
-            with tf.device(self.server_0.device_name):
-                z_on_0 = tf.where(x_on_0.value)
-
-            with tf.device(self.server_1.device_name):
-                z_on_1 = tf.where(x_on_1.value)
-
-            return PondPublicTensor(self, self.tensor_factory.Tensor.from_native(z_on_0), self.tensor_factory.Tensor.from_native(z_on_1), x.is_scaled)
-
-    @memoize
-    def equal(self, x, y):
-        x, y = self.lift(x, y)
-        return self.dispatch('equal', x, y)
-
-    @memoize
     def sub(self, x, y):
         x, y = self.lift(x, y)
         return self.dispatch('sub', x, y)

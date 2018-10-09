@@ -251,5 +251,25 @@ def gen_crt_cumsum(m):
     return crt_cumsum
 
 
+def gen_crt_equal_zero(m, int_type):
+
+    decompose = gen_crt_decompose(m)
+
+    def crt_equal_zero(x):
+
+        with tf.name_scope('crt_equal_zero'):
+
+            number_of_zeros = tf.reduce_sum([
+                tf.cast(tf.equal(xi, 0), tf.int32)
+                for xi in x
+            ], axis=0)
+
+            all_zeros = tf.cast(tf.equal(number_of_zeros, len(m)), tf.int32)
+
+            return decompose(all_zeros)
+
+    return crt_equal_zero
+
+
 class CrtTensor(object):
     pass

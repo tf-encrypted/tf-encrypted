@@ -104,8 +104,8 @@ class SecureNN(Pond):
         return self.bitwise_not(self.less(x, y))
 
     @memoize
-    def select_share(self, x: PondTensor, y: PondTensor, choice_bit: PondTensor) -> PondTensor:
-        return x + choice_bit * (y - x)
+    def select(self, choice: PondTensor, x: PondTensor, y: PondTensor) -> PondTensor:
+        return choice * (y - x) + x
 
     def factory_from_type(self, type: str) -> AbstractFactory:
         if type == 'prime':
@@ -113,118 +113,70 @@ class SecureNN(Pond):
 
         return self.tensor_factory
 
-    def _private_compare_beta0(prot, x_bits: PondPrivateTensor, r_bits: PondPublicTensor):
-        assert isinstance(x_bits.share0, PrimeTensor) and x_bits.share0.modulus == 37
-        assert isinstance(r_bits.value_on_0, PrimeTensor) and r_bits.value_on_0.modulus == 37
+    def _private_compare(self, x_bits: PondPrivateTensor, r: PondPublicTensor, beta: PondPublicTensor):
+        base_shape = r.shape
+        bit_length = x_bits.shape[-1]
 
-        w_bits = prot.bitwise_xor(x_bits, r_bits)
-
-        # s0 = tf.cumsum(w_bits.share0.value, axis=-1, reverse=True, exclusive=True)
-        # s1 = tf.cumsum(w_bits.share1.value, axis=-1, reverse=True, exclusive=True)
-        # s = PondPrivateTensor(prot, PrimeTensor(s0, 37), PrimeTensor(s1, 37), False)
-
-        c = r_bits - x_bits + 1 + prot.cumsum(w_bits, axis=-1, reverse=True, exclusive=True)
-        return c
-
-    def _private_compare_beta1(prot, x_bits: PondPrivateTensor, t_bits: PondPublicTensor):
-        assert isinstance(x_bits.share0, PrimeTensor) and x_bits.share0.modulus == 37
-        assert isinstance(t_bits.value_on_0, PrimeTensor) and t_bits.value_on_0.modulus == 37
-
-        w_bits = prot.bitwise_xor(x_bits, t_bits)
-
-        # s0 = tf.cumsum(w_bits.share0.value, axis=-1, reverse=True, exclusive=True)
-        # s1 = tf.cumsum(w_bits.share0.value, axis=-1, reverse=True, exclusive=True)
-        # s = PondPrivateTensor(prot, PrimeTensor(s0, 37), PrimeTensor(s1, 37), False)
-
-        c = x_bits - t_bits + 1 + prot.cumsum(w_bits, axis=-1, reverse=True, exclusive=True)
-        return c
-
-    def _private_compare_edge(self):
-        random_values_u = self.tensor_factory.Tensor.sample_random_tensor((bits,), modulus=p - 1) + 1
-        c0 = (random_values_u + 1)
-        c1 = (-random_values_u)
-
-        c0[0] = random_values_u[0]
-
-        return c0
-
-    def private_compare(self, input: PondPrivateTensor, rho: PondPublicTensor, beta: PondPublicTensor):
-        theta = rho + 1
-
-        print('binarizing')
-        rho = rho.to_bits(self.prime_factory.modulus)
-        theta = theta.to_bits(self.prime_factory.modulus)
-
-        print("SHAPE", beta.shape, rho.shape, theta.shape)
+        assert base_shape == x_bits.shape[:-1]
+        assert base_shape == beta.shape
 
         with tf.name_scope('private_compare'):
-            beta = beta.reshape([beta.shape.as_list()[0], 1])
-            beta = beta.broadcast([beta.shape.as_list()[0], 16])
 
-            with tf.name_scope('find_zeros'):
-                eq = self.equal(beta, 0)
-                zeros = self.where(eq)
+            # use either r and t = r + 1 according to beta
+            s = self.select(beta, r, r + 1)
+            s_bits = s.to_bits(self.prime_factory.modulus)
 
-            with tf.name_scope('find_ones'):
-                eq = self.equal(beta, 1)
-                ones = self.where(eq)
+            # compute w_sum
+            w_bits = self.bitwise_xor(x_bits, s_bits)
+            w_sum = self.cumsum(w_bits, axis=-1, reverse=True, exclusive=True)
 
-            with tf.name_scope('find_edges'):
-                edges = self.where(self.equal(rho, 2 ** bits - 1))
+            # compute c, ignoring edge cases at first
+            sign = self.select(beta, 1, -1)
+            sign = self.expand_dims(sign, axis=-1)
+            c_except_edge_case = (s_bits - x_bits) * sign + 1 + w_sum
 
-            print("FILTERED", zeros.shape, ones.shape, edges.shape)
+            # adjust for edge cases, i.e. where beta is 1 and s is zero (meaning r was -1)
+            edge_cases = self.bitwise_and(
+                beta,
+                self.equal_zero(s)
+            )
+            edge_cases = self.expand_dims(edge_cases, axis=-1)
+            c_edge_case_raw = tf.constant([0] + [1] * (bit_length-1), dtype=tf.int32, shape=(1, bit_length))
+            c_edge_case = PondPrivateTensor(self, *self._share(PrimeTensor(c_edge_case_raw, 37), self.prime_factory), False)
+            c = self.select(
+                edge_cases,
+                c_except_edge_case,
+                c_edge_case
+            )  # type: PondPrivateTensor
 
-            # with tf.name_scope('find_non_edge_ones'):
-            #     ones = tf.setdiff1d(ones, edges)
-
-            # return input
-            pc_0 = self._private_compare_beta0(input, rho)
-            pc_1 = self._private_compare_beta1(input, theta)
-
-            # return tf.Print(zeros.value_on_1.value, [zeros.value_on_1.value], 'ZEROS')
-
-            print('shapes befoooorre', input, rho, theta)
-
-            pc_0 = self.gather_nd(pc_0, zeros)
-            pc_1 = self.gather_nd(pc_1, ones)
-
-            # c0_edge, c1_edge = self._private_compare_edge()
-
-            pc_0 = pc_0.reshape([-1])
-            pc_1 = pc_1.reshape([-1])
-
+            # generate multiplicative mask to hide non-zero values
             with tf.device(self.server_0.device_name):
-                c0 = tf.zeros(shape=input.shape, dtype=tf.int32)
+                mask_raw = self.prime_factory.Tensor.sample_uniform(c.shape, minval=1)
+                mask = PondPublicTensor(self, mask_raw, mask_raw, False)
 
-                delta0 = tf.SparseTensor(zeros.value_on_0.value, pc_0.share0.value, input.shape)
-                delta1 = tf.SparseTensor(ones.value_on_0.value, pc_1.share0.value, input.shape)
+            # mask non-zero values; this is safe when we're in a field
+            c_masked = c * mask
 
-                c0 = c0 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
-                c0 = self.prime_factory.Tensor.from_native(c0)
+            # TODO[Morten] permute
 
-            with tf.device(self.server_1.device_name):
-                c1 = tf.zeros(shape=input.shape, dtype=tf.int32)
+            # reconstruct masked values on server 2 to find entries with zeros
+            with tf.device(self.server_2.device_name):
+                d = self._reconstruct(*c_masked.unwrapped)
+                # find all zero entries
+                zeros = d.equal_zero()
+                # for each bit sequence, determine whether it has one or no zero in it
+                rows_with_zeros = zeros.reduce_sum(axis=-1, keepdims=False)
+                # reshare result
+                return PondPrivateTensor(self, *self._share(rows_with_zeros, self.prime_factory), False)
 
-                delta0 = tf.SparseTensor(zeros.value_on_1.value, pc_0.share1.value, input.shape)
-                delta1 = tf.SparseTensor(ones.value_on_1.value, pc_1.share1.value, input.shape)
+    def equal_zero(self, x):
 
-                c1 = c1 + tf.sparse_tensor_to_dense(delta0) + tf.sparse_tensor_to_dense(delta1)
-                c1 = self.prime_factory.Tensor.from_native(c1)
+        with tf.name_scope('equal_zero'):
 
-            with tf.device(self.crypto_producer.device_name):
-                c0.value = tf.Print(c0.value, [c0.value], 'PC-C0')
-                c1.value = tf.Print(c1.value, [c1.value], 'PC-C0')
-                answer = PondPrivateTensor(self, share0=c0, share1=c1, is_scaled=input.is_scaled).reveal()
-                reduced = tf.reduce_max(tf.cast(tf.equal(answer.value_on_0.value, 0), tf.int32), axis=-1)
-
-                r = self.tensor_factory.Tensor.from_native(reduced)
-
-                print(c0.value)
-                print(c1.value)
-
-                answer = PondPrivateTensor(self, *self._share(r, factory=self.prime_factory), is_scaled=answer.is_scaled)
-
-            return answer
+            
+        # TODO[Morten] use devices, except to int100 etc
+        value = x.value_on_0.equal_zero()
+        return PondPublicTensor(self, value, value, False)
 
     def share_convert(self, x):
         raise NotImplementedError
@@ -285,7 +237,7 @@ def _lsb_private(prot: SecureNN, y: PondPrivateTensor):
 
         print('backing tensor', xbits.share0)
         xbits.share0.value = tf.Print(xbits.share0.value, [xbits.reveal().value_on_1.value], 'X BITS before PC!', summarize=50)
-        bp = prot.private_compare(xbits, r, beta)
+        bp = prot._private_compare(xbits, r, beta)
         print('inputs', x.share0, r, beta)
         # bp = prot.private_compare(x, r, beta)
         # bp.share0.value = tf.Print(bp.share0.value, [bp.reveal().value_on_0.value], 'bpsh', summarize=10)

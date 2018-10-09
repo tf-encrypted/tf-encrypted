@@ -100,6 +100,9 @@ class Int64Tensor(AbstractTensor):
     def cumsum(self, axis, exclusive, reverse) -> 'Int64Tensor':
         return Int64Tensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
 
+    def equal_zero(self) -> 'Int64Tensor':
+        return Int64Tensor(tf.cast(tf.equal(self.value, 0), dtype=self.int_type))
+
     @staticmethod
     def stack(xs: List['Int64Tensor'], axis: int = 0) -> 'Int64Tensor':
         assert all(isinstance(x, Int64Tensor) for x in xs)

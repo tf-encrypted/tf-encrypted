@@ -114,6 +114,9 @@ class Int32Tensor(AbstractTensor):
     def cumsum(self, axis, exclusive, reverse) -> 'Int32Tensor':
         return Int32Tensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
 
+    def equal_zero(self) -> 'Int32Tensor':
+        return Int32Tensor(tf.cast(tf.equal(self.value, 0), dtype=self.int_type))
+
     @staticmethod
     def stack(xs: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':
         assert all(isinstance(x, Int32Tensor) for x in xs)

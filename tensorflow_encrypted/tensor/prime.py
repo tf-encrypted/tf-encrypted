@@ -34,8 +34,8 @@ class PrimeTensor(AbstractTensor):
         return PrimeTensor.binarize(self, prime=self.modulus)
 
     @staticmethod
-    def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int) -> 'PrimeTensor':
-        return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=modulus), modulus)
+    def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int, minval: Optional[int] = 0) -> 'PrimeTensor':
+        return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=minval, maxval=modulus), modulus)
 
     @staticmethod
     def sample_bounded(shape: List[int], bitlength: int) -> 'PrimeTensor':
@@ -150,6 +150,10 @@ class PrimeTensor(AbstractTensor):
         value = tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse) % self.modulus
         return PrimeTensor(value, self.modulus)
 
+    def equal_zero(self) -> 'PrimeTensor':
+        value = tf.cast(tf.equal(self.value, 0), dtype=self.int_type)
+        return PrimeTensor(value, self.modulus)
+
 
 def _lift(x: Union['PrimeTensor', int], modulus: int) -> 'PrimeTensor':
     if isinstance(x, PrimeTensor):
@@ -247,8 +251,8 @@ def prime_factory(modulus: int) -> Any:
             return PrimeTensor.from_native(x, modulus)
 
         @staticmethod
-        def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape]) -> PrimeTensor:
-            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=modulus), modulus)
+        def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], minval: Optional[int] = 0) -> PrimeTensor:
+            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=minval, maxval=modulus), modulus)
 
         @staticmethod
         def sample_bounded(shape: Union[Tuple[int, ...], tf.TensorShape], bitlength: int) -> PrimeTensor:

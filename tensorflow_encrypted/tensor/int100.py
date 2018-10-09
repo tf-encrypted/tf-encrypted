@@ -10,6 +10,7 @@ from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_matmul, gen_crt_mod,
     gen_crt_reduce_sum, gen_crt_cumsum, crt_im2col, crt_matmul_split,
+    gen_crt_equal_zero,
     gen_crt_sample_uniform, gen_crt_sample_bounded
 )
 from .helpers import prod, inverse
@@ -52,6 +53,7 @@ _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
 _crt_matmul = gen_crt_matmul(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE)
+_crt_equal_zero = gen_crt_equal_zero(m, INT_TYPE)
 
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
 _crt_sample_bounded = gen_crt_sample_bounded(m, INT_TYPE)
@@ -242,6 +244,10 @@ class Int100Tensor(AbstractTensor):
 
     def cumsum(self, axis, exclusive, reverse) -> 'Int100Tensor':
         backing = _crt_cumsum(self.backing, axis=axis, exclusive=exclusive, reverse=reverse)
+        return Int100Tensor.from_decomposed(backing)
+
+    def equal_zero(self) -> 'Int100Tensor':
+        backing = _crt_equal_zero(self.backing)
         return Int100Tensor.from_decomposed(backing)
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int100Tensor':

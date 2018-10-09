@@ -43,7 +43,7 @@ def share(secrets, modulus=Q):
 
 class TestPrivateCompare(unittest.TestCase):
 
-    def test_private_compare_0(self):
+    def test_private(self):
 
         config = tfe.LocalConfig([
             'server0',
@@ -51,17 +51,40 @@ class TestPrivateCompare(unittest.TestCase):
             'server2'
         ])
 
-        x = tf.constant([
-            [1,0,0,1,1,0,1],
-            [1,0,0,1,1,0,1],
-            [0,0,0,1,1,0,1],
-            [0,0,0,0,0,0,1]], dtype=tf.int32)
-        
-        r = tf.constant([
-            [1,0,0,1,1,0,1],
-            [0,0,0,1,1,0,1],
-            [1,0,0,1,1,0,1],
-            [1,1,1,1,1,1,0]], dtype=tf.int32)
+        x = np.array([
+            21,
+            21,
+            21,
+            21,
+            21,
+            21,
+            21,
+            21
+        ], dtype=np.int32).reshape(2,2,2)
+
+        r = np.array([
+            36,
+            20,
+            21,
+            22,
+            36,
+            20,
+            21,
+            22
+        ], dtype=np.int32).reshape(2,2,2)
+
+        beta = np.array([
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1
+        ], dtype=np.int32).reshape(2,2,2)
+
+        expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
 
         prot = tfe.protocol.SecureNN(
             tensor_factory=Int32Factory(),
@@ -70,13 +93,15 @@ class TestPrivateCompare(unittest.TestCase):
             verify_precision=False,
             *config.get_players('server0, server1, server2'))
 
-        x = PondPrivateTensor(prot, *prot._share(PrimeTensor(x, 37), prime_factory(37)), False)
-        r = PondPublicTensor(prot, PrimeTensor(r, 37), PrimeTensor(r, 37), False)
-
-        res = prot._private_compare_beta0(x, r)
+        res = prot._private_compare(
+            x_bits = PondPrivateTensor(prot, *prot._share(PrimeTensor(tf.convert_to_tensor(x), 37).to_bits(), prime_factory(37)), False),
+            r = PondPublicTensor(prot, PrimeTensor(tf.convert_to_tensor(r), 37), PrimeTensor(tf.convert_to_tensor(r), 37), False),
+            beta = PondPublicTensor(prot, PrimeTensor(tf.convert_to_tensor(beta), 37), PrimeTensor(tf.convert_to_tensor(beta), 37), False)
+        )
 
         with config.session() as sess:
-            print(sess.run(res.reveal().value_on_0.value))
+            actual = sess.run(res.reveal().value_on_0.value)
+            np.testing.assert_array_equal(actual, expected)
 
 
     # def test_privateCompare(self):
