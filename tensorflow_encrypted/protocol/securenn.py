@@ -16,7 +16,6 @@ from ..player import Player
 from ..config import get_config
 
 
-bits = 32
 _thismodule = sys.modules[__name__]
 
 
@@ -24,20 +23,20 @@ class SecureNN(Pond):
 
     def __init__(
         self,
-        server_0: Player,
-        server_1: Player,
-        server_2: Player,
-        prime_factory: AbstractFactory=None,
-        odd_factory: AbstractFactory=None,
+        server_0: Optional[Player] = None,
+        server_1: Optional[Player] = None,
+        server_2: Optional[Player] = None,
+        prime_factory: AbstractFactory = None,
+        odd_factory: AbstractFactory = None,
         **kwargs
     ) -> None:
         super(SecureNN, self).__init__(
-            server_0=server_0 or get_config().get_player('server0'),
-            server_1=server_1 or get_config().get_player('server1'),
-            crypto_producer=server_2 or get_config().get_player('crypto_producer'),
+            server_0=server_0,
+            server_1=server_1,
+            crypto_producer=server_2,
             **kwargs
         )
-        self.server_2 = server_2
+        self.server_2 = self.crypto_producer
         self.prime_factory = prime_factory or gen_prime_factory(67)  # TODO: import or choose based on factory kwarg to super.__init__()
         self.odd_factory = odd_factory or self.tensor_factory
 
@@ -111,8 +110,8 @@ class SecureNN(Pond):
         return self.bitwise_not(self.less(x, y))
 
     @memoize
-    def select(self, choice: PondTensor, x: PondTensor, y: PondTensor) -> PondTensor:
-        return choice * (y - x) + x
+    def select(self, choice_bit: PondTensor, x: PondTensor, y: PondTensor) -> PondTensor:
+        return (y - x) * choice_bit + x
 
     def factory_from_type(self, type: str) -> AbstractFactory:
         if type == 'prime':
