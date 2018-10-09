@@ -17,7 +17,6 @@ from ..tensor.factory import AbstractFactory
 from ..tensor.int100 import Int100Factory
 from ..tensor.tensor import AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 
-from ..io import InputProvider, OutputReceiver
 from ..player import Player
 from ..config import get_config
 from .protocol import Protocol, global_cache_updators, memoize, nodes
