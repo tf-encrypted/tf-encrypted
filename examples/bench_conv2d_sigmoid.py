@@ -1,5 +1,4 @@
 import sys
-from typing import List
 
 import tensorflow as tf
 import tensorflow_encrypted as tfe
@@ -29,7 +28,7 @@ if len(sys.argv) > 1:
     # assume we're running as a server
     #
 
-    player_name: str = str(sys.argv[1])
+    player_name = str(sys.argv[1])
 
     server = config.server(player_name)
     server.start()
@@ -41,28 +40,28 @@ else:
     #
 
     input_shape = [1, 3, 192, 192]
-    conv11_fshape: List = [3, 3, 3, 64]
-    conv12_fshape: List = [3, 3, 64, 64]
-    pool1_shape: List = [1, 1, 64, 64]
+    conv11_fshape = [3, 3, 3, 64]
+    conv12_fshape = [3, 3, 64, 64]
+    pool1_shape = [1, 1, 64, 64]
 
-    conv21_fshape: List = [3, 3, 64, 128]
-    conv22_fshape: List = [3, 3, 128, 128]
-    pool2_shape: List = [1, 1, 128, 128]
+    conv21_fshape = [3, 3, 64, 128]
+    conv22_fshape = [3, 3, 128, 128]
+    pool2_shape = [1, 1, 128, 128]
 
-    conv31_fshape: List = [3, 3, 128, 256]
-    conv32_fshape: List = [3, 3, 256, 256]
-    conv33_fshape: List = [3, 3, 256, 256]
-    pool3_shape: List = [1, 1, 256, 256]
+    conv31_fshape = [3, 3, 128, 256]
+    conv32_fshape = [3, 3, 256, 256]
+    conv33_fshape = [3, 3, 256, 256]
+    pool3_shape = [1, 1, 256, 256]
 
-    conv41_fshape: List = [3, 3, 256, 512]
-    conv42_fshape: List = [3, 3, 512, 512]
-    conv43_fshape: List = [3, 3, 512, 512]
-    pool4_shape: List = [1, 1, 512, 512]
+    conv41_fshape = [3, 3, 256, 512]
+    conv42_fshape = [3, 3, 512, 512]
+    conv43_fshape = [3, 3, 512, 512]
+    pool4_shape = [1, 1, 512, 512]
 
-    conv51_fshape: List = [3, 3, 512, 512]
-    conv52_fshape: List = [3, 3, 512, 512]
-    conv53_fshape: List = [3, 3, 512, 512]
-    pool5_shape: List = [1, 1, 512, 512]
+    conv51_fshape = [3, 3, 512, 512]
+    conv52_fshape = [3, 3, 512, 512]
+    conv53_fshape = [3, 3, 512, 512]
+    pool5_shape = [1, 1, 512, 512]
 
     def provide_input_conv11weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv11_fshape, dtype=tf.float32)

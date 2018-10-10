@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List, Any, Union, Optional
+from typing import Dict, List, Any, Union, Optional
 
 from ..player import Player
 from ..protocol import Pond, get_protocol
@@ -35,8 +35,6 @@ class Converter():
             input_player = get_config().get_player('input-provider')
         assert isinstance(input_player, Player)
 
-        name_to_input_name, name_to_node = extract_graph_summary(graph_def)
-
         if inputter_fn is None:
             inputs = []
         elif type(inputter_fn) is list:
@@ -45,8 +43,9 @@ class Converter():
             inputs = [inputter_fn]
         inputs_iterable = enumerate(inputs)
 
-        for output, inputs in name_to_input_name.items():
-            node = name_to_node[output]
+        for node in graph_def.node:
+            output = node_name(node.name)
+            inputs = [node_name(x) for x in node.input]
 
             if node.op == "Placeholder":
                 try:
@@ -69,21 +68,6 @@ def node_name(n: str) -> str:
         return n[1:]
     else:
         return n.split(":")[0]
-
-
-def extract_graph_summary(graph_def: Any) -> Tuple[Dict[str, List[str]],
-                                                   Dict[str, Any]]:
-    """Extracts useful information from the graph and returns them."""
-    name_to_input_name = {}  # Keyed by the dest node name.
-    name_to_node = {}  # Keyed by node name.
-
-    for node in graph_def.node:
-        name = node.name
-        n = node_name(name)
-        name_to_node[n] = node
-        name_to_input_name[n] = [node_name(x) for x in node.input]
-
-    return name_to_input_name, name_to_node
 
 
 class InvalidArgumentError(Exception):

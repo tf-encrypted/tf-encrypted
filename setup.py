@@ -13,8 +13,8 @@ setuptools.setup(
         "numpy>=1.14.0"
     ],
     extra_requires={
-        "tf": ["tensorflow>=1.9.0"],
-        "tf_gpu": ["tensorflow-gpu>=1.9.0"]
+        "tf": ["tensorflow>=1.10.0"],
+        "tf_gpu": ["tensorflow-gpu>=1.10.0"]
     },
     license="Apache License 2.0",
     url="https://github.com/mortendahl/tf-encrypted",

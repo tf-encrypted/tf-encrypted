@@ -10,7 +10,7 @@ all: test
 # Rules for bootstrapping the Makefile such as checking for docker, python versions, etc.
 # ###############################################
 DOCKER_REQUIRED_VERSION=18.
-PYTHON_REQUIRED_VERSION=3.6.
+PYTHON_REQUIRED_VERSION=3.5.
 TENSORFLOW_REQUIRED_VERSION=1.10
 SHELL := /bin/bash
 
