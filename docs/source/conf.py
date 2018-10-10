@@ -24,9 +24,9 @@ copyright = '2018, Dropout Labs'
 author = 'Dropout Labs'
 
 # The short X.Y version
-version = ''
+version = '0.1.0'
 # The full version, including alpha/beta/rc tags
-release = ''
+release = '0.1.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -156,7 +156,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'tf-encrypted', 'tf-encrypted Documentation',
-     author, 'tf-encrypted', 'One line description of project.',
+     author, 'tf-encrypted', 'Secure ML playground.',
      'Miscellaneous'),
 ]
 
