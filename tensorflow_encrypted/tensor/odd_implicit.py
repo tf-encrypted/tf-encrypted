@@ -1,112 +1,156 @@
 from __future__ import absolute_import
+from typing import Union, List, Any, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Dict, Any, Tuple
 
-from ..config import run
-from .tensor import AbstractTensor
+from .factory import AbstractTensor, AbstractFactory
+
+
+class OddImplicitFactory:
+
+    def __init__(self, int_type: Union[Type['tf.int32'], Type['tf.int64']]) -> None:
+        self.int_type = int_type
+
+    def tensor(self, value) -> 'OddImplicitTensor':
+
+        if isinstance(value, (tf.Tensor, np.ndarray)):
+            return OddImplicitTensor(value, self)
+
+        if isinstance(value, OddImplicitTensor):
+            assert value.factory == self
+            return OddImplicitTensor(value.value, self)
+
+        raise TypeError("Don't know how to handle {}".format(type(value)))
+
+    def constant(self, value) -> 'OddImplicitTensor':
+        raise NotImplementedError()
+
+    def variable(self, initial_value) -> 'OddImplicitTensor':
+        raise NotImplementedError()
+
+    def placeholder(self, shape) -> 'OddImplicitTensor':
+        raise NotImplementedError()
+
+    @property
+    def modulus(self):
+
+        if self.int_type is tf.int32:
+            return 2**32 - 1
+
+        if self.int_type is tf.int64:
+            return 2**64 - 1
+
+        raise NotImplementedError("Don't know how to handle {}".format(self.int_type))
+
+    def sample_uniform(self, shape: Union[Tuple[int, ...], tf.TensorShape], dtype=tf.int32) -> 'OddImplicitTensor':
+        value = tf.random_uniform(
+            shape=shape,
+            dtype=self.int_type,
+            minval=self.int_type.min + 1,
+            maxval=self.int_type.max)
+        return OddImplicitTensor(value, self)
+
+    def sample_bounded(self, shape: List[int], bitlength: int) -> 'OddImplicitTensor':
+        raise NotImplementedError()
+
+    def stack(self, xs: List['OddImplicitTensor'], axis: int = 0) -> 'OddImplicitTensor':
+        assert all(isinstance(x, OddImplicitTensor) for x in xs)
+        value = tf.stack([x.value for x in xs], axis=axis)
+        return OddImplicitTensor(value, self)
+
+    def concat(self, xs: List['OddImplicitTensor'], axis: int) -> 'OddImplicitTensor':
+        assert all(isinstance(x, OddImplicitTensor) for x in xs)
+        value = tf.concat([x.value for x in xs], axis=axis)
+        return OddImplicitTensor(value, self)
+
+
+oddInt32factory = OddImplicitFactory(tf.int32)
+oddInt64factory = OddImplicitFactory(tf.int64)
 
 
 class OddImplicitTensor(AbstractTensor):
-    def __init__(self, value: Union[np.ndarray, tf.Tensor], dtype=tf.int32) -> None:
-        if dtype not in [tf.int32, tf.int64]:
-            raise Exception("Only int32 and int64 dtypes are allowed for the odd implicit tensor")
+
+    def __init__(self, value: Union[np.ndarray, tf.Tensor], factory: OddImplicitFactory) -> None:
+        self._factory = factory
         self.value = value
-        self.dtype = dtype
-
-    @staticmethod
-    def from_native(value: Union[np.ndarray, tf.Tensor], dtype=tf.int32) -> 'OddImplicitTensor':
-        assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
-        return OddImplicitTensor(value, dtype=dtype)
-
-    @staticmethod
-    def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], dtype=tf.int32) -> 'OddImplicitTensor':
-        return OddImplicitTensor(tf.random_uniform(shape=shape, dtype=dtype,
-                                                   minval=dtype.min + 1, maxval=dtype.max), dtype)
-
-    @staticmethod
-    def sample_bounded(shape: List[int], bitlength: int) -> 'OddImplicitTensor':
-        raise NotImplementedError()
-
-    @staticmethod
-    def stack(x: List['OddImplicitTensor'], axis: int = 0) -> 'OddImplicitTensor':
-        assert all(isinstance(i, OddImplicitTensor) for i in x)
-        return OddImplicitTensor.from_native(tf.stack([v.value for v in x], axis=axis), dtype=x[0].dtype)
-
-    @staticmethod
-    def concat(x: List['OddImplicitTensor'], axis: int) -> 'OddImplicitTensor':
-        assert all(isinstance(i, OddImplicitTensor) for i in x)
-        return OddImplicitTensor.from_native(tf.concat([v.value for v in x], axis=axis), dtype=x[0].dtype)
-
-    def eval(self, sess: tf.Session, feed_dict: Dict[Any, Any]={},
-             tag: Optional[str]=None) -> 'OddImplicitTensor':
-        return OddImplicitTensor(run(sess, self.value, feed_dict=feed_dict, tag=tag), dtype=self.dtype)
-
-    def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
-        return self.value[slice]
 
     def __repr__(self) -> str:
-        return 'OddImplicitTensor(shape={}, dtype={})'.format(self.shape, self.dtype)
+        return 'OddImplicitTensor(shape={}, int_type={})'.format(self.shape, self._factory.int_type)
+
+    def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
+        return self.factory.tensor(self.value[slice])
 
     @property
     def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
         return self.value.shape
 
-    def __add__(self, other: Union['OddImplicitTensor', int]) -> 'OddImplicitTensor':
+    @property
+    def factory(self) -> AbstractFactory:
+        return self._factory
+
+    def __add__(self, other) -> 'OddImplicitTensor':
         return self.add(other)
 
-    def __sub__(self, other: Union['OddImplicitTensor', int]) -> 'OddImplicitTensor':
+    def __sub__(self, other) -> 'OddImplicitTensor':
         return self.sub(other)
 
-    def __mul__(self, other: Union['OddImplicitTensor', int]) -> 'OddImplicitTensor':
+    def __mul__(self, other) -> 'OddImplicitTensor':
         return self.mul(other)
 
     def __mod__(self, k: int) -> 'OddImplicitTensor':
         return self.mod(k)
 
-    def add(self, other: Union['OddImplicitTensor', int]) -> 'OddImplicitTensor':
-        x, y = self._lift(self), self._lift(other)
+    def add(self, other) -> 'OddImplicitTensor':
+        x, y = _lift(self, other)
 
         z = x.value + y.value
 
+        int_type = self.factory.int_type
+
+        # correct for overflow where needed
         z = z + tf.where(
-            tf.logical_and(y.value > 0, x.value > tf.int32.max - y.value),
-            tf.ones(z.shape, dtype=self.dtype),
-            tf.zeros(z.shape, dtype=self.dtype)
+            tf.logical_and(y.value > 0, x.value > int_type.max - y.value),
+            tf.ones(z.shape, dtype=int_type),
+            tf.zeros(z.shape, dtype=int_type)
         )
+
         # correct for underflow where needed
         z = z - tf.where(
-            tf.logical_and(y.value < 0, x.value < tf.int32.min - y.value),
-            tf.ones(z.shape, dtype=self.dtype),
-            tf.zeros(z.shape, dtype=self.dtype)
+            tf.logical_and(y.value < 0, x.value < int_type.min - y.value),
+            tf.ones(z.shape, dtype=int_type),
+            tf.zeros(z.shape, dtype=int_type)
         )
 
-        return OddImplicitTensor(z, dtype=self.dtype)
+        return OddImplicitTensor(z, self._factory)
 
-    def sub(self, other: Union['OddImplicitTensor', int]) -> 'OddImplicitTensor':
-        x, y = self._lift(self), self._lift(other)
+    def sub(self, other) -> 'OddImplicitTensor':
+        x, y = _lift(self, other)
 
         z = x.value - y.value
 
+        int_type = self.factory.int_type
+
+        # correct for overflow where needed
         z = z + tf.where(
-            tf.logical_and(y.value < 0, x.value > tf.int32.max + y.value),
-            tf.ones(z.shape, dtype=self.dtype),
-            tf.zeros(z.shape, dtype=self.dtype)
+            tf.logical_and(y.value < 0, x.value > int_type.max + y.value),
+            tf.ones(z.shape, dtype=int_type),
+            tf.zeros(z.shape, dtype=int_type)
         )
+
         # correct for underflow where needed
         z = z - tf.where(
-            tf.logical_and(y.value > 0, x.value < tf.int32.min + y.value),
-            tf.ones(z.shape, dtype=self.dtype),
-            tf.zeros(z.shape, dtype=self.dtype)
+            tf.logical_and(y.value > 0, x.value < int_type.min + y.value),
+            tf.ones(z.shape, dtype=int_type),
+            tf.zeros(z.shape, dtype=int_type)
         )
 
-        return OddImplicitTensor(z, dtype=self.dtype)
+        return OddImplicitTensor(z, self._factory)
 
-    def mul(self, other: Union['OddImplicitTensor', int]) -> 'OddImplicitTensor':
+    def mul(self, other) -> 'OddImplicitTensor':
         raise NotImplementedError()
 
-    def dot(self, other: Union['OddImplicitTensor', int]) -> 'OddImplicitTensor':
+    def matmul(self, other) -> 'OddImplicitTensor':
         raise NotImplementedError()
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'OddImplicitTensor':
@@ -116,23 +160,38 @@ class OddImplicitTensor(AbstractTensor):
         raise NotImplementedError()
 
     def mod(self, k: int) -> 'OddImplicitTensor':
-        x = self._lift(self)
-        return OddImplicitTensor(x.value % k, self.dtype)
+        raise NotImplementedError()
 
     def transpose(self, perm: Union[List[int], Tuple[int]]) -> 'OddImplicitTensor':
-        return OddImplicitTensor(tf.transpose(self.value, perm), self.dtype)
+        return OddImplicitTensor(tf.transpose(self.value, perm), self.factory)
 
     def strided_slice(self, args: Any, kwargs: Any) -> 'OddImplicitTensor':
-        return OddImplicitTensor(tf.strided_slice(self.value, *args, **kwargs), self.dtype)
+        return OddImplicitTensor(tf.strided_slice(self.value, *args, **kwargs), self.factory)
 
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'OddImplicitTensor':
-        return OddImplicitTensor(tf.reshape(self.value, axes), self.dtype)
+        return OddImplicitTensor(tf.reshape(self.value, axes), self.factory)
 
-    def _lift(self, x: Union['OddImplicitTensor', int]) -> 'OddImplicitTensor':
-        if isinstance(x, OddImplicitTensor):
-            return x
 
-        if type(x) is int:
-            return OddImplicitTensor.from_native(np.array([x]), dtype=self.dtype)
+def _lift(x, y) -> Tuple[OddImplicitTensor, OddImplicitTensor]:
 
-        raise TypeError("Unsupported type {}".format(type(x)))
+    if isinstance(x, OddImplicitTensor) and isinstance(y, OddImplicitTensor):
+        assert x.factory == y.factory, "Incompatible data types: {} and {}".format(x.factory, y.factory)
+        return x, y
+
+    if isinstance(x, OddImplicitTensor):
+
+        if isinstance(y, int):
+            return x, x.factory.tensor(np.array([y]))
+
+        if isinstance(y, np.ndarray):
+            return x, x.factory.tensor(y)
+
+    if isinstance(y, OddImplicitTensor):
+
+        if isinstance(x, int):
+            return y.factory.tensor(np.array([x])), y
+
+        if isinstance(x, np.ndarray):
+            return y.factory.tensor(x), y
+
+    raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))

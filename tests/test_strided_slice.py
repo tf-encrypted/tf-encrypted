@@ -36,9 +36,9 @@ class TestStridedSlice(unittest.TestCase):
 
             out = prot.strided_slice(out, [1, 0, 0], [2, 1, 3], [1, 1, 1])
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                final = out.reveal().eval(sess)
+                final = sess.run(out.reveal())
 
         np.testing.assert_array_equal(final, actual)
 

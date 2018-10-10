@@ -1,18 +1,19 @@
+from abc import ABC, abstractmethod
 import functools
-from typing import Optional, Type, Any
+from typing import Optional, Type, Any, Callable
 from types import TracebackType
 
 import tensorflow as tf
 
-from ..tensor.tensor import AbstractTensor
+from ..tensor.factory import AbstractTensor
 
 
-_current_prot = None
+__PROTOCOL__ = None
 global_cache_updators = list()
 nodes = dict()
 
 
-class Protocol(object):
+class Protocol(ABC):
 
     def __enter__(self) -> 'Protocol':
         set_protocol(self)
@@ -24,22 +25,27 @@ class Protocol(object):
         set_protocol(None)
         return None
 
+    @property
+    @abstractmethod
+    def initializer(self) -> tf.Operation:
+        pass
+
 
 def set_protocol(prot: Optional[Protocol]) -> None:
-    global _current_prot
-    _current_prot = prot
+    global __PROTOCOL__
+    __PROTOCOL__ = prot
 
 
 def get_protocol() -> Optional[Protocol]:
-    return _current_prot
+    return __PROTOCOL__
 
 
-def global_caches_updator():
+def global_caches_updator() -> tf.Operation:
     with tf.name_scope('cache_update'):
         return tf.group(*global_cache_updators)
 
 
-def memoize(func):
+def memoize(func: Callable) -> Callable:
 
     @functools.wraps(func)
     def cache_nodes(self: Protocol, *args: Any, **kwargs: Any) -> AbstractTensor:

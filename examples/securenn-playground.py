@@ -1,12 +1,7 @@
 import numpy as np
 import tensorflow_encrypted as tfe
 
-config = tfe.LocalConfig([
-    'server0',
-    'server1',
-    'crypto_producer'
-])
-
+config = tfe.get_config()
 with tfe.protocol.SecureNN(*config.get_players('server0, server1, crypto_producer')) as prot:
 
     a = prot.define_constant(np.array([0, 0, 1, 1]), apply_scaling=False)
@@ -17,6 +12,5 @@ with tfe.protocol.SecureNN(*config.get_players('server0, server1, crypto_produce
     y = prot.define_constant(np.array([0., 1., 2., 3.]))
     z = (x * c) * y
 
-    with config.session() as sess:
-
-        print(z.eval(sess, tag='res'))
+    with tfe.Session() as sess:
+        print(sess.run(z, tag='res'))

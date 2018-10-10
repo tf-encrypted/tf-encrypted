@@ -26,11 +26,11 @@ class TestSelectShare(unittest.TestCase):
             bob_input = prot.define_private_variable(bob)
             bit_input = prot.define_private_variable(bit)
 
-            select = prot.select_share(alice_input, bob_input, bit_input)
+            select = prot.select(bit_input, alice_input, bob_input)
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                chosen = select.reveal().eval(sess)
+                chosen = sess.run(select.reveal())
 
                 assert(np.array_equal(expected, chosen))
 

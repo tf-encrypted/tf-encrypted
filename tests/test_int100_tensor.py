@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.int100 import Int100Tensor, Int100Factory
+
+from tensorflow_encrypted.tensor.int100 import int100factory
 
 
 class TestInt100Tensor(unittest.TestCase):
@@ -12,15 +13,10 @@ class TestInt100Tensor(unittest.TestCase):
         tf.reset_default_graph()
 
     def test_pond(self) -> None:
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
 
         with tfe.protocol.Pond(
-            *config.get_players('server0, server1, crypto_producer'),
-            tensor_factory=Int100Factory(),
+            None,
+            tensor_factory=int100factory,
             use_noninteractive_truncation=True,
             verify_precision=True
         ) as prot:
@@ -30,9 +26,9 @@ class TestInt100Tensor(unittest.TestCase):
 
             z = x * y
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                actual = z.reveal().eval(sess)
+                actual = sess.run(z.reveal())
 
             expected = np.array([4, 4])
             np.testing.assert_array_almost_equal(actual, expected, decimal=3)
@@ -44,7 +40,7 @@ class TestInt100Tensor(unittest.TestCase):
             bits = [0] * (min_bitlength - len(bits)) + bits
             return list(reversed(bits))
 
-        x = Int100Tensor(np.array([
+        x = int100factory.tensor(np.array([
             0,
             -1,
             123456789,
@@ -84,8 +80,8 @@ class TestConv2D(unittest.TestCase):
         filter_shape = (h_filter, w_filter, channels_in, channels_out)
         filter_values = np.random.normal(size=filter_shape).astype(np.int32)
 
-        inp = Int100Tensor(input_conv)
-        out = inp.conv2d(Int100Tensor(filter_values), strides)
+        inp = int100factory.tensor(input_conv)
+        out = inp.conv2d(int100factory.tensor(filter_values), strides)
         with tf.Session() as sess:
             actual = sess.run(out.to_native())
 

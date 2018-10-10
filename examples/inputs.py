@@ -4,21 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-config = tfe.LocalConfig([
-    'server0',
-    'server1',
-    'crypto_producer',
-    'weights_provider',
-    'prediction_client'
-])
-
-# config = tfe.RemoteConfig([
-#     ('server0', 'localhost:4440'),
-#     ('server1', 'localhost:4441'),
-#     ('crypto_producer', 'localhost:4442'),
-#     ('weights_provider', 'localhost:4443'),
-#     ('prediction_client', 'localhost:4444')
-# ])
+config = tfe.get_config()
 
 if len(sys.argv) > 1:
 
@@ -53,11 +39,11 @@ else:
         def receive_output(self, prediction):
             return tf.Print([], [prediction], summarize=4)
 
-    weights_input = WeightsInputProvider(config.get_player('weights_provider'))
-    prediction_input = PredictionInputProvider(config.get_player('prediction_client'))
-    prediction_output = PredictionOutputReceiver(config.get_player('prediction_client'))
+    weights_input = WeightsInputProvider('model-provider')
+    prediction_input = PredictionInputProvider('input-provider')
+    prediction_output = PredictionOutputReceiver('input-provider')
 
-    with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+    with tfe.protocol.Pond() as prot:
 
         # treat weights as private
         w = prot.define_private_input(weights_input)
@@ -71,8 +57,8 @@ else:
         # send output
         prediction_op = prot.define_output(y, prediction_output)
 
-        with config.session() as sess:
-            tfe.run(sess, tf.global_variables_initializer(), tag='init')
+        with tfe.Session() as sess:
+            sess.run(tf.global_variables_initializer(), tag='init')
 
             for _ in range(5):
-                tfe.run(sess, prediction_op, tag='prediction')
+                sess.run(prediction_op, tag='prediction')

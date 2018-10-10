@@ -39,9 +39,9 @@ class TestBatchnorm(unittest.TestCase):
             batchnorm_layer.initialize()
             batchnorm_out_pond = batchnorm_layer.forward(batchnorm_input)
 
-            with config.session() as sess:
+            with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                out_pond = batchnorm_out_pond.reveal().eval(sess)
+                out_pond = sess.run(batchnorm_out_pond.reveal())
 
             # reset graph
             tf.reset_default_graph()

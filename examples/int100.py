@@ -1,14 +1,10 @@
 import numpy as np
-import tensorflow as tf
-from tensorflow_encrypted.tensor.int100 import (
-    Int100Tensor,
-    Int100Constant,
-    Int100Variable,
-    Int100Placeholder
-)
+import tensorflow_encrypted as tfe
 
-x = Int100Tensor(np.array([1, 2, 3]))
-y = Int100Tensor(np.array([1, 2, 3]))
+from tensorflow_encrypted.tensor.int100 import int100factory as int100
+
+x = int100.tensor(np.array([1, 2, 3]))
+y = int100.tensor(np.array([1, 2, 3]))
 
 z = x + y
 print(z)
@@ -19,23 +15,23 @@ print(z)
 z = x * y
 print(z)
 
-c = Int100Constant(np.array([4, 4, 4]))
-v = Int100Variable(np.array([1, 1, 1]))
-p = Int100Placeholder((3, ))
+c = int100.constant(np.array([4, 4, 4]))
+v = int100.variable(np.array([1, 1, 1]))
+p = int100.placeholder((3,))
 
-with tf.Session() as sess:
+with tfe.Session() as sess:
 
     print('Constant')
-    print(c.eval(sess).to_native())
+    print(sess.run(c))
 
     print('Variable')
     sess.run(v.initializer)
-    print(v.eval(sess).to_native())
+    print(sess.run(v))
 
     print('Placeholder')
-    print(p.eval(sess, feed_dict=p.feed_from_native(np.array([5, 5, 5]))).to_native())
+    print(sess.run(p, feed_dict=p.feed_from_native(np.array([5, 5, 5]))))
 
     print('Assignment')
     w = c - p
     sess.run(v.assign_from_same(w), feed_dict=p.feed_from_native(np.array([5, 5, 5])))
-    print(v.eval(sess).to_bigint() - Int100Tensor.modulus)
+    print(sess.run(v))
