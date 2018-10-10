@@ -14,7 +14,9 @@ Decomposed = Union[List[tf.Tensor], List[np.ndarray]]
 def gen_crt_decompose(m):
 
     def crt_decompose(x):
-        return tuple(x % mi for mi in m)
+
+        with tf.name_scope('crt_decompose'):
+            return tuple(x % mi for mi in m)
 
     return crt_decompose
 
@@ -233,6 +235,7 @@ def gen_crt_mod(m, int_type):
 def gen_crt_reduce_sum(m):
 
     def crt_reduce_sum(x, axis=None, keepdims=None):
+
         with tf.name_scope('crt_reduce_sum'):
             return [tf.reduce_sum(xi, axis, keepdims) % mi for xi, mi in zip(x, m)]
 
@@ -242,6 +245,7 @@ def gen_crt_reduce_sum(m):
 def gen_crt_cumsum(m):
 
     def crt_cumsum(x, axis=None, exclusive=None, reverse=None):
+
         with tf.name_scope('crt_cumsum'):
             return [
                 tf.cumsum(xi, axis=axis, exclusive=exclusive, reverse=reverse) % mi
@@ -253,40 +257,22 @@ def gen_crt_cumsum(m):
 
 def gen_crt_equal_zero(m, int_type):
 
-    decompose = gen_crt_decompose(m)
-
     def crt_equal_zero(x):
-
         with tf.name_scope('crt_equal_zero'):
-
-            number_of_zeros = tf.reduce_sum([
-                tf.cast(tf.equal(xi, 0), int_type)
-                for xi in x
-            ], axis=0)
-
+            number_of_zeros = tf.reduce_sum([tf.cast(tf.equal(xi, 0), int_type) for xi in x], axis=0)
             all_zeros = tf.cast(tf.equal(number_of_zeros, len(m)), int_type)
-
-            return decompose(all_zeros)
+            return all_zeros
 
     return crt_equal_zero
 
 
 def gen_crt_equal(m, int_type):
 
-    decompose = gen_crt_decompose(m)
-
     def crt_equal(x, y):
-
         with tf.name_scope('crt_equal'):
-
-            number_of_matches = tf.reduce_sum([
-                tf.cast(tf.equal(xi, yi), int_type)
-                for xi, yi in zip(x, y)
-            ], axis=0)
-
+            number_of_matches = tf.reduce_sum([tf.cast(tf.equal(xi, yi), int_type) for xi, yi in zip(x, y)], axis=0)
             all_matches = tf.cast(tf.equal(number_of_matches, len(m)), int_type)
-
-            return decompose(all_matches)
+            return all_matches
 
     return crt_equal
 
