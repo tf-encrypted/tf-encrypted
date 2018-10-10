@@ -1,5 +1,5 @@
 `protocol`
-========
+===========
 
 In `tf-encrypted`, a protocol represents a certain type of cryptographic protocol
 to achieve security.
