@@ -41,6 +41,3 @@ Several contributors have put resources into the development of this library, mo
    :caption: API
 
    api/index
-   api/protocol
-   api/pond
-   api/securenn

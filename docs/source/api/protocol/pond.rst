@@ -1,4 +1,4 @@
-`.pond`
+`Pond`
 =======
 
 Pond is an implementation of the SPDZ algorithm for MPC.

@@ -1,4 +1,4 @@
-`.secureNN`
+`SecureNN`
 ============
 
 SecureNN is an extension of the `Pond` protocol.  It is an implementation from the `SecureNN paper`_.
