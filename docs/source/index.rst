@@ -37,7 +37,7 @@ Several contributors have put resources into the development of this library, mo
    usage/getting_started
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 5
    :caption: API
 
    api/index

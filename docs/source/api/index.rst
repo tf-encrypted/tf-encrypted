@@ -12,10 +12,13 @@ The top tfe module.
   :members: set_protocol, set_config
 
 .. toctree::
-   :maxdepth: 5
-   :caption: API
+    :maxdepth: 5
+    :caption: API
 
-   protocol/index
-   config/config
-   session
-   layers/index
+    config/config
+    session
+
+    protocol/index
+    layers/index
+
+.. TODO: How do we make two submenus in API
