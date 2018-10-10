@@ -8,9 +8,11 @@ Layers implements ready to use `neural network` layers that come with crypto for
    :maxdepth: 5
    :caption: Classes
 
-   activation
    dense
    convolution
    avg_pooling_2d
-   reshape
    batchnorm
+   sigmoid
+   relu
+   tanh
+   reshape

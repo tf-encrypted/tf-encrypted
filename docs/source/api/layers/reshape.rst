@@ -1,5 +1,5 @@
 `Reshape`
 =============
 
-.. autoclass:: tensorflow_encrypted.layers.activation.Reshape
+.. autoclass:: tensorflow_encrypted.layers.reshape.Reshape
   :members:

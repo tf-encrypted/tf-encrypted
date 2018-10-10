@@ -1,5 +1,5 @@
 `Convolution`
 =============
 
-.. autoclass:: tensorflow_encrypted.layers.activation.Conv2D
+.. autoclass:: tensorflow_encrypted.layers.convolution.Conv2D
   :members:

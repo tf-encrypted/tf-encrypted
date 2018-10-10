@@ -1,5 +1,5 @@
 `Dense`
 =============
 
-.. autoclass:: tensorflow_encrypted.layers.activation.Dense
+.. autoclass:: tensorflow_encrypted.layers.dense.Dense
   :members:
