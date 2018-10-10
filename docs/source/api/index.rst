@@ -1,5 +1,8 @@
 `tf-encrypted`
 ==============
 
-.. automodule:: tensorflow_encrypted
-  :members:
+.. toctree::
+   :maxdepth: 5
+   :caption: API
+
+   config/config
