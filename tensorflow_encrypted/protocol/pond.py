@@ -194,7 +194,7 @@ class Pond(Protocol):
     ) -> Union['PondPublicTensor', List['PondPublicTensor']]:
 
         if type(player) is str:
-            player = get_config().get_player('input-provider')
+            player = get_config().get_player(player)
         assert isinstance(player, Player)
 
         def helper(v: tf.Tensor) -> 'PondPublicTensor':
@@ -231,7 +231,7 @@ class Pond(Protocol):
     ) -> Union['PondPrivateTensor', 'PondMaskedTensor', List[Union['PondPrivateTensor', 'PondMaskedTensor']]]:
 
         if type(player) is str:
-            player = get_config().get_player('input-provider')
+            player = get_config().get_player(player)
         assert isinstance(player, Player)
 
         def helper(v: tf.Tensor) -> Union['PondPrivateTensor', 'PondMaskedTensor']:
@@ -275,12 +275,12 @@ class Pond(Protocol):
         self,
         player: Union[str, Player],
         xs: Union['PondPrivateTensor', List['PondPrivateTensor']],
-        post_fn: Callable[..., Any],
+        outputter_fn: Callable[..., Any],
         name: Optional[str]=None
     ) -> tf.Operation:
 
         if type(player) is str:
-            player = get_config().get_player('input-provider')
+            player = get_config().get_player(player)
         assert isinstance(player, Player)
 
         def helper(x: 'PondPrivateTensor') -> tf.Tensor:
@@ -297,10 +297,10 @@ class Pond(Protocol):
                 if isinstance(xs, PondPrivateTensor):
                     # single input -> single output
                     x = xs
-                    op = post_fn(helper(x))
+                    op = outputter_fn(helper(x))
 
                 elif isinstance(xs, (list, tuple)):
-                    op = post_fn(*[helper(x) for x in xs])
+                    op = outputter_fn(*[helper(x) for x in xs])
 
                 else:
                     raise TypeError("Don't know how to handle inputs of type {}".format(type(xs)))
