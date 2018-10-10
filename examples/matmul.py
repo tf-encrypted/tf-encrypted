@@ -27,12 +27,19 @@ import tensorflow_encrypted as tfe
 # But you can use your another one!
 # tfe.set_protocol(tfe.protocol.SecureNN())
 
-w = tfe.define_private_variable(np.ones((10, 10)))
+a = np.ones((10, 10))
 
-y = w
+x = tfe.define_private_variable(a)
+
+b = a
+y = x
 for _ in range(2):
+    b = np.dot(b, b)
     y = y.matmul(y)
 
 with tfe.Session() as sess:
     sess.run(tfe.get_global_variables(), tag='init')
-    print(sess.run(y.reveal(), tag='reveal'))
+    actual = sess.run(y.reveal(), tag='reveal')
+
+    expected = b
+    np.testing.assert_array_equal(actual, expected)

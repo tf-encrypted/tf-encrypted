@@ -1,14 +1,10 @@
 import numpy as np
 import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.int100 import (
-    Int100Tensor,
-    Int100Constant,
-    Int100Variable,
-    Int100Placeholder
-)
 
-x = Int100Tensor(np.array([1, 2, 3]))
-y = Int100Tensor(np.array([1, 2, 3]))
+from tensorflow_encrypted.tensor.int100 import int100factory as int100
+
+x = int100.tensor(np.array([1, 2, 3]))
+y = int100.tensor(np.array([1, 2, 3]))
 
 z = x + y
 print(z)
@@ -19,9 +15,9 @@ print(z)
 z = x * y
 print(z)
 
-c = Int100Constant(np.array([4, 4, 4]))
-v = Int100Variable(np.array([1, 1, 1]))
-p = Int100Placeholder((3, ))
+c = int100.constant(np.array([4, 4, 4]))
+v = int100.variable(np.array([1, 1, 1]))
+p = int100.placeholder((3,))
 
 with tfe.Session() as sess:
 
