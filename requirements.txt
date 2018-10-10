@@ -3,7 +3,6 @@ astor==0.7.1
 certifi==2018.8.13
 cffi==1.11.5
 colorama==0.3.7
-cryptography==2.3
 flake8==3.5.0
 Flask==1.0.2
 Flask-Cors==3.0.6
@@ -18,12 +17,11 @@ protobuf==3.6.1
 pyasn1==0.4.2
 pycparser==2.18
 requests==2.19.1
-rsa==3.4.2
 s3transfer==0.1.13
 six==1.11.0
-tensorboard==1.10.0
+tensorboard==1.11.0
+tensorflow==1.11.0
 termcolor==1.1.0
 typed-ast==1.1.0
 urllib3==1.23
 Werkzeug==0.14.1
-tensorflow==1.10.0
