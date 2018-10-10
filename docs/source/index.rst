@@ -34,7 +34,7 @@ Several contributors have put resources into the development of this library, mo
    :caption: Getting Started
 
    usage/installation
-   usage/usage
+   usage/getting_started
 
 .. toctree::
    :maxdepth: 2
