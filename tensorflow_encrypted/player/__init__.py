@@ -4,6 +4,4 @@ from .player import Player
 
 __all__ = [
     'Player',
-    'player',
-    '__main__',
 ]

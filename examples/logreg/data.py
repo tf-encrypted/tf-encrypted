@@ -38,4 +38,4 @@ def gen_test_input(total_size: int, nb_feats: int, bs: int) -> Tuple[tf.Tensor, 
     x_test = tf.reshape(x_test, [bs, nb_feats])
     y_test = tf.reshape(y_test, [bs, 1])
 
-    return x_test, y_test, y_test_np
+    return x_test, y_test

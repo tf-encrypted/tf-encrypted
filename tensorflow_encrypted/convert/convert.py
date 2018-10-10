@@ -1,27 +1,9 @@
 from typing import Dict, Tuple, List, Any, Union, Optional
-import tensorflow as tf
-from collections import Iterable
-import numpy as np
 
-from ..io import InputProvider
 from ..player import Player
 from ..protocol import Pond, get_protocol
+from ..protocol.pond import TFEInputter
 from ..config import Config, get_config
-
-
-class ConvertInputProvider(InputProvider):
-
-    def __init__(self, player: Union[str, Player], input: Union[np.ndarray, tf.Tensor]) -> None:
-        self.input = input
-        if isinstance(player, str):
-            self.player = get_config().get_player(player)
-        else:
-            self.player = player
-
-    def provide_input(self) -> tf.Tensor:
-        if isinstance(self.input, tf.Tensor):
-            return self.input
-        return tf.constant(self.input)
 
 
 class Converter():
@@ -45,31 +27,34 @@ class Converter():
     def convert(
         self,
         graph_def: Any,
-        input: Union[List[InputProvider], InputProvider],
-        register: Dict[str, Any]
+        register: Dict[str, Any],
+        input_player: Union[str, Player],
+        inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]]=None
     ) -> Any:
+        if type(input_player) is str:
+            input_player = get_config().get_player('input-provider')
+        assert isinstance(input_player, Player)
 
         name_to_input_name, name_to_node = extract_graph_summary(graph_def)
 
-        if isinstance(input, InputProvider):
-            i = [input]
-        elif isinstance(input, Iterable):
-            i = input
+        if inputter_fn is None:
+            inputs = []
+        elif type(inputter_fn) is list:
+            inputs = inputter_fn
         else:
-            i = []
-
-        iter = enumerate(i)
+            inputs = [inputter_fn]
+        inputs_iterable = enumerate(inputs)
 
         for output, inputs in name_to_input_name.items():
             node = name_to_node[output]
 
             if node.op == "Placeholder":
                 try:
-                    count, item = iter.__next__()
+                    count, item = inputs_iterable.__next__()
                 except StopIteration:
                     raise InvalidArgumentError("Not enough placeholders supplied")
 
-                x = self.protocol.define_private_input(item)
+                x = self.protocol.define_private_input(input_player, item)
 
                 self.outputs[output] = x
                 continue

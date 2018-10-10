@@ -5,13 +5,13 @@ from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 
 model_name = "2inputs"
-output_file = dir_path = os.path.join(
+output_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
     "..",
     "models",
     "{}.pb".format(model_name),
 )
-input_data_file = dir_path = os.path.join(
+input_data_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
     "..",
     "models",

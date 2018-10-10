@@ -47,7 +47,7 @@ conv2d = lambda x, w, s: tf.nn.conv2d(x, w, strides=[1, s, s, 1], padding='VALID
 pooling = lambda x: tf.nn.avg_pool(x, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
 
 
-class ModelTrainer(tfe.io.InputProvider):
+class ModelTrainer():
     BATCH_SIZE = 32
     ITERATIONS = 60000 // BATCH_SIZE
     EPOCHS = 15
@@ -61,6 +61,9 @@ class ModelTrainer(tfe.io.InputProvider):
     HIDDEN_FC2 = 120
     HIDDEN_FC3 = 84
     OUT_N = 10
+
+    def __init__(self, player: tfe.player.Player) -> None:
+        self.player = player
 
     def build_data_pipeline(self):
 
@@ -138,9 +141,12 @@ class ModelTrainer(tfe.io.InputProvider):
         return parameters
 
 
-class PredictionClient(tfe.io.InputProvider, tfe.io.OutputReceiver):
+class PredictionClient():
 
     BATCH_SIZE = 20
+
+    def __init__(self, player: tfe.player.Player) -> None:
+        self.player = player
 
     def build_data_pipeline(self):
 
@@ -167,8 +173,7 @@ class PredictionClient(tfe.io.InputProvider, tfe.io.OutputReceiver):
 
         return [prediction_input]
 
-    def receive_output(self, tensors: List[tf.Tensor]) -> tf.Operation:
-        likelihoods, = tensors
+    def receive_output(self, likelihoods: tf.Tensor) -> tf.Operation:
         with tf.name_scope('post-processing'):
             prediction = tf.argmax(likelihoods, axis=1)
             op = tf.Print([], [prediction], summarize=self.BATCH_SIZE, message="ACTUAL ")
@@ -185,13 +190,13 @@ crypto_producer = config.get_player('crypto-producer')
 with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
 
     # get model parameters as private tensors from model owner
-    params = prot.define_private_input(model_trainer, masked=True)  # pylint: disable=E0632
+    params = prot.define_private_input(model_trainer.player, model_trainer.provide_input, masked=True)  # pylint: disable=E0632
 
     # we'll use the same parameters for each prediction so we cache them to avoid re-training each time
     params = prot.cache(params)
 
     # get prediction input from client
-    x, = prot.define_private_input(prediction_client, masked=True)  # pylint: disable=E0632
+    x, = prot.define_private_input(prediction_client.player, prediction_client.provide_input, masked=True)  # pylint: disable=E0632
 
     # helpers
     conv = lambda x, w: prot.conv2d(x, w, ModelTrainer.STRIDE, 'VALID')
@@ -209,7 +214,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     logits = prot.matmul(layer4, Wfc3) + bfc3
 
     # send prediction output back to client
-    prediction_op = prot.define_output([logits], prediction_client)
+    prediction_op = prot.define_output(prediction_client.player, [logits], prediction_client.receive_output)
 
 
 with tfe.Session() as sess:

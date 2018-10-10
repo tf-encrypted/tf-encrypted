@@ -1,10 +1,10 @@
 import tensorflow as tf
 import numpy as np
 import array
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D
-from .convert import Converter, ConvertInputProvider
+from .convert import Converter
 
 from tensorflow_encrypted.protocol.pond import PondPublicTensor
 
@@ -67,9 +67,8 @@ def matmul(converter: Converter, node: Any, inputs: List[str]) -> Any:
     else:
         raise TypeError("Unsupported dtype for weights")
 
-    provider = ConvertInputProvider(converter.model_provider,
-                                    np.array(nums).reshape(b_shape))
-    w = converter.protocol.define_private_input(provider)
+    inputter_fn = lambda: tf.constant(np.array(nums).reshape(b_shape))
+    w = converter.protocol.define_private_input(converter.model_provider, inputter_fn)
 
     layer.initialize(initial_weights=w)
 
@@ -98,9 +97,8 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
     else:
         raise TypeError("Unsupported dtype for weights")
 
-    provider = ConvertInputProvider(converter.model_provider,
-                                    np.array(nums).reshape(shape))
-    w = converter.protocol.define_private_input(provider)
+    inputter_fn = lambda: tf.constant(np.array(nums).reshape(shape))
+    w = converter.protocol.define_private_input(converter.model_provider, inputter_fn)
 
     layer.initialize(initial_weights=w)
 
@@ -261,9 +259,8 @@ def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
         x = tf.rsqrt(decoded)
 
-    provider = ConvertInputProvider(converter.model_provider, x)
-
-    x = converter.protocol.define_public_input(provider)
+    inputter_fn = lambda: tf.constant(x)
+    x = converter.protocol.define_public_input(converter.model_provider, inputter_fn)
 
     return x
 
@@ -360,8 +357,7 @@ def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
         else:
             raise TypeError("Unsupported dtype")
 
-        provider = ConvertInputProvider(converter.model_provider,
-                                        np.array(nums).reshape(1, 1))
+        inputter_fn = lambda: tf.constant(np.array(nums).reshape(1, 1))
     else:
         if dtype == tf.float32:
             nums = array.array('f', x.attr["value"].tensor.tensor_content)
@@ -370,15 +366,17 @@ def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
         else:
             raise TypeError("Unsupported dtype")
 
-        provider = ConvertInputProvider(converter.model_provider,
-                                        np.array(nums).reshape(x_shape))
+        inputter_fn = lambda: tf.constant(np.array(nums).reshape(x_shape))
 
-    x_public = converter.protocol.define_public_input(provider)
+    x_public = converter.protocol.define_public_input(converter.model_provider, inputter_fn)
 
     return x_public
 
 
-def nodef_to_private_pond(converter: Converter, x: Any):
+def nodef_to_private_pond(
+    converter: Converter,
+    x: Any
+) -> Union['tfe.protocol.pond.PondPrivateTensor', 'tfe.protocol.pond.PondMaskedTensor', List[Union['tfe.protocol.pond.PondPrivateTensor', 'tfe.protocol.pond.PondMaskedTensor']]]:
     dtype = x.attr["dtype"].type
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
@@ -390,8 +388,7 @@ def nodef_to_private_pond(converter: Converter, x: Any):
         else:
             raise TypeError("Unsupported dtype")
 
-        provider = ConvertInputProvider(converter.model_provider,
-                                        np.array(nums).reshape(1, 1))
+        inputter_fn = lambda: tf.constant(np.array(nums).reshape(1, 1))
     else:
         if dtype == tf.float32:
             nums = array.array('f', x.attr["value"].tensor.tensor_content)
@@ -400,10 +397,9 @@ def nodef_to_private_pond(converter: Converter, x: Any):
         else:
             raise TypeError("Unsupported dtype")
 
-        provider = ConvertInputProvider(converter.model_provider,
-                                        np.array(nums).reshape(x_shape))
+        inputter_fn = lambda: tf.constant(np.array(nums).reshape(x_shape))
 
-    x_private = converter.protocol.define_private_input(provider)
+    x_private = converter.protocol.define_private_input(converter.model_provider, inputter_fn)
 
     return x_private
 

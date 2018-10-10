@@ -1,8 +1,10 @@
 import numpy as np
+import tensorflow as tf
 
-from typing import List
+from typing import List, Union, Optional
 
 from . import core
+from ..protocol.pond import PondPublicTensor, PondPrivateTensor
 
 
 class Dense(core.Layer):
@@ -26,7 +28,11 @@ class Dense(core.Layer):
     def get_output_shape(self):
         return [self.input_shape[0] + self.out_features]
 
-    def initialize(self, initial_weights=None, initial_bias=None):
+    def initialize(
+        self,
+        initial_weights: Optional[Union[np.ndarray, tf.Tensor, PondPublicTensor, PondPrivateTensor]]=None,
+        initial_bias: Optional[Union[np.ndarray, tf.Tensor, PondPublicTensor, PondPrivateTensor]]=None
+    ) -> None:
         if initial_weights is None:
             initial_size = (self.in_features, self.out_features)
             initial_weights = np.random.normal(scale=0.1, size=initial_size)

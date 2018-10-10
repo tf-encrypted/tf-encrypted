@@ -1,8 +1,9 @@
-from typing import Optional, List
-
+from typing import Optional, List, Any, Union
+import tensorflow as tf
+import numpy as np
 from abc import ABC, abstractmethod
 from ..protocol.protocol import get_protocol, Protocol
-from ..protocol.pond import TFEVariable
+from ..protocol.pond import PondPublicTensor, PondPrivateTensor, TFEVariable
 
 # TODO
 # Split backward function in compute_gradient and compute_backpropagated_error?
@@ -20,15 +21,27 @@ class Layer(ABC):
         """Returns the layer's output shape"""
 
     @abstractmethod
-    def initialize(self, *args, **kwargs) -> None:  # type: ignore
+    def initialize(
+        self,
+        *args: Optional[Union[np.ndarray, tf.Tensor, PondPublicTensor, PondPrivateTensor]],
+        **kwargs: Optional[Union[np.ndarray, tf.Tensor, PondPublicTensor, PondPrivateTensor]]
+    ) -> None:
         pass
 
     @abstractmethod
-    def forward(self, *args, **kwargs) -> Optional[TFEVariable]:  # type: ignore
+    def forward(
+        self,
+        *args: Any,
+        **kwargs: Any
+    ) -> Optional[TFEVariable]:
         pass
 
     @abstractmethod
-    def backward(self, *args, **kwargs) -> Optional[TFEVariable]:  # type: ignore
+    def backward(
+        self,
+        *args: Any,
+        **kwargs: Any
+    ) -> Optional[TFEVariable]:
         pass
 
     @property
