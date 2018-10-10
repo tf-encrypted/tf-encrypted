@@ -7,7 +7,6 @@ from .config import Config, LocalConfig, RemoteConfig, get_config
 from .session import Session, setTFEDebugFlag, setMonitorStatsFlag, setTFETraceFlag
 from .protocol import global_caches_updator, Pond, get_protocol
 from .player import player
-from . import io
 from . import protocol
 from . import layers
 from . import convert

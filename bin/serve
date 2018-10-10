@@ -137,14 +137,13 @@ else:
 
                 return provide_input
 
-            x = tfe.io.InputProvider(remote_config.get_player('master'), scope(i))
-            inputs.append(x)
+            inputs.append(scope(i))
 
         print('Securing computation')
         secure_start = time.time()
 
         c = tfe.convert.convert.Converter(remote_config, prot, remote_config.get_player('weights_provider'))
-        y = c.convert(graph_def, inputs, tfe.convert.register())
+        y = c.convert(graph_def, tfe.convert.register(), remote_config.get_player('master'), inputs)
         # TODO: do not reveal on the master server
         y = y.reveal()
 

@@ -26,6 +26,7 @@ TFEData = Union[np.ndarray, tf.Tensor]
 TFEVariable = Union['PondPublicVariable', 'PondPrivateVariable', tf.Variable]
 TFEPublicTensor = NewType('TFEPublicTensor', 'PondPublicTensor')
 TFETensor = Union[TFEPublicTensor, 'PondPrivateTensor', 'PondMaskedTensor']
+TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 
 # the assumption in encoding/decoding is that encoded numbers will fit into signed int32
 BITPRECISION_INTEGRAL = 14
@@ -146,7 +147,7 @@ class Pond(Protocol):
 
     def define_private_variable(
         self,
-        initial_value,
+        initial_value: Union[np.ndarray, tf.Tensor, 'PondPublicTensor', 'PondPrivateTensor'],
         apply_scaling: bool = True,
         name: Optional[str] = None
     ) -> 'PondPrivateVariable':
@@ -187,13 +188,14 @@ class Pond(Protocol):
     def define_public_input(
         self,
         player: Union[str, Player],
-        data_fn: Callable,
+        inputter_fn: TFEInputter,
         apply_scaling: bool=True,
-        name: str=None
+        name: Optional[str]=None
     ) -> Union['PondPublicTensor', List['PondPublicTensor']]:
 
         if type(player) is str:
             player = get_config().get_player('input-provider')
+        assert isinstance(player, Player)
 
         def helper(v: tf.Tensor) -> 'PondPublicTensor':
             assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', player.name)
@@ -204,7 +206,7 @@ class Pond(Protocol):
 
             with tf.device(player.device_name):
 
-                inputs = data_fn()
+                inputs = inputter_fn()
 
                 if isinstance(inputs, tf.Tensor):
                     # single input -> single output
@@ -222,17 +224,19 @@ class Pond(Protocol):
     def define_private_input(
         self,
         player: Union[str, Player],
-        data_fn: Callable,
+        inputter_fn: TFEInputter,
         apply_scaling: bool=True,
-        name: str=None,
+        name: Optional[str]=None,
         masked: bool=False
-    ) -> Union['PondPrivateTensor', 'PondMaskedTensor', List['PondPrivateTensor'], List['PondMaskedTensor']]:
+    ) -> Union['PondPrivateTensor', 'PondMaskedTensor', List[Union['PondPrivateTensor', 'PondMaskedTensor']]]:
 
         if type(player) is str:
             player = get_config().get_player('input-provider')
+        assert isinstance(player, Player)
 
-        def helper(v: tf.Tensor):
+        def helper(v: tf.Tensor) -> Union['PondPrivateTensor', 'PondMaskedTensor']:
             assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', player.name)
+
             w = self._encode(v, apply_scaling)
             x0, x1 = self._share(w)
             x = PondPrivateTensor(self, x0, x1, apply_scaling)
@@ -250,7 +254,7 @@ class Pond(Protocol):
 
             with tf.device(player.device_name):
 
-                inputs = data_fn()
+                inputs = inputter_fn()
 
                 if isinstance(inputs, tf.Tensor):
                     # single input -> single output
@@ -271,12 +275,13 @@ class Pond(Protocol):
         self,
         player: Union[str, Player],
         xs: Union['PondPrivateTensor', List['PondPrivateTensor']],
-        post_fn: Callable,
+        post_fn: Callable[..., Any],
         name: Optional[str]=None
     ) -> tf.Operation:
 
         if type(player) is str:
             player = get_config().get_player('input-provider')
+        assert isinstance(player, Player)
 
         def helper(x: 'PondPrivateTensor') -> tf.Tensor:
             assert isinstance(x, PondPrivateTensor), type(x)

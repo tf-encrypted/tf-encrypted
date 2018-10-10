@@ -15,9 +15,7 @@ class TestPond(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             assert isinstance(prot, tfe.protocol.Pond)
 
-            p_input = prot.define_private_input(
-                tfe.io.InputProvider('input-provider', lambda: tf.constant([1.]))
-            )
+            p_input = prot.define_private_input('input-provider', lambda: tf.constant([1.]))
             pub_input = p_input.reveal()
 
             pond_public_tensor = pub_input
