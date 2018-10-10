@@ -1,11 +1,12 @@
 from __future__ import absolute_import
+from typing import Union, Optional, List, Dict, Any, Tuple
+import math
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, List, Dict, Any, Tuple, Type
 
-from .factory import AbstractFactory
-from .tensor import AbstractTensor, AbstractConstant, AbstractVariable
+from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
+from .shared import binarize
 
 INT_TYPE = tf.int32
 
@@ -14,38 +15,21 @@ class PrimeTensor(AbstractTensor):
 
     int_type = INT_TYPE
 
-    def __init__(self, value: Union[np.ndarray, tf.Tensor], modulus: int) -> None:
+    def __init__(self, value: Union[np.ndarray, tf.Tensor], factory: 'PrimeFactory') -> None:
+        self._factory = factory
+        self.modulus = factory.modulus
         self.value = value
-        self.modulus = modulus
-
-    @staticmethod
-    def from_native(value: Union[np.ndarray, tf.Tensor], modulus: int) -> 'PrimeTensor':
-        assert isinstance(value, (np.ndarray, tf.Tensor)), type(value)
-        return PrimeTensor(value, modulus)
-
-    @staticmethod
-    def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape], modulus: int) -> 'PrimeTensor':
-        return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, minval=0, maxval=modulus), modulus)
-
-    @staticmethod
-    def sample_bounded(shape: List[int], bitlength: int) -> 'PrimeTensor':
-        raise NotImplementedError()
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
 
-    @staticmethod
-    def stack(x: List['PrimeTensor'], axis: int = 0) -> 'PrimeTensor':
-        assert all(isinstance(i, PrimeTensor) for i in x)
-        return PrimeTensor.from_native(tf.stack([v.value for v in x], axis=axis), x[0].modulus)
-
-    @staticmethod
-    def concat(x: List['PrimeTensor'], axis: int) -> 'PrimeTensor':
-        assert all(isinstance(i, PrimeTensor) for i in x)
-        return PrimeTensor.from_native(tf.concat([v.value for v in x], axis=axis), x[0].modulus)
+    def to_bits(self, factory: Optional[AbstractFactory] = None) -> 'PrimeTensor':
+        factory = factory or self.factory
+        bitsize = math.ceil(math.log2(self.modulus))
+        return factory.tensor(binarize(self.value % self.modulus, bitsize))
 
     def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
-        return self.value[slice]
+        return self.factory.tensor(self.value[slice])
 
     def __repr__(self) -> str:
         return 'PrimeTensor(shape={}, modulus={})'.format(self.shape, self.modulus)
@@ -54,33 +38,40 @@ class PrimeTensor(AbstractTensor):
     def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
         return self.value.shape
 
-    def __add__(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
+    @property
+    def factory(self) -> AbstractFactory:
+        return self._factory
+
+    def __add__(self, other) -> 'PrimeTensor':
         return self.add(other)
 
-    def __sub__(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
+    def __sub__(self, other) -> 'PrimeTensor':
         return self.sub(other)
 
-    def __mul__(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
+    def __mul__(self, other) -> 'PrimeTensor':
         return self.mul(other)
 
     def __mod__(self, k: int) -> 'PrimeTensor':
         return self.mod(k)
 
-    def add(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
-        x, y = _lift(self, self.modulus), _lift(other, self.modulus)
-        return PrimeTensor((x.value + y.value) % self.modulus, self.modulus)
+    def add(self, other) -> 'PrimeTensor':
+        x, y = _lift(self, other)
+        return self.factory.tensor((x.value + y.value) % self.modulus)
 
-    def sub(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
-        x, y = _lift(self, self.modulus), _lift(other, self.modulus)
-        return PrimeTensor((x.value - y.value) % self.modulus, self.modulus)
+    def sub(self, other) -> 'PrimeTensor':
+        x, y = _lift(self, other)
+        return self.factory.tensor((x.value - y.value) % self.modulus)
 
-    def mul(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
-        x, y = _lift(self, self.modulus), _lift(other, self.modulus)
-        return PrimeTensor(x.value * y.value % self.modulus, self.modulus)
+    def mul(self, other) -> 'PrimeTensor':
+        x, y = _lift(self, other)
+        return self.factory.tensor((x.value * y.value) % self.modulus)
 
-    def matmul(self, other: Union['PrimeTensor', int]) -> 'PrimeTensor':
-        x, y = _lift(self, self.modulus), _lift(other, self.modulus)
-        return PrimeTensor(tf.matmul(x.value, y.value) % self.modulus, self.modulus)
+    def negative(self) -> 'PrimeTensor':
+        return self.mul(-1)
+
+    def matmul(self, other) -> 'PrimeTensor':
+        x, y = _lift(self, other)
+        return self.factory.tensor(tf.matmul(x.value, y.value) % self.modulus)
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'PrimeTensor':
         raise NotImplementedError()
@@ -89,149 +80,166 @@ class PrimeTensor(AbstractTensor):
         raise NotImplementedError()
 
     def mod(self, k: int) -> 'PrimeTensor':
-        x = _lift(self, self.modulus)
-        return PrimeTensor(x.value % k, self.modulus)
+        return self.factory.tensor((self.value % k) % self.modulus)
 
     def transpose(self, perm: Union[List[int], Tuple[int]]) -> 'PrimeTensor':
-        return PrimeTensor(tf.transpose(self.value, perm), self.modulus)
+        return self.factory.tensor(tf.transpose(self.value, perm))
 
     def strided_slice(self, args: Any, kwargs: Any) -> 'PrimeTensor':
-        return PrimeTensor(tf.strided_slice(self.value, *args, **kwargs), self.modulus)
+        return self.factory.tensor(tf.strided_slice(self.value, *args, **kwargs))
 
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'PrimeTensor':
-        return PrimeTensor(tf.reshape(self.value, axes), self.modulus)
+        return self.factory.tensor(tf.reshape(self.value, axes))
+
+    def expand_dims(self, axis: int) -> 'PrimeTensor':
+        return self.factory.tensor(tf.expand_dims(self.value, axis))
+
+    def reduce_sum(self, axis, keepdims) -> 'PrimeTensor':
+        return self.factory.tensor(tf.reduce_sum(self.value, axis, keepdims) % self.modulus)
+
+    def sum(self, axis, keepdims) -> 'PrimeTensor':
+        return self.reduce_sum(axis, keepdims)
+
+    def cumsum(self, axis, exclusive, reverse) -> 'PrimeTensor':
+        return self.factory.tensor(
+            tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse) % self.modulus
+        )
+
+    def equal_zero(self, out_dtype: Optional[AbstractFactory]=None) -> 'PrimeTensor':
+        out_dtype = out_dtype or self.factory
+        return out_dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=self.int_type))
+
+    def cast(self, factory):
+        return factory.tensor(self.value)
 
 
-def _lift(x: Union['PrimeTensor', int], modulus: int) -> 'PrimeTensor':
-    if isinstance(x, PrimeTensor):
-        return x
+def _lift(x, y) -> Tuple[PrimeTensor, PrimeTensor]:
 
-    if type(x) is int:
-        return PrimeTensor.from_native(np.array([x]), modulus)
+    if isinstance(x, PrimeTensor) and isinstance(y, PrimeTensor):
+        assert x.modulus == y.modulus, "Incompatible moduli: {} and {}".format(x.modulus, y.modulus)
+        return x, y
 
-    raise TypeError("Unsupported type {}".format(type(x)))
+    if isinstance(x, PrimeTensor) and isinstance(y, int):
+        return x, x.factory.tensor(np.array([y]))
+
+    if isinstance(x, int) and isinstance(y, PrimeTensor):
+        return y.factory.tensor(np.array([x])), y
+
+    raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
 
 
-class PrimeConstant(PrimeTensor):
+class PrimeConstant(PrimeTensor, AbstractConstant):
 
-    def __init__(self, value: Union[tf.Tensor, np.ndarray], modulus: int) -> None:
+    def __init__(self, value: Union[tf.Tensor, np.ndarray], factory) -> None:
         v = tf.constant(value, dtype=INT_TYPE)
-        super(PrimeConstant, self).__init__(v, modulus)
-
-    @staticmethod
-    def from_native(value: Union[np.ndarray, tf.Tensor], modulus: int) -> 'PrimeConstant':
-        assert type(value) in [np.ndarray, tf.Tensor], type(value)
-        return PrimeConstant(value, modulus)
-
-    @staticmethod
-    def from_same(value: PrimeTensor, modulus: int) -> 'PrimeConstant':
-        assert type(value) in [PrimeTensor], type(value)
-        return PrimeConstant(value.value, modulus)
+        super(PrimeConstant, self).__init__(v, factory)
 
     def __repr__(self) -> str:
         return 'PrimeConstant({})'.format(self.shape)
 
 
-class PrimePlaceholder(PrimeTensor):
+class PrimePlaceholder(PrimeTensor, AbstractPlaceholder):
 
-    def __init__(self, shape: List[int], modulus: int) -> None:
+    def __init__(self, shape: List[int], factory) -> None:
         placeholder = tf.placeholder(INT_TYPE, shape=shape)
-        super(PrimePlaceholder, self).__init__(placeholder, modulus)
+        super(PrimePlaceholder, self).__init__(placeholder, factory)
         self.placeholder = placeholder
-
-    def feed_from_native(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
-        assert type(value) in [np.ndarray], type(value)
-        return {
-            self.placeholder: value
-        }
-
-    def feed_from_backing(self, value: 'PrimeTensor') -> Dict[tf.Tensor, np.ndarray]:
-        assert type(value) in [PrimeTensor], type(value)
-        assert isinstance(value.value, np.ndarray)
-        return {
-            self.placeholder: value.value
-        }
 
     def __repr__(self) -> str:
         return 'PrimePlaceholder({})'.format(self.shape)
 
+    def feed_from_native(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
+        assert isinstance(value, np.ndarray), type(value)
+        return self.feed_from_same(self.factory.tensor(value))
 
-class PrimeVariable(PrimeTensor):
+    def feed_from_same(self, value: PrimeTensor) -> Dict[tf.Tensor, np.ndarray]:
+        assert isinstance(value, PrimeTensor), type(value)
+        return {
+            self.placeholder: value.value
+        }
 
-    def __init__(self, initial_value: Union[tf.Tensor, np.ndarray], modulus: int) -> None:
-        variable = tf.Variable(initial_value, dtype=INT_TYPE, trainable=False)
-        value = variable.read_value()
 
-        super(PrimeVariable, self).__init__(value, modulus)
-        self.variable = variable
-        self.initializer = variable.initializer
+class PrimeVariable(PrimeTensor, AbstractVariable):
 
-    @staticmethod
-    def from_native(initial_value: Union[np.ndarray, tf.Tensor], modulus: int) -> 'PrimeVariable':
-        assert type(initial_value) in [np.ndarray, tf.Tensor], type(initial_value)
-        return PrimeVariable(initial_value, modulus)
-
-    @staticmethod
-    def from_same(initial_value: 'PrimeTensor', modulus: int) -> 'PrimeVariable':
-        assert type(initial_value) in [PrimeTensor], type(initial_value)
-        return PrimeVariable(initial_value.value, modulus)
+    def __init__(self, initial_value: Union[tf.Tensor, np.ndarray], factory) -> None:
+        self.variable = tf.Variable(initial_value, dtype=INT_TYPE, trainable=False)
+        self.initializer = self.variable.initializer
+        super(PrimeVariable, self).__init__(self.variable.read_value(), factory)
 
     def __repr__(self) -> str:
         return 'PrimeVariable({})'.format(self.shape)
 
     def assign_from_native(self, value: np.ndarray) -> tf.Operation:
-        assert type(value) in [np.ndarray], type(value)
-        return tf.assign(self.variable, value).op
+        assert isinstance(value, np.ndarray), type(value)
+        return self.assign_from_same(self.factory.tensor(value))
 
-    def assign_from_backing(self, value: PrimeTensor) -> tf.Operation:
+    def assign_from_same(self, value: PrimeTensor) -> tf.Operation:
         assert isinstance(value, (PrimeTensor,)), type(value)
         return tf.assign(self.variable, value.value).op
 
 
-def prime_factory(modulus: int) -> Any:
+class PrimeFactory(AbstractFactory):
 
-    class TensorWrap(AbstractTensor):
-        @staticmethod
-        def from_native(x: Union[tf.Tensor, np.ndarray]) -> PrimeTensor:
-            return PrimeTensor.from_native(x, modulus)
+    def __init__(self, modulus, int_type=tf.int32):
+        self._modulus = modulus
+        self.int_type = int_type
 
-        @staticmethod
-        def sample_uniform(shape: Union[Tuple[int, ...], tf.TensorShape]) -> PrimeTensor:
-            return PrimeTensor(tf.random_uniform(shape=shape, dtype=INT_TYPE, maxval=modulus), modulus)
+    @property
+    def modulus(self):
+        return self._modulus
 
-    class ConstantWrap(TensorWrap, AbstractConstant):
-        @staticmethod
-        def from_native(x: Union[tf.Tensor, np.ndarray]) -> PrimeTensor:
-            return PrimeConstant.from_native(x, modulus)
+    def sample_uniform(self, shape: Union[Tuple[int, ...], tf.TensorShape], minval: Optional[int] = 0) -> PrimeTensor:
+        value = tf.random_uniform(shape=shape, dtype=self.int_type, minval=minval, maxval=self.modulus)
+        return PrimeTensor(value, self)
 
-        @staticmethod
-        def from_same(initial_value: PrimeTensor) -> PrimeConstant:
-            assert type(initial_value) in [PrimeTensor], type(initial_value)
-            return PrimeConstant(initial_value.value, modulus)
+    def sample_bounded(self, shape: List[int], bitlength: int) -> PrimeTensor:
+        maxval = 2 ** bitlength
+        assert self.modulus > maxval
+        value = tf.random_uniform(shape=shape, dtype=self.int_type, minval=0, maxval=maxval)
+        return PrimeTensor(value, self)
 
-    class VariableWrap(TensorWrap, AbstractVariable):
-        @staticmethod
-        def from_native(x: Union[tf.Tensor, np.ndarray]) -> PrimeTensor:
-            return PrimeVariable.from_native(x, modulus)
+    def stack(self, xs: List[PrimeTensor], axis: int = 0) -> PrimeTensor:
+        assert all(isinstance(x, PrimeTensor) for x in xs)
+        value = tf.stack([x.value for x in xs], axis=axis)
+        return PrimeTensor(value, self)
 
-    class Factory(AbstractFactory):
-        @property
-        def Tensor(self) -> Type[TensorWrap]:
-            return TensorWrap
+    def concat(self, xs: List[PrimeTensor], axis: int = 0) -> PrimeTensor:
+        assert all(isinstance(x, PrimeTensor) for x in xs)
+        value = tf.concat([v.value for v in xs], axis=axis)
+        return PrimeTensor(value, self)
 
-        @property
-        def Constant(self) -> Type[ConstantWrap]:
-            return ConstantWrap
+    def tensor(self, value) -> PrimeTensor:
 
-        @property
-        def Variable(self) -> Type[VariableWrap]:
-            return VariableWrap
+        if isinstance(value, (tf.Tensor, np.ndarray)):
+            return PrimeTensor(value, self)
 
-        def Placeholder(self, shape: List[int]) -> PrimePlaceholder:  # type: ignore
-            return PrimePlaceholder(shape, modulus)
+        if isinstance(value, PrimeTensor):
+            assert value.modulus == self.modulus, "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
+            return PrimeTensor(value.value, self)
 
-        @property
-        def modulus(self) -> int:
-            return modulus
+        raise TypeError("Don't know how to handle {}".format(type(value)))
 
-    return Factory()
+    def constant(self, value) -> PrimeConstant:
+
+        if isinstance(value, (tf.Tensor, np.ndarray)):
+            return PrimeConstant(value, self)
+
+        if isinstance(value, PrimeTensor):
+            assert value.modulus == self.modulus, "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
+            return PrimeConstant(value.value, self)
+
+        raise TypeError("Don't know how to handle {}".format(type(value)))
+
+    def variable(self, initial_value) -> PrimeVariable:
+
+        if isinstance(initial_value, (tf.Tensor, np.ndarray)):
+            return PrimeVariable(initial_value, self)
+
+        if isinstance(initial_value, PrimeTensor):
+            assert initial_value.modulus == self.modulus, "Incompatible modulus: {}, (expected {})".format(initial_value.modulus, self.modulus)
+            return PrimeVariable(initial_value.value, self)
+
+        raise TypeError("Don't know how to handle {}".format(type(initial_value)))
+
+    def placeholder(self, shape: List[int]) -> PrimePlaceholder:
+        return PrimePlaceholder(shape, self)
