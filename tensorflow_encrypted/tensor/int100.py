@@ -5,13 +5,13 @@ import math
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Any, Type
+from typing import Union, Optional, List, Any
 
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_matmul, gen_crt_mod,
     gen_crt_reduce_sum, gen_crt_cumsum, crt_im2col, crt_matmul_split,
-    gen_crt_equal_zero,
+    gen_crt_equal_zero, gen_crt_equal,
     gen_crt_sample_uniform, gen_crt_sample_bounded
 )
 from .helpers import prod, inverse
@@ -50,8 +50,11 @@ _crt_mul = gen_crt_mul(m)
 _crt_matmul = gen_crt_matmul(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE)
 _crt_equal_zero = gen_crt_equal_zero(m, INT_TYPE)
+_crt_equal = gen_crt_equal(m, INT_TYPE)
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
 _crt_sample_bounded = gen_crt_sample_bounded(m, INT_TYPE)
+
+Backing = Union[List[np.ndarray], List[tf.Tensor]]
 
 
 class Int100Factory(AbstractFactory):
@@ -112,7 +115,7 @@ class Int100Factory(AbstractFactory):
             return Int100Variable(_crt_decompose(initial_value))
 
         if isinstance(initial_value, Int100Tensor):
-            return Int100Variable(initial_value)
+            return Int100Variable(initial_value.backing)
 
         raise TypeError("Don't know how to handle {}", type(initial_value))
 
@@ -136,7 +139,7 @@ class Int100Tensor(AbstractTensor):
     def factory(self):
         return int100factory
 
-    def __init__(self, backing: Union[List[np.ndarray], List[tf.Tensor]]) -> None:
+    def __init__(self, backing: Backing) -> None:
         # TODO[Morten] turn any np.ndarray into a tf.Constant to only store tf.Tensors?
         assert type(backing) in [tuple, list], type(backing)
         assert len(backing) == len(m), len(backing)
@@ -242,7 +245,7 @@ class Int100Tensor(AbstractTensor):
         return Int100Tensor(z_backing)
 
     def mod(self, k: int) -> 'Int100Tensor':
-        return Int100Tensor(_crt_mod(self.backing, k))
+        return Int100Tensor(_crt_decompose(_crt_mod(self.backing, k)))
 
     def reduce_sum(self, axis=None, keepdims=None) -> 'Int100Tensor':
         backing = _crt_reduce_sum(self.backing, axis, keepdims)
@@ -254,6 +257,11 @@ class Int100Tensor(AbstractTensor):
 
     def equal_zero(self) -> 'Int100Tensor':
         backing = _crt_equal_zero(self.backing)
+        return Int100Tensor(backing)
+
+    def equal(self, other) -> 'Int100Tensor':
+        x, y = Int100Tensor.lift(self, other)
+        backing = _crt_equal(x.backing, y.backing)
         return Int100Tensor(backing)
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int100Tensor':
@@ -291,9 +299,8 @@ class Int100Tensor(AbstractTensor):
 
 class Int100Constant(Int100Tensor, AbstractConstant):
 
-    def __init__(self, value: Int100Tensor) -> None:
-        backing = [tf.constant(vi, dtype=INT_TYPE) for vi in value.backing]
-        super(Int100Constant, self).__init__(backing)
+    def __init__(self, backing: Backing) -> None:
+        super(Int100Constant, self).__init__([tf.constant(vi, dtype=INT_TYPE) for vi in backing])
 
     def __repr__(self) -> str:
         return 'Int100Constant({})'.format(self.shape)
@@ -321,10 +328,10 @@ class Int100Placeholder(Int100Tensor, AbstractPlaceholder):
 
 class Int100Variable(Int100Tensor, AbstractVariable):
 
-    def __init__(self, initial_value: Int100Tensor) -> None:
+    def __init__(self, initial_value: Backing) -> None:
         self.variables = [
             tf.Variable(val, dtype=INT_TYPE, trainable=False)
-            for val in initial_value.backing
+            for val in initial_value
         ]
         self.initializer = tf.group(*[var.initializer for var in self.variables])
         backing = [
@@ -343,4 +350,3 @@ class Int100Variable(Int100Tensor, AbstractVariable):
     def assign_from_same(self, value: Int100Tensor):
         assert isinstance(value, Int100Tensor), type(value)
         return tf.group(*[tf.assign(xi, vi).op for xi, vi in zip(self.variables, value.backing)])
-

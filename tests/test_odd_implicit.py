@@ -2,17 +2,20 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-from tensorflow_encrypted.tensor.odd_implicit import OddImplicitTensor
+
+from tensorflow_encrypted.tensor.odd_implicit import oddInt32factory
 
 
 class TestOddImplicitTensor(unittest.TestCase):
+
     def setUp(self):
         tf.reset_default_graph()
 
     def test_add(self) -> None:
+
         # regular, overflow, underflow
-        x = OddImplicitTensor(tf.constant([5, 2**31 - 1, -2147483643], dtype=tf.int32))
-        y = OddImplicitTensor(tf.constant([3, 5, -6], dtype=tf.int32))
+        x = oddInt32factory.tensor(tf.constant([5, 2**31 - 1, -2147483643], dtype=tf.int32))
+        y = oddInt32factory.tensor(tf.constant([3, 5, -6], dtype=tf.int32))
 
         z = x + y
 
@@ -21,12 +24,13 @@ class TestOddImplicitTensor(unittest.TestCase):
         with tf.Session() as sess:
             actual = sess.run(z.value)
 
-            np.testing.assert_array_almost_equal(actual, expected, decimal=3)
+        np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
     def test_sub(self) -> None:
+
         # regular, overflow, underflow
-        x = OddImplicitTensor(tf.constant([10, 6, -6], dtype=tf.int32))
-        y = OddImplicitTensor(tf.constant([5, -2**31 + 1, -2**31 + 1], dtype=tf.int32))
+        x = oddInt32factory.tensor(tf.constant([10, 6, -6], dtype=tf.int32))
+        y = oddInt32factory.tensor(tf.constant([5, -2**31 + 1, -2**31 + 1], dtype=tf.int32))
 
         z = x - y
 
@@ -35,7 +39,7 @@ class TestOddImplicitTensor(unittest.TestCase):
         with tf.Session() as sess:
             actual = sess.run(z.value)
 
-            np.testing.assert_array_almost_equal(actual, expected, decimal=3)
+        np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
 
 if __name__ == '__main__':

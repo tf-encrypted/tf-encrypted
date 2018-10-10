@@ -4,9 +4,9 @@ import random
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.int32 import int32factory
 from tensorflow_encrypted.tensor.prime import PrimeFactory
 from tensorflow_encrypted.protocol.pond import PondPrivateTensor, PondPublicTensor
+from tensorflow_encrypted.protocol.securenn import _private_compare
 
 bits = 32
 Q = 2 ** bits
@@ -45,11 +45,11 @@ class TestPrivateCompare(unittest.TestCase):
 
     def test_private(self):
 
-        config = tfe.LocalConfig([
+        tfe.set_config(tfe.LocalConfig([
             'server0',
             'server1',
-            'server2'
-        ])
+            'crypto_producer'
+        ]))
 
         x = np.array([
             21,
@@ -86,33 +86,36 @@ class TestPrivateCompare(unittest.TestCase):
 
         expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
 
-        prime_factory = PrimeFactory(37)
+        bit_dtype = PrimeFactory(37)
+        # val_dtype = int32factory
+        val_dtype = bit_dtype
 
         prot = tfe.protocol.SecureNN(
-            tensor_factory=int32factory,
-            prime_factory=prime_factory,
+            tensor_factory=val_dtype,
+            prime_factory=bit_dtype,
             use_noninteractive_truncation=True,
-            verify_precision=False,
-            *config.get_players('server0, server1, server2'))
+            verify_precision=False
+        )
 
-        res = prot._private_compare(
-            x_bits = PondPrivateTensor(
+        res = _private_compare(
+            prot,
+            x_bits=PondPrivateTensor(
                 prot,
-                *prot._share(prime_factory.tensor(tf.convert_to_tensor(x)).to_bits(), prime_factory),
+                *prot._share(bit_dtype.tensor(tf.convert_to_tensor(x)).to_bits()),
                 False),
-            r = PondPublicTensor(
+            r=PondPublicTensor(
                 prot,
-                prime_factory.tensor(tf.convert_to_tensor(r)),
-                prime_factory.tensor(tf.convert_to_tensor(r)),
+                val_dtype.tensor(tf.convert_to_tensor(r)),
+                val_dtype.tensor(tf.convert_to_tensor(r)),
                 False),
-            beta = PondPublicTensor(
+            beta=PondPublicTensor(
                 prot,
-                prime_factory.tensor(tf.convert_to_tensor(beta)),
-                prime_factory.tensor(tf.convert_to_tensor(beta)),
+                bit_dtype.tensor(tf.convert_to_tensor(beta)),
+                bit_dtype.tensor(tf.convert_to_tensor(beta)),
                 False)
         )
 
-        with config.session() as sess:
+        with tfe.Session() as sess:
             actual = sess.run(res.reveal().value_on_0.value)
             np.testing.assert_array_equal(actual, expected)
 

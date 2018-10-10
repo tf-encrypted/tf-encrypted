@@ -1,11 +1,10 @@
 from __future__ import absolute_import
-from typing import Union, Optional, List, Dict, Any, Tuple, Type
+from typing import Union, Optional, List, Dict, Any, Tuple
 import math
 
 import numpy as np
 import tensorflow as tf
 
-from ..types import Ellipse, Slice
 from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 from .shared import binarize
 
@@ -16,7 +15,7 @@ class PrimeTensor(AbstractTensor):
 
     int_type = INT_TYPE
 
-    def __init__(self, value: Union[np.ndarray, tf.Tensor], factory) -> None:
+    def __init__(self, value: Union[np.ndarray, tf.Tensor], factory: 'PrimeFactory') -> None:
         self._factory = factory
         self.modulus = factory.modulus
         self.value = value
@@ -106,14 +105,18 @@ class PrimeTensor(AbstractTensor):
             tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse) % self.modulus
         )
 
-    def equal_zero(self) -> 'PrimeTensor':
-        return self.factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=self.int_type))
+    def equal_zero(self, out_dtype: Optional[AbstractFactory]=None) -> 'PrimeTensor':
+        out_dtype = out_dtype or self.factory
+        return out_dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=self.int_type))
+
+    def cast(self, factory):
+        return factory.tensor(self.value)
 
 
 def _lift(x, y) -> Tuple[PrimeTensor, PrimeTensor]:
 
     if isinstance(x, PrimeTensor) and isinstance(y, PrimeTensor):
-        assert x.modulus == y.modulus
+        assert x.modulus == y.modulus, "Incompatible moduli: {} and {}".format(x.modulus, y.modulus)
         return x, y
 
     if isinstance(x, PrimeTensor) and isinstance(y, int):
@@ -162,7 +165,7 @@ class PrimeVariable(PrimeTensor, AbstractVariable):
         self.variable = tf.Variable(initial_value, dtype=INT_TYPE, trainable=False)
         self.initializer = self.variable.initializer
         super(PrimeVariable, self).__init__(self.variable.read_value(), factory)
-        
+
     def __repr__(self) -> str:
         return 'PrimeVariable({})'.format(self.shape)
 
@@ -177,7 +180,7 @@ class PrimeVariable(PrimeTensor, AbstractVariable):
 
 class PrimeFactory(AbstractFactory):
 
-    def __init__(self, modulus, int_type = tf.int32):
+    def __init__(self, modulus, int_type=tf.int32):
         self._modulus = modulus
         self.int_type = int_type
 
@@ -192,7 +195,6 @@ class PrimeFactory(AbstractFactory):
     def sample_bounded(self, shape: List[int], bitlength: int) -> PrimeTensor:
         maxval = 2 ** bitlength
         assert self.modulus > maxval
-
         value = tf.random_uniform(shape=shape, dtype=self.int_type, minval=0, maxval=maxval)
         return PrimeTensor(value, self)
 
@@ -212,7 +214,7 @@ class PrimeFactory(AbstractFactory):
             return PrimeTensor(value, self)
 
         if isinstance(value, PrimeTensor):
-            assert value.modulus == self.modulus
+            assert value.modulus == self.modulus, "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
             return PrimeTensor(value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
@@ -223,18 +225,18 @@ class PrimeFactory(AbstractFactory):
             return PrimeConstant(value, self)
 
         if isinstance(value, PrimeTensor):
-            assert value.modulus == self.modulus
+            assert value.modulus == self.modulus, "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
             return PrimeConstant(value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
 
     def variable(self, initial_value) -> PrimeVariable:
-       
+
         if isinstance(initial_value, (tf.Tensor, np.ndarray)):
             return PrimeVariable(initial_value, self)
 
         if isinstance(initial_value, PrimeTensor):
-            assert initial_value.modulus == self.modulus
+            assert initial_value.modulus == self.modulus, "Incompatible modulus: {}, (expected {})".format(initial_value.modulus, self.modulus)
             return PrimeVariable(initial_value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(initial_value)))

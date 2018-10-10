@@ -1,9 +1,9 @@
 from __future__ import absolute_import
+from typing import Union, List, Dict, Any, Tuple, Optional
 
 import numpy as np
 import tensorflow as tf
 
-from typing import Union, List, Dict, Any, Tuple, Type, Optional
 from .factory import AbstractFactory, AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
@@ -17,29 +17,26 @@ class Int32Factory(AbstractFactory):
             return Int32Tensor(value)
 
         if isinstance(value, Int32Tensor):
-            assert value.modulus == self.modulus
             return Int32Tensor(value.value)
-        
+
         raise TypeError("Don't know how to handle {}".format(type(value)))
 
     def constant(self, value) -> 'Int32Constant':
-        
+
         if isinstance(value, (tf.Tensor, np.ndarray)):
             return Int32Constant(value)
 
         if isinstance(value, Int32Tensor):
-            assert value.modulus == self.modulus
             return Int32Constant(value.value)
-        
+
         raise TypeError("Don't know how to handle {}".format(type(value)))
 
     def variable(self, initial_value) -> 'Int32Variable':
-        
+
         if isinstance(initial_value, (tf.Tensor, np.ndarray)):
             return Int32Variable(initial_value)
 
         if isinstance(initial_value, Int32Tensor):
-            assert initial_value.modulus == self.modulus
             return Int32Variable(initial_value.value)
 
         raise TypeError("Don't know how to handle {}".format(type(initial_value)))
@@ -54,7 +51,7 @@ class Int32Factory(AbstractFactory):
     def sample_uniform(self, shape: List[int]) -> 'Int32Tensor':
         value = tf.random_uniform(shape=shape, dtype=tf.int32, minval=tf.int32.min, maxval=tf.int32.max)
         return Int32Tensor(value)
-    
+
     def stack(self, xs: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':
         assert all(isinstance(x, Int32Tensor) for x in xs)
         value = tf.stack([x.value for x in xs], axis=axis)
@@ -72,7 +69,6 @@ int32factory = Int32Factory()
 def _lift(x, y) -> Tuple['Int32Tensor', 'Int32Tensor']:
 
     if isinstance(x, Int32Tensor) and isinstance(y, Int32Tensor):
-        assert x.modulus == y.modulus
         return x, y
 
     if isinstance(x, Int32Tensor) and isinstance(y, int):
@@ -89,7 +85,6 @@ class Int32Tensor(AbstractTensor):
     int_type = tf.int32
 
     def __init__(self, value: Union[np.ndarray, tf.Tensor]) -> None:
-        self.modulus = int32factory.modulus
         self.value = value
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
@@ -100,12 +95,12 @@ class Int32Tensor(AbstractTensor):
         return factory.tensor(binarize(self.value))
 
     def __repr__(self) -> str:
-        return 'int32.Tensor(shape={})'.format(self.shape)
+        return 'Int32Tensor(shape={})'.format(self.shape)
 
     @property
     def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
         return self.value.shape
-    
+
     @property
     def factory(self) -> AbstractFactory:
         return int32factory
@@ -169,8 +164,12 @@ class Int32Tensor(AbstractTensor):
     def cumsum(self, axis, exclusive, reverse) -> 'Int32Tensor':
         return int32factory.tensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
 
-    def equal_zero(self) -> 'Int32Tensor':
-        return int32factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=self.int_type))
+    def equal_zero(self, factory: AbstractFactory=int32factory) -> 'AbstractTensor':
+        return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=tf.int32))
+
+    def equal(self, other, factory: AbstractFactory=int32factory) -> 'AbstractTensor':
+        x, y = _lift(self, other)
+        return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=tf.int32))
 
 
 class Int32Constant(Int32Tensor, AbstractConstant):
@@ -186,9 +185,8 @@ class Int32Constant(Int32Tensor, AbstractConstant):
 class Int32Placeholder(Int32Tensor, AbstractPlaceholder):
 
     def __init__(self, shape: List[int]) -> None:
-        placeholder = tf.placeholder(tf.int32, shape=shape)
-        super(Int32Placeholder, self).__init__(placeholder)
-        self.placeholder = placeholder
+        self.placeholder = tf.placeholder(tf.int32, shape=shape)
+        super(Int32Placeholder, self).__init__(self.placeholder)
 
     def __repr__(self) -> str:
         return 'Int32Placeholder(shape={})'.format(self.shape)
@@ -212,7 +210,7 @@ class Int32Variable(Int32Tensor, AbstractVariable):
         super(Int32Variable, self).__init__(self.variable.read_value())
 
     def __repr__(self) -> str:
-        return 'int32.Variable(shape={})'.format(self.shape)
+        return 'Int32Variable(shape={})'.format(self.shape)
 
     def assign_from_native(self, value: np.ndarray) -> tf.Operation:
         assert type(value) in [np.ndarray], type(value)
