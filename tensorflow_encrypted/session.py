@@ -9,7 +9,8 @@ from tensorflow.python import debug as tf_debug
 
 from .config import Config, RemoteConfig, get_config
 from .protocol.pond import PondPublicTensor
-from .tensor.tensor import AbstractTensor
+from .tensor.factory import AbstractTensor
+
 
 __TFE_STATS__ = bool(os.getenv('TFE_STATS', False))
 __TFE_TRACE__ = bool(os.getenv('TFE_TRACE', False))

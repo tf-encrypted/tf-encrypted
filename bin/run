@@ -78,11 +78,10 @@ for i, spec in enumerate(input_spec):
 
         return provide_input
 
-    x = tfe.io.InputProvider('input-provider', scope(i))
-    inputs.append(x)
+    inputs.append(scope(i))
 
 c = tfe.convert.convert.Converter()
-y = c.convert(graph_def, inputs, tfe.convert.register())
+y = c.convert(graph_def, tfe.convert.register(), 'input-provider', inputs)
 
 pls = []
 for i in range(len(input_spec)):
@@ -105,7 +104,7 @@ else:
 
 with tfe.Session() as sess:
     print("initing!!!")
-    sess.run(tfe.get_global_variables(), tag='init')
+    sess.run(tfe.global_variables_initializer(), tag='init')
 
     print("running")
     feed_dict = {

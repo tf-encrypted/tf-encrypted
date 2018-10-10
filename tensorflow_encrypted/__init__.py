@@ -7,7 +7,6 @@ from .config import Config, LocalConfig, RemoteConfig, get_config
 from .session import Session, setTFEDebugFlag, setMonitorStatsFlag, setTFETraceFlag
 from .protocol import global_caches_updator, Pond, get_protocol
 from .player import player
-from . import io
 from . import protocol
 from . import layers
 from . import convert
@@ -51,7 +50,7 @@ def set_config(config: Config) -> None:
     set_protocol(None)
 
 
-def get_global_variables() -> Optional[tf.Operation]:
+def global_variables_initializer() -> Optional[tf.Operation]:
     prot = protocol.get_protocol()
     if prot is not None:
         return prot.initializer
@@ -78,5 +77,5 @@ __all__ = [
     "layers",
     "convert",
     "global_caches_updator",
-    "get_global_variables",
+    "global_variables_initializer",
 ]

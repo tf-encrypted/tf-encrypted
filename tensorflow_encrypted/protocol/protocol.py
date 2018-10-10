@@ -5,7 +5,7 @@ from types import TracebackType
 
 import tensorflow as tf
 
-from ..tensor.tensor import AbstractTensor
+from ..tensor.factory import AbstractTensor
 
 
 __PROTOCOL__ = None

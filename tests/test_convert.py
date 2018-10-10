@@ -51,15 +51,12 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant(np.ones(input_shape))
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -91,15 +88,12 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant(np.ones(input_shape))
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -131,15 +125,12 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant(np.ones(input_shape))
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -171,15 +162,12 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant(np.ones(input_shape))
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -211,15 +199,12 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant(np.ones(input_shape))
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -251,15 +236,12 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant(np.ones(input_shape))
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -290,15 +272,12 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant(np.ones(input_shape))
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -330,15 +309,12 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant(np.ones(input_shape))
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -370,15 +346,12 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant(np.ones(input_shape))
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -410,15 +383,12 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape))
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape))
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -452,17 +422,14 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant([[[1, 1, 1], [2, 2, 2]],
-                                        [[3, 3, 3], [4, 4, 4]],
-                                        [[5, 5, 5], [6, 6, 6]]])
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant([[[1, 1, 1], [2, 2, 2]],
+                                    [[3, 3, 3], [4, 4, 4]],
+                                    [[5, 5, 5], [6, 6, 6]]])
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -494,15 +461,12 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant(np.ones(input_shape))
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -534,15 +498,12 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                def provide_input(self):
-                    return tf.constant(np.ones(input_shape))
-
-            input = PredictionClient('input-provider')
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -576,24 +537,20 @@ class TestConvert(unittest.TestCase):
         with tfe.protocol.Pond() as prot:
             prot.clear_initializers()
 
-            class PredictionClient(tfe.io.InputProvider):
-                self.input = None
+            def provide_input1() -> tf.Tensor:
+                return tf.constant(input1)
 
-                def provide_input(self):
-                    return tf.constant(self.input)
+            def provide_input2() -> tf.Tensor:
+                return tf.constant(input2)
 
-            i1 = PredictionClient('input-provider')
-            i1.input = input1
-            i2 = PredictionClient('input-provider')
-            i2.input = input2
-            i3 = PredictionClient('input-provider')
-            i3.input = input3
+            def provide_input3() -> tf.Tensor:
+                return tf.constant(input3)
 
-            input = [i1, i2, i3]
+            inputs = [provide_input1, provide_input2, provide_input3]
 
             converter = Converter(tfe.get_config(), prot, 'model-provider')
 
-            x = converter.convert(graph_def, input, register())
+            x = converter.convert(graph_def, register(), 'input-provider', inputs)
 
             with tfe.Session() as sess:
                 sess.run(prot.initializer, tag='init')
@@ -898,7 +855,6 @@ def export(x: tf.Tensor, filename: str):
         graph = graph_util.remove_training_nodes(graph)
 
         path = graph_io.write_graph(graph, ".", filename, as_text=False)
-        print('saved the frozen graph (ready for inference) at: ', filename)
 
     return path
 

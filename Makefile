@@ -59,12 +59,14 @@ bootstrap: pythoncheck pipcheck tensorflowcheck
 # Rules for running our tests and for running various different linters
 # ###############################################
 test: lint pythoncheck
+	python examples/convert.py
+	python examples/inputs.py
 	python examples/int32.py
 	python examples/int100.py
-	python examples/inputs.py
 	python examples/matmul.py
 	python examples/pond-simple.py
-	python examples/federated-average/run.py 
+	python examples/securenn-playground.py
+	python examples/federated-average/run.py
 	python -m unittest discover
 
 lint: pythoncheck
