@@ -21,13 +21,21 @@ _run_counter = defaultdict(int)  # type: Any
 
 class Session(tf.Session):
     """
-    Wrap a Tensorflow Session
+    Wrap a Tensorflow Session.
+
+    See :py:class:`tf.Session`
+
+    :param Optional[tf.Graph] graph: A :class:`tf.Graph`.  Used in the same as in tensorflow.
+            This is the graph to be launched.  If nothing is specified then the default session graph will
+            be used.
+    :param Optional[~tensorflow_encrypted.config.Config] config:  A :class:`Local <tensorflow_encrypted.config.LocalConfig>` or
+            :class:`Remote <tensorflow_encrypted.config.RemoteConfig>` config to be used to execute the graph.
     """
 
     def __init__(
         self,
-        graph: Optional[tf.Graph]=None,
-        config: Optional[Config]=None
+        graph=None,
+        config=None
     ) -> None:
         if config is None:
             config = get_config()
@@ -60,11 +68,27 @@ class Session(tf.Session):
 
     def run(
         self,
-        fetches: Any,
-        feed_dict: Dict[str, np.ndarray] = {},
-        tag: Optional[str] = None,
+        fetches,
+        feed_dict={},
+        tag=None,
         write_trace: bool = False
-    ) -> Any:
+    ):
+        """
+        See :meth:tf.Session.run
+
+        This method functions just as the one from tensorflow.
+
+        :param Any fetches: A single graph element, a list of graph elements, or a dictionary whose values are graph elements or lists of graph elements.
+        :param Dict[str,np.ndarray] feed_dict: A dictionary that maps graph elements to values.
+        :param Optional[str] tag: A namespace to run the session under.
+        :param bool write_Trace: If true, the session logs will be dumped to be used in tensorboard.
+
+        :rtype: Any
+        :returns: Either a single value if `fetches` is a single graph element,
+                  or a list of values if fetches is a list, or a dictionary with the
+                  same keys as fetches if that is a dictionary (described above).
+                  Order in which fetches operations are evaluated inside the call is undefined.
+        """
 
         sanitized_fetches = self.sanitize_fetches(fetches)
 
