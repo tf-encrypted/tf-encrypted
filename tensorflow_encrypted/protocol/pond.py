@@ -818,11 +818,22 @@ class Pond(Protocol):
 class PondTensor(abc.ABC):
     """
     This class functions mostly as a convenient way of exposing operations
-    directly on the various tensor objects, ie allowing one to write x + y
-    instead of prot.add(x, y). Since this functionality is shared among all
+    directly on the various tensor objects, ie allowing one to write `x + y`
+    instead of `prot.add(x, y)`. Since this functionality is shared among all
     tensors we put it in this superclass.
 
     This class should never be instantiated on its own.
+    Instead you should use your chosen protocols factory methods::
+
+        x = prot.define_private_input(tf.constant(np.array([1,2,3,4])))
+        y = prot.define_public_input(tf.constant(np.array([4,5,6,7])))
+
+        z = x + y
+
+        with config.Session() as sess:
+            answer = z.reveal().eval(sess)
+
+            print(answer) # => [5, 7, 9, 11]
     """
 
     def __init__(self, prot, is_scaled):
