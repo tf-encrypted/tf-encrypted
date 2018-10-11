@@ -9,8 +9,8 @@ from .factory import AbstractTensor, AbstractFactory
 
 class OddImplicitFactory:
 
-    def __init__(self, int_type: Union[Type['tf.int32'], Type['tf.int64']]) -> None:
-        self.int_type = int_type
+    def __init__(self, native_type: Union[Type['tf.int32'], Type['tf.int64']]) -> None:
+        self.native_type = native_type
 
     def tensor(self, value) -> 'OddImplicitTensor':
 
@@ -35,20 +35,20 @@ class OddImplicitFactory:
     @property
     def modulus(self):
 
-        if self.int_type is tf.int32:
+        if self.native_type is tf.int32:
             return 2**32 - 1
 
-        if self.int_type is tf.int64:
+        if self.native_type is tf.int64:
             return 2**64 - 1
 
-        raise NotImplementedError("Don't know how to handle {}".format(self.int_type))
+        raise NotImplementedError("Don't know how to handle {}".format(self.native_type))
 
-    def sample_uniform(self, shape: Union[Tuple[int, ...], tf.TensorShape], dtype=tf.int32) -> 'OddImplicitTensor':
+    def sample_uniform(self, shape: Union[Tuple[int, ...], tf.TensorShape]) -> 'OddImplicitTensor':
         value = tf.random_uniform(
             shape=shape,
-            dtype=self.int_type,
-            minval=self.int_type.min + 1,
-            maxval=self.int_type.max)
+            dtype=self.native_type,
+            minval=self.native_type.min + 1,
+            maxval=self.native_type.max)
         return OddImplicitTensor(value, self)
 
     def sample_bounded(self, shape: List[int], bitlength: int) -> 'OddImplicitTensor':
@@ -76,7 +76,7 @@ class OddImplicitTensor(AbstractTensor):
         self.value = value
 
     def __repr__(self) -> str:
-        return 'OddImplicitTensor(shape={}, int_type={})'.format(self.shape, self._factory.int_type)
+        return 'OddImplicitTensor(shape={}, native_type={})'.format(self.shape, self._factory.native_type)
 
     def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
         return self.factory.tensor(self.value[slice])
@@ -106,20 +106,20 @@ class OddImplicitTensor(AbstractTensor):
 
         z = x.value + y.value
 
-        int_type = self.factory.int_type
+        native_type = self.factory.native_type
 
         # correct for overflow where needed
         z = z + tf.where(
-            tf.logical_and(y.value > 0, x.value > int_type.max - y.value),
-            tf.ones(z.shape, dtype=int_type),
-            tf.zeros(z.shape, dtype=int_type)
+            tf.logical_and(y.value > 0, x.value > native_type.max - y.value),
+            tf.ones(z.shape, dtype=native_type),
+            tf.zeros(z.shape, dtype=native_type)
         )
 
         # correct for underflow where needed
         z = z - tf.where(
-            tf.logical_and(y.value < 0, x.value < int_type.min - y.value),
-            tf.ones(z.shape, dtype=int_type),
-            tf.zeros(z.shape, dtype=int_type)
+            tf.logical_and(y.value < 0, x.value < native_type.min - y.value),
+            tf.ones(z.shape, dtype=native_type),
+            tf.zeros(z.shape, dtype=native_type)
         )
 
         return OddImplicitTensor(z, self._factory)
@@ -129,20 +129,20 @@ class OddImplicitTensor(AbstractTensor):
 
         z = x.value - y.value
 
-        int_type = self.factory.int_type
+        native_type = self.factory.native_type
 
         # correct for overflow where needed
         z = z + tf.where(
-            tf.logical_and(y.value < 0, x.value > int_type.max + y.value),
-            tf.ones(z.shape, dtype=int_type),
-            tf.zeros(z.shape, dtype=int_type)
+            tf.logical_and(y.value < 0, x.value > native_type.max + y.value),
+            tf.ones(z.shape, dtype=native_type),
+            tf.zeros(z.shape, dtype=native_type)
         )
 
         # correct for underflow where needed
         z = z - tf.where(
-            tf.logical_and(y.value > 0, x.value < int_type.min + y.value),
-            tf.ones(z.shape, dtype=int_type),
-            tf.zeros(z.shape, dtype=int_type)
+            tf.logical_and(y.value > 0, x.value < native_type.min + y.value),
+            tf.ones(z.shape, dtype=native_type),
+            tf.zeros(z.shape, dtype=native_type)
         )
 
         return OddImplicitTensor(z, self._factory)

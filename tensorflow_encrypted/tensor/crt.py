@@ -257,10 +257,10 @@ def gen_crt_cumsum(m):
 
 def gen_crt_equal_zero(m, int_type):
 
-    def crt_equal_zero(x):
+    def crt_equal_zero(x, out_native_type):
         with tf.name_scope('crt_equal_zero'):
-            number_of_zeros = tf.reduce_sum([tf.cast(tf.equal(xi, 0), int_type) for xi in x], axis=0)
-            all_zeros = tf.cast(tf.equal(number_of_zeros, len(m)), int_type)
+            number_of_zeros = tf.reduce_sum([tf.cast(tf.equal(xi, 0), out_native_type) for xi in x], axis=0)
+            all_zeros = tf.cast(tf.equal(number_of_zeros, len(m)), out_native_type)
             return all_zeros
 
     return crt_equal_zero
@@ -268,10 +268,10 @@ def gen_crt_equal_zero(m, int_type):
 
 def gen_crt_equal(m, int_type):
 
-    def crt_equal(x, y):
+    def crt_equal(x, y, out_native_type):
         with tf.name_scope('crt_equal'):
-            number_of_matches = tf.reduce_sum([tf.cast(tf.equal(xi, yi), int_type) for xi, yi in zip(x, y)], axis=0)
-            all_matches = tf.cast(tf.equal(number_of_matches, len(m)), int_type)
+            number_of_matches = tf.reduce_sum([tf.cast(tf.equal(xi, yi), out_native_type) for xi, yi in zip(x, y)], axis=0)
+            all_matches = tf.cast(tf.equal(number_of_matches, len(m)), out_native_type)
             return all_matches
 
     return crt_equal
