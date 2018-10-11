@@ -1,5 +1,20 @@
 `Relu`
 =============
 
+Classicly, `Relu` computes the following on input:
+
+.. code-block:: python
+
+    Relu(x) = max(0, x)
+
+In `tf-encrypted`, how `Relu` behaves will depend on the underlying protocol
+you are using.
+
+| With :class:`~tensorflow_encrypted.protocol.pond.Pond`, `Relu` will be approximated using `Chebyshev Polynomial Approximation`_
+| With :class:`~tensorflow_encrypted.protocol.securenn.SecureNN`, `Relu` will behave as you expect (`Relu(x) = max(0, x)`)
+
+.. _Chebyshev Polynomial Approximation: https://en.wikipedia.org/wiki/Chebyshev_polynomials
+
+
 .. autoclass:: tensorflow_encrypted.layers.activation.Relu
   :members:

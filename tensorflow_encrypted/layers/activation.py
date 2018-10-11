@@ -23,7 +23,6 @@ class Sigmoid(core.Layer):
 
 
 class Relu(core.Layer):
-
     def get_output_shape(self) -> List[int]:
         return self.input_shape
 
@@ -31,6 +30,11 @@ class Relu(core.Layer):
         pass
 
     def forward(self, x):
+        """
+        :param ~tensorflow_encrypted.protocol.pond.PondTensor x: The input tensor
+        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        :returns: A pond tensor with the same backing type as the input tensor.
+        """
         y = self.prot.relu(x)
         self.layer_output = y
         return y
