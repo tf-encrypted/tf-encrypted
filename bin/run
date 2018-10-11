@@ -24,6 +24,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--model_name", type=str, default='', help="Model name")
 parser.add_argument(
+    "--batch_size", type=int, default=1, help="Batch size")
+parser.add_argument(
     "--model_url", type=str, default='', help="Model's public URL")
 parser.add_argument(
     '--input_file', type=str, default="", help='load the data from a numpy file format (.npy)')
@@ -66,7 +68,7 @@ with gfile.FastGFile(model_file, 'rb') as f:
         input_spec.append({
             'name': node.name,
             'dtype': node.attr['dtype'].type,
-            'shape': [int(d.size) if d.size > 0 else 1 for d in node.attr['shape'].shape.dim]
+            'shape': [config.batch_size] + [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
         })
 
 inputs = []
@@ -94,7 +96,11 @@ for i in range(len(input_spec)):
     )
 
 if config.input_file != '':
-    input_data = np.load(config.input_file)
+    # TODO: Currently this allows for only one input
+    # If we want to load models with multiple diffrent inputs
+    # We will need to save our inputs as a list of np.array
+    input_data = [np.load(config.input_file)]
+    assert len(input_data) == len(input_spec), 'the input_data length ({}) should be equal the number of inputs required by the loaded model ({})'.format(len(input_data), len(input_spec))
 else:
     input_data = []
     for spec in input_spec:
