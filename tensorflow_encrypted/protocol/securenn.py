@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 from typing import Optional
-import random
 import sys
 
 import tensorflow as tf
@@ -67,12 +66,13 @@ class SecureNN(Pond):
     def bitwise_xor(self, x: PondTensor, y: PondTensor) -> PondTensor:
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
-        return x + y - self.bitwise_and(x, y) * 2
+        with tf.name_scope('bitwise_xor'):
+            return x + y - self.bitwise_and(x, y) * 2
 
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
-        if x.modulus % 2 != 1:
+        if x.backing_dtype.modulus % 2 != 1:
             # NOTE: this is currently only for use with an odd-modulus CRTTensor
             #       NativeTensor will use an even modulus and will require share_convert
             raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
@@ -114,7 +114,8 @@ class SecureNN(Pond):
 
     @memoize
     def select(self, choice_bit: PondTensor, x: PondTensor, y: PondTensor) -> PondTensor:
-        return (y - x) * choice_bit + x
+        with tf.name_scope('select'):
+            return (y - x) * choice_bit + x
 
     @memoize
     def equal_zero(self, x, out_dtype: Optional[AbstractFactory]=None):
@@ -128,8 +129,9 @@ class SecureNN(Pond):
 
     @memoize
     def relu(self, x):
-        drelu = self.non_negative(x)
-        return drelu * x
+        with tf.name_scope('relu'):
+            drelu = self.non_negative(x)
+            return drelu * x
 
     def max_pool(self, x):
         raise NotImplementedError
@@ -162,43 +164,31 @@ def _lsb_private(prot, y: PondPrivateTensor):
         with tf.name_scope('lsb_mask'):
 
             with tf.device(prot.server_2.device_name):
-                x = y.backing_dtype.sample_uniform(y.shape)
-                xbits = x.to_bits(factory=prot.prime_factory)
-                xlsb = xbits[..., 0].cast(y.backing_dtype)
+                x_raw = y.backing_dtype.sample_uniform(y.shape)
+                xbits_raw = x_raw.to_bits(factory=prot.prime_factory)
+                xlsb_raw = xbits_raw[..., 0].cast(y.backing_dtype)
 
-                x = PondPrivateTensor(prot, *prot._share(x), is_scaled=False)
-                xbits = PondPrivateTensor(prot, *prot._share(xbits), is_scaled=False)
-                xlsb = PondPrivateTensor(prot, *prot._share(xlsb), is_scaled=False)
-                # xlsb.share0.value = tf.Print(xlsb.share0.value, [xlsb.reveal().value_on_0.value], 'xlsb', summarize=10)
+                x = prot._share_and_wrap(x_raw, False)
+                xbits = prot._share_and_wrap(xbits_raw, False)
+                xlsb = prot._share_and_wrap(xlsb_raw, False)
 
-            devices = [prot.server_0.device_name, prot.server_1.device_name]
-            bits_device = random.choice(devices)
-            with tf.device(bits_device):
+            with tf.device(prot.server_0.device_name):
                 # TODO[Morten] pull this out as a separate `sample_bits` method on tensors (optimized for bits only)
                 beta_raw = prot.prime_factory.sample_bounded(y.shape, 1)
                 beta = PondPublicTensor(prot, beta_raw, beta_raw, is_scaled=False)
 
-        r = (y + x).reveal()
-        r0, r1 = r.unwrapped
+        with tf.name_scope('lsb_compare'):
+            r = (y + x).reveal()
+            rbits = prot.bits(r)
+            rlsb = rbits[..., 0]
+            bp = _private_compare(prot, xbits, r, beta)
 
-        # TODO[Morten] wrap this in a `to_bits()` on public tensors?
-        with tf.device(prot.server_0.device_name):
-            rbits0 = r0.to_bits()
+        with tf.name_scope('lsb_combine'):
+            gamma = prot.bitwise_xor(bp, beta.cast_backing(prot.tensor_factory))
+            delta = prot.bitwise_xor(xlsb, rlsb)
+            alpha = prot.bitwise_xor(gamma, delta)
+            assert alpha.backing_dtype is y.backing_dtype
 
-        with tf.device(prot.server_1.device_name):
-            rbits1 = r1.to_bits()
-
-        rbits = PondPublicTensor(prot, rbits0, rbits1, is_scaled=False)
-        rlsb = rbits[..., 0]
-
-        bp = _private_compare(prot, xbits, r, beta)
-        # bp = prot.private_compare(x, r, beta)
-        # bp.share0.value = tf.Print(bp.share0.value, [bp.reveal().value_on_0.value], 'bpsh', summarize=10)
-
-        gamma = prot.bitwise_xor(bp, beta.cast_backing(prot.tensor_factory))
-        delta = prot.bitwise_xor(xlsb, rlsb)
-        alpha = prot.bitwise_xor(gamma, delta)
-        assert alpha.backing_dtype is y.backing_dtype
         return alpha
 
 
@@ -225,57 +215,65 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
 
     with tf.name_scope('private_compare'):
 
-        # use either r and t = r + 1 according to beta
-        s = prot.select(beta.cast_backing(r.backing_dtype), r, r + 1)
-        s_bits = prot.bits(s, factory=prime_dtype)
-        assert s_bits.shape[-1] == bit_length
+        with tf.name_scope('bit_comparisons'):
 
-        # compute w_sum
-        w_bits = prot.bitwise_xor(x_bits, s_bits)
-        w_sum = prot.cumsum(w_bits, axis=-1, reverse=True, exclusive=True)
-        assert w_sum.backing_dtype == prime_dtype
+            # use either r or t = r + 1 according to beta
+            s = prot.select(beta.cast_backing(r.backing_dtype), r, r + 1)
+            s_bits = prot.bits(s, factory=prime_dtype)
+            assert s_bits.shape[-1] == bit_length
 
-        # compute c, ignoring edge cases at first)
-        sign = prot.select(beta, 1, -1)
-        sign = prot.expand_dims(sign, axis=-1)
-        c_except_edge_case = (s_bits - x_bits) * sign + 1 + w_sum
-        assert c_except_edge_case.backing_dtype == prime_dtype
+            # compute w_sum
+            w_bits = prot.bitwise_xor(x_bits, s_bits)
+            w_sum = prot.cumsum(w_bits, axis=-1, reverse=True, exclusive=True)
+            assert w_sum.backing_dtype == prime_dtype
 
-        # adjust for edge cases, i.e. where beta is 1 and s is zero (meaning r was -1)
-        edge_cases = prot.bitwise_and(
-            beta,
-            prot.equal_zero(s, prime_dtype)
-        )
-        edge_cases = prot.expand_dims(edge_cases, axis=-1)
-        c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1), dtype=tf.int32, shape=(1, bit_length)))
-        c_edge_case = PondPrivateTensor(prot, *prot._share(c_edge_case_raw), False)
-        c = prot.select(
-            edge_cases,
-            c_except_edge_case,
-            c_edge_case
-        )  # type: PondPrivateTensor
-        assert c.backing_dtype == prime_dtype
+            # compute c, ignoring edge cases at first
+            sign = prot.select(beta, 1, -1)
+            sign = prot.expand_dims(sign, axis=-1)
+            c_except_edge_case = (s_bits - x_bits) * sign + 1 + w_sum
+            assert c_except_edge_case.backing_dtype == prime_dtype
 
-        # generate multiplicative mask to hide non-zero values
-        with tf.device(prot.server_0.device_name):
-            mask_raw = prime_dtype.sample_uniform(c.shape, minval=1)
-            mask = PondPublicTensor(prot, mask_raw, mask_raw, False)
+        with tf.name_scope('edge_cases'):
 
-        # mask non-zero values; this is safe when we're in a field
-        c_masked = c * mask
-        assert c_masked.backing_dtype == prime_dtype
+            # adjust for edge cases, i.e. where beta is 1 and s is zero (meaning r was -1)
 
-        # TODO[Morten] permute
+            edge_cases = prot.bitwise_and(
+                beta,
+                prot.equal_zero(s, prime_dtype)
+            )
+            edge_cases = prot.expand_dims(edge_cases, axis=-1)
+            c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1), dtype=tf.int32, shape=(1, bit_length)))
+            c_edge_case = prot._share_and_wrap(c_edge_case_raw, False)
 
-        # reconstruct masked values on server 2 to find entries with zeros
-        with tf.device(prot.server_2.device_name):
-            d = prot._reconstruct(*c_masked.unwrapped)
-            # find all zero entries
-            zeros = d.equal_zero(out_dtype)
-            # for each bit sequence, determine whether it has one or no zero in it
-            rows_with_zeros = zeros.reduce_sum(axis=-1, keepdims=False)
-            # reshare result
-            result = PondPrivateTensor(prot, *prot._share(rows_with_zeros), False)
+            c = prot.select(
+                edge_cases,
+                c_except_edge_case,
+                c_edge_case
+            )  # type: PondPrivateTensor
+            assert c.backing_dtype == prime_dtype
+
+        with tf.name_scope('zero_search'):
+
+            # generate multiplicative mask to hide non-zero values
+            with tf.device(prot.server_0.device_name):
+                mask_raw = prime_dtype.sample_uniform(c.shape, minval=1)
+                mask = PondPublicTensor(prot, mask_raw, mask_raw, False)
+
+            # mask non-zero values; this is safe when we're in a field
+            c_masked = c * mask
+            assert c_masked.backing_dtype == prime_dtype
+
+            # TODO[Morten] permute
+
+            # reconstruct masked values on server 2 to find entries with zeros
+            with tf.device(prot.server_2.device_name):
+                d = prot._reconstruct(*c_masked.unwrapped)
+                # find all zero entries
+                zeros = d.equal_zero(out_dtype)
+                # for each bit sequence, determine whether it has one or no zero in it
+                rows_with_zeros = zeros.reduce_sum(axis=-1, keepdims=False)
+                # reshare result
+                result = prot._share_and_wrap(rows_with_zeros, False)
 
         assert result.backing_dtype == out_dtype
         return result

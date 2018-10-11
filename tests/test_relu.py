@@ -14,36 +14,24 @@ class TestRelu(unittest.TestCase):
         input_shape = [4]
         input_relu = np.array([-1.0, -0.5, 0.5, 3.0]).astype(np.float32)
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
+        # with tfe.protocol.Pond() as prot:
+        with tfe.protocol.SecureNN() as prot:
 
-        # relu pond
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+            tf.reset_default_graph()
 
             relu_input = prot.define_private_variable(input_relu)
             relu_layer = Relu(input_shape)
-
             relu_out_pond = relu_layer.forward(relu_input)
-
             with tfe.Session() as sess:
-
                 sess.run(tf.global_variables_initializer())
-                # outputs
-                out_pond = sess.run(relu_out_pond.reveal())
+                out_pond = sess.run(relu_out_pond.reveal(), tag='tfe')
 
-            # reset graph
             tf.reset_default_graph()
 
+            x = tf.Variable(input_relu, dtype=tf.float32)
+            relu_out_tf = tf.nn.relu(x)
             with tf.Session() as sess:
-                x = tf.Variable(input_relu, dtype=tf.float32)
-
-                relu_out_tf = tf.nn.relu(x)
-
                 sess.run(tf.global_variables_initializer())
-
                 out_tensorflow = sess.run(relu_out_tf)
 
         assert(np.isclose(out_pond, out_tensorflow, atol=0.6).all())
