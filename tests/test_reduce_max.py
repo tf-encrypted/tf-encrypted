@@ -21,7 +21,6 @@ class TestReduceMax(unittest.TestCase):
         with tfe.protocol.SecureNN() as prot:
             b = prot.define_private_variable(tf.constant(t))
             out_tfe = prot.reduce_max(b)
-            print(out_tf.shape, out_tfe.shape)
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
@@ -41,7 +40,6 @@ class TestReduceMax(unittest.TestCase):
         with tfe.protocol.SecureNN() as prot:
             b = prot.define_private_variable(tf.constant(t))
             out_tfe = prot.reduce_max(b, axis=0)
-            print(out_tf.shape, out_tfe.shape)
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
