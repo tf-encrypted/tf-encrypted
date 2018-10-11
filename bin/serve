@@ -18,6 +18,7 @@ from flask import Flask, request, jsonify  # type: ignore
 from flask_cors import CORS  # type: ignore
 
 import tensorflow_encrypted as tfe
+from tensorflow_encrypted.protocol import Pond, SecureNN
 
 node_name = os.environ.get('TFE_NODE_NAME')
 server0_address = os.environ.get('TFE_SERVER0_ADDRESS')
@@ -27,9 +28,15 @@ provider_address = os.environ.get('TFE_WEIGHTS_PROVIDER_ADDRESS')
 master_address = os.environ.get('TFE_MASTER_ADDRESS')
 port = int(os.environ.get('TFE_API_PORT', "8080"))
 batch_size = int(os.environ.get('TFE_BATCH_SIZE', 1))
+protocol_name = str(os.environ.get('TFE_PROTOCOL_NAME', 'securenn'))
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
 enable_debug = os.environ.get('TFE_DEBUG') is not None
+
+if protocol_name == 'securenn':
+    tfe.set_protocol(SecureNN())
+else:
+    tfe.set_protocol(Pond())
 
 if node_name is None:
     print("The node_name of this node must be provided via the 'TFE_NODE_NAME' environment variable")
