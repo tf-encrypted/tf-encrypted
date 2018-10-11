@@ -1,22 +1,17 @@
 from __future__ import absolute_import
 from typing import Tuple, List, Union, Optional, Any, NewType, Callable
-from ..types import Slice, Ellipse
 import abc
 import sys
-import math
+from math import log2
+from collections import namedtuple
 
 import numpy as np
 import tensorflow as tf
 
-from ..tensor.helpers import (
-    log2,
-    gcd,
-    inverse
-)
-
+from ..tensor.helpers import gcd, inverse
 from ..tensor.factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 from ..tensor.int100 import int100factory
-
+from ..types import Slice, Ellipse
 from ..player import Player
 from ..config import get_config
 from .protocol import Protocol, global_cache_updators, memoize, nodes
@@ -28,16 +23,57 @@ TFEPublicTensor = NewType('TFEPublicTensor', 'PondPublicTensor')
 TFETensor = Union[TFEPublicTensor, 'PondPrivateTensor', 'PondMaskedTensor']
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 
-# the assumption in encoding/decoding is that encoded numbers will fit into signed int32
-BITPRECISION_INTEGRAL = 14
-BITPRECISION_FRACTIONAL = 16
-TRUNCATION_GAP = 20
-BOUND = 2**30  # bound on magnitude of encoded numbers: x in [-BOUND, +BOUND)
-STATISTICAL_SECURITY = 40  # number of bit for statistical security TODO[Morten] write assertions
-
 
 _initializers = list()
 _thismodule = sys.modules[__name__]
+
+
+# NOTE the assumption in encoding/decoding is that encoded numbers will fit into signed int32
+PondTensorConfig = namedtuple('PondTensorConfig', [
+    'tensor_factory',
+    'bitprecision_integral',
+    'bitprecision_fractional',
+    'bound',  # bound on magnitude of encoded numbers: x in [-BOUND, +BOUND)
+    'matmul_threshold',
+    'truncation_gap_ni',
+    'truncation_gap_i',  # number of bit for statistical security TODO[Morten] write assertions
+])
+
+
+int100config = PondTensorConfig(
+    tensor_factory = int100factory,
+    bitprecision_integral = 14,
+    bitprecision_fractional = 16,
+    bound = 2**30,
+    matmul_threshold = 1024,
+    truncation_gap_ni = 20,
+    truncation_gap_i = 40,
+)
+
+# int64config = PondTensorConfig(
+#     backing_tensor = int64factory,
+#     bitprecision_integral = 0, # TODO
+#     bitprecision_fractional = 13,
+#     bound = 0, # TODO
+#     truncation_gap = 10,
+# )
+
+def _validate_config(config: PondTensorConfig):
+    bitsize_single_precision = config.bitprecision_integral + config.bitprecision_fractional
+    bitsize_double_precision = config.bitprecision_integral + 2 * config.bitprecision_fractional
+    bitsize_intermediate_results = bitsize_double_precision + log2(config.matmul_threshold)
+
+    if bitsize_single_precision > log2(config.bound):
+        print("WARNING: Bound is too small to hold largest value when scaled")
+
+    if bitsize_intermediate_results + config.truncation_gap_ni >= log2(config.tensor_factory.modulus):
+        print("WARNING: Default modulus is too small for non-interactive truncation")
+    
+    if bitsize_intermediate_results + config.truncation_gap_i >= log2(config.tensor_factory.modulus):
+        print("WARNING: Default modulus is too small for interactive truncation")
+
+_validate_config(int100config)
+# _validate_config(int64config)
 
 
 class Pond(Protocol):
@@ -47,29 +83,22 @@ class Pond(Protocol):
         server_0: Optional[Player] = None,
         server_1: Optional[Player] = None,
         crypto_producer: Optional[Player] = None,
+        tensor_config: PondTensorConfig = int100config,
         use_noninteractive_truncation: bool = False,
-        tensor_factory: AbstractFactory = int100factory,
-        verify_precision: bool = True
     ) -> None:
 
         self.server_0 = server_0 or get_config().get_player('server0')
         self.server_1 = server_1 or get_config().get_player('server1')
         self.crypto_producer = crypto_producer or get_config().get_player('crypto_producer')
-        self.use_noninteractive_truncation = use_noninteractive_truncation
-        self.tensor_factory = tensor_factory
 
-        # modulus
-        self.M = tensor_factory.modulus
+        self.tensor_config = tensor_config
+        self.tensor_factory = tensor_config.tensor_factory
+        self.use_noninteractive_truncation = use_noninteractive_truncation
 
         # truncation factor for going from double to single precision
-        self.K = 2 ** BITPRECISION_FRACTIONAL
-        self.K_inv_wrapped = self.tensor_factory.tensor(np.array([inverse(self.K, self.M)]))
-        self.M_wrapped = self.tensor_factory.tensor(np.array([self.M]))
-
-        if verify_precision:
-            assert log2(BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) <= log2(BOUND)
-            assert log2(self.M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
-            assert gcd(self.K, self.M) == 1
+        self.scaling_factor = 2 ** tensor_config.bitprecision_fractional
+        self.scaling_factor_inverse = self.tensor_factory.constant(np.array([inverse(self.scaling_factor, self.tensor_factory.modulus)]))
+        assert gcd(self.scaling_factor, self.tensor_factory.modulus) == 1
 
     def define_constant(
         self,
@@ -224,7 +253,7 @@ class Pond(Protocol):
         name: Optional[str]=None
     ) -> Union['PondPublicTensor', List['PondPublicTensor']]:
 
-        if type(player) is str:
+        if isinstance(player, str):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
 
@@ -311,7 +340,7 @@ class Pond(Protocol):
         name: Optional[str]=None
     ) -> tf.Operation:
 
-        if type(player) is str:
+        if isinstance(player, str):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
 
@@ -355,7 +384,7 @@ class Pond(Protocol):
         factory = factory or self.tensor_factory
 
         with tf.name_scope('encode'):
-            scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
+            scaling_factor = self.scaling_factor if apply_scaling else 1
 
             if isinstance(rationals, np.ndarray):
                 scaled = (rationals * scaling_factor).astype(int).astype(object)
@@ -373,10 +402,10 @@ class Pond(Protocol):
         """ Decode tensor of ring elements into tensor of rational numbers """
 
         with tf.name_scope('decode'):
-            scaling_factor = 2 ** BITPRECISION_FRACTIONAL if is_scaled else 1
+            scaling_factor = self.scaling_factor if is_scaled else 1
 
-            # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
-            return ((elements + BOUND).to_native() - BOUND) / scaling_factor
+            # NOTE we assume that x + bound fits within int32, ie that (bound - 1) +bound <= 2**31 - 1
+            return ((elements + self.tensor_config.bound).to_native() - self.tensor_config.bound) / scaling_factor
 
     def _share(self, secret: AbstractTensor) -> Tuple[AbstractTensor, AbstractTensor]:
 
@@ -1364,8 +1393,8 @@ def _cache_masked(prot, x):
 
 
 def _raw_truncate(prot: Pond, x: AbstractTensor) -> AbstractTensor:
-    y = x - (x % prot.K)
-    return y * prot.K_inv_wrapped
+    y = x - (x % prot.scaling_factor)
+    return y * prot.scaling_factor_inverse
 
 
 def _truncate_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
@@ -1396,6 +1425,7 @@ def _truncate_private(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
 def _truncate_private_noninteractive(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
+    modulus = x.tensor_factory.constant(x.tensor_factory.modulus)
     x0, x1 = x.unwrapped
 
     with tf.name_scope('truncate-ni'):
@@ -1404,7 +1434,7 @@ def _truncate_private_noninteractive(prot: Pond, x: PondPrivateTensor) -> PondPr
             y0 = _raw_truncate(prot, x0)
 
         with tf.device(prot.server_1.device_name):
-            y1 = prot.M_wrapped - _raw_truncate(prot, prot.M_wrapped - x1)
+            y1 = modulus - _raw_truncate(prot, modulus - x1)
 
     return PondPrivateTensor(prot, y0, y1, x.is_scaled)
 
@@ -1420,13 +1450,13 @@ def _truncate_private_interactive(prot: Pond, a: PondPrivateTensor) -> PondPriva
         # assumption that the values originally lie in `[-B, B)`, and will
         # leak private information otherwise
 
-        B = 2**(BITPRECISION_INTEGRAL + 2 * BITPRECISION_FRACTIONAL)
+        B = 2**(prot.tensor_config.bitprecision_integral + 2 * prot.tensor_config.bitprecision_fractional)
         b = a + B
 
         # next step is for server0 to add a statistical mask to `b`, reveal
         # it to server1, and compute the lower part
 
-        mask_bitlength = int(log2(B) + STATISTICAL_SECURITY)
+        mask_bitlength = int(log2(B) + prot.tensor_config.truncation_gap_ni)
         assert mask_bitlength < 100, mask_bitlength
 
         b0, b1 = b.unwrapped
@@ -1438,13 +1468,13 @@ def _truncate_private_interactive(prot: Pond, a: PondPrivateTensor) -> PondPriva
 
         with tf.device(prot.server_1.device_name):
             c1 = b1
-            c_lower = prot._reconstruct(c0, c1) % prot.K
+            c_lower = prot._reconstruct(c0, c1) % prot.scaling_factor
 
         # then use the lower part of the masked value to compute lower part
         # of original value
 
         with tf.device(prot.server_0.device_name):
-            r_lower = r % prot.K
+            r_lower = r % prot.scaling_factor
             a_lower0 = r_lower * -1
 
         with tf.device(prot.server_1.device_name):
@@ -1455,10 +1485,10 @@ def _truncate_private_interactive(prot: Pond, a: PondPrivateTensor) -> PondPriva
         a0, a1 = a.unwrapped
 
         with tf.device(prot.server_0.device_name):
-            d0 = (a0 - a_lower0) * prot.K_inv_wrapped
+            d0 = (a0 - a_lower0) * prot.scaling_factor_inverse
 
         with tf.device(prot.server_1.device_name):
-            d1 = (a1 - a_lower1) * prot.K_inv_wrapped
+            d1 = (a1 - a_lower1) * prot.scaling_factor_inverse
 
     return PondPrivateTensor(prot, d0, d1, a.is_scaled)
 
