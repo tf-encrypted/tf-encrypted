@@ -10,6 +10,7 @@ from .reshape import Reshape
 
 __all__ = [
     'AveragePooling2D',
+    'MaxPooling2D'
     'Conv2D',
     'Dense',
     'Sigmoid',

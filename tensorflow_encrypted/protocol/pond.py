@@ -806,6 +806,9 @@ class Pond(Protocol):
 
         return z
 
+    def maxpool2d(self, x, pool_size, strides, padding):
+        raise NotImplementedError("Only SecureNN supports Max Pooling")
+
     def avgpool2d(self, x, pool_size, strides, padding):
         node_key = ('avgpool2d', x, tuple(pool_size), tuple(strides), padding)
         z = nodes.get(node_key, None)
@@ -2221,7 +2224,6 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
 # average pooling helpers
 #
 
-
 def _avgpool2d_core(prot: Pond,
                     x: PondTensor,
                     pool_size: Tuple[int, int],
@@ -2277,7 +2279,9 @@ def _avgpool2d_im2col_reduce(x: AbstractTensor,
         out_width = math.ceil((int(width) - pool_size[1] + 1) / strides[1])
 
     x_split = x.reshape((batch * channels, 1, height, width))
+    print('what are you split', x_split)
     x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
+    print('what are you', x_cols)
     x_cols_sum = x_cols.reduce_sum(axis=0)
     out = x_cols_sum.reshape([out_height, out_width, batch, channels]).transpose([2, 3, 0, 1])
     return out
