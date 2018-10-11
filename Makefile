@@ -10,7 +10,7 @@ all: test
 # Rules for bootstrapping the Makefile such as checking for docker, python versions, etc.
 # ###############################################
 DOCKER_REQUIRED_VERSION=18.
-PYTHON_REQUIRED_VERSION=3.6.
+PYTHON_REQUIRED_VERSION=3.5.
 TENSORFLOW_REQUIRED_VERSION=1.10
 SHELL := /bin/bash
 
@@ -49,7 +49,7 @@ ifeq (,$(BYPASS_TENSORFLOW_CHECK))
 endif
 endif
 
-bootstrap: pythoncheck pipcheck tensorflowcheck
+bootstrap: pythoncheck pipcheck
 	pip install -r requirements.txt
 	pip install -e .
 
@@ -58,7 +58,7 @@ bootstrap: pythoncheck pipcheck tensorflowcheck
 #
 # Rules for running our tests and for running various different linters
 # ###############################################
-test: lint pythoncheck
+test: lint pythoncheck tensorflowcheck
 	python examples/convert.py
 	python examples/inputs.py
 	python examples/int32.py
@@ -69,10 +69,10 @@ test: lint pythoncheck
 	python examples/federated-average/run.py
 	python -m unittest discover
 
-lint: pythoncheck
+lint: pythoncheck tensorflowcheck
 	flake8
 
-typecheck: pythoncheck
+typecheck: pythoncheck tensorflowcheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tensorflow_encrypted
 
 
@@ -183,7 +183,7 @@ docker-push: docker-push-$(PUSHTYPE)
 # variables to be set to be executed properly.
 # ##############################################
 
-pypicheck: pipcheck pythoncheck
+pypicheck: pipcheck pythoncheck tensorflowcheck
 ifeq (,$(PYPI_USERNAME))
 ifeq (,$(PYPI_PASSWORD))
 	$(error "Missing PYPI_USERNAME and PYPI_PASSWORD environment variables")

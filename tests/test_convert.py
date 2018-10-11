@@ -15,7 +15,7 @@ from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 
 
-global_filename: str = ''
+global_filename = ''
 
 
 class TestConvert(unittest.TestCase):
