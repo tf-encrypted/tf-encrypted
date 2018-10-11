@@ -259,7 +259,7 @@ def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
         x = tf.rsqrt(decoded)
 
-    if isinstance(x,tf.Tensor):
+    if isinstance(x, tf.Tensor):
         inputter_fn = lambda: x
     else:
         inputter_fn = lambda: tf.constant(x)
