@@ -155,6 +155,10 @@ class Int32Tensor(AbstractTensor):
     def strided_slice(self, args: Any, kwargs: Any) -> 'Int32Tensor':
         return int32factory.tensor(tf.strided_slice(self.value, *args, **kwargs))
 
+    def split(self, num_split: int, axis: int=0) -> List['Int32Tensor']:
+        values = tf.split(self.value, num_split, axis=axis)
+        return [int32factory.tensor(value) for value in values]
+
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'Int32Tensor':
         return int32factory.tensor(tf.reshape(self.value, axes))
 
