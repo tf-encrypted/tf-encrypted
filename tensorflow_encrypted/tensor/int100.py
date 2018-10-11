@@ -126,6 +126,10 @@ class Int100Factory(AbstractFactory):
     def modulus(self) -> int:
         return M
 
+    @property
+    def native_type(self):
+        return INT_TYPE
+
 
 int100factory = Int100Factory()
 
@@ -133,7 +137,6 @@ int100factory = Int100Factory()
 class Int100Tensor(AbstractTensor):
 
     modulus = M
-    int_type = INT_TYPE
 
     @property
     def factory(self):
@@ -147,7 +150,7 @@ class Int100Tensor(AbstractTensor):
 
     def convert_to_tensor(self) -> 'Int100Tensor':
         converted_backing = [
-            tf.convert_to_tensor(xi, dtype=self.int_type)
+            tf.convert_to_tensor(xi, dtype=self.factory.native_type)
             for xi in self.backing
         ]
         return Int100Tensor(converted_backing)
@@ -257,11 +260,11 @@ class Int100Tensor(AbstractTensor):
 
     def equal_zero(self, out_dtype: Optional[AbstractFactory]=None) -> 'Int100Tensor':
         out_dtype = out_dtype or self.factory
-        return out_dtype.tensor(_crt_equal_zero(self.backing))
+        return out_dtype.tensor(_crt_equal_zero(self.backing, out_dtype.native_type))
 
     def equal(self, other) -> 'Int100Tensor':
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
-        backing = _crt_equal(x.backing, y.backing)
+        backing = _crt_equal(x.backing, y.backing, x.factory.native_type)
         return Int100Tensor(backing)
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int100Tensor':

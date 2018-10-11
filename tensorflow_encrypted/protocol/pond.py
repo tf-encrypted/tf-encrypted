@@ -1264,7 +1264,7 @@ def _type(x):
 
 def _cache_wrap_helper(prot, sources):
     variables = [
-        prot.tensor_factory.variable(tf.zeros(shape=source.shape, dtype=prot.tensor_factory.int_type))
+        prot.tensor_factory.variable(tf.zeros(shape=source.shape, dtype=prot.tensor_factory.native_type))
         for source in sources
     ]
     updator = tf.group(*[
