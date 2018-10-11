@@ -60,10 +60,10 @@ Backing = Union[List[np.ndarray], List[tf.Tensor]]
 class Int100Factory(AbstractFactory):
 
     def zero(self) -> 'Int100Tensor':
-        return Int100Tensor(np.array([0]) * len(m))
+        return Int100Tensor([np.array([0])] * len(m))
 
     def one(self) -> 'Int100Tensor':
-        return Int100Tensor(np.array([1]) * len(m))
+        return Int100Tensor([np.array([1])] * len(m))
 
     def sample_uniform(self, shape: List[int]) -> 'Int100Tensor':
         backing = _crt_sample_uniform(shape)
@@ -255,12 +255,12 @@ class Int100Tensor(AbstractTensor):
         backing = _crt_cumsum(self.backing, axis=axis, exclusive=exclusive, reverse=reverse)
         return Int100Tensor(backing)
 
-    def equal_zero(self) -> 'Int100Tensor':
-        backing = _crt_equal_zero(self.backing)
-        return Int100Tensor(backing)
+    def equal_zero(self, out_dtype: Optional[AbstractFactory]=None) -> 'Int100Tensor':
+        out_dtype = out_dtype or self.factory
+        return out_dtype.tensor(_crt_equal_zero(self.backing))
 
     def equal(self, other) -> 'Int100Tensor':
-        x, y = Int100Tensor.lift(self, other)
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
         backing = _crt_equal(x.backing, y.backing)
         return Int100Tensor(backing)
 
