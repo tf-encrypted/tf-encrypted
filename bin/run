@@ -24,6 +24,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--model_name", type=str, default='', help="Model name")
 parser.add_argument(
+    "--batch_size", type=str, default='', help="Batch size")
+parser.add_argument(
     "--model_url", type=str, default='', help="Model's public URL")
 parser.add_argument(
     '--input_file', type=str, default="", help='load the data from a numpy file format (.npy)')
@@ -66,7 +68,7 @@ with gfile.FastGFile(model_file, 'rb') as f:
         input_spec.append({
             'name': node.name,
             'dtype': node.attr['dtype'].type,
-            'shape': [int(d.size) if d.size > 0 else 1 for d in node.attr['shape'].shape.dim]
+            'shape': [config.batch_size] + [int(d.size) if d.size > 0 else 1 for d in node.attr['shape'].shape.dim[1:]]
         })
 
 inputs = []
@@ -108,7 +110,7 @@ with tfe.Session() as sess:
 
     print("running")
     feed_dict = {
-        pl: input_data[i] for i, pl in enumerate(pls)
+        pl: input_data for i, pl in enumerate(pls)
     }
     output = sess.run(
         y.reveal(),
