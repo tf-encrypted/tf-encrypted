@@ -327,12 +327,15 @@ class Pond(Protocol):
             with tf.device(player.device_name):
 
                 if isinstance(xs, PondPrivateTensor):
-                    # single input -> single output
                     x = xs
                     op = outputter_fn(helper(x))
-
+                elif isinstance(xs, PondMaskedTensor):
+                    x = xs.unmasked
+                    op = outputter_fn(helper(x))
                 elif isinstance(xs, (list, tuple)):
-                    op = outputter_fn(*[helper(x) for x in xs])
+                    op = outputter_fn(*[
+                        helper(x) if isinstance(x, PondPrivateTensor) else helper(x.unmasked) for x in xs
+                    ])
 
                 else:
                     raise TypeError("Don't know how to handle inputs of type {}".format(type(xs)))

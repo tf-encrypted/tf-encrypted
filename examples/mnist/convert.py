@@ -4,7 +4,7 @@
 # - https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/how_tos/reading_data/convert_to_records.py
 # - https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/how_tos/reading_data/fully_connected_reader.py
 #
-
+from typing import Tuple
 import tensorflow as tf
 
 
@@ -41,3 +41,18 @@ def decode(serialized_example):
     image = decode_image(features['image'])
     label = decode_label(features['label'])
     return image, label
+
+
+def normalize(image, label):
+    x = tf.cast(image, tf.float32) / 255.
+    image = (x - 0.1307) / 0.3081  # image = (x - mean) / std
+    return image, label
+
+
+def get_data_from_tfrecord(filename: str, bs: int) -> Tuple[tf.Tensor, tf.Tensor]:
+    return tf.data.TFRecordDataset([filename]) \
+                     .map(decode) \
+                     .map(normalize) \
+                     .repeat() \
+                     .batch(bs) \
+                     .make_one_shot_iterator()
