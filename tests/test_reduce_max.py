@@ -66,7 +66,7 @@ class TestReduceMax(unittest.TestCase):
                     actual = sess.run(out_tfe.reveal(), tag='test_2d_axis1')
 
         np.testing.assert_array_equal(actual, expected)
-    
+
     def test_reduce_max_3d_axis0(self):
 
         t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape(2, 2, 2)

@@ -2532,10 +2532,10 @@ def _split_public(prot: Pond, x: PondPublicTensor, num_split: int, axis: int=0) 
     with tf.name_scope('split'):
 
         with tf.device(prot.server_0.device_name):
-            ys_on_0 = x_on_0.split(num_splitargs, axis=axis)
+            ys_on_0 = x_on_0.split(num_split, axis=axis)
 
         with tf.device(prot.server_1.device_name):
-            ys_on_1 = x_on_1.split(num_splitargs, axis=axis)
+            ys_on_1 = x_on_1.split(num_split, axis=axis)
 
         return [PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled) for y_on_0, y_on_1 in zip(ys_on_0, ys_on_1)]
 
