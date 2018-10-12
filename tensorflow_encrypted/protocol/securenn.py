@@ -374,12 +374,12 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
 
     print('shapes', x_bits, out_shape)
 
-    assert r.shape == out_shape, f'{r.shape} != {out_shape}'
-    assert r.backing_dtype == out_dtype, f'{r.backing_dtype} != {out_dtype}'
-    assert x_bits.shape[:-1] == out_shape, f'{x_bits.shape[:-1]} != {out_shape}'
-    assert x_bits.backing_dtype == prime_dtype, f'{x_bits.backing_dtype} != {prime_dtype}'
-    assert beta.shape == out_shape, f'{beta.shape} != {out_shape}'
-    assert beta.backing_dtype == prime_dtype, f'{beta.backing_dtype} != {prime_dtype}'
+    assert r.shape == out_shape
+    assert r.backing_dtype == out_dtype
+    assert x_bits.shape[:-1] == out_shape
+    assert x_bits.backing_dtype == prime_dtype
+    assert beta.shape == out_shape
+    assert beta.backing_dtype == prime_dtype
 
     with tf.name_scope('private_compare'):
 
