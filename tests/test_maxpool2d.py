@@ -2,7 +2,6 @@ import unittest
 import tensorflow_encrypted as tfe
 import tensorflow as tf
 import numpy as np
-from tensorflow_encrypted.tensor.int100 import Int100Factory
 from tensorflow_encrypted.protocol.pond import PondPublicTensor
 from tensorflow_encrypted.layers.pooling import MaxPooling2D
 
