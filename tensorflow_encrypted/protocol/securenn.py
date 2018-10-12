@@ -195,27 +195,52 @@ def _lsb_private(prot, y: PondPrivateTensor):
             with tf.device(prot.server_2.device_name):
                 x_raw = y.backing_dtype.sample_uniform(y.shape)
                 xbits_raw = x_raw.to_bits(factory=prot.prime_factory)
-                xlsb_raw = xbits_raw[..., 0].cast(y.backing_dtype)
+                xlsb_raw = xbits_raw[..., 0]
+                xmsb_raw = xbits_raw[..., -1]
+
+                xlsb_raw.value = tf.Print(xlsb_raw.value, [xlsb_raw.value], summarize=1000, message="xlsb ")
+                xlsb_raw.value = tf.Print(xlsb_raw.value, [xmsb_raw.value], summarize=1000, message="xmsb ")
+
+                # xlsb_raw = xlsb_raw + xmsb_raw - xlsb_raw * xmsb_raw * 2
 
                 x = prot._share_and_wrap(x_raw, False)
                 xbits = prot._share_and_wrap(xbits_raw, False)
-                xlsb = prot._share_and_wrap(xlsb_raw, False)
+                xlsb = prot._share_and_wrap(xlsb_raw.cast(y.backing_dtype), False)
 
             with tf.device(prot.server_0.device_name):
                 # TODO[Morten] pull this out as a separate `sample_bits` method on tensors (optimized for bits only)
-                beta_raw = prot.prime_factory.sample_bounded(y.shape, 1)
+                # beta_raw = prot.prime_factory.sample_bounded(y.shape, 1)
+                beta_raw = prot.prime_factory.tensor(tf.zeros(y.shape, dtype=tf.int32))
                 beta = PondPublicTensor(prot, beta_raw, beta_raw, is_scaled=False)
 
         with tf.name_scope('lsb_compare'):
             r = (y + x).reveal()
             rbits = prot.bits(r)
             rlsb = rbits[..., 0]
-            bp = _private_compare(prot, xbits, r, beta)
+            rmsb = rbits[..., -1]
+
+            rlsb.value_on_0.backing = list(rlsb.value_on_0.backing)
+            rlsb.value_on_0.backing[0] = tf.Print(rlsb.value_on_0.backing[0], [rlsb.value_on_0.to_native()], summarize=1000, message="rlsb ")
+            rlsb.value_on_0.backing[0] = tf.Print(rlsb.value_on_0.backing[0], [rmsb.value_on_0.to_native()], summarize=1000, message="rmsb ")
+
+            # rlsb = prot.bitwise_xor(rlsb, rmsb)
+            
+            greater_xor_beta = _private_compare(prot, xbits, r, beta)
 
         with tf.name_scope('lsb_combine'):
-            gamma = prot.bitwise_xor(bp, beta.cast_backing(prot.tensor_factory))
+            gamma = prot.bitwise_xor(greater_xor_beta, beta.cast_backing(prot.tensor_factory))
+
+            gamma.share0.backing = list(gamma.share0.backing)
+            gamma.share0.backing[0] = tf.Print(gamma.share0.backing[0], [gamma.reveal().value_on_0.to_native()], summarize=1000, message='GAMMA')
+            
             delta = prot.bitwise_xor(xlsb, rlsb)
+            delta.share0.backing = list(delta.share0.backing)
+            delta.share0.backing[0] = tf.Print(delta.share0.backing[0], [delta.reveal().value_on_0.to_native()], summarize=1000, message='DELTA')
+
             alpha = prot.bitwise_xor(gamma, delta)
+            alpha.share0.backing = list(alpha.share0.backing)
+            alpha.share0.backing[0] = tf.Print(alpha.share0.backing[0], [alpha.reveal().value_on_0.to_native()], summarize=1000, message='ALPHA')
+
             assert alpha.backing_dtype is y.backing_dtype
 
         return alpha
