@@ -19,7 +19,7 @@ class TestMaxPooling2D(unittest.TestCase):
             expected = np.array([[[[3, 4],
                                   [3, 4]]]], dtype=np.float64)
 
-            input = tfe.define_private_variable(input)
+            input = prot.define_private_variable(input)
             pool = MaxPooling2D([0, 1, 4, 4], pool_size=2, padding="VALID")
             result = pool.forward(input)
 
