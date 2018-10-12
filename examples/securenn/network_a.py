@@ -8,6 +8,7 @@ import tensorflow_encrypted as tfe
 
 from examples.mnist.convert import get_data_from_tfrecord
 
+# tfe.setMonitorStatsFlag(True)
 
 if len(sys.argv) >= 2:
     # config file was specified
@@ -23,14 +24,15 @@ else:
         'prediction-client'
     ])
 tfe.set_config(config)
-tfe.set_protocol(tfe.protocol.Pond(*tfe.get_config().get_players(['server0', 'server1', 'crypto-producer'])))
+tfe.set_protocol(tfe.protocol.SecureNN(*tfe.get_config().get_players(['server0', 'server1', 'crypto-producer'])))
 
 
 class ModelTrainer():
 
-    BATCH_SIZE = 32
+    BATCH_SIZE = 256
     ITERATIONS = 60000 // BATCH_SIZE
-    EPOCHS = 15
+    EPOCHS = 3
+    LEARNING_RATE = 3e-3
     IN_N = 28 * 28
     HIDDEN_N = 128
     OUT_N = 10
@@ -65,11 +67,10 @@ class ModelTrainer():
         params = [w0, b0, w1, b1, w2, b2]
 
         # optimizer and data pipeline
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.LEARNING_RATE)
 
         # training loop
         def loop_body(i: tf.Tensor, max_iter: tf.Tensor, nb_epochs: tf.Tensor, avg_loss: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-
             # get next batch
             x, y = training_data.get_next()
 

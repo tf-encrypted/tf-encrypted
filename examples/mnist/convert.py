@@ -51,8 +51,8 @@ def normalize(image, label):
 
 def get_data_from_tfrecord(filename: str, bs: int) -> Tuple[tf.Tensor, tf.Tensor]:
     return tf.data.TFRecordDataset([filename]) \
-                     .map(decode) \
-                     .map(normalize) \
-                     .repeat() \
-                     .batch(bs) \
-                     .make_one_shot_iterator()
+                  .map(decode) \
+                  .map(normalize) \
+                  .repeat() \
+                  .batch(bs) \
+                  .make_one_shot_iterator()
