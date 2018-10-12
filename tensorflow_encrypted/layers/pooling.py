@@ -82,7 +82,7 @@ class AveragePooling2D(Pooling2D):
         super(AveragePooling2D, self).__init__(input_shape, pool_size, strides, padding, channels_first)
 
     def pool(self, x: TFEVariable, pool_size, strides, padding) -> TFEVariable:
-        self.prot.avgpool2d(x, pool_size, strides, padding)
+        return self.prot.avgpool2d(x, pool_size, strides, padding)
 
 
 class MaxPooling2D(Pooling2D):
@@ -96,4 +96,4 @@ class MaxPooling2D(Pooling2D):
         # TODO -- throw an error here if the protocol is not secureNN
 
     def pool(self, x: TFEVariable, pool_size, strides, padding) -> TFEVariable:
-        self.prot.maxpool2d(x, pool_size, strides, padding)
+        return self.prot.maxpool2d(x, pool_size, strides, padding)
