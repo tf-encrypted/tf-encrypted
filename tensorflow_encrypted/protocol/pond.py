@@ -554,6 +554,7 @@ class Pond(Protocol):
 
         nodes[node_key] = x_t
 
+        print('returning', x_t)
         return x_t
 
     @memoize
@@ -2286,9 +2287,7 @@ def _avgpool2d_im2col_reduce(x: AbstractTensor,
         out_width = math.ceil((int(width) - pool_size[1] + 1) / strides[1])
 
     x_split = x.reshape((batch * channels, 1, height, width))
-    print('what are you split', x_split)
     x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
-    print('what are you', x_cols)
     x_cols_sum = x_cols.reduce_sum(axis=0)
     out = x_cols_sum.reshape([out_height, out_width, batch, channels]).transpose([2, 3, 0, 1])
     return out
