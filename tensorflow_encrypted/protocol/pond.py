@@ -622,6 +622,10 @@ class Pond(Protocol):
 
         return x_sliced
 
+    @memoize
+    def split(self, x: 'PondTensor', num_split: int, axis: int=0) -> List['PondTensor']:
+        return self.dispatch('split', x, num_split, axis=axis)
+
     def stack(self, xs: List['PondTensor'], axis: int = 0):
 
         node_key = ('stack', tuple(xs))
@@ -2518,6 +2522,75 @@ def _strided_slice_masked(prot, x: PondMaskedTensor, args: Any, kwargs: Any):
             alpha_on_1_slice,
             x.is_scaled
         )
+
+
+#
+# split helpers
+#
+
+
+def _split_public(prot: Pond, x: PondPublicTensor, num_split: int, axis: int=0) -> List[PondPublicTensor]:
+
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope('split'):
+
+        with tf.device(prot.server_0.device_name):
+            ys_on_0 = x_on_0.split(num_split, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            ys_on_1 = x_on_1.split(num_split, axis=axis)
+
+        return [PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled) for y_on_0, y_on_1 in zip(ys_on_0, ys_on_1)]
+
+
+def _split_private(prot: Pond, x: PondPrivateTensor, num_split: int, axis: int=0) -> List[PondPrivateTensor]:
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope('split'):
+
+        with tf.device(prot.server_0.device_name):
+            ys0 = x0.split(num_split, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            ys1 = x1.split(num_split, axis=axis)
+
+        return [PondPrivateTensor(prot, y0, y1, x.is_scaled) for y0, y1 in zip(ys0, ys1)]
+
+
+def _split_masked(prot: Pond, x: PondMaskedTensor, num_split: int, axis: int=0) -> List[PondMaskedTensor]:
+
+    a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
+
+    with tf.name_scope('split'):
+
+        with tf.device(prot.crypto_producer.device_name):
+            bs = a.split(num_split, axis=axis)
+
+        with tf.device(prot.server_0.device_name):
+            bs0 = a0.split(num_split, axis=axis)
+            betas_on_0 = alpha_on_0.split(num_split, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            bs1 = a1.split(num_split, axis=axis)
+            betas_on_1 = alpha_on_1.split(num_split, axis=axis)
+
+            ys = prot.split(x.unmasked, num_split, axis=axis)
+
+        return [
+            PondMaskedTensor(
+                prot,
+                y,
+                b,
+                b0,
+                b1,
+                beta_on_0,
+                beta_on_1,
+                x.is_scaled
+            )
+            for y, b, b0, b1, beta_on_0, beta_on_1 in zip(ys, bs, bs0, bs1, betas_on_0, betas_on_1)
+        ]
 
 
 #
