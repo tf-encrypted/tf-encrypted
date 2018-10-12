@@ -12,6 +12,7 @@ from tensorflow.python.platform import gfile
 
 import numpy as np
 import tensorflow_encrypted as tfe
+from tensorflow_encrypted.protocol import Pond, SecureNN
 
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
@@ -22,6 +23,8 @@ tfe.setTFEDebugFlag(enable_debug)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
+    "--protocol_name", type=str, default='securenn', help="Protocol name")
+parser.add_argument(
     "--model_name", type=str, default='', help="Model name")
 parser.add_argument(
     "--batch_size", type=int, default=1, help="Batch size")
@@ -31,6 +34,11 @@ parser.add_argument(
     '--input_file', type=str, default="", help='load the data from a numpy file format (.npy)')
 config = parser.parse_args()
 
+if config.protocol_name == 'securenn':
+    tfe.set_protocol(SecureNN())
+else:
+    tfe.set_protocol(Pond())
+    
 model_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
     "..",

@@ -62,7 +62,7 @@ class Session(tf.Session):
     def run(
         self,
         fetches: Any,
-        feed_dict: Dict[str, np.ndarray] = {},
+        feed_dict: Dict[tf.Tensor, np.ndarray] = {},
         tag: Optional[str] = None,
         write_trace: bool = False
     ) -> Any:
