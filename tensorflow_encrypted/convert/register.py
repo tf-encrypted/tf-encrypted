@@ -251,15 +251,14 @@ def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
         else:
             raise TypeError("Unsupported dtype for rsqrt")
 
-        x = 1 / np.sqrt(np.array(nums).reshape(shape))
+        inputter_fn = lambda: tf.constant(1 / np.sqrt(np.array(nums).reshape(shape)))
     else:
         # XXX this is a little weird but the input into rsqrt is public and
         # being used only for batchnorm at the moment
         decoded = converter.protocol._decode(input.value_on_0, True)
 
-        x = tf.rsqrt(decoded)
+        inputter_fn = lambda: tf.rsqrt(decoded)
 
-    inputter_fn = lambda: tf.constant(x)
     x = converter.protocol.define_public_input(converter.model_provider, inputter_fn)
 
     return x
