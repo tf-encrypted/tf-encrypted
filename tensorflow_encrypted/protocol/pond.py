@@ -433,7 +433,6 @@ class Pond(Protocol):
 
         with tf.name_scope('share'):
             share0 = secret.factory.sample_uniform(secret.shape)
-            print(secret.factory.native_type, share0.factory.native_type)
             share1 = secret - share0
 
         return share0, share1

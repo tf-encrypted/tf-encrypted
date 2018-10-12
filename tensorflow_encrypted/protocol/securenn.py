@@ -39,8 +39,11 @@ class SecureNN(Pond):
             **kwargs
         )
         self.server_2 = server_2
-        self.prime_factory = prime_factory or PrimeFactory(107)
+
+        self.prime_factory = prime_factory or PrimeFactory(107, native_type=self.tensor_factory.native_type)
         self.odd_factory = odd_factory or self.tensor_factory
+        assert self.prime_factory.native_type == self.tensor_factory.native_type
+        assert self.odd_factory.native_type == self.tensor_factory.native_type
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
@@ -271,7 +274,7 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
                 prot.equal_zero(s, prime_dtype)
             )
             edge_cases = prot.expand_dims(edge_cases, axis=-1)
-            c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1), dtype=tf.int32, shape=(1, bit_length)))
+            c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1), dtype=prime_dtype.native_type, shape=(1, bit_length)))
             c_edge_case = prot._share_and_wrap(c_edge_case_raw, False)
 
             c = prot.select(

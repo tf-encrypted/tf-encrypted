@@ -206,6 +206,9 @@ class Int64Tensor(AbstractTensor):
     def squeeze(self, axis: Optional[List[int]]=None) -> 'Int64Tensor':
         return Int64Tensor(tf.squeeze(self.value, axis=axis))
 
+    def negative(self) -> 'Int64Tensor':
+        return Int64Tensor(tf.negative(self.value))
+
 
 class Int64Constant(Int64Tensor, AbstractConstant):
 
