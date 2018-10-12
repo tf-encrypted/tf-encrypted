@@ -45,12 +45,6 @@ class TestPrivateCompare(unittest.TestCase):
 
     def test_private(self):
 
-        tfe.set_config(tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ]))
-
         x = np.array([
             21,
             21,
@@ -94,7 +88,6 @@ class TestPrivateCompare(unittest.TestCase):
             tensor_factory=val_dtype,
             prime_factory=bit_dtype,
             use_noninteractive_truncation=True,
-            verify_precision=False
         )
 
         res = _private_compare(

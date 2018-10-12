@@ -11,8 +11,12 @@ class TestInt32Tensor(unittest.TestCase):
         tf.reset_default_graph()
 
     def test_pond(self) -> None:
-        with tfe.protocol.Pond(tensor_factory=Int32Factory(), use_noninteractive_truncation=True,
-                               verify_precision=False) as prot:
+
+        with tfe.protocol.Pond(
+            tensor_factory=Int32Factory(),
+            use_noninteractive_truncation=True
+        ) as prot:
+
             x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
             y = prot.define_public_variable(np.array([2, 2]), apply_scaling=False)
 

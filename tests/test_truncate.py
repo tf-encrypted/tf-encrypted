@@ -11,43 +11,28 @@ class TestTruncate(unittest.TestCase):
 
     def test_interactive_truncate(self):
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
-
-        server0, server1, cp = config.get_players('server0, server1, crypto_producer')
-
         prot = tfe.protocol.Pond(
-            server0, server1, cp,
             use_noninteractive_truncation=False
         )
 
-        with tfe.Session() as sess:
+        # TODO[Morten] remove this condition
+        if prot.tensor_factory not in [tfe.tensor.int64.int64factory]:
 
-            expected = np.array([12345.6789])
+            with tfe.Session() as sess:
 
-            w = prot.define_private_variable(expected * (2**16))  # double precision
-            v = prot.truncate(w)  # single precision
+                expected = np.array([12345.6789])
 
-            sess.run(tf.global_variables_initializer())
-            actual = sess.run(v.reveal(), tag='foo')
+                w = prot.define_private_variable(expected * prot.fixedpoint_config.scaling_factor)  # double precision
+                v = prot.truncate(w)  # single precision
 
-            assert np.isclose(actual, expected).all(), actual
+                sess.run(tf.global_variables_initializer())
+                actual = sess.run(v.reveal(), tag='foo')
+
+                np.testing.assert_allclose(actual, expected)
 
     def test_noninteractive_truncate(self):
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
-
-        server0, server1, cp = config.get_players('server0, server1, crypto_producer')
-
         prot = tfe.protocol.Pond(
-            server0, server1, cp,
             use_noninteractive_truncation=True
         )
 
@@ -55,13 +40,13 @@ class TestTruncate(unittest.TestCase):
 
             expected = np.array([12345.6789])
 
-            w = prot.define_private_variable(expected * (2**16))  # double precision
+            w = prot.define_private_variable(expected * prot.fixedpoint_config.scaling_factor)  # double precision
             v = prot.truncate(w)  # single precision
 
             sess.run(tf.global_variables_initializer())
             actual = sess.run(v.reveal(), tag='foo')
 
-            assert np.isclose(actual, expected).all(), actual
+            np.testing.assert_allclose(actual, expected)
 
 
 if __name__ == '__main__':

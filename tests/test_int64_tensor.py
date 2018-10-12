@@ -11,15 +11,12 @@ class TestInt64Tensor(unittest.TestCase):
         tf.reset_default_graph()
 
     def test_pond(self) -> None:
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
 
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer'),
-                               tensor_factory=Int64Factory(), use_noninteractive_truncation=True,
-                               verify_precision=False) as prot:
+        with tfe.protocol.Pond(
+            tensor_factory=Int64Factory(),
+            use_noninteractive_truncation=True,
+        ) as prot:
+
             x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
             y = prot.define_public_variable(np.array([2, 2]), apply_scaling=False)
 

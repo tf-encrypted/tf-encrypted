@@ -11,7 +11,7 @@ all: test
 # ###############################################
 DOCKER_REQUIRED_VERSION=18.
 PYTHON_REQUIRED_VERSION=3.5.
-TENSORFLOW_REQUIRED_VERSION=1.11
+TENSORFLOW_REQUIRED_VERSION=1.10
 SHELL := /bin/bash
 
 CURRENT_DIR=$(shell pwd)

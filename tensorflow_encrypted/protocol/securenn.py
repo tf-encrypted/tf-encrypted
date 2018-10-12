@@ -72,11 +72,13 @@ class SecureNN(Pond):
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
-        if x.backing_dtype.modulus % 2 != 1:
-            # NOTE: this is currently only for use with an odd-modulus CRTTensor
-            #       NativeTensor will use an even modulus and will require share_convert
-            raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
-                            'but it was initialized with an even one.')
+
+        # if x.backing_dtype.modulus % 2 != 1:
+        #     # NOTE: this is currently only for use with an odd-modulus CRTTensor
+        #     #       NativeTensor will use an even modulus and will require share_convert
+        #     raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
+        #                     'but it was initialized with an even one.')
+
         return self.lsb(x * 2)
 
     @memoize

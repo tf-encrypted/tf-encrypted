@@ -208,13 +208,28 @@ class Int100Tensor(AbstractTensor):
         raise TypeError("Unsupported type {}".format(type(x)))
 
     def __add__(self, other) -> 'Int100Tensor':
-        return self.add(other)
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.add(y)
+
+    def __radd__(self, other) -> 'Int100Tensor':
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.add(y)
 
     def __sub__(self, other) -> 'Int100Tensor':
-        return self.sub(other)
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.sub(y)
+
+    def __rsub__(self, other) -> 'Int100Tensor':
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.sub(y)
 
     def __mul__(self, other) -> 'Int100Tensor':
-        return self.mul(other)
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.mul(y)
+
+    def __rmul__(self, other) -> 'Int100Tensor':
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.mul(y)
 
     def __mod__(self, k) -> 'Int100Tensor':
         return self.mod(k)
@@ -295,6 +310,11 @@ class Int100Tensor(AbstractTensor):
     def negative(self) -> 'Int100Tensor':
         # TODO[Morten] there's probably a more efficient way
         return int100factory.zero() - self
+
+    def right_shift(self, bitlength):
+        factor = 2**bitlength
+        factor_inverse = inverse(factor, self.factory.modulus)
+        return (self - (self % factor)) * factor_inverse
 
 
 class Int100Constant(Int100Tensor, AbstractConstant):

@@ -17,7 +17,6 @@ class TestPondPublicEqual(unittest.TestCase):
         with tfe.protocol.Pond(
             tensor_factory=int32factory,
             use_noninteractive_truncation=True,
-            verify_precision=False
         ) as prot:
 
             x_raw = int32factory.constant(np.array([100, 200, 100, 300]))

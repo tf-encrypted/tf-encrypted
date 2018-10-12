@@ -42,4 +42,4 @@ with tfe.Session() as sess:
     actual = sess.run(y.reveal(), tag='reveal')
 
     expected = b
-    np.testing.assert_array_equal(actual, expected)
+    np.testing.assert_allclose(actual, expected, atol=.1)

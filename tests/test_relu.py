@@ -3,6 +3,9 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
+
+from tensorflow_encrypted.tensor.int64 import int64factory
+# from tensorflow_encrypted.tensor.int100 import int100factory
 from tensorflow_encrypted.layers.activation import Relu
 
 
@@ -14,8 +17,10 @@ class TestRelu(unittest.TestCase):
         input_shape = [4]
         input_relu = np.array([-1.0, -0.5, 0.5, 3.0]).astype(np.float32)
 
-        # with tfe.protocol.Pond() as prot:
-        with tfe.protocol.SecureNN() as prot:
+        with tfe.protocol.SecureNN(
+            tensor_factory=int64factory,
+            use_noninteractive_truncation=True,
+        ) as prot:
 
             tf.reset_default_graph()
 

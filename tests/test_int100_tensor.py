@@ -17,8 +17,7 @@ class TestInt100Tensor(unittest.TestCase):
         with tfe.protocol.Pond(
             None,
             tensor_factory=int100factory,
-            use_noninteractive_truncation=True,
-            verify_precision=True
+            use_noninteractive_truncation=True
         ) as prot:
 
             x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
