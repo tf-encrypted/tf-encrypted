@@ -94,7 +94,7 @@ server = remote_config.server(node_name)
 if node_name != 'master':
     server.join()
 else:
-    _global_memory: Dict[str, Any] = {}
+    _global_memory = {}
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -188,7 +188,7 @@ else:
     print("Graph warmed up in {}".format(warmup_end - warmup_start))
 
     print('Serving model: %s' % config.model_name)
-    
+
 
     # define the app
     app = Flask(__name__)
