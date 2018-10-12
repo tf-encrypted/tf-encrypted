@@ -48,8 +48,12 @@ class Int32Factory(AbstractFactory):
     def modulus(self) -> int:
         return 2**32
 
+    @property
+    def native_type(self):
+        return tf.int32
+
     def sample_uniform(self, shape: List[int]) -> 'Int32Tensor':
-        value = tf.random_uniform(shape=shape, dtype=tf.int32, minval=tf.int32.min, maxval=tf.int32.max)
+        value = tf.random_uniform(shape=shape, dtype=self.native_type, minval=self.native_type.min, maxval=self.native_type.max)
         return Int32Tensor(value)
 
     def stack(self, xs: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':
@@ -81,8 +85,6 @@ def _lift(x, y) -> Tuple['Int32Tensor', 'Int32Tensor']:
 
 
 class Int32Tensor(AbstractTensor):
-
-    int_type = tf.int32
 
     def __init__(self, value: Union[np.ndarray, tf.Tensor]) -> None:
         self.value = value
@@ -155,6 +157,10 @@ class Int32Tensor(AbstractTensor):
     def strided_slice(self, args: Any, kwargs: Any) -> 'Int32Tensor':
         return int32factory.tensor(tf.strided_slice(self.value, *args, **kwargs))
 
+    def split(self, num_split: int, axis: int=0) -> List['Int32Tensor']:
+        values = tf.split(self.value, num_split, axis=axis)
+        return [int32factory.tensor(value) for value in values]
+
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'Int32Tensor':
         return int32factory.tensor(tf.reshape(self.value, axes))
 
@@ -165,11 +171,11 @@ class Int32Tensor(AbstractTensor):
         return int32factory.tensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
 
     def equal_zero(self, factory: AbstractFactory=int32factory) -> 'AbstractTensor':
-        return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=tf.int32))
+        return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
 
     def equal(self, other, factory: AbstractFactory=int32factory) -> 'AbstractTensor':
         x, y = _lift(self, other)
-        return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=tf.int32))
+        return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
 
     def right_shift(self, bitlength):
         return int32factory.tensor(tf.bitwise.right_shift(self.value, bitlength))

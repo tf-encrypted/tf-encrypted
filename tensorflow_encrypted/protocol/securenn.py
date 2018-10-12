@@ -91,28 +91,34 @@ class SecureNN(Pond):
 
     @memoize
     def negative(self, x: PondTensor) -> PondTensor:
-        # NOTE MSB is 1 iff xi < 0
-        return self.msb(x)
+        with tf.name_scope('negative'):
+            # NOTE MSB is 1 iff xi < 0
+            return self.msb(x)
 
     @memoize
     def non_negative(self, x: PondTensor) -> PondTensor:
-        return self.bitwise_not(self.msb(x))
+        with tf.name_scope('non_negative'):
+            return self.bitwise_not(self.msb(x))
 
     @memoize
     def less(self, x: PondTensor, y: PondTensor) -> PondTensor:
-        return self.negative(x - y)
+        with tf.name_scope('less'):
+            return self.negative(x - y)
 
     @memoize
     def less_equal(self, x: PondTensor, y: PondTensor) -> PondTensor:
-        return self.bitwise_not(self.greater(x, y))
+        with tf.name_scope('less_equal'):
+            return self.bitwise_not(self.greater(x, y))
 
     @memoize
     def greater(self, x: PondTensor, y: PondTensor) -> PondTensor:
-        return self.negative(y - x)
+        with tf.name_scope('greater'):
+            return self.negative(y - x)
 
     @memoize
     def greater_equal(self, x: PondTensor, y: PondTensor) -> PondTensor:
-        return self.bitwise_not(self.less(x, y))
+        with tf.name_scope('greater_equal'):
+            return self.bitwise_not(self.less(x, y))
 
     @memoize
     def select(self, choice_bit: PondTensor, x: PondTensor, y: PondTensor) -> PondTensor:
@@ -135,8 +141,29 @@ class SecureNN(Pond):
             drelu = self.non_negative(x)
             return drelu * x
 
-    def max_pool(self, x):
-        raise NotImplementedError
+    @memoize
+    def maximum(self, x, y):
+        with tf.name_scope('maximum'):
+            indices_of_maximum = self.greater(x, y)
+            return self.select(indices_of_maximum, y, x)
+
+    @memoize
+    def reduce_max(self, x, axis=0):
+        with tf.name_scope('reduce_max'):
+
+            def build_comparison_tree(ts):
+                assert len(ts) > 0
+                if len(ts) == 1:
+                    return ts[0]
+                halfway = len(ts) // 2
+                ts_left, ts_right = ts[:halfway], ts[halfway:]
+                maximum_left = build_comparison_tree(ts_left)
+                maximum_right = build_comparison_tree(ts_right)
+                return self.maximum(maximum_left, maximum_right)
+
+            tensors = self.split(x, int(x.shape[axis]), axis=axis)
+            maximum = build_comparison_tree(tensors)
+            return self.squeeze(maximum, axis=(axis,))
 
     def dmax_pool_efficient(self, x):
         raise NotImplementedError

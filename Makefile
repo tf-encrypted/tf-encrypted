@@ -183,7 +183,7 @@ docker-push: docker-push-$(PUSHTYPE)
 # variables to be set to be executed properly.
 # ##############################################
 
-pypicheck: pipcheck pythoncheck tensorflowcheck
+pypicheck: pipcheck pythoncheck
 ifeq (,$(PYPI_USERNAME))
 ifeq (,$(PYPI_PASSWORD))
 	$(error "Missing PYPI_USERNAME and PYPI_PASSWORD environment variables")

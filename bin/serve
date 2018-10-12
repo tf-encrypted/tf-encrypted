@@ -18,6 +18,7 @@ from flask import Flask, request, jsonify  # type: ignore
 from flask_cors import CORS  # type: ignore
 
 import tensorflow_encrypted as tfe
+from tensorflow_encrypted.protocol import Pond, SecureNN
 
 node_name = os.environ.get('TFE_NODE_NAME')
 server0_address = os.environ.get('TFE_SERVER0_ADDRESS')
@@ -27,6 +28,7 @@ provider_address = os.environ.get('TFE_WEIGHTS_PROVIDER_ADDRESS')
 master_address = os.environ.get('TFE_MASTER_ADDRESS')
 port = int(os.environ.get('TFE_API_PORT', "8080"))
 batch_size = int(os.environ.get('TFE_BATCH_SIZE', 1))
+protocol_name = str(os.environ.get('TFE_PROTOCOL_NAME', 'securenn'))
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
 enable_debug = os.environ.get('TFE_DEBUG') is not None
@@ -59,22 +61,40 @@ tfe.setMonitorStatsFlag(enable_stats_monitor)
 tfe.setTFETraceFlag(enable_traces)
 tfe.setTFEDebugFlag(enable_debug)
 
-remote_config = tfe.RemoteConfig(
-    {
-        'master': master_address,
-        'server0': server0_address,
-        'server1': server1_address,
-        'crypto_producer': producer_address,
-        'weights_provider': provider_address
-    },
-    master='master'
-)
+if protocol_name == 'securenn':
+    print('Using protocol: {}'.format(protocol_name))
+    remote_config = tfe.RemoteConfig(
+        {
+            'master': master_address,
+            'server0': server0_address,
+            'server1': server1_address,
+            'crypto_producer': producer_address,
+            'weights_provider': provider_address
+        },
+        master='master'
+    )
+    tfe.set_config(remote_config)
+    tfe.set_protocol(SecureNN())
+else:
+    print('Using protocol: {}'.format('pond'))
+    remote_config = tfe.RemoteConfig(
+        {
+            'master': master_address,
+            'server0': server0_address,
+            'server1': server1_address,
+            'crypto_producer': producer_address,
+            'weights_provider': provider_address
+        },
+        master='master'
+    )
+    tfe.set_config(remote_config)
+    tfe.set_protocol(Pond())
 
 server = remote_config.server(node_name)
 if node_name != 'master':
     server.join()
 else:
-    _global_memory: Dict[str, Any] = {}
+    _global_memory = {}
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -123,71 +143,44 @@ else:
                 'shape': [batch_size] + [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
             })
 
-    sess = tfe.Session(config=remote_config)
-
-    with tfe.protocol.Pond(*remote_config.get_players('server0, server1, crypto_producer')) as prot:
-        assert isinstance(prot, tfe.protocol.Pond)
-
-        inputs = []
-        for i, spec in enumerate(input_spec):
-            def scope(i: int) -> Callable[[], tf.Tensor]:
-                def provide_input() -> tf.Tensor:
-                    pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
-                    return pl
-
-                return provide_input
-
-            inputs.append(scope(i))
-
-        print('Securing computation')
-        secure_start = time.time()
-
-        c = tfe.convert.convert.Converter(remote_config, prot, remote_config.get_player('weights_provider'))
-        y = c.convert(graph_def, tfe.convert.register(), remote_config.get_player('master'), inputs)
-        # TODO: do not reveal on the master server
-        y = y.reveal()
-
-        secure_end = time.time()
-        print("Graph secured in {}".format(secure_end - secure_start))
-
-        if isinstance(prot, tfe.protocol.Pond):
-            print('Initializing variables')
-            init_start = time.time()
-
-            sess.run(tfe.global_variables_initializer(), tag='init')
-
-            init_end = time.time()
-            print("Graph initialized in {}".format(init_end - init_start))
+    sess = tfe.Session()
 
     pls = []
-    for i in range(len(input_spec)):
-        if i == 0:
-            name = "private-input/api/{}:0".format(i)
-        else:
-            name = "private-input_{}/api/{}:0".format(i, i)
-        pls.append(
-            tf.get_default_graph().get_tensor_by_name(name)
-        )
+    inputs = []
+    for i, spec in enumerate(input_spec):
+        def scope(i: int) -> Callable[[], tf.Tensor]:
+            def provide_input() -> tf.Tensor:
+                pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
+                pls.append(pl)
+                return pl
 
-    def predict(request_id: str, input_data: List[Any]) -> None:
-        feed_dict = {
-            pl: input_data[i] for i, pl in enumerate(pls)
-        }
+            return provide_input
 
-        output_data = sess.run(
-            y,
-            feed_dict=feed_dict,
-            tag='prediction',
-        )
+        inputs.append(scope(i))
+
+    def predict(request_id: str, input_data: List[np.ndarray]) -> None:
+        feed_dict = {pl: input_data[i] for i, pl in enumerate(pls)}
+        output_data = sess.run(y, feed_dict=feed_dict, tag='prediction')
 
         _global_memory[request_id] = output_data.tolist()
 
+    print('Securing computation')
+    secure_start = time.time()
+    c = tfe.convert.convert.Converter(remote_config, tfe.get_protocol(), remote_config.get_player('weights_provider'))
+    y = c.convert(graph_def, tfe.convert.register(), remote_config.get_player('master'), inputs)
+    # TODO: do not reveal on the master server
+    y = y.reveal()
+    secure_end = time.time()
+    print("Graph secured in {}".format(secure_end - secure_start))
+
+    print('Initializing variables')
+    init_start = time.time()
+    sess.run(tfe.global_variables_initializer(), tag='init')
+    init_end = time.time()
+    print("Graph initialized in {}".format(init_end - init_start))
+
     print("Warming up the graph")
-    warmup_data = []
-    for spec in input_spec:
-        warmup_data.append(
-            np.random.standard_normal(spec['shape']).tolist()
-        )
+    warmup_data = [np.random.standard_normal(spec['shape']).tolist() for spec in input_spec]
     warmup_start = time.time()
     predict("warm-up-id", warmup_data)
     _global_memory.pop("warm-up-id")
@@ -195,6 +188,7 @@ else:
     print("Graph warmed up in {}".format(warmup_end - warmup_start))
 
     print('Serving model: %s' % config.model_name)
+
 
     # define the app
     app = Flask(__name__)

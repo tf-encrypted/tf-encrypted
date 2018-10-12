@@ -1,7 +1,7 @@
 from typing import Dict, List, Any, Union, Optional
 
 from ..player import Player
-from ..protocol import Pond, get_protocol
+from ..protocol import Protocol, get_protocol
 from ..protocol.pond import TFEInputter
 from ..config import Config, get_config
 
@@ -11,7 +11,7 @@ class Converter():
     def __init__(
         self,
         config: Optional[Config] = None,
-        protocol: Optional[Pond] = None,
+        protocol: Optional[Protocol] = None,
         player: Optional[Union[str, Player]] = None
     ) -> None:
         self.config = config if config is not None else get_config()
