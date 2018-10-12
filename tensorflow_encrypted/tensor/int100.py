@@ -283,6 +283,10 @@ class Int100Tensor(AbstractTensor):
         backing = [tf.strided_slice(xi, *args, **kwargs) for xi in self.backing]
         return Int100Tensor(backing)
 
+    def split(self, num_split: int, axis: int=0) -> List['Int100Tensor']:
+        backings = zip(*[tf.split(xi, num_split, axis=axis) for xi in self.backing])
+        return [Int100Tensor(backing) for backing in backings]
+
     def reshape(self, axes: List[int]) -> 'Int100Tensor':
         backing = [tf.reshape(xi, axes) for xi in self.backing]
         return Int100Tensor(backing)

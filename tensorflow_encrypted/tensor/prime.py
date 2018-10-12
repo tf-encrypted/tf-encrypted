@@ -87,6 +87,10 @@ class PrimeTensor(AbstractTensor):
     def strided_slice(self, args: Any, kwargs: Any) -> 'PrimeTensor':
         return self.factory.tensor(tf.strided_slice(self.value, *args, **kwargs))
 
+    def split(self, num_split: int, axis: int=0) -> List['PrimeTensor']:
+        values = tf.split(self.value, num_split, axis=axis)
+        return [self.factory.tensor(value) for value in values]
+
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'PrimeTensor':
         return self.factory.tensor(tf.reshape(self.value, axes))
 
