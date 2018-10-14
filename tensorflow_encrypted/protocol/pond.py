@@ -108,9 +108,9 @@ class Pond(Protocol):
         server_0: Optional[Player] = None,
         server_1: Optional[Player] = None,
         crypto_producer: Optional[Player] = None,
-        tensor_factory: AbstractFactory = int100factory,
-        fixedpoint_config: FixedpointConfig = fixedpoint_int100,
-        use_noninteractive_truncation: bool = False,
+        tensor_factory: AbstractFactory = int64factory,
+        fixedpoint_config: FixedpointConfig = fixedpoint_int64,
+        use_noninteractive_truncation: bool = True,
     ) -> None:
 
         self.server_0 = server_0 or get_config().get_player('server0')
