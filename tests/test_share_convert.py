@@ -27,22 +27,23 @@ class TestShareConvert(unittest.TestCase):
                                    prime_factory=bit_dtype,
                                    verify_precision=False) as prot:
 
-            hi = np.array([1, 2, 3, 4])
-            x_in = prot.define_private_variable(hi, apply_scaling=False)
-            converted = prot.share_convert(x_in)
+            val_a = np.array([1, 2, 3, 4])
+            val_b = np.array([1, 2, 3, 4])
+
+            x_in = prot.define_private_variable(val_a, apply_scaling=False)
+            y_in = prot.define_private_variable(val_b, apply_scaling=False)
+
+            x_c = prot.share_convert(x_in)
+            y_c = prot.share_convert(y_in)
+
+            expected = val_a + val_b
+            actual = x_c + y_c
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
 
-                share0 = Int32Tensor(converted.share0.value)
-                share1 = Int32Tensor(converted.share1.value)
-
-                p = PondPrivateTensor(prot, share0, share1, is_scaled=False)
-
-                actual = sess.run(p.reveal().value_on_0.value)
-                # actual = p.reveal().eval(sess)
-
-                print(actual)
+                answer = sess.run(actual.reveal().value_on_0.value)
+                assert np.array_equal(answer, expected)
 
 
 if __name__ == '__main__':

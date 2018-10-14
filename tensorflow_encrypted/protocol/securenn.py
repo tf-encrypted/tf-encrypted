@@ -30,6 +30,7 @@ class SecureNN(Pond):
         server_2: Optional[Player] = None,
         prime_factory: Optional[AbstractFactory] = None,
         odd_factory: Optional[AbstractFactory] = None,
+        implicit_factory: Optional[AbstractFactory] = None,
         **kwargs
     ) -> None:
         server_0 = server_0 or get_config().get_player('server0')
@@ -45,6 +46,7 @@ class SecureNN(Pond):
         self.server_2 = server_2
         self.prime_factory = prime_factory or PrimeFactory(107)
         self.odd_factory = odd_factory or self.tensor_factory
+        self.implicit_factory = implicit_factory or OddImplicitFactory(tf.int32)
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
@@ -202,11 +204,10 @@ class SecureNN(Pond):
         print(alpha.value_on_0.value)
         print(beta_wrap.value_on_0.value)
 
-        factory = OddImplicitFactory(tf.int32)
-        preconverter = self.odd_modulus_bitwise_xor(compared, bitmask, factory)
+        preconverter = self.odd_modulus_bitwise_xor(compared, bitmask, self.implicit_factory)
 
-        deltashares = self.to_odd_modulus(deltashares, factory)
-        beta_wrap = self.to_odd_modulus(beta_wrap, factory)
+        deltashares = self.to_odd_modulus(deltashares, self.implicit_factory)
+        beta_wrap = self.to_odd_modulus(beta_wrap, self.implicit_factory)
 
         # print(deltashares.share0.value, deltashares.share1.value)
         # print(preconverter.share0.value, preconverter.share1.value)
@@ -222,12 +223,12 @@ class SecureNN(Pond):
 
         converter = preconverter + deltashares + beta_wrap
 
-        converter = converter + self.to_odd_modulus(alpha, factory)
+        converter = converter + self.to_odd_modulus(alpha, self.implicit_factory)
 
         # print(x.share0.value)
         # print(x.share1.value)
 
-        return self.to_odd_modulus(x, factory) - converter
+        return self.to_odd_modulus(x, self.implicit_factory) - converter
 
     def divide(self, x, y):
         raise NotImplementedError
