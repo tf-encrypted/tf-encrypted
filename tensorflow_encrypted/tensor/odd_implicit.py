@@ -149,11 +149,7 @@ class OddImplicitTensor(AbstractTensor):
 
     def optional_sub(self, x: Union['OddImplicitTensor', int],
                      bits: ['OddImplicitTensor', int]):
-        def func(vals):
-            x, y, bit = vals
-            return tf.cond(tf.equal(bit, 1), lambda: x - y, lambda: y)
-
-        ret = tf.map_fn(func, (self.value, x.value, bits.value), dtype=self.factory.native_type)
+        ret = tf.where(tf.equal(bits.value, 1), self.value - x.value, x.value)
         return OddImplicitTensor(ret, self.factory)
 
     def mul(self, other) -> 'OddImplicitTensor':
