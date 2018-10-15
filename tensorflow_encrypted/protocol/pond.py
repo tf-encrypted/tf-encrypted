@@ -449,7 +449,7 @@ class Pond(Protocol):
             bound = self.fixedpoint_config.bound_single_precision
             scaled = ((elements + bound).to_native() - bound)
 
-            if self.fixedpoint_config.scaling_factor:
+            if is_scaled:
                 return scaled / self.fixedpoint_config.scaling_factor
             else:
                 return scaled
@@ -1452,7 +1452,7 @@ def _cache_masked(prot, x):
 def _truncate_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
     assert isinstance(x, PondPublicTensor)
 
-    base = prot.fixedpoint_config.base
+    base = prot.fixedpoint_config.scaling_base
     amount = prot.fixedpoint_config.precision_fractional
     x_on_0, x_on_1 = x.unwrapped
 
@@ -1479,7 +1479,7 @@ def _truncate_private(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
 def _truncate_private_noninteractive(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
-    base = prot.fixedpoint_config.base
+    base = prot.fixedpoint_config.scaling_base
     amount = prot.fixedpoint_config.precision_fractional
     x0, x1 = x.unwrapped
 
@@ -1508,15 +1508,16 @@ def _truncate_private_interactive(prot: Pond, a: PondPrivateTensor) -> PondPriva
         # assumption that the values originally lie in `[-B, B)`, and will
         # leak private information otherwise
 
-        b = a + prot.fixedpoint_config.bound_double_precision
+        bound = prot.fixedpoint_config.bound_double_precision
+        b = a + bound
 
         # next step is for server0 to add a statistical mask to `b`, reveal
         # it to server1, and compute the lower part
 
         mask_bitlength = \
-            ceil(log2(prot.fixedpoint_config.bound_double_precision)) \
+            ceil(log2(bound)) \
             + 1 \
-            + prot.fixedpoint_config.truncation_gap_ni
+            + prot.fixedpoint_config.truncation_gap_i
 
         b0, b1 = b.unwrapped
         shape = a.shape
