@@ -1,15 +1,16 @@
 from __future__ import absolute_import
-from typing import Optional
+from typing import Optional, Tuple
 import sys
+import math
 
 import tensorflow as tf
 
-from .protocol import memoize
+from .protocol import memoize, nodes
 from ..protocol.pond import (
-    Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
+    Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor, _type
 )
 from ..tensor.prime import PrimeFactory
-from ..tensor.factory import AbstractFactory
+from ..tensor.factory import AbstractFactory, AbstractTensor
 from ..player import Player
 from ..config import get_config
 
@@ -138,6 +139,28 @@ class SecureNN(Pond):
         with tf.name_scope('relu'):
             drelu = self.non_negative(x)
             return drelu * x
+
+    def maxpool2d(self, x, pool_size, strides, padding):
+        node_key = ('maxpool2d', x, tuple(pool_size), tuple(strides), padding)
+        z = nodes.get(node_key, None)
+
+        if z is not None:
+            return z
+
+        dispatch = {
+            PondPublicTensor: _maxpool2d_public,
+            PondPrivateTensor: _maxpool2d_private,
+            PondMaskedTensor: _maxpool2d_masked,
+        }
+
+        func = dispatch.get(_type(x), None)
+        if func is None:
+            raise TypeError("Don't know how to avgpool2d {}".format(type(x)))
+
+        z = func(self, x, pool_size, strides, padding)
+        nodes[node_key] = z
+
+        return z
 
     @memoize
     def maximum(self, x, y):
@@ -319,3 +342,75 @@ def _equal_zero_public(prot, x: PondPublicTensor, out_dtype: Optional[AbstractFa
             equal_zero_on_1 = x_on_1.equal_zero(out_dtype)
 
         return PondPublicTensor(prot, equal_zero_on_0, equal_zero_on_1, False)
+
+
+#
+# max pooling helpers
+#
+
+def _im2col(prot: Pond,
+            x: PondTensor,
+            pool_size: Tuple[int, int],
+            strides: Tuple[int, int],
+            padding: str) -> Tuple[AbstractTensor, AbstractTensor]:
+
+    x_on_0, x_on_1 = x.unwrapped
+    batch, channels, height, width = x.shape
+
+    if padding == "SAME":
+        out_height = math.ceil(int(height) / strides[0])
+        out_width = math.ceil(int(width) / strides[1])
+    else:
+        out_height = math.ceil((int(height) - pool_size[0] + 1) / strides[0])
+        out_width = math.ceil((int(width) - pool_size[1] + 1) / strides[1])
+
+    batch, channels, height, width = x.shape
+    pool_height, pool_width = pool_size
+
+    with tf.device(prot.server_0.device_name):
+        x_split = x_on_0.reshape((batch * channels, 1, height, width))
+        y_on_0 = x_split.im2col(pool_height, pool_width, padding, strides[0])
+
+    with tf.device(prot.server_1.device_name):
+        x_split = x_on_1.reshape((batch * channels, 1, height, width))
+        y_on_1 = x_split.im2col(pool_height, pool_width, padding, strides[0])
+
+    return y_on_0, y_on_1, [out_height, out_width, int(batch), int(channels)]
+
+
+def _maxpool2d_public(prot: Pond,
+                      x: PondPublicTensor,
+                      pool_size: Tuple[int, int],
+                      strides: Tuple[int, int],
+                      padding: str) -> PondPublicTensor:
+
+    with tf.name_scope('maxpool2d'):
+        y_on_0, y_on_1, reshape_to = _im2col(prot, x, pool_size, strides, padding)
+        im2col = PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
+        max = im2col.reduce_max(axis=0)
+        result = max.reshape(reshape_to).transpose([2, 3, 0, 1])
+        return result
+
+
+def _maxpool2d_private(prot: Pond,
+                       x: PondPrivateTensor,
+                       pool_size: Tuple[int, int],
+                       strides: Tuple[int, int],
+                       padding: str) -> PondPrivateTensor:
+
+    with tf.name_scope('maxpool2d'):
+        y_on_0, y_on_1, reshape_to = _im2col(prot, x, pool_size, strides, padding)
+        im2col = PondPrivateTensor(prot, y_on_0, y_on_1, x.is_scaled)
+        max = im2col.reduce_max(axis=0)
+        result = max.reshape(reshape_to).transpose([2, 3, 0, 1])
+        return result
+
+
+def _maxpool2d_masked(prot: Pond,
+                      x: PondMaskedTensor,
+                      pool_size: Tuple[int, int],
+                      strides: Tuple[int, int],
+                      padding: str) -> PondPrivateTensor:
+
+    with tf.name_scope('maxpool2d'):
+        return prot.maxpool2d(x.unwrapped, pool_size, strides, padding)

@@ -532,7 +532,7 @@ class Pond(Protocol):
     def indexer(self, x: 'PondTensor', slice: Union[Slice, Ellipse]) -> 'PondTensor':
         return self.dispatch('indexer', x, slice)
 
-    def transpose(self, x: 'PondTensor', perm=None):
+    def transpose(self, x: 'PondTensor', perm=None) -> 'PondTensor':
 
         node_key = ('transpose', x)
         x_t = nodes.get(node_key, None)
@@ -553,7 +553,6 @@ class Pond(Protocol):
             raise TypeError("Don't know how to transpose {}".format(type(x)))
 
         nodes[node_key] = x_t
-
         return x_t
 
     @memoize
@@ -810,6 +809,9 @@ class Pond(Protocol):
 
         return z
 
+    def maxpool2d(self, x, pool_size, strides, padding):
+        raise NotImplementedError("Only SecureNN supports Max Pooling")
+
     def avgpool2d(self, x, pool_size, strides, padding):
         node_key = ('avgpool2d', x, tuple(pool_size), tuple(strides), padding)
         z = nodes.get(node_key, None)
@@ -928,8 +930,8 @@ class PondTensor(abc.ABC):
     def __getitem__(self, slice):
         return self.prot.indexer(self, slice)
 
-    def tranpose(self):
-        return self.prot.transpose(self)
+    def transpose(self, perm=None):
+        return self.prot.transpose(self, perm)
 
     def truncate(self):
         return self.prot.truncate(self)
@@ -942,6 +944,9 @@ class PondTensor(abc.ABC):
 
     def cast_backing(self, backing_dtype):
         return self.prot.cast_backing(self, backing_dtype)
+
+    def reduce_max(self, axis: int) -> 'PondTensor':
+        return self.prot.reduce_max(self, axis)
 
 
 class PondPublicTensor(PondTensor):
@@ -2224,7 +2229,6 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
 #
 # average pooling helpers
 #
-
 
 def _avgpool2d_core(prot: Pond,
                     x: PondTensor,
