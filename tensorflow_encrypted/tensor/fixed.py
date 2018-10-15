@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from math import ceil, log2
 
-from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
+from .factory import AbstractFactory
 
 
 # NOTE the assumption in encoding/decoding is that encoded numbers will fit into signed int32
@@ -41,6 +41,15 @@ class FixedpointConfig:
         return self.scaling_base ** self.precision_fractional
 
 
+fixed100 = FixedpointConfig(
+    scaling_base=2,
+    precision_integral=14,
+    precision_fractional=16,
+    matmul_threshold=1024,
+    truncation_gap=40,
+    use_noninteractive_truncation=False,
+)
+
 fixed100_ni = FixedpointConfig(
     scaling_base=2,
     precision_integral=14,
@@ -50,16 +59,16 @@ fixed100_ni = FixedpointConfig(
     use_noninteractive_truncation=True,
 )
 
-fixed100_i = FixedpointConfig(
-    scaling_base=2,
-    precision_integral=14,
-    precision_fractional=16,
-    matmul_threshold=1024,
-    truncation_gap=40,
+# TODO[Morten] make sure values in int64 configs make sense
+
+fixed64 = FixedpointConfig(
+    scaling_base=3,
+    precision_integral=7,
+    precision_fractional=8,
+    matmul_threshold=256,
+    truncation_gap=20,
     use_noninteractive_truncation=False,
 )
-
-# TODO[Morten] make sure values in int32 and int64 configs make sense
 
 fixed64_ni = FixedpointConfig(
     scaling_base=2,
@@ -70,14 +79,6 @@ fixed64_ni = FixedpointConfig(
     use_noninteractive_truncation=True,
 )
 
-fixed64_i = FixedpointConfig(
-    scaling_base=3,
-    precision_integral=7,
-    precision_fractional=8,
-    matmul_threshold=256,
-    truncation_gap=20,
-    use_noninteractive_truncation=False,
-)
 
 def _validate_fixedpoint_config(config: FixedpointConfig, tensor_factory: AbstractFactory):
 

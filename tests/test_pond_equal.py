@@ -5,7 +5,6 @@ import tensorflow_encrypted as tfe
 import numpy as np
 
 from tensorflow_encrypted.protocol.pond import PondPublicTensor
-from tensorflow_encrypted.tensor.int32 import int32factory
 
 
 class TestPondPublicEqual(unittest.TestCase):

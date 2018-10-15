@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-from tensorflow_encrypted.tensor import int64factory, fixed64_i
+from tensorflow_encrypted.tensor import int64factory, fixed64
 
 
 class TestInt64Tensor(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestInt64Tensor(unittest.TestCase):
 
         with tfe.protocol.Pond(
             tensor_factory=int64factory,
-            fixedpoint_config=fixed64_i,
+            fixedpoint_config=fixed64,
         ) as prot:
 
             x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)

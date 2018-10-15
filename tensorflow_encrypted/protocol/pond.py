@@ -10,8 +10,8 @@ import tensorflow as tf
 from ..tensor.helpers import inverse
 from ..tensor.factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 from ..tensor.fixed import FixedpointConfig
-# from ..tensor import int100factory, fixed100_i
-from ..tensor import int64factory, fixed64_i
+# from ..tensor import int100factory, fixed100
+from ..tensor import int64factory, fixed64
 from ..types import Slice, Ellipse
 from ..player import Player
 from ..config import get_config
@@ -37,7 +37,7 @@ class Pond(Protocol):
         server_1: Optional[Player] = None,
         crypto_producer: Optional[Player] = None,
         tensor_factory: AbstractFactory = int64factory,
-        fixedpoint_config: FixedpointConfig = fixed64_i,
+        fixedpoint_config: FixedpointConfig = fixed64,
     ) -> None:
 
         self.server_0 = server_0 or get_config().get_player('server0')

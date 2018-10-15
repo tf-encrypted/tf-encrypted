@@ -58,7 +58,7 @@ bootstrap: pythoncheck pipcheck
 #
 # Rules for running our tests and for running various different linters
 # ###############################################
-test: lint pythoncheck tensorflowcheck
+test: lint pythoncheck
 	python examples/convert.py
 	python examples/inputs.py
 	python examples/int32.py
@@ -69,10 +69,10 @@ test: lint pythoncheck tensorflowcheck
 	python examples/federated-average/run.py
 	python -m unittest discover
 
-lint: pythoncheck tensorflowcheck
+lint: pythoncheck
 	flake8
 
-typecheck: pythoncheck tensorflowcheck
+typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tensorflow_encrypted
 
 

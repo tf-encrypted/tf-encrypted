@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
 
-from tensorflow_encrypted.tensor import int100factory, fixed100_i, fixed100_ni
+from tensorflow_encrypted.tensor import int100factory, fixed100, fixed100_ni
 
 
 class TestTruncate(unittest.TestCase):
@@ -15,9 +15,9 @@ class TestTruncate(unittest.TestCase):
 
         prot = tfe.protocol.Pond(
             tensor_factory=int100factory,
-            fixedpoint_config=fixed100_i,
+            fixedpoint_config=fixed100,
         )
-        
+
         with tfe.Session() as sess:
 
             expected = np.array([12345.6789])
