@@ -8,12 +8,11 @@ import tensorflow as tf
 from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 from .shared import binarize
 
+
 INT_TYPE = tf.int32
 
 
 class PrimeTensor(AbstractTensor):
-
-    int_type = INT_TYPE
 
     def __init__(self, value: Union[np.ndarray, tf.Tensor], factory: 'PrimeFactory') -> None:
         self._factory = factory
@@ -88,6 +87,10 @@ class PrimeTensor(AbstractTensor):
     def strided_slice(self, args: Any, kwargs: Any) -> 'PrimeTensor':
         return self.factory.tensor(tf.strided_slice(self.value, *args, **kwargs))
 
+    def split(self, num_split: int, axis: int=0) -> List['PrimeTensor']:
+        values = tf.split(self.value, num_split, axis=axis)
+        return [self.factory.tensor(value) for value in values]
+
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'PrimeTensor':
         return self.factory.tensor(tf.reshape(self.value, axes))
 
@@ -107,7 +110,7 @@ class PrimeTensor(AbstractTensor):
 
     def equal_zero(self, out_dtype: Optional[AbstractFactory]=None) -> 'PrimeTensor':
         out_dtype = out_dtype or self.factory
-        return out_dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=self.int_type))
+        return out_dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=out_dtype.native_type))
 
     def cast(self, factory):
         return factory.tensor(self.value)
@@ -180,22 +183,22 @@ class PrimeVariable(PrimeTensor, AbstractVariable):
 
 class PrimeFactory(AbstractFactory):
 
-    def __init__(self, modulus, int_type=tf.int32):
+    def __init__(self, modulus, native_type=tf.int32):
         self._modulus = modulus
-        self.int_type = int_type
+        self.native_type = native_type
 
     @property
     def modulus(self):
         return self._modulus
 
     def sample_uniform(self, shape: Union[Tuple[int, ...], tf.TensorShape], minval: Optional[int] = 0) -> PrimeTensor:
-        value = tf.random_uniform(shape=shape, dtype=self.int_type, minval=minval, maxval=self.modulus)
+        value = tf.random_uniform(shape=shape, dtype=self.native_type, minval=minval, maxval=self.modulus)
         return PrimeTensor(value, self)
 
     def sample_bounded(self, shape: List[int], bitlength: int) -> PrimeTensor:
         maxval = 2 ** bitlength
         assert self.modulus > maxval
-        value = tf.random_uniform(shape=shape, dtype=self.int_type, minval=0, maxval=maxval)
+        value = tf.random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=maxval)
         return PrimeTensor(value, self)
 
     def stack(self, xs: List[PrimeTensor], axis: int = 0) -> PrimeTensor:

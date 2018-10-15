@@ -12,6 +12,7 @@ from tensorflow.python.platform import gfile
 
 import numpy as np
 import tensorflow_encrypted as tfe
+from tensorflow_encrypted.protocol import Pond, SecureNN
 
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
@@ -22,13 +23,22 @@ tfe.setTFEDebugFlag(enable_debug)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
+    "--protocol_name", type=str, default='securenn', help="Protocol name")
+parser.add_argument(
     "--model_name", type=str, default='', help="Model name")
+parser.add_argument(
+    "--batch_size", type=int, default=1, help="Batch size")
 parser.add_argument(
     "--model_url", type=str, default='', help="Model's public URL")
 parser.add_argument(
     '--input_file', type=str, default="", help='load the data from a numpy file format (.npy)')
 config = parser.parse_args()
 
+if config.protocol_name == 'securenn':
+    tfe.set_protocol(SecureNN())
+else:
+    tfe.set_protocol(Pond())
+    
 model_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
     "..",
@@ -66,7 +76,7 @@ with gfile.FastGFile(model_file, 'rb') as f:
         input_spec.append({
             'name': node.name,
             'dtype': node.attr['dtype'].type,
-            'shape': [int(d.size) if d.size > 0 else 1 for d in node.attr['shape'].shape.dim]
+            'shape': [config.batch_size] + [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
         })
 
 inputs = []
@@ -94,7 +104,11 @@ for i in range(len(input_spec)):
     )
 
 if config.input_file != '':
-    input_data = np.load(config.input_file)
+    # TODO: Currently this allows for only one input
+    # If we want to load models with multiple diffrent inputs
+    # We will need to save our inputs as a list of np.array
+    input_data = [np.load(config.input_file)]
+    assert len(input_data) == len(input_spec), 'the input_data length ({}) should be equal the number of inputs required by the loaded model ({})'.format(len(input_data), len(input_spec))
 else:
     input_data = []
     for spec in input_spec:

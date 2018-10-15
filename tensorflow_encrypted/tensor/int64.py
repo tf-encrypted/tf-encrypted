@@ -48,6 +48,10 @@ class Int64Factory(AbstractFactory):
     def modulus(self) -> int:
         return 2**64
 
+    @property
+    def native_type(self):
+        return tf.int64
+
     def sample_uniform(self, shape: List[int]) -> 'Int64Tensor':
         value = tf.random_uniform(shape=shape, dtype=tf.int64, minval=tf.int64.min, maxval=tf.int64.max)
         return Int64Tensor(value)
@@ -81,8 +85,6 @@ def _lift(x, y) -> Tuple['Int64Tensor', 'Int64Tensor']:
 
 
 class Int64Tensor(AbstractTensor):
-
-    int_type = tf.int64
 
     def __init__(self, value: Union[np.ndarray, tf.Tensor]) -> None:
         self.value = value
@@ -155,6 +157,10 @@ class Int64Tensor(AbstractTensor):
     def strided_slice(self, args: Any, kwargs: Any) -> 'Int64Tensor':
         return int64factory.tensor(tf.strided_slice(self.value, *args, **kwargs))
 
+    def split(self, num_split: int, axis: int=0) -> List['Int64Tensor']:
+        values = tf.split(self.value, num_split, axis=axis)
+        return [int64factory.tensor(value) for value in values]
+
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'Int64Tensor':
         return int64factory.tensor(tf.reshape(self.value, axes))
 
@@ -165,11 +171,11 @@ class Int64Tensor(AbstractTensor):
         return int64factory.tensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
 
     def equal_zero(self, factory: AbstractFactory=int64factory) -> 'AbstractTensor':
-        return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=tf.int64))
+        return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
 
     def equal(self, other, factory: AbstractFactory=int64factory) -> 'AbstractTensor':
         x, y = _lift(self, other)
-        return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=tf.int64))
+        return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
 
 
 class Int64Constant(Int64Tensor, AbstractConstant):

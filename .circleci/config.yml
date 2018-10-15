@@ -34,7 +34,7 @@ variables:
 jobs:
   build:
     docker:
-      - image: circleci/python:3.6.4
+      - image: circleci/python:3.5
     working_directory: ~/repo
     steps:
       - *docker-caching
@@ -47,9 +47,13 @@ jobs:
           command: |
             . venv/bin/activate
             make test
+      - run:
+          name: build docker container
+          command: make docker
+
   deploy:
     docker:
-      - image: circleci/python:3.6.4
+      - image: circleci/python:3.5
     working_directory: ~/repo
     steps:
       - *docker-caching

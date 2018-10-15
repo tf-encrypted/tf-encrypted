@@ -69,9 +69,9 @@ class Session(tf.Session):
 
     def run(
         self,
-        fetches,
-        feed_dict={},
-        tag=None,
+        fetches: Any,
+        feed_dict: Dict[tf.Tensor, np.ndarray] = {},
+        tag: Optional[str] = None,
         write_trace: bool = False
     ):
         """

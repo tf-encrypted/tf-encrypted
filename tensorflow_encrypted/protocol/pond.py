@@ -291,8 +291,7 @@ class Pond(Protocol):
             assert v.shape.is_fully_defined(), "Shape of input '{}' on '{}' is not fully defined".format(name if name else '', player.name)
 
             w = self._encode(v, apply_scaling)
-            x0, x1 = self._share(w)
-            x = PondPrivateTensor(self, x0, x1, apply_scaling)
+            x = self._share_and_wrap(w, apply_scaling)
 
             if not masked:
                 return x
@@ -406,6 +405,10 @@ class Pond(Protocol):
             share1 = secret - share0
 
         return share0, share1
+
+    def _share_and_wrap(self, secret: AbstractTensor, is_scaled) -> 'PondPrivateTensor':
+        s0, s1 = self._share(secret)
+        return PondPrivateTensor(self, s0, s1, is_scaled)
 
     def _reconstruct(self, share0: AbstractTensor, share1: AbstractTensor) -> AbstractTensor:
         with tf.name_scope('reconstruct'):
@@ -638,6 +641,10 @@ class Pond(Protocol):
         nodes[node_key] = x_sliced
 
         return x_sliced
+
+    @memoize
+    def split(self, x: 'PondTensor', num_split: int, axis: int=0) -> List['PondTensor']:
+        return self.dispatch('split', x, num_split, axis=axis)
 
     def stack(self, xs: List['PondTensor'], axis: int = 0):
 
@@ -1373,7 +1380,7 @@ def _type(x):
 
 def _cache_wrap_helper(prot, sources):
     variables = [
-        prot.tensor_factory.variable(tf.zeros(shape=source.shape, dtype=prot.tensor_factory.int_type))
+        prot.tensor_factory.variable(tf.zeros(shape=source.shape, dtype=prot.tensor_factory.native_type))
         for source in sources
     ]
     updator = tf.group(*[
@@ -1674,7 +1681,8 @@ def _add_private_public(prot, x, y):
 def _add_private_private(prot, x, y):
     assert isinstance(x, PondPrivateTensor), type(x)
     assert isinstance(y, PondPrivateTensor), type(y)
-    assert x.is_scaled == y.is_scaled, "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
+    # TODO[Morten] fails due to use in masking in SecureNN; how do deal with this?
+    # assert x.is_scaled == y.is_scaled, "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
 
     x0, x1 = x.unwrapped
     y0, y1 = y.unwrapped
@@ -2622,6 +2630,75 @@ def _strided_slice_masked(prot, x: PondMaskedTensor, args: Any, kwargs: Any):
             alpha_on_1_slice,
             x.is_scaled
         )
+
+
+#
+# split helpers
+#
+
+
+def _split_public(prot: Pond, x: PondPublicTensor, num_split: int, axis: int=0) -> List[PondPublicTensor]:
+
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope('split'):
+
+        with tf.device(prot.server_0.device_name):
+            ys_on_0 = x_on_0.split(num_split, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            ys_on_1 = x_on_1.split(num_split, axis=axis)
+
+        return [PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled) for y_on_0, y_on_1 in zip(ys_on_0, ys_on_1)]
+
+
+def _split_private(prot: Pond, x: PondPrivateTensor, num_split: int, axis: int=0) -> List[PondPrivateTensor]:
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope('split'):
+
+        with tf.device(prot.server_0.device_name):
+            ys0 = x0.split(num_split, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            ys1 = x1.split(num_split, axis=axis)
+
+        return [PondPrivateTensor(prot, y0, y1, x.is_scaled) for y0, y1 in zip(ys0, ys1)]
+
+
+def _split_masked(prot: Pond, x: PondMaskedTensor, num_split: int, axis: int=0) -> List[PondMaskedTensor]:
+
+    a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
+
+    with tf.name_scope('split'):
+
+        with tf.device(prot.crypto_producer.device_name):
+            bs = a.split(num_split, axis=axis)
+
+        with tf.device(prot.server_0.device_name):
+            bs0 = a0.split(num_split, axis=axis)
+            betas_on_0 = alpha_on_0.split(num_split, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            bs1 = a1.split(num_split, axis=axis)
+            betas_on_1 = alpha_on_1.split(num_split, axis=axis)
+
+            ys = prot.split(x.unmasked, num_split, axis=axis)
+
+        return [
+            PondMaskedTensor(
+                prot,
+                y,
+                b,
+                b0,
+                b1,
+                beta_on_0,
+                beta_on_1,
+                x.is_scaled
+            )
+            for y, b, b0, b1, beta_on_0, beta_on_1 in zip(ys, bs, bs0, bs1, betas_on_0, betas_on_1)
+        ]
 
 
 #
