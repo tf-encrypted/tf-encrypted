@@ -279,8 +279,8 @@ class Int100Tensor(AbstractTensor):
 
     def equal(self, other) -> 'Int100Tensor':
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
-        backing = _crt_equal(x.backing, y.backing, x.factory.native_type)
-        return Int100Tensor(backing)
+        out_dtype = x.factory
+        return out_dtype.tensor(_crt_equal(x.backing, y.backing, out_dtype.native_type))
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int100Tensor':
         backing = crt_im2col(self.backing, h_filter, w_filter, padding, strides)

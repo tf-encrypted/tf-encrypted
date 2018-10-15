@@ -87,7 +87,6 @@ class TestPrivateCompare(unittest.TestCase):
         prot = tfe.protocol.SecureNN(
             tensor_factory=val_dtype,
             prime_factory=bit_dtype,
-            use_noninteractive_truncation=True,
         )
 
         res = _private_compare(

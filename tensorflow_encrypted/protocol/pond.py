@@ -9,8 +9,9 @@ import tensorflow as tf
 
 from ..tensor.helpers import inverse
 from ..tensor.factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
-from ..tensor.int100 import int100factory
-from ..tensor.int64 import int64factory
+from ..tensor.fixed import FixedpointConfig
+# from ..tensor import int100factory, fixed100_i
+from ..tensor import int64factory, fixed64_i
 from ..types import Slice, Ellipse
 from ..player import Player
 from ..config import get_config
@@ -28,94 +29,6 @@ _initializers = list()
 _thismodule = sys.modules[__name__]
 
 
-# NOTE the assumption in encoding/decoding is that encoded numbers will fit into signed int32
-class FixedpointConfig:
-
-    def __init__(
-        self,
-        scaling_base: int,
-        precision_integral: int,
-        precision_fractional: int,
-        matmul_threshold: int,
-        truncation_gap_ni: int,
-        truncation_gap_i: int,  # number of bit for statistical security TODO[Morten] write assertions
-    ) -> None:
-        self.scaling_base = scaling_base
-        self.precision_integral = precision_integral
-        self.precision_fractional = precision_fractional
-        self.matmul_threshold = matmul_threshold
-        self.truncation_gap_ni = truncation_gap_ni
-        self.truncation_gap_i = truncation_gap_i
-
-    @property
-    def bound_single_precision(self) -> int:
-        return self.scaling_base ** (self.precision_integral + self.precision_fractional)
-
-    @property
-    def bound_double_precision(self) -> int:
-        return self.scaling_base ** (self.precision_integral + 2 * self.precision_fractional)
-
-    @property
-    def bound_intermediate_results(self) -> int:
-        return self.bound_double_precision * self.matmul_threshold
-
-    @property
-    def scaling_factor(self) -> int:
-        return self.scaling_base ** self.precision_fractional
-
-
-fixedpoint_int100 = FixedpointConfig(
-    scaling_base=2,
-    precision_integral=14,
-    precision_fractional=16,
-    matmul_threshold=1024,
-    truncation_gap_ni=20,
-    truncation_gap_i=40,
-)
-
-# TODO[Morten] make sure values in this config make sense
-fixedpoint_int64_ni = FixedpointConfig(
-    scaling_base=2,
-    precision_integral=10,
-    precision_fractional=13,
-    matmul_threshold=256,
-    truncation_gap_ni=20,
-    truncation_gap_i=20,
-)
-
-fixedpoint_int64_i = FixedpointConfig(
-    scaling_base=3,
-    precision_integral=7,
-    precision_fractional=8,
-    matmul_threshold=256,
-    truncation_gap_ni=20,
-    truncation_gap_i=20,
-)
-
-def _validate_fixedpoint_config(config: FixedpointConfig, tensor_factory: AbstractFactory):
-
-    if ceil(log2(config.bound_single_precision)) > 31:
-        print("WARNING: Plaintext values won't fit in 32bit tensors")
-
-    if ceil(log2(config.bound_single_precision)) > 63:
-        print("WARNING: Plaintext values won't fit in 64bit values")
-
-    if ceil(log2(config.bound_double_precision)) + config.truncation_gap_ni >= log2(tensor_factory.modulus):
-        print("WARNING: Modulus is too small for non-interactive truncation")
-
-    if ceil(log2(config.bound_double_precision)) + config.truncation_gap_i >= log2(tensor_factory.modulus):
-        print("WARNING: Modulus is too small for interactive truncation")
-
-    # TODO[Morten] test for intermediate size wrt native type
-
-    # TODO[Morten] in decoding we assume that x + bound fits within the native type of the backing tensor
-
-
-_validate_fixedpoint_config(fixedpoint_int100, int100factory)
-_validate_fixedpoint_config(fixedpoint_int64_ni, int64factory)
-_validate_fixedpoint_config(fixedpoint_int64_i, int64factory)
-
-
 class Pond(Protocol):
 
     def __init__(
@@ -123,9 +36,8 @@ class Pond(Protocol):
         server_0: Optional[Player] = None,
         server_1: Optional[Player] = None,
         crypto_producer: Optional[Player] = None,
-        tensor_factory: AbstractFactory = int100factory,
-        fixedpoint_config: FixedpointConfig = fixedpoint_int100,
-        use_noninteractive_truncation: bool = False,
+        tensor_factory: AbstractFactory = int64factory,
+        fixedpoint_config: FixedpointConfig = fixed64_i,
     ) -> None:
 
         self.server_0 = server_0 or get_config().get_player('server0')
@@ -134,7 +46,6 @@ class Pond(Protocol):
 
         self.fixedpoint_config = fixedpoint_config
         self.tensor_factory = tensor_factory
-        self.use_noninteractive_truncation = use_noninteractive_truncation
 
     def define_constant(
         self,
@@ -1470,7 +1381,7 @@ def _truncate_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
 def _truncate_private(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
-    if prot.use_noninteractive_truncation:
+    if prot.fixedpoint_config.use_noninteractive_truncation:
         return _truncate_private_noninteractive(prot, x)
     else:
         return _truncate_private_interactive(prot, x)
@@ -1517,7 +1428,7 @@ def _truncate_private_interactive(prot: Pond, a: PondPrivateTensor) -> PondPriva
         mask_bitlength = \
             ceil(log2(bound)) \
             + 1 \
-            + prot.fixedpoint_config.truncation_gap_i
+            + prot.fixedpoint_config.truncation_gap
 
         b0, b1 = b.unwrapped
         shape = a.shape

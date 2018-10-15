@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.int64 import Int64Factory, Int64Tensor
+
+from tensorflow_encrypted.tensor import int64factory, fixed64_i
 
 
 class TestInt64Tensor(unittest.TestCase):
@@ -13,8 +14,8 @@ class TestInt64Tensor(unittest.TestCase):
     def test_pond(self) -> None:
 
         with tfe.protocol.Pond(
-            tensor_factory=Int64Factory(),
-            use_noninteractive_truncation=True,
+            tensor_factory=int64factory,
+            fixedpoint_config=fixed64_i,
         ) as prot:
 
             x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
@@ -28,7 +29,7 @@ class TestInt64Tensor(unittest.TestCase):
                 np.testing.assert_array_almost_equal(out, [4, 4], decimal=3)
 
     def test_binarize(self) -> None:
-        x = Int64Tensor(tf.constant([
+        x = int64factory.tensor(tf.constant([
             2**62 + 3,
             2**63 - 1,
             2**63 - 2,
@@ -55,7 +56,7 @@ class TestInt64Tensor(unittest.TestCase):
 
     def test_random_binarize(self) -> None:
         input = np.random.uniform(low=2**63 + 1, high=2**63 - 1, size=2000).astype(np.int64).tolist()
-        x = Int64Tensor(tf.constant(input, dtype=tf.int64))
+        x = int64factory.tensor(tf.constant(input, dtype=tf.int64))
 
         y = x.to_bits()
 

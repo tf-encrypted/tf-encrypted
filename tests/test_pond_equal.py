@@ -14,12 +14,9 @@ class TestPondPublicEqual(unittest.TestCase):
 
         expected = np.array([1, 0, 1, 0])
 
-        with tfe.protocol.Pond(
-            tensor_factory=int32factory,
-            use_noninteractive_truncation=True,
-        ) as prot:
+        with tfe.protocol.Pond() as prot:
 
-            x_raw = int32factory.constant(np.array([100, 200, 100, 300]))
+            x_raw = prot.tensor_factory.constant(np.array([100, 200, 100, 300]))
             x = PondPublicTensor(prot, value_on_0=x_raw, value_on_1=x_raw, is_scaled=False)
 
             res = prot.equal(x, 100)
