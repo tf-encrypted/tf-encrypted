@@ -318,10 +318,13 @@ class Int100Tensor(AbstractTensor):
         # TODO[Morten] there's probably a more efficient way
         return int100factory.zero() - self
 
-    def right_shift(self, bitlength):
-        factor = 2**bitlength
+    def truncate(self, amount, base=2):
+        factor = base**amount
         factor_inverse = inverse(factor, self.factory.modulus)
         return (self - (self % factor)) * factor_inverse
+
+    def right_shift(self, bitlength):
+        return self.truncate(bitlength, 2)
 
 
 class Int100Constant(Int100Tensor, AbstractConstant):

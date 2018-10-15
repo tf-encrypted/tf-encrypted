@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from .factory import AbstractFactory, AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
+from .helpers import inverse
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
 
@@ -196,6 +197,14 @@ class Int64Tensor(AbstractTensor):
     def equal(self, other, factory: AbstractFactory=int64factory) -> 'AbstractTensor':
         x, y = _lift(self, other)
         return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
+
+    def truncate(self, amount, base=2) -> 'Int64Tensor':
+        if base == 2:
+            return self.right_shift(amount)
+        else:
+            factor = base**amount
+            factor_inverse = inverse(factor, self.factory.modulus)
+            return (self - (self % factor)) * factor_inverse
 
     def right_shift(self, bitlength) -> 'Int64Tensor':
         return Int64Tensor(tf.bitwise.right_shift(self.value, bitlength))

@@ -33,72 +33,87 @@ class FixedpointConfig:
 
     def __init__(
         self,
-        bitprecision_integral,
-        bitprecision_fractional,
-        matmul_threshold,
-        truncation_gap_ni,
-        truncation_gap_i  # number of bit for statistical security TODO[Morten] write assertions
+        scaling_base: int,
+        precision_integral: int,
+        precision_fractional: int,
+        matmul_threshold: int,
+        truncation_gap_ni: int,
+        truncation_gap_i: int,  # number of bit for statistical security TODO[Morten] write assertions
     ) -> None:
-        self.bitprecision_integral = bitprecision_integral
-        self.bitprecision_fractional = bitprecision_fractional
+        self.scaling_base = scaling_base
+        self.precision_integral = precision_integral
+        self.precision_fractional = precision_fractional
         self.matmul_threshold = matmul_threshold
         self.truncation_gap_ni = truncation_gap_ni
         self.truncation_gap_i = truncation_gap_i
 
     @property
-    def bitsize_single_precision(self):
-        return self.bitprecision_integral + self.bitprecision_fractional
+    def bound_single_precision(self) -> int:
+        return self.scaling_base ** (self.precision_integral + self.precision_fractional)
 
     @property
-    def bitsize_double_precision(self):
-        return self.bitprecision_integral + 2 * self.bitprecision_fractional
+    def bound_double_precision(self) -> int:
+        return self.scaling_base ** (self.precision_integral + 2 * self.precision_fractional)
 
     @property
-    def bitsize_intermediate_results(self):
-        return self.bitsize_double_precision + ceil(log2(self.matmul_threshold))
+    def bound_intermediate_results(self) -> int:
+        return self.bound_double_precision * self.matmul_threshold
 
     @property
-    def scaling_factor(self):
-        return 2**self.bitprecision_fractional
+    def scaling_factor(self) -> int:
+        return self.scaling_base ** self.precision_fractional
 
 
 fixedpoint_int100 = FixedpointConfig(
-    bitprecision_integral=14,
-    bitprecision_fractional=16,
-    matmul_threshold=2**10,
+    scaling_base=2,
+    precision_integral=14,
+    precision_fractional=16,
+    matmul_threshold=1024,
     truncation_gap_ni=20,
     truncation_gap_i=40,
 )
 
 # TODO[Morten] make sure values in this config make sense
-fixedpoint_int64 = FixedpointConfig(
-    bitprecision_integral=10,
-    bitprecision_fractional=13,
-    matmul_threshold=2**8,
+fixedpoint_int64_ni = FixedpointConfig(
+    scaling_base=2,
+    precision_integral=10,
+    precision_fractional=13,
+    matmul_threshold=256,
     truncation_gap_ni=20,
     truncation_gap_i=20,
 )
 
+fixedpoint_int64_i = FixedpointConfig(
+    scaling_base=3,
+    precision_integral=7,
+    precision_fractional=8,
+    matmul_threshold=256,
+    truncation_gap_ni=20,
+    truncation_gap_i=20,
+)
 
 def _validate_fixedpoint_config(config: FixedpointConfig, tensor_factory: AbstractFactory):
 
-    if config.bitsize_single_precision > 31:
+    if ceil(log2(config.bound_single_precision)) > 31:
         print("WARNING: Plaintext values won't fit in 32bit tensors")
 
-    if config.bitsize_single_precision > 63:
+    if ceil(log2(config.bound_single_precision)) > 63:
         print("WARNING: Plaintext values won't fit in 64bit values")
 
-    if config.bitsize_double_precision + config.truncation_gap_ni >= log2(tensor_factory.modulus):
+    if ceil(log2(config.bound_double_precision)) + config.truncation_gap_ni >= log2(tensor_factory.modulus):
         print("WARNING: Modulus is too small for non-interactive truncation")
 
-    if config.bitsize_double_precision + config.truncation_gap_i >= log2(tensor_factory.modulus):
+    if ceil(log2(config.bound_double_precision)) + config.truncation_gap_i >= log2(tensor_factory.modulus):
         print("WARNING: Modulus is too small for interactive truncation")
 
     # TODO[Morten] test for intermediate size wrt native type
 
+    # TODO[Morten] in decoding we assume that x + bound fits within the native type of the backing tensor
+
 
 _validate_fixedpoint_config(fixedpoint_int100, int100factory)
-_validate_fixedpoint_config(fixedpoint_int64, int64factory)
+_validate_fixedpoint_config(fixedpoint_int64_ni, int64factory)
+_validate_fixedpoint_config(fixedpoint_int64_i, int64factory)
 
 
 class Pond(Protocol):
@@ -108,9 +123,9 @@ class Pond(Protocol):
         server_0: Optional[Player] = None,
         server_1: Optional[Player] = None,
         crypto_producer: Optional[Player] = None,
-        tensor_factory: AbstractFactory = int64factory,
-        fixedpoint_config: FixedpointConfig = fixedpoint_int64,
-        use_noninteractive_truncation: bool = True,
+        tensor_factory: AbstractFactory = int100factory,
+        fixedpoint_config: FixedpointConfig = fixedpoint_int100,
+        use_noninteractive_truncation: bool = False,
     ) -> None:
 
         self.server_0 = server_0 or get_config().get_player('server0')
@@ -313,7 +328,7 @@ class Pond(Protocol):
     ) -> Union['PondPrivateTensor', 'PondMaskedTensor', List[Union['PondPrivateTensor', 'PondMaskedTensor']]]:
         factory = factory or self.tensor_factory
 
-        if type(player) is str:
+        if isinstance(player, str):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
 
@@ -405,29 +420,39 @@ class Pond(Protocol):
         factory = factory or self.tensor_factory
 
         with tf.name_scope('encode'):
-            scaling_factor = self.fixedpoint_config.scaling_factor if apply_scaling else 1
 
-            if isinstance(rationals, np.ndarray):
-                scaled = (rationals * scaling_factor).astype(int).astype(object)
+            # we first scale as needed
+            if apply_scaling:
+                scaled = rationals * self.fixedpoint_config.scaling_factor
+            else:
+                scaled = rationals
 
-            elif isinstance(rationals, tf.Tensor):
-                scaled = tf.cast(rationals * scaling_factor, tf.int32)
+            # and then we round to integers
+            if isinstance(scaled, np.ndarray):
+                integers = scaled.astype(int).astype(object)
+
+            elif isinstance(scaled, tf.Tensor):
+                integers = tf.cast(scaled, factory.native_type)
 
             else:
                 raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
-        return factory.tensor(scaled)
+            # and finally wrap in tensor type
+            return factory.tensor(integers)
 
     @memoize
     def _decode(self, elements: AbstractTensor, is_scaled: bool) -> Union[tf.Tensor, np.ndarray]:
         """ Decode tensor of ring elements into tensor of rational numbers """
 
         with tf.name_scope('decode'):
-            scaling_factor = self.fixedpoint_config.scaling_factor if is_scaled else 1
 
-            # NOTE we assume that x + bound fits within the native type of the backing tensor
-            bound = 2**self.fixedpoint_config.bitsize_single_precision
-            return ((elements + bound).to_native() - bound) / scaling_factor
+            bound = self.fixedpoint_config.bound_single_precision
+            scaled = ((elements + bound).to_native() - bound)
+
+            if self.fixedpoint_config.scaling_factor:
+                return scaled / self.fixedpoint_config.scaling_factor
+            else:
+                return scaled
 
     def _share(self, secret: AbstractTensor) -> Tuple[AbstractTensor, AbstractTensor]:
 
@@ -1427,16 +1452,17 @@ def _cache_masked(prot, x):
 def _truncate_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
     assert isinstance(x, PondPublicTensor)
 
-    bitlength = prot.fixedpoint_config.bitprecision_fractional
+    base = prot.fixedpoint_config.base
+    amount = prot.fixedpoint_config.precision_fractional
     x_on_0, x_on_1 = x.unwrapped
 
     with tf.name_scope('truncate'):
 
         with tf.device(prot.server_0.device_name):
-            y_on_0 = x_on_0.right_shift(bitlength)
+            y_on_0 = x_on_0.truncate(amount, base)
 
         with tf.device(prot.server_1.device_name):
-            y_on_1 = x_on_1.right_shift(bitlength)
+            y_on_1 = x_on_1.truncate(amount, base)
 
     return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
@@ -1453,16 +1479,17 @@ def _truncate_private(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
 def _truncate_private_noninteractive(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
-    truncation_amount = prot.fixedpoint_config.bitprecision_fractional
+    base = prot.fixedpoint_config.base
+    amount = prot.fixedpoint_config.precision_fractional
     x0, x1 = x.unwrapped
 
     with tf.name_scope('truncate-ni'):
 
         with tf.device(prot.server_0.device_name):
-            y0 = x0.right_shift(truncation_amount)
+            y0 = x0.truncate(amount, base)
 
         with tf.device(prot.server_1.device_name):
-            y1 = 0 - (0 - x1).right_shift(truncation_amount)
+            y1 = 0 - (0 - x1).truncate(amount, base)
 
     return PondPrivateTensor(prot, y0, y1, x.is_scaled)
 
@@ -1481,14 +1508,13 @@ def _truncate_private_interactive(prot: Pond, a: PondPrivateTensor) -> PondPriva
         # assumption that the values originally lie in `[-B, B)`, and will
         # leak private information otherwise
 
-        bound = 2**prot.fixedpoint_config.bitsize_double_precision
-        b = a + bound
+        b = a + prot.fixedpoint_config.bound_double_precision
 
         # next step is for server0 to add a statistical mask to `b`, reveal
         # it to server1, and compute the lower part
 
         mask_bitlength = \
-            prot.fixedpoint_config.bitsize_double_precision \
+            ceil(log2(prot.fixedpoint_config.bound_double_precision)) \
             + 1 \
             + prot.fixedpoint_config.truncation_gap_ni
 
