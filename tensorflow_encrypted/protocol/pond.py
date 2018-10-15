@@ -553,8 +553,6 @@ class Pond(Protocol):
             raise TypeError("Don't know how to transpose {}".format(type(x)))
 
         nodes[node_key] = x_t
-
-        print('returning', x_t)
         return x_t
 
     @memoize

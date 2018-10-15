@@ -413,8 +413,4 @@ def _maxpool2d_masked(prot: Pond,
                       padding: str) -> PondPrivateTensor:
 
     with tf.name_scope('maxpool2d'):
-        y_on_0, y_on_1, reshape_to = _im2col(prot, x, pool_size, strides, padding)
-        im2col = PondPrivateTensor(prot, y_on_0, y_on_1, x.is_scaled)
-        max = im2col.reduce_max(axis=0)
-        result = max.reshape(reshape_to).transpose([2, 3, 0, 1])
-        return result
+        return prot.maxpool2d(x.unwrapped, pool_size, strides, padding)
