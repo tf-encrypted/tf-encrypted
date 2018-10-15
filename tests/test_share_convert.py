@@ -43,6 +43,7 @@ class TestShareConvert(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
 
                 answer = sess.run(actual.reveal().value_on_0.value)
+                print('answer', answer)
                 assert np.array_equal(answer, expected)
 
 
