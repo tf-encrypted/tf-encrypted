@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
-from .shared import binarize
+from .shared import binarize, im2col
 
 
 class PrimeTensor(AbstractTensor):
@@ -70,7 +70,7 @@ class PrimeTensor(AbstractTensor):
         return self.factory.tensor(tf.matmul(x.value, y.value) % self.modulus)
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'PrimeTensor':
-        raise NotImplementedError()
+        return self.factory.tensor(im2col(self.value, h_filter, w_filter, padding, strides))
 
     def conv2d(self, other, strides, padding='SAME') -> 'PrimeTensor':
         raise NotImplementedError()
