@@ -11,7 +11,7 @@ all: test
 # ###############################################
 DOCKER_REQUIRED_VERSION=18.
 PYTHON_REQUIRED_VERSION=3.5.
-TENSORFLOW_REQUIRED_VERSION=1.11
+TENSORFLOW_REQUIRED_VERSION=1.9
 SHELL := /bin/bash
 
 CURRENT_DIR=$(shell pwd)
@@ -115,8 +115,10 @@ endif
 # Builds a docker image for tf-encrypted that can be used to deploy and
 # test.
 # ###############################################
+DOCKER_BUILD=docker build -t mortendahl/tf-encrypted:$(1) -f Dockerfile $(2) .
 docker: Dockerfile dockercheck
-	docker build -t mortendahl/tf-encrypted:latest -f Dockerfile .
+	$(call DOCKER_BUILD,latest,)
+	$(call DOCKER_BUILD,latest-int64,--build-arg TF_WHL_URL=https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.9.0-cp35-cp35m-linux_x86_64.whl)
 
 .PHONY: docker
 
@@ -127,7 +129,7 @@ docker: Dockerfile dockercheck
 # authenticating to docker hub and pushing built docker containers up with the
 # appropriate tags.
 # ###############################################
-DOCKER_TAG=docker tag mortendahl/tf-encrypted:latest mortendahl/tf-encrypted:$(1)
+DOCKER_TAG=docker tag mortendahl/tf-encrypted:$(1) mortendahl/tf-encrypted:$(2)
 DOCKER_PUSH=docker push mortendahl/tf-encrypted:$(1)
 
 docker-logincheck:
@@ -138,13 +140,16 @@ endif
 endif
 
 docker-tag: dockercheck
-	$(call DOCKER_TAG,$(VERSION))
+	$(call DOCKER_TAG,latest,$(VERSION))
+	$(call DOCKER_TAG,latest-int64,$(VERSION)-int64)
 
 docker-push-tag: dockercheck
 	$(call DOCKER_PUSH,$(VERSION))
+	$(call DOCKER_PUSH,$(VERSION)-int64)
 
 docker-push-latest: dockercheck
 	$(call DOCKER_PUSH,latest)
+	$(call DOCKER_PUSH,latest-int64)
 
 # Rely on DOCKER_USERNAME and DOCKER_PASSWORD being set inside CI or equivalent
 # environment
