@@ -10,6 +10,6 @@ CMD_KILL = "gcloud compute ssh {name} --command='killall screen'"
 for name in INSTANCE_NAMES:
     subprocess.call(CMD_KILL.format(name=name), shell=True)
 
-CMD_SERVE = "gcloud compute ssh {name} --command='screen -dmS tfe python3 -m tensorflow_encrypted.player {name}'"
+CMD_SERVE = "gcloud compute ssh {name} --command='screen -dmS tfe python3 -m tf_encrypted.player {name}'"
 for name in INSTANCE_NAMES:
     subprocess.call(CMD_SERVE.format(name=name), shell=True)

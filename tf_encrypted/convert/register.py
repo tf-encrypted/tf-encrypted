@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Union
 from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
 from .convert import Converter
 
-from tensorflow_encrypted.protocol.pond import PondPublicTensor
+from tf_encrypted.protocol.pond import PondPublicTensor
 
 
 def register() -> Dict[str, Any]:

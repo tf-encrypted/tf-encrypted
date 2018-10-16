@@ -4,7 +4,7 @@ from typing import List
 import math
 
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 from examples.securenn.conv_convert import decode
 

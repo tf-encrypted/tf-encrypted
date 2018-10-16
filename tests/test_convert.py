@@ -6,9 +6,9 @@ from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.convert import Converter
-from tensorflow_encrypted.convert.register import register
+import tf_encrypted as tfe
+from tf_encrypted.convert import Converter
+from tf_encrypted.convert.register import register
 
 from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util

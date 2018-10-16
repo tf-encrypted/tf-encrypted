@@ -1,10 +1,10 @@
 import unittest
 
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 import tensorflow as tf
 import numpy as np
 
-from tensorflow_encrypted.layers.pooling import MaxPooling2D
+from tf_encrypted.layers.pooling import MaxPooling2D
 
 
 class TestMaxPooling2D(unittest.TestCase):

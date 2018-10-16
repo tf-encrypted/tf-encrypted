@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from tensorflow_encrypted.tensor.odd_implicit import oddInt32factory
+from tf_encrypted.tensor.odd_implicit import oddInt32factory
 
 
 class TestOddImplicitTensor(unittest.TestCase):

@@ -2,9 +2,9 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
-from tensorflow_encrypted.tensor import int100factory, fixed100, fixed100_ni
+from tf_encrypted.tensor import int100factory, fixed100, fixed100_ni
 
 
 class TestTruncate(unittest.TestCase):
