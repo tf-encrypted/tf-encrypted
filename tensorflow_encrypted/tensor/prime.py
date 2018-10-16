@@ -112,6 +112,9 @@ class PrimeTensor(AbstractTensor):
     def cast(self, factory):
         return factory.tensor(self.value)
 
+    def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
+        return self.factory.tensor(tf.cast(self.value + y.value >= modulus, dtype=tf.int32))
+
 
 def _lift(x, y) -> Tuple[PrimeTensor, PrimeTensor]:
 

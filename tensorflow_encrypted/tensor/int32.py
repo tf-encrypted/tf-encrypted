@@ -7,6 +7,7 @@ import tensorflow as tf
 from .factory import AbstractFactory, AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
+from .odd_implicit import OddImplicitTensor, OddImplicitFactory
 
 
 class Int32Factory(AbstractFactory):
@@ -179,6 +180,12 @@ class Int32Tensor(AbstractTensor):
 
     def right_shift(self, bitlength):
         return int32factory.tensor(tf.bitwise.right_shift(self.value, bitlength))
+
+    def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
+        return Int32Tensor(tf.cast(self.value + y.value >= modulus, dtype=tf.int32))
+
+    def to_odd_modulus(self, factory: OddImplicitFactory) -> OddImplicitTensor:
+        return OddImplicitTensor(self.value, factory=factory)
 
 
 class Int32Constant(Int32Tensor, AbstractConstant):
