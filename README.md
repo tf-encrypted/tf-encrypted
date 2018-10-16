@@ -1,11 +1,5 @@
 <p align="center">
-<!-- <img align="center" width="200" height="200" src="./img/logo.png"/> -->
-<img align="center" width="100" height="100" src="./img/logo.png"/>
-  <img align="center" width="100" height="100" src="./img/logo.png"/>
-  <img align="center" width="100" height="100" src="./img/logo.png"/>
-  <img align="center" width="100" height="100" src="./img/logo.png"/>
-  <img align="center" width="100" height="100" src="./img/logo.png"/>
-  <!-- <img align="center" width="200" height="200" src="./img/logo.png"/> -->
+<img align="center" width="200" height="200" src="./img/logo_scatter.png"/>
 </p>
 
 # tf-encrypted
