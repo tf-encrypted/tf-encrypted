@@ -9,12 +9,12 @@ import tensorflow as tf
 
 from ..tensor.helpers import inverse
 from ..tensor.factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
-from ..tensor.fixed import FixedpointConfig
-# from ..tensor import int100factory, fixed100
+from ..tensor.fixed import FixedpointConfig, _validate_fixedpoint_config
+from ..tensor import int100factory, fixed100
 from ..tensor import int64factory, fixed64
 from ..types import Slice, Ellipse
 from ..player import Player
-from ..config import get_config
+from ..config import get_config, tensorflow_supports_int64
 from .protocol import Protocol, global_cache_updators, memoize, nodes
 
 
@@ -36,14 +36,29 @@ class Pond(Protocol):
         server_0: Optional[Player] = None,
         server_1: Optional[Player] = None,
         crypto_producer: Optional[Player] = None,
-        tensor_factory: AbstractFactory = int64factory,
-        fixedpoint_config: FixedpointConfig = fixed64,
+        tensor_factory: Optional[AbstractFactory] = None,
+        fixedpoint_config: Optional[FixedpointConfig] = None,
     ) -> None:
 
         self.server_0 = server_0 or get_config().get_player('server0')
         self.server_1 = server_1 or get_config().get_player('server1')
         self.crypto_producer = crypto_producer or get_config().get_player('crypto_producer')
 
+        if tensor_factory is None:
+            if tensorflow_supports_int64():
+                tensor_factory = int64factory
+            else:
+                tensor_factory = int100factory
+
+        if fixedpoint_config is None:
+            if tensor_factory is int64factory:
+                fixedpoint_config = fixed64
+            elif tensor_factory is int100factory:
+                fixedpoint_config = fixed100
+            else:
+                raise ValueError("Don't know how to pick fixedpoint configuration for tensor type {}".format(tensor_factory))
+
+        _validate_fixedpoint_config(fixedpoint_config, tensor_factory)
         self.fixedpoint_config = fixedpoint_config
         self.tensor_factory = tensor_factory
 

@@ -80,19 +80,26 @@ fixed64_ni = FixedpointConfig(
 )
 
 
-def _validate_fixedpoint_config(config: FixedpointConfig, tensor_factory: AbstractFactory):
+def _validate_fixedpoint_config(config: FixedpointConfig, tensor_factory: AbstractFactory) -> bool:
+
+    no_issues = True
 
     if ceil(log2(config.bound_single_precision)) > 31:
         print("WARNING: Plaintext values won't fit in 32bit tensors")
+        no_issues = False
 
     if ceil(log2(config.bound_single_precision)) > 63:
         print("WARNING: Plaintext values won't fit in 64bit values")
+        no_issues = False
 
     if ceil(log2(config.bound_double_precision)) + config.truncation_gap >= log2(tensor_factory.modulus):
         print("WARNING: Modulus is too small for truncation")
+        no_issues = False
 
     # TODO[Morten] test for intermediate size wrt native type
 
     # TODO[Morten] in decoding we assume that x + bound fits within the native type of the backing tensor
 
     # TODO[Morten] truncation gap is statistical security for interactive truncation; write assertions
+
+    return no_issues

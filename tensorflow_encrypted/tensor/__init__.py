@@ -38,10 +38,10 @@ from .fixed import (
     fixed64_ni,
 )
 
-_validate_fixedpoint_config(fixed100, int100factory)
-_validate_fixedpoint_config(fixed100_ni, int100factory)
-_validate_fixedpoint_config(fixed64, int64factory)
-_validate_fixedpoint_config(fixed64_ni, int64factory)
+assert _validate_fixedpoint_config(fixed100, int100factory)
+assert _validate_fixedpoint_config(fixed100_ni, int100factory)
+assert _validate_fixedpoint_config(fixed64, int64factory)
+assert _validate_fixedpoint_config(fixed64_ni, int64factory)
 
 __all__ = [
     'Int100Constant',
