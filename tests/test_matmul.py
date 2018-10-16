@@ -75,7 +75,7 @@ class TestMatMul(unittest.TestCase):
             sess.run(tf.global_variables_initializer())
             out_tensorflow = sess.run(out)
 
-        np.testing.assert_allclose(out_pond, out_tensorflow, atol=.3)
+        np.testing.assert_allclose(out_pond, out_tensorflow, atol=.1)
 
 
 if __name__ == '__main__':

@@ -41,8 +41,14 @@ class SecureNN(Pond):
         )
         self.server_2 = server_2
 
-        self.prime_factory = prime_factory or PrimeFactory(107, native_type=self.tensor_factory.native_type)
-        self.odd_factory = odd_factory or self.tensor_factory
+        if prime_factory is None:
+            prime_factory = PrimeFactory(107, native_type=self.tensor_factory.native_type)
+
+        if odd_factory is None:
+            odd_factory = self.tensor_factory
+
+        self.prime_factory = prime_factory
+        self.odd_factory = odd_factory
         assert self.prime_factory.native_type == self.tensor_factory.native_type
         assert self.odd_factory.native_type == self.tensor_factory.native_type
 
