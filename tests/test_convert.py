@@ -512,6 +512,43 @@ class TestConvert(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
+    def test_maxpooling_convert(self):
+        tf.reset_default_graph()
+
+        global global_filename
+        global_filename = "maxpool.pb"
+
+        input_shape = [1, 28, 28, 1]
+
+        path = export_maxpool(global_filename, input_shape)
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        actual = run_maxpool(input_shape)
+
+        tf.reset_default_graph()
+
+        with tfe.protocol.SecureNN() as prot:
+            prot.clear_initializers()
+
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
+
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
+
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
+
+            with tfe.Session() as sess:
+                sess.run(prot.initializer, tag='init')
+
+                output = sess.run(x.reveal(), tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
     def test_stack_convert(self):
         tf.reset_default_graph()
 
@@ -597,6 +634,25 @@ def export_avgpool(filename: str, input_shape: List[int]):
     input = tf.placeholder(tf.float32, shape=input_shape, name="input")
 
     x = tf.nn.avg_pool(input, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+
+    return export(x, filename)
+
+
+def run_maxpool(input_shape: List[int]):
+    input = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    x = tf.nn.max_pool(input, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={input: np.ones(input_shape)})
+
+    return output
+
+
+def export_maxpool(filename: str, input_shape: List[int]):
+    input = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    x = tf.nn.max_pool(input, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
 
     return export(x, filename)
 

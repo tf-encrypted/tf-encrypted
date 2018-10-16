@@ -3,7 +3,7 @@ import numpy as np
 import array
 from typing import Any, Dict, List, Union
 
-from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D
+from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
 from .convert import Converter
 
 from tensorflow_encrypted.protocol.pond import PondPublicTensor
@@ -32,7 +32,7 @@ def register() -> Dict[str, Any]:
         'ConcatV2': concat,
         'BiasAdd': bias_add,
         # 'Pack': pack,
-        # 'MaxPool': maxpool,
+        'MaxPool': maxpool,
     }
 
     return reg
@@ -170,13 +170,24 @@ def bias_add(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 
 def maxpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
-    raise NotImplementedError()
-
     input = converter.outputs[inputs[0]]
 
-    return tf.nn.max_pool(input, list(node.attr["ksize"].list.i),
-                          list(node.attr["strides"].list.i),
-                          node.attr["padding"].s)
+    ksize = node.attr["ksize"].list.i
+    s = node.attr["strides"].list.i
+
+    padding = node.attr["padding"].s.decode('ascii')
+    pool_size = [ksize[1], ksize[2]]
+    strides = [s[1], s[2]]
+
+    shape = [int(i) for i in input.shape]
+
+    channels_first = node.attr["data_format"].s.decode('ascii') == "NCHW"
+
+    max = MaxPooling2D(shape, pool_size, strides, padding, channels_first)
+
+    out = max.forward(input)
+
+    return out
 
 
 def shape(converter: Converter, node: Any, inputs: List[str]) -> Any:
