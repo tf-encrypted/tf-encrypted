@@ -1,5 +1,5 @@
 `PondPublicTensor`
 ====================
 
-.. autoclass:: tensorflow_encrypted.protocol.pond.PondPublicTensor
+.. autoclass:: tf_encrypted.protocol.pond.PondPublicTensor
   :members:

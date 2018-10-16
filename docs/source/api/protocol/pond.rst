@@ -11,5 +11,5 @@ Pond is an implementation of the SPDZ algorithm for MPC.
    pond_private_tensor
    pond_public_tensor
 
-.. autoclass:: tensorflow_encrypted.protocol.pond.Pond
+.. autoclass:: tf_encrypted.protocol.pond.Pond
   :members: define_public_variable, define_private_variable

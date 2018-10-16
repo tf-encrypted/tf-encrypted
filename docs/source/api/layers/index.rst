@@ -11,6 +11,7 @@ Layers implements ready to use `neural network` layers that come with crypto for
    dense
    convolution
    avg_pooling_2d
+   max_pooling_2d
    batchnorm
    sigmoid
    relu

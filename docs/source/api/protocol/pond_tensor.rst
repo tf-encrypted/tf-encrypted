@@ -10,7 +10,7 @@ through `protocol`.
 
     pondPrivateTensor = prot.define_private_variable(np.array([1,2,3,4]))
     pondPublicTensor = prot.define_private_variable(np.array([1,2,3,4]))
-    
 
-.. autoclass:: tensorflow_encrypted.protocol.pond.PondTensor
+
+.. autoclass:: tf_encrypted.protocol.pond.PondTensor
   :members:

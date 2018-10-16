@@ -5,10 +5,10 @@ The top tfe module.
 
 .. code-block:: python
 
-    import tensorflow_encrypted as tfe
+    import tf_encrypted as tfe
 
 
-.. automodule:: tensorflow_encrypted
+.. automodule:: tf_encrypted
   :members: set_protocol, set_config
 
 .. toctree::

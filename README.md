@@ -1,5 +1,5 @@
 <p align="center">
-<img align="center" width="200" height="200" src="./img/logo_scatter.png"/>
+<img align="center" width="200" height="200" src="./img/logo.png"/>
 </p>
 
 # tf-encrypted

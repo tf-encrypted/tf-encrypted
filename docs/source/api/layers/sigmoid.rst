@@ -1,5 +1,5 @@
 `Sigmoid`
 =============
 
-.. autoclass:: tensorflow_encrypted.layers.activation.Sigmoid
+.. autoclass:: tf_encrypted.layers.activation.Sigmoid
   :members:

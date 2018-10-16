@@ -1,5 +1,5 @@
 `Tanh`
 =============
 
-.. autoclass:: tensorflow_encrypted.layers.activation.Tanh
+.. autoclass:: tf_encrypted.layers.activation.Tanh
   :members:

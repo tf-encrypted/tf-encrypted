@@ -1,5 +1,5 @@
 `Batchnorm`
 =============
 
-.. autoclass:: tensorflow_encrypted.layers.batchnorm.Batchnorm
+.. autoclass:: tf_encrypted.layers.batchnorm.Batchnorm
   :members:

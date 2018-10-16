@@ -9,7 +9,7 @@ by simply changing the protocol.
 
 .. code-block:: python
 
-  import tensorflow_encrypted as tfe
+  import tf_encrypted as tfe
 
   tfe.set_protocol(tfe.protocol.SecureNN())
 
@@ -23,5 +23,5 @@ by simply changing the protocol.
    securenn
 
 
-.. automodule:: tensorflow_encrypted.protocol.protocol
+.. automodule:: tf_encrypted.protocol.protocol
   :members: set_protocol, get_protocol

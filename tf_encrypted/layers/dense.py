@@ -10,9 +10,8 @@ from ..protocol.pond import PondPublicTensor, PondPrivateTensor
 class Dense(core.Layer):
     """Standard dense linear layer including bias.
 
-    Arguments:
-    in_features (int, required): number of input features
-    out_features (int, required): number of output neurons for the layer
+    :param int in_features: number of input features
+    :param int out_features: number of output neurons for the layer
     """
 
     def __init__(self, input_shape: List[int], out_features: int) -> None:

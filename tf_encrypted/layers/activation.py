@@ -5,6 +5,12 @@ from . import core
 
 class Sigmoid(core.Layer):
 
+    """
+    Sigmoid Layer
+
+    :See: tf.nn.Sigmoid
+    """
+
     def get_output_shape(self) -> List[int]:
         return self.input_shape
 
@@ -23,6 +29,13 @@ class Sigmoid(core.Layer):
 
 
 class Relu(core.Layer):
+
+    """
+    Relu Layer
+
+    :See: tf.nn.relu
+    """
+
     def get_output_shape(self) -> List[int]:
         return self.input_shape
 
@@ -41,10 +54,21 @@ class Relu(core.Layer):
 
     # TODO Approximate Relu derivate to implement backward
     def backward(self, d_y, *args):
+        """
+        `backward` is not implemented for `Relu`
+
+        :raises: NotImplementedError
+        """
         raise NotImplementedError
 
 
 class Tanh(core.Layer):
+
+    """
+    Tanh Layer
+
+    :See: tf.nn.tanh
+    """
 
     def get_output_shape(self) -> List[int]:
         return self.input_shape
@@ -59,4 +83,9 @@ class Tanh(core.Layer):
 
     # TODO Approximate Relu derivate to implement backward
     def backward(self, d_y, *args):
+        """
+        `backward` is not implemented for `Tanh`
+
+        :raises: NotImplementedError
+        """
         raise NotImplementedError
