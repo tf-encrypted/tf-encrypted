@@ -26,7 +26,6 @@ class TestLSB(unittest.TestCase):
         with tfe.protocol.SecureNN(
             tensor_factory=tensor_factory,
             prime_factory=prime_factory,
-            verify_precision=False
         ) as prot:
 
             x_in = prot.define_private_variable(self.x, apply_scaling=False, name='test_lsb_input')

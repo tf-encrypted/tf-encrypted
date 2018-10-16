@@ -55,7 +55,7 @@ class TestBatchnorm(unittest.TestCase):
 
                 out_tensorflow = sess.run(batchnorm_out_tf)
 
-                np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=3)
+                np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=1)
 
 
 if __name__ == '__main__':

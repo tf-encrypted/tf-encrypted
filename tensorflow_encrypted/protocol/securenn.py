@@ -40,8 +40,17 @@ class SecureNN(Pond):
             **kwargs
         )
         self.server_2 = server_2
-        self.prime_factory = prime_factory or PrimeFactory(107)
-        self.odd_factory = odd_factory or self.tensor_factory
+
+        if prime_factory is None:
+            prime_factory = PrimeFactory(107, native_type=self.tensor_factory.native_type)
+
+        if odd_factory is None:
+            odd_factory = self.tensor_factory
+
+        self.prime_factory = prime_factory
+        self.odd_factory = odd_factory
+        assert self.prime_factory.native_type == self.tensor_factory.native_type
+        assert self.odd_factory.native_type == self.tensor_factory.native_type
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
@@ -73,11 +82,13 @@ class SecureNN(Pond):
     @memoize
     def msb(self, x: PondTensor) -> PondTensor:
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
-        if x.backing_dtype.modulus % 2 != 1:
-            # NOTE: this is currently only for use with an odd-modulus CRTTensor
-            #       NativeTensor will use an even modulus and will require share_convert
-            raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
-                            'but it was initialized with an even one.')
+
+        # if x.backing_dtype.modulus % 2 != 1:
+        #     # NOTE: this is currently only for use with an odd-modulus CRTTensor
+        #     #       NativeTensor will use an even modulus and will require share_convert
+        #     raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
+        #                     'but it was initialized with an even one.')
+
         return self.lsb(x * 2)
 
     @memoize
@@ -292,7 +303,7 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
                 prot.equal_zero(s, prime_dtype)
             )
             edge_cases = prot.expand_dims(edge_cases, axis=-1)
-            c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1), dtype=tf.int32, shape=(1, bit_length)))
+            c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1), dtype=prime_dtype.native_type, shape=(1, bit_length)))
             c_edge_case = prot._share_and_wrap(c_edge_case_raw, False)
 
             c = prot.select(

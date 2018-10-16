@@ -211,13 +211,28 @@ class Int100Tensor(AbstractTensor):
         raise TypeError("Unsupported type {}".format(type(x)))
 
     def __add__(self, other) -> 'Int100Tensor':
-        return self.add(other)
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.add(y)
+
+    def __radd__(self, other) -> 'Int100Tensor':
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.add(y)
 
     def __sub__(self, other) -> 'Int100Tensor':
-        return self.sub(other)
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.sub(y)
+
+    def __rsub__(self, other) -> 'Int100Tensor':
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.sub(y)
 
     def __mul__(self, other) -> 'Int100Tensor':
-        return self.mul(other)
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.mul(y)
+
+    def __rmul__(self, other) -> 'Int100Tensor':
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.mul(y)
 
     def __mod__(self, k) -> 'Int100Tensor':
         return self.mod(k)
@@ -264,8 +279,8 @@ class Int100Tensor(AbstractTensor):
 
     def equal(self, other) -> 'Int100Tensor':
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
-        backing = _crt_equal(x.backing, y.backing, x.factory.native_type)
-        return Int100Tensor(backing)
+        out_dtype = x.factory
+        return out_dtype.tensor(_crt_equal(x.backing, y.backing, out_dtype.native_type))
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int100Tensor':
         backing = crt_im2col(self.backing, h_filter, w_filter, padding, strides)
@@ -302,6 +317,14 @@ class Int100Tensor(AbstractTensor):
     def negative(self) -> 'Int100Tensor':
         # TODO[Morten] there's probably a more efficient way
         return int100factory.zero() - self
+
+    def truncate(self, amount, base=2):
+        factor = base**amount
+        factor_inverse = inverse(factor, self.factory.modulus)
+        return (self - (self % factor)) * factor_inverse
+
+    def right_shift(self, bitlength):
+        return self.truncate(bitlength, 2)
 
 
 class Int100Constant(Int100Tensor, AbstractConstant):
