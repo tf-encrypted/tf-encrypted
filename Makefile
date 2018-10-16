@@ -73,7 +73,7 @@ lint: pythoncheck
 	flake8
 
 typecheck: pythoncheck
-	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tensorflow_encrypted
+	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
 
 
 .PHONY: lint test typecheck

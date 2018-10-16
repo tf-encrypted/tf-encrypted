@@ -1,8 +1,8 @@
 import sys
 
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.layers import Conv2D, Dense, Sigmoid, Reshape
+import tf_encrypted as tfe
+from tf_encrypted.layers import Conv2D, Dense, Sigmoid, Reshape
 
 config = tfe.LocalConfig([
     'server0',

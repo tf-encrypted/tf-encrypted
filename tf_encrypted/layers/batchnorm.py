@@ -2,7 +2,7 @@ import numpy as np
 from . import core
 
 from typing import List
-from tensorflow_encrypted.protocol.pond import PondPrivateTensor
+from tf_encrypted.protocol.pond import PondPrivateTensor
 
 
 class Batchnorm(core.Layer):

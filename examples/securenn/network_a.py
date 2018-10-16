@@ -4,7 +4,7 @@ import math
 from typing import List
 
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 from examples.mnist.convert import decode
 

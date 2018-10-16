@@ -2,9 +2,9 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
-from tensorflow_encrypted.tensor import int64factory, fixed64
+from tf_encrypted.tensor import int64factory, fixed64
 
 
 class TestInt64Tensor(unittest.TestCase):

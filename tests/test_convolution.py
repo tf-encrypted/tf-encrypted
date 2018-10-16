@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 
 class TestConv2D(unittest.TestCase):

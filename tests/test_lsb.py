@@ -2,10 +2,10 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
-from tensorflow_encrypted.tensor.int100 import int100factory
-from tensorflow_encrypted.tensor.prime import PrimeFactory
+from tf_encrypted.tensor.int100 import int100factory
+from tf_encrypted.tensor.prime import PrimeFactory
 
 
 class TestLSB(unittest.TestCase):

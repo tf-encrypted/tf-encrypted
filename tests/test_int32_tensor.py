@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-from tensorflow_encrypted.tensor.int32 import Int32Tensor
+from tf_encrypted.tensor.int32 import Int32Tensor
 
 
 class TestInt32Tensor(unittest.TestCase):

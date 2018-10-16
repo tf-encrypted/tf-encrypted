@@ -3,7 +3,7 @@ import sys
 from functools import reduce
 
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 
 player_names_fixed = ['server0', 'server1', 'crypto_producer', 'result_receiver']

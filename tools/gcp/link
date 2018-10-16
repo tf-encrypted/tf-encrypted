@@ -5,7 +5,7 @@ import sys
 import json
 import subprocess
 
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 INSTANCE_NAMES = [name.strip() for arg in sys.argv[1:] for name in os.path.expandvars(arg).split(' ') if name]
 BASE_PORT = 4440

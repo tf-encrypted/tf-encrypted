@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 prot = tfe.protocol.Pond()
 

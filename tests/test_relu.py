@@ -2,9 +2,9 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
-from tensorflow_encrypted.layers.activation import Relu
+from tf_encrypted.layers.activation import Relu
 
 
 class TestRelu(unittest.TestCase):
