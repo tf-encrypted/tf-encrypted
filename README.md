@@ -1,3 +1,9 @@
+<p align="center">
+<!-- <img align="center" width="200" height="200" src="./img/logo.png"/> -->
+  <img align="center" width="200" height="200" src="./img/logo.png"/>
+  <!-- <img align="center" width="200" height="200" src="./img/logo.png"/> -->
+</p>
+
 # tf-encrypted
 
 ![Status](https://img.shields.io/badge/status-alpha-blue.svg)  [![License](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg)](./LICENSE)  [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master) [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://tf-encrypted.readthedocs.io/en/latest/)
