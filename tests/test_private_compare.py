@@ -2,9 +2,9 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.protocol.pond import PondPrivateTensor, PondPublicTensor
-from tensorflow_encrypted.protocol.securenn import _private_compare
+import tf_encrypted as tfe
+from tf_encrypted.protocol.pond import PondPrivateTensor, PondPublicTensor
+from tf_encrypted.protocol.securenn import _private_compare
 
 
 class TestPrivateCompare(unittest.TestCase):

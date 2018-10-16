@@ -2,10 +2,10 @@ import os
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util, graph_io
-from tensorflow_encrypted.convert import convert
-from tensorflow_encrypted.convert.register import register
+from tf_encrypted.convert import convert
+from tf_encrypted.convert.register import register
 import numpy as np
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 
 def export_cnn() -> None:

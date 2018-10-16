@@ -1,4 +1,4 @@
-# TensorFlow Encrypted
+# tf-encrypted
 
 ![Status](https://img.shields.io/badge/status-alpha-blue.svg)  [![License](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg)](./LICENSE)  [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master)
 
@@ -40,11 +40,11 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
         tfe.run(sess, result_op, tag='average')
 ```
 
-To get this running we first have to import `tensorflow_encrypted`, and since we also want to use ordinary Tensorflow locally on both the inputters and the result receiver we also import `tensorflow`.
+To get this running we first have to import `tf_encrypted`, and since we also want to use ordinary Tensorflow locally on both the inputters and the result receiver we also import `tensorflow`.
 
 ```python
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 ```
 
 Furthermore, we also need to specify the *local* behaviour of the inputters and the receiver by defining classes deriving from respectively `tfe.io.InputProvider` and `tfe.io.OutputReceiver`.

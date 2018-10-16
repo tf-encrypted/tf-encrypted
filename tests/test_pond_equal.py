@@ -1,10 +1,10 @@
 import unittest
 
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 import numpy as np
 
-from tensorflow_encrypted.protocol.pond import PondPublicTensor
+from tf_encrypted.protocol.pond import PondPublicTensor
 
 
 class TestPondPublicEqual(unittest.TestCase):

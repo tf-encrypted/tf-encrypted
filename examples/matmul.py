@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 # use local config (for development/debugging)
 # A default configuration exists if you don't want to

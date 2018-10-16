@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 config = tfe.get_config()
 with tfe.protocol.SecureNN(*config.get_players('server0, server1, crypto_producer')) as prot:

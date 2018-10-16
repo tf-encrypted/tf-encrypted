@@ -2,7 +2,7 @@ import sys
 from typing import List
 
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 from convert import decode
 
