@@ -189,6 +189,7 @@ def maxpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
     return out
 
+
 def shape(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
