@@ -17,7 +17,8 @@ def gcd(a: int, b: int) -> int:
 
 
 def inverse(a: int, m: int) -> int:
-    _, b, _ = egcd(a, m)
+    g, b, _ = egcd(a, m)
+    assert g == 1
     return b % m
 
 

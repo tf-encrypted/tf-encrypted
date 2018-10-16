@@ -6,10 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
-from .shared import binarize
-
-
-INT_TYPE = tf.int32
+from .shared import binarize, im2col
 
 
 class PrimeTensor(AbstractTensor):
@@ -73,7 +70,7 @@ class PrimeTensor(AbstractTensor):
         return self.factory.tensor(tf.matmul(x.value, y.value) % self.modulus)
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'PrimeTensor':
-        raise NotImplementedError()
+        return self.factory.tensor(im2col(self.value, h_filter, w_filter, padding, strides))
 
     def conv2d(self, other, strides, padding='SAME') -> 'PrimeTensor':
         raise NotImplementedError()
@@ -134,7 +131,7 @@ def _lift(x, y) -> Tuple[PrimeTensor, PrimeTensor]:
 class PrimeConstant(PrimeTensor, AbstractConstant):
 
     def __init__(self, value: Union[tf.Tensor, np.ndarray], factory) -> None:
-        v = tf.constant(value, dtype=INT_TYPE)
+        v = tf.constant(value, dtype=factory.native_type)
         super(PrimeConstant, self).__init__(v, factory)
 
     def __repr__(self) -> str:
@@ -144,7 +141,7 @@ class PrimeConstant(PrimeTensor, AbstractConstant):
 class PrimePlaceholder(PrimeTensor, AbstractPlaceholder):
 
     def __init__(self, shape: List[int], factory) -> None:
-        placeholder = tf.placeholder(INT_TYPE, shape=shape)
+        placeholder = tf.placeholder(factory.native_type, shape=shape)
         super(PrimePlaceholder, self).__init__(placeholder, factory)
         self.placeholder = placeholder
 
@@ -165,7 +162,7 @@ class PrimePlaceholder(PrimeTensor, AbstractPlaceholder):
 class PrimeVariable(PrimeTensor, AbstractVariable):
 
     def __init__(self, initial_value: Union[tf.Tensor, np.ndarray], factory) -> None:
-        self.variable = tf.Variable(initial_value, dtype=INT_TYPE, trainable=False)
+        self.variable = tf.Variable(initial_value, dtype=factory.native_type, trainable=False)
         self.initializer = self.variable.initializer
         super(PrimeVariable, self).__init__(self.variable.read_value(), factory)
 

@@ -3,18 +3,12 @@ from . import core
 
 from ..protocol.pond import TFEVariable
 from typing import Optional, Union, Tuple, List
+from abc import abstractmethod
 
 IntTuple = Union[int, Tuple[int, int], List[int]]
 
 
-class AveragePooling2D(core.Layer):
-    """AveragePooling2D layer
-    Arguments:
-    pool_size (int or tuple/list of ints) size of kernel
-    strides (int or tuple/list of ints) stride length
-    padding (str) SAME or VALID
-    """
-
+class Pooling2D(core.Layer):
     def __init__(self,
                  input_shape: List[int],
                  pool_size: IntTuple,
@@ -33,7 +27,7 @@ class AveragePooling2D(core.Layer):
         self.padding = padding
         self.channels_first = channels_first
 
-        super(AveragePooling2D, self).__init__(input_shape)
+        super(Pooling2D, self).__init__(input_shape)
         self.cache = None
         self.cached_input_shape = None
 
@@ -56,6 +50,10 @@ class AveragePooling2D(core.Layer):
             W_out = math.ceil((W_in - self.pool_size[1] + 1) / self.strides[1])
         return [self.input_shape[0], self.input_shape[1], H_out, W_out]
 
+    @abstractmethod
+    def pool(self, x: TFEVariable, pool_size, strides, padding) -> TFEVariable:
+        raise NotImplementedError
+
     def forward(self, x: TFEVariable) -> TFEVariable:
         if not self.channels_first:
             x = self.prot.transpose(x, perm=[0, 3, 1, 2])
@@ -63,7 +61,7 @@ class AveragePooling2D(core.Layer):
         self.cached_input_shape = x.shape
         self.cache = x
 
-        out = self.prot.avgpool2d(x, self.pool_size, self.strides, self.padding)
+        out = self.pool(x, self.pool_size, self.strides, self.padding)
 
         if not self.channels_first:
             out = self.prot.transpose(out, perm=[0, 2, 3, 1])
@@ -72,3 +70,30 @@ class AveragePooling2D(core.Layer):
 
     def backward(self, d_y: TFEVariable, learning_rate: float) -> Optional[TFEVariable]:
         raise NotImplementedError
+
+
+class AveragePooling2D(Pooling2D):
+    def __init__(self,
+                 input_shape: List[int],
+                 pool_size: IntTuple,
+                 strides: Optional[IntTuple] = None,
+                 padding: str = "SAME", channels_first: bool = True) -> None:
+
+        super(AveragePooling2D, self).__init__(input_shape, pool_size, strides, padding, channels_first)
+
+    def pool(self, x: TFEVariable, pool_size, strides, padding) -> TFEVariable:
+        return self.prot.avgpool2d(x, pool_size, strides, padding)
+
+
+class MaxPooling2D(Pooling2D):
+    def __init__(self,
+                 input_shape: List[int],
+                 pool_size: IntTuple,
+                 strides: Optional[IntTuple] = None,
+                 padding: str = "SAME", channels_first: bool = True) -> None:
+
+        super(MaxPooling2D, self).__init__(input_shape, pool_size, strides, padding, channels_first)
+        # TODO -- throw an error here if the protocol is not secureNN
+
+    def pool(self, x: TFEVariable, pool_size, strides, padding) -> TFEVariable:
+        return self.prot.maxpool2d(x, pool_size, strides, padding)

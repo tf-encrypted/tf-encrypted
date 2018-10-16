@@ -177,6 +177,9 @@ class Int32Tensor(AbstractTensor):
         x, y = _lift(self, other)
         return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
 
+    def right_shift(self, bitlength):
+        return int32factory.tensor(tf.bitwise.right_shift(self.value, bitlength))
+
 
 class Int32Constant(Int32Tensor, AbstractConstant):
 

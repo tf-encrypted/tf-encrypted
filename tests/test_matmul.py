@@ -10,13 +10,9 @@ class TestMatMul(unittest.TestCase):
         tf.reset_default_graph()
 
     def test_matmul(self) -> None:
-        config = tfe.LocalConfig([
-            'server_0',
-            'server_1',
-            'crypto_producer'
-        ])
 
-        with tfe.protocol.Pond(*config.get_players('server_0, server_1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
+
             input_shape = [4, 5]
             input = np.random.normal(size=input_shape)
 
@@ -48,13 +44,9 @@ class TestMatMul(unittest.TestCase):
         np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=2)
 
     def test_big_middle_matmul(self) -> None:
-        config = tfe.LocalConfig([
-            'server_0',
-            'server_1',
-            'crypto_producer'
-        ])
 
-        with tfe.protocol.Pond(*config.get_players('server_0, server_1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
+
             input_shape = [64, 4500]
             input = np.random.normal(size=input_shape)
 
@@ -83,7 +75,7 @@ class TestMatMul(unittest.TestCase):
             sess.run(tf.global_variables_initializer())
             out_tensorflow = sess.run(out)
 
-        np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=2)
+        np.testing.assert_allclose(out_pond, out_tensorflow, atol=.1)
 
 
 if __name__ == '__main__':

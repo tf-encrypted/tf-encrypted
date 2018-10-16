@@ -1,15 +1,16 @@
 from __future__ import absolute_import
-from typing import Optional
+from typing import Optional, Tuple
 import sys
+import math
 
 import tensorflow as tf
 
-from .protocol import memoize
+from .protocol import memoize, nodes
 from ..protocol.pond import (
-    Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
+    Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor, _type
 )
 from ..tensor.prime import PrimeFactory
-from ..tensor.factory import AbstractFactory
+from ..tensor.factory import AbstractFactory, AbstractTensor
 from ..player import Player
 from ..config import get_config
 
@@ -43,8 +44,17 @@ class SecureNN(Pond):
             **kwargs
         )
         self.server_2 = server_2
-        self.prime_factory = prime_factory or PrimeFactory(107)
-        self.odd_factory = odd_factory or self.tensor_factory
+
+        if prime_factory is None:
+            prime_factory = PrimeFactory(107, native_type=self.tensor_factory.native_type)
+
+        if odd_factory is None:
+            odd_factory = self.tensor_factory
+
+        self.prime_factory = prime_factory
+        self.odd_factory = odd_factory
+        assert self.prime_factory.native_type == self.tensor_factory.native_type
+        assert self.odd_factory.native_type == self.tensor_factory.native_type
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
@@ -112,11 +122,13 @@ class SecureNN(Pond):
         :param x: a :class:`~tensorflow_encrypted.protocol.pond.PondTensor`
         """
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
-        if x.backing_dtype.modulus % 2 != 1:
-            # NOTE: this is currently only for use with an odd-modulus CRTTensor
-            #       NativeTensor will use an even modulus and will require share_convert
-            raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
-                            'but it was initialized with an even one.')
+
+        # if x.backing_dtype.modulus % 2 != 1:
+        #     # NOTE: this is currently only for use with an odd-modulus CRTTensor
+        #     #       NativeTensor will use an even modulus and will require share_convert
+        #     raise Exception('SecureNN protocol assumes a ring of odd cardinality, ' +
+        #                     'but it was initialized with an even one.')
+
         return self.lsb(x * 2)
 
     @memoize
@@ -178,6 +190,28 @@ class SecureNN(Pond):
         with tf.name_scope('relu'):
             drelu = self.non_negative(x)
             return drelu * x
+
+    def maxpool2d(self, x, pool_size, strides, padding):
+        node_key = ('maxpool2d', x, tuple(pool_size), tuple(strides), padding)
+        z = nodes.get(node_key, None)
+
+        if z is not None:
+            return z
+
+        dispatch = {
+            PondPublicTensor: _maxpool2d_public,
+            PondPrivateTensor: _maxpool2d_private,
+            PondMaskedTensor: _maxpool2d_masked,
+        }
+
+        func = dispatch.get(_type(x), None)
+        if func is None:
+            raise TypeError("Don't know how to avgpool2d {}".format(type(x)))
+
+        z = func(self, x, pool_size, strides, padding)
+        nodes[node_key] = z
+
+        return z
 
     @memoize
     def maximum(self, x, y):
@@ -309,7 +343,7 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
                 prot.equal_zero(s, prime_dtype)
             )
             edge_cases = prot.expand_dims(edge_cases, axis=-1)
-            c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1), dtype=tf.int32, shape=(1, bit_length)))
+            c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1), dtype=prime_dtype.native_type, shape=(1, bit_length)))
             c_edge_case = prot._share_and_wrap(c_edge_case_raw, False)
 
             c = prot.select(
@@ -359,3 +393,75 @@ def _equal_zero_public(prot, x: PondPublicTensor, out_dtype: Optional[AbstractFa
             equal_zero_on_1 = x_on_1.equal_zero(out_dtype)
 
         return PondPublicTensor(prot, equal_zero_on_0, equal_zero_on_1, False)
+
+
+#
+# max pooling helpers
+#
+
+def _im2col(prot: Pond,
+            x: PondTensor,
+            pool_size: Tuple[int, int],
+            strides: Tuple[int, int],
+            padding: str) -> Tuple[AbstractTensor, AbstractTensor]:
+
+    x_on_0, x_on_1 = x.unwrapped
+    batch, channels, height, width = x.shape
+
+    if padding == "SAME":
+        out_height = math.ceil(int(height) / strides[0])
+        out_width = math.ceil(int(width) / strides[1])
+    else:
+        out_height = math.ceil((int(height) - pool_size[0] + 1) / strides[0])
+        out_width = math.ceil((int(width) - pool_size[1] + 1) / strides[1])
+
+    batch, channels, height, width = x.shape
+    pool_height, pool_width = pool_size
+
+    with tf.device(prot.server_0.device_name):
+        x_split = x_on_0.reshape((batch * channels, 1, height, width))
+        y_on_0 = x_split.im2col(pool_height, pool_width, padding, strides[0])
+
+    with tf.device(prot.server_1.device_name):
+        x_split = x_on_1.reshape((batch * channels, 1, height, width))
+        y_on_1 = x_split.im2col(pool_height, pool_width, padding, strides[0])
+
+    return y_on_0, y_on_1, [out_height, out_width, int(batch), int(channels)]
+
+
+def _maxpool2d_public(prot: Pond,
+                      x: PondPublicTensor,
+                      pool_size: Tuple[int, int],
+                      strides: Tuple[int, int],
+                      padding: str) -> PondPublicTensor:
+
+    with tf.name_scope('maxpool2d'):
+        y_on_0, y_on_1, reshape_to = _im2col(prot, x, pool_size, strides, padding)
+        im2col = PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
+        max = im2col.reduce_max(axis=0)
+        result = max.reshape(reshape_to).transpose([2, 3, 0, 1])
+        return result
+
+
+def _maxpool2d_private(prot: Pond,
+                       x: PondPrivateTensor,
+                       pool_size: Tuple[int, int],
+                       strides: Tuple[int, int],
+                       padding: str) -> PondPrivateTensor:
+
+    with tf.name_scope('maxpool2d'):
+        y_on_0, y_on_1, reshape_to = _im2col(prot, x, pool_size, strides, padding)
+        im2col = PondPrivateTensor(prot, y_on_0, y_on_1, x.is_scaled)
+        max = im2col.reduce_max(axis=0)
+        result = max.reshape(reshape_to).transpose([2, 3, 0, 1])
+        return result
+
+
+def _maxpool2d_masked(prot: Pond,
+                      x: PondMaskedTensor,
+                      pool_size: Tuple[int, int],
+                      strides: Tuple[int, int],
+                      padding: str) -> PondPrivateTensor:
+
+    with tf.name_scope('maxpool2d'):
+        return prot.maxpool2d(x.unwrapped, pool_size, strides, padding)
