@@ -22,6 +22,5 @@ by simply changing the protocol.
    :maxdepth: 5
    :caption: Classes
 
-   protocol
    pond
    securenn
