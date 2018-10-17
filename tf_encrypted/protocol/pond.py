@@ -1025,6 +1025,10 @@ class PondTensor(abc.ABC):
     @property
     @abc.abstractmethod
     def shape(self) -> List[int]:
+        """
+        :rtype: List[int]
+        :returns: The shape of this tensor.
+        """
         pass
 
     @property
@@ -1039,9 +1043,9 @@ class PondTensor(abc.ABC):
 
         This function returns a new PondTensor and does not modify this one.
 
-        :param ~tensorflow_encrypted.protocol.pond.PondTensor other: a or primitive (e.g. a float)
+        :param PondTensor other: a or primitive (e.g. a float)
         :return: A new PondTensor with `other` added.
-        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        :rtype: PondTensor
         """
         return self.prot.add(self, other)
 
@@ -1061,13 +1065,13 @@ class PondTensor(abc.ABC):
         :param int axis:  The axis to reduce along
         :param bool keepdims: If true, retains reduced dimensions with length 1.
         :return: A new PondTensor
-        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        :rtype: PondTensor
         """
         return self.prot.reduce_sum(self, axis, keepdims)
 
     def sum(self, axis=None, keepdims=None):
         """
-        See :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.reduce_sum`
+        See :meth:`PondTensor.reduce_sum`
         """
         return self.reduce_sum(axis, keepdims)
 
@@ -1075,9 +1079,9 @@ class PondTensor(abc.ABC):
         """
         Subtract `other` from this tensor.
 
-        :param ~tensorflow_encrypted.protocol.pond.PondTensor other: to subtract
+        :param PondTensor other: to subtract
         :return: A new PondTensor
-        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        :rtype: PondTensor
         """
         return self.prot.sub(self, other)
 
@@ -1091,9 +1095,9 @@ class PondTensor(abc.ABC):
         """
         Multiply this tensor with `other`
 
-        :param ~tensorflow_encrypted.protocol.pond.PondTensor other: to multiply
+        :param PondTensor other: to multiply
         :return: A new PondTensor
-        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        :rtype: PondTensor
         """
         return self.prot.mul(self, other)
 
@@ -1111,7 +1115,7 @@ class PondTensor(abc.ABC):
         Square this tensor.
 
         :return: A new PondTensor
-        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        :rtype: PondTensor
         """
         return self.prot.square(self)
 
@@ -1119,9 +1123,9 @@ class PondTensor(abc.ABC):
         """
         MatMul this tensor with `other`.  This will perform matrix multiplication rather than elementwise like :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.mul`
 
-        :param ~tensorflow_encrypted.protocol.pond.PondTensor other: to subtract
+        :param PondTensor other: to subtract
         :return: A new PondTensor
-        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        :rtype: PondTensor
         """
         return self.prot.matmul(self, other)
 
@@ -1130,7 +1134,7 @@ class PondTensor(abc.ABC):
         Alias for :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.matmul`
 
         :return: A new PondTensor
-        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        :rtype: PondTensor
         """
         return self.matmul(other)
 
@@ -1146,7 +1150,7 @@ class PondTensor(abc.ABC):
         :param List[int]: A permutation of the dimensions of this tensor.
 
         :return: A new PondTensor
-        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        :rtype: PondTensor
         """
         return self.prot.transpose(self, perm)
 
@@ -1157,28 +1161,40 @@ class PondTensor(abc.ABC):
         `TODO`
 
         :return: A new PondTensor
-        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        :rtype: PondTensor
         """
         return self.prot.truncate(self)
 
     def expand_dims(self):
         """
-        Expand dims
-
-        `TODO`
+        :See: tf.expand_dims
 
         :return: A new PondTensor
-        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        :rtype: PondTensor
         """
         return self.prot.expand_dims(self)
 
     def reshape(self, shape: List[int]) -> 'PondTensor':
+        """
+        :See: tf.reshape
+
+        :param List[int] shape: The new shape of the tensor.
+        :rtype: PondTensor
+        :returns: A new tensor with the contents of this tensor, but with the new specified shape.
+        """
         return self.prot.reshape(self, shape)
 
     def cast_backing(self, backing_dtype):
         return self.prot.cast_backing(self, backing_dtype)
 
     def reduce_max(self, axis: int) -> 'PondTensor':
+        """
+        :See: tf.reduce_max
+
+        :param int axis: The axis to take the max along
+        :rtype: PondTensor
+        :returns: A new pond tensor with the max value from each axis.
+        """
         return self.prot.reduce_max(self, axis)
 
 
@@ -1220,6 +1236,34 @@ class PondPublicTensor(PondTensor):
 
     @property
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
+        """
+        Unwrap the tensor.
+
+        This will return the value for each of the parties that collectively own the tensor.
+
+        In most cases, this will be the same value on each device.
+
+        .. code-block:: python
+
+            x_0, y_0 = tensor.unwrapped
+            # x_0 == 10 with the value pinned to player_0's device.
+            # y_0 == 10 with the value pinned to player_1's device.
+
+        In most cases you will want to work on this data on the specified device.
+
+        .. code-block:: python
+        
+            x_0, y_0 = tensor.unwrapped
+
+            with tf.device(prot.player_0.device_name):
+                # act on x_0
+
+            with tf.device(prot.player_1.device_name):
+                # act on y_0
+
+        In most cases you will not need to use this method.  All funtions
+        will hide this functionality for you (e.g. `add`, `mul`, etc).
+        """
         return (self.value_on_0, self.value_on_1)
 
     def decode(self) -> Union[np.ndarray, tf.Tensor]:
@@ -1261,6 +1305,20 @@ class PondPrivateTensor(PondTensor):
 
     @property
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
+        """
+        Unwrap the tensor.
+
+        This will return the shares for each of the parties that collectively own the tensor.
+
+        .. code-block:: python
+
+            x_0, y_0 = tensor.unwrapped
+            # x_0 == private shares of the value pinned to player_0's device.
+            # y_0 == private shares of the value pinned to player_1's device.
+
+        In most cases you will not need to use this method.  All funtions
+        will hide this functionality for you (e.g. `add`, `mul`, etc).
+        """
         return (self.share0, self.share1)
 
     def reveal(self) -> PondPublicTensor:

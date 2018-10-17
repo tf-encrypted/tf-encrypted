@@ -13,10 +13,10 @@
     :maxdepth: 5
     :caption: API
 
-    config/config
+    protocol/index
     session
 
-    protocol/index
+    config/config
     layers/index
 
 .. TODO: How do we make two submenus in API

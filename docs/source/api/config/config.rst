@@ -22,6 +22,7 @@ in a production environment.  What machines are on which host, etc.
 See class definitions for usage examples and more.
 
 .. toctree::
+   :caption: Classes
 
    local
    remote

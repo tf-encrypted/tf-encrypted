@@ -17,7 +17,8 @@ class Protocol(ABC):
     """
     Protocol is the base class that other protocols in tf-encrypted will extend from.
 
-    Do not directly instantiate this class.  You should use a subclass instead, such as :class:`~tensorflow_encrypted.protocol.protocol.SecureNN`
+    Do not directly instantiate this class.  You should use a subclass instead, such as :class:`~tf_encrypted.protocol.protocol.SecureNN`
+    or :class:`~tf_encrypted.protocol.protocol.Pond`
     """
 
     def __enter__(self) -> 'Protocol':
