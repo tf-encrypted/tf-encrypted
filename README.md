@@ -49,7 +49,7 @@ For more information, checkout our full getting started guide in our [documentat
 
 tf-encrypted is experimental software that is not ready for use in any production environment for security reasons. We're currently focused on building the underlying primitives that enabled cryptographist, machine learning researchers, and data scientists to experiment with private machine learning.
 
-Don't hesitate to send a pull request or open an issue, we'd love to work with anyone interested in using or developing private machine learning.
+Don't hesitate to send a pull request, open an issue, or ask for help! We'd love to work with anyone interested in using or developing private machine learning.
 
 # License
 
