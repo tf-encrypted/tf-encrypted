@@ -6,28 +6,40 @@
 tf-encrypted
 ========================================
 
-.. image:: https://img.shields.io/badge/status-alpha-blue.svg
-.. image:: https://img.shields.io/github/license/mortendahl/tf-encrypted.svg
-.. image:: https://img.shields.io/pypi/v/tf-encrypted.svg
-.. image:: https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg
+tf-encrypted is an open source Python library built on top of `TensorFlow`_ focused on making it easy for researchers and practitioners to experiment with privacy-preserving machine learning without needing to be an expert in machine learning, cryptography, distributed systems, or high performance computing. For more information on performance and security please read the `Private Machine Learning in TensorFlow using Secure Computation`_ paper.
 
-This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in `Secure Computations as Dataflow Programs`_, with the aim of making it easy for researchers and practitioners to experiment with private machine learning using familiar tools and without being an expert in both machine learning and cryptography. To this end the code is structured into roughly three modules:
+.. _TensorFlow: https://tensorflow.org
+.. _Private Machine Learning in TensorFlow using Secure Computation: https://linkhere.org
 
-.. _Secure Computations as Dataflow Programs: https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/
+- **Simple**: It should be easy to get started, experiment with, use, benchmark, and deeply integrate with pre-existing data science workflows.
+- **Extensible**: Extending tf-encrypted to experiment with new protocols, tensor implementations, and machine learning algorithms should be a first class citizen.
+- **Performant**: All of the fastest known implementations of protocols, tensor implementations, and machine learning algorithms in a private setting should exist within this library.
+- **Secure**: A user should have to go out of their way to use the library in a non-secure, non-private fashion. New protocols are marked as experimental until they've met our high bar of security.
+- **Community-Driven**: Community-first as a decision making framework. We can only achieve these goals by building a community of researchers, contributors, and users around the project.
 
-- secure operations for computing on encrypted tensors
-- basic machine learning operations built on top of these
-- ready-to-use components for private prediction and training
+Checkout the `Getting Started`_ guide to learn how to get up and running with private machine learning.
 
-that are all exposed through Python interfaces, and all resulting in ordinary TensorFlow graphs for easy integration with other TensorFlow mechanisms and efficient execution.
+You can view the project source, contribute, and asks questions on `GitHub`_.
 
-Several contributors have put resources into the development of this library, most notably `Dropout Labs`_ and members of the `OpenMined`_ community.
+.. _Getting Started: usage/getting_started.html
+.. _GitHub: https://github.com/mortendahl/tf-encrypted
 
-.. _Dropout Labs: https://dropoutlabs.com/
-.. _OpenMined: https://www.openmined.org/
+--------------------------
+Project Status
+--------------------------
 
-**Important**: this is experimental software that should not be used in production for security reasons.
+tf-encrypted is experimental software that is not ready for use in production environments for security reasons. However, it is ready to be used for research and for experimenting with private machine learning.
 
+We're always looking for new contributors, to help new users, or solve bugs encountered when using the library. Please don't hesitate to open an issue on `GitHub`_.
+
+-----------------------
+License
+-----------------------
+
+Licensed under the Apache License, Version 2.0 (see `License`_). Copyright as specified in the `NOTICE`_ contained in the code base.
+
+.. _License: https://github.com/mortendahl/tf-encrypted/blob/master/LICENSE
+.. _NOTICE: https://github.com/mortendahl/tf-encrypted/blob/master/NOTICE
 
 .. toctree::
    :maxdepth: 2
