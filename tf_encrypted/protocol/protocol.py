@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import functools
-from typing import Optional, Type, Any, Callable
+from typing import Optional, Any, Callable
 from types import TracebackType
 
 import tensorflow as tf
@@ -24,7 +24,7 @@ class Protocol(ABC):
         set_protocol(self)
         return self
 
-    def __exit__(self, type: Optional[Type[BaseException]],
+    def __exit__(self, type,
                  value: Optional[Exception],
                  traceback: Optional[TracebackType]) -> Optional[bool]:
         set_protocol(None)
