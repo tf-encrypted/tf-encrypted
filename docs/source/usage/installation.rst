@@ -7,4 +7,4 @@ tf-encrypted is installed via pip::
 
 and can be imported into your code just like tensorflow::
 
-    import tensorflow_encrypted as tfe
+    import tf_encrypted as tfe
