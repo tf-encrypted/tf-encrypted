@@ -84,11 +84,11 @@ With Tensorflow Encrypted, you can very easily make private predictions with a p
 ```bash
 python3 mnist_deep_cnn.py
 ```
-If you prefer to skip this step, we have saved the trained model `mnist_model.pb` in [`examples/test_data/`](./examples/test_data/).
+If you prefer to skip this step, we have saved the trained model `mnist_model.pb` in [`models/test_data/`](./models/).
 
 2. Make private prediction on an MNIST input by running the following code snippet:
 ```bash
-../bin/run test_data/mnist_model.pb test_data/mnist_input.npy
+../bin/run --protocol_name securenn --model_name mnist_model --batch_size 1 --input_file test_data/mnist_input.npy
 ```
 
 You have just made a prediction without revealing anything about the input!
