@@ -3,7 +3,7 @@
 
 Session is an extension of `tf.Session` that lets the graph run in a secure manner.
 
-You get and use a session in the same manner that you are used to with Tensorflow::
+You get and use a session the same way that you're used to with Tensorflow::
 
     import tf_encrypted as tfe
 

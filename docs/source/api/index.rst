@@ -1,8 +1,6 @@
 `tf-encrypted`
 ==============
 
-The top tfe module.
-
 .. code-block:: python
 
     import tf_encrypted as tfe

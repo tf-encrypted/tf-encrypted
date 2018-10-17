@@ -40,4 +40,8 @@ Several contributors have put resources into the development of this library, mo
    :maxdepth: 5
    :caption: API
 
-   api/index
+   api/config/config
+   api/session
+
+   api/protocol/index
+   api/layers/index
