@@ -1,5 +1,5 @@
 `RemoteConfig`
 ==============
 
-.. autoclass:: tensorflow_encrypted.config.RemoteConfig
+.. autoclass:: tf_encrypted.config.RemoteConfig
   :members:

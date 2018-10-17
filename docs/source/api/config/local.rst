@@ -1,5 +1,5 @@
 `LocalConfig`
 ==============
 
-.. autoclass:: tensorflow_encrypted.config.LocalConfig
+.. autoclass:: tf_encrypted.config.LocalConfig
   :members:
