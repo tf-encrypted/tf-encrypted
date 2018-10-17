@@ -62,8 +62,9 @@ class SecureNN(Pond):
         Computes the bitwise `NOT` of the input.
             `(1 - x)`
 
-        :param PondTensor x:
+        :param PondTensor x: Input tensor.
         :rtype: PondTensor
+        :returns: A new tensor with values `(1 - x)`
         """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         with tf.name_scope('bitwise_not'):
@@ -75,9 +76,10 @@ class SecureNN(Pond):
         Computes the bitwise `AND` of the given inputs.
             `(x * y)`
 
-        :param PondTensor x:
-        :param PondTensory:
+        :param PondTensor x: Input tensor.
+        :param PondTensory y: Input tensor.
         :rtype: PondTensor
+        :returns: A new tensor with values `(x * y)`
         """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
@@ -90,9 +92,10 @@ class SecureNN(Pond):
         Computes the bitwise `OR` of the given inputs.
             `(x + y) - (x * y)`
 
-        :param PondTensor x:
-        :param PondTensor y:
+        :param PondTensor x: Input tensor.
+        :param PondTensor y: Input tensor.
         :rtype: PondTensor
+        :returns: A new tensor with values `(x + y) - (x * y)`
         """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
@@ -105,9 +108,10 @@ class SecureNN(Pond):
         Compute the bitwise `XOR` of the given inputs.
             `(x + y) - (x * y * 2)`
 
-        :param PondTensor x:
-        :param PondTensor y:
+        :param PondTensor x: Input tensor.
+        :param PondTensor y: Input tensor.
         :rtype: PondTensor
+        :returns: A new tensor with values `(x + y) - (x * y * 2)`
         """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
