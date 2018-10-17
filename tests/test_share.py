@@ -2,9 +2,9 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.prime import PrimeFactory
-from tensorflow_encrypted.tensor.int100 import int100factory
+import tf_encrypted as tfe
+from tf_encrypted.tensor.prime import PrimeFactory
+from tf_encrypted.tensor.int100 import int100factory
 
 
 class TestShare(unittest.TestCase):

@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 from data import gen_training_input, gen_test_input
 

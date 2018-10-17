@@ -17,8 +17,8 @@ import numpy as np
 from flask import Flask, request, jsonify  # type: ignore
 from flask_cors import CORS  # type: ignore
 
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.protocol import Pond, SecureNN
+import tf_encrypted as tfe
+from tf_encrypted.protocol import Pond, SecureNN
 
 node_name = os.environ.get('TFE_NODE_NAME')
 server0_address = os.environ.get('TFE_SERVER0_ADDRESS')

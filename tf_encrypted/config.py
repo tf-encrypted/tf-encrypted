@@ -9,6 +9,18 @@ import tensorflow as tf
 from .player import Player
 
 
+def tensorflow_supports_int64() -> bool:
+    # hacky way to test if int64 is supported by this build of TensorFlow
+    with tf.Graph().as_default():
+        x = tf.constant([1], shape=(1, 1), dtype=tf.int64)
+        try:
+            tf.matmul(x, x)
+        except TypeError:
+            return False
+        else:
+            return True
+
+
 def get_docker_cpu_quota() -> Optional[int]:
     cpu_cores = None
 

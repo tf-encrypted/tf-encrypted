@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from .factory import AbstractFactory, AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
+from .helpers import inverse
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
 
@@ -13,7 +14,12 @@ class Int64Factory(AbstractFactory):
 
     def tensor(self, value) -> 'Int64Tensor':
 
-        if isinstance(value, (tf.Tensor, np.ndarray)):
+        if isinstance(value, tf.Tensor):
+            if value.dtype is not tf.int64:
+                value = tf.cast(value, dtype=tf.int64)
+            return Int64Tensor(value)
+
+        if isinstance(value, np.ndarray):
             return Int64Tensor(value)
 
         if isinstance(value, Int64Tensor):
@@ -53,7 +59,12 @@ class Int64Factory(AbstractFactory):
         return tf.int64
 
     def sample_uniform(self, shape: List[int]) -> 'Int64Tensor':
-        value = tf.random_uniform(shape=shape, dtype=tf.int64, minval=tf.int64.min, maxval=tf.int64.max)
+        value = tf.random_uniform(shape=shape, dtype=self.native_type, minval=tf.int64.min, maxval=tf.int64.max)
+        return Int64Tensor(value)
+
+    def sample_bounded(self, shape: List[int], bitlength: int) -> 'Int64Tensor':
+        # TODO[Morten] verify that uses of this work for signed integers
+        value = tf.random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=2**bitlength)
         return Int64Tensor(value)
 
     def stack(self, xs: List['Int64Tensor'], axis: int = 0) -> 'Int64Tensor':
@@ -107,14 +118,29 @@ class Int64Tensor(AbstractTensor):
     def factory(self) -> AbstractFactory:
         return int64factory
 
-    def __add__(self, other: Any) -> 'Int64Tensor':
-        return self.add(other)
+    def __add__(self, other) -> 'Int64Tensor':
+        x, y = _lift(self, other)
+        return x.add(y)
 
-    def __sub__(self, other: Any) -> 'Int64Tensor':
-        return self.sub(other)
+    def __radd__(self, other) -> 'Int64Tensor':
+        x, y = _lift(self, other)
+        return x.add(y)
 
-    def __mul__(self, other: Any) -> 'Int64Tensor':
-        return self.mul(other)
+    def __sub__(self, other) -> 'Int64Tensor':
+        x, y = _lift(self, other)
+        return x.sub(y)
+
+    def __rsub__(self, other) -> 'Int64Tensor':
+        x, y = _lift(self, other)
+        return x.sub(y)
+
+    def __mul__(self, other) -> 'Int64Tensor':
+        x, y = _lift(self, other)
+        return x.mul(y)
+
+    def __rmul__(self, other) -> 'Int64Tensor':
+        x, y = _lift(self, other)
+        return x.mul(y)
 
     def __mod__(self, k: int) -> 'Int64Tensor':
         return self.mod(k)
@@ -162,13 +188,13 @@ class Int64Tensor(AbstractTensor):
         return [int64factory.tensor(value) for value in values]
 
     def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'Int64Tensor':
-        return int64factory.tensor(tf.reshape(self.value, axes))
+        return Int64Tensor(tf.reshape(self.value, axes))
 
-    def reduce_sum(self, axis, keepdims) -> 'Int64Tensor':
-        return int64factory.tensor(tf.reduce_sum(self.value, axis, keepdims))
+    def reduce_sum(self, axis, keepdims=None) -> 'Int64Tensor':
+        return Int64Tensor(tf.reduce_sum(self.value, axis, keepdims))
 
     def cumsum(self, axis, exclusive, reverse) -> 'Int64Tensor':
-        return int64factory.tensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
+        return Int64Tensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
 
     def equal_zero(self, factory: AbstractFactory=int64factory) -> 'AbstractTensor':
         return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
@@ -176,6 +202,26 @@ class Int64Tensor(AbstractTensor):
     def equal(self, other, factory: AbstractFactory=int64factory) -> 'AbstractTensor':
         x, y = _lift(self, other)
         return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
+
+    def truncate(self, amount, base=2) -> 'Int64Tensor':
+        if base == 2:
+            return self.right_shift(amount)
+        else:
+            factor = base**amount
+            factor_inverse = inverse(factor, self.factory.modulus)
+            return (self - (self % factor)) * factor_inverse
+
+    def right_shift(self, bitlength) -> 'Int64Tensor':
+        return Int64Tensor(tf.bitwise.right_shift(self.value, bitlength))
+
+    def expand_dims(self, axis: Optional[int]=None) -> 'Int64Tensor':
+        return Int64Tensor(tf.expand_dims(self.value, axis))
+
+    def squeeze(self, axis: Optional[List[int]]=None) -> 'Int64Tensor':
+        return Int64Tensor(tf.squeeze(self.value, axis=axis))
+
+    def negative(self) -> 'Int64Tensor':
+        return Int64Tensor(tf.negative(self.value))
 
 
 class Int64Constant(Int64Tensor, AbstractConstant):

@@ -2,8 +2,8 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.layers.activation import Tanh
+import tf_encrypted as tfe
+from tf_encrypted.layers.activation import Tanh
 
 
 class TestTanh(unittest.TestCase):

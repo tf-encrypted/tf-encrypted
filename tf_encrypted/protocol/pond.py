@@ -1,24 +1,20 @@
 from __future__ import absolute_import
 from typing import Tuple, List, Union, Optional, Any, NewType, Callable
-from ..types import Slice, Ellipse
 import abc
 import sys
-import math
+from math import log2, ceil
 
 import numpy as np
 import tensorflow as tf
 
-from ..tensor.helpers import (
-    log2,
-    gcd,
-    inverse
-)
-
+from ..tensor.helpers import inverse
 from ..tensor.factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
-from ..tensor.int100 import int100factory
-
+from ..tensor.fixed import FixedpointConfig, _validate_fixedpoint_config
+from ..tensor import int100factory, fixed100
+from ..tensor import int64factory, fixed64
+from ..types import Slice, Ellipse
 from ..player import Player
-from ..config import get_config
+from ..config import get_config, tensorflow_supports_int64
 from .protocol import Protocol, global_cache_updators, memoize, nodes
 
 
@@ -27,13 +23,6 @@ TFEVariable = Union['PondPublicVariable', 'PondPrivateVariable', tf.Variable]
 TFEPublicTensor = NewType('TFEPublicTensor', 'PondPublicTensor')
 TFETensor = Union[TFEPublicTensor, 'PondPrivateTensor', 'PondMaskedTensor']
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
-
-# the assumption in encoding/decoding is that encoded numbers will fit into signed int32
-BITPRECISION_INTEGRAL = 14
-BITPRECISION_FRACTIONAL = 16
-TRUNCATION_GAP = 20
-BOUND = 2**30  # bound on magnitude of encoded numbers: x in [-BOUND, +BOUND)
-STATISTICAL_SECURITY = 40  # number of bit for statistical security TODO[Morten] write assertions
 
 
 _initializers = list()
@@ -47,29 +36,31 @@ class Pond(Protocol):
         server_0: Optional[Player] = None,
         server_1: Optional[Player] = None,
         crypto_producer: Optional[Player] = None,
-        use_noninteractive_truncation: bool = False,
-        tensor_factory: AbstractFactory = int100factory,
-        verify_precision: bool = True
+        tensor_factory: Optional[AbstractFactory] = None,
+        fixedpoint_config: Optional[FixedpointConfig] = None,
     ) -> None:
 
         self.server_0 = server_0 or get_config().get_player('server0')
         self.server_1 = server_1 or get_config().get_player('server1')
         self.crypto_producer = crypto_producer or get_config().get_player('crypto_producer')
-        self.use_noninteractive_truncation = use_noninteractive_truncation
+
+        if tensor_factory is None:
+            if tensorflow_supports_int64():
+                tensor_factory = int64factory
+            else:
+                tensor_factory = int100factory
+
+        if fixedpoint_config is None:
+            if tensor_factory is int64factory:
+                fixedpoint_config = fixed64
+            elif tensor_factory is int100factory:
+                fixedpoint_config = fixed100
+            else:
+                raise ValueError("Don't know how to pick fixedpoint configuration for tensor type {}".format(tensor_factory))
+
+        _validate_fixedpoint_config(fixedpoint_config, tensor_factory)
+        self.fixedpoint_config = fixedpoint_config
         self.tensor_factory = tensor_factory
-
-        # modulus
-        self.M = tensor_factory.modulus
-
-        # truncation factor for going from double to single precision
-        self.K = 2 ** BITPRECISION_FRACTIONAL
-        self.K_inv_wrapped = self.tensor_factory.tensor(np.array([inverse(self.K, self.M)]))
-        self.M_wrapped = self.tensor_factory.tensor(np.array([self.M]))
-
-        if verify_precision:
-            assert log2(BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) <= log2(BOUND)
-            assert log2(self.M) >= 2 * (BITPRECISION_INTEGRAL + BITPRECISION_FRACTIONAL) + log2(1024) + TRUNCATION_GAP
-            assert gcd(self.K, self.M) == 1
 
     def define_constant(
         self,
@@ -224,7 +215,7 @@ class Pond(Protocol):
         name: Optional[str]=None
     ) -> Union['PondPublicTensor', List['PondPublicTensor']]:
 
-        if type(player) is str:
+        if isinstance(player, str):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
 
@@ -263,7 +254,7 @@ class Pond(Protocol):
     ) -> Union['PondPrivateTensor', 'PondMaskedTensor', List[Union['PondPrivateTensor', 'PondMaskedTensor']]]:
         factory = factory or self.tensor_factory
 
-        if type(player) is str:
+        if isinstance(player, str):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
 
@@ -311,7 +302,7 @@ class Pond(Protocol):
         name: Optional[str]=None
     ) -> tf.Operation:
 
-        if type(player) is str:
+        if isinstance(player, str):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
 
@@ -358,28 +349,39 @@ class Pond(Protocol):
         factory = factory or self.tensor_factory
 
         with tf.name_scope('encode'):
-            scaling_factor = 2 ** BITPRECISION_FRACTIONAL if apply_scaling else 1
 
-            if isinstance(rationals, np.ndarray):
-                scaled = (rationals * scaling_factor).astype(int).astype(object)
+            # we first scale as needed
+            if apply_scaling:
+                scaled = rationals * self.fixedpoint_config.scaling_factor
+            else:
+                scaled = rationals
 
-            elif isinstance(rationals, tf.Tensor):
-                scaled = tf.cast(rationals * scaling_factor, tf.int32)
+            # and then we round to integers
+            if isinstance(scaled, np.ndarray):
+                integers = scaled.astype(int).astype(object)
+
+            elif isinstance(scaled, tf.Tensor):
+                integers = tf.cast(scaled, factory.native_type)
 
             else:
                 raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
-        return factory.tensor(scaled)
+            # and finally wrap in tensor type
+            return factory.tensor(integers)
 
     @memoize
     def _decode(self, elements: AbstractTensor, is_scaled: bool) -> Union[tf.Tensor, np.ndarray]:
         """ Decode tensor of ring elements into tensor of rational numbers """
 
         with tf.name_scope('decode'):
-            scaling_factor = 2 ** BITPRECISION_FRACTIONAL if is_scaled else 1
 
-            # NOTE we assume that x + BOUND fits within int32, ie that (BOUND - 1) + BOUND <= 2**31 - 1
-            return ((elements + BOUND).to_native() - BOUND) / scaling_factor
+            bound = self.fixedpoint_config.bound_single_precision
+            scaled = ((elements + bound).to_native() - bound)
+
+            if is_scaled:
+                return scaled / self.fixedpoint_config.scaling_factor
+            else:
+                return scaled
 
     def _share(self, secret: AbstractTensor) -> Tuple[AbstractTensor, AbstractTensor]:
 
@@ -535,7 +537,7 @@ class Pond(Protocol):
     def indexer(self, x: 'PondTensor', slice: Union[Slice, Ellipse]) -> 'PondTensor':
         return self.dispatch('indexer', x, slice)
 
-    def transpose(self, x: 'PondTensor', perm=None):
+    def transpose(self, x: 'PondTensor', perm=None) -> 'PondTensor':
 
         node_key = ('transpose', x)
         x_t = nodes.get(node_key, None)
@@ -556,7 +558,6 @@ class Pond(Protocol):
             raise TypeError("Don't know how to transpose {}".format(type(x)))
 
         nodes[node_key] = x_t
-
         return x_t
 
     @memoize
@@ -813,6 +814,9 @@ class Pond(Protocol):
 
         return z
 
+    def maxpool2d(self, x, pool_size, strides, padding):
+        raise NotImplementedError("Only SecureNN supports Max Pooling")
+
     def avgpool2d(self, x, pool_size, strides, padding):
         node_key = ('avgpool2d', x, tuple(pool_size), tuple(strides), padding)
         z = nodes.get(node_key, None)
@@ -895,6 +899,9 @@ class PondTensor(abc.ABC):
     def __add__(self, other):
         return self.prot.add(self, other)
 
+    def __radd__(self, other):
+        return other.prot.add(self, other)
+
     def reduce_sum(self, axis=None, keepdims=None):
         return self.prot.reduce_sum(self, axis, keepdims)
 
@@ -905,6 +912,9 @@ class PondTensor(abc.ABC):
         return self.prot.sub(self, other)
 
     def __sub__(self, other):
+        return self.prot.sub(self, other)
+
+    def __rsub__(self, other):
         return self.prot.sub(self, other)
 
     def mul(self, other):
@@ -931,8 +941,8 @@ class PondTensor(abc.ABC):
     def __getitem__(self, slice):
         return self.prot.indexer(self, slice)
 
-    def tranpose(self):
-        return self.prot.transpose(self)
+    def transpose(self, perm=None):
+        return self.prot.transpose(self, perm)
 
     def truncate(self):
         return self.prot.truncate(self)
@@ -945,6 +955,9 @@ class PondTensor(abc.ABC):
 
     def cast_backing(self, backing_dtype):
         return self.prot.cast_backing(self, backing_dtype)
+
+    def reduce_max(self, axis: int) -> 'PondTensor':
+        return self.prot.reduce_max(self, axis)
 
 
 class PondPublicTensor(PondTensor):
@@ -1370,23 +1383,20 @@ def _cache_masked(prot, x):
 #
 
 
-def _raw_truncate(prot: Pond, x: AbstractTensor) -> AbstractTensor:
-    y = x - (x % prot.K)
-    return y * prot.K_inv_wrapped
-
-
 def _truncate_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
     assert isinstance(x, PondPublicTensor)
 
+    base = prot.fixedpoint_config.scaling_base
+    amount = prot.fixedpoint_config.precision_fractional
     x_on_0, x_on_1 = x.unwrapped
 
     with tf.name_scope('truncate'):
 
         with tf.device(prot.server_0.device_name):
-            y_on_0 = _raw_truncate(prot, x_on_0)
+            y_on_0 = x_on_0.truncate(amount, base)
 
         with tf.device(prot.server_1.device_name):
-            y_on_1 = _raw_truncate(prot, x_on_1)
+            y_on_1 = x_on_1.truncate(amount, base)
 
     return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
@@ -1394,7 +1404,7 @@ def _truncate_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
 def _truncate_private(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
-    if prot.use_noninteractive_truncation:
+    if prot.fixedpoint_config.use_noninteractive_truncation:
         return _truncate_private_noninteractive(prot, x)
     else:
         return _truncate_private_interactive(prot, x)
@@ -1403,15 +1413,17 @@ def _truncate_private(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
 def _truncate_private_noninteractive(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
+    base = prot.fixedpoint_config.scaling_base
+    amount = prot.fixedpoint_config.precision_fractional
     x0, x1 = x.unwrapped
 
     with tf.name_scope('truncate-ni'):
 
         with tf.device(prot.server_0.device_name):
-            y0 = _raw_truncate(prot, x0)
+            y0 = x0.truncate(amount, base)
 
         with tf.device(prot.server_1.device_name):
-            y1 = prot.M_wrapped - _raw_truncate(prot, prot.M_wrapped - x1)
+            y1 = 0 - (0 - x1).truncate(amount, base)
 
     return PondPrivateTensor(prot, y0, y1, x.is_scaled)
 
@@ -1422,19 +1434,24 @@ def _truncate_private_interactive(prot: Pond, a: PondPrivateTensor) -> PondPriva
 
     with tf.name_scope('truncate-i'):
 
-        # we first rotate `a` to make sure the reconstructed value fall into
+        scaling_factor = prot.fixedpoint_config.scaling_factor
+        scaling_factor_inverse = inverse(prot.fixedpoint_config.scaling_factor, prot.tensor_factory.modulus)
+
+        # we first rotate `a` to make sure reconstructed values fall into
         # a non-negative interval `[0, 2B)` for some bound B; this uses an
         # assumption that the values originally lie in `[-B, B)`, and will
         # leak private information otherwise
 
-        B = 2**(BITPRECISION_INTEGRAL + 2 * BITPRECISION_FRACTIONAL)
-        b = a + B
+        bound = prot.fixedpoint_config.bound_double_precision
+        b = a + bound
 
         # next step is for server0 to add a statistical mask to `b`, reveal
         # it to server1, and compute the lower part
 
-        mask_bitlength = int(log2(B) + STATISTICAL_SECURITY)
-        assert mask_bitlength < 100, mask_bitlength
+        mask_bitlength = \
+            ceil(log2(bound)) \
+            + 1 \
+            + prot.fixedpoint_config.truncation_gap
 
         b0, b1 = b.unwrapped
         shape = a.shape
@@ -1445,13 +1462,13 @@ def _truncate_private_interactive(prot: Pond, a: PondPrivateTensor) -> PondPriva
 
         with tf.device(prot.server_1.device_name):
             c1 = b1
-            c_lower = prot._reconstruct(c0, c1) % prot.K
+            c_lower = prot._reconstruct(c0, c1) % scaling_factor
 
         # then use the lower part of the masked value to compute lower part
         # of original value
 
         with tf.device(prot.server_0.device_name):
-            r_lower = r % prot.K
+            r_lower = r % scaling_factor
             a_lower0 = r_lower * -1
 
         with tf.device(prot.server_1.device_name):
@@ -1462,10 +1479,10 @@ def _truncate_private_interactive(prot: Pond, a: PondPrivateTensor) -> PondPriva
         a0, a1 = a.unwrapped
 
         with tf.device(prot.server_0.device_name):
-            d0 = (a0 - a_lower0) * prot.K_inv_wrapped
+            d0 = (a0 - a_lower0) * scaling_factor_inverse
 
         with tf.device(prot.server_1.device_name):
-            d1 = (a1 - a_lower1) * prot.K_inv_wrapped
+            d1 = (a1 - a_lower1) * scaling_factor_inverse
 
     return PondPrivateTensor(prot, d0, d1, a.is_scaled)
 
@@ -2228,7 +2245,6 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
 # average pooling helpers
 #
 
-
 def _avgpool2d_core(prot: Pond,
                     x: PondTensor,
                     pool_size: Tuple[int, int],
@@ -2277,11 +2293,11 @@ def _avgpool2d_im2col_reduce(x: AbstractTensor,
     pool_height, pool_width = pool_size
 
     if padding == "SAME":
-        out_height = math.ceil(int(height) / strides[0])
-        out_width = math.ceil(int(width) / strides[1])
+        out_height = ceil(int(height) / strides[0])
+        out_width = ceil(int(width) / strides[1])
     else:
-        out_height = math.ceil((int(height) - pool_size[0] + 1) / strides[0])
-        out_width = math.ceil((int(width) - pool_size[1] + 1) / strides[1])
+        out_height = ceil((int(height) - pool_size[0] + 1) / strides[0])
+        out_width = ceil((int(width) - pool_size[1] + 1) / strides[1])
 
     x_split = x.reshape((batch * channels, 1, height, width))
     x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])

@@ -2,10 +2,10 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
-from tensorflow_encrypted.tensor.int100 import int100factory
-from tensorflow_encrypted.tensor.prime import PrimeFactory
+from tf_encrypted.tensor.int100 import int100factory
+from tf_encrypted.tensor.prime import PrimeFactory
 
 
 class TestLSB(unittest.TestCase):
@@ -26,7 +26,6 @@ class TestLSB(unittest.TestCase):
         with tfe.protocol.SecureNN(
             tensor_factory=tensor_factory,
             prime_factory=prime_factory,
-            verify_precision=False
         ) as prot:
 
             x_in = prot.define_private_variable(self.x, apply_scaling=False, name='test_lsb_input')
