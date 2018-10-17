@@ -18,13 +18,13 @@ To achieve its vision, this library has several goals:
 
 Learn more about how to use the project by visiting the [documentation](https://tf-encrypted.readthedocs.io/en/latest/index.html).
 
-Several contributors have put resources into the development of this library, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community (see below for [details](#contributions)). The approached used by this library was first described by Morten Dahl in his [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/)) blog post.
+Several contributors have put resources into the development of this library, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community (see below for [details](#contributions)). The approached used by this library was first described by Morten Dahl in his [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) blog post.
 
 # Installation & Usage
 
-tf-encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) which can be installed using pip:
+tf-encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.5+ which can be installed using pip:
 
-```
+```bash
 $ pip install tf-encrypted
 ```
 
