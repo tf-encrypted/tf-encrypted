@@ -6,7 +6,9 @@
 tf-encrypted
 ========================================
 
-tf-encrypted is an open source Python library built on top of `TensorFlow`_ focused on making it easy for researchers and practitioners to experiment with privacy-preserving machine learning without needing to be an expert in machine learning, cryptography, distributed systems, or high performance computing. For more information on performance and security please read the `Private Machine Learning in TensorFlow using Secure Computation`_ paper.
+tf-encrypted is an open source Python library built on top of `TensorFlow`_ focused on making it easy for researchers and practitioners to experiment with privacy-preserving machine learning without needing to be an expert in machine learning, cryptography, distributed systems, or high performance computing.
+
+More detailed information on the architecture, performance, and security considerations of this project are contained in `Private Machine Learning in TensorFlow using Secure Computation`_ paper which introduced this project.
 
 .. _TensorFlow: https://tensorflow.org
 .. _Private Machine Learning in TensorFlow using Secure Computation: https://linkhere.org
@@ -24,19 +26,12 @@ You can view the project source, contribute, and asks questions on `GitHub`_.
 .. _Getting Started: usage/getting_started.html
 .. _GitHub: https://github.com/mortendahl/tf-encrypted
 
---------------------------
-Project Status
---------------------------
-
-tf-encrypted is experimental software that is not ready for use in production environments for security reasons. However, it is ready to be used for research and for experimenting with private machine learning.
-
-We're always looking for new contributors, to help new users, or solve bugs encountered when using the library. Please don't hesitate to open an issue on `GitHub`_.
 
 -----------------------
 License
 -----------------------
 
-Licensed under the Apache License, Version 2.0 (see `License`_). Copyright as specified in the `NOTICE`_ contained in the code base.
+This project is licensed under the Apache License, Version 2.0 (see `License`_). Copyright as specified in the `NOTICE`_ contained in the code base.
 
 .. _License: https://github.com/mortendahl/tf-encrypted/blob/master/LICENSE
 .. _NOTICE: https://github.com/mortendahl/tf-encrypted/blob/master/NOTICE

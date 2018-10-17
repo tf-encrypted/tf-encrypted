@@ -78,6 +78,21 @@ typecheck: pythoncheck
 
 .PHONY: lint test typecheck
 
+# ##############################################
+# Documentation
+#
+# Rules for building our documentation
+# ##############################################
+SPHINXOPTS    =
+SPHINXBUILD   = sphinx-build
+SOURCEDIR     = docs/source
+BUILDDIR      = build
+
+docs:
+	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+.PHONY: docs
+
 # ###############################################
 # Version Derivation
 #
@@ -198,6 +213,9 @@ endif
 pypi-version-check:
 ifeq (,$(shell grep -e $(VERSION) setup.py))
 	$(error "Version specified in setup.py does not match $(VERSION)")
+endif
+ifeq (,$(shell grep -e $(VERSION) docs/source/conf.py))
+	$(error "Version specified in docs/source/conf.py does not match $(VERSION)")
 endif
 
 pypi-push-master: pypicheck pypi-version-check

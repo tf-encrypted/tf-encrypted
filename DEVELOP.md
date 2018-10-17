@@ -1,5 +1,19 @@
 # Developing
 
+## Documentation
+
+This project uses [Sphinx](http://www.sphinx-doc.org/en/master/) documentation.
+
+Whenever a change is made that impacts the behaviour of the API used by
+consumers of this project the corresponding documentation should be updated so
+users always have up to date documentation that reflects the true behaviour of
+the library.
+
+You can build the project locally using the `make docs` command which will
+subsequently output the html version of our docs to your `build` folder. You
+can view the docs after their built using your browser by running the command
+`open build/html/index.html`.
+
 ## Typing
 
 tf-encrypted is developed using types with [mypy](http://mypy-lang.org/).
