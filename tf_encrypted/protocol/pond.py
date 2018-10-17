@@ -30,6 +30,17 @@ _thismodule = sys.modules[__name__]
 
 
 class Pond(Protocol):
+    """
+    Pond is similar to SPDZ except it has been vectorized plus a few more optimizations.
+
+    Pond works with 2 parties for computation and one crypto producer for triples.
+
+    :param Player server_0: The "alice" of MPC.
+    :param Player server_1: The "bob" of MPC.
+    :param Player crypto_producer: The host to act as the crypto producer.  In pond this party is
+        responsible for producing triples to aid in computation.
+    :param AbstractFactory tensor_factory: Which backing type of tensor you would like to use. E.g. `int100` or `int64`
+    """
 
     def __init__(
         self,
@@ -69,6 +80,22 @@ class Pond(Protocol):
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None
     ) -> 'PondConstant':
+        """
+        Define a constant to use in computation.
+
+        .. code-block:: python
+
+            x = prot.define_constant(np.array([1,2,3,4]), apply_scaling=False)
+
+        :See: tf.constant
+
+        :param np.ndarray value: The value to define as a constant.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value with.
+
+        :rtype: PondConstant
+        """
         assert isinstance(value, (np.ndarray,)), type(value)
 
         factory = factory or self.tensor_factory
@@ -93,6 +120,23 @@ class Pond(Protocol):
         factory: Optional[AbstractFactory] = None
     ) -> 'PondPublicTensor':
 
+        """
+        Define a `public` placeholder to use in computation.  This will be known to both parties.
+
+        .. code-block:: python
+
+            x = prot.define_public_placeholder(shape=(1024, 1024))
+
+        :See: tf.placeholder
+
+        :param List[int] shape: The shape of the placeholder.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value with.
+
+        :rtype: PondPublicTensor
+        """
+
         factory = factory or self.tensor_factory
 
         with tf.name_scope('public-placeholder{}'.format('-' + name if name else '')):
@@ -112,6 +156,23 @@ class Pond(Protocol):
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None
     ) -> 'PondPrivateTensor':
+
+        """
+        Define a `private` placeholder to use in computation.  This will only be known by the party that defines it.
+
+        .. code-block:: python
+
+            x = prot.define_private_placeholder(shape=(1024, 1024))
+
+        :See: tf.placeholder
+
+        :param List[int] shape: The shape of the placeholder.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value with.
+
+        :rtype: PondPrivateTensor
+        """
 
         factory = factory or self.tensor_factory
 
@@ -148,6 +209,15 @@ class Pond(Protocol):
 
         For those curious, under the hood, the major difference is that this function will pin your data to
         a specific device which will be used to optimize the graph later on.
+
+        :see tf.Variable
+
+        :param Union[np.ndarray,tf.Tensor,PondPublicTensor] initial_value: The initial value.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value with.
+
+        :rtype: PondPublicVariable
         """
         assert isinstance(initial_value, (np.ndarray, tf.Tensor, PondPublicTensor)), type(initial_value)
 
@@ -190,6 +260,15 @@ class Pond(Protocol):
 
         For example, in a two party architecture, this will split the value into two sets of
         shares and transfer them between each party in a secure manner.
+
+        :see tf.Variable
+
+        :param Union[np.ndarray,tf.Tensor,PondPublicTensor] initial_value: The initial value.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value with.
+
+        :rtype: PondPrivateVariable
         """
         assert isinstance(initial_value, (np.ndarray, tf.Tensor, PondPublicTensor,
                                           PondPrivateTensor)), type(initial_value)
@@ -235,6 +314,18 @@ class Pond(Protocol):
         name: Optional[str]=None
     ) -> Union['PondPublicTensor', List['PondPublicTensor']]:
 
+        """
+        Define a public input.
+
+        This represents a `public` input owned by the specified player into the graph.
+
+        :param Union[str,Player] player: Which player owns this input.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+
+        :rtype: PondPublicTensor
+        """
+
         if isinstance(player, str):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
@@ -272,6 +363,21 @@ class Pond(Protocol):
         masked: bool=False,
         factory: Optional[AbstractFactory] = None
     ) -> Union['PondPrivateTensor', 'PondMaskedTensor', List[Union['PondPrivateTensor', 'PondMaskedTensor']]]:
+
+        """
+        Define a private input.
+
+        This represents a `private` input owned by the specified player into the graph.
+
+        :param Union[str,Player] player: Which player owns this input.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param bool masked: Whether or not to mask the input.
+        :param AbstractFactory factory: Which backing type to use for this input (e.g. `int100` or `int64`).
+
+        :rtype: PondPublicTensor
+        """
+
         factory = factory or self.tensor_factory
 
         if isinstance(player, str):
@@ -321,6 +427,12 @@ class Pond(Protocol):
         outputter_fn: Callable[..., Any],
         name: Optional[str]=None
     ) -> tf.Operation:
+
+        """
+        Define an output for this graph.
+
+        :param Union[str,Player] player: Which player/device this output will be sent to.
+        """
 
         if isinstance(player, str):
             player = get_config().get_player(player)
