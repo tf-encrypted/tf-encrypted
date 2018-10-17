@@ -4,7 +4,6 @@
 | Config determines how a session should run in tf-encrypted.
 | There are two primary ways in which config can be used:
 
-.. TODO: How do we link these to the real thing?
 .. py:class:: tf_encrypted.config.LocalConfig
   :noindex:
 
