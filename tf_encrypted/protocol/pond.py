@@ -1252,7 +1252,7 @@ class PondPublicTensor(PondTensor):
         In most cases you will want to work on this data on the specified device.
 
         .. code-block:: python
-        
+
             x_0, y_0 = tensor.unwrapped
 
             with tf.device(prot.player_0.device_name):

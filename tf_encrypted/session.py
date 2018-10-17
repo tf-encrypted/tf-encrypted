@@ -7,7 +7,7 @@ import tensorflow as tf
 from tensorflow.python.client import timeline
 from tensorflow.python import debug as tf_debug
 
-from .config import Config, RemoteConfig, get_config
+from .config import RemoteConfig, get_config
 from .protocol.pond import PondPublicTensor
 from .tensor.factory import AbstractTensor
 
