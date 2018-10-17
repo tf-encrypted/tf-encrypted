@@ -26,6 +26,7 @@ else:
 tfe.set_config(config)
 tfe.set_protocol(tfe.protocol.SecureNN(*tfe.get_config().get_players(['server0', 'server1', 'crypto-producer'])))
 
+
 def weight_variable(shape, gain):
     """weight_variable generates a weight variable of a given shape."""
     if len(shape) == 2:

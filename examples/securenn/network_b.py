@@ -168,6 +168,7 @@ class PredictionClient():
             op = tf.Print([op], [acc], summarize=self.BATCH_SIZE, message="Acuraccy: ")
             return op
 
+
 model_trainer = ModelTrainer()
 prediction_client = PredictionClient()
 
