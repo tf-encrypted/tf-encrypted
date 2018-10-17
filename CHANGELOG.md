@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Breaking**
+
+- Import path renamed from `tensorflow_encrypted` to `tf_encrypted`
+
 **Added**
 
 - Added a CHANGELOG.md file to the project root.
