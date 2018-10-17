@@ -6,7 +6,7 @@
 
 ![Status](https://img.shields.io/badge/status-alpha-blue.svg)  [![License](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg)](./LICENSE)  [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master) [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://tf-encrypted.readthedocs.io/en/latest/)
 
-tf-encrypted is a Python library built on top of [TensorFlow](https://www.tensorflow.org) focused on making it easy for researchers and practitioners to experiment with privacy-preserving machine learning without needing to be an expert in machine learning, cryptography, distributed systems, or high performance computing. For more information on performance and security please read the [Private Machine Learning in TensorFlow using Secure Computation](link here) paper.
+tf-encrypted is a Python library built on top of [TensorFlow](https://www.tensorflow.org) focused on making it easy for researchers and practitioners to experiment with privacy-preserving machine learning without needing to be an expert in machine learning, cryptography, distributed systems, or high performance computing. For more information on performance and security please read the [Private Machine Learning in TensorFlow using Secure Computation](linkhere) paper.
 
 To achieve its vision, this library has several goals:
 
@@ -22,7 +22,7 @@ Several contributors have put resources into the development of this library, mo
 
 # Installation & Usage
 
-tf-encrypted is available as a package on [pypi.org](https://pypi.org/project/tf-encrypted/) which can be installed using pip:
+tf-encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) which can be installed using pip:
 
 ```
 $ pip install tf-encrypted
@@ -49,7 +49,7 @@ For more information, checkout our full getting started guide in our [documentat
 
 tf-encrypted is experimental software that is not ready for use in any production environment for security reasons. We're currently focused on building the underlying primitives that enabled cryptographist, machine learning researchers, and data scientists to experiment with private machine learning.
 
-We are actively seeking outside contributions to help us move from experimental to production-ready software. Don't hesitate to send a pull request or open an issue, we'd love to work with anyone interested in democratizing private machine learning.
+Don't hesitate to send a pull request or open an issue, we'd love to work with anyone interested in using or developing private machine learning.
 
 # License
 
