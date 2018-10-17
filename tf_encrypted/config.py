@@ -132,9 +132,7 @@ class LocalConfig(Config):
         config = tf.ConfigProto(
             log_device_placement=self._log_device_placement,
             allow_soft_placement=False,
-            device_count={"CPU": len(self._players)},
-            inter_op_parallelism_threads=1,
-            intra_op_parallelism_threads=1
+            device_count={"CPU": len(self._players)}
         )
 
         return (target, config)

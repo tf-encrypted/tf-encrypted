@@ -221,7 +221,7 @@ pypi-push: pypi-push-$(PUSHTYPE)
 # The following are meta-rules for building and pushing various different
 # release artifacts to their intended destinations.
 # ###############################################
-push:
+push: pypi-version-check
 	@echo "Attempting to build and push $(VERSION) with push type $(PUSHTYPE) - $(EXACT_TAG)"
 	make docker-push
 	make pypi-push
