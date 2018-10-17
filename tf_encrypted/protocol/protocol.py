@@ -24,7 +24,7 @@ class Protocol(ABC):
         set_protocol(self)
         return self
 
-    def __exit__(self, type,
+    def __exit__(self, type,  # type is `Optional[Type[BaseException]]`, but declaring `Type` breaks readthedocs.
                  value: Optional[Exception],
                  traceback: Optional[TracebackType]) -> Optional[bool]:
         set_protocol(None)
