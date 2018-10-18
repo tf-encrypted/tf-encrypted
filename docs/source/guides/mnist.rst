@@ -6,7 +6,7 @@ This tutorial is also available on `Google Collab`_, feel free to follow along t
 In this tutorial, we will train our model in plaintext with Tensorflow, then
 make private predictions with `tf-encrypted`. we will use the `MNIST dataset`_.
 
-.. _Google Collab: https://colab.research.google.com/drive/1fc7FYSWE2c5s_LsRDAlTPZB_TSAImtYq?authuser=2&pli=1
+.. _Google Collab: https://colab.research.google.com/drive/1BbOcMc8npAfQH91-2jtCWkTvpXY0aThC
 .. _MNIST dataset: http://yann.lecun.com/exdb/mnist/
 
 .. code-block:: python

@@ -1,10 +1,13 @@
 Logistic Regression
 ====================
 
+This tutorial is also available on `Google Collab`_, feel free to follow along there!
+
 In this section we will see how to do an easy task, but in secret: `Logistic Regression`_.
 
 Let's go through piece by piece.  This section assumes some familiarity with machine learning and `TensorFlow`_.
 
+.. _Google Collab: https://colab.research.google.com/drive/18eu3zm1mhBlxRL17MYXzQUiz-sp4p6Uc
 .. _Logistic Regression: https://en.wikipedia.org/wiki/Logistic_regression
 .. _TensorFlow: https://www.tensorflow.org/
 
