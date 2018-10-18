@@ -19,6 +19,10 @@ _thismodule = sys.modules[__name__]
 
 
 class SecureNN(Pond):
+    """Implementation of secureNN from the secureNN paper
+        https://eprint.iacr.org/2018/442.pdf
+
+    """
 
     def __init__(
         self,
@@ -54,33 +58,73 @@ class SecureNN(Pond):
 
     @memoize
     def bitwise_not(self, x: PondTensor) -> PondTensor:
+        """
+        Computes the bitwise `NOT` of the input.
+            `(1 - x)`
+
+        :param PondTensor x: Input tensor.
+        :rtype: PondTensor
+        :returns: A new tensor with values `(1 - x)`
+        """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         with tf.name_scope('bitwise_not'):
             return self.sub(1, x)
 
     @memoize
-    def bitwise_and(self, x: PondTensor, y: PondTensor) -> PondTensor:
+    def bitwise_and(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
+        """
+        Computes the bitwise `AND` of the given inputs.
+            `(x * y)`
+
+        :param PondTensor x: Input tensor.
+        :param PondTensory y: Input tensor.
+        :rtype: PondTensor
+        :returns: A new tensor with values `(x * y)`
+        """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
         with tf.name_scope('bitwise_and'):
             return x * y
 
     @memoize
-    def bitwise_or(self, x: PondTensor, y: PondTensor) -> PondTensor:
+    def bitwise_or(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
+        """
+        Computes the bitwise `OR` of the given inputs.
+            `(x + y) - (x * y)`
+
+        :param PondTensor x: Input tensor.
+        :param PondTensor y: Input tensor.
+        :rtype: PondTensor
+        :returns: A new tensor with values `(x + y) - (x * y)`
+        """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
         with tf.name_scope('bitwise_or'):
             return x + y - self.bitwise_and(x, y)
 
     @memoize
-    def bitwise_xor(self, x: PondTensor, y: PondTensor) -> PondTensor:
+    def bitwise_xor(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
+        """
+        Compute the bitwise `XOR` of the given inputs.
+            `(x + y) - (x * y * 2)`
+
+        :param PondTensor x: Input tensor.
+        :param PondTensor y: Input tensor.
+        :rtype: PondTensor
+        :returns: A new tensor with values `(x + y) - (x * y * 2)`
+        """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
         with tf.name_scope('bitwise_xor'):
             return x + y - self.bitwise_and(x, y) * 2
 
     @memoize
-    def msb(self, x: PondTensor) -> PondTensor:
+    def msb(self, x: 'PondTensor') -> 'PondTensor':
+        """
+        Computes the most significant bit of the provided tensor.
+
+        :param PondTensor x: The tensor to take the most significant bit of
+        """
         # NOTE when the modulus is odd then msb reduces to lsb via x -> 2*x
 
         # if x.backing_dtype.modulus % 2 != 1:
@@ -93,6 +137,11 @@ class SecureNN(Pond):
 
     @memoize
     def lsb(self, x: PondTensor) -> PondTensor:
+        """
+        Computes the least significant bit of the provided tensor.
+
+        :param PondTensor x: The tensor to take the least significant bit of.
+        """
         return self.dispatch('lsb', x, container=_thismodule)
 
     @memoize
@@ -101,57 +150,210 @@ class SecureNN(Pond):
 
     @memoize
     def negative(self, x: PondTensor) -> PondTensor:
+        """
+        Returns whether or not the element in the tensor is negative. `e.g.`
+
+        .. code-block:: none
+
+            negative([-1, 0, 1])
+            => [1, 0, 0]
+
+        :param PondTensor x: The tensor to check.
+        :rtype: PondTensor
+        :returns: If `1` if the element is `< 0`, `0` otherwise.
+        """
         with tf.name_scope('negative'):
             # NOTE MSB is 1 iff xi < 0
             return self.msb(x)
 
     @memoize
     def non_negative(self, x: PondTensor) -> PondTensor:
+        """
+        Returns whether or not the element in the tensor is positive. `e.g.`
+
+        .. code-block:: none
+
+            non_negative([-1, 0, 1])
+            => [0, 1, 1]
+
+        :param PondTensor x: The tensor to check.
+        :rtype: PondTensor
+        :returns: If `1` if the element is `>= 0`, `0` otherwise.
+        """
         with tf.name_scope('non_negative'):
             return self.bitwise_not(self.msb(x))
 
     @memoize
     def less(self, x: PondTensor, y: PondTensor) -> PondTensor:
+        """
+        Returns `x < y`
+
+        .. code-block:: none
+
+            less([1,2,3], [0,1,5])
+            => [0, 0, 1]
+
+        :param PondTensor x: The tensor to check.
+        :param PondTensor y: The tensor to check against.
+        :rtype: PondTensor
+        :returns: If `1` if the element is `< yi`, `0` otherwise.
+        """
         with tf.name_scope('less'):
             return self.negative(x - y)
 
     @memoize
     def less_equal(self, x: PondTensor, y: PondTensor) -> PondTensor:
+        """
+        Returns `x <= y`
+
+        .. code-block:: none
+
+            less_equal([1,2,3], [0,1,3])
+            => [0, 0, 1]
+
+        :param PondTensor x: The tensor to check.
+        :param PondTensor y: The tensor to check against.
+        :rtype: PondTensor
+        :returns: If `1` if the element is `<= yi`, `0` otherwise.
+        """
         with tf.name_scope('less_equal'):
             return self.bitwise_not(self.greater(x, y))
 
     @memoize
     def greater(self, x: PondTensor, y: PondTensor) -> PondTensor:
+        """
+        Returns `x > y`
+
+        .. code-block:: none
+
+            greater([1,2,3], [0,1,5])
+            => [1, 1, 0]
+
+        :param PondTensor x: The tensor to check.
+        :param PondTensor y: The tensor to check against.
+        :rtype: PondTensor
+        :returns: If `1` if the element is `> yi`, `0` otherwise.
+        """
         with tf.name_scope('greater'):
             return self.negative(y - x)
 
     @memoize
     def greater_equal(self, x: PondTensor, y: PondTensor) -> PondTensor:
+        """
+        Returns `x >= y`
+
+        .. code-block:: none
+
+            greater_equal([1,2,3], [0,1,3])
+            => [1, 1, 1]
+
+        :param PondTensor x: The tensor to check.
+        :param PondTensor y: The tensor to check against.
+        :rtype: PondTensor
+        :returns: If `1` if the element is `>= yi`, `0` otherwise.
+        """
         with tf.name_scope('greater_equal'):
             return self.bitwise_not(self.less(x, y))
 
     @memoize
     def select(self, choice_bit: PondTensor, x: PondTensor, y: PondTensor) -> PondTensor:
+        """
+        The `select` protocol from `secureNN`.
+
+        :param PondTensor choice_bit: The bits representing which share to choose.
+            If `choice_bit = 0` then choose from `x`, otherwise choose from `y`.
+
+        .. code-block:: python
+
+            select(choice_bit=[0,1,0,1], x=[10, 20, 30, 40], y=[1, 2, 3, 4])
+            # [10, 2, 30, 4]
+
+        `NOTE:` Inputs to this function in real use will not look like above.
+        In practice these will be secret shares.
+
+        :param PondTensor choice_bit: Which tensor to choose from. `x` if the bit is `0`, `y` otherwise.
+            This is known as `alpha` in the `secureNN` paper.
+        :param PondTensor x: Input tensor.
+        :param PondTensor y: Input tensor.
+
+        :rtype: PondTensor
+        :returns: A new tensor with the bits from `x` and `y` chosen as described above.
+
+        """
         with tf.name_scope('select'):
             return (y - x) * choice_bit + x
 
     @memoize
     def equal_zero(self, x, out_dtype: Optional[AbstractFactory]=None):
+        """
+        Returns `x == 0`
+
+        .. code-block:: none
+
+            equal_zero([1,0,1])
+            => [0, 1, 0]
+
+        :param PondTensor x: The tensor to check.
+        :rtype: PondTensor
+        :returns: If `1` if the element is `0`, `0` otherwise.
+        """
         return self.dispatch('equal_zero', x, container=_thismodule, out_dtype=out_dtype)
 
     def share_convert(self, x):
+        """
+        Convert which ring `x` belongs to.  This protocol is not implemented yet.
+
+        Some operations in secureNN only work in an odd ring.  This function
+        is used to convert from one ring to another.
+
+        :param PondTensor x: The tensor to convert.
+        :raises: NotImplementedError
+        """
         raise NotImplementedError
 
     def divide(self, x, y):
+        """
+        Divide x by y.
+
+        :param PondTensor x: Input tensor.
+        :param PondTensor y: Input tensor.
+
+        :rtype: PondTensor
+        :returns: x divided by y.
+        """
         raise NotImplementedError
 
     @memoize
     def relu(self, x):
+        """
+        Returns the exact `Relu` of `x`.  One of the major differences between
+        `pond` and `secureNN` is that `Relu` is not approximated.
+
+        .. code-block:: python
+
+            relu([-12, -3, 1, 3, 3])
+            # [0, 0, 1, 3, 3]
+
+        :param PondTensor x: Input tensor.
+        :rtype: PondTensor
+        :returns: The pond tensor with a `Relu` activation performed on it.
+        """
         with tf.name_scope('relu'):
             drelu = self.non_negative(x)
             return drelu * x
 
     def maxpool2d(self, x, pool_size, strides, padding):
+        """
+        Performs a `MaxPooling2d` operation on `x`.
+
+        :param PondTensor x: Input tensor.
+        :param List[int] pool_size: The size of the pool.
+        :param List[int] strides: A list describing how to stride over the convolution.
+        :param str padding: Which type of padding to use ("SAME" or "VALID").
+
+        :rtype: PondTensor
+        :returns: A new pond tensor with the result of the specified pool operation.
+        """
         node_key = ('maxpool2d', x, tuple(pool_size), tuple(strides), padding)
         z = nodes.get(node_key, None)
 
@@ -175,12 +377,42 @@ class SecureNN(Pond):
 
     @memoize
     def maximum(self, x, y):
+        """
+        Computes max(x, y).
+
+        Returns the greater value of each tensor per index.
+
+        .. code-block:: python
+
+            maximum([10, 20, 30], [11, 19, 31])
+            # [11, 20, 31]
+
+        :param PondTensor x: Input tensor.
+        :param PondTensor y: Input tensor.
+
+        :rtype: PondTensor
+        :returns: A new tensor with the max value per index of `x` & `y`.
+        """
         with tf.name_scope('maximum'):
             indices_of_maximum = self.greater(x, y)
             return self.select(indices_of_maximum, y, x)
 
     @memoize
     def reduce_max(self, x, axis=0):
+        """
+        Find the max value along an axis.
+
+        .. code-block:: python
+
+            reduce_max([[10, 20, 30], [11, 13, 12], [15, 16, 17]], axis=0)
+            # [[30], [13], [17]]
+
+        :See: tf.reduce_max
+        :param PondTensor x: Input tensor.
+        :param int axis: The tensor axis to reduce along.
+        :rtype: PondTensor
+        :returns: A new tensor with the specified axis reduced to the max value in that axis.
+        """
         with tf.name_scope('reduce_max'):
 
             def build_comparison_tree(ts):

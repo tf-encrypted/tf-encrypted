@@ -7,19 +7,28 @@ from . import core
 
 class Conv2D(core.Layer):
 
+    """
+    2 Dimensional convolutional layer, expects NCHW data format
+
+    :param List[int] input_shape: The shape of the data flowing into the convolution.
+    :param List[int] filter_shape: The shape of the convolutional filter.  Expected to be rank 4.
+    :param int strides: The size of the stride
+    :param padding str: The type of padding ("SAAME" or "VALID")
+    :param lambda filter_init: lambda function with shape parameter
+
+        `Example`
+
+        .. code-block:: python
+
+                Conv2D((4, 4, 1, 20), strides=2, filter_init=lambda shp:
+                        np.random.normal(scale=0.01, size=shp))
+    """
+
     def __init__(self,
                  input_shape: List[int], filter_shape: List[int],
                  strides: int = 1, padding: str = "SAME",
                  filter_init=lambda shp: np.random.normal(scale = 0.1, size = shp),
                  l2reg_lambda: float = 0.0, channels_first: bool = True) -> None:
-        """ 2 Dimensional convolutional layer, expects NCHW data format
-            filter_shape: tuple of rank 4
-            strides: int with stride size
-            filter init: lambda function with shape parameter
-            Example:
-            Conv2D((4, 4, 1, 20), strides=2, filter_init=lambda shp:
-                    np.random.normal(scale=0.01, size=shp))
-        """
         self.fshape = filter_shape
         self.strides = strides
         self.padding = padding

@@ -26,6 +26,11 @@ def get_protocol_public_func(prot: protocol.Protocol) -> list:
 
 
 def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
+    """
+    Sets the global protocol.  See :class:`~tensorflow_encrypted.protocol.protocol.Protocol` for more info.
+
+    :param ~tensorflow_encrypted.protocol.protocol.Protocol prot: A protocol instance.
+    """
     for func in all_prot_funcs:
         if func[0] in globals():
             del globals()[func[0]]

@@ -9,6 +9,11 @@ IntTuple = Union[int, Tuple[int, int], List[int]]
 
 
 class Pooling2D(core.Layer):
+    """
+    Subclass for Average and Max pooling layers
+
+    Do not instantiate.
+    """
     def __init__(self,
                  input_shape: List[int],
                  pool_size: IntTuple,
@@ -73,6 +78,13 @@ class Pooling2D(core.Layer):
 
 
 class AveragePooling2D(Pooling2D):
+
+    """
+    AveragePooling2D
+
+    :See: tf.nn.avg_pool
+    """
+
     def __init__(self,
                  input_shape: List[int],
                  pool_size: IntTuple,
@@ -86,6 +98,12 @@ class AveragePooling2D(Pooling2D):
 
 
 class MaxPooling2D(Pooling2D):
+    """
+    MaxPooling2D
+
+    :See: tf.nn.max_pool
+    """
+
     def __init__(self,
                  input_shape: List[int],
                  pool_size: IntTuple,

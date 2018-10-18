@@ -43,10 +43,11 @@ jobs:
       - *bootstrap
       - *save-cache
       - run:
-          name: run tests
+          name: run tests and build the docs
           command: |
             . venv/bin/activate
             make test
+            make docs
       - run:
           name: build docker container
           command: make docker
