@@ -1,5 +1,5 @@
-Secret Logistic Regression
-===========================
+Logistic Regression
+====================
 
 In this section we will see how to do an easy task, but in secret: `Logistic Regression`_.
 
