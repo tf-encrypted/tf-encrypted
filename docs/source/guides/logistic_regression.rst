@@ -118,4 +118,4 @@ Finally, we can run our training loop
         sess.run(print_acc_op)
 
 
-You have just made a prediction without revealing anything about the input!
+You have just done private training without revealing anything about the input!
