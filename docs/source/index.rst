@@ -44,6 +44,13 @@ This project is licensed under the Apache License, Version 2.0 (see `License`_).
    usage/getting_started
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Guides
+
+   guides/mnist
+   guides/logistic_regression
+
+.. toctree::
    :maxdepth: 5
    :caption: API
 
