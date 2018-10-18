@@ -1,24 +1,24 @@
 Getting Started
 ================
 
-This guide assumes that you have followed the `installation instructions`_.
+This walkthrough assumes that you have installed `tf-encrypted` by following the `installation instructions`_.
 
 .. _installation instructions: installation.html
 
-There are also some concepts that you should be familiar with before reading this guide:
+`tf-encrypted` is a `secure multiparty computation`_ library where multiple people (or "`parties`") work together to compute results in a secure fashion without any one party having access to the underlying data. This is achieved by splitting up the input data into shares that are `perfectly secure`_.
 
-- `MPC`_: `tf-encrypted` is a secure multiparty computation library.  The short and suite is that this implies there will be multiple people (or "`parties`") working together to compute something in a secure fashion.  `i.e.` multiple people will get a result, but the computation and input data is `perfectly secure`_.
-
-.. _MPC: https://en.wikipedia.org/wiki/Secure_multi-party_computation
+.. _secure multiparty computation: https://en.wikipedia.org/wiki/Secure_multi-party_computation
 .. _perfectly secure: https://en.wikipedia.org/wiki/One-time_pad
 
 --------------------------------------------
 Introduction to TensorFlow Encrypted API
 --------------------------------------------
 
-tf-encrypted has a simple api to make it easy for data scientists to make private predictions and trainings.
-To define a machine learning model, tf-encrypted and TensorFlow follow a very similar API.
-We can declare constants and variables in the same way that you are used to
+tf-encrypted provides an API similar to TensorFlow that data scientists and researchers can use to train models and predict upon them in privacy-preserving fashion.
+
+One of the goals of `tf-encrypted` is to make experimenting with secure private machine learning accessible to anyone. To do this, we've implemented an API that is very similar to TensorFlow while abstracting away the complexity of securely managing public and private data. The `PondTensor` is the primary abstraction provided for managing public and private data.
+
+The following example demonstrates constructing a public value (known to all parties) using `tfe.define_public_variable`.
 
 .. code-block:: python
 
@@ -28,22 +28,10 @@ We can declare constants and variables in the same way that you are used to
     variable = tfe.define_public_variable(np.array([1,2,3]))
     print(variable) # PondPublicVariable(shape=(3,))
 
-One of the goals of the `tf-encrypted` API is to be able to abstract `MPC`_ details away from
-users if they don't want to think about them.  In the above example we are able to abstract
-one of the major challenges with implementing MPC algorithms, and that is data residency.
 
-In MPC sometimes pieces of data are known to both parties, or sometimes only one person can know about a piece of data.
-Obviously, private data should not leave the machine who knows what it really is, and public data is
-okay to live anywhere, but it should be efficiently sent to machines that need it to avoid unnecessary communication.
+We can then perform operations on these Tensors which define an underlying computation graph which can be executed inside a `Session`_ which manages figuring out which nodes run which parts of the computation. This is demonstrated in the following example:
 
-The `PondTensor` above implements all of the appropriate abstractions to deal with these
-challenges.  By default we will have 2 parties involved in a communication.  Creating
-a tensor using `tfe.define_public_variable` ensures that the data ends up on the proper
-machine.
-
-.. _MPC: https://en.wikipedia.org/wiki/Secure_multi-party_computation
-
-Expanding on this, we can start to see the benefits when we process the tensors
+.. _Session: ../api/session.html
 
 .. code-block:: python
 
@@ -56,9 +44,7 @@ Expanding on this, we can start to see the benefits when we process the tensors
 
     # => array([2., 4., 6.])
 
-This hides the requirement of telling tensorflow to run this math on each individual machine.
-
-Now, for something more interesting, private variables!
+Similar to public variables we can define private variables as demonstrated below:
 
 .. code-block:: python
 
@@ -71,12 +57,15 @@ Now, for something more interesting, private variables!
     # => [array([ 1601115100, -2072569751,  -600438257], dtype=int32),
     #     array([-1601049564,  2072700823,   600634865], dtype=int32)]
 
+Unlike with public tensors, each node involved in a computation will get a different share of the encrypted (private) data. This sharing mechanism is the backbone of multiparty computation.
 
-Unlike the public tensor, private tensors will have different copies for the same
-variable.  These `shares` are the backbone of MPC.
+For more indepth examples of how to use `tf-encrypted` to train and predict upon machine learning models please check out our `MNIST`_ or `Logistic Regression`_ guies.
 
-To get secrecy into your AI model though, you don't even have to worry about
-this stuff.  Check the other pages to see how you can start using MPC with machine learning.
+If you have any questions, please don't hesitate to reach out via a `GitHub Issue`_.
+
+.. _`MNIST`: ../guides/mnist.html
+.. _`Logistic Regression`: ../guides/logistic_regression.html
+.. _`GitHub Issue`: https://github.com/mortendahl/tf-encrypted/issues
 
 .. toctree::
     :maxdepth: 5

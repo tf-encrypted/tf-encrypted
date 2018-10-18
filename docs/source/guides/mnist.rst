@@ -108,14 +108,15 @@ Below is just an helper function to print tensors in a notebook.
     # Source: https://stackoverflow.com/questions/37898478/is-there-a-way-to-get-tensorflow-tf-print-output-to-appear-in-jupyter-notebook-o
     def tf_print(tensor, transform=None):
 
-    def print_tensor(x):
-        print(x if transform is None else transform(x))
-        return x
-    log_op = tf.py_func(print_tensor, [tensor], [tensor.dtype])[0]
-    with tf.control_dependencies([log_op]):
-        res = tf.identity(tensor)
+       def print_tensor(x):
+           print(x if transform is None else transform(x))
+           return x
 
-    return res
+       log_op = tf.py_func(print_tensor, [tensor], [tensor.dtype])[0]
+       with tf.control_dependencies([log_op]):
+           res = tf.identity(tensor)
+
+       return res
 
 ----------------------------------
 Select your cryptography protocol
@@ -245,28 +246,28 @@ The `PredictionClient` object will provide the private input that will be used t
 
     class PredictionClient():
 
-    BATCH_SIZE = 20
+       BATCH_SIZE = 20
 
-    def provide_input(self) -> List[tf.Tensor]:
-        with tf.name_scope('loading'):
-            prediction_input, expected_result = get_data_from_tfrecord("./data/test.tfrecord", self.BATCH_SIZE).get_next()
+       def provide_input(self) -> List[tf.Tensor]:
+           with tf.name_scope('loading'):
+               prediction_input, expected_result = get_data_from_tfrecord("./data/test.tfrecord", self.BATCH_SIZE).get_next()
 
-        with tf.name_scope('pre-processing'):
-            prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 28 * 28))
-            expected_result = tf.reshape(expected_result, shape=(self.BATCH_SIZE,))
+           with tf.name_scope('pre-processing'):
+               prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 28 * 28))
+               expected_result = tf.reshape(expected_result, shape=(self.BATCH_SIZE,))
 
-        return [prediction_input, expected_result]
+           return [prediction_input, expected_result]
 
-    def receive_output(self, likelihoods: tf.Tensor, y_true: tf.Tensor) -> tf.Tensor:
-        with tf.name_scope('post-processing'):
-            prediction = tf.argmax(likelihoods, axis=1)
-            eq_values = tf.equal(prediction, tf.cast(y_true, tf.int64))
-            acc = tf.reduce_mean(tf.cast(eq_values, tf.float32))
-            op = tf.Print([], [y_true], summarize=self.BATCH_SIZE, message="EXPECT: ")
-            op = tf.Print(op, [prediction], summarize=self.BATCH_SIZE, message="ACTUAL: ")
-            op = tf_print(prediction)
-            op = tf.Print([op], [acc], summarize=self.BATCH_SIZE, message="Acuraccy: ")
-            return op
+       def receive_output(self, likelihoods: tf.Tensor, y_true: tf.Tensor) -> tf.Tensor:
+           with tf.name_scope('post-processing'):
+               prediction = tf.argmax(likelihoods, axis=1)
+               eq_values = tf.equal(prediction, tf.cast(y_true, tf.int64))
+               acc = tf.reduce_mean(tf.cast(eq_values, tf.float32))
+               op = tf.Print([], [y_true], summarize=self.BATCH_SIZE, message="EXPECT: ")
+               op = tf.Print(op, [prediction], summarize=self.BATCH_SIZE, message="ACTUAL: ")
+               op = tf_print(prediction)
+               op = tf.Print([op], [acc], summarize=self.BATCH_SIZE, message="Acuraccy: ")
+               return op
 
 
 Once you instantiate the `ModelTrainer` and `PredictionClient` objects, you can very
