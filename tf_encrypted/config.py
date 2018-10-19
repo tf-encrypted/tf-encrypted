@@ -285,7 +285,7 @@ __CONFIG__ = LocalConfig([
     'model-provider',
     'server0',
     'server1',
-    'crypto_producer'
+    'crypto-producer'
 ])
 
 

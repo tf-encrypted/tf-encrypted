@@ -42,7 +42,7 @@ class Pond(Protocol):
 
         self.server_0 = server_0 or get_config().get_player('server0')
         self.server_1 = server_1 or get_config().get_player('server1')
-        self.crypto_producer = crypto_producer or get_config().get_player('crypto_producer')
+        self.crypto_producer = crypto_producer or get_config().get_player('crypto-producer')
 
         if tensor_factory is None:
             if tensorflow_supports_int64():
@@ -306,8 +306,10 @@ class Pond(Protocol):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
 
-        def helper(x: 'PondPrivateTensor') -> tf.Tensor:
-            assert isinstance(x, PondPrivateTensor), type(x)
+        def helper(x: Union['PondPrivateTensor', 'PondMasterTensor']) -> tf.Tensor:
+            if isinstance(x, PondMaskedTensor):
+                x = x.unmasked
+            assert isinstance(x, PondPrivateTensor), "Don't know how to handle inputs of type {}".format(type(x))
             x0, x1 = x.unwrapped
             w = self._reconstruct(x0, x1)
             v = self._decode(w, x.is_scaled)
@@ -317,19 +319,11 @@ class Pond(Protocol):
 
             with tf.device(player.device_name):
 
-                if isinstance(xs, PondPrivateTensor):
-                    x = xs
-                    op = outputter_fn(helper(x))
-                elif isinstance(xs, PondMaskedTensor):
-                    x = xs.unmasked
-                    op = outputter_fn(helper(x))
-                elif isinstance(xs, (list, tuple)):
-                    op = outputter_fn(*[
-                        helper(x) if isinstance(x, PondPrivateTensor) else helper(x.unmasked) for x in xs
-                    ])
+                if isinstance(xs, (list, tuple)):
+                    op = outputter_fn(*[helper(x) for x in xs])
 
                 else:
-                    raise TypeError("Don't know how to handle inputs of type {}".format(type(xs)))
+                    op = outputter_fn(helper(xs))
 
                 # wrap in tf.group to prevent sending back any tensors (which might hence be leaked)
                 op = tf.group(op)
