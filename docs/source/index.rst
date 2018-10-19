@@ -11,7 +11,7 @@ tf-encrypted is an open source Python library built on top of `TensorFlow`_ focu
 More detailed information on the architecture, performance, and security considerations of this project are contained in `Private Machine Learning in TensorFlow using Secure Computation`_ paper which introduced this project.
 
 .. _TensorFlow: https://tensorflow.org
-.. _Private Machine Learning in TensorFlow using Secure Computation: https://linkhere.org
+.. _Private Machine Learning in TensorFlow using Secure Computation: https://arxiv.org/abs/1810.08130
 
 - **Simple**: It should be easy to get started, experiment with, use, benchmark, and deeply integrate with pre-existing data science workflows.
 - **Extensible**: Extending tf-encrypted to experiment with new protocols, tensor implementations, and machine learning algorithms should be a first class citizen.
