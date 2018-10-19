@@ -2,7 +2,7 @@
 
 ![Status](https://img.shields.io/badge/status-alpha-blue.svg)  [![License](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg)](./LICENSE)  [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master) [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://tf-encrypted.readthedocs.io/en/latest/)
 
-tf-encrypted is a Python library built on top of [TensorFlow](https://www.tensorflow.org) focused on making it easy for researchers and practitioners to experiment with privacy-preserving machine learning without needing to be an expert in machine learning, cryptography, distributed systems, or high performance computing. For more information on performance and security please read the [Private Machine Learning in TensorFlow using Secure Computation](linkhere) paper.
+tf-encrypted is a Python library built on top of [TensorFlow](https://www.tensorflow.org) focused on making it easy for researchers and practitioners to experiment with privacy-preserving machine learning without needing to be an expert in machine learning, cryptography, distributed systems, or high performance computing. For more information on performance and security please read the [Private Machine Learning in TensorFlow using Secure Computation](https://arxiv.org/abs/1810.08130) paper.
 
 To achieve its vision, this library has several goals:
 
