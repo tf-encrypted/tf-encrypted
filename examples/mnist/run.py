@@ -30,6 +30,9 @@ class ModelTrainer():
     ITERATIONS = 60000 // BATCH_SIZE
     EPOCHS = 1
 
+    def __init__(self, player_name):
+        self.player_name = player_name
+
     def build_data_pipeline(self):
 
         def normalize(image, label):
@@ -93,6 +96,9 @@ class PredictionClient():
 
     BATCH_SIZE = 20
 
+    def __init__(self, player_name):
+        self.player_name = player_name
+
     def build_data_pipeline(self):
 
         def normalize(image, label):
@@ -124,17 +130,17 @@ class PredictionClient():
             return op
 
 
-model_trainer = ModelTrainer()
-prediction_client = PredictionClient()
+model_trainer = ModelTrainer('model-trainer')
+prediction_client = PredictionClient('prediction-client')
 
 # get model parameters as private tensors from model owner
-params = tfe.define_private_input('model-trainer', model_trainer.provide_input, masked=True)  # pylint: disable=E0632
+params = tfe.define_private_input(model_trainer.player_name, model_trainer.provide_input, masked=True)  # pylint: disable=E0632
 
 # we'll use the same parameters for each prediction so we cache them to avoid re-training each time
 params = tfe.cache(params)
 
 # get prediction input from client
-x = tfe.define_private_input('prediction-client', prediction_client.provide_input, masked=True)  # pylint: disable=E0632
+x = tfe.define_private_input(prediction_client.player_name, prediction_client.provide_input, masked=True)  # pylint: disable=E0632
 
 # compute prediction
 w0, b0, w1, b1 = params
@@ -143,7 +149,7 @@ layer1 = tfe.sigmoid(layer0 * 0.1)  # input normalized to avoid large values
 logits = tfe.matmul(layer1, w1) + b1
 
 # send prediction output back to client
-prediction_op = tfe.define_output('prediction-client', [logits], prediction_client.receive_output)
+prediction_op = tfe.define_output(prediction_client.player_name, [logits], prediction_client.receive_output)
 
 
 target = sys.argv[2] if len(sys.argv) > 2 else None
