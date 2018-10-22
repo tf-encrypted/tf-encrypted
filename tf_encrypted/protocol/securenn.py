@@ -35,7 +35,7 @@ class SecureNN(Pond):
     ) -> None:
         server_0 = server_0 or get_config().get_player('server0')
         server_1 = server_1 or get_config().get_player('server1')
-        server_2 = server_2 or get_config().get_player('crypto_producer')  # TODO[Morten] use `server2` as key
+        server_2 = server_2 or get_config().get_player('crypto-producer')  # TODO[Morten] use `server2` as key
 
         super(SecureNN, self).__init__(
             server_0=server_0,

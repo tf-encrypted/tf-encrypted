@@ -126,21 +126,21 @@ In this example we use the SecureNN protocol. As for the different parties invol
 we here assume a setting with two server, a crypto producer,
 a weights provider (model-trainer), and a private input provider (prediction-client).
 Note that we could have selected very easily the Pond protocol by running instead:
-`tfe.set_protocol(tfe.protocol.Pond(*tfe.get_config().get_players(['server0', 'server1', 'crypto_producer'])))`
+`tfe.set_protocol(tfe.protocol.Pond(*tfe.get_config().get_players(['server0', 'server1', 'crypto-producer'])))`
 
 .. code-block:: python
 
     config = tfe.LocalConfig([
             'server0',
             'server1',
-            'crypto_producer',
+            'crypto-producer',
             'model-trainer',
             'prediction-client'
         ])
 
 
     tfe.set_config(config)
-    tfe.set_protocol(tfe.protocol.SecureNN(*tfe.get_config().get_players(['server0', 'server1', 'crypto_producer'])))
+    tfe.set_protocol(tfe.protocol.SecureNN(*tfe.get_config().get_players(['server0', 'server1', 'crypto-producer'])))
 
 -------------------
 Plaintext Training

@@ -41,9 +41,9 @@ with gfile.FastGFile(model_filename, 'rb') as f:
 config = tfe.LocalConfig([
     'server0',
     'server1',
-    'crypto_producer',
-    'prediction_client',
-    'weights_provider'
+    'crypto-producer',
+    'prediction-client',
+    'weights-provider'
 ])
 
 
@@ -55,12 +55,12 @@ def receive_output(tensor: tf.Tensor) -> tf.Tensor:
     return tf.Print(tensor, [tensor])
 
 
-with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+with tfe.protocol.Pond(*config.get_players('server0, server1, crypto-producer')) as prot:
 
-    c = convert.Converter(config, prot, config.get_player('weights_provider'))
-    x = c.convert(graph_def, register(), config.get_player('prediction_client'), provide_input)
+    c = convert.Converter(config, prot, config.get_player('weights-provider'))
+    x = c.convert(graph_def, register(), config.get_player('prediction-client'), provide_input)
 
-    prediction_op = prot.define_output(config.get_player('prediction_client'), x, receive_output)
+    prediction_op = prot.define_output(config.get_player('prediction-client'), x, receive_output)
 
     with tfe.Session(config=config) as sess:
         sess.run(prot.initializer, tag='init')

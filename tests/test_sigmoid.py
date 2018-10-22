@@ -14,14 +14,8 @@ class TestSigmoid(unittest.TestCase):
         input_shape = [4]
         input_sigmoid = np.array([-1.0, -0.5, 0.5, 3.0]).astype(np.float32)
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
-
         # sigmoid pond
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
 
             sigmoid_input = prot.define_private_variable(input_sigmoid)
             sigmoid_layer = Sigmoid(input_shape)

@@ -49,7 +49,7 @@ This way of running the example is slightly more involved but will give actual p
 
 This example needs the following instances to run
 ```shell
-export INSTANCE_NAMES="master server0 server1 crypto_producer model-trainer prediction-client"
+export INSTANCE_NAMES="master server0 server1 crypto-producer model-trainer prediction-client"
 ```
 which we'll use frequently below.
 

@@ -1,31 +1,6 @@
 import numpy as np
 import tf_encrypted as tfe
 
-# use local config (for development/debugging)
-# A default configuration exists if you don't want to
-# config = tfe.LocalConfig([
-#     'server0',
-#     'server1',
-#     'crypto_producer'
-# ])
-
-# use remote config
-# config = tfe.RemoteConfig([
-#     'localhost:4440',
-#     'localhost:4441',
-#     'localhost:4442'
-# ])
-
-# use remote config from cluster file
-# config = tfe.RemoteConfig.from_file('cluster.json')
-
-# Setting your custom configuration
-# tfe.set_config(config)
-
-# TFE sets a default cryptographic protocol, called Pond
-# It's a 3 party computation protocol
-# But you can use your another one!
-# tfe.set_protocol(tfe.protocol.SecureNN())
 
 a = np.ones((10, 10))
 

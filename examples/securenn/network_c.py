@@ -19,12 +19,12 @@ else:
     config = tfe.LocalConfig([
         'server0',
         'server1',
-        'crypto_producer',
+        'crypto-producer',
         'model-trainer',
         'prediction-client'
     ])
 tfe.set_config(config)
-tfe.set_protocol(tfe.protocol.SecureNN(*tfe.get_config().get_players(['server0', 'server1', 'crypto_producer'])))
+tfe.set_protocol(tfe.protocol.SecureNN(*tfe.get_config().get_players(['server0', 'server1', 'crypto-producer'])))
 
 
 def weight_variable(shape, gain):
