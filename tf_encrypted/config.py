@@ -64,14 +64,19 @@ class LocalConfig(Config):
     Configure tf-encrypted to use threads on the local CPU
     to simulate the different players.
     Intended mostly for development/debugging use.
+
+    :param List[str] player_names: List of players to be used in the session.
+    :param Optional[Union[int,str]] master: Mapping of a name to host for the master node.
+    :param str job_name: The name of the job.
+    :param bool log_device_placement: Whether or not to write device placement in logs.
     """
 
     def __init__(
         self,
-        player_names: List[str],
-        master: Optional[Union[int, str]] = None,
-        job_name: str='localhost',
-        log_device_placement: bool=False
+        player_names,
+        master=None,
+        job_name='localhost',
+        log_device_placement=False
     ) -> None:
         self._master = master
         self._log_device_placement = log_device_placement
@@ -136,14 +141,19 @@ class LocalConfig(Config):
 class RemoteConfig(Config):
     """
     Configure tf-encrypted to use network hosts for the different players.
+
+    :param Union[List[Tuple[str,str]],Dict[str,str]] hostmap: A mapping of hostnames to their IP / domain.
+    :param Optional[Union[int,str]] master: A mapping of the masters IP to his name.
+    :param str job_name: The name of the job.
+    :param bool log_device_placement: Whether or not to write device placement in logs.
     """
 
     def __init__(
         self,
-        hostmap: Union[List[Tuple[str, str]], Dict[str, str]],
-        master: Optional[Union[int, str]] = None,
-        job_name: str = 'tfe',
-        log_device_placement: bool=False
+        hostmap,
+        master=None,
+        job_name='tfe',
+        log_device_placement=False
     ) -> None:
 
         if isinstance(hostmap, dict):

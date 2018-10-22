@@ -34,6 +34,9 @@ class Layer(ABC):
         *args: Any,
         **kwargs: Any
     ) -> Optional[TFEVariable]:
+        """
+        Forward pass for inference
+        """
         pass
 
     @abstractmethod
@@ -42,6 +45,9 @@ class Layer(ABC):
         *args: Any,
         **kwargs: Any
     ) -> Optional[TFEVariable]:
+        """
+        The backward pass for training.
+        """
         pass
 
     @property

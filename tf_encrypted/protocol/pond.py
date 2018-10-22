@@ -30,6 +30,17 @@ _thismodule = sys.modules[__name__]
 
 
 class Pond(Protocol):
+    """
+    Pond is similar to SPDZ except it has been vectorized plus a few more optimizations.
+
+    Pond works with 2 parties for computation and one crypto producer for triples.
+
+    :param Player server_0: The "alice" of MPC.
+    :param Player server_1: The "bob" of MPC.
+    :param Player crypto_producer: The host to act as the crypto producer.  In pond this party is
+        responsible for producing triples to aid in computation.
+    :param AbstractFactory tensor_factory: Which backing type of tensor you would like to use. E.g. `int100` or `int64`
+    """
 
     def __init__(
         self,
@@ -69,6 +80,22 @@ class Pond(Protocol):
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None
     ) -> 'PondConstant':
+        """
+        Define a constant to use in computation.
+
+        .. code-block:: python
+
+            x = prot.define_constant(np.array([1,2,3,4]), apply_scaling=False)
+
+        :See: tf.constant
+
+        :param np.ndarray value: The value to define as a constant.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value with.
+
+        :rtype: PondConstant
+        """
         assert isinstance(value, (np.ndarray,)), type(value)
 
         factory = factory or self.tensor_factory
@@ -93,6 +120,23 @@ class Pond(Protocol):
         factory: Optional[AbstractFactory] = None
     ) -> 'PondPublicTensor':
 
+        """
+        Define a `public` placeholder to use in computation.  This will be known to both parties.
+
+        .. code-block:: python
+
+            x = prot.define_public_placeholder(shape=(1024, 1024))
+
+        :See: tf.placeholder
+
+        :param List[int] shape: The shape of the placeholder.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value with.
+
+        :rtype: PondPublicTensor
+        """
+
         factory = factory or self.tensor_factory
 
         with tf.name_scope('public-placeholder{}'.format('-' + name if name else '')):
@@ -112,6 +156,23 @@ class Pond(Protocol):
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None
     ) -> 'PondPrivateTensor':
+
+        """
+        Define a `private` placeholder to use in computation.  This will only be known by the party that defines it.
+
+        .. code-block:: python
+
+            x = prot.define_private_placeholder(shape=(1024, 1024))
+
+        :See: tf.placeholder
+
+        :param List[int] shape: The shape of the placeholder.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value with.
+
+        :rtype: PondPrivateTensor
+        """
 
         factory = factory or self.tensor_factory
 
@@ -138,6 +199,26 @@ class Pond(Protocol):
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None
     ) -> 'PondPublicVariable':
+        """
+        Define a public variable.
+
+        This is like defining a variable in tensorflow except it creates one that can be used by the protocol.
+
+        For most cases, you can think of this as the same as the one from tensorflow
+        and you don't generally need to consider the difference.
+
+        For those curious, under the hood, the major difference is that this function will pin your data to
+        a specific device which will be used to optimize the graph later on.
+
+        :see tf.Variable
+
+        :param Union[np.ndarray,tf.Tensor,PondPublicTensor] initial_value: The initial value.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value with.
+
+        :rtype: PondPublicVariable
+        """
         assert isinstance(initial_value, (np.ndarray, tf.Tensor, PondPublicTensor)), type(initial_value)
 
         factory = factory or self.tensor_factory
@@ -171,6 +252,24 @@ class Pond(Protocol):
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None
     ) -> 'PondPrivateVariable':
+        """
+        Define a private variable.
+
+        This will take the passed value and construct shares that will be split up between
+        those involved in the computationself.
+
+        For example, in a two party architecture, this will split the value into two sets of
+        shares and transfer them between each party in a secure manner.
+
+        :see tf.Variable
+
+        :param Union[np.ndarray,tf.Tensor,PondPublicTensor] initial_value: The initial value.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value with.
+
+        :rtype: PondPrivateVariable
+        """
         assert isinstance(initial_value, (np.ndarray, tf.Tensor, PondPublicTensor,
                                           PondPrivateTensor)), type(initial_value)
 
@@ -215,6 +314,18 @@ class Pond(Protocol):
         name: Optional[str]=None
     ) -> Union['PondPublicTensor', List['PondPublicTensor']]:
 
+        """
+        Define a public input.
+
+        This represents a `public` input owned by the specified player into the graph.
+
+        :param Union[str,Player] player: Which player owns this input.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+
+        :rtype: PondPublicTensor
+        """
+
         if isinstance(player, str):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
@@ -252,6 +363,21 @@ class Pond(Protocol):
         masked: bool=False,
         factory: Optional[AbstractFactory] = None
     ) -> Union['PondPrivateTensor', 'PondMaskedTensor', List[Union['PondPrivateTensor', 'PondMaskedTensor']]]:
+
+        """
+        Define a private input.
+
+        This represents a `private` input owned by the specified player into the graph.
+
+        :param Union[str,Player] player: Which player owns this input.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param bool masked: Whether or not to mask the input.
+        :param AbstractFactory factory: Which backing type to use for this input (e.g. `int100` or `int64`).
+
+        :rtype: PondPublicTensor
+        """
+
         factory = factory or self.tensor_factory
 
         if isinstance(player, str):
@@ -301,6 +427,12 @@ class Pond(Protocol):
         outputter_fn: Callable[..., Any],
         name: Optional[str]=None
     ) -> tf.Operation:
+
+        """
+        Define an output for this graph.
+
+        :param Union[str,Player] player: Which player/device this output will be sent to.
+        """
 
         if isinstance(player, str):
             player = get_config().get_player(player)
@@ -862,24 +994,38 @@ class Pond(Protocol):
 # Classes representing the base values in the Pond protocol.
 #
 
-
 class PondTensor(abc.ABC):
     """
     This class functions mostly as a convenient way of exposing operations
-    directly on the various tensor objects, ie allowing one to write x + y
-    instead of prot.add(x, y). Since this functionality is shared among all
+    directly on the various tensor objects, ie allowing one to write `x + y`
+    instead of `prot.add(x, y)`. Since this functionality is shared among all
     tensors we put it in this superclass.
 
     This class should never be instantiated on its own.
+    Instead you should use your chosen protocols factory methods::
+
+        x = prot.define_private_input(tf.constant(np.array([1,2,3,4])))
+        y = prot.define_public_input(tf.constant(np.array([4,5,6,7])))
+
+        z = x + y
+
+        with config.Session() as sess:
+            answer = z.reveal().eval(sess)
+
+            print(answer) # => [5, 7, 9, 11]
     """
 
-    def __init__(self, prot: Pond, is_scaled: bool) -> None:
+    def __init__(self, prot, is_scaled):
         self.prot = prot
         self.is_scaled = is_scaled
 
     @property
     @abc.abstractmethod
     def shape(self) -> List[int]:
+        """
+        :rtype: List[int]
+        :returns: The shape of this tensor.
+        """
         pass
 
     @property
@@ -888,21 +1034,52 @@ class PondTensor(abc.ABC):
         pass
 
     def add(self, other):
+        """
+        Add `other` to this PondTensor.  This can be another tensor with the same
+        backing or a primitive.
+
+        This function returns a new PondTensor and does not modify this one.
+
+        :param PondTensor other: a or primitive (e.g. a float)
+        :return: A new PondTensor with `other` added.
+        :rtype: PondTensor
+        """
         return self.prot.add(self, other)
 
     def __add__(self, other):
+        """
+        See :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.add`
+        """
         return self.prot.add(self, other)
 
     def __radd__(self, other):
         return other.prot.add(self, other)
 
     def reduce_sum(self, axis=None, keepdims=None):
+        """
+        Like :meth:`tensorflow.reduce_sum`
+
+        :param int axis:  The axis to reduce along
+        :param bool keepdims: If true, retains reduced dimensions with length 1.
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.reduce_sum(self, axis, keepdims)
 
     def sum(self, axis=None, keepdims=None):
+        """
+        See :meth:`PondTensor.reduce_sum`
+        """
         return self.reduce_sum(axis, keepdims)
 
     def sub(self, other):
+        """
+        Subtract `other` from this tensor.
+
+        :param PondTensor other: to subtract
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.sub(self, other)
 
     def __sub__(self, other):
@@ -912,6 +1089,13 @@ class PondTensor(abc.ABC):
         return self.prot.sub(self, other)
 
     def mul(self, other):
+        """
+        Multiply this tensor with `other`
+
+        :param PondTensor other: to multiply
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.mul(self, other)
 
     def __mul__(self, other):
@@ -924,33 +1108,90 @@ class PondTensor(abc.ABC):
         return self.prot.mod(self, other)
 
     def square(self):
+        """
+        Square this tensor.
+
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.square(self)
 
     def matmul(self, other):
+        """
+        MatMul this tensor with `other`.  This will perform matrix multiplication rather than elementwise like :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.mul`
+
+        :param PondTensor other: to subtract
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.matmul(self, other)
 
     def dot(self, other):
+        """
+        Alias for :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.matmul`
+
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.matmul(other)
 
     def __getitem__(self, slice):
         return self.prot.indexer(self, slice)
 
     def transpose(self, perm=None):
+        """
+        Transpose this tensor.
+
+        See :meth:`tensorflow.transpose`
+
+        :param List[int]: A permutation of the dimensions of this tensor.
+
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.transpose(self, perm)
 
     def truncate(self):
+        """
+        Truncate this tensor.
+
+        `TODO`
+
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.truncate(self)
 
     def expand_dims(self):
+        """
+        :See: tf.expand_dims
+
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.expand_dims(self)
 
     def reshape(self, shape: List[int]) -> 'PondTensor':
+        """
+        :See: tf.reshape
+
+        :param List[int] shape: The new shape of the tensor.
+        :rtype: PondTensor
+        :returns: A new tensor with the contents of this tensor, but with the new specified shape.
+        """
         return self.prot.reshape(self, shape)
 
     def cast_backing(self, backing_dtype):
         return self.prot.cast_backing(self, backing_dtype)
 
     def reduce_max(self, axis: int) -> 'PondTensor':
+        """
+        :See: tf.reduce_max
+
+        :param int axis: The axis to take the max along
+        :rtype: PondTensor
+        :returns: A new pond tensor with the max value from each axis.
+        """
         return self.prot.reduce_max(self, axis)
 
 
@@ -992,6 +1233,34 @@ class PondPublicTensor(PondTensor):
 
     @property
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
+        """
+        Unwrap the tensor.
+
+        This will return the value for each of the parties that collectively own the tensor.
+
+        In most cases, this will be the same value on each device.
+
+        .. code-block:: python
+
+            x_0, y_0 = tensor.unwrapped
+            # x_0 == 10 with the value pinned to player_0's device.
+            # y_0 == 10 with the value pinned to player_1's device.
+
+        In most cases you will want to work on this data on the specified device.
+
+        .. code-block:: python
+
+            x_0, y_0 = tensor.unwrapped
+
+            with tf.device(prot.player_0.device_name):
+                # act on x_0
+
+            with tf.device(prot.player_1.device_name):
+                # act on y_0
+
+        In most cases you will not need to use this method.  All funtions
+        will hide this functionality for you (e.g. `add`, `mul`, etc).
+        """
         return (self.value_on_0, self.value_on_1)
 
     def decode(self) -> Union[np.ndarray, tf.Tensor]:
@@ -1033,6 +1302,20 @@ class PondPrivateTensor(PondTensor):
 
     @property
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
+        """
+        Unwrap the tensor.
+
+        This will return the shares for each of the parties that collectively own the tensor.
+
+        .. code-block:: python
+
+            x_0, y_0 = tensor.unwrapped
+            # x_0 == private shares of the value pinned to player_0's device.
+            # y_0 == private shares of the value pinned to player_1's device.
+
+        In most cases you will not need to use this method.  All funtions
+        will hide this functionality for you (e.g. `add`, `mul`, etc).
+        """
         return (self.share0, self.share1)
 
     def reveal(self) -> PondPublicTensor:
