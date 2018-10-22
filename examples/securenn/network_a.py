@@ -19,12 +19,12 @@ else:
     config = tfe.LocalConfig([
         'server0',
         'server1',
-        'crypto-producer',
+        'crypto_producer',
         'model-trainer',
         'prediction-client'
     ])
 tfe.set_config(config)
-tfe.set_protocol(tfe.protocol.SecureNN(*tfe.get_config().get_players(['server0', 'server1', 'crypto-producer'])))
+tfe.set_protocol(tfe.protocol.SecureNN(*tfe.get_config().get_players(['server0', 'server1', 'crypto_producer'])))
 
 
 class ModelTrainer():

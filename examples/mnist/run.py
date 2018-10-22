@@ -15,7 +15,7 @@ else:
     config = tfe.LocalConfig([
         'server0',
         'server1',
-        'crypto-producer',
+        'crypto_producer',
         'model-trainer',
         'prediction-client'
     ])
