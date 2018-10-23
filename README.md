@@ -73,13 +73,18 @@ tf-encrypted is experimental software not currently intended for use in producti
 
 Don't hesitate to send a pull request, open an issue, or ask for help!
 
-Several individuals have already had a big impact on the development of this library (in alphabetical order):
+Several individuals have already had an impact on the development of this library (in alphabetical order):
 
-- [Morgan Giraud](https://github.com/morgangiraud)
-- [Andrew Trask](https://github.com/iamtrask)
-- [Koen van der Veen](https://github.com/koenvanderveen)
+- [Ben DeCoste](https://github.com/bendecoste) (Dropout Labs)
+- [Yann Dupis](https://github.com/yanndupis) (Dropout Labs)
+- [Morgan Giraud](https://github.com/morgangiraud) (while at Dropout Labs)
+- [Ian Livingstone](https://github.com/ianlivingstone) (Dropout Labs)
+- [Jason Mancuso](https://github.com/jvmancuso) (Dropout Labs)
+- [Justin Patriquin](https://github.com/justin1121) (Dropout Labs)
+- [Andrew Trask](https://github.com/iamtrask) (OpenMined)
+- [Koen van der Veen](https://github.com/koenvanderveen) (OpenMined)
 
-and several companies have invested significant resources (in alphabetical order):
+and several companies have invested significant resources:
 
 - [Dropout Labs](https://dropoutlabs.com/) continues to sponsor a large amount of both research and engineering
 - [OpenMined](https://openmined.org) was the breeding ground for the initial idea and continues to support discussions and guidance
