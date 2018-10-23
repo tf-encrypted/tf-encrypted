@@ -1,36 +1,35 @@
-# TensorFlow Encrypted
+# Getting Started with tf-encrypted
 
 This guide assumes that you have followed the installation instructions in [README](https://github.com/mortendahl/tf-encrypted).
 
 ## Contents
 
-- [Introduction to Tensorflow Encrypted API](#introduction-to-tensorflow-encrypted-api)
-- [Making private predictions](#making-private-predictions)
+- [Introduction to the API](#introduction-to-the-api)
+- [Private predictions](#private-predictions)
   - [Locally](#a-locally)
   - [With GCP](#b-gcp)
-- [Making private trainings](#making-private-trainings)
+- [Private training](#private-training)
 
-## Introduction to TensorFlow Encrypted API
+## Introduction to the API
 
-tf-encrypted has a simple api to make it easy for data scientists to make private predictions and trainings.
-
+tf-encrypted has a simple API to make it easy for data scientists to make private predictions and training.
 
 To define a machine learning model, tf-encrypted and TensorFlow follow a very similar API.
 
 <table>
 <tr>
-<th>Tensorflow</th>
-<th>Tensorflow Encrypted</th>
+<th>TensorFlow</th>
+<th>tf-encrypted</th>
 </tr>
 <tr>
-<td><pre lang="python">layer0 = prot.matmul(x, w0) + b0
-layer1 = prot.sigmoid(layer0)
-layer2 = prot.matmul(layer, w1) + b1
+<td><pre lang="python">layer0 = tf.matmul(x, w0) + b0
+layer1 = tf.sigmoid(layer0)
+layer2 = tf.matmul(layer, w1) + b1
 prediction = layer2</pre>
 </td>
-<td><pre lang="python">layer0 = prot.dot(x, w0) + b0
-layer1 = prot.sigmoid(layer0)
-layer2 = prot.dot(layer, w1) + b1
+<td><pre lang="python">layer0 = tfe.matmul(x, w0) + b0
+layer1 = tfe.sigmoid(layer0)
+layer2 = tfe.matmul(layer, w1) + b1
 prediction = layer2</pre>
 </td>
 </tr>
@@ -44,30 +43,22 @@ model_trainer = ModelTrainer(config.get_player('model-trainer'))
 prediction_client = PredictionClient(config.get_player('prediction-client'))
 ```
 
-We indicate tf-encrypted to perform secure computation with the Pond protocol as follows:
-
+We can make a prediction as follows:
 ```python
-with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
-```
+# get model parameters as private tensors from model owner
+w0, b0, w1, b1 = tfe.define_private_input(model_trainer)
 
-Finally we can make a prediction as follows:
-```python
-with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
+# get prediction input from client
+x = tfe.define_private_input(prediction_client)
 
-  # get model parameters as private tensors from model owner
-  w0, b0, w1, b1 = prot.define_private_input(model_trainer, masked=True)
+# compute prediction
+layer0 = tfe.matmul(x, w0) + b0
+layer1 = tfe.sigmoid(layer0)
+layer2 = tfe.matmul(layer, w1) + b1
+prediction = layer2
 
-  # get prediction input from client
-  x = prot.define_private_input(prediction_client, masked=True)
-
-  # compute prediction
-  layer0 = prot.dot(x, w0) + b0
-  layer1 = prot.sigmoid(layer0)
-  layer2 = prot.dot(layer, w1) + b1
-  prediction = layer2
-
-  # send prediction output back to client
-  prediction_op = prot.define_output(prediction, prediction_client)
+# send prediction output back to client
+prediction_op = tfe.define_output(prediction, prediction_client)
 ```
 
 Two servers and a crypto producer are doing the actual computation on encrypted data, with only the client being able to decrypt the final result.
@@ -75,10 +66,10 @@ Two servers and a crypto producer are doing the actual computation on encrypted 
 
 
 
-## Making Private Predictions
+## Private Predictions
 ### a. Locally
 
-With Tensorflow Encrypted, you can very easily make private predictions with a pre-trained model saved as a [protobuf](https://www.tensorflow.org/extend/tool_developers/) file.
+With tf-encrypted, you can very easily make private predictions with a pre-trained model saved as a [protobuf](https://www.tensorflow.org/extend/tool_developers/) file.
 
 1. In the [`examples/`](./examples/) folder run the following line of code in your terminal to train a convolution network on MNIST dataset, then save the model as a protobuf file :
 ```bash
@@ -99,6 +90,6 @@ You have just made a prediction without revealing anything about the input!
 
 You can make private predictions with GCP as well. You can find a great example [here](https://github.com/mortendahl/tf-encrypted/tree/master/examples/mnist#remotely-on-gcp).
 
-## Making Private Trainings
+## Private Training
 
 **NOTE** We currently don't have an example. We are planning to train/create a simple logistic regression as a demo..

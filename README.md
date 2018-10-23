@@ -2,19 +2,20 @@
 
 ![Status](https://img.shields.io/badge/status-alpha-blue.svg)  [![License](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg)](./LICENSE)  [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master) [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://tf-encrypted.readthedocs.io/en/latest/)
 
-tf-encrypted is a Python library built on top of [TensorFlow](https://www.tensorflow.org) focused on making it easy for researchers and practitioners to experiment with privacy-preserving machine learning without needing to be an expert in machine learning, cryptography, distributed systems, or high performance computing. For more information on performance and security please read the [Private Machine Learning in TensorFlow using Secure Computation](https://arxiv.org/abs/1810.08130) paper.
+tf-encrypted is a Python library built on top of [TensorFlow](https://www.tensorflow.org) for researchers and practitioners to experiment with privacy-preserving machine learning. It provides an interface similar to that of TensorFlow, and aims at making the technology readily available without first becoming an expert in machine learning, cryptography, distributed systems, and high performance computing.
 
-To achieve its vision, this library has several goals:
+In particular, the library focuses on:
 
-- **Simple**: It should be easy to get started, experiment with, use, benchmark, and deeply integrate with pre-existing data science workflows.
-- **Extensible**: Extending tf-encrypted to experiment with new protocols, tensor implementations, and machine learning algorithms should be a first class citizen.
-- **Performant**: All of the fastest known implementations of protocols, tensor implementations, and machine learning algorithms in a private setting should exist within this library.
-- **Secure**: A user should have to go out of their way to use the library in a non-secure, non-private fashion. New protocols are marked as experimental until they've met our high bar of security.
-- **Community-Driven**: Community-first as a decision making framework. We can only achieve these goals by building a community of researchers, contributors, and users around the project.
+- **Usability**: The API and its underlying design philosophy make it easy to get started, use, and integrate privacy-preserving technology into pre-existing machine learning processes.
+- **Extensibility**: The architecture supports and encourages experimentation and benchmarking of new cryptographic protocols and machine learning algorithms.
+- **Performance**: Optimizing for tensor-based applications and relying on TensorFlow's backend means runtime performance comparable to that of specialized stand-alone frameworks.
+- **Community**: With a primary goal of pushing the technology forward the project encourages collaboration and open source over proprietary and closed solutions.
+- **Security**: Cryptographic protocols are evaluated against strong notions of security and [known limitations](#known-limitations) are highlighted.
 
-Learn more about how to use the project by visiting the [documentation](https://tf-encrypted.readthedocs.io/en/latest/index.html).
+See below for more [background material](#background--further-reading) or visit the [documentation](https://tf-encrypted.readthedocs.io/en/latest/index.html) to learn more about how to use the library.
 
-Several contributors have put resources into the development of this library, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community (see below for [details](#contributions)). The approached used by this library was first described by Morten Dahl in his [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) blog post.
+The project has benefitted enormously from the efforts of several contributors following its original implementation, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community. See below for further [details](#contributions).
+
 
 # Installation & Usage
 
@@ -27,34 +28,54 @@ $ pip install tf-encrypted
 The following is an example of simple matmul on encrypted data using tf-encrypted:
 
 ```python
-import numpy as np
+import tensorflow as tf
 import tf_encrypted as tfe
 
-a = np.ones((10,10))
-x = tfe.define_private_variable(a)
-y = x.matmul(x)
+def provide_input():
+    # local TensorFlow operations can be run locally
+    # as part of defining a private input, in this
+    # case on the machine of the input provider
+    return tf.ones(shape=(5, 10))
+
+# define inputs
+w = tfe.define_private_variable(tf.ones(shape=(10,10)))
+x = tfe.define_private_input('input-provider', provide_input)
+
+# define computation
+y = tfe.matmul(x, w)
 
 with tfe.Session() as sess:
-    sess.run(tfe.global_variables_initializer(), tag='init')
-    actual = sess.run(y.reveal(), tag='reveal')
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(y.reveal())
 ```
 
-For more information, checkout our full getting started guide in our [documentation](https://tf-encrypted.readthedocs.io/en/latest/usage/getting_started.html)!
+For more information, check out our full getting started guide in the [documentation](https://tf-encrypted.readthedocs.io/en/latest/usage/getting_started.html).
+
+# Background & Further Reading
+
+The following texts provide further in-depth presentations of the project:
+- [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) describes the initial motivation and implementation
+- [Private Machine Learning in TensorFlow using Secure Computation](https://arxiv.org/abs/1810.08130) further elaborates on the benefits of the approach, outlines the adaptation of a secure computation protocol, and reports on concrete performance numbers
+- [Experimenting with tf-encrypted](https://medium.com/dropoutlabs/experimenting-with-tf-encrypted-fe37977ff03c) walks through a simple example of turning an existing TensorFlow prediction model private
 
 # Project Status
 
-tf-encrypted is experimental software that is not ready for use in any production environment for security reasons. We're currently focused on building the underlying primitives that enabled cryptographist, machine learning researchers, and data scientists to experiment with private machine learning.
+tf-encrypted is experimental software not currently intended for use in production environments. The focus is on building the underlying primitives and techniques, with some practical security issues post-poned for a later stage. However, care is taken to ensure that none of these represent fundamental issues that cannot be fixed as needed.
 
-Don't hesitate to send a pull request, open an issue, or ask for help! We'd love to work with anyone interested in using or developing private machine learning.
+## Known limitations
 
-# License
-
-Licensed under Apache License, Version 2.0 (see [LICENSE](./LICENSE) or http://www.apache.org/licenses/LICENSE-2.0). Copyright as specified in [NOTICE](./NOTICE).
+- Elements of TensorFlow's networking subsystem does not appear to be sufficiently hardened against malicious users. Proxies or other means of access filtering may be sufficient to mitigate this.
+- The pseudo-random generators provided in TensorFlow are not cryptographically strong. Custom ops could easily be used to remedy this.
 
 # Contributions
 
-Several people have had an impact on the development of this library (in alphabetical order):
+Don't hesitate to send a pull request, open an issue, or ask for help!
 
+Several individuals have already had a big impact on the development of this library (in alphabetical order):
+
+- [Morgan Giraud](https://github.com/morgangiraud)
 - [Andrew Trask](https://github.com/iamtrask)
 - [Koen van der Veen](https://github.com/koenvanderveen)
 
@@ -62,3 +83,7 @@ and several companies have invested significant resources (in alphabetical order
 
 - [Dropout Labs](https://dropoutlabs.com/) continues to sponsor a large amount of both research and engineering
 - [OpenMined](https://openmined.org) was the breeding ground for the initial idea and continues to support discussions and guidance
+
+# License
+
+Licensed under Apache License, Version 2.0 (see [LICENSE](./LICENSE) or http://www.apache.org/licenses/LICENSE-2.0). Copyright as specified in [NOTICE](./NOTICE).
