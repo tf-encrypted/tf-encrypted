@@ -20,8 +20,8 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'tf-encrypted'
-copyright = '2018, Dropout Labs'
-author = 'Dropout Labs'
+copyright = '2018, The tf-encrypted Contributors'
+author = 'The tf-encrypted Contributors'
 
 # The short X.Y version
 version = '0.2.0'
@@ -139,7 +139,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'tf-encrypted.tex', 'tf-encrypted Documentation',
-     'Dropout Labs', 'manual'),
+     author, 'manual'),
 ]
 
 
@@ -160,7 +160,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'tf-encrypted', 'tf-encrypted Documentation',
-     author, 'tf-encrypted', 'Secure ML playground.',
+     author, 'tf-encrypted', 'Private ML playground.',
      'Miscellaneous'),
 ]
 

@@ -11,12 +11,12 @@ This walkthrough assumes that you have installed `tf-encrypted` by following the
 .. _perfectly secure: https://en.wikipedia.org/wiki/One-time_pad
 
 --------------------------------------------
-Introduction to TensorFlow Encrypted API
+Introduction to tf-encrypted's API
 --------------------------------------------
 
 tf-encrypted provides an API similar to TensorFlow that data scientists and researchers can use to train models and predict upon them in privacy-preserving fashion.
 
-One of the goals of `tf-encrypted` is to make experimenting with secure private machine learning accessible to anyone. To do this, we've implemented an API that is very similar to TensorFlow while abstracting away the complexity of securely managing public and private data. The `PondTensor` is the primary abstraction provided for managing public and private data.
+One of the goals of tf-encrypted is to make experimenting with secure private machine learning accessible to anyone. To do this, we've implemented an API that is very similar to TensorFlow while abstracting away the complexity of securely managing public and private data. The `PondTensor` is the primary abstraction provided for managing public and private data.
 
 The following example demonstrates constructing a public value (known to all parties) using `tfe.define_public_variable`.
 
