@@ -19,7 +19,7 @@ class TestShare(unittest.TestCase):
 
     def test_share(self):
 
-        with tfe.protocol.Pond(tfe.get_config().get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             shares = prot._share(self.int100tensor)
             out = prot._reconstruct(*shares)
 
@@ -31,7 +31,7 @@ class TestShare(unittest.TestCase):
 
     def test_factory_share(self):
 
-        with tfe.protocol.Pond(tfe.get_config().get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             shares = prot._share(self.primetensor)
             out = prot._reconstruct(*shares)
 

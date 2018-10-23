@@ -26,13 +26,7 @@ class TestAveragePooling2D(unittest.TestCase):
         n_elements = batch_size * channels_in * img_height * img_width
         input_pool = np.ones(n_elements, dtype=np.float32).reshape(input_shape)
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
-
-        return input_pool, input_shape, config
+        return input_pool, input_shape
 
     def _tf_tiled_forward(self, input_pool: np.ndarray) -> np.ndarray:
         x = tf.constant(input_pool, dtype=tf.float32)
@@ -48,10 +42,10 @@ class TestAveragePooling2D(unittest.TestCase):
 
     def _generic_tiled_forward(self, t_type: str, even: bool = True) -> None:
         assert t_type in ['public', 'private', 'masked']
-        input_pool, input_shape, config = self._get_fixtures(even)
+        input_pool, input_shape = self._get_fixtures(even)
 
         # pooling in pond
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             if t_type == 'public':
                 x_in = prot.define_public_variable(input_pool)
             elif t_type in ['private', 'masked']:

@@ -11,12 +11,6 @@ class TestStridedSlice(unittest.TestCase):
 
     def test_strided_slice(self):
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
-
         with tf.Session() as sess:
             t = tf.constant([[[1, 1, 1], [2, 2, 2]],
                              [[3, 3, 3], [4, 4, 4]],
@@ -27,7 +21,7 @@ class TestStridedSlice(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             x = np.array([[[1, 1, 1], [2, 2, 2]],
                           [[3, 3, 3], [4, 4, 4]],
                           [[5, 5, 5], [6, 6, 6]]])

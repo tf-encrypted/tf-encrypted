@@ -26,13 +26,7 @@ class TestBatchnorm(unittest.TestCase):
         offset = np.array([1.5, 1.2, 1.4]).reshape(1, channels_in, 1, 1).astype(np.float32)
         variance_epsilon = 1e-8
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             batchnorm_input = prot.define_private_variable(input_batchnorm)
 
             batchnorm_layer = Batchnorm(input_shape, mean, variance, scale, offset)

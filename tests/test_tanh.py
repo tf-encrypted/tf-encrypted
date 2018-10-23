@@ -14,14 +14,8 @@ class TestTanh(unittest.TestCase):
         input_shape = [4]
         input_tanh = np.array([-1.0, -0.5, 0.5, 3.0]).astype(np.float32)
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
-
         # tanh pond
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
 
             tanh_input = prot.define_private_variable(input_tanh)
             tanh_layer = Tanh(input_shape)
