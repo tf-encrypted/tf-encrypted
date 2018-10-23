@@ -6,7 +6,7 @@
 tf-encrypted
 ========================================
 
-tf-encrypted is a Python library built on top of [TensorFlow](https://www.tensorflow.org) for researchers and practitioners to experiment with privacy-preserving machine learning. It provides an interface similar to that of TensorFlow, and aims at making the technology readily available without first becoming an expert in machine learning, cryptography, distributed systems, and high performance computing.
+tf-encrypted is a Python library built on top of TensorFlow_ for researchers and practitioners to experiment with privacy-preserving machine learning. It provides an interface similar to that of TensorFlow, and aims at making the technology readily available without first becoming an expert in machine learning, cryptography, distributed systems, and high performance computing.
 
 In particular, the library focuses on:
 
@@ -20,6 +20,7 @@ Checkout the `Getting Started`_ guide to learn how to get up and running with pr
 
 You can view the project source, contribute, and asks questions on `GitHub`_.
 
+.. _TensorFlow: https://www.tensorflow.org
 .. _Getting Started: usage/getting_started.html
 .. _GitHub: https://github.com/mortendahl/tf-encrypted
 
