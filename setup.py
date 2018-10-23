@@ -21,7 +21,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Morten Dahl",
-    author_email="morten@dropoutlabs.com",
+    author_email="mortendahlcs@gmail.com",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",

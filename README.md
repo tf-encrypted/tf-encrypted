@@ -12,7 +12,7 @@ In particular, the library focuses on:
 - **Community**: With a primary goal of pushing the technology forward the project encourages collaboration and open source over proprietary and closed solutions.
 - **Security**: Cryptographic protocols are evaluated against strong notions of security and [known limitations](#known-limitations) are highlighted.
 
-See below for more [background material](#background-further-reading) or visit the [documentation](https://tf-encrypted.readthedocs.io/en/latest/index.html) to learn more about how to use the library.
+See below for more [background material](#background--further-reading) or visit the [documentation](https://tf-encrypted.readthedocs.io/en/latest/index.html) to learn more about how to use the library.
 
 The project has benefitted enormously from the efforts of several contributors following its original implementation, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community. See below for further [details](#contributions).
 
