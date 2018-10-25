@@ -43,10 +43,11 @@ jobs:
       - *bootstrap
       - *save-cache
       - run:
-          name: run tests
+          name: run tests and build the docs
           command: |
             . venv/bin/activate
             make test
+            make docs
       - run:
           name: build docker container
           command: make docker
@@ -73,7 +74,7 @@ workflows:
               # In order for the 'deploy' job to run, we must first kick off
               # the build job on all tags. By default, Circle CI only kicks off
               # builds on tags if a filter is defined.
-              only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc\.[0-9]+)?)$/
+              only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc[0-9]+)?)$/
       - deploy:
           requires:
             - build
@@ -81,4 +82,4 @@ workflows:
             branches:
               only: master
             tags:
-              only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc\.[0-9]+)?)$/
+              only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc[0-9]+)?)$/

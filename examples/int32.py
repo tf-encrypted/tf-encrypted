@@ -1,6 +1,6 @@
 import numpy as np
-import tensorflow_encrypted as tfe
-import tensorflow_encrypted.tensor.int32 as tensor_type
+import tf_encrypted as tfe
+import tf_encrypted.tensor.int32 as tensor_type
 
 Int32Tensor = tensor_type.Int32Tensor
 Int32Constant = tensor_type.Int32Constant

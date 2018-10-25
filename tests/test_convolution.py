@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 
 class TestConv2D(unittest.TestCase):
@@ -21,14 +21,8 @@ class TestConv2D(unittest.TestCase):
         filter_shape = (h_filter, w_filter, channels_in, channels_out)
         filter_values = np.random.normal(size=filter_shape)
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
-
         # convolution pond
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
 
             conv_input = prot.define_private_variable(input_conv)
             conv_layer = tfe.layers.Conv2D(input_shape, filter_shape, strides=2)
@@ -59,7 +53,7 @@ class TestConv2D(unittest.TestCase):
             sess.run(tf.global_variables_initializer())
             out_tensorflow = sess.run(conv_out_tf).transpose(0, 3, 1, 2)
 
-        np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=3)
+        np.testing.assert_allclose(out_pond, out_tensorflow, atol=0.01)
 
     def test_backward(self):
         pass

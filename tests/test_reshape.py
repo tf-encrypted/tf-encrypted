@@ -2,8 +2,8 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.layers import Reshape
+import tf_encrypted as tfe
+from tf_encrypted.layers import Reshape
 
 
 class TestReshape(unittest.TestCase):
@@ -15,14 +15,8 @@ class TestReshape(unittest.TestCase):
         output_shape = [2, -1]
         input_reshape = np.random.standard_normal(input_shape)
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
-
         # reshape pond
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
 
             reshape_input = prot.define_private_variable(input_reshape)
             reshape_layer = Reshape(input_shape, output_shape)

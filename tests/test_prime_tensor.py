@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from tensorflow_encrypted.tensor.prime import PrimeFactory
+from tf_encrypted.tensor.prime import PrimeFactory
 
 
 class TestPrimeTensor(unittest.TestCase):

@@ -1,16 +1,16 @@
 import unittest
-import tensorflow_encrypted as tfe
+
+import tf_encrypted as tfe
 import tensorflow as tf
 import numpy as np
-from tensorflow_encrypted.layers.pooling import MaxPooling2D
+
+from tf_encrypted.layers.pooling import MaxPooling2D
 
 
 class TestMaxPooling2D(unittest.TestCase):
     def test_maxpool2d(self):
-        with tfe.protocol.SecureNN(
-            use_noninteractive_truncation=True,
-            verify_precision=False
-        ) as prot:
+        with tfe.protocol.SecureNN() as prot:
+
             input = np.array([[[[1, 2, 3, 4],
                                 [3, 2, 4, 1],
                                 [1, 2, 3, 4],

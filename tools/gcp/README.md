@@ -8,7 +8,7 @@ It also assumes that you are running the commands from this directory (`cd tools
 
 ## Base image
 
-We first create a base image with all needed software for future GCP instances running TensorFlow Encrypted. To that end we start with a template instance whos disk turns into the image.
+We first create a base image with all needed software for future GCP instances running tf-encrypted. To that end we start with a template instance whos disk turns into the image.
 
 Run the following to create the template instance
 ```shell

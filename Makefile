@@ -11,7 +11,7 @@ all: test
 # ###############################################
 DOCKER_REQUIRED_VERSION=18.
 PYTHON_REQUIRED_VERSION=3.5.
-TENSORFLOW_REQUIRED_VERSION=1.11
+TENSORFLOW_REQUIRED_VERSION=1.9
 SHELL := /bin/bash
 
 CURRENT_DIR=$(shell pwd)
@@ -58,7 +58,7 @@ bootstrap: pythoncheck pipcheck
 #
 # Rules for running our tests and for running various different linters
 # ###############################################
-test: lint pythoncheck tensorflowcheck
+test: lint pythoncheck
 	python examples/convert.py
 	python examples/inputs.py
 	python examples/int32.py
@@ -69,14 +69,29 @@ test: lint pythoncheck tensorflowcheck
 	python examples/federated-average/run.py
 	python -m unittest discover
 
-lint: pythoncheck tensorflowcheck
+lint: pythoncheck
 	flake8
 
-typecheck: pythoncheck tensorflowcheck
-	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tensorflow_encrypted
+typecheck: pythoncheck
+	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
 
 
 .PHONY: lint test typecheck
+
+# ##############################################
+# Documentation
+#
+# Rules for building our documentation
+# ##############################################
+SPHINXOPTS    =
+SPHINXBUILD   = sphinx-build
+SOURCEDIR     = docs/source
+BUILDDIR      = build
+
+docs:
+	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+.PHONY: docs
 
 # ###############################################
 # Version Derivation
@@ -115,8 +130,10 @@ endif
 # Builds a docker image for tf-encrypted that can be used to deploy and
 # test.
 # ###############################################
+DOCKER_BUILD=docker build -t mortendahl/tf-encrypted:$(1) -f Dockerfile $(2) .
 docker: Dockerfile dockercheck
-	docker build -t mortendahl/tf-encrypted:latest -f Dockerfile .
+	$(call DOCKER_BUILD,latest,)
+	$(call DOCKER_BUILD,latest-int64,--build-arg TF_WHL_URL=https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.9.0-cp35-cp35m-linux_x86_64.whl)
 
 .PHONY: docker
 
@@ -127,7 +144,7 @@ docker: Dockerfile dockercheck
 # authenticating to docker hub and pushing built docker containers up with the
 # appropriate tags.
 # ###############################################
-DOCKER_TAG=docker tag mortendahl/tf-encrypted:latest mortendahl/tf-encrypted:$(1)
+DOCKER_TAG=docker tag mortendahl/tf-encrypted:$(1) mortendahl/tf-encrypted:$(2)
 DOCKER_PUSH=docker push mortendahl/tf-encrypted:$(1)
 
 docker-logincheck:
@@ -138,13 +155,16 @@ endif
 endif
 
 docker-tag: dockercheck
-	$(call DOCKER_TAG,$(VERSION))
+	$(call DOCKER_TAG,latest,$(VERSION))
+	$(call DOCKER_TAG,latest-int64,$(VERSION)-int64)
 
 docker-push-tag: dockercheck
 	$(call DOCKER_PUSH,$(VERSION))
+	$(call DOCKER_PUSH,$(VERSION)-int64)
 
 docker-push-latest: dockercheck
 	$(call DOCKER_PUSH,latest)
+	$(call DOCKER_PUSH,latest-int64)
 
 # Rely on DOCKER_USERNAME and DOCKER_PASSWORD being set inside CI or equivalent
 # environment
@@ -183,7 +203,7 @@ docker-push: docker-push-$(PUSHTYPE)
 # variables to be set to be executed properly.
 # ##############################################
 
-pypicheck: pipcheck pythoncheck tensorflowcheck
+pypicheck: pipcheck pythoncheck
 ifeq (,$(PYPI_USERNAME))
 ifeq (,$(PYPI_PASSWORD))
 	$(error "Missing PYPI_USERNAME and PYPI_PASSWORD environment variables")
@@ -193,6 +213,9 @@ endif
 pypi-version-check:
 ifeq (,$(shell grep -e $(VERSION) setup.py))
 	$(error "Version specified in setup.py does not match $(VERSION)")
+endif
+ifeq (,$(shell grep -e $(VERSION) docs/source/conf.py))
+	$(error "Version specified in docs/source/conf.py does not match $(VERSION)")
 endif
 
 pypi-push-master: pypicheck pypi-version-check
@@ -216,7 +239,7 @@ pypi-push: pypi-push-$(PUSHTYPE)
 # The following are meta-rules for building and pushing various different
 # release artifacts to their intended destinations.
 # ###############################################
-push:
+push: pypi-version-check
 	@echo "Attempting to build and push $(VERSION) with push type $(PUSHTYPE) - $(EXACT_TAG)"
 	make docker-push
 	make pypi-push

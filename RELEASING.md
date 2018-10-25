@@ -8,7 +8,7 @@ build and push all release artifacts.
 
 Today, the following artifacts are produced from this repository:
 
-- a docker container which is available on docker hub as [mortendahl/tf-encrypted](https://hub.docker.com/r/mortendahl/tf-encrypted/))
+- a docker container which is available on docker hub as [mortendahl/tf-encrypted](https://hub.docker.com/r/mortendahl/tf-encrypted))
 - a python package registered on pypi as [tf-encrypted](https://pypi.org/project/tf-encrypted)
 
 If a release candidate tag (e.g. `X.Y.Z-rc#`) is pushed then Circle CI will
@@ -24,20 +24,25 @@ Anyone with write access can trigger a release candidate or release to be
 created by pushing a tag to GitHub! We've documented the flow for releasing
 tf-encrypted below:
 
-1. Create a Release Candidate by creating a tag on master in the form of
-   `X.Y.Z-rc.#`. If this is the first release candidate in the series for this
-   tag the number should begin at 0 (e.g. `git tag 0.1.0-rc0`).
-2. Push the tag up to GitHub which will trigger a build in Circle CI (e.g. `git
-   push origin 0.1.0-rc0`). Once this build is complete, Circle CI will build
-   the release artifacts to their respective repositories (Docker Hub, etc.).
-3. Test the Release Artifact to make sure it passes our bar of quality. If any
-   bugs are found or other quality issues create a new release candidate by
-   proceeding back to the first step! Don't forget to increment the Release
-   Candidate version!
-4. Once we're satisfied with the quality of the release candidate, it's time to
-   cut the actual release! This is done once again by creating a tag without
-   the `-rc#` (e.g. `git tag 0.1.0`) and push it again (e.g. `git push origin
-   0.1.0`). Once the build is done, the release is available in the wild!
+1. Create a release candidate branch based off master (e.g.
+   `release-0.1.0-rc0`) and update the `setup.py` and `CHANGELOG.md` and
+   attempt to merge it into master. If this is the first release candidate in
+   the series for this version the number should begin at 0 (e.g. `0.1.0-rc0`).
+2. Create a tag off of the commit that merges the release candidate branch into
+   master for the given version in setup.py (e.g. `git tag 0.1.0-rc0`) and push
+   to GitHub (e.g. `git push origin 0.1.0-rc0`). This will trigger a deploy on
+   Circle CI which will push the artifacts to PyPI and Docker Hub.
+3. Once the build on Circle CI has passed create pull down the library from
+   pypi and ensure the different examples in our library and documentation work
+   as expected. If at any point a bug is found repeat steps 1-3 until the
+   release works as expected.
+4. Once the release candidate work as expected, create a new branch based off
+   master (e.g. `release-0.1.0`) and update the `setup.py`and `CHANGELOG.md`
+   file and merge it into master. Once done, just as we did for the release
+   candidate, create a tag (e.g. `git tag release-0.1.0`) off of the merge
+   commit and push it to github (e.g. `git push origin release-0.1.0`).
+5. Once the build on Circle CI has passed for our full release it should be
+   available to the world to start using! Don't forget to tweet about it :)
 
 **NOTE**: You must update *and* commit to master a new version of `setup.py`
 everytime you want to tag a new version of `tf-encrypted`. Make sure you push
@@ -58,3 +63,15 @@ the Z in `X.Y.Z`) then only a fix has been implemented.
 
 This makes it easy for developers of tf-encrypted and users alike to communicate
 about the risk involved in uptaking a new version of tf-encrypted.
+
+### What's with the CHANGELOG?
+
+Any time we make a change that could impact a consumer of tf-encrypted whether
+it be a bug fix, api improvement, performance enhancement, or resolve a
+security issue a note is added to the CHANGELOG.md under the `[Unreleased]`
+section as a part of the pull request changing the code. This makes it easy for
+any consumers of the project to understand *exactly* what has changed in any
+given version.
+
+When a release is created the `[Unreleased]` block is updated to the release
+version and a new `[Unreleased]` block is put at the top of the file.
