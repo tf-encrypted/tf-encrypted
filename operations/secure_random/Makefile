@@ -2,6 +2,7 @@ LIBSODIUM_VER_TAG=1.0.16
 
 TF_CFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))' 2>/dev/null)
 TF_LFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))' 2>/dev/null)
+PACKAGE_DIR=../../tf_encrypted/operations
 
 all: build-op
 
@@ -15,5 +16,7 @@ build-lib-sodium:
 	$(MAKE) -C libsodium install
 	rm -Rf libsodium
 
-build-op:
-	g++ -std=c++11 -shared secure_random.cc -o secure_random.so -fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -lsodium
+build-op: secure_random.cc
+	mkdir -p $(PACKAGE_DIR)/secure_random
+	g++ -std=c++11 -shared secure_random.cc -o $(PACKAGE_DIR)/secure_random/secure_random.so \
+		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -lsodium

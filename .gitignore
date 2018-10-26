@@ -12,3 +12,5 @@ tmp/
 examples/api/*.pb
 data/
 *.egg-info
+*.so
+tf_encrypted/operations
