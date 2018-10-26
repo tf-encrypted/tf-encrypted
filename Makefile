@@ -50,6 +50,7 @@ endif
 endif
 
 bootstrap: pythoncheck pipcheck
+	$(MAKE) -C operations/secure_random
 	pip install -r requirements.txt
 	pip install -e .
 
@@ -70,7 +71,7 @@ test: lint pythoncheck
 	python -m unittest discover
 
 lint: pythoncheck
-	flake8
+	flake8 --exclude=build
 
 typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted

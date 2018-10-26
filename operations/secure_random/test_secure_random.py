@@ -2,9 +2,11 @@ import unittest
 
 import tensorflow as tf
 import numpy as np
+import tf_encrypted as tfe
+import os
 
-
-shared_object = '../../tf_encrypted/operations/secure_random/secure_random.so'
+dirname = os.path.dirname(tfe.__file__)
+shared_object = dirname + ' /operations/secure_random/secure_random.so'
 
 
 class TestSecureRandom(unittest.TestCase):
