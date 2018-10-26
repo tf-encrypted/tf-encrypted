@@ -23,13 +23,13 @@ static Status SecureRandomShape(shape_inference::InferenceContext* context) {
   return Status::OK();
 }
 
-REGISTER_OP("SecureRandom")                        \
-    .Input("shape: T")                             \
-    .Input("seed: Tseed")                          \
-    .Output("output: dtype")                       \
-    .Attr("dtype: {int32, int64} = DT_INT32") \
-    .Attr("T: {int32, int64} = DT_INT32")          \
-    .Attr("Tseed: {int32} = DT_INT32")      \
+REGISTER_OP("SecureRandom")
+    .Input("shape: T")
+    .Input("seed: Tseed")
+    .Output("output: dtype")
+    .Attr("dtype: {int32, int64} = DT_INT32")
+    .Attr("T: {int32, int64} = DT_INT32")
+    .Attr("Tseed: {int32} = DT_INT32")
     .SetShapeFn(SecureRandomShape);
 
 template <typename T>
@@ -57,24 +57,25 @@ public:
   
     int number_of_seeds = randombytes_SEEDBYTES / sizeof(int32);
 
-    int32 *array = (int *)malloc(sizeof(int32) * number_of_seeds);
+    int32 *seeds = static_cast<int *>(malloc(sizeof(int32) * number_of_seeds));
     auto seed_vals = seed_t.flat<int32>().data();
 
     for(auto i = 0; i < number_of_seeds; i++) {
-      array[i] = seed_vals[i];
+      seeds[i] = seed_vals[i];
     }
 
     auto flat = output->flat<T>();
     int data_size = flat.size() * sizeof(T);
 
-    auto bytes = static_cast<const unsigned char*>(static_cast<void*>(array));
-    T * buf = (T*)malloc(data_size);
+    auto bytes = reinterpret_cast<const unsigned char*>(seeds);
+    T *buf = static_cast<T *>(malloc(data_size));
 
     randombytes_buf_deterministic(buf, data_size, bytes);
 
     std::copy(buf, buf + flat.size(), flat.data());
     
     free(buf);
+    free(seeds);
   }
 };
 
