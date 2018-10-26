@@ -6,7 +6,7 @@ import tf_encrypted as tfe
 import os
 
 dirname = os.path.dirname(tfe.__file__)
-shared_object = dirname + ' /operations/secure_random/secure_random.so'
+shared_object = dirname + '/operations/secure_random/secure_random.so'
 
 
 class TestSecureRandom(unittest.TestCase):
