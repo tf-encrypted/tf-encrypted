@@ -71,7 +71,7 @@ test: lint pythoncheck
 	python -m unittest discover
 
 lint: pythoncheck
-	flake8 --exclude=build
+	flake8 --exclude=venv,build
 
 typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
