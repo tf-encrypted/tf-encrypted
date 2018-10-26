@@ -24,7 +24,7 @@ ifeq ("$(wildcard /usr/local/lib/libsodium.a)","")
 		cd $(LIBSODIUM_DIR) && ./autogen.sh && ./configure --disable-shared --enable-static \
 			--disable-debug --disable-dependency-tracking --with-pic
 		$(MAKE) -C $(LIBSODIUM_DIR)
-		$(MAKE) -C $(LIBSODIUM_DIR) install
+		sudo $(MAKE) -C $(LIBSODIUM_DIR) install
 		rm -f $(LIBSODIUM_VER_TAG).tar.gz
 endif
 
