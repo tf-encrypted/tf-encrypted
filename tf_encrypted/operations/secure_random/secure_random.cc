@@ -43,7 +43,7 @@ public:
     TensorShape shape;
     OP_REQUIRES_OK(context, MakeShape(shape_t, &shape));
     OP_REQUIRES(context, seed_t.dims() == 1 && seed_t.dim_size(0) == 8,
-                errors::InvalidArgument("seed must have shape [1], not ",
+                errors::InvalidArgument("seed must have shape [8], not ",
                                         seed_t.shape().DebugString()));
 
     // Allocate output
