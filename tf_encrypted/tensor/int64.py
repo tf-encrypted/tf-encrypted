@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from .factory import AbstractFactory, AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
+from .odd_implicit import OddImplicitTensor, OddImplicitFactory
 from .helpers import inverse
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
@@ -223,10 +224,14 @@ class Int64Tensor(AbstractTensor):
     def negative(self) -> 'Int64Tensor':
         return Int64Tensor(tf.negative(self.value))
 
+    def to_odd_modulus(self, factory: OddImplicitFactory) -> OddImplicitTensor:
+        return OddImplicitTensor(self.value, factory=factory)
+
     def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
         # print('hrmm', self.value, int(modulus / 2), tf.int64.max)
         val = self.value - (int(modulus / 4))  # - (int(modulus / 2))
         val = val - (int(modulus / 4))
+
         val = val - (int(modulus / 4))
         val = val - (int(modulus / 4))
         return Int64Tensor(tf.cast(val + y.value >= 0, dtype=tf.int64))

@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from typing import Optional, Tuple, List
 import sys
 import math
-
+import numpy as np
 import tensorflow as tf
 
 from .protocol import memoize, nodes
@@ -13,6 +13,8 @@ from ..tensor.prime import PrimeFactory
 from ..tensor.factory import AbstractFactory, AbstractTensor
 from ..player import Player
 from ..config import get_config
+from ..tensor.int64 import Int64Tensor
+from ..tensor.odd_implicit import OddImplicitFactory
 
 
 _thismodule = sys.modules[__name__]
@@ -31,6 +33,7 @@ class SecureNN(Pond):
         server_2: Optional[Player] = None,
         prime_factory: Optional[AbstractFactory] = None,
         odd_factory: Optional[AbstractFactory] = None,
+        implicit_factory: Optional[AbstractFactory] = None,
         **kwargs
     ) -> None:
         server_0 = server_0 or get_config().get_player('server0')
@@ -51,8 +54,13 @@ class SecureNN(Pond):
         if odd_factory is None:
             odd_factory = self.tensor_factory
 
+        if implicit_factory is None:
+            implicit_factory = OddImplicitFactory(tf.int64)
+
         self.prime_factory = prime_factory
         self.odd_factory = odd_factory
+        self.implicit_factory = implicit_factory
+
         assert self.prime_factory.native_type == self.tensor_factory.native_type
         assert self.odd_factory.native_type == self.tensor_factory.native_type
 
@@ -323,8 +331,8 @@ class SecureNN(Pond):
 
             masked = x + pvt_sharemask
 
-        alpha_wrap_t = Int32Tensor(-alpha_wrap.value - 1)
-        zero = Int32Tensor(np.zeros(alpha_wrap.shape, dtype=np.int32))
+        alpha_wrap_t = Int64Tensor(-alpha_wrap.value - 1)
+        zero = Int64Tensor(np.zeros(alpha_wrap.shape, dtype=np.int32))
         alpha = PondPublicTensor(self, alpha_wrap_t, zero, is_scaled=False)
 
         # P0, P1
@@ -354,10 +362,10 @@ class SecureNN(Pond):
         print(alpha.value_on_0.value)
         print(beta_wrap.value_on_0.value)
 
-        preconverter = self.odd_modulus_bitwise_xor(compared, bitmask, self.implicit_factory)
+        preconverter = self._odd_modulus_bitwise_xor(compared, bitmask)
 
-        deltashares = self.to_odd_modulus(deltashares, self.implicit_factory)
-        beta_wrap = self.to_odd_modulus(beta_wrap, self.implicit_factory)
+        deltashares = self._to_odd_modulus(deltashares, self.implicit_factory)
+        beta_wrap = self._to_odd_modulus(beta_wrap, self.implicit_factory)
 
         # print(deltashares.share0.value, deltashares.share1.value)
         # print(preconverter.share0.value, preconverter.share1.value)
@@ -373,12 +381,12 @@ class SecureNN(Pond):
 
         converter = preconverter + deltashares + beta_wrap
 
-        converter = converter + self.to_odd_modulus(alpha, self.implicit_factory)
+        converter = converter + self._to_odd_modulus(alpha, self.implicit_factory)
 
         # print(x.share0.value)
         # print(x.share1.value)
 
-        return self.to_odd_modulus(x, self.implicit_factory) - converter
+        return self._to_odd_modulus(x, self.implicit_factory) - converter
 
     def divide(self, x, y):
         """
@@ -500,6 +508,35 @@ class SecureNN(Pond):
 
     def dmax_pool_efficient(self, x):
         raise NotImplementedError
+
+    def _odd_modulus_bitwise_xor(self, x: PondPrivateTensor, bits: PondPublicTensor) -> PondPrivateTensor:
+        with tf.device(self.server_0.device_name):
+            ones = self.implicit_factory.tensor(tf.ones(x.shape, dtype=self.implicit_factory.native_type))
+            share0 = ones.optional_sub(x.share0, bits.value_on_0)
+
+        with tf.device(self.server_1.device_name):
+            zeros = self.implicit_factory.tensor(tf.zeros(x.shape, dtype=self.implicit_factory.native_type))
+            share1 = zeros.optional_sub(x.share1, bits.value_on_1)
+
+        return PondPrivateTensor(self, share0, share1, is_scaled=False)
+
+    def _to_odd_modulus(self, x: PondTensor, factory: AbstractFactory):
+        if isinstance(x, PondPrivateTensor):
+            with tf.device(self.server_0.device_name):
+                share0 = x.share0.to_odd_modulus(factory)
+
+            with tf.device(self.server_1.device_name):
+                share1 = x.share1.to_odd_modulus(factory)
+
+            return PondPrivateTensor(self, share0, share1, is_scaled=False)
+        elif isinstance(x, PondPublicTensor):
+            with tf.device(self.server_0.device_name):
+                share0 = x.value_on_0.to_odd_modulus(factory)
+
+            with tf.device(self.server_1.device_name):
+                share1 = x.value_on_1.to_odd_modulus(factory)
+
+            return PondPublicTensor(self, share0, share1, is_scaled=False)
 
 
 def _bits_public(prot, x: PondPublicTensor, factory: Optional[AbstractFactory]=None) -> PondPublicTensor:
