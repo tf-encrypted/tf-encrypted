@@ -6,6 +6,7 @@ TF_LFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfi
 PACKAGE_DIR=../../tf_encrypted/operations
 
 WGET_PATH=$(shell which wget)
+SODIUM_INSTALL = $(shell pwd)/build
 
 all: build-op
 
@@ -17,14 +18,14 @@ endif
 endif
 
 build-libsodium: wgetcheck
-ifeq ("$(wildcard /usr/local/lib/libsodium.a)","")
+ifeq ("$(wildcard $(SODIUM_INSTALL)/lib/libsodium.a)","")
 		wget https://github.com/jedisct1/libsodium/archive/$(LIBSODIUM_VER_TAG).tar.gz
 		mkdir -p build
 		tar -xvf $(LIBSODIUM_VER_TAG).tar.gz -C build
 		cd $(LIBSODIUM_DIR) && ./autogen.sh && ./configure --disable-shared --enable-static \
-			--disable-debug --disable-dependency-tracking --with-pic
+			--disable-debug --disable-dependency-tracking --with-pic --prefix=$(SODIUM_INSTALL)
 		$(MAKE) -C $(LIBSODIUM_DIR)
-		sudo $(MAKE) -C $(LIBSODIUM_DIR) install
+		$(MAKE) -C $(LIBSODIUM_DIR) install
 		rm -f $(LIBSODIUM_VER_TAG).tar.gz
 endif
 
@@ -32,7 +33,7 @@ endif
 build-op: secure_random.cc build-libsodium
 	mkdir -p $(PACKAGE_DIR)/secure_random
 	g++ -std=c++11 -shared secure_random.cc -o $(PACKAGE_DIR)/secure_random/secure_random.so \
-		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -lsodium
+		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium
 
 clean:
 	$(MAKE) -C $(LIBSODIUM_DIR) uninstall
