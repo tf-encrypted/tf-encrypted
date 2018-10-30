@@ -32,10 +32,10 @@ endif
 
 build-op: secure_random.cc build-libsodium
 	mkdir -p $(PACKAGE_DIR)/secure_random
-	g++ -std=c++11 -shared secure_random.cc -o $(PACKAGE_DIR)/secure_random/secure_random.so \
+	g++ -std=c++11 -shared secure_random.cc -o $(PACKAGE_DIR)/secure_random/secure_random_module.so \
 		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium
 
 clean:
 	$(MAKE) -C $(LIBSODIUM_DIR) uninstall
 	rm -fR build
-	rm -fR $(PACKAGE_DIR)/secure_random/secure_random.so
+	rm -fR $(PACKAGE_DIR)/secure_random/secure_random_module.so

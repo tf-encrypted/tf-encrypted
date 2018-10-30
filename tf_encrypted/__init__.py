@@ -10,6 +10,7 @@ from .player import player
 from . import protocol
 from . import layers
 from . import convert
+from . import operations
 
 all_prot_funcs = protocol.get_all_funcs()
 
@@ -81,6 +82,7 @@ __all__ = [
     "protocol",
     "layers",
     "convert",
+    "operations",
     "global_caches_updator",
     "global_variables_initializer",
 ]
