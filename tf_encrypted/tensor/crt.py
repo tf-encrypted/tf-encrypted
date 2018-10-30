@@ -10,6 +10,8 @@ from .helpers import inverse, prod
 
 Decomposed = Union[List[tf.Tensor], List[np.ndarray]]
 
+from ..operations.secure_random import random_func
+
 
 def gen_crt_decompose(m):
 
