@@ -7,10 +7,9 @@ import tensorflow as tf
 
 from ..tensor.shared import im2col
 from .helpers import inverse, prod
+from ..operations.secure_random import random_func
 
 Decomposed = Union[List[tf.Tensor], List[np.ndarray]]
-
-from ..operations.secure_random import random_func
 
 
 def gen_crt_decompose(m):
