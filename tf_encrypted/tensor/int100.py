@@ -1,11 +1,10 @@
 from __future__ import absolute_import
-
+from typing import Union, Optional, List, Any
 from functools import reduce
 import math
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Any
 
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
@@ -168,6 +167,17 @@ class Int100Tensor(AbstractTensor):
             MAX_CHUNK_BITSIZE = 16
             q, r = BITSIZE // MAX_CHUNK_BITSIZE, BITSIZE % MAX_CHUNK_BITSIZE
             chunk_bitsizes = [MAX_CHUNK_BITSIZE] * q + ([r] if r > 0 else [])
+
+            # to get the right bit pattern for negative number we may need to apply a correction
+            # to the first chunk; unfortunately whether or not this is the case isn't known until
+            # all bits have been extracted. for this reason we extract bits both with and without
+            # the correction. although the two branches could be computed independently we here
+            # combine them into a single tensor to keep the graph smaller.
+            shape = self.shape
+            correction = tf.stack([
+                tf.zeros(shape, dtype=self.factory.native_type),
+                np.full(shape, m % 8)
+            ], axis=0)
 
             # extract bits of chunks
             chunks_bits = []  # type: List[INT_TYPE]
