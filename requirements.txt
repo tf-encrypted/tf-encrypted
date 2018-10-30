@@ -13,6 +13,7 @@ jwt==0.5.4
 Markdown==2.6.11
 mypy==0.620
 numpy==1.14.5
+nose==1.0.0
 protobuf==3.6.1
 pyasn1==0.4.2
 pycparser==2.18
