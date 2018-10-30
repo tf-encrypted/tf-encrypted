@@ -68,6 +68,9 @@ public:
 
     T hi = maxval.scalar<T>()();
     T lo = minval.scalar<T>()();
+    OP_REQUIRES(
+      context, lo < hi,
+      errors::InvalidArgument("Need minval < maxval, got ", lo, " >= ", hi));
 
     // Allocate output
     Tensor* output;

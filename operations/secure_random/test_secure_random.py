@@ -1,6 +1,7 @@
 import unittest
 
 import tensorflow as tf
+from tensorflow.python.framework import errors
 import numpy as np
 import tf_encrypted as tfe
 import os
@@ -33,6 +34,16 @@ class TestSecureRandom(unittest.TestCase):
             output = secure_random_module.secure_random([2, 3], [1, 1, 1, 1, 1, 1, 1, 2], minval, maxval).eval()
 
             np.testing.assert_array_equal(output, expected)
+
+    def test_invalid_max_min(self):
+        with tf.Session():
+            secure_random_module = tf.load_op_library(shared_object)
+
+            minval = tf.constant(1000, dtype=tf.int64)
+            maxval = tf.constant(-1000, dtype=tf.int64)
+
+            with np.testing.assert_raises(errors.InvalidArgumentError):
+                secure_random_module.secure_random([2, 3], [1, 1, 1, 1, 1, 1, 1, 2], minval, maxval).eval()
 
 
 if __name__ == '__main__':
