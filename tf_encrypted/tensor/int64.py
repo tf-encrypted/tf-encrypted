@@ -227,15 +227,60 @@ class Int64Tensor(AbstractTensor):
     def to_odd_modulus(self, factory: OddImplicitFactory) -> OddImplicitTensor:
         return OddImplicitTensor(self.value, factory=factory)
 
-    def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
-        # print('hrmm', self.value, int(modulus / 2), tf.int64.max)
-        val = self.value - (int(modulus / 4))  # - (int(modulus / 2))
-        val = val - (int(modulus / 4))
+    # 2 ** 63
 
-        val = val - (int(modulus / 4))
-        val = val - (int(modulus / 4))
-        return Int64Tensor(tf.cast(val + y.value >= 0, dtype=tf.int64))
-        # return Int64Tensor(tf.cast(self.value + y.value >= modulus, dtype=tf.int64))
+    # all positive rep
+    # [0, 1, .., 2**64 - 1] 2 ** 64
+    # [0, 1, .., 2**64 - 2] 2 ** 64 - 1
+
+    # symetric representation
+    # [0, 1, 9223372036854775807, -9223372036854775808, ... -1] 2 ** 64
+    # [0, 1, 9223372036854775807, -9223372036854775807, ..., -1] 2 ** 64 - 1
+
+    def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
+
+        # classical overflow
+        overflow_max = tf.cast(tf.logical_and((self.value > 0), (y.value > tf.int64.max - self.value)), dtype=tf.bool)
+        overflow_min = tf.cast(tf.logical_and((self.value < 0), (y.value < tf.int64.min - self.value)), dtype=tf.bool)
+
+        vals = tf.where(
+            overflow_max,
+            tf.ones(self.shape, dtype=tf.int64),
+            tf.zeros(self.shape, dtype=tf.int64)
+        )
+
+        vals = tf.where(
+            overflow_min,
+            tf.ones(self.shape, dtype=tf.int64) * -1,
+            vals
+        )
+
+        return Int64Tensor(vals)
+
+        # Detect overflow in the ring
+        overflow_min = tf.cast(
+            tf.logical_and(
+                tf.logical_and(self.value >= 0, self.value + y.value < 0),
+                tf.logical_not(overflow_64)
+            ),
+
+            dtype=tf.bool
+        )
+
+        overflow_max = tf.cast(
+            tf.logical_and(
+                tf.logical_and(self.value < 0, self.value + y.value >= 0),
+                tf.logical_not(overflow_64)
+            ),
+
+            dtype=tf.bool
+        )
+
+        overflow = tf.logical_or(overflow_min, overflow_max)
+
+        # Detect overflow in int64
+
+        return Int64Tensor(tf.cast(overflow, dtype=tf.int64))
 
 
 class Int64Constant(Int64Tensor, AbstractConstant):

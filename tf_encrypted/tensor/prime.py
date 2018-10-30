@@ -7,6 +7,7 @@ import tensorflow as tf
 
 from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 from .shared import binarize, im2col
+# from .odd_implicit import OddImplicitTensor
 
 
 class PrimeTensor(AbstractTensor):
@@ -127,6 +128,9 @@ def _lift(x, y) -> Tuple[PrimeTensor, PrimeTensor]:
 
     if isinstance(x, int) and isinstance(y, PrimeTensor):
         return y.factory.tensor(np.array([x])), y
+
+    # if isinstance(x, PrimeTensor) and isinstance(y, OddImplicitTensor):
+    #     return y, x
 
     raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
 

@@ -20,30 +20,23 @@ class TestShareConvert(unittest.TestCase):
     def test_share_convert(self):
 
         prot = tfe.protocol.SecureNN(
-            tensor_factory = int64factory
+            tensor_factory=int64factory
         )
 
         bit_dtype = prot.prime_factory
         val_dtype = prot.tensor_factory
 
-        val_a = np.array([1, 2, 3, 4])
-        val_b = np.array([1, 2, 3, 4])
+        val_a = np.array([100])
 
         x_in = prot.define_private_variable(val_a, apply_scaling=False)
-        y_in = prot.define_private_variable(val_b, apply_scaling=False)
 
-        x_c = prot.share_convert(x_in)
-        y_c = prot.share_convert(y_in)
-
-        expected = val_a + val_b
-        actual = x_c + y_c
+        x_c = prot.share_convert_2(x_in)
 
         with tfe.Session() as sess:
             sess.run(tf.global_variables_initializer())
 
-            answer = sess.run(actual.reveal().value_on_0.value)
+            answer = sess.run(x_c.reveal().value_on_0.value)
             print('answer', answer)
-            assert np.array_equal(answer, expected)
 
 
 if __name__ == '__main__':

@@ -307,6 +307,92 @@ class SecureNN(Pond):
         """
         return self.dispatch('equal_zero', x, container=_thismodule, out_dtype=out_dtype)
 
+    def share_convert_2(self, a):
+        L = self.tensor_factory.modulus
+
+        if L > 2**64:
+            raise Exception('SecureNN share convert only support moduli of less or equal to 2 ** 64.')
+
+        with tf.device(self.server_0.device_name):
+            # Common randomness
+            npp = _generate_random_bits(self, a.shape)
+            r = self.tensor_factory.sample_uniform(a.shape)
+            r_0, r_1 = self._share(r)
+            r = PondPublicTensor(self, r_0, r_1, is_scaled=False)
+            alpha = self.compute_wrap(r_0, r_1, L)
+
+        # line 2
+        a_hat = a + r
+
+        with tf.device(self.server_0.device_name):
+            beta_0 = self.compute_wrap(a.share0, r.value_on_0, L)
+
+        with tf.device(self.server_1.device_name):
+            beta_1 = self.compute_wrap(a.share1, r.value_on_1, L)
+
+        # line 3
+        with tf.device(self.crypto_producer.device_name):
+            # line 4
+            x = a_hat.reveal()
+            gamma = self.compute_wrap(a_hat.share0, a_hat.share1, L)
+
+            # line 5
+            x_bits = x.value_on_0.to_bits(self.prime_factory)
+            x_bits = self._share_and_wrap(x_bits, is_scaled=False)
+            # need shares of gamma in L-1
+            gamma_odd = gamma.to_odd_modulus(self.implicit_factory)
+            gamma = self._share_and_wrap(gamma_odd, is_scaled=False)
+
+        # line 6
+        np = _private_compare(self, x_bits, r, npp)
+
+        # line 7 (convert np to L-1)
+        with tf.device(self.crypto_producer.device_name):
+            np_0, np_1 = np.reveal().unwrapped
+            np_0 = np_0.to_odd_modulus(self.implicit_factory)
+
+            np_odd = self._share_and_wrap(np_0, is_scaled=False)
+
+        # line 9
+        n = np_odd + npp - np_odd * npp * 2
+
+        # line 10, j = 0
+        with tf.device(self.server_0.device_name):
+            a_0 = a.share0.to_odd_modulus(self.implicit_factory)
+            theta_0 = beta_0.to_odd_modulus(self.implicit_factory) + (((-alpha).to_odd_modulus(self.implicit_factory) - 1) * 1) + gamma.share0 + n.share0
+
+            y_0 = a_0 - theta_0
+
+        # line 10, j = 1
+        with tf.device(self.server_1.device_name):
+            a_1 = a.share1.to_odd_modulus(self.implicit_factory)
+            theta_1 = beta_1.to_odd_modulus(self.implicit_factory) + (((-alpha).to_odd_modulus(self.implicit_factory) - 1) * 0) + gamma.share1 + n.share1
+
+            y_1 = a_1 - theta_1
+
+        # line 11
+        y = PondPrivateTensor(self, y_0, y_1, is_scaled=False)
+        return y
+
+    def compute_wrap(self, s0, s1, L: int):
+        # classical overflow
+        overflow_max = tf.cast(tf.logical_and((s0.value > 0), (s1.value > tf.int64.max - s0.value)), dtype=tf.bool)
+        overflow_min = tf.cast(tf.logical_and((s0.value < 0), (s1.value < tf.int64.min - s0.value)), dtype=tf.bool)
+
+        vals = tf.where(
+            overflow_max,
+            tf.ones(s0.shape, dtype=tf.int64),
+            tf.zeros(s0.shape, dtype=tf.int64)
+        )
+
+        vals = tf.where(
+            overflow_min,
+            tf.ones(s0.shape, dtype=tf.int64) * -1,
+            vals
+        )
+
+        return Int64Tensor(vals)
+
     def share_convert(self, x):
         """
         Convert which ring `x` belongs to.  This protocol is not implemented yet.

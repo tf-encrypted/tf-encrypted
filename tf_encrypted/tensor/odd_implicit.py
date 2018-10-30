@@ -4,7 +4,8 @@ from typing import Union, List, Any, Tuple, Type
 import numpy as np
 import tensorflow as tf
 
-from .factory import AbstractTensor, AbstractFactory
+from .factory import AbstractTensor, AbstractFactory, AbstractConstant
+from .prime import PrimeTensor
 
 
 class OddImplicitFactory:
@@ -24,7 +25,13 @@ class OddImplicitFactory:
         raise TypeError("Don't know how to handle {}".format(type(value)))
 
     def constant(self, value) -> 'OddImplicitTensor':
-        raise NotImplementedError()
+        if isinstance(value, (tf.Tensor, np.ndarray)):
+            return OddImplicitConstant(value, self)
+
+        if isinstance(value, OddImplicitTensor):
+            return OddImplicitConstant(value.value, self)
+
+        raise TypeError("Don't know how to handle {}".format(type(value)))
 
     def variable(self, initial_value) -> 'OddImplicitTensor':
         raise NotImplementedError()
@@ -153,7 +160,13 @@ class OddImplicitTensor(AbstractTensor):
         return OddImplicitTensor(ret, self.factory)
 
     def mul(self, other) -> 'OddImplicitTensor':
-        raise NotImplementedError()
+        # NOTE!!
+        # This isn't actuall implemented properly.
+        # It works right now because other is only ever 0 or 1 so wrapping
+        # is never needed
+        x, y = _lift(self, other)
+        z = x.value * y.value
+        return OddImplicitTensor(z, self._factory)
 
     def matmul(self, other) -> 'OddImplicitTensor':
         raise NotImplementedError()
@@ -177,6 +190,16 @@ class OddImplicitTensor(AbstractTensor):
         return OddImplicitTensor(tf.reshape(self.value, axes), self.factory)
 
 
+class OddImplicitConstant(OddImplicitTensor, AbstractConstant):
+
+    def __init__(self, value: Union[tf.Tensor, np.ndarray], factory) -> None:
+        v = tf.constant(value, dtype=factory.native_type)
+        super(OddImplicitConstant, self).__init__(v, factory)
+
+    def __repr__(self) -> str:
+        return 'OddImplicitConstant({})'.format(self.shape)
+
+
 def _lift(x, y) -> Tuple[OddImplicitTensor, OddImplicitTensor]:
 
     if isinstance(x, OddImplicitTensor) and isinstance(y, OddImplicitTensor):
@@ -190,6 +213,9 @@ def _lift(x, y) -> Tuple[OddImplicitTensor, OddImplicitTensor]:
 
         if isinstance(y, np.ndarray):
             return x, x.factory.tensor(y)
+
+        if isinstance(y, PrimeTensor):
+            return x, x.factory.tensor(y.value)
 
     if isinstance(y, OddImplicitTensor):
 
