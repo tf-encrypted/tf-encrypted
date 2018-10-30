@@ -6,6 +6,8 @@ import tensorflow as tf
 
 from .factory import AbstractTensor, AbstractFactory
 
+from ..operations.secure_random import random_func
+
 
 class OddImplicitFactory:
 
@@ -44,7 +46,7 @@ class OddImplicitFactory:
         raise NotImplementedError("Don't know how to handle {}".format(self.native_type))
 
     def sample_uniform(self, shape: Union[Tuple[int, ...], tf.TensorShape]) -> 'OddImplicitTensor':
-        value = tf.random_uniform(
+        value = random_func(
             shape=shape,
             dtype=self.native_type,
             minval=self.native_type.min + 1,
