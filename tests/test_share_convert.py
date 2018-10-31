@@ -40,6 +40,5 @@ class TestShareConvert(unittest.TestCase):
             answer = sess.run(result.reveal().value_on_0.value)
             np.testing.assert_array_equal(answer, expected)
 
-
 if __name__ == '__main__':
     unittest.main()

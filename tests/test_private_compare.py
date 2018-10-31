@@ -9,41 +9,6 @@ from tf_encrypted.protocol.securenn import _private_compare
 
 class TestPrivateCompare(unittest.TestCase):
 
-    def test_private_negative(self):
-        x = np.array([-10, 10, -10, -20])
-        r = np.array([-9, -10, -11, 19])
-
-        beta = np.array([0, 0, 0, 0])
-        expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
-
-        print('expected', expected)
-        prot = tfe.protocol.SecureNN()
-
-        bit_dtype = prot.prime_factory
-        val_dtype = prot.tensor_factory
-
-        res = _private_compare(
-            prot,
-            x_bits=PondPrivateTensor(
-                prot,
-                *prot._share(val_dtype.tensor(tf.convert_to_tensor(x, dtype=val_dtype.native_type)).to_bits(bit_dtype)),
-                False),
-            r=PondPublicTensor(
-                prot,
-                val_dtype.tensor(tf.convert_to_tensor(r, dtype=val_dtype.native_type)),
-                val_dtype.tensor(tf.convert_to_tensor(r, dtype=val_dtype.native_type)),
-                False),
-            beta=PondPublicTensor(
-                prot,
-                bit_dtype.tensor(tf.convert_to_tensor(beta, dtype=bit_dtype.native_type)),
-                bit_dtype.tensor(tf.convert_to_tensor(beta, dtype=bit_dtype.native_type)),
-                False)
-        )
-
-        with tfe.Session() as sess:
-            actual = sess.run(res.reveal().value_on_0.to_native())
-            np.testing.assert_array_equal(actual, expected)
-
     def test_private(self):
 
         x = np.array([
@@ -54,7 +19,7 @@ class TestPrivateCompare(unittest.TestCase):
             21,
             21,
             21,
-            21,
+            21
         ], dtype=np.int32).reshape(2, 2, 2)
 
         r = np.array([
