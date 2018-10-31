@@ -18,6 +18,8 @@ CURRENT_DIR=$(shell pwd)
 PIP_PATH=$(shell which pip)
 DOCKER_PATH=$(shell which docker)
 CURRENT_TF_VERSION=$(shell python -c 'import tensorflow as tf; print(tf.__version__)' 2>/dev/null)
+SECURE_OUT = $(CURRENT_DIR)/tf_encrypted/operations/secure_random/secure_random_module.so
+
 
 dockercheck:
 ifeq (,$(DOCKER_PATH))
@@ -49,10 +51,12 @@ ifeq (,$(BYPASS_TENSORFLOW_CHECK))
 endif
 endif
 
-bootstrap: pythoncheck pipcheck
-	$(MAKE) -C operations/secure_random
+bootstrap: pythoncheck pipcheck $(SECURE_OUT)
 	pip install -r requirements.txt
 	pip install -e .
+
+$(SECURE_OUT):
+	$(MAKE) -C operations/secure_random
 
 # ###############################################
 # Testing and Linting
