@@ -29,7 +29,7 @@ class TestShareConvert(unittest.TestCase):
         val_a = np.array([100, -100])
         val_b = np.array([101, 50])
 
-        expected = val_a + val_b
+        expected = [201, -49]  # -100 is -99 in L-1
 
         x_in = prot.define_private_variable(val_a, apply_scaling=False)
         y_in = prot.define_private_variable(val_b, apply_scaling=False)
@@ -42,9 +42,8 @@ class TestShareConvert(unittest.TestCase):
         with tfe.Session() as sess:
             sess.run(tf.global_variables_initializer())
 
-            answer = sess.run(x_c.reveal().value_on_0.value)
-            print('answer', answer)
-            # np.testing.assert_array_equal(answer, expected)
+            answer = sess.run(result.reveal().value_on_0.value)
+            np.testing.assert_array_equal(answer, expected)
 
 
 if __name__ == '__main__':

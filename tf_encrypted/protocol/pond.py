@@ -513,16 +513,8 @@ class Pond(Protocol):
     def _share(self, secret: AbstractTensor) -> Tuple[AbstractTensor, AbstractTensor]:
 
         with tf.name_scope('share'):
-            print('secret!!', secret.factory)
             share0 = secret.factory.sample_uniform(secret.shape)
-
-            # if isinstance(secret, OddImplicitTensor):
-            #     share0.value = tf.Print(share0.value, [share0.value], 'SHARE 0:', summarize=100)
-            #     secret.value = tf.Print(secret.value, [secret.value], 'secret:')
-
             share1 = secret - share0
-            # if isinstance(secret, OddImplicitTensor):
-            #     share1.value = tf.Print(share1.value, [share1.value], 'SHARE1:')
 
         return share0, share1
 

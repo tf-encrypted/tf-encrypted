@@ -346,11 +346,7 @@ class SecureNN(Pond):
             gamma = self._share_and_wrap(gamma_odd, is_scaled=False)
 
         # line 6
-        x_bits.share0.value = tf.Print(x_bits.share0.value, [x_bits.share0.value], 'XBITS_0:', summarize=100)
-        x_bits.share1.value = tf.Print(x_bits.share1.value, [x_bits.share1.value], 'XBITS_1:', summarize=100)
-        r.value_on_0.value = tf.Print(r.value_on_0.value, [r.value_on_0.value], 'R:', summarize=100)
-        npp.value_on_0.value = tf.Print(npp.value_on_0.value, [npp.value_on_0.value], 'NPP:', summarize=100)
-        np = _private_compare(self, x_bits, r, npp)
+        np = _private_compare(self, x_bits, r - 1, npp)
 
         # line 7 (convert np to L-1)
         with tf.device(self.crypto_producer.device_name):
