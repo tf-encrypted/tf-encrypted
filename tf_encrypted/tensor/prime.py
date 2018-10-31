@@ -205,6 +205,10 @@ class PrimeFactory(AbstractFactory):
         value = tf.random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=maxval)
         return PrimeTensor(value, self)
 
+    def sample_binary(self, shape: List[int]) -> PrimeTensor:
+        value = tf.random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=2)
+        return PrimeTensor(value, self)
+
     def stack(self, xs: List[PrimeTensor], axis: int = 0) -> PrimeTensor:
         assert all(isinstance(x, PrimeTensor) for x in xs)
         value = tf.stack([x.value for x in xs], axis=axis)

@@ -318,21 +318,23 @@ class SecureNN(Pond):
             npp = _generate_random_bits(self, a.shape)
             r = self.tensor_factory.sample_uniform(a.shape)
             r_0, r_1 = self._share(r)
-            r = PondPublicTensor(self, r_0, r_1, is_scaled=False)
+            r = PondPublicTensor(self, r_0 + r_1, r_0 + r_1, is_scaled=False)
             alpha = self.compute_wrap(r_0, r_1, L)
 
-        # line 2
-        a_hat = a + r
-
         with tf.device(self.server_0.device_name):
-            beta_0 = self.compute_wrap(a.share0, r.value_on_0, L)
+            # line 2
+            a_hat_0 = a.share0 + r_0
+            beta_0 = self.compute_wrap(a.share0, r_0, L)
 
         with tf.device(self.server_1.device_name):
-            beta_1 = self.compute_wrap(a.share1, r.value_on_1, L)
+            # line 2
+            a_hat_1 = a.share1 + r_1
+            beta_1 = self.compute_wrap(a.share1, r_1, L)
 
         # line 3
         with tf.device(self.crypto_producer.device_name):
             # line 4
+            a_hat = PondPrivateTensor(self, a_hat_0, a_hat_1, is_scaled=False)
             x = a_hat.reveal()
             gamma = self.compute_wrap(a_hat.share0, a_hat.share1, L)
 
@@ -344,6 +346,10 @@ class SecureNN(Pond):
             gamma = self._share_and_wrap(gamma_odd, is_scaled=False)
 
         # line 6
+        x_bits.share0.value = tf.Print(x_bits.share0.value, [x_bits.share0.value], 'XBITS_0:', summarize=100)
+        x_bits.share1.value = tf.Print(x_bits.share1.value, [x_bits.share1.value], 'XBITS_1:', summarize=100)
+        r.value_on_0.value = tf.Print(r.value_on_0.value, [r.value_on_0.value], 'R:', summarize=100)
+        npp.value_on_0.value = tf.Print(npp.value_on_0.value, [npp.value_on_0.value], 'NPP:', summarize=100)
         np = _private_compare(self, x_bits, r, npp)
 
         # line 7 (convert np to L-1)
@@ -354,19 +360,21 @@ class SecureNN(Pond):
             np_odd = self._share_and_wrap(np_0, is_scaled=False)
 
         # line 9
-        n = np_odd + npp - np_odd * npp * 2
+        # n = np_odd + npp - np_odd * npp * 2
 
         # line 10, j = 0
         with tf.device(self.server_0.device_name):
+            n_0 = np_odd.share0 + npp.value_on_0 - (np_odd.share0 * npp.value_on_0 * 2)
             a_0 = a.share0.to_odd_modulus(self.implicit_factory)
-            theta_0 = beta_0.to_odd_modulus(self.implicit_factory) + (((-alpha).to_odd_modulus(self.implicit_factory) - 1) * 1) + gamma.share0 + n.share0
+            theta_0 = beta_0.to_odd_modulus(self.implicit_factory) + (((-alpha).to_odd_modulus(self.implicit_factory) - 1) * 1) + gamma.share0 + n_0
 
             y_0 = a_0 - theta_0
 
         # line 10, j = 1
         with tf.device(self.server_1.device_name):
+            n_1 = np_odd.share1 - (np_odd.share1 * npp.value_on_1 * 2)
             a_1 = a.share1.to_odd_modulus(self.implicit_factory)
-            theta_1 = beta_1.to_odd_modulus(self.implicit_factory) + (((-alpha).to_odd_modulus(self.implicit_factory) - 1) * 0) + gamma.share1 + n.share1
+            theta_1 = beta_1.to_odd_modulus(self.implicit_factory) + (((-alpha).to_odd_modulus(self.implicit_factory) - 1) * 0) + gamma.share1 + n_1
 
             y_1 = a_1 - theta_1
 
@@ -780,7 +788,7 @@ def _equal_zero_public(prot, x: PondPublicTensor, out_dtype: Optional[AbstractFa
 
 
 def _generate_random_bits(prot: SecureNN, shape: List[int]):
-    backing = prot.prime_factory.sample_bounded(shape, 2)
+    backing = prot.prime_factory.sample_binary(shape)
     return PondPublicTensor(prot, backing, backing, is_scaled=False)
 
 
