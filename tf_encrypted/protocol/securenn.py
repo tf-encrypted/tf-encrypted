@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from typing import Optional, Tuple, List
 import sys
 import math
-import numpy as np
 import tensorflow as tf
 
 from .protocol import memoize, nodes
@@ -307,7 +306,16 @@ class SecureNN(Pond):
         """
         return self.dispatch('equal_zero', x, container=_thismodule, out_dtype=out_dtype)
 
-    def share_convert_2(self, a):
+    def share_convert(self, a):
+        """
+        Convert which ring `x` belongs to.  This protocol is not implemented yet.
+
+        Some operations in secureNN only work in an odd ring.  This function
+        is used to convert from one ring to another.
+
+        :param PondTensor x: The tensor to convert.
+        """
+
         L = self.tensor_factory.modulus
 
         if L > 2**64:
@@ -396,87 +404,6 @@ class SecureNN(Pond):
         )
 
         return Int64Tensor(vals)
-
-    def share_convert(self, x):
-        """
-        Convert which ring `x` belongs to.  This protocol is not implemented yet.
-
-        Some operations in secureNN only work in an odd ring.  This function
-        is used to convert from one ring to another.
-
-        :param PondTensor x: The tensor to convert.
-        :raises: NotImplementedError
-        """
-        L = self.tensor_factory.modulus
-
-        if L > 2**64:
-            raise Exception('SecureNN share convert only support moduli of less or equal to 2 ** 64.')
-
-        # P0
-        with tf.device(self.server_0.device_name):
-            bitmask = _generate_random_bits(self, x.shape)
-            sharemask = self.tensor_factory.sample_uniform(x.shape)
-            sharemask0, sharemask1, alpha_wrap = share_with_wrap(self, sharemask, L)
-            pvt_sharemask = PondPrivateTensor(self, sharemask0, sharemask1, is_scaled=False)
-
-            masked = x + pvt_sharemask
-
-        alpha_wrap_t = Int64Tensor(-alpha_wrap.value - 1)
-        zero = Int64Tensor(np.zeros(alpha_wrap.shape, dtype=np.int32))
-        alpha = PondPublicTensor(self, alpha_wrap_t, zero, is_scaled=False)
-
-        # P0, P1
-        with tf.device(self.server_0.device_name):
-            beta_wrap_0 = x.share0.compute_wrap(sharemask0, L)
-
-        with tf.device(self.server_1.device_name):
-            beta_wrap_1 = x.share1.compute_wrap(sharemask1, L)
-
-        beta_wrap = PondPublicTensor(self, beta_wrap_0, beta_wrap_1, is_scaled=False)
-
-        # P2
-        with tf.device(self.crypto_producer.device_name):
-            delta_wrap = masked.share0.compute_wrap(masked.share1, L)
-            x_pub_masked = masked.reveal()
-
-            xbits = x_pub_masked.value_on_0.to_bits(self.prime_factory)  # .to_bits()
-
-            bitshares = self._share_and_wrap(xbits, is_scaled=False)
-            deltashares = self._share_and_wrap(delta_wrap, is_scaled=False)
-
-        with tf.device(self.server_0.device_name):
-            compared = _private_compare(self, bitshares, pvt_sharemask.reveal() - 1, bitmask)
-
-        # P0, P1
-        print(bitmask.value_on_0.value)
-        print(alpha.value_on_0.value)
-        print(beta_wrap.value_on_0.value)
-
-        preconverter = self._odd_modulus_bitwise_xor(compared, bitmask)
-
-        deltashares = self._to_odd_modulus(deltashares, self.implicit_factory)
-        beta_wrap = self._to_odd_modulus(beta_wrap, self.implicit_factory)
-
-        # print(deltashares.share0.value, deltashares.share1.value)
-        # print(preconverter.share0.value, preconverter.share1.value)
-        #
-        # one = deltashares.share0.value + preconverter.share0.value
-        # two = deltashares.share1.value + preconverter.share1.value
-        #
-        # print(one)
-        # print(two)
-
-        # print(beta_wrap.value_on_0.value)
-        # print(alpha.value_on_0.value)
-
-        converter = preconverter + deltashares + beta_wrap
-
-        converter = converter + self._to_odd_modulus(alpha, self.implicit_factory)
-
-        # print(x.share0.value)
-        # print(x.share1.value)
-
-        return self._to_odd_modulus(x, self.implicit_factory) - converter
 
     def divide(self, x, y):
         """

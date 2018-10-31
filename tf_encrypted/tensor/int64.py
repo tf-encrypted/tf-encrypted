@@ -227,16 +227,6 @@ class Int64Tensor(AbstractTensor):
     def to_odd_modulus(self, factory: OddImplicitFactory) -> OddImplicitTensor:
         return OddImplicitTensor(self.value, factory=factory)
 
-    # 2 ** 63
-
-    # all positive rep
-    # [0, 1, .., 2**64 - 1] 2 ** 64
-    # [0, 1, .., 2**64 - 2] 2 ** 64 - 1
-
-    # symetric representation
-    # [0, 1, 9223372036854775807, -9223372036854775808, ... -1] 2 ** 64
-    # [0, 1, 9223372036854775807, -9223372036854775807, ..., -1] 2 ** 64 - 1
-
     def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
 
         # classical overflow
@@ -256,31 +246,6 @@ class Int64Tensor(AbstractTensor):
         )
 
         return Int64Tensor(vals)
-
-        # Detect overflow in the ring
-        overflow_min = tf.cast(
-            tf.logical_and(
-                tf.logical_and(self.value >= 0, self.value + y.value < 0),
-                tf.logical_not(overflow_64)
-            ),
-
-            dtype=tf.bool
-        )
-
-        overflow_max = tf.cast(
-            tf.logical_and(
-                tf.logical_and(self.value < 0, self.value + y.value >= 0),
-                tf.logical_not(overflow_64)
-            ),
-
-            dtype=tf.bool
-        )
-
-        overflow = tf.logical_or(overflow_min, overflow_max)
-
-        # Detect overflow in int64
-
-        return Int64Tensor(tf.cast(overflow, dtype=tf.int64))
 
 
 class Int64Constant(Int64Tensor, AbstractConstant):

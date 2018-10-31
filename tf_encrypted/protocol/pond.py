@@ -10,7 +10,6 @@ import tensorflow as tf
 from ..tensor.helpers import inverse
 from ..tensor.factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 from ..tensor.fixed import FixedpointConfig, _validate_fixedpoint_config
-from ..tensor.odd_implicit import OddImplicitTensor
 from ..tensor import int100factory, fixed100
 from ..tensor import int64factory, fixed64
 from ..types import Slice, Ellipse
