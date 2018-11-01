@@ -13,3 +13,4 @@ examples/api/*.pb
 data/
 *.egg-info
 *.so
+*.gz
