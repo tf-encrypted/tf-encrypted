@@ -39,13 +39,13 @@ class TestSecureRandom(unittest.TestCase):
         secure_random_module = tf.load_op_library(shared_object)
 
         with tf.Session():
-            minval = tf.constant(-1000_000_00, dtype=tf.int32)
-            maxval = tf.constant(1000_000_00, dtype=tf.int32)
+            minval = tf.constant(-100000000, dtype=tf.int32)
+            maxval = tf.constant(100000000, dtype=tf.int32)
 
             output = secure_random_module.secure_random([1000], [1, 1, 1, 500, 1, 1, 1, 2], minval, maxval).eval()
 
             for out in output:
-                assert(out >= -1000_000_00 and out < 1000_000_00)
+                assert(out >= -100000000 and out < 100000000)
 
     def test_invalid_max_min(self):
         with tf.Session():
