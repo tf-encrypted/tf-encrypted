@@ -1,4 +1,6 @@
 import unittest
+import math
+import random
 
 import numpy as np
 import tensorflow as tf
@@ -39,24 +41,26 @@ class TestInt100Tensor(unittest.TestCase):
             bits = [0] * (min_bitlength - len(bits)) + bits
             return list(reversed(bits))
 
-        x = int100factory.tensor(np.array([
-            0,
-            -1,
-            123456789,
-            -123456789,
-        ]).reshape([2, 2]))
+        modulus = int100factory.modulus
+        bitlen = math.ceil(math.log2(modulus))
 
-        with tf.Session() as sess:
-            actual = sess.run(
-                x.convert_to_tensor().to_bits().to_native()
-            )
+        random.seed(1234)
+        raw = [-1, 0, 1] + [
+            random.randint(-modulus // 2 + 1, modulus // 2)
+            for _ in range(256 - 3)
+        ]
+        shape = (2, 2, 2, -1)
 
         expected = np.array([
-            as_bits((2**103 + (0)) % 2**103, 103),  # == as_bits(0, 103)
-            as_bits((2**103 + (-1)) % 2**103, 103),
-            as_bits((2**103 + (123456789)) % 2**103, 103),  # == as_bits(123456789, 103)
-            as_bits((2**103 + (-123456789)) % 2**103, 103),
-        ]).reshape([2, 2, 103])
+            as_bits((modulus + x) % modulus, bitlen)
+            for x in raw
+        ]).reshape(shape + (bitlen,))
+
+        x = int100factory.tensor(np.array(raw).reshape(shape))
+        y = x.convert_to_tensor().to_bits().to_native()
+
+        with tf.Session() as sess:
+            actual = sess.run(y)
 
         np.testing.assert_array_equal(actual, expected)
 
