@@ -5,7 +5,6 @@ import numpy as np
 import tensorflow as tf
 
 from .factory import AbstractFactory, AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
-from .odd_implicit import OddImplicitTensor, OddImplicitFactory
 from .helpers import inverse
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
