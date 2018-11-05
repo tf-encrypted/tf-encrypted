@@ -8,7 +8,7 @@ import tensorflow as tf
 from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 from .shared import binarize, im2col
 
-from ..operations.secure_random import random_func
+from ..operations.secure_random import random_uniform
 
 
 class PrimeTensor(AbstractTensor):
@@ -191,13 +191,13 @@ class PrimeFactory(AbstractFactory):
         return self._modulus
 
     def sample_uniform(self, shape: Union[Tuple[int, ...], tf.TensorShape], minval: Optional[int] = 0) -> PrimeTensor:
-        value = random_func(shape=shape, dtype=self.native_type, minval=minval, maxval=self.modulus)
+        value = random_uniform(shape=shape, dtype=self.native_type, minval=minval, maxval=self.modulus)
         return PrimeTensor(value, self)
 
     def sample_bounded(self, shape: List[int], bitlength: int) -> PrimeTensor:
         maxval = 2 ** bitlength
         assert self.modulus > maxval
-        value = random_func(shape=shape, dtype=self.native_type, minval=0, maxval=maxval)
+        value = random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=maxval)
         return PrimeTensor(value, self)
 
     def stack(self, xs: List[PrimeTensor], axis: int = 0) -> PrimeTensor:

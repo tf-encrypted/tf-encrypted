@@ -65,9 +65,9 @@ public:
   Generator(Tensor* output, const unsigned char * seeds) : output(output), seeds(seeds) {
     auto flat = output->flat<T>();
 
-    count_ = output->flat<T>().size();
+    count_ = flat.size();
     bytes_count_ = count_ * sizeof(T);
-    buf_ = static_cast<T *>(malloc(bytes_count_));
+    buf_ = static_cast<T *>(flat.data());
 
     elements_per_block_ = CHACHABLOCKSIZE / sizeof(T);
     extra_block_ = static_cast<T *>(malloc(CHACHABLOCKSIZE));
@@ -79,7 +79,6 @@ public:
   }
 
   ~ Generator() {
-    free(buf_);
     free(extra_block_);
   }
 
@@ -142,15 +141,15 @@ public:
   explicit SecureRandomOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
-    const Tensor& shape_t = context->input(0);
-    const Tensor& seed_t = context->input(1);
+    const Tensor& shape_tensor = context->input(0);
+    const Tensor& seed_tensor = context->input(1);
     const Tensor& minval = context->input(2);
     const Tensor& maxval = context->input(3);
     TensorShape shape;
-    OP_REQUIRES_OK(context, MakeShape(shape_t, &shape));
-    OP_REQUIRES(context, seed_t.dims() == 1 && seed_t.dim_size(0) == 8,
+    OP_REQUIRES_OK(context, MakeShape(shape_tensor, &shape));
+    OP_REQUIRES(context, seed_tensor.dims() == 1 && seed_tensor.dim_size(0) == 8,
                 errors::InvalidArgument("seed must have shape [8], not ",
-                                        seed_t.shape().DebugString()));
+                                        seed_tensor.shape().DebugString()));
 
     OP_REQUIRES(context, TensorShapeUtils::IsScalar(maxval.shape()),
                 errors::InvalidArgument("maxval must be 0-D, got shape ",
@@ -165,16 +164,13 @@ public:
     // Allocate output
     Tensor* output;
     OP_REQUIRES_OK(context, context->allocate_output(0, shape, &output));
-    if (shape.num_elements() == 0) return;
-
-    if (sodium_init() < 0) {
-      return;
-    }
+    OP_REQUIRES(context, shape.num_elements() > 0, errors::InvalidArgument("Shape contains zero elements"));
+    OP_REQUIRES(context, sodium_init() >= 0, errors::Internal("libsodium failed to initialize, try again"));
 
     int number_of_seeds = randombytes_SEEDBYTES / sizeof(int32);
 
     int32 *seeds = static_cast<int *>(malloc(sizeof(int32) * number_of_seeds));
-    auto seed_vals = seed_t.flat<int32>().data();
+    auto seed_vals = seed_tensor.flat<int32>().data();
 
     for(auto i = 0; i < number_of_seeds; i++) {
       seeds[i] = seed_vals[i];

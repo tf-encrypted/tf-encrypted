@@ -6,6 +6,7 @@ import os
 
 dirname = os.path.dirname(tfe.__file__)
 shared_object = dirname + '/operations/secure_random/secure_random_module.so'
+secure_random_module = tf.load_op_library(shared_object)
 
 
 def secure_random(shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=None):
@@ -25,8 +26,6 @@ def secure_random(shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=
 
     :rtype: tf.Tensor
     """
-
-    secure_random_module = tf.load_op_library(shared_object)
 
     dtype = dtypes.as_dtype(dtype)
     if dtype not in (dtypes.int32, dtypes.int64):
