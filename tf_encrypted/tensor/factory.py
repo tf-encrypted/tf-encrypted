@@ -16,6 +16,9 @@ class AbstractTensor(abc.ABC):
     def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
         pass
 
+    def cast(self, factory):
+        return factory.tensor(self.value)
+
 
 class AbstractConstant(AbstractTensor):
     pass

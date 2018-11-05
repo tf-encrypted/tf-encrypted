@@ -32,7 +32,6 @@ class SecureNN(Pond):
         server_2: Optional[Player] = None,
         prime_factory: Optional[AbstractFactory] = None,
         odd_factory: Optional[AbstractFactory] = None,
-        implicit_factory: Optional[AbstractFactory] = None,
         **kwargs
     ) -> None:
         server_0 = server_0 or get_config().get_player('server0')
@@ -51,14 +50,10 @@ class SecureNN(Pond):
             prime_factory = PrimeFactory(107, native_type=self.tensor_factory.native_type)
 
         if odd_factory is None:
-            odd_factory = self.tensor_factory
-
-        if implicit_factory is None:
-            implicit_factory = OddImplicitFactory(tf.int64)
+            odd_factory = OddImplicitFactory(self.tensor_factory.native_type)
 
         self.prime_factory = prime_factory
         self.odd_factory = odd_factory
-        self.implicit_factory = implicit_factory
 
         assert self.prime_factory.native_type == self.tensor_factory.native_type
         assert self.odd_factory.native_type == self.tensor_factory.native_type
@@ -326,7 +321,7 @@ class SecureNN(Pond):
             npp = _generate_random_bits(self, a.shape)
             r = self.tensor_factory.sample_uniform(a.shape)
             r_0, r_1 = self._share(r)
-            r = PondPublicTensor(self, r_0 + r_1, r_0 + r_1, is_scaled=False)
+            r = PondPublicTensor(self, r, r, is_scaled=False)
             alpha = self.compute_wrap(r_0, r_1, L)
 
         with tf.device(self.server_0.device_name):
@@ -342,15 +337,15 @@ class SecureNN(Pond):
         # line 3
         with tf.device(self.crypto_producer.device_name):
             # line 4
-            a_hat = PondPrivateTensor(self, a_hat_0, a_hat_1, is_scaled=False)
-            x = a_hat.reveal()
-            gamma = self.compute_wrap(a_hat.share0, a_hat.share1, L)
+            a_hat = a_hat_0 + a_hat_1
+            x = PondPublicTensor(self, a_hat, a_hat, is_scaled=False)
+            gamma = self.compute_wrap(a_hat_0, a_hat_1, L)
 
             # line 5
             x_bits = x.value_on_0.to_bits(self.prime_factory)
             x_bits = self._share_and_wrap(x_bits, is_scaled=False)
             # need shares of gamma in L-1
-            gamma_odd = gamma.to_odd_modulus(self.implicit_factory)
+            gamma_odd = gamma.cast(self.odd_factory)
             gamma = self._share_and_wrap(gamma_odd, is_scaled=False)
 
         # line 6
@@ -359,7 +354,7 @@ class SecureNN(Pond):
         # line 7 (convert np to L-1)
         with tf.device(self.crypto_producer.device_name):
             np_0, np_1 = np.reveal().unwrapped
-            np_0 = np_0.to_odd_modulus(self.implicit_factory)
+            np_0 = np_0.cast(self.odd_factory)
 
             np_odd = self._share_and_wrap(np_0, is_scaled=False)
 
@@ -369,16 +364,16 @@ class SecureNN(Pond):
         # line 10, j = 0
         with tf.device(self.server_0.device_name):
             n_0 = np_odd.share0 + npp.value_on_0 - (np_odd.share0 * npp.value_on_0 * 2)
-            a_0 = a.share0.to_odd_modulus(self.implicit_factory)
-            theta_0 = beta_0.to_odd_modulus(self.implicit_factory) + (((-alpha).to_odd_modulus(self.implicit_factory) - 1) * 1) + gamma.share0 + n_0
+            a_0 = a.share0.cast(self.odd_factory)
+            theta_0 = beta_0.cast(self.odd_factory) + (((-alpha).cast(self.odd_factory) - 1) * 1) + gamma.share0 + n_0
 
             y_0 = a_0 - theta_0
 
         # line 10, j = 1
         with tf.device(self.server_1.device_name):
             n_1 = np_odd.share1 - (np_odd.share1 * npp.value_on_1 * 2)
-            a_1 = a.share1.to_odd_modulus(self.implicit_factory)
-            theta_1 = beta_1.to_odd_modulus(self.implicit_factory) + (((-alpha).to_odd_modulus(self.implicit_factory) - 1) * 0) + gamma.share1 + n_1
+            a_1 = a.share1.cast(self.odd_factory)
+            theta_1 = beta_1.cast(self.odd_factory) + (((-alpha).cast(self.odd_factory) - 1) * 0) + gamma.share1 + n_1
 
             y_1 = a_1 - theta_1
 
@@ -393,13 +388,13 @@ class SecureNN(Pond):
 
         vals = tf.where(
             overflow_max,
-            tf.ones(s0.shape, dtype=tf.int64),
-            tf.zeros(s0.shape, dtype=tf.int64)
+            tf.ones(s0.shape, dtype=s0.value.dtype),
+            tf.zeros(s0.shape, dtype=s0.value.dtype)
         )
 
         vals = tf.where(
             overflow_min,
-            tf.ones(s0.shape, dtype=tf.int64) * -1,
+            tf.ones(s0.shape, dtype=s0.value.dtype) * -1,
             vals
         )
 

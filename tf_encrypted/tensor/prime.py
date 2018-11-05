@@ -7,7 +7,6 @@ import tensorflow as tf
 
 from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
 from .shared import binarize, im2col
-# from .odd_implicit import OddImplicitTensor
 
 
 class PrimeTensor(AbstractTensor):
@@ -110,9 +109,6 @@ class PrimeTensor(AbstractTensor):
         out_dtype = out_dtype or self.factory
         return out_dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=out_dtype.native_type))
 
-    def cast(self, factory):
-        return factory.tensor(self.value)
-
     def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
         return self.factory.tensor(tf.cast(self.value + y.value >= modulus, dtype=tf.int32))
 
@@ -128,9 +124,6 @@ def _lift(x, y) -> Tuple[PrimeTensor, PrimeTensor]:
 
     if isinstance(x, int) and isinstance(y, PrimeTensor):
         return y.factory.tensor(np.array([x])), y
-
-    # if isinstance(x, PrimeTensor) and isinstance(y, OddImplicitTensor):
-    #     return y, x
 
     raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
 

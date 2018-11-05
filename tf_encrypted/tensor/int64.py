@@ -224,9 +224,6 @@ class Int64Tensor(AbstractTensor):
     def negative(self) -> 'Int64Tensor':
         return Int64Tensor(tf.negative(self.value))
 
-    def to_odd_modulus(self, factory: OddImplicitFactory) -> OddImplicitTensor:
-        return OddImplicitTensor(self.value, factory=factory)
-
     def compute_wrap(self, y: AbstractTensor, modulus: int) -> AbstractTensor:
 
         # classical overflow
