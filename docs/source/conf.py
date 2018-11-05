@@ -24,9 +24,9 @@ copyright = '2018, The tf-encrypted Contributors'
 author = 'The tf-encrypted Contributors'
 
 # The short X.Y version
-version = '0.3.0-rc1'
+version = '0.3.0'
 # The full version, including alpha/beta/rc tags
-release = '0.3.0-rc1'
+release = '0.3.0'
 
 
 # -- General configuration ---------------------------------------------------
