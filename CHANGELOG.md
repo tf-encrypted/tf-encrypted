@@ -6,10 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0]
+
 **Breaking**
 
 - Default naming of crypto producer and weights provider have been changed to `crypto-producer` and `weights-provider` respectively.
 
+**Changed**
+
+- Various documentation updates.
 
 ## [0.2.0]
 
