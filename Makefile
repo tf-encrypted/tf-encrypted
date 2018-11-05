@@ -199,8 +199,9 @@ docker-push: docker-push-$(PUSHTYPE)
 # ###############################################
 # Targets for publishing to pypi
 #
-# These targets required a PYPI_USERNAME and PYPI_PASSWORD environment
-# variables to be set to be executed properly.
+# These targets required a PYPI_USERNAME, PYPI_PASSWORD
+# and PYPI_PLATFORM, environment variables to be set to be
+# executed properly.
 # ##############################################
 
 pypicheck: pipcheck pythoncheck
@@ -218,10 +219,16 @@ ifeq (,$(shell grep -e $(VERSION) docs/source/conf.py))
 	$(error "Version specified in docs/source/conf.py does not match $(VERSION)")
 endif
 
-pypi-push-master: pypicheck pypi-version-check
+# default to manylinux
+pypi-platform-check:
+ifeq (,$(PYPI_PLATFORM))
+PYPI_PLATFORM=manylinux1_x86_64
+endif
+
+pypi-push-master: pypicheck pypi-version-check pypi-platform-check
 	pip install --user --upgrade setuptools wheel twine
 	rm -rf dist
-	python setup.py sdist bdist_wheel
+	python setup.py sdist bdist_wheel --plat-name=$(PYPI_PLATFORM)
 
 pypi-push-release-candidate: releasecheck pypi-push-master
 	@echo "Attempting to upload to pypi"
