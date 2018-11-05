@@ -29,8 +29,8 @@ class TestShareConvert(unittest.TestCase):
 
         with tfe.Session() as sess:
             sess.run(tf.global_variables_initializer())
-
             answer = sess.run(x_convert.reveal().value_on_0.value)
+            print(answer, expected)
             # np.testing.assert_array_equal(answer, expected)
 
 
