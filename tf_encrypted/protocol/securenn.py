@@ -467,17 +467,19 @@ def _lsb_private(prot, y: PondPrivateTensor):
 
             with tf.device(prot.server_0.device_name):
                 # TODO[Morten] pull this out as a separate `sample_bits` method on tensors (optimized for bits only)
-                beta_raw = prot.prime_factory.sample_bounded(y.shape, 1)
+                # beta_raw = prot.prime_factory.sample_bounded(y.shape, 1)
+                # beta_raw.value = tf.Print(beta_raw.value, [beta_raw.value], summarize=100)
+                beta_raw = prot.prime_factory.tensor(tf.ones(y.shape, dtype=tf.int32))  # TODO undo
                 beta = PondPublicTensor(prot, beta_raw, beta_raw, is_scaled=False)
 
         with tf.name_scope('lsb_compare'):
             r = (y + x).reveal()
             rbits = prot.bits(r)
             rlsb = rbits[..., 0]
-            bp = _private_compare(prot, xbits, r, beta)
+            greater_xor_beta = _private_compare(prot, xbits, r, beta)
 
         with tf.name_scope('lsb_combine'):
-            gamma = prot.bitwise_xor(bp, beta.cast_backing(prot.tensor_factory))
+            gamma = prot.bitwise_xor(greater_xor_beta, beta.cast_backing(prot.tensor_factory))
             delta = prot.bitwise_xor(xlsb, rlsb)
             alpha = prot.bitwise_xor(gamma, delta)
             assert alpha.backing_dtype is y.backing_dtype
