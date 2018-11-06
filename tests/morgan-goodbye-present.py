@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
-tfe.set_protocol(tfe.protocol.SecureNN(*tfe.get_config().get_players(['server0', 'server1', 'crypto-producer'])))
 
+tfe.set_protocol(tfe.protocol.SecureNN())
 
 batch_size, channels_in, channels_out = 1, 1, 1
 img_height, img_width = 5, 5
