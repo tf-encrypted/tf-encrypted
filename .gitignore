@@ -6,6 +6,7 @@
 .pytest_cache/
 
 build/
+docs/build
 dist/
 tmp/
 examples/api/*.pb

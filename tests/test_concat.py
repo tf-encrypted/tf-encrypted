@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 
 class Testconcat(unittest.TestCase):
@@ -10,11 +10,6 @@ class Testconcat(unittest.TestCase):
         tf.reset_default_graph()
 
     def test_concat(self):
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
 
         with tf.Session() as sess:
             t1 = [[1, 2, 3], [4, 5, 6]]
@@ -24,7 +19,7 @@ class Testconcat(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             x = prot.define_private_variable(np.array(t1))
             y = prot.define_private_variable(np.array(t2))
 
@@ -37,11 +32,6 @@ class Testconcat(unittest.TestCase):
         np.testing.assert_array_equal(final, actual)
 
     def test_masked_concat(self):
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
 
         with tf.Session() as sess:
             t1 = [[1, 2, 3], [4, 5, 6]]
@@ -51,7 +41,7 @@ class Testconcat(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             x = prot.mask(prot.define_private_variable(np.array(t1)))
             y = prot.mask(prot.define_private_variable(np.array(t2)))
 

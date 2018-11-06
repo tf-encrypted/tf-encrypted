@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 
 class TestStack(unittest.TestCase):
@@ -10,12 +10,6 @@ class TestStack(unittest.TestCase):
         tf.reset_default_graph()
 
     def test_stack(self):
-
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
 
         with tf.Session() as sess:
             x = tf.constant([1, 4])
@@ -27,7 +21,7 @@ class TestStack(unittest.TestCase):
 
         tf.reset_default_graph()
 
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             x = prot.define_private_variable(np.array([1, 4]))
             y = prot.define_private_variable(np.array([2, 5]))
             z = prot.define_private_variable(np.array([3, 6]))

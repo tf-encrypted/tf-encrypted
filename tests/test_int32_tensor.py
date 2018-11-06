@@ -2,30 +2,12 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
+from tf_encrypted.tensor.int32 import Int32Tensor
 
 
 class TestInt32Tensor(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
-
-    def test_pond(self) -> None:
-
-        with tfe.protocol.Pond(
-            tensor_factory=Int32Factory(),
-            use_noninteractive_truncation=True
-        ) as prot:
-
-            x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
-            y = prot.define_public_variable(np.array([2, 2]), apply_scaling=False)
-
-            z = x * y
-
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                out = sess.run(z.reveal())
-                np.testing.assert_array_almost_equal(out, [4, 4], decimal=3)
 
     def test_binarize(self) -> None:
         x = Int32Tensor(tf.constant([

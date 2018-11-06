@@ -2,9 +2,9 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.prime import PrimeFactory
-from tensorflow_encrypted.tensor.int100 import int100factory
+import tf_encrypted as tfe
+from tf_encrypted.tensor.prime import PrimeFactory
+from tf_encrypted.tensor.int100 import int100factory
 
 
 class TestShare(unittest.TestCase):
@@ -19,7 +19,7 @@ class TestShare(unittest.TestCase):
 
     def test_share(self):
 
-        with tfe.protocol.Pond(tfe.get_config().get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             shares = prot._share(self.int100tensor)
             out = prot._reconstruct(*shares)
 
@@ -31,7 +31,7 @@ class TestShare(unittest.TestCase):
 
     def test_factory_share(self):
 
-        with tfe.protocol.Pond(tfe.get_config().get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             shares = prot._share(self.primetensor)
             out = prot._reconstruct(*shares)
 

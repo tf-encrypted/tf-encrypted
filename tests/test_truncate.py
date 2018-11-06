@@ -2,7 +2,9 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
+
+from tf_encrypted.tensor import int100factory, fixed100, fixed100_ni
 
 
 class TestTruncate(unittest.TestCase):
@@ -12,18 +14,20 @@ class TestTruncate(unittest.TestCase):
     def test_interactive_truncate(self):
 
         prot = tfe.protocol.Pond(
-            use_noninteractive_truncation=False
+            tensor_factory=int100factory,
+            fixedpoint_config=fixed100,
         )
 
         # TODO[Morten] remove this condition
         if prot.tensor_factory not in [tfe.tensor.int64.int64factory]:
 
-            with tfe.Session() as sess:
+            w = prot.define_private_variable(expected * prot.fixedpoint_config.scaling_factor)  # double precision
+            v = prot.truncate(w)  # single precision
 
-                expected = np.array([12345.6789])
+            sess.run(tf.global_variables_initializer())
+            actual = sess.run(v.reveal())
 
-                w = prot.define_private_variable(expected * prot.fixedpoint_config.scaling_factor)  # double precision
-                v = prot.truncate(w)  # single precision
+            np.testing.assert_allclose(actual, expected)
 
                 sess.run(tf.global_variables_initializer())
                 actual = sess.run(v.reveal(), tag='foo')
@@ -33,7 +37,8 @@ class TestTruncate(unittest.TestCase):
     def test_noninteractive_truncate(self):
 
         prot = tfe.protocol.Pond(
-            use_noninteractive_truncation=True
+            tensor_factory=int100factory,
+            fixedpoint_config=fixed100_ni,
         )
 
         with tfe.Session() as sess:
@@ -44,7 +49,7 @@ class TestTruncate(unittest.TestCase):
             v = prot.truncate(w)  # single precision
 
             sess.run(tf.global_variables_initializer())
-            actual = sess.run(v.reveal(), tag='foo')
+            actual = sess.run(v.reveal())
 
             np.testing.assert_allclose(actual, expected)
 

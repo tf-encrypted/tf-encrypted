@@ -11,8 +11,8 @@ from typing import Callable
 from tensorflow.python.platform import gfile
 
 import numpy as np
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.protocol import Pond, SecureNN
+import tf_encrypted as tfe
+from tf_encrypted.protocol import Pond, SecureNN
 
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None

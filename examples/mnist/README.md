@@ -1,6 +1,6 @@
 # Overview
 
-This example not only illustrates how MNIST digit predictions can be done on encrypted data, but also how TensorFlow Encrypted can be integrated with ordinary TensorFlow.
+This example not only illustrates how MNIST digit predictions can be done on encrypted data, but also how tf-encrypted can be integrated with ordinary TensorFlow.
 
 In particular, we here have a separate *model trainer* that provides encrypted weights to our two compute servers, all running on different hosts. And while these weights might typically simply be read from disk, in this example the model trainer runs an ordinary TensorFlow computation locally to first train these weigths when requested to by the servers, who then catches them for future predictions. Likewise, our *prediction client* sends the input and receives the prediction directly in TensorFlow, allowing it to locally both pre-process and post-process using ordinary TensorFlow mechanisms.
 

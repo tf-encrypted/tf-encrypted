@@ -2,7 +2,7 @@ import sys
 from typing import List
 
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 from convert import decode
 
@@ -20,6 +20,9 @@ else:
         'prediction-client'
     ])
 
+tfe.set_config(config)
+tfe.set_protocol(tfe.protocol.Pond())
+
 
 class ModelTrainer():
 
@@ -27,8 +30,8 @@ class ModelTrainer():
     ITERATIONS = 60000 // BATCH_SIZE
     EPOCHS = 1
 
-    def __init__(self, player: tfe.player.Player) -> None:
-        self.player = player
+    def __init__(self, player_name):
+        self.player_name = player_name
 
     def build_data_pipeline(self):
 
@@ -93,8 +96,8 @@ class PredictionClient():
 
     BATCH_SIZE = 20
 
-    def __init__(self, player: tfe.player.Player) -> None:
-        self.player = player
+    def __init__(self, player_name):
+        self.player_name = player_name
 
     def build_data_pipeline(self):
 
@@ -127,32 +130,26 @@ class PredictionClient():
             return op
 
 
-model_trainer = ModelTrainer(config.get_player('model-trainer'))
-prediction_client = PredictionClient(config.get_player('prediction-client'))
+model_trainer = ModelTrainer('model-trainer')
+prediction_client = PredictionClient('prediction-client')
 
-server0 = config.get_player('server0')
-server1 = config.get_player('server1')
-crypto_producer = config.get_player('crypto-producer')
+# get model parameters as private tensors from model owner
+params = tfe.define_private_input(model_trainer.player_name, model_trainer.provide_input, masked=True)  # pylint: disable=E0632
 
-with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
+# we'll use the same parameters for each prediction so we cache them to avoid re-training each time
+params = tfe.cache(params)
 
-    # get model parameters as private tensors from model owner
-    params = prot.define_private_input(model_trainer.player, model_trainer.provide_input, masked=True)  # pylint: disable=E0632
+# get prediction input from client
+x = tfe.define_private_input(prediction_client.player_name, prediction_client.provide_input, masked=True)  # pylint: disable=E0632
 
-    # we'll use the same parameters for each prediction so we cache them to avoid re-training each time
-    params = prot.cache(params)
+# compute prediction
+w0, b0, w1, b1 = params
+layer0 = tfe.matmul(x, w0) + b0
+layer1 = tfe.sigmoid(layer0 * 0.1)  # input normalized to avoid large values
+logits = tfe.matmul(layer1, w1) + b1
 
-    # get prediction input from client
-    x, = prot.define_private_input(prediction_client.player, prediction_client.provide_input, masked=True)  # pylint: disable=E0632
-
-    # compute prediction
-    w0, b0, w1, b1 = params
-    layer0 = prot.matmul(x, w0) + b0
-    layer1 = prot.sigmoid(layer0 * 0.1)  # input normalized to avoid large values
-    logits = prot.matmul(layer1, w1) + b1
-
-    # send prediction output back to client
-    prediction_op = prot.define_output(prediction_client.player, [logits], prediction_client.receive_output)
+# send prediction output back to client
+prediction_op = tfe.define_output(prediction_client.player_name, [logits], prediction_client.receive_output)
 
 
 target = sys.argv[2] if len(sys.argv) > 2 else None
