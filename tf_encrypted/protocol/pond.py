@@ -512,7 +512,6 @@ class Pond(Protocol):
     def _share(self, secret: AbstractTensor) -> Tuple[AbstractTensor, AbstractTensor]:
 
         with tf.name_scope('share'):
-            print(secret.factory)
             share0 = secret.factory.sample_uniform(secret.shape)
             share1 = secret - share0
 
