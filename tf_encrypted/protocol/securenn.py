@@ -3,7 +3,6 @@ from typing import Optional, Tuple
 import sys
 import math
 
-import numpy as np
 import tensorflow as tf
 
 from .protocol import memoize, nodes
@@ -461,10 +460,10 @@ def _lsb_private(prot, y: PondPrivateTensor):
         with tf.name_scope('lsb_mask'):
 
             with tf.device(prot.server_2.device_name):
-                # x_raw = y.backing_dtype.sample_uniform(y.shape)
-                x_raw = y.backing_dtype.tensor(np.array([791214428653850574900464730187]).reshape(y.shape.as_list())).convert_to_tensor()
+                x_raw = y.backing_dtype.sample_uniform(y.shape)
+                # x_raw = y.backing_dtype.tensor(np.array([791214428653850574900464730187]).reshape(y.shape.as_list())).convert_to_tensor()
                 xbits_raw = x_raw.to_bits(factory=prot.prime_factory)
-                xbits_raw.value = tf.Print(xbits_raw.value, [xbits_raw.value], summarize=200, message="xbits ")
+                # xbits_raw.value = tf.Print(xbits_raw.value, [xbits_raw.value], summarize=200, message="xbits ")
                 xlsb_raw = xbits_raw[..., 0].cast(y.backing_dtype)
 
                 x = prot._share_and_wrap(x_raw, False)
@@ -473,22 +472,23 @@ def _lsb_private(prot, y: PondPrivateTensor):
 
             with tf.device(prot.server_0.device_name):
                 # TODO[Morten] pull this out as a separate `sample_bits` method on tensors (optimized for bits only)
-                # beta_raw = prot.prime_factory.sample_bounded(y.shape, 1)
+                beta_raw = prot.prime_factory.sample_bounded(y.shape, 1)
                 # beta_raw.value = tf.Print(beta_raw.value, [beta_raw.value], summarize=100)
-                beta_raw = prot.prime_factory.tensor(tf.ones(y.shape, dtype=tf.int32))  # TODO undo
+                # beta_raw = prot.prime_factory.tensor(tf.ones(y.shape, dtype=tf.int32))  # TODO undo
                 beta = PondPublicTensor(prot, beta_raw, beta_raw, is_scaled=False)
 
         with tf.name_scope('lsb_compare'):
             y.share0.backing = list(y.share0.backing)
-            y.share0.backing[0] = tf.Print(y.share0.backing[0], [prot.bits(y.reveal()).value_on_0.to_native()], summarize=200, message="ybits ")
+            # y.share0.backing[0] = tf.Print(y.share0.backing[0], [prot.bits(y.reveal()).value_on_0.to_native()], summarize=200, message="ybits ")
 
             r = (y + x).reveal()
+            r.is_scaled = False
             rbits = prot.bits(r)
             rbits.value_on_0.backing = list(rbits.value_on_0.backing)
-            rbits.value_on_0.backing[0] = tf.Print(rbits.value_on_0.backing[0], [rbits.value_on_0.to_native()], summarize=200, message="rbits ")
+            # rbits.value_on_0.backing[0] = tf.Print(rbits.value_on_0.backing[0], [rbits.value_on_0.to_native()], summarize=200, message="rbits ")
             rlsb = rbits[..., 0]
             greater_xor_beta = _private_compare(prot, xbits, r, beta)
-            greater_xor_beta.share0.backing[0] = tf.Print(greater_xor_beta.share0.backing[0], [greater_xor_beta.reveal().value_on_0.to_native()], summarize=100, message="pc    ")
+            # greater_xor_beta.share0.backing[0] = tf.Print(greater_xor_beta.share0.backing[0], [greater_xor_beta.reveal().value_on_0.to_native()], summarize=100, message="pc    ")
 
         with tf.name_scope('lsb_combine'):
             gamma = prot.bitwise_xor(greater_xor_beta, beta.cast_backing(prot.tensor_factory))
@@ -503,6 +503,17 @@ def _lsb_masked(prot, x: PondMaskedTensor):
     return prot.lsb(x.unmasked)
 
 
+def debug(x: PondTensor, summarize=None, message=''):
+    if isinstance(x, PondPublicTensor):
+        x.value_on_0.value = tf.Print(x.value_on_0.value, [x.value_on_0.value], summarize=summarize, message=message)
+
+    elif isinstance(x, PondPrivateTensor):
+        x.share0.value = tf.Print(x.share0.value, [x.reveal().value_on_0.value], summarize=summarize, message=message)
+
+    else:
+        raise TypeError("Don't know how to debug {}".format(type(x)))
+
+
 def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta: PondPublicTensor):
     # TODO[Morten] no need to check this (should be free)
     assert r.backing_dtype == prot.tensor_factory
@@ -515,31 +526,41 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
 
     assert r.shape == out_shape
     assert r.backing_dtype == out_dtype
+    assert not r.is_scaled
     assert x_bits.shape[:-1] == out_shape
     assert x_bits.backing_dtype == prime_dtype
+    assert not x_bits.is_scaled
     assert beta.shape == out_shape
     assert beta.backing_dtype == prime_dtype
+    assert not beta.is_scaled
 
     with tf.name_scope('private_compare'):
 
         with tf.name_scope('bit_comparisons'):
+
+            # debug(beta, summarize=200, message="beta  ")
 
             # use either r or t = r + 1 according to beta
             s = prot.select(beta.cast_backing(r.backing_dtype), r, r + 1)
             s_bits = prot.bits(s, factory=prime_dtype)
             assert s_bits.shape[-1] == bit_length
 
+            # debug(s_bits, summarize=200, message="sbits ")
+
             # compute w_sum
             w_bits = prot.bitwise_xor(x_bits, s_bits)
             w_sum = prot.cumsum(w_bits, axis=-1, reverse=True, exclusive=True)
             assert w_sum.backing_dtype == prime_dtype
+
+            # debug(w_bits, summarize=200, message="wbits ")
+            # debug(w_sum, summarize=200, message="wsum  ")
 
             # compute c, ignoring edge cases at first
             sign = prot.select(beta, 1, -1)
             sign = prot.expand_dims(sign, axis=-1)
             c_except_edge_case = (s_bits - x_bits) * sign + 1 + w_sum
 
-            c_except_edge_case.share0.value = tf.Print(c_except_edge_case.share0.value, [c_except_edge_case.reveal().value_on_0.value], summarize=200, message="c_ex  ")
+            # debug(c_except_edge_case, summarize=200, message="c_ex  ")
 
             assert c_except_edge_case.backing_dtype == prime_dtype
 
@@ -547,15 +568,16 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
 
             # adjust for edge cases, i.e. where beta is 1 and s is zero (meaning r was -1)
 
+            # identify edge cases
             edge_cases = prot.bitwise_and(
                 beta,
                 prot.equal_zero(s, prime_dtype)
             )
             edge_cases = prot.expand_dims(edge_cases, axis=-1)
+
+            # tensor for edge cases: one zero and the rest ones
             c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1), dtype=prime_dtype.native_type, shape=(1, bit_length)))
             c_edge_case = prot._share_and_wrap(c_edge_case_raw, False)
-
-            prot.debug(edge_cases)
 
             c = prot.select(
                 edge_cases,
@@ -563,6 +585,8 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
                 c_edge_case
             )  # type: PondPrivateTensor
             assert c.backing_dtype == prime_dtype
+
+            # debug(c, message="c     ", summarize=200)
 
         with tf.name_scope('zero_search'):
 

@@ -5,18 +5,13 @@ import tensorflow as tf
 import tf_encrypted as tfe
 from tf_encrypted.protocol.pond import PondPrivateTensor, PondPublicTensor
 from tf_encrypted.protocol.securenn import _private_compare
-from tf_encrypted.tensor.prime import PrimeFactory
-from tf_encrypted.tensor import fixed64
 
 
 class TestPrivateCompare(unittest.TestCase):
 
     def test_private(self):
 
-        prot = tfe.protocol.SecureNN(
-            # tensor_factory=PrimeFactory(123456789),
-            # fixedpoint_config=fixed64,
-        )
+        prot = tfe.protocol.SecureNN()
 
         bit_dtype = prot.prime_factory
         val_dtype = prot.tensor_factory
