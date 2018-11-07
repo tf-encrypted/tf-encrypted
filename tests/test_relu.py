@@ -13,7 +13,8 @@ class TestRelu(unittest.TestCase):
 
     def test_forward(self):
         input_shape = [4]
-        input_relu = np.array([-1.0, -0.05, 0.05, -0.098526, 3.0]).astype(np.float32)
+        # input_relu = np.array([-1.0, -0.05, 0.05, -0.098526, 3.0]).astype(np.float32)
+        input_relu = np.array([-0.098526]).astype(np.float32)
 
         with tfe.protocol.SecureNN() as prot:
 
