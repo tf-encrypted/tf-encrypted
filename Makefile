@@ -19,6 +19,12 @@ PIP_PATH=$(shell which pip)
 DOCKER_PATH=$(shell which docker)
 CURRENT_TF_VERSION=$(shell python -c 'import tensorflow as tf; print(tf.__version__)' 2>/dev/null)
 
+# Default platform
+# PYPI doesn't allow linux build tags to be pushed and doesn't support
+# specific operating systems such a ubuntu. It only allows build tags for linux
+# to be pushed as manylinux.
+DEFAULT_PLATFORM=manylinux1_x86_64
+
 dockercheck:
 ifeq (,$(DOCKER_PATH))
 ifeq (,$(findstring $(DOCKER_REQUIRED_VERSION),$(shell docker version)))
@@ -222,7 +228,7 @@ endif
 # default to manylinux
 pypi-platform-check:
 ifeq (,$(PYPI_PLATFORM))
-PYPI_PLATFORM=manylinux1_x86_64
+PYPI_PLATFORM=$(DEFAULT_PLATFORM)
 endif
 
 pypi-push-master: pypicheck pypi-version-check pypi-platform-check

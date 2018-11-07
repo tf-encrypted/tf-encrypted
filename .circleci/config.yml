@@ -18,7 +18,7 @@ variables:
   build-release: &build-release
     run:
       name: Build and push release artifacts (e.g. docker containers)
-      command: RELEASE_CONFIRM=yes PYPI_PLATFORM=manylinux1_x86_64 make push
+      command: RELEASE_CONFIRM=yes make push
   restore-cache: &restore-cache
     restore_cache:
       keys:
@@ -91,6 +91,9 @@ jobs:
             ../miniconda3/envs/py35/bin/python -m venv venv
             . venv/bin/activate
             make bootstrap
+        - run:
+            name: release
+            command: RELEASE_CONFIRM=yes PYPI_PLATFORM=macosx_10_11_x86_64 make pypi-push
       - *save-cache-mac
 
 workflows:
@@ -113,6 +116,11 @@ workflows:
             tags:
               only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc[0-9]+)?)$/
       - deploy-macos:
+          requires:
+            - build
+            - deploy
           filters:
+            branches:
+              only: master
             tags:
               only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc[0-9]+)?)$/
