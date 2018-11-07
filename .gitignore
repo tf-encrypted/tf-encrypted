@@ -9,6 +9,6 @@ build/
 docs/build
 dist/
 tmp/
-examples/api/*.pb
+**/*.pb
 data/
 *.egg-info
