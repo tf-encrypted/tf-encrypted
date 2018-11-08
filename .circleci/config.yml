@@ -93,7 +93,9 @@ jobs:
             make bootstrap
       - run:
           name: release
-          command: RELEASE_CONFIRM=yes PYPI_PLATFORM=macosx_10_11_x86_64 make pypi-push
+          command: |
+            . venv/bin/activate
+            RELEASE_CONFIRM=yes PYPI_PLATFORM=macosx_10_11_x86_64 make pypi-push
       - *save-cache-mac
 
 workflows:
@@ -118,9 +120,6 @@ workflows:
       - deploy-macos:
           requires:
             - build
-            - deploy
           filters:
-            branches:
-              only: master
             tags:
               only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc[0-9]+)?)$/
