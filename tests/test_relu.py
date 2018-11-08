@@ -12,11 +12,8 @@ class TestRelu(unittest.TestCase):
         tf.reset_default_graph()
 
     def test_forward(self):
-        input_shape = [2, 2, 2]
+        input_shape = [2, 2, 2, 50]
         input_relu = np.random.randn(np.prod(input_shape)).astype(np.float32).reshape(input_shape)
-        # input_relu = np.array([-1.0, -0.05, 0.05, -0.098526, 3.0]).astype(np.float32)
-        # input_relu = np.array([-0.098526]).astype(np.float32)
-        # input_relu = np.array([-0.5]).astype(np.float32)
 
         with tfe.protocol.SecureNN() as prot:
 
