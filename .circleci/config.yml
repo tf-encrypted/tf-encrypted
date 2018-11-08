@@ -93,7 +93,9 @@ jobs:
             make bootstrap
       - run:
           name: release
-          command: RELEASE_CONFIRM=yes PYPI_PLATFORM=macosx_10_11_x86_64 make pypi-push
+          command: |
+            . venv/bin/activate
+            RELEASE_CONFIRM=yes PYPI_PLATFORM=macosx_10_11_x86_64 make pypi-push
       - *save-cache-mac
 
 workflows:
