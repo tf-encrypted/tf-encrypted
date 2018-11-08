@@ -157,7 +157,11 @@ class Int100Tensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return _crt_recombine_explicit(self.backing, 2**32)
 
-    def to_bits(self, factory: Optional[AbstractFactory] = None) -> AbstractTensor:
+    def to_bits(
+        self,
+        factory: Optional[AbstractFactory] = None,
+        ensure_positive_interpretation: bool = False
+    ) -> AbstractTensor:
 
         factory = factory or self.factory
 
@@ -169,26 +173,29 @@ class Int100Tensor(AbstractTensor):
             chunk_bitsizes = [MAX_CHUNK_BITSIZE] * q + ([r] if r > 0 else [])
             chunks_modulus = [2**bitsize for bitsize in chunk_bitsizes]
 
-            # To get the right bit pattern for negative numbers we need to apply a correction
-            # to the first chunk. Unfortunately, this isn't known until all bits have been
-            # extracted and hence we extract bits both with and without the correction and
-            # then select afterwards. Although these two versions could be computed independently
-            # we here combine them into a single tensor to keep the graph smaller.
+            remaining = self
 
-            shape = self.shape.as_list()
-            shape_value = [1] + shape
-            shape_correction = [2] + [1] * len(shape)
+            if ensure_positive_interpretation:
 
-            # this means that chunk[0] is uncorrected and chunk[1] is corrected
-            correction = tf.constant(
-                [0, self.modulus % chunks_modulus[0]],
-                shape=shape_correction,
-                dtype=self.factory.native_type)
+                # To get the right bit pattern for negative numbers we need to apply a correction
+                # to the first chunk. Unfortunately, this isn't known until all bits have been
+                # extracted and hence we extract bits both with and without the correction and
+                # select afterwards. Although these two versions could be computed independently
+                # we here combine them into a single tensor to keep the graph smaller.
+
+                shape = self.shape.as_list()
+                shape_value = [1] + shape
+                shape_correction = [2] + [1] * len(shape)
+
+                # this means that chunk[0] is uncorrected and chunk[1] is corrected
+                correction_raw = [0, self.modulus % chunks_modulus[0]]
+                correction = tf.constant(correction_raw, shape=shape_correction, dtype=self.factory.native_type)
+
+                remaining = remaining.reshape(shape_value)
 
             # extract chunks
             chunks = []
-            remaining = self.reshape(shape_value)
-            apply_correction = True
+            apply_correction = ensure_positive_interpretation
             for chunk_modulus in chunks_modulus:
 
                 # extract chunk from remaining
@@ -205,16 +212,17 @@ class Int100Tensor(AbstractTensor):
                 # perform right shift on remaining
                 remaining = (remaining - int100factory.tensor(chunk)) * inverse(chunk_modulus, self.modulus)
 
-            # pick between corrected and uncorrected based on MSB
-            msb = chunks[-1][0] >= (chunks_modulus[-1]) // 2
-            chunks = [
-                tf.where(
-                    msb,
-                    chunk[1],  # corrected
-                    chunk[0],  # uncorrected
-                )
-                for chunk in chunks
-            ]
+            if ensure_positive_interpretation:
+                # pick between corrected and uncorrected based on MSB
+                msb = chunks[-1][0] >= (chunks_modulus[-1]) // 2
+                chunks = [
+                    tf.where(
+                        msb,
+                        chunk[1],  # corrected
+                        chunk[0],  # uncorrected
+                    )
+                    for chunk in chunks
+                ]
 
             # extract bits from chunks
             chunks_bits = [
