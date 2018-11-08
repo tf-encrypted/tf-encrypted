@@ -432,9 +432,6 @@ class SecureNN(Pond):
     def dmax_pool_efficient(self, x):
         raise NotImplementedError
 
-    def debug(self, x):
-        return self.dispatch('debug', x, container=_thismodule)
-
 
 def _bits_public(prot, x: PondPublicTensor, factory: Optional[AbstractFactory]=None) -> PondPublicTensor:
 
@@ -493,17 +490,6 @@ def _lsb_private(prot, y: PondPrivateTensor):
 
 def _lsb_masked(prot, x: PondMaskedTensor):
     return prot.lsb(x.unmasked)
-
-
-def debug(x: PondTensor, summarize=None, message=''):
-    if isinstance(x, PondPublicTensor):
-        x.value_on_0.value = tf.Print(x.value_on_0.value, [x.value_on_0.value], summarize=summarize, message=message)
-
-    elif isinstance(x, PondPrivateTensor):
-        x.share0.value = tf.Print(x.share0.value, [x.reveal().value_on_0.value], summarize=summarize, message=message)
-
-    else:
-        raise TypeError("Don't know how to debug {}".format(type(x)))
 
 
 def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta: PondPublicTensor):

@@ -994,6 +994,7 @@ class Pond(Protocol):
 # Classes representing the base values in the Pond protocol.
 #
 
+
 class PondTensor(abc.ABC):
     """
     This class functions mostly as a convenient way of exposing operations
@@ -1552,6 +1553,18 @@ def _type(x):
         return PondMaskedTensor
 
     return type(x)
+
+
+# TODO[Morten] this is just a very first step; far from finished
+def debug(x: PondTensor, summarize=None, message=''):
+    if isinstance(x, PondPublicTensor):
+        x.value_on_0.value = tf.Print(x.value_on_0.value, [x.value_on_0.value], summarize=summarize, message=message)
+
+    elif isinstance(x, PondPrivateTensor):
+        x.share0.value = tf.Print(x.share0.value, [x.reveal().value_on_0.value], summarize=summarize, message=message)
+
+    else:
+        raise TypeError("Don't know how to debug {}".format(type(x)))
 
 
 #
