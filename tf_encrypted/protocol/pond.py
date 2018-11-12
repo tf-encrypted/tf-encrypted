@@ -1109,6 +1109,22 @@ class PondTensor(abc.ABC):
     def __rmul__(self, other):
         return self.prot.mul(self, other)
 
+    def div(self, other):
+        """
+        Divide this tensor with `other`
+
+        :param PondTensor other: to divide
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
+        return self.prot.div(self, other)
+
+    def __div__(self, other):
+        return self.prot.div(self, other)
+
+    def __rdiv__(self, other):
+        return self.prot.div(self, other)
+
     def __mod__(self, other):
         return self.prot.mod(self, other)
 
