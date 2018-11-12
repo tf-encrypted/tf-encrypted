@@ -2272,6 +2272,127 @@ def _mul_masked_masked(prot, x, y):
         z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
         return z
 
+#
+# div helpers
+#
+
+
+def _div_public_public(prot, x, y):
+    assert isinstance(x, PondPublicTensor), type(x)
+    assert isinstance(y, PondPublicTensor), type(y)
+
+    x_on_0, x_on_1 = x.unwrapped
+    y_on_0, y_on_1 = y.unwrapped
+
+    with tf.name_scope('div'):
+
+        with tf.device(prot.server_0.device_name):
+            z_on_0 = x_on_0 / y_on_0
+
+        with tf.device(prot.server_1.device_name):
+            z_on_1 = x_on_1 / y_on_1
+
+        z = PondPublicTensor(prot, z_on_0, z_on_1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
+
+
+def _div_public_private(prot, x, y):
+    assert isinstance(x, PondPublicTensor), type(x)
+    assert isinstance(y, PondPrivateTensor), type(y)
+
+    x_on_0, x_on_1 = x.unwrapped
+    y0, y1 = y.unwrapped
+
+    with tf.name_scope('div'):
+
+        with tf.device(prot.server_0.device_name):
+            z0 = x_on_0 / y0
+
+        with tf.device(prot.server_1.device_name):
+            z1 = x_on_1 / y1
+
+        z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
+
+
+def _div_public_masked(prot, x, y):
+    assert isinstance(x, PondPublicTensor), type(x)
+    assert isinstance(y, PondMaskedTensor), type(y)
+    return prot.div(x, y.unmasked)
+
+
+def _div_private_public(prot, x, y):
+    assert isinstance(x, PondPrivateTensor), type(x)
+    assert isinstance(y, PondPublicTensor), type(y)
+
+    x0, x1 = x.unwrapped
+    y_on_0, y_on_1 = y.unwrapped
+
+    with tf.name_scope('div'):
+
+        with tf.device(prot.server_0.device_name):
+            z0 = x0 / y_on_0
+
+        with tf.device(prot.server_1.device_name):
+            z1 = x1 / y_on_1
+
+        z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
+
+
+def _div_private_private(prot, x, y):
+    assert isinstance(x, PondPrivateTensor), type(x)
+    assert isinstance(y, PondPrivateTensor), type(y)
+    return prot.div(prot.mask(x), prot.mask(y))
+
+
+def _div_private_masked(prot, x, y):
+    assert isinstance(x, PondPrivateTensor), type(x)
+    assert isinstance(y, PondMaskedTensor), type(y)
+    return prot.div(prot.mask(x), y)
+
+
+def _div_masked_public(prot, x, y):
+    assert isinstance(x, PondMaskedTensor), type(x)
+    assert isinstance(y, PondPublicTensor), type(y)
+    return prot.div(x.unmasked, y)
+
+
+def _div_masked_private(prot, x, y):
+    assert isinstance(x, PondMaskedTensor), type(x)
+    assert isinstance(y, PondPrivateTensor), type(y)
+    return prot.div(x, prot.mask(y))
+
+
+def _div_masked_masked(prot, x, y):
+    assert isinstance(x, PondMaskedTensor), type(x)
+    assert isinstance(y, PondMaskedTensor), type(y)
+
+    a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
+    b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
+
+    with tf.name_scope('div'):
+
+        with tf.device(prot.crypto_producer.device_name):
+            ab = a / b
+            ab0, ab1 = prot._share(ab)
+
+        with tf.device(prot.server_0.device_name):
+            alpha = alpha_on_0
+            beta = beta_on_0
+            z0 = ab0 + (a0 * beta) + (alpha * b0) + (alpha * beta)
+
+        with tf.device(prot.server_1.device_name):
+            alpha = alpha_on_1
+            beta = beta_on_1
+            z1 = ab1 + (a1 * beta) + (alpha * b1)
+
+        z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
+        return z
 
 #
 # square helpers
