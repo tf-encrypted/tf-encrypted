@@ -118,6 +118,14 @@ def gen_crt_mul(m):
 
     return crt_mul
 
+def gen_crt_div(m):
+
+    def crt_div(x, y):
+        with tf.name_scope('crt_div'):
+            return [(xi / yi) % mi for xi, yi, mi in zip(x, y, m)]
+
+    return crt_mul
+
 
 def gen_crt_matmul(m):
 
