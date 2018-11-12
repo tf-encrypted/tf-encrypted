@@ -9,7 +9,7 @@ from typing import Union, Optional, List, Any
 
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
-    gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_matmul, gen_crt_mod,
+    gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_div, gen_crt_matmul, gen_crt_mod,
     gen_crt_reduce_sum, gen_crt_cumsum, crt_im2col, crt_matmul_split,
     gen_crt_equal_zero, gen_crt_equal,
     gen_crt_sample_uniform, gen_crt_sample_bounded
@@ -47,6 +47,7 @@ _crt_reduce_sum = gen_crt_reduce_sum(m)
 _crt_cumsum = gen_crt_cumsum(m)
 _crt_sub = gen_crt_sub(m)
 _crt_mul = gen_crt_mul(m)
+_crt_div = gen_crt_div(m)
 _crt_matmul = gen_crt_matmul(m)
 _crt_mod = gen_crt_mod(m, INT_TYPE)
 _crt_equal_zero = gen_crt_equal_zero(m, INT_TYPE)
@@ -234,6 +235,14 @@ class Int100Tensor(AbstractTensor):
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
         return x.mul(y)
 
+    def __div__(self, other) -> 'Int100Tensor':
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.div(y)
+
+    def __rdiv__(self, other) -> 'Int100Tensor':
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return x.div(y)
+
     def __mod__(self, k) -> 'Int100Tensor':
         return self.mod(k)
 
@@ -248,6 +257,10 @@ class Int100Tensor(AbstractTensor):
     def mul(self, other) -> 'Int100Tensor':
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
         return Int100Tensor(_crt_mul(x.backing, y.backing))
+
+    def div(self, other) -> 'Int100Tensor':
+        x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
+        return Int100Tensor(_crt_div(x.backing, y.backing))
 
     def matmul(self, other) -> 'Int100Tensor':
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
