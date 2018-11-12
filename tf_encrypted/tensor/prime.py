@@ -46,6 +46,9 @@ class PrimeTensor(AbstractTensor):
 
     def __mul__(self, other) -> 'PrimeTensor':
         return self.mul(other)
+    
+    def __div__(self, other) -> 'PrimeTensor':
+        return self.div(other)
 
     def __mod__(self, k: int) -> 'PrimeTensor':
         return self.mod(k)
@@ -61,6 +64,10 @@ class PrimeTensor(AbstractTensor):
     def mul(self, other) -> 'PrimeTensor':
         x, y = _lift(self, other)
         return self.factory.tensor((x.value * y.value) % self.modulus)
+
+    def div(self, other) -> 'PrimeTensor':
+        x, y = _lift(self, other)
+        return self.factory.tensor((x.value / y.value) % self.modulus)
 
     def negative(self) -> 'PrimeTensor':
         return self.mul(-1)
