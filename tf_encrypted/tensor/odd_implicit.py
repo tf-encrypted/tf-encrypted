@@ -98,6 +98,9 @@ class OddImplicitTensor(AbstractTensor):
     def __mul__(self, other) -> 'OddImplicitTensor':
         return self.mul(other)
 
+    def __mul__(self, other) -> 'OddImplicitTensor':
+        return self.div(other)
+
     def __mod__(self, k: int) -> 'OddImplicitTensor':
         return self.mod(k)
 
@@ -148,6 +151,9 @@ class OddImplicitTensor(AbstractTensor):
         return OddImplicitTensor(z, self._factory)
 
     def mul(self, other) -> 'OddImplicitTensor':
+        raise NotImplementedError()
+
+    def div(self, other) -> 'OddImplicitTensor':
         raise NotImplementedError()
 
     def matmul(self, other) -> 'OddImplicitTensor':
