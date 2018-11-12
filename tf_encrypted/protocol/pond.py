@@ -645,6 +645,11 @@ class Pond(Protocol):
         return self.dispatch('mul', x, y)
 
     @memoize
+    def div(self, x, y):
+        x, y = self.lift(x, y)
+        return self.dispatch('div', x, y)
+
+    @memoize
     def square(self, x):
         return self.dispatch('square', x)
 
