@@ -116,6 +116,9 @@ class Int32Tensor(AbstractTensor):
     def __mul__(self, other: Any) -> 'Int32Tensor':
         return self.mul(other)
 
+    def __div__(self, other: Any) -> 'Int32Tensor':
+        return self.div(other)
+
     def __mod__(self, k: int) -> 'Int32Tensor':
         return self.mod(k)
 
@@ -136,6 +139,10 @@ class Int32Tensor(AbstractTensor):
     def mul(self, other: Any) -> 'Int32Tensor':
         x, y = _lift(self, other)
         return int32factory.tensor(x.value * y.value)
+
+    def div(self, other: Any) -> 'Int32Tensor':
+        x, y = _lift(self, other)
+        return int32factory.tensor(x.value / y.value)
 
     def matmul(self, other: Any) -> 'Int32Tensor':
         x, y = _lift(self, other)
