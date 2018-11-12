@@ -1488,7 +1488,7 @@ class PondPrivateVariable(PondPrivateTensor):
         return 'PondPrivateVariable(shape={})'.format(self.shape)
 
 
-class PondCachedPublicTensor(PondPrivateTensor):
+class PondCachedPublicTensor(PondPublicTensor):
 
     def __init__(self, prot, x_on_0, x_on_1, is_scaled, updator):
         assert isinstance(x_on_0, AbstractTensor), type(x_on_0)
