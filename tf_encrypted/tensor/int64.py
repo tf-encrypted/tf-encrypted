@@ -142,6 +142,14 @@ class Int64Tensor(AbstractTensor):
         x, y = _lift(self, other)
         return x.mul(y)
 
+    def __div__(self, other) -> 'Int64Tensor':
+        x, y = _lift(self, other)
+        return x.div(y)
+
+    def __rdiv__(self, other) -> 'Int64Tensor':
+        x, y = _lift(self, other)
+        return x.div(y)
+
     def __mod__(self, k: int) -> 'Int64Tensor':
         return self.mod(k)
 
@@ -162,6 +170,10 @@ class Int64Tensor(AbstractTensor):
     def mul(self, other: Any) -> 'Int64Tensor':
         x, y = _lift(self, other)
         return int64factory.tensor(x.value * y.value)
+    
+    def div(self, other: Any) -> 'Int64Tensor':
+        x, y = _lift(self, other)
+        return int64factory.tensor(x.value / y.value)   
 
     def matmul(self, other: Any) -> 'Int64Tensor':
         x, y = _lift(self, other)
