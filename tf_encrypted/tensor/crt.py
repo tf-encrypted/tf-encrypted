@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 from typing import Union, List, Tuple
-from math import ceil
+from math import ceil, gcd
 
 import numpy as np
 import tensorflow as tf
@@ -122,7 +122,10 @@ def gen_crt_div(m):
 
     def crt_div(x, y):
         with tf.name_scope('crt_div'):
-            return [(xi / yi) % mi for xi, yi, mi in zip(x, y, m)]
+            if coprime2(sum(m), sum(y)):
+                return [(xi * (1/yi) % mi) % mi for xi, yi, mi in zip(x, y, m)]
+            else:
+                raise NotImplementedError
 
     return crt_mul
 
@@ -287,3 +290,8 @@ def gen_crt_equal(m, int_type):
 
 class CrtTensor(object):
     pass
+
+### Helper ###
+
+def coprime2(a, b):
+    return math.gcd(a, b) == 1
