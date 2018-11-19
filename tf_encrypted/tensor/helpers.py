@@ -22,5 +22,9 @@ def inverse(a: int, m: int) -> int:
     return b % m
 
 
-log2 = lambda x: log(x) / log(2)
-prod = lambda xs: reduce(lambda x, y: x * y, xs)
+def log2(x):
+    return log(x) / log(2)
+
+
+def prod(xs):
+    return reduce(lambda x, y: x * y, xs)

@@ -29,7 +29,7 @@ class Converter():
         graph_def: Any,
         register: Dict[str, Any],
         input_player: Union[str, Player],
-        inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]]=None
+        inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]] = None
     ) -> Any:
         if type(input_player) is str:
             input_player = get_config().get_player('input-provider')
