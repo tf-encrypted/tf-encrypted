@@ -989,6 +989,36 @@ class Pond(Protocol):
         else:
             raise TypeError("Don't know how to {}: {}".format(base_name, [type(arg) for arg in args]))
 
+    
+    @memoize
+    def zeros(self, 
+            shape,
+            apply_scaling: bool = True,
+            name: Optional[str] = None,
+            factory: Optional[AbstractFactory] = None
+            ) -> 'PondPrivateTensor':
+
+        # [Note] Do we want a public version of it?
+
+        zeros_array = np.zeros(shape)
+
+        factory = factory or self.tensor_factory
+
+        with tf.name_scope('private-var{}'.format('-' + name if name else '')):
+
+            v = self._encode(zeros_array, apply_scaling)
+            v0, v1 = self._share(v)
+
+            with tf.device(self.server_0.device_name):
+                x0 = factory.variable(v0)
+
+            with tf.device(self.server_1.device_name):
+                x1 = factory.variable(v1)
+
+        x = PondPrivateTensor(self, x0, x1, apply_scaling)
+        return x
+
+
 
 #
 # Classes representing the base values in the Pond protocol.
