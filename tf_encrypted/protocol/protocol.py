@@ -41,15 +41,17 @@ class Protocol(ABC):
         pass
 
 
-def set_protocol(prot: Optional[Protocol]) -> None:
+def set_protocol(prot: Protocol) -> None:
     """
+    set_protocol(prot)
+
     Sets the global protocol.  E.g. :class:`~tensorflow_encrypted.protocol.securenn.SecureNN`
     or :class:`~tensorflow_encrypted.protocol.pond.Pond`.
 
     .. code-block::python
         tfe.set_protocol(tfe.protocol.secureNN())
 
-    :param ~tensorflow_encrypted.protocol.protocol.Protocol prot: An instance of a tfe protocol.
+    :param Protocol prot: An instance of a tfe protocol.
     """
     global __PROTOCOL__
     __PROTOCOL__ = prot
@@ -57,16 +59,19 @@ def set_protocol(prot: Optional[Protocol]) -> None:
 
 def get_protocol() -> Optional[Protocol]:
     """
-    :rtype: ~tensorflow_encrypted.protocol.protocol.Protocol
-    :returns: The global protocol.
+    get_protocol() -> Protocol or None
+
+    Returns the current global protocol.
     """
     return __PROTOCOL__
 
 
 def global_caches_updater() -> tf.Operation:
     """
-    :rtype: ~tensorflow.Operation
-    :returns: A grouping of all ops that have been decorated by a `memoize` decorator.
+    global_caches_updater() -> tensorflow.Operation
+
+    Groups all ops that have been instantiated with a memoize decoratored function into a
+    single tf.Operation.
     """
     with tf.name_scope("cache_update"):
         return tf.group(*global_cache_updaters)
@@ -74,11 +79,11 @@ def global_caches_updater() -> tf.Operation:
 
 def memoize(func: Callable) -> Callable:
     """
+    memoize(func) -> Callable
+
     Decorates a function for memoization, which explicitly caches the function's output.
 
     :param Callable func: The function to memoize
-    :rtype: Callable
-    :returns: The memoized function
     """
     @functools.wraps(func)
     def cache_nodes(self: Protocol, *args: Any, **kwargs: Any) -> AbstractTensor:
