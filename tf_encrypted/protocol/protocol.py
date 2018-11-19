@@ -64,11 +64,22 @@ def get_protocol() -> Optional[Protocol]:
 
 
 def global_caches_updater() -> tf.Operation:
+    """
+    :rtype: ~tensorflow.Operation
+    :returns: A grouping of all ops that have been decorated by a `memoize` decorator.
+    """
     with tf.name_scope("cache_update"):
         return tf.group(*global_cache_updaters)
 
 
 def memoize(func: Callable) -> Callable:
+    """
+    Decorates a function for memoization, which explicitly caches the function's output.
+
+    :param Callable func: The function to memoize
+    :rtype: Callable
+    :returns: The memoized function
+    """
     @functools.wraps(func)
     def cache_nodes(self: Protocol, *args: Any, **kwargs: Any) -> AbstractTensor:
         args = tuple(tuple(x) if isinstance(x, list) else x for x in args)
