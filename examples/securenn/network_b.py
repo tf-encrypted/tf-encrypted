@@ -204,7 +204,7 @@ with tfe.Session() as sess:
     sess.run(tf.global_variables_initializer(), tag='init')
 
     print("Training")
-    sess.run(tfe.global_caches_updator(), tag='training')
+    sess.run(tfe.global_caches_updater(), tag='training')
 
     for _ in range(5):
         print("Predicting")
