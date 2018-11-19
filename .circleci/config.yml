@@ -86,7 +86,10 @@ jobs:
       - run:
           name: bootstrap setup
           command: |
-            curl -C - -O https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+            if [ ! -f Miniconda3-latest-MacOSX-x86_64.sh ]; then
+              curl -O https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+            fi
+
             bash Miniconda3-latest-MacOSX-x86_64.sh -b -f
             ../miniconda3/bin/conda create -n py35 python=3.5 2> /dev/null || true
             ../miniconda3/envs/py35/bin/python -m venv venv
@@ -119,11 +122,6 @@ workflows:
             tags:
               only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc[0-9]+)?)$/
       - deploy-macos:
-          requires:
-            - build
-            - deploy
           filters:
-            branches:
-              only: master
             tags:
               only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc[0-9]+)?)$/
