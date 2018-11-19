@@ -22,25 +22,26 @@ variables:
   restore-cache: &restore-cache
     restore_cache:
       keys:
-        - v1-dependencies-{{ checksum "requirements.txt" }}
+        - v2-dependencies-{{ checksum "requirements.txt" }}
         # fallback to using the latest cache if no exact match is found
-        - v1-dependencies-
+        - v2-dependencies-
   save-cache: &save-cache
     save_cache:
       paths:
         - ./venv
-      key: v1-dependencies-{{ checksum "requirements.txt" }}
+      key: v2-dependencies-{{ checksum "requirements.txt" }}
   restore-cache-mac: &restore-cache-mac
     restore_cache:
       keys:
-        - v1-dependencies-mac2-{{ checksum "requirements.txt" }}
+        - v2-dependencies-mac2-{{ checksum "requirements.txt" }}
+        - v2-dependencies-mac2-
   save-cache-mac: &save-cache-mac
     save_cache:
       paths:
         - ./venv
         - ../miniconda3
         - ./Miniconda3-latest-MacOSX-x86_64.sh
-      key: v1-dependencies-mac2-{{ checksum "requirements.txt" }}
+      key: v2-dependencies-mac2-{{ checksum "requirements.txt" }}
 
 jobs:
   build:

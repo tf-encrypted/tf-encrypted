@@ -6,6 +6,8 @@ from typing import List, Union, Optional
 from . import core
 from ..protocol.pond import PondPublicTensor, PondPrivateTensor
 
+InitialTensor = Optional[Union[np.ndarray, tf.Tensor, PondPublicTensor, PondPrivateTensor]]
+
 
 class Dense(core.Layer):
     """Standard dense linear layer including bias.
@@ -29,8 +31,8 @@ class Dense(core.Layer):
 
     def initialize(
         self,
-        initial_weights: Optional[Union[np.ndarray, tf.Tensor, PondPublicTensor, PondPrivateTensor]]=None,
-        initial_bias: Optional[Union[np.ndarray, tf.Tensor, PondPublicTensor, PondPrivateTensor]]=None
+        initial_weights: InitialTensor = None,
+        initial_bias: InitialTensor = None
     ) -> None:
         if initial_weights is None:
             initial_size = (self.in_features, self.out_features)

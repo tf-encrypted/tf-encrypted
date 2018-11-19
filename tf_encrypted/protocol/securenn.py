@@ -35,7 +35,8 @@ class SecureNN(Pond):
     ) -> None:
         server_0 = server_0 or get_config().get_player('server0')
         server_1 = server_1 or get_config().get_player('server1')
-        server_2 = server_2 or get_config().get_player('crypto-producer')  # TODO[Morten] use `server2` as key
+        # TODO[Morten] use `server2` as key here
+        server_2 = server_2 or get_config().get_player('crypto-producer')
 
         super(SecureNN, self).__init__(
             server_0=server_0,
@@ -145,7 +146,7 @@ class SecureNN(Pond):
         return self.dispatch('lsb', x, container=_thismodule)
 
     @memoize
-    def bits(self, x: PondTensor, factory: Optional[AbstractFactory]=None) -> 'PondTensor':
+    def bits(self, x: PondTensor, factory: Optional[AbstractFactory] = None) -> 'PondTensor':
         return self.dispatch('bits', x, container=_thismodule, factory=factory)
 
     @memoize
@@ -279,12 +280,12 @@ class SecureNN(Pond):
         :rtype: PondTensor
         :returns: A new tensor with the bits from `x` and `y` chosen as described above.
 
-        """
+        """  # noqa:E501
         with tf.name_scope('select'):
             return (y - x) * choice_bit + x
 
     @memoize
-    def equal_zero(self, x, out_dtype: Optional[AbstractFactory]=None):
+    def equal_zero(self, x, out_dtype: Optional[AbstractFactory] = None):
         """
         Returns `x == 0`
 
@@ -433,7 +434,8 @@ class SecureNN(Pond):
         raise NotImplementedError
 
 
-def _bits_public(prot, x: PondPublicTensor, factory: Optional[AbstractFactory]=None) -> PondPublicTensor:
+def _bits_public(prot, x: PondPublicTensor,
+                 factory: Optional[AbstractFactory] = None) -> PondPublicTensor:
 
     factory = factory or prot.tensor_factory
 
@@ -466,7 +468,8 @@ def _lsb_private(prot, y: PondPrivateTensor):
                 xlsb = prot._share_and_wrap(xlsb_raw.cast(y.backing_dtype), False)
 
             with tf.device(prot.server_0.device_name):
-                # TODO[Morten] pull this out as a separate `sample_bits` method on tensors (optimized for bits only)
+                # TODO[Morten] pull this out as a separate `sample_bits` method on tensors
+                #              (optimized for bits only)
                 beta_raw = prot.prime_factory.sample_bounded(y.shape, 1)
                 beta = PondPublicTensor(prot, beta_raw, beta_raw, is_scaled=False)
 
@@ -545,7 +548,9 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
             edge_cases = prot.expand_dims(edge_cases, axis=-1)
 
             # tensor for edge cases: one zero and the rest ones
-            c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1), dtype=prime_dtype.native_type, shape=(1, bit_length)))
+            c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1),
+                                                 dtype=prime_dtype.native_type,
+                                                 shape=(1, bit_length)))
             c_edge_case = prot._share_and_wrap(c_edge_case_raw, False)
 
             c = prot.select(
@@ -582,7 +587,9 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
         return result
 
 
-def _equal_zero_public(prot, x: PondPublicTensor, out_dtype: Optional[AbstractFactory]=None) -> PondPublicTensor:
+def _equal_zero_public(prot,
+                       x: PondPublicTensor,
+                       out_dtype: Optional[AbstractFactory] = None) -> PondPublicTensor:
 
     with tf.name_scope('equal_zero'):
 

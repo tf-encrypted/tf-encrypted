@@ -5,7 +5,8 @@ import math
 import numpy as np
 import tensorflow as tf
 
-from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
+from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
+                      AbstractConstant, AbstractPlaceholder)
 from .shared import binarize, im2col
 
 
@@ -84,7 +85,7 @@ class PrimeTensor(AbstractTensor):
     def strided_slice(self, args: Any, kwargs: Any) -> 'PrimeTensor':
         return self.factory.tensor(tf.strided_slice(self.value, *args, **kwargs))
 
-    def split(self, num_split: int, axis: int=0) -> List['PrimeTensor']:
+    def split(self, num_split: int, axis: int = 0) -> List['PrimeTensor']:
         values = tf.split(self.value, num_split, axis=axis)
         return [self.factory.tensor(value) for value in values]
 
@@ -105,7 +106,7 @@ class PrimeTensor(AbstractTensor):
             tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse) % self.modulus
         )
 
-    def equal_zero(self, out_dtype: Optional[AbstractFactory]=None) -> 'PrimeTensor':
+    def equal_zero(self, out_dtype: Optional[AbstractFactory] = None) -> 'PrimeTensor':
         out_dtype = out_dtype or self.factory
         return out_dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=out_dtype.native_type))
 
@@ -188,8 +189,13 @@ class PrimeFactory(AbstractFactory):
     def modulus(self):
         return self._modulus
 
-    def sample_uniform(self, shape: Union[Tuple[int, ...], tf.TensorShape], minval: Optional[int] = 0) -> PrimeTensor:
-        value = tf.random_uniform(shape=shape, dtype=self.native_type, minval=minval, maxval=self.modulus)
+    def sample_uniform(self,
+                       shape: Union[Tuple[int, ...], tf.TensorShape],
+                       minval: Optional[int] = 0) -> PrimeTensor:
+        value = tf.random_uniform(shape=shape,
+                                  dtype=self.native_type,
+                                  minval=minval,
+                                  maxval=self.modulus)
         return PrimeTensor(value, self)
 
     def sample_bounded(self, shape: List[int], bitlength: int) -> PrimeTensor:
@@ -214,7 +220,8 @@ class PrimeFactory(AbstractFactory):
             return PrimeTensor(value, self)
 
         if isinstance(value, PrimeTensor):
-            assert value.modulus == self.modulus, "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
+            err = "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
+            assert value.modulus == self.modulus, err
             return PrimeTensor(value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
@@ -225,7 +232,8 @@ class PrimeFactory(AbstractFactory):
             return PrimeConstant(value, self)
 
         if isinstance(value, PrimeTensor):
-            assert value.modulus == self.modulus, "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
+            err = "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
+            assert value.modulus == self.modulus, err
             return PrimeConstant(value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
@@ -236,7 +244,9 @@ class PrimeFactory(AbstractFactory):
             return PrimeVariable(initial_value, self)
 
         if isinstance(initial_value, PrimeTensor):
-            assert initial_value.modulus == self.modulus, "Incompatible modulus: {}, (expected {})".format(initial_value.modulus, self.modulus)
+            err = "Incompatible modulus: {}, (expected {})".format(initial_value.modulus,
+                                                                   self.modulus)
+            assert initial_value.modulus == self.modulus, err
             return PrimeVariable(initial_value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(initial_value)))
