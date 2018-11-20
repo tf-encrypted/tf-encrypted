@@ -1004,7 +1004,7 @@ class Pond(Protocol):
 
         factory = factory or self.tensor_factory
 
-        with tf.name_scope('private-var{}'.format('-' + name if name else '')):
+        with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
 
             v = self._encode(zeros_array, apply_scaling)
             v0, v1 = self._share(v)
@@ -1018,6 +1018,46 @@ class Pond(Protocol):
         x = PondPrivateTensor(self, x0, x1, apply_scaling)
         return x
 
+    
+    def pad(self, x, paddings):
+
+        with tf.name_scope('pad'):
+            zeros_id = 0
+            for axis, (pad_before, pad_after) in enumerate(paddings):
+                x = self._append_const(x, pad_after, axis, zeros_id)
+                zeros_id += 1
+                x = self._prepend_const(x, pad_before, axis, zeros_id)
+                zeros_id += 1
+
+        return x
+
+    def _prepend_const(self, arr, pad_amt, axis, zeros_id):
+  
+        if pad_amt == 0:
+                return arr
+
+        shape_arr = arr.shape.as_list()
+        padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(shape_arr))
+
+        zeros_array = self.zeros(padshape, name=str(zeros_id))
+
+        with tf.name_scope('prepend'):
+             out = self.concat([zeros_array, arr], axis=axis)
+        
+        return out
+    
+    def _append_const(self, arr, pad_amt, axis, zeros_id):
+    
+        if pad_amt == 0:
+                return arr
+
+        shape_arr = arr.shape.as_list()
+        padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(shape_arr))
+        
+        zeros_array = self.zeros(padshape, name=str(zeros_id))
+
+        with tf.name_scope('append'):
+            return self.concat([arr, zeros_array], axis=axis)
 
 
 #
