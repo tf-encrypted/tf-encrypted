@@ -1,8 +1,11 @@
+#include <tuple>
+
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/kernels/bounds_check.h"
 #include "tensorflow/core/framework/shape_inference.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/lib/random/random_distributions.h"
+#include "absl/numeric/int128.h"
 #include "sodium.h"
 
 using namespace tensorflow;
@@ -11,6 +14,24 @@ using shape_inference::DimensionHandle;
 using shape_inference::ShapeHandle;
 
 #define CHACHABLOCKSIZE 64
+
+template <typename uInt, typename uWide>
+std::tuple<uInt, uInt> wmul(uInt x, uInt y) {
+    uWide x_w = static_cast<uWide>(x);
+    uWide y_w = static_cast<uWide>(y);
+
+    uWide tmp = x_w * y_w;
+
+    // shift top half by size of not wide int to get mod
+    // lower half is the result of x * y
+
+    auto hi = static_cast<uInt>(tmp >> (sizeof(uInt) * 8));
+    auto lo = static_cast<uInt>(tmp);
+
+    auto tup = std::make_tuple(hi, lo);
+
+    return tup;
+}
 
 static Status SecureRandomShape(shape_inference::InferenceContext* context) {
   // Check seed shape
@@ -56,7 +77,7 @@ void randombytes_buf_deterministic_ic(void * const buf, const size_t size, uint3
 }
 
 
-template <typename T>
+template <typename T, typename Wide>
 class Generator {
 public:
   Tensor *output = NULL;
@@ -87,7 +108,7 @@ public:
 
     randombytes_buf_deterministic(buf_, bytes_count_, seeds);
 
-    Uniform(minval, maxval);
+    Uniform(minval, maxval - 1);
 
     std::copy(buf_, buf_ + flat.size(), flat.data());
   }
@@ -102,20 +123,29 @@ private:
   int elements_per_block_ = 0;
   int inner_block_index_ = 0;
 
-  void Uniform(T lo, T hi) {
-    auto range = static_cast<typename std::make_unsigned<T>::type>(hi) -
-                   static_cast<typename std::make_unsigned<T>::type>(lo);
+  // inclusive uniform!
+  void Uniform(T low, T high) {
+    typedef typename std::make_unsigned<T>::type uT;
+    auto range = static_cast<uT>(high) - static_cast<uT>(low) + 1;
 
-    typename std::make_unsigned<T>::type min = (1U + ~range) % range;
+    auto unsigned_max = std::numeric_limits<uT>::max();
+    auto ints_to_reject = (unsigned_max - range + 1) % range;
+    auto zone = unsigned_max - ints_to_reject;
 
     for (int i = 0; i < count_; ++i) {
-      auto unsign = static_cast<typename std::make_unsigned<T>::type>(buf_[i]);
-      while(unsign < min) {
+      auto unsign = static_cast<uT>(buf_[i]);
+
+      T hi, lo;
+      std::tie(hi, lo) = wmul<uT, Wide>(unsign, range);
+
+      while(lo > zone) {
         // rejection sampling, get the next valid number in the stream
         buf_[i] = GetNextValidData();
-        unsign = static_cast<typename std::make_unsigned<T>::type>(buf_[i]);
+        unsign = static_cast<uT>(buf_[i]);
+
+        std::tie(hi, lo) = wmul<uT, Wide>(unsign, range);
       }
-      buf_[i] = random::SignedAdd(lo, buf_[i] % range);
+      buf_[i] = random::SignedAdd(low, hi);
     }
   }
 
@@ -135,7 +165,7 @@ private:
   }
 };
 
-template <typename T>
+template <typename T, typename Wide>
 class SecureRandomOp : public OpKernel {
 public:
   explicit SecureRandomOp(OpKernelConstruction* context) : OpKernel(context) {}
@@ -178,7 +208,7 @@ public:
 
     const unsigned char * seed_bytes = reinterpret_cast<const unsigned char*>(seeds);
 
-    Generator<T> gen(output, seed_bytes);
+    Generator<T, Wide> gen(output, seed_bytes);
 
     gen.GenerateData(lo, hi);
 
@@ -191,9 +221,9 @@ REGISTER_KERNEL_BUILDER(
   Name("SecureRandom")
   .Device(DEVICE_CPU)
   .TypeConstraint<int32>("dtype"),
-  SecureRandomOp<int32>);
+  SecureRandomOp<int32, uint64>);
 REGISTER_KERNEL_BUILDER(
   Name("SecureRandom")
   .Device(DEVICE_CPU)
   .TypeConstraint<int64>("dtype"),
-  SecureRandomOp<int64>);
+  SecureRandomOp<int64, absl::uint128>);
