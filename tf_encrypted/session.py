@@ -126,8 +126,8 @@ class Session(tf.Session):
             writer.close()
 
             if __TFE_TRACE__ or write_trace:
-                tl = timeline.Timeline(run_metadata.step_stats)
-                chrome_trace = tl.generate_chrome_trace_format()
+                tracer = timeline.Timeline(run_metadata.step_stats)
+                chrome_trace = tracer.generate_chrome_trace_format()
                 with open('{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag), 'w') as f:
                     f.write(chrome_trace)
 

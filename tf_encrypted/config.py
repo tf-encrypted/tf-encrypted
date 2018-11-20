@@ -233,11 +233,11 @@ class RemoteConfig(Config):
         )
 
     def to_dict(self) -> Dict:
-        hmap = [(p.name, p.host) for p in sorted(self._players.values(), key=lambda p: p.index)]
+        hostmap = [(p.name, p.host) for p in sorted(self._players.values(), key=lambda p: p.index)]
         params = {
             'type': 'remote',
             'job_name': self._job_name,
-            'hostmap': hmap
+            'hostmap': hostmap
         }
 
         if self._master is not None:
