@@ -128,6 +128,13 @@ class Session(tf.Session):
 
 
 def setMonitorStatsFlag(monitor_stats: bool = False) -> None:
+    """
+    setMonitorStatsFlag(monitor_stats)
+
+    Set flag to enable or disable monitoring of runtime statistics for each call to session.run().
+
+    :param bool monitor_stats: Enable or disable stats, disabled by default.
+    """
     global __TFE_STATS__
     if monitor_stats is True:
         print("Tensorflow encrypted is monitoring statistics for each session.run() call using a tag")
@@ -136,6 +143,13 @@ def setMonitorStatsFlag(monitor_stats: bool = False) -> None:
 
 
 def setTFEDebugFlag(debug: bool = False) -> None:
+    """
+    setTFEDebugFlag(debug)
+
+    Set flag to enable or disable debugging mode for tf-encrypted.
+
+    :param bool debug: Enable or disable debugging, disabled by default.
+    """
     global __TFE_DEBUG__
     if debug is True:
         print("Tensorflow encrypted is running in DEBUG mode")
@@ -144,6 +158,13 @@ def setTFEDebugFlag(debug: bool = False) -> None:
 
 
 def setTFETraceFlag(trace: bool = False) -> None:
+    """
+    setTFETraceFlag(trace)
+
+    Set flag to enable or disable tracing in tf-encrypted.
+
+    :param bool trace: Enable or disable tracing, disabled by default.
+    """
     global __TFE_TRACE__
     if trace is True:
         print("Tensorflow encrypted is dumping computation traces")
