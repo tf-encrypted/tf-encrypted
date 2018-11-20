@@ -24,13 +24,17 @@ class Session(tf.Session):
     """
     Wrap a Tensorflow Session.
 
-    See :py:class:`tf.Session`
+    See the documentation of
+    `tf.Session <https://www.tensorflow.org/api_docs/python/tf/Session>`_
+    for more details.
 
     :param Optional[tf.Graph] graph: A :class:`tf.Graph`.  Used in the same as in tensorflow.
-            This is the graph to be launched.  If nothing is specified then the default session graph will
-            be used.
-    :param Optional[~tensorflow_encrypted.config.Config] config:  A :class:`Local <tensorflow_encrypted.config.LocalConfig>` or
-            :class:`Remote <tensorflow_encrypted.config.RemoteConfig>` config to be used to execute the graph.
+            This is the graph to be launched.  If nothing is specified then the default session
+            graph will be used.
+    :param Optional[~tensorflow_encrypted.config.Config] config:  A
+            :class:`Local <tf_encrypted.config.LocalConfig/>` or
+            :class:`Remote <tensorflow_encrypted.config.RemoteConfig>` config to be used to
+            execute the graph.
     """
 
     def __init__(
@@ -77,7 +81,9 @@ class Session(tf.Session):
         """
         run(fetches, feed_dict, tag, write_trace) -> Any
 
-        See :meth:tf.Session.run
+        See the documentation for
+        `tf.Session.run <https://www.tensorflow.org/api_docs/python/tf/Session#run>`_
+        for more details.
 
         This method functions just as the one from tensorflow.
 
@@ -120,7 +126,8 @@ class Session(tf.Session):
             writer.close()
 
             if __TFE_TRACE__ or write_trace:
-                chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
+                tl = timeline.Timeline(run_metadata.step_stats)
+                chrome_trace = tl.generate_chrome_trace_format()
                 with open('{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag), 'w') as f:
                     f.write(chrome_trace)
 
@@ -137,7 +144,8 @@ def setMonitorStatsFlag(monitor_stats: bool = False) -> None:
     """
     global __TFE_STATS__
     if monitor_stats is True:
-        print("Tensorflow encrypted is monitoring statistics for each session.run() call using a tag")
+        print("Tensorflow encrypted is monitoring statistics for each session.run() \
+              call using a tag")
 
     __TFE_STATS__ = monitor_stats
 
