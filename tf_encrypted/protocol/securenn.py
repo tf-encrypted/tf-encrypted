@@ -63,7 +63,7 @@ class SecureNN(Pond):
         """
         bitwise_not(x) -> PondTensor
 
-        Computes the bitwise `NOT` of the input, i.e. :math:`y = 1 - x`.
+        Computes the bitwise `NOT` of the input, i.e. :math:`f(x) = 1 - x`.
 
         :param PondTensor x: Input tensor.
         """
@@ -76,7 +76,7 @@ class SecureNN(Pond):
         """
         bitwise_and(x, y) -> PondTensor
 
-        Computes the bitwise `AND` of the given inputs, :math:`z = x \dot y`.
+        Computes the bitwise `AND` of the given inputs, :math:`f(x,y) = xy`.
 
         :param PondTensor x: Input tensor.
         :param PondTensor y: Input tensor.
@@ -91,7 +91,7 @@ class SecureNN(Pond):
         """
         bitwise_or(x, y) -> PondTensor
 
-        Computes the bitwise `OR` of the given inputs, :math:`z = (x + y) - (x * y)`.
+        Computes the bitwise `OR` of the given inputs, :math:`f(x,y) = x + y - xy`.
 
         :param PondTensor x: Input tensor.
         :param PondTensor y: Input tensor.
@@ -106,7 +106,7 @@ class SecureNN(Pond):
         """
         bitwise_xor(x, y) -> PondTensor
 
-        Compute the bitwise `XOR` of the given inputs, :math:`(x + y) - (2 * x * y)`
+        Compute the bitwise `XOR` of the given inputs, :math:`f(x,y) = x + y - 2xy`
 
         :param PondTensor x: Input tensor.
         :param PondTensor y: Input tensor.
@@ -147,7 +147,9 @@ class SecureNN(Pond):
         return self.dispatch('lsb', x, container=_thismodule)
 
     @memoize
-    def bits(self, x: PondPublicTensor, factory: Optional[AbstractFactory] = None) -> 'PondPublicTensor':
+    def bits(self,
+             x: PondPublicTensor,
+             factory: Optional[AbstractFactory] = None) -> 'PondPublicTensor':
         """
         bits(x, factory) -> PondPublicTensor
 
@@ -160,12 +162,12 @@ class SecureNN(Pond):
     @memoize
     def negative(self, x: PondTensor) -> PondTensor:
         """
-        Returns whether or not the element in the tensor is negative. `e.g.`
+        Returns :math:`x < 0`.
 
-        .. code-block:: none
+        .. code-block:: python
 
-            negative([-1, 0, 1])
-            => [1, 0, 0]
+            >>> negative([-1, 0, 1])
+            [1, 0, 0]
 
         :param PondTensor x: The tensor to check.
         """
@@ -178,12 +180,12 @@ class SecureNN(Pond):
         """
         non_negative(x) -> PondTensor
 
-        Returns whether or not the element in the tensor is positive. `e.g.`
+        Returns :math:`x >= 0`.
 
-        .. code-block:: none
+        .. code-block:: python
 
-            non_negative([-1, 0, 1])
-            => [0, 1, 1]
+            >>> non_negative([-1, 0, 1])
+            [0, 1, 1]
 
         Note this is the derivative of the ReLU function.
 
@@ -197,12 +199,12 @@ class SecureNN(Pond):
         """
         less(x, y) -> PondTensor
 
-        Returns `x < y`
+        Returns :math:`x < y`.
 
-        .. code-block:: none
+        .. code-block:: python
 
-            less([1,2,3], [0,1,5])
-            => [0, 0, 1]
+            >>> less([1,2,3], [0,1,5])
+            [0, 0, 1]
 
         :param PondTensor x: The tensor to check.
         :param PondTensor y: The tensor to check against.
@@ -215,12 +217,12 @@ class SecureNN(Pond):
         """
         less_equal(x, y) -> PondTensor
 
-        Returns `x <= y`
+        Returns :math:`x <= y`.
 
-        .. code-block:: none
+        .. code-block:: python
 
-            less_equal([1,2,3], [0,1,3])
-            => [0, 0, 1]
+            >>> less_equal([1,2,3], [0,1,3])
+            [0, 0, 1]
 
         :param PondTensor x: The tensor to check.
         :param PondTensor y: The tensor to check against.
@@ -233,12 +235,12 @@ class SecureNN(Pond):
         """
         greater(x, y) -> PondTensor
 
-        Returns `x > y`
+        Returns :math:`x > y`.
 
-        .. code-block:: none
+        .. code-block:: python
 
-            greater([1,2,3], [0,1,5])
-            => [1, 1, 0]
+            >>> greater([1,2,3], [0,1,5])
+            [1, 1, 0]
 
         :param PondTensor x: The tensor to check.
         :param PondTensor y: The tensor to check against.
@@ -251,12 +253,12 @@ class SecureNN(Pond):
         """
         greater_equal(x, y) -> PondTensor
 
-        Returns `x >= y`
+        Returns :math:`x >= y`.
 
-        .. code-block:: none
+        .. code-block:: python
 
-            greater_equal([1,2,3], [0,1,3])
-            => [1, 1, 1]
+            >>> greater_equal([1,2,3], [0,1,3])
+            [1, 1, 1]
 
         :param PondTensor x: The tensor to check.
         :param PondTensor y: The tensor to check against.
@@ -269,48 +271,56 @@ class SecureNN(Pond):
         """
         select(choice_bit, x, y) -> PondTensor
 
-        The `select` protocol from `secureNN`.
-
-        :param PondTensor choice_bit: The bits representing which share to choose.
-            If `choice_bit = 0` then choose from `x`, otherwise choose from `y`.
+        The `select` protocol from Wagh et al.  Secretly selects and returns elements from two candidate tensors.
 
         .. code-block:: python
 
-            select(choice_bit=[0,1,0,1], x=[10, 20, 30, 40], y=[1, 2, 3, 4])
-            # [10, 2, 30, 4]
+            >>> option_x = [10, 20, 30, 40]
+            >>> option_y = [1, 2, 3, 4]
+            >>> select(choice_bit=1, x=option_x, y=option_y)
+            [1, 2, 3, 4]
+            >>> select(choice_bit=[0,1,0,1], x=option_x, y=option_y)
+            [10, 2, 30, 4]
 
         `NOTE:` Inputs to this function in real use will not look like above.
         In practice these will be secret shares.
 
-        :param PondTensor choice_bit: Which tensor to choose from. `x` if the bit is `0`, `y` otherwise.
-            This is known as `alpha` in the `secureNN` paper.
-        :param PondTensor x: Input tensor.
-        :param PondTensor y: Input tensor.
+        :param PondTensor choice_bit: The bits representing which tensor to choose.
+            If `choice_bit = 0` then choose elements from `x`, otherwise choose from `y`.
+        :param PondTensor x: Candidate tensor 0.
+        :param PondTensor y: Candidate tensor 1.
         """  # noqa:E501
         with tf.name_scope('select'):
             return (y - x) * choice_bit + x
 
     @memoize
-    def equal_zero(self, x, out_dtype: Optional[AbstractFactory] = None):
+    def equal_zero(self, x, dtype: Optional[AbstractFactory] = None):
         """
-        equal_zero(x, out_dtype) -> PondTensor
-        Returns `x == 0`
+        equal_zero(x, dtype) -> PondTensor
 
-        .. code-block:: none
+        Evaluates the Boolean expression :math:`x = 0`.
 
-            equal_zero([1,0,1])
-            => [0, 1, 0]
+        .. code-block:: python
 
-        :param PondTensor x: The tensor to check.
+            >>> equal_zero([1,0,1])
+            [0, 1, 0]
+
+        :param PondTensor x: The tensor to evaluate.
+        :param AbstractFactory dtype: An optional tensor factory, defaults to dtype of `x`.
         """
-        return self.dispatch('equal_zero', x, container=_thismodule, out_dtype=out_dtype)
+        return self.dispatch('equal_zero', x, container=_thismodule, dtype=dtype)
 
     def share_convert(self, x):
         """
-        Convert which ring `x` belongs to.  This protocol is not implemented yet.
+        share_convert(x) -> PondTensor
 
-        Some operations in secureNN only work in an odd ring.  This function
-        is used to convert from one ring to another.
+        Convert `x` from the ring :math:`Z_L` to the ring :math:`Z_{L-1}`.
+        This protocol is not yet implemented.
+
+        Wagh et al. compute :math:`msb(x)` by computing :math:`lsb(2x)`, but this can cause an
+        off-by-one error in even rings. Share convert is used to convert a shared tensor
+        into an odd ring.  In practice, this error has about as much impact on a model's
+        overall neural network inference as the usual truncation error from fixed-point encodings.
 
         :param PondTensor x: The tensor to convert.
         :raises: NotImplementedError
@@ -338,8 +348,8 @@ class SecureNN(Pond):
 
         .. code-block:: python
 
-            relu([-12, -3, 1, 3, 3])
-            # [0, 0, 1, 3, 3]
+            >>> relu([-12, -3, 1, 3, 3])
+            [0, 0, 1, 3, 3]
 
         :param PondTensor x: Input tensor.
         """
@@ -384,14 +394,14 @@ class SecureNN(Pond):
         """
         maximum(x, y) -> PondTensor
 
-        Computes max(x, y).
+        Computes :math:`max(x,y)`.
 
         Returns the greater value of each tensor per index.
 
         .. code-block:: python
 
-            maximum([10, 20, 30], [11, 19, 31])
-            # [11, 20, 31]
+            >>> maximum([10, 20, 30], [11, 19, 31])
+            [11, 20, 31]
 
         :param PondTensor x: Input tensor.
         :param PondTensor y: Input tensor.
@@ -409,8 +419,8 @@ class SecureNN(Pond):
 
         .. code-block:: python
 
-            reduce_max([[10, 20, 30], [11, 13, 12], [15, 16, 17]], axis=0)
-            # [[30], [13], [17]]
+            >>> reduce_max([[10, 20, 30], [11, 13, 12], [15, 16, 17]], axis=0)
+            [[30], [13], [17]]
 
         :See: tf.reduce_max
         :param PondTensor x: Input tensor.
@@ -593,17 +603,17 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
 
 def _equal_zero_public(prot,
                        x: PondPublicTensor,
-                       out_dtype: Optional[AbstractFactory] = None) -> PondPublicTensor:
+                       dtype: Optional[AbstractFactory] = None) -> PondPublicTensor:
 
     with tf.name_scope('equal_zero'):
 
         x_on_0, x_on_1 = x.unwrapped
 
         with tf.device(prot.server_0.device_name):
-            equal_zero_on_0 = x_on_0.equal_zero(out_dtype)
+            equal_zero_on_0 = x_on_0.equal_zero(dtype)
 
         with tf.device(prot.server_1.device_name):
-            equal_zero_on_1 = x_on_1.equal_zero(out_dtype)
+            equal_zero_on_1 = x_on_1.equal_zero(dtype)
 
         return PondPublicTensor(prot, equal_zero_on_0, equal_zero_on_1, False)
 
