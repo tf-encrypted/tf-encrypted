@@ -127,7 +127,6 @@ class LocalConfig(Config):
 
         :param dict params: Key-value store of constructor arguments.
         """
-
         if not params.get('type', None) == 'local':
             return None
 
@@ -224,8 +223,6 @@ class RemoteConfig(Config):
 
         :param dict params: Key-value store of constructor arguments.
         """
-        _get_config_docstr(cls)
-
         if not params.get('type', None) == 'remote':
             return None
 
