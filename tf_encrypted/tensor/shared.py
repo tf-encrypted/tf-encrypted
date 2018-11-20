@@ -7,7 +7,7 @@ import numpy as np
 from .factory import AbstractTensor
 
 
-def binarize(tensor: tf.Tensor, bitsize: Optional[int]=None) -> tf.Tensor:
+def binarize(tensor: tf.Tensor, bitsize: Optional[int] = None) -> tf.Tensor:
 
     with tf.name_scope('binarize'):
         bitsize = bitsize or (tensor.dtype.size * 8)

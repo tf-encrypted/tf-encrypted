@@ -9,7 +9,7 @@ from ..tensor.factory import AbstractTensor
 
 
 __PROTOCOL__ = None
-global_cache_updators = list()
+global_cache_updaters = list()
 nodes = dict()
 
 
@@ -17,17 +17,21 @@ class Protocol(ABC):
     """
     Protocol is the base class that other protocols in tf-encrypted will extend from.
 
-    Do not directly instantiate this class.  You should use a subclass instead, such as :class:`~tf_encrypted.protocol.protocol.SecureNN`
+    Do not directly instantiate this class.  You should use a subclass instead,
+    such as :class:`~tf_encrypted.protocol.protocol.SecureNN`
     or :class:`~tf_encrypted.protocol.protocol.Pond`
     """
 
-    def __enter__(self) -> 'Protocol':
+    def __enter__(self) -> "Protocol":
         set_protocol(self)
         return self
 
-    def __exit__(self, type,  # type is `Optional[Type[BaseException]]`, but declaring `Type` breaks readthedocs.
-                 value: Optional[Exception],
-                 traceback: Optional[TracebackType]) -> Optional[bool]:
+    def __exit__(
+        self,
+        type,  # type is `Optional[Type[BaseException]]`, but declaring `Type` breaks readthedocs.
+        value: Optional[Exception],
+        traceback: Optional[TracebackType],
+    ) -> Optional[bool]:
         set_protocol(None)
         return None
 
@@ -59,13 +63,12 @@ def get_protocol() -> Optional[Protocol]:
     return __PROTOCOL__
 
 
-def global_caches_updator() -> tf.Operation:
-    with tf.name_scope('cache_update'):
-        return tf.group(*global_cache_updators)
+def global_caches_updater() -> tf.Operation:
+    with tf.name_scope("cache_update"):
+        return tf.group(*global_cache_updaters)
 
 
 def memoize(func: Callable) -> Callable:
-
     @functools.wraps(func)
     def cache_nodes(self: Protocol, *args: Any, **kwargs: Any) -> AbstractTensor:
         args = tuple(tuple(x) if isinstance(x, list) else x for x in args)

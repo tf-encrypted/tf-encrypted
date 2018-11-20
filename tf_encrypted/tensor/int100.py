@@ -1,11 +1,10 @@
 from __future__ import absolute_import
-
+from typing import Union, Optional, List, Any
 from functools import reduce
 import math
 
 import numpy as np
 import tensorflow as tf
-from typing import Union, Optional, List, Any
 
 from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
@@ -15,7 +14,8 @@ from .crt import (
     gen_crt_sample_uniform, gen_crt_sample_bounded
 )
 from .helpers import prod, inverse
-from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
+from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
+                      AbstractConstant, AbstractPlaceholder)
 from .shared import binarize, conv2d
 
 #
@@ -158,7 +158,11 @@ class Int100Tensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return _crt_recombine_explicit(self.backing, 2**32)
 
-    def to_bits(self, factory: Optional[AbstractFactory] = None) -> AbstractTensor:
+    def to_bits(
+        self,
+        factory: Optional[AbstractFactory] = None,
+        ensure_positive_interpretation: bool = False
+    ) -> AbstractTensor:
 
         factory = factory or self.factory
 
@@ -168,18 +172,67 @@ class Int100Tensor(AbstractTensor):
             MAX_CHUNK_BITSIZE = 16
             q, r = BITSIZE // MAX_CHUNK_BITSIZE, BITSIZE % MAX_CHUNK_BITSIZE
             chunk_bitsizes = [MAX_CHUNK_BITSIZE] * q + ([r] if r > 0 else [])
+            chunks_modulus = [2**bitsize for bitsize in chunk_bitsizes]
 
-            # extract bits of chunks
-            chunks_bits = []  # type: List[INT_TYPE]
             remaining = self
-            for chunk_bitsize in chunk_bitsizes:
+
+            if ensure_positive_interpretation:
+
+                # To get the right bit pattern for negative numbers we need to apply a correction
+                # to the first chunk. Unfortunately, this isn't known until all bits have been
+                # extracted and hence we extract bits both with and without the correction and
+                # select afterwards. Although these two versions could be computed independently
+                # we here combine them into a single tensor to keep the graph smaller.
+
+                shape = self.shape.as_list()
+                shape_value = [1] + shape
+                shape_correction = [2] + [1] * len(shape)
+
+                # this means that chunk[0] is uncorrected and chunk[1] is corrected
+                correction_raw = [0, self.modulus % chunks_modulus[0]]
+                correction = tf.constant(correction_raw,
+                                         shape=shape_correction,
+                                         dtype=self.factory.native_type)
+
+                remaining = remaining.reshape(shape_value)
+
+            # extract chunks
+            chunks = []
+            apply_correction = ensure_positive_interpretation
+            for chunk_modulus in chunks_modulus:
+
                 # extract chunk from remaining
-                chunk = _crt_mod(remaining.backing, 2**chunk_bitsize)
-                # extract bits from chunk and save for concatenation later
-                chunk_bits = binarize(chunk, chunk_bitsize)
-                chunks_bits.append(chunk_bits)
+                chunk = _crt_mod(remaining.backing, chunk_modulus)
+
+                # apply correction only to the first chunk
+                if apply_correction:
+                    chunk = (chunk + correction) % chunk_modulus
+                    apply_correction = False
+
+                # save for below
+                chunks.append(chunk)
+
                 # perform right shift on remaining
-                remaining = (remaining - int100factory.tensor(chunk)) * inverse(2**chunk_bitsize, self.modulus)
+                shifted = (remaining - int100factory.tensor(chunk))
+                remaining = shifted * inverse(chunk_modulus, self.modulus)
+
+            if ensure_positive_interpretation:
+                # pick between corrected and uncorrected based on MSB
+                msb = chunks[-1][0] >= (chunks_modulus[-1]) // 2
+                chunks = [
+                    tf.where(
+                        msb,
+                        chunk[1],  # corrected
+                        chunk[0],  # uncorrected
+                    )
+                    for chunk in chunks
+                ]
+
+            # extract bits from chunks
+            chunks_bits = [
+                binarize(chunk, chunk_bitsize)
+                for chunk, chunk_bitsize in zip(chunks, chunk_bitsizes)
+            ]
 
             # combine bits of chunks
             bits = tf.concat(chunks_bits, axis=-1)
@@ -273,7 +326,7 @@ class Int100Tensor(AbstractTensor):
         backing = _crt_cumsum(self.backing, axis=axis, exclusive=exclusive, reverse=reverse)
         return Int100Tensor(backing)
 
-    def equal_zero(self, out_dtype: Optional[AbstractFactory]=None) -> 'Int100Tensor':
+    def equal_zero(self, out_dtype: Optional[AbstractFactory] = None) -> 'Int100Tensor':
         out_dtype = out_dtype or self.factory
         return out_dtype.tensor(_crt_equal_zero(self.backing, out_dtype.native_type))
 
@@ -290,7 +343,7 @@ class Int100Tensor(AbstractTensor):
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
         return conv2d(x, y, strides, padding)  # type: ignore
 
-    def transpose(self, perm: Optional[List[int]]=None) -> 'Int100Tensor':
+    def transpose(self, perm: Optional[List[int]] = None) -> 'Int100Tensor':
         backing = [tf.transpose(xi, perm=perm) for xi in self.backing]
         return Int100Tensor(backing)
 
@@ -298,7 +351,7 @@ class Int100Tensor(AbstractTensor):
         backing = [tf.strided_slice(xi, *args, **kwargs) for xi in self.backing]
         return Int100Tensor(backing)
 
-    def split(self, num_split: int, axis: int=0) -> List['Int100Tensor']:
+    def split(self, num_split: int, axis: int = 0) -> List['Int100Tensor']:
         backings = zip(*[tf.split(xi, num_split, axis=axis) for xi in self.backing])
         return [Int100Tensor(backing) for backing in backings]
 
@@ -306,11 +359,11 @@ class Int100Tensor(AbstractTensor):
         backing = [tf.reshape(xi, axes) for xi in self.backing]
         return Int100Tensor(backing)
 
-    def expand_dims(self, axis: Optional[int]=None) -> 'Int100Tensor':
+    def expand_dims(self, axis: Optional[int] = None) -> 'Int100Tensor':
         backing = [tf.expand_dims(xi, axis) for xi in self.backing]
         return Int100Tensor(backing)
 
-    def squeeze(self, axis: Optional[List[int]]=None) -> 'Int100Tensor':
+    def squeeze(self, axis: Optional[List[int]] = None) -> 'Int100Tensor':
         backing = [tf.squeeze(xi, axis=axis) for xi in self.backing]
         return Int100Tensor(backing)
 

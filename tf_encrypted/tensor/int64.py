@@ -4,7 +4,8 @@ from typing import Union, List, Dict, Any, Tuple, Optional
 import numpy as np
 import tensorflow as tf
 
-from .factory import AbstractFactory, AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
+from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
+                      AbstractConstant, AbstractPlaceholder)
 from .helpers import inverse
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
@@ -61,12 +62,18 @@ class Int64Factory(AbstractFactory):
         return tf.int64
 
     def sample_uniform(self, shape: List[int]) -> 'Int64Tensor':
-        value = random_uniform(shape=shape, dtype=self.native_type, minval=tf.int64.min, maxval=tf.int64.max)
+        value = random_uniform(shape=shape,
+                               dtype=self.native_type,
+                               minval=tf.int64.min,
+                               maxval=tf.int64.max)
         return Int64Tensor(value)
 
     def sample_bounded(self, shape: List[int], bitlength: int) -> 'Int64Tensor':
         # TODO[Morten] verify that uses of this work for signed integers
-        value = random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=2**bitlength)
+        value = random_uniform(shape=shape,
+                               dtype=self.native_type,
+                               minval=0,
+                               maxval=2**bitlength)
         return Int64Tensor(value)
 
     def stack(self, xs: List['Int64Tensor'], axis: int = 0) -> 'Int64Tensor':
@@ -172,7 +179,7 @@ class Int64Tensor(AbstractTensor):
     def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int) -> 'Int64Tensor':
         return int64factory.tensor(im2col(self.value, h_filter, w_filter, padding, strides))
 
-    def conv2d(self, other: Any, strides: int, padding: str='SAME') -> 'Int64Tensor':
+    def conv2d(self, other: Any, strides: int, padding: str = 'SAME') -> 'Int64Tensor':
         x, y = _lift(self, other)
         return conv2d(x, y, strides, padding)  # type: ignore
 
@@ -185,7 +192,7 @@ class Int64Tensor(AbstractTensor):
     def strided_slice(self, args: Any, kwargs: Any) -> 'Int64Tensor':
         return int64factory.tensor(tf.strided_slice(self.value, *args, **kwargs))
 
-    def split(self, num_split: int, axis: int=0) -> List['Int64Tensor']:
+    def split(self, num_split: int, axis: int = 0) -> List['Int64Tensor']:
         values = tf.split(self.value, num_split, axis=axis)
         return [int64factory.tensor(value) for value in values]
 
@@ -198,10 +205,10 @@ class Int64Tensor(AbstractTensor):
     def cumsum(self, axis, exclusive, reverse) -> 'Int64Tensor':
         return Int64Tensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
 
-    def equal_zero(self, factory: AbstractFactory=int64factory) -> 'AbstractTensor':
+    def equal_zero(self, factory: AbstractFactory = int64factory) -> 'AbstractTensor':
         return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
 
-    def equal(self, other, factory: AbstractFactory=int64factory) -> 'AbstractTensor':
+    def equal(self, other, factory: AbstractFactory = int64factory) -> 'AbstractTensor':
         x, y = _lift(self, other)
         return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
 
@@ -216,10 +223,10 @@ class Int64Tensor(AbstractTensor):
     def right_shift(self, bitlength) -> 'Int64Tensor':
         return Int64Tensor(tf.bitwise.right_shift(self.value, bitlength))
 
-    def expand_dims(self, axis: Optional[int]=None) -> 'Int64Tensor':
+    def expand_dims(self, axis: Optional[int] = None) -> 'Int64Tensor':
         return Int64Tensor(tf.expand_dims(self.value, axis))
 
-    def squeeze(self, axis: Optional[List[int]]=None) -> 'Int64Tensor':
+    def squeeze(self, axis: Optional[List[int]] = None) -> 'Int64Tensor':
         return Int64Tensor(tf.squeeze(self.value, axis=axis))
 
     def negative(self) -> 'Int64Tensor':

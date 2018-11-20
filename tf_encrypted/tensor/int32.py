@@ -4,7 +4,8 @@ from typing import Union, List, Dict, Any, Tuple, Optional
 import numpy as np
 import tensorflow as tf
 
-from .factory import AbstractFactory, AbstractTensor, AbstractVariable, AbstractConstant, AbstractPlaceholder
+from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
+                      AbstractConstant, AbstractPlaceholder)
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
 
@@ -55,7 +56,10 @@ class Int32Factory(AbstractFactory):
         return tf.int32
 
     def sample_uniform(self, shape: List[int]) -> 'Int32Tensor':
-        value = random_uniform(shape=shape, dtype=self.native_type, minval=self.native_type.min, maxval=self.native_type.max)
+        value = random_uniform(shape=shape,
+                               dtype=self.native_type,
+                               minval=self.native_type.min,
+                               maxval=self.native_type.max)
         return Int32Tensor(value)
 
     def stack(self, xs: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':
@@ -146,7 +150,7 @@ class Int32Tensor(AbstractTensor):
     def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int) -> 'Int32Tensor':
         return int32factory.tensor(im2col(self.value, h_filter, w_filter, padding, strides))
 
-    def conv2d(self, other: Any, strides: int, padding: str='SAME') -> 'Int32Tensor':
+    def conv2d(self, other: Any, strides: int, padding: str = 'SAME') -> 'Int32Tensor':
         x, y = _lift(self, other)
         return conv2d(x, y, strides, padding)  # type: ignore
 
@@ -159,7 +163,7 @@ class Int32Tensor(AbstractTensor):
     def strided_slice(self, args: Any, kwargs: Any) -> 'Int32Tensor':
         return int32factory.tensor(tf.strided_slice(self.value, *args, **kwargs))
 
-    def split(self, num_split: int, axis: int=0) -> List['Int32Tensor']:
+    def split(self, num_split: int, axis: int = 0) -> List['Int32Tensor']:
         values = tf.split(self.value, num_split, axis=axis)
         return [int32factory.tensor(value) for value in values]
 
@@ -170,12 +174,15 @@ class Int32Tensor(AbstractTensor):
         return int32factory.tensor(tf.reduce_sum(self.value, axis, keepdims))
 
     def cumsum(self, axis, exclusive, reverse) -> 'Int32Tensor':
-        return int32factory.tensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
+        return int32factory.tensor(tf.cumsum(self.value,
+                                             axis=axis,
+                                             exclusive=exclusive,
+                                             reverse=reverse))
 
-    def equal_zero(self, factory: AbstractFactory=int32factory) -> 'AbstractTensor':
+    def equal_zero(self, factory: AbstractFactory = int32factory) -> 'AbstractTensor':
         return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
 
-    def equal(self, other, factory: AbstractFactory=int32factory) -> 'AbstractTensor':
+    def equal(self, other, factory: AbstractFactory = int32factory) -> 'AbstractTensor':
         x, y = _lift(self, other)
         return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
 

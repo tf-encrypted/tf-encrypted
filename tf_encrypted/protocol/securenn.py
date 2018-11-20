@@ -35,7 +35,8 @@ class SecureNN(Pond):
     ) -> None:
         server_0 = server_0 or get_config().get_player('server0')
         server_1 = server_1 or get_config().get_player('server1')
-        server_2 = server_2 or get_config().get_player('crypto-producer')  # TODO[Morten] use `server2` as key
+        # TODO[Morten] use `server2` as key here
+        server_2 = server_2 or get_config().get_player('crypto-producer')
 
         super(SecureNN, self).__init__(
             server_0=server_0,
@@ -145,7 +146,7 @@ class SecureNN(Pond):
         return self.dispatch('lsb', x, container=_thismodule)
 
     @memoize
-    def bits(self, x: PondTensor, factory: Optional[AbstractFactory]=None) -> 'PondTensor':
+    def bits(self, x: PondTensor, factory: Optional[AbstractFactory] = None) -> 'PondTensor':
         return self.dispatch('bits', x, container=_thismodule, factory=factory)
 
     @memoize
@@ -279,12 +280,12 @@ class SecureNN(Pond):
         :rtype: PondTensor
         :returns: A new tensor with the bits from `x` and `y` chosen as described above.
 
-        """
+        """  # noqa:E501
         with tf.name_scope('select'):
             return (y - x) * choice_bit + x
 
     @memoize
-    def equal_zero(self, x, out_dtype: Optional[AbstractFactory]=None):
+    def equal_zero(self, x, out_dtype: Optional[AbstractFactory] = None):
         """
         Returns `x == 0`
 
@@ -433,7 +434,8 @@ class SecureNN(Pond):
         raise NotImplementedError
 
 
-def _bits_public(prot, x: PondPublicTensor, factory: Optional[AbstractFactory]=None) -> PondPublicTensor:
+def _bits_public(prot, x: PondPublicTensor,
+                 factory: Optional[AbstractFactory] = None) -> PondPublicTensor:
 
     factory = factory or prot.tensor_factory
 
@@ -459,25 +461,29 @@ def _lsb_private(prot, y: PondPrivateTensor):
             with tf.device(prot.server_2.device_name):
                 x_raw = y.backing_dtype.sample_uniform(y.shape)
                 xbits_raw = x_raw.to_bits(factory=prot.prime_factory)
-                xlsb_raw = xbits_raw[..., 0].cast(y.backing_dtype)
+                xlsb_raw = xbits_raw[..., 0]
 
                 x = prot._share_and_wrap(x_raw, False)
                 xbits = prot._share_and_wrap(xbits_raw, False)
-                xlsb = prot._share_and_wrap(xlsb_raw, False)
+                xlsb = prot._share_and_wrap(xlsb_raw.cast(y.backing_dtype), False)
 
             with tf.device(prot.server_0.device_name):
-                # TODO[Morten] pull this out as a separate `sample_bits` method on tensors (optimized for bits only)
+                # TODO[Morten] pull this out as a separate `sample_bits` method on tensors
+                #              (optimized for bits only)
                 beta_raw = prot.prime_factory.sample_bounded(y.shape, 1)
                 beta = PondPublicTensor(prot, beta_raw, beta_raw, is_scaled=False)
 
         with tf.name_scope('lsb_compare'):
+
             r = (y + x).reveal()
+            r.is_scaled = False
+
             rbits = prot.bits(r)
             rlsb = rbits[..., 0]
-            bp = _private_compare(prot, xbits, r, beta)
+            greater_xor_beta = _private_compare(prot, xbits, r, beta)
 
         with tf.name_scope('lsb_combine'):
-            gamma = prot.bitwise_xor(bp, beta.cast_backing(prot.tensor_factory))
+            gamma = prot.bitwise_xor(greater_xor_beta, beta.cast_backing(prot.tensor_factory))
             delta = prot.bitwise_xor(xlsb, rlsb)
             alpha = prot.bitwise_xor(gamma, delta)
             assert alpha.backing_dtype is y.backing_dtype
@@ -501,10 +507,13 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
 
     assert r.shape == out_shape
     assert r.backing_dtype == out_dtype
+    assert not r.is_scaled
     assert x_bits.shape[:-1] == out_shape
     assert x_bits.backing_dtype == prime_dtype
+    assert not x_bits.is_scaled
     assert beta.shape == out_shape
     assert beta.backing_dtype == prime_dtype
+    assert not beta.is_scaled
 
     with tf.name_scope('private_compare'):
 
@@ -524,18 +533,24 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
             sign = prot.select(beta, 1, -1)
             sign = prot.expand_dims(sign, axis=-1)
             c_except_edge_case = (s_bits - x_bits) * sign + 1 + w_sum
+
             assert c_except_edge_case.backing_dtype == prime_dtype
 
         with tf.name_scope('edge_cases'):
 
             # adjust for edge cases, i.e. where beta is 1 and s is zero (meaning r was -1)
 
+            # identify edge cases
             edge_cases = prot.bitwise_and(
                 beta,
                 prot.equal_zero(s, prime_dtype)
             )
             edge_cases = prot.expand_dims(edge_cases, axis=-1)
-            c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1), dtype=prime_dtype.native_type, shape=(1, bit_length)))
+
+            # tensor for edge cases: one zero and the rest ones
+            c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1),
+                                                 dtype=prime_dtype.native_type,
+                                                 shape=(1, bit_length)))
             c_edge_case = prot._share_and_wrap(c_edge_case_raw, False)
 
             c = prot.select(
@@ -572,7 +587,9 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
         return result
 
 
-def _equal_zero_public(prot, x: PondPublicTensor, out_dtype: Optional[AbstractFactory]=None) -> PondPublicTensor:
+def _equal_zero_public(prot,
+                       x: PondPublicTensor,
+                       out_dtype: Optional[AbstractFactory] = None) -> PondPublicTensor:
 
     with tf.name_scope('equal_zero'):
 

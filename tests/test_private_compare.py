@@ -11,6 +11,11 @@ class TestPrivateCompare(unittest.TestCase):
 
     def test_private(self):
 
+        prot = tfe.protocol.SecureNN()
+
+        bit_dtype = prot.prime_factory
+        val_dtype = prot.tensor_factory
+
         x = np.array([
             21,
             21,
@@ -45,11 +50,6 @@ class TestPrivateCompare(unittest.TestCase):
         ], dtype=np.int32).reshape(2, 2, 2)
 
         expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
-
-        prot = tfe.protocol.SecureNN()
-
-        bit_dtype = prot.prime_factory
-        val_dtype = prot.tensor_factory
 
         res = _private_compare(
             prot,
