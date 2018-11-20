@@ -122,21 +122,38 @@ private:
   int elements_per_block_ = 0;
   int inner_block_index_ = 0;
 
+  // The following random uniform distribution is based on a an implementation from
+  // https://github.com/rust-random/rand/blob/3eadab75c8a5871d1be729091795a6c4e1dc19bb/src/distributions/uniform.rs#L310
+  // There is quite a bit of documentation at that link which is explains the implementation.
+  // See below for other inline docs.
+
   // inclusive uniform!
   void Uniform(T low, T high) {
     typedef typename std::make_unsigned<T>::type uT;
+
+    // add one for inclusive range, subtract 1 from high input to get exclusive range
     auto range = static_cast<uT>(high) - static_cast<uT>(low) + 1;
 
     auto unsigned_max = std::numeric_limits<uT>::max();
+
+    // find the number of integers to reject
     auto ints_to_reject = (unsigned_max - range + 1) % range;
+
+    // find the allowed zone, multiple of the range
     auto zone = unsigned_max - ints_to_reject;
 
+    // loop through all of the values to check for numbers to reject
     for (int i = 0; i < count_; ++i) {
+      // we need the unsigned version here
       auto unsign = static_cast<uT>(buf_[i]);
 
       T hi, lo;
+      // returns a tuple of result of the widening multiplication
+      // hi word contains the result, i.e. the left over after the cast back to normal width
+      // lo word contains the product minus the first 32 bit after cast back to normal width
       std::tie(hi, lo) = wmul<uT, Wide>(unsign, range);
 
+      // if lo is out of the zone reject and get another number
       while(lo > zone) {
         // rejection sampling, get the next valid number in the stream
         buf_[i] = GetNextValidData();
@@ -144,6 +161,8 @@ private:
 
         std::tie(hi, lo) = wmul<uT, Wide>(unsign, range);
       }
+
+      // shift hi by the lower bound to get the value in between lower/upper bound
       buf_[i] = random::SignedAdd(low, hi);
     }
   }
