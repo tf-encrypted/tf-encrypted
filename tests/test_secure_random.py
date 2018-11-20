@@ -45,6 +45,8 @@ class TestSecureRandom(unittest.TestCase):
         # TODO how to test rejection?!
         seed = [87654321, 4321, 8765431, 87654325, 87654321, 874321, 87654321, 87654321]
 
+        seed + 1
+
 
 if __name__ == '__main__':
     unittest.main()
