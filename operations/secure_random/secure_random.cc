@@ -5,7 +5,6 @@
 #include "tensorflow/core/framework/shape_inference.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/lib/random/random_distributions.h"
-#include "absl/numeric/int128.h"
 #include "sodium.h"
 
 using namespace tensorflow;
@@ -226,4 +225,4 @@ REGISTER_KERNEL_BUILDER(
   Name("SecureRandom")
   .Device(DEVICE_CPU)
   .TypeConstraint<int64>("dtype"),
-  SecureRandomOp<int64, absl::uint128>);
+  SecureRandomOp<int64, __uint128_t>);
