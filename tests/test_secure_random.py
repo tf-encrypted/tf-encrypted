@@ -41,6 +41,10 @@ class TestSecureRandom(unittest.TestCase):
             with np.testing.assert_raises(ValueError):
                 secure_random([3, 3], maxval=10000, dtype=tf.float32).eval()
 
+    def test_rejection(self):
+        # TODO how to test rejection?!
+        seed = [87654321, 4321, 8765431, 87654325, 87654321, 874321, 87654321, 87654321]
+
 
 if __name__ == '__main__':
     unittest.main()
