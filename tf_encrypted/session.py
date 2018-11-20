@@ -53,10 +53,10 @@ class Session(tf.Session):
             print('Session in debug mode')
             self = tf_debug.LocalCLIDebugWrapperSession(self)
 
-    def sanitize_fetches(self, fetches: Any) -> Union[List[Any], tf.Tensor, tf.Operation]:
+    def _sanitize_fetches(self, fetches: Any) -> Union[List[Any], tf.Tensor, tf.Operation]:
 
         if isinstance(fetches, (list, tuple)):
-            return [self.sanitize_fetches(fetch) for fetch in fetches]
+            return [self._sanitize_fetches(fetch) for fetch in fetches]
         else:
             if isinstance(fetches, (tf.Tensor, tf.Operation)):
                 return fetches
@@ -75,23 +75,25 @@ class Session(tf.Session):
         write_trace: bool = False
     ):
         """
+        run(fetches, feed_dict, tag, write_trace) -> Any
+
         See :meth:tf.Session.run
 
         This method functions just as the one from tensorflow.
 
-        :param Any fetches: A single graph element, a list of graph elements, or a dictionary whose values are graph elements or lists of graph elements.
-        :param Dict[str,np.ndarray] feed_dict: A dictionary that maps graph elements to values.
-        :param Optional[str] tag: A namespace to run the session under.
-        :param bool write_Trace: If true, the session logs will be dumped to be used in tensorboard.
+        The value returned by run() has the same shape as the fetches argument, where the leaves
+        are replaced by the corresponding values returned by TensorFlow.
 
-        :rtype: Any
-        :returns: Either a single value if `fetches` is a single graph element,
-                  or a list of values if fetches is a list, or a dictionary with the
-                  same keys as fetches if that is a dictionary (described above).
-                  Order in which fetches operations are evaluated inside the call is undefined.
+        :param Any fetches: A single graph element, a list of graph elements, or a dictionary whose
+                            values are graph elements or lists of graph elements
+                            (described in tf.Session.run docs).
+        :param str->np.ndarray feed_dict: A dictionary that maps graph elements to values
+                                          (described in tf.Session.run docs).
+        :param str tag: An optional namespace to run the session under.
+        :param bool write_trace: If true, the session logs will be dumped for use in Tensorboard.
         """
 
-        sanitized_fetches = self.sanitize_fetches(fetches)
+        sanitized_fetches = self._sanitize_fetches(fetches)
 
         if not __TFE_STATS__ or tag is None:
             fetches_out = super(Session, self).run(
