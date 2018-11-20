@@ -24,13 +24,17 @@ class Session(tf.Session):
     """
     Wrap a Tensorflow Session.
 
-    See :py:class:`tf.Session`
+    See the documentation of
+    `tf.Session <https://www.tensorflow.org/api_docs/python/tf/Session>`_
+    for more details.
 
     :param Optional[tf.Graph] graph: A :class:`tf.Graph`.  Used in the same as in tensorflow.
-            This is the graph to be launched.  If nothing is specified then the default session graph will
-            be used.
-    :param Optional[~tensorflow_encrypted.config.Config] config:  A :class:`Local <tensorflow_encrypted.config.LocalConfig>` or
-            :class:`Remote <tensorflow_encrypted.config.RemoteConfig>` config to be used to execute the graph.
+            This is the graph to be launched.  If nothing is specified then the default session
+            graph will be used.
+    :param Optional[~tensorflow_encrypted.config.Config] config:  A
+            :class:`Local <tf_encrypted.config.LocalConfig/>` or
+            :class:`Remote <tensorflow_encrypted.config.RemoteConfig>` config to be used to
+            execute the graph.
     """
 
     def __init__(
@@ -53,10 +57,10 @@ class Session(tf.Session):
             print('Session in debug mode')
             self = tf_debug.LocalCLIDebugWrapperSession(self)
 
-    def sanitize_fetches(self, fetches: Any) -> Union[List[Any], tf.Tensor, tf.Operation]:
+    def _sanitize_fetches(self, fetches: Any) -> Union[List[Any], tf.Tensor, tf.Operation]:
 
         if isinstance(fetches, (list, tuple)):
-            return [self.sanitize_fetches(fetch) for fetch in fetches]
+            return [self._sanitize_fetches(fetch) for fetch in fetches]
         else:
             if isinstance(fetches, (tf.Tensor, tf.Operation)):
                 return fetches
@@ -75,23 +79,27 @@ class Session(tf.Session):
         write_trace: bool = False
     ):
         """
-        See :meth:tf.Session.run
+        run(fetches, feed_dict, tag, write_trace) -> Any
+
+        See the documentation for
+        `tf.Session.run <https://www.tensorflow.org/api_docs/python/tf/Session#run>`_
+        for more details.
 
         This method functions just as the one from tensorflow.
 
-        :param Any fetches: A single graph element, a list of graph elements, or a dictionary whose values are graph elements or lists of graph elements.
-        :param Dict[str,np.ndarray] feed_dict: A dictionary that maps graph elements to values.
-        :param Optional[str] tag: A namespace to run the session under.
-        :param bool write_Trace: If true, the session logs will be dumped to be used in tensorboard.
+        The value returned by run() has the same shape as the fetches argument, where the leaves
+        are replaced by the corresponding values returned by TensorFlow.
 
-        :rtype: Any
-        :returns: Either a single value if `fetches` is a single graph element,
-                  or a list of values if fetches is a list, or a dictionary with the
-                  same keys as fetches if that is a dictionary (described above).
-                  Order in which fetches operations are evaluated inside the call is undefined.
+        :param Any fetches: A single graph element, a list of graph elements, or a dictionary whose
+                            values are graph elements or lists of graph elements
+                            (described in tf.Session.run docs).
+        :param str->np.ndarray feed_dict: A dictionary that maps graph elements to values
+                                          (described in tf.Session.run docs).
+        :param str tag: An optional namespace to run the session under.
+        :param bool write_trace: If true, the session logs will be dumped for use in Tensorboard.
         """
 
-        sanitized_fetches = self.sanitize_fetches(fetches)
+        sanitized_fetches = self._sanitize_fetches(fetches)
 
         if not __TFE_STATS__ or tag is None:
             fetches_out = super(Session, self).run(
@@ -118,7 +126,8 @@ class Session(tf.Session):
             writer.close()
 
             if __TFE_TRACE__ or write_trace:
-                chrome_trace = timeline.Timeline(run_metadata.step_stats).generate_chrome_trace_format()
+                tracer = timeline.Timeline(run_metadata.step_stats)
+                chrome_trace = tracer.generate_chrome_trace_format()
                 with open('{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag), 'w') as f:
                     f.write(chrome_trace)
 
@@ -126,14 +135,29 @@ class Session(tf.Session):
 
 
 def setMonitorStatsFlag(monitor_stats: bool = False) -> None:
+    """
+    setMonitorStatsFlag(monitor_stats)
+
+    Set flag to enable or disable monitoring of runtime statistics for each call to session.run().
+
+    :param bool monitor_stats: Enable or disable stats, disabled by default.
+    """
     global __TFE_STATS__
     if monitor_stats is True:
-        print("Tensorflow encrypted is monitoring statistics for each session.run() call using a tag")
+        print("Tensorflow encrypted is monitoring statistics for each session.run() \
+              call using a tag")
 
     __TFE_STATS__ = monitor_stats
 
 
 def setTFEDebugFlag(debug: bool = False) -> None:
+    """
+    setTFEDebugFlag(debug)
+
+    Set flag to enable or disable debugging mode for tf-encrypted.
+
+    :param bool debug: Enable or disable debugging, disabled by default.
+    """
     global __TFE_DEBUG__
     if debug is True:
         print("Tensorflow encrypted is running in DEBUG mode")
@@ -142,6 +166,13 @@ def setTFEDebugFlag(debug: bool = False) -> None:
 
 
 def setTFETraceFlag(trace: bool = False) -> None:
+    """
+    setTFETraceFlag(trace)
+
+    Set flag to enable or disable tracing in tf-encrypted.
+
+    :param bool trace: Enable or disable tracing, disabled by default.
+    """
     global __TFE_TRACE__
     if trace is True:
         print("Tensorflow encrypted is dumping computation traces")
