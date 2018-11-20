@@ -106,16 +106,16 @@ private:
     auto range = static_cast<typename std::make_unsigned<T>::type>(hi) -
                    static_cast<typename std::make_unsigned<T>::type>(lo);
 
-    typename std::make_unsigned<T>::type min = (1U + ~hi) % hi;
+    typename std::make_unsigned<T>::type min = (1U + ~range) % range;
 
     for (int i = 0; i < count_; ++i) {
       auto unsign = static_cast<typename std::make_unsigned<T>::type>(buf_[i]);
-        while(unsign < min) {
-          // rejection sampling, get the next valid number in the stream
-          buf_[i] = GetNextValidData();
-          unsign = static_cast<typename std::make_unsigned<T>::type>(buf_[i]);
-        }
-        buf_[i] = random::SignedAdd(lo, buf_[i] % range);
+      while(unsign < min) {
+        // rejection sampling, get the next valid number in the stream
+        buf_[i] = GetNextValidData();
+        unsign = static_cast<typename std::make_unsigned<T>::type>(buf_[i]);
+      }
+      buf_[i] = random::SignedAdd(lo, buf_[i] % range);
     }
   }
 
