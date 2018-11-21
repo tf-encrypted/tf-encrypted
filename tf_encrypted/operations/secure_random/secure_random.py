@@ -9,7 +9,7 @@ shared_object = dirname + '/operations/secure_random/secure_random_module.so'
 secure_random_module = tf.load_op_library(shared_object)
 
 
-def secure_random(shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=None):
+def seeded_secure_random(shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=None):
     """
     Returns random numbers securely.
 
@@ -40,4 +40,4 @@ def secure_random(shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=
     minval = ops.convert_to_tensor(minval, dtype=dtype, name="min")
     maxval = ops.convert_to_tensor(maxval, dtype=dtype, name="max")
 
-    return secure_random_module.secure_random(shape, seed, minval, maxval, name=name)
+    return secure_random_module.seeded_secure_random(shape, seed, minval, maxval, name=name)

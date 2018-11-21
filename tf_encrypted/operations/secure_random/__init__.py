@@ -1,9 +1,9 @@
 import tensorflow as tf
-from .secure_random import secure_random
+from .secure_random import seeded_secure_random
 
-# FEATURE FLAG: secure_random or tf.random_uniform
+# FEATURE FLAG: seeded_secure_random or tf.random_uniform
 random_uniform = tf.random_uniform
 
 __all__ = [
-    "secure_random"
+    "seeded_secure_random"
 ]
