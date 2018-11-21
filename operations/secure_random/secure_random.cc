@@ -13,6 +13,7 @@ using shape_inference::DimensionHandle;
 using shape_inference::ShapeHandle;
 
 #define CHACHABLOCKSIZE 64
+#define NUMBER_OF_SEEDS randombytes_SEEDBYTES / sizeof(int32)
 
 template <typename uInt, typename uWide>
 std::tuple<uInt, uInt> wmul(uInt x, uInt y) {
@@ -37,7 +38,7 @@ static Status SecureRandomShape(shape_inference::InferenceContext* context) {
   ShapeHandle seed;
   TF_RETURN_IF_ERROR(context->WithRank(context->input(1), 1, &seed));
   DimensionHandle unused;
-  TF_RETURN_IF_ERROR(context->WithValue(context->Dim(seed, 0), 8, &unused));
+  TF_RETURN_IF_ERROR(context->WithValue(context->Dim(seed, 0), NUMBER_OF_SEEDS, &unused));
 
   // Set output shape
   ShapeHandle out;
@@ -195,8 +196,8 @@ public:
     const Tensor& maxval = context->input(3);
     TensorShape shape;
     OP_REQUIRES_OK(context, MakeShape(shape_tensor, &shape));
-    OP_REQUIRES(context, seed_tensor.dims() == 1 && seed_tensor.dim_size(0) == 8,
-                errors::InvalidArgument("seed must have shape [8], not ",
+    OP_REQUIRES(context, seed_tensor.dims() == 1 && seed_tensor.dim_size(0) == NUMBER_OF_SEEDS,
+                errors::InvalidArgument("seed must have shape [", NUMBER_OF_SEEDS, "], not ",
                                         seed_tensor.shape().DebugString()));
 
     OP_REQUIRES(context, TensorShapeUtils::IsScalar(maxval.shape()),
@@ -215,12 +216,12 @@ public:
     OP_REQUIRES(context, shape.num_elements() > 0, errors::InvalidArgument("Shape contains zero elements"));
     OP_REQUIRES(context, sodium_init() >= 0, errors::Internal("libsodium failed to initialize, try again"));
 
-    int number_of_seeds = randombytes_SEEDBYTES / sizeof(int32);
 
-    int32 *seeds = static_cast<int *>(malloc(sizeof(int32) * number_of_seeds));
+
+    int32 *seeds = static_cast<int *>(malloc(sizeof(int32) * NUMBER_OF_SEEDS));
     auto seed_vals = seed_tensor.flat<int32>().data();
 
-    for(auto i = 0; i < number_of_seeds; i++) {
+    for(auto i = 0; i < NUMBER_OF_SEEDS; i++) {
       seeds[i] = seed_vals[i];
     }
 

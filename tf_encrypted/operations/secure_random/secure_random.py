@@ -35,10 +35,7 @@ def secure_random(shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=
         raise ValueError("Must specify maxval for integer dtype %r" % dtype)
 
     if seed is None:
-        # TODO random seed if not specified?
-        seed = [87654321, 87654321, 87654321, 87654321, 87654321, 87654321, 87654321, 87654321]
-    elif len(seed) != 8:
-        raise ValueError("Seed length must 8")
+        raise ValueError("Seed must be passed")
 
     minval = ops.convert_to_tensor(minval, dtype=dtype, name="min")
     maxval = ops.convert_to_tensor(maxval, dtype=dtype, name="max")

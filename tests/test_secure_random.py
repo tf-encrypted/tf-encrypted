@@ -4,6 +4,8 @@ import tensorflow as tf
 import numpy as np
 from tf_encrypted.operations.secure_random import secure_random
 
+seed = [87654321, 87654321, 87654321, 87654321, 87654321, 87654321, 87654321, 87654321]
+
 
 class TestSecureRandom(unittest.TestCase):
 
@@ -13,7 +15,7 @@ class TestSecureRandom(unittest.TestCase):
                     [9678, 7188, 8280]]
 
         with tf.Session():
-            output = secure_random([3, 3], maxval=10000).eval()
+            output = secure_random([3, 3], seed=seed, maxval=10000).eval()
 
             np.testing.assert_array_equal(output, expected)
 
@@ -23,7 +25,7 @@ class TestSecureRandom(unittest.TestCase):
                     [9356, 4377, 6561]]
 
         with tf.Session():
-            output = secure_random([3, 3], minval=-10000, maxval=10000).eval()
+            output = secure_random([3, 3], seed=seed, minval=-10000, maxval=10000).eval()
 
             np.testing.assert_array_equal(output, expected)
 
@@ -35,11 +37,11 @@ class TestSecureRandom(unittest.TestCase):
 
             # invalid maxval
             with np.testing.assert_raises(ValueError):
-                secure_random([3, 3], seed=[1]).eval()
+                secure_random([3, 3]).eval()
 
             # invalid dtype
             with np.testing.assert_raises(ValueError):
-                secure_random([3, 3], maxval=10000, dtype=tf.float32).eval()
+                secure_random([3, 3], seed=seed, maxval=10000, dtype=tf.float32).eval()
 
     # def test_rejection(self):
     #     # TODO how to test rejection?!
