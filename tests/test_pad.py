@@ -23,11 +23,8 @@ class TestPad(unittest.TestCase):
             out =  prot.pad(input_input, paddings)
 
             with tfe.Session() as sess:
-                writer = tf.summary.FileWriter("output", sess.graph)
                 sess.run(tf.global_variables_initializer())
                 out_tfe = sess.run(out.reveal())
-                writer.close()
-                print(out_tfe)
 
             tf.reset_default_graph()
         
@@ -38,7 +35,6 @@ class TestPad(unittest.TestCase):
             with tf.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 out_tensorflow = sess.run(pad_out_tf)
-                print(out_tensorflow)
 
             np.testing.assert_allclose(out_tfe, out_tensorflow, atol=.01)
 

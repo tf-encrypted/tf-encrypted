@@ -989,16 +989,14 @@ class Pond(Protocol):
         else:
             raise TypeError("Don't know how to {}: {}".format(base_name, [type(arg) for arg in args]))
 
-    
     @memoize
-    def zeros(self, 
-            shape,
-            apply_scaling: bool = True,
-            name: Optional[str] = None,
-            factory: Optional[AbstractFactory] = None
-            ) -> 'PondPrivateTensor':
-
-        # [Note] Do we want a public version of it?
+    def zeros(
+        self,
+        shape,
+        apply_scaling: bool = True,
+        name: Optional[str] = None,
+        factory: Optional[AbstractFactory] = None
+    ) -> 'PondPrivateTensor':
 
         zeros_array = np.zeros(shape)
 
@@ -1016,46 +1014,41 @@ class Pond(Protocol):
                 x1 = factory.variable(v1)
 
         x = PondPrivateTensor(self, x0, x1, apply_scaling)
-        #x = PondPrivateVariable(self, x0, x1, apply_scaling)
-        #_initializers.append(x.initializer)
         return x
 
-    
     def pad(self, x, paddings):
 
         with tf.name_scope('pad'):
             zeros_id = 0
             for axis, (pad_before, pad_after) in enumerate(paddings):
-                x = self._append_const(x, pad_after, axis, zeros_id)
+                x = self._append_zeros(x, pad_after, axis, zeros_id)
                 zeros_id += 1
-                x = self._prepend_const(x, pad_before, axis, zeros_id)
+                x = self._prepend_zeros(x, pad_before, axis, zeros_id)
                 zeros_id += 1
 
         return x
 
-    def _prepend_const(self, arr, pad_amt, axis, zeros_id):
-  
+    def _prepend_zeros(self, arr, pad_amt, axis, zeros_id):
+
         if pad_amt == 0:
                 return arr
 
-        shape_arr = arr.shape.as_list()
-        padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(shape_arr))
+        arrshape = arr.shape.as_list()
+        padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(arrshape))
 
         zeros_array = self.zeros(padshape, name=str(zeros_id))
 
         with tf.name_scope('prepend'):
-             out = self.concat([zeros_array, arr], axis=axis)
-        
-        return out
-    
-    def _append_const(self, arr, pad_amt, axis, zeros_id):
-    
+            return self.concat([zeros_array, arr], axis=axis)
+
+    def _append_zeros(self, arr, pad_amt, axis, zeros_id):
+
         if pad_amt == 0:
                 return arr
 
-        shape_arr = arr.shape.as_list()
-        padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(shape_arr))
-        
+        arrshape = arr.shape.as_list()
+        padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(arrshape))
+
         zeros_array = self.zeros(padshape, name=str(zeros_id))
 
         with tf.name_scope('append'):

@@ -59,7 +59,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -96,7 +96,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -133,7 +133,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -170,7 +170,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -207,7 +207,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -244,7 +244,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -280,7 +280,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -317,10 +317,9 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
-                print("tfe_out", output)
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
@@ -356,7 +355,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -393,7 +392,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -430,7 +429,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -471,7 +470,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -508,7 +507,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -545,7 +544,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -582,7 +581,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', provide_input)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -629,7 +628,7 @@ class TestConvert(unittest.TestCase):
             x = converter.convert(graph_def, register(), 'input-provider', inputs)
 
             with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
+                sess.run(tf.global_variables_initializer())
 
                 output = sess.run(x.reveal(), tag='reveal')
 
@@ -867,7 +866,6 @@ def run_pad(input_shape: List[int]):
 
     with tf.Session() as sess:
         output = sess.run(x, feed_dict={a: np.array([[1, 2, 3], [4, 5, 6]])})
-        print("tf",output)
 
     return output
 

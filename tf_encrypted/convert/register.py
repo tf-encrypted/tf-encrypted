@@ -7,7 +7,6 @@ from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2
 from .convert import Converter
 
 from tf_encrypted.protocol.pond import PondPublicTensor
-import tf_encrypted
 
 
 def register() -> Dict[str, Any]:
@@ -251,20 +250,12 @@ def squeeze(converter: Converter, node: Any, inputs: List[str]) -> Any:
 def pad(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
     p = (converter.outputs[inputs[1]])
-    tensor = p.attr["value"].tensor
-    print(p)
-    #print(tensor.tensor_shape.dim[0][-1])
-    nums = list(array.array('I', tensor.tensor_content))
-    paddings = [nums[i:i+2] for i in range(0,len(nums),2)]
-    print(paddings)
-    #print(input)
+    paddings_t = p.attr["value"].tensor
 
-    #input2 = converter.protocol.define_private_input(input)
-    #input_out = nodef_to_private_pond(converter, input)
+    paddings_arr = list(array.array('I', paddings_t.tensor_content))
+    paddings_lst = [paddings_arr[i:i + 2] for i in range(0, len(paddings_arr), 2)]
 
-    #out = tf_encrypted.protocol.Pond().define_private_variable(input)
-
-    return converter.protocol.pad(input, paddings)
+    return converter.protocol.pad(input, paddings_lst)
 
 
 def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
