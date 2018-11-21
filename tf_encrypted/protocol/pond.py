@@ -1016,6 +1016,8 @@ class Pond(Protocol):
                 x1 = factory.variable(v1)
 
         x = PondPrivateTensor(self, x0, x1, apply_scaling)
+        #x = PondPrivateVariable(self, x0, x1, apply_scaling)
+        #_initializers.append(x.initializer)
         return x
 
     
