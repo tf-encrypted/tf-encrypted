@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 
+
 class TestZeros(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
@@ -16,14 +17,14 @@ class TestZeros(unittest.TestCase):
 
             tf.reset_default_graph()
 
-            out =  prot.zeros(input_shape)
+            out = prot.zeros(input_shape)
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 out_tfe = sess.run(out.reveal())
-            
+
             tf.reset_default_graph()
-        
+
             zeros_out_tf = tf.zeros(input_shape)
             with tf.Session() as sess:
                 sess.run(tf.global_variables_initializer())

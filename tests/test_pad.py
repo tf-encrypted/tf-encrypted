@@ -20,14 +20,14 @@ class TestPad(unittest.TestCase):
 
             paddings = [[1, 1], [3, 4]]
 
-            out =  prot.pad(input_input, paddings)
+            out = prot.pad(input_input, paddings)
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 out_tfe = sess.run(out.reveal())
 
             tf.reset_default_graph()
-        
+
             t = tf.constant([[1, 2, 3], [4, 5, 6]], dtype='float32')
             paddings = tf.constant([[1, 1], [3, 4]])
             pad_out_tf = tf.pad(t, paddings, constant_values=0)
