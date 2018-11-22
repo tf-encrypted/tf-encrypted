@@ -1008,7 +1008,7 @@ class Pond(Protocol):
 
         return out
 
-    def pad(self, x, paddings):
+    def pad(self, x: 'PondTensor', paddings: list):
 
         with tf.name_scope('pad'):
             zeros_id = 0
@@ -1020,7 +1020,7 @@ class Pond(Protocol):
 
         return x
 
-    def _prepend_zeros(self, arr, pad_amt, axis, zeros_id):
+    def _prepend_zeros(self, arr: np.ndarray, pad_amt: int, axis: int, zeros_id: int):
 
         if pad_amt == 0:
                 return arr
@@ -1040,7 +1040,7 @@ class Pond(Protocol):
         with tf.name_scope('prepend'):
             return self.concat([zeros_array, arr], axis=axis)
 
-    def _append_zeros(self, arr, pad_amt, axis, zeros_id):
+    def _append_zeros(self, arr: np.ndarray, pad_amt: int, axis: int, zeros_id: int):
 
         if pad_amt == 0:
                 return arr
