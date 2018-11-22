@@ -94,6 +94,9 @@ jobs:
             ../miniconda3/bin/conda create -n py35 python=3.5 2> /dev/null || true
             ../miniconda3/envs/py35/bin/python -m venv venv
             . venv/bin/activate
+
+            brew install libtool automake
+
             make bootstrap
       - run:
           name: release
