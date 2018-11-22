@@ -140,7 +140,7 @@ REGISTER_KERNEL_BUILDER(
   Name("SeededRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int64>("dtype"),
-  SeededRandomUniformOp<int64, SeededGenerator<int64, __int128_t>>);
+  SeededRandomUniformOp<int64, SeededGenerator<int64, __uint128_t>>);
 
 REGISTER_KERNEL_BUILDER(
   Name("SecureRandomUniform")
@@ -151,4 +151,4 @@ REGISTER_KERNEL_BUILDER(
   Name("SecureRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int64>("dtype"),
-  RandomUniformOp<int64, Generator<int64, __int128_t>>);
+  RandomUniformOp<int64, Generator<int64, __uint128_t>>);
