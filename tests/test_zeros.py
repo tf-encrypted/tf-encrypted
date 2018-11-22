@@ -17,7 +17,7 @@ class TestZeros(unittest.TestCase):
 
             tf.reset_default_graph()
 
-            out = prot.zeros(input_shape)
+            out = prot.zeros_private(input_shape)
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
