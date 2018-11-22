@@ -19,23 +19,6 @@ PIP_PATH=$(shell which pip)
 DOCKER_PATH=$(shell which docker)
 CURRENT_TF_VERSION=$(shell python -c 'import tensorflow as tf; print(tf.__version__)' 2>/dev/null)
 
-
-# ###############################################
-# libsodium and secure random custom op defines
-# ###############################################
-LIBSODIUM_VER_TAG=1.0.16
-LIBSODIUM_DIR=build/libsodium-$(LIBSODIUM_VER_TAG)
-
-TF_CFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))' 2>/dev/null)
-TF_LFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))' 2>/dev/null)
-PACKAGE_DIR=tf_encrypted/operations
-
-SODIUM_INSTALL = $(shell pwd)/build
-
-SECURE_OUT = $(PACKAGE_DIR)/secure_random/secure_random_module.so
-SECURE_IN = operations/secure_random/secure_random.cc
-LIBSODIUM_OUT = $(SODIUM_INSTALL)/lib/libsodium.a
-
 # Default platform
 # PYPI doesn't allow linux build tags to be pushed and doesn't support
 # specific operating systems such a ubuntu. It only allows build tags for linux
@@ -278,6 +261,23 @@ push: pypi-version-check
 .PHONY: push
 
 # ###############################################
+# libsodium and secure random custom op defines
+# ###############################################
+LIBSODIUM_VER_TAG=1.0.16
+LIBSODIUM_DIR=build/libsodium-$(LIBSODIUM_VER_TAG)
+
+TF_CFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))' 2>/dev/null)
+TF_LFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))' 2>/dev/null)
+PACKAGE_DIR=tf_encrypted/operations
+
+SODIUM_INSTALL = $(shell pwd)/build
+
+SECURE_OUT_PRE = $(PACKAGE_DIR)/secure_random/secure_random_module_tf_
+
+SECURE_IN = operations/secure_random/secure_random.cc
+LIBSODIUM_OUT = $(SODIUM_INSTALL)/lib/libsodium.a
+
+# ###############################################
 # Secure Random Shared Object
 #
 # Rules for building libsodium and the shared object for secure random.
@@ -292,15 +292,25 @@ $(LIBSODIUM_OUT):
 	$(MAKE) -C $(LIBSODIUM_DIR)
 	$(MAKE) -C $(LIBSODIUM_DIR) install
 
-
-$(SECURE_OUT): $(LIBSODIUM_OUT) $(SECURE_IN)
+$(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN)
 	mkdir -p $(PACKAGE_DIR)/secure_random
-	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT) \
+	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
 		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium
 
-build: $(SECURE_OUT)
+build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
 
-.PHONY: build
+build-all:
+	pip install tensorflow==1.9.0
+	$(MAKE) $(SECURE_OUT_PRE)1.9.0.so
+	pip install tensorflow==1.10.0
+	$(MAKE) $(SECURE_OUT_PRE)1.10.0.so
+	pip install tensorflow==1.11.0
+	$(MAKE) $(SECURE_OUT_PRE)1.11.0.so
+	pip install tensorflow==1.12.0
+	$(MAKE) $(SECURE_OUT_PRE)1.12.0.so
+
+
+.PHONY: build build-all
 
 clean:
 	$(MAKE) -C $(LIBSODIUM_DIR) uninstall

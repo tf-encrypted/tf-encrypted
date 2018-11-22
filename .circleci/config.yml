@@ -152,6 +152,7 @@ workflows:
       - deploy-macos:
           requires:
             - build
+            - build-macos
             - deploy
           filters:
             branches:
