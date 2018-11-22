@@ -1097,8 +1097,8 @@ class Pond(Protocol):
             zeros_array = self.zeros_public(padshape, name=str(zeros_id))
         elif isinstance(arr, PondPrivateTensor):
             zeros_array = self.zeros_private(padshape, name=str(zeros_id))
-        elif isinstance(arr, PondPublicTensor):
-            zeros_array = self.zeros_public(padshape, name=str(zeros_id))
+        elif isinstance(arr, PondMaskedTensor):
+            zeros_array = self.zeros_masked(padshape, name=str(zeros_id))
         else:
             raise TypeError("Don't know how to do a zeros tensor {}".format(type(arr)))
 
@@ -1117,8 +1117,8 @@ class Pond(Protocol):
             zeros_array = self.zeros_public(padshape, name=str(zeros_id))
         elif isinstance(arr, PondPrivateTensor):
             zeros_array = self.zeros_private(padshape, name=str(zeros_id))
-        elif isinstance(arr, PondPublicTensor):
-            zeros_array = self.zeros_public(padshape, name=str(zeros_id))
+        elif isinstance(arr, PondMaskedTensor):
+            zeros_array = self.zeros_masked(padshape, name=str(zeros_id))
         else:
             raise TypeError("Don't know how to do a zeros tensor {}".format(type(arr)))
 
