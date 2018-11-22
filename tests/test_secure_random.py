@@ -2,12 +2,12 @@ import unittest
 
 import tensorflow as tf
 import numpy as np
-from tf_encrypted.operations.secure_random import seeded_secure_random
+from tf_encrypted.operations.secure_random import seeded_random_uniform, random_uniform
 
 seed = [87654321, 87654321, 87654321, 87654321, 87654321, 87654321, 87654321, 87654321]
 
 
-class TestSecureRandom(unittest.TestCase):
+class TestSeededRandom(unittest.TestCase):
 
     def test_wrapper(self):
         expected = [[6610, 5100, 676],
@@ -15,7 +15,7 @@ class TestSecureRandom(unittest.TestCase):
                     [9678, 7188, 8280]]
 
         with tf.Session():
-            output = seeded_secure_random([3, 3], seed=seed, maxval=10000).eval()
+            output = seeded_random_uniform([3, 3], seed=seed, maxval=10000).eval()
 
             np.testing.assert_array_equal(output, expected)
 
@@ -25,7 +25,7 @@ class TestSecureRandom(unittest.TestCase):
                     [9356, 4377, 6561]]
 
         with tf.Session():
-            output = seeded_secure_random([3, 3], seed=seed, minval=-10000, maxval=10000).eval()
+            output = seeded_random_uniform([3, 3], seed=seed, minval=-10000, maxval=10000).eval()
 
             np.testing.assert_array_equal(output, expected)
 
@@ -33,19 +33,45 @@ class TestSecureRandom(unittest.TestCase):
         with tf.Session():
             # invalid seed
             with np.testing.assert_raises(ValueError):
-                seeded_secure_random([3, 3], maxval=10000, seed=[1]).eval()
+                seeded_random_uniform([3, 3], maxval=10000, seed=[1]).eval()
 
             # invalid maxval
             with np.testing.assert_raises(ValueError):
-                seeded_secure_random([3, 3]).eval()
+                seeded_random_uniform([3, 3]).eval()
 
             # invalid dtype
             with np.testing.assert_raises(ValueError):
-                seeded_secure_random([3, 3], seed=seed, maxval=10000, dtype=tf.float32).eval()
+                seeded_random_uniform([3, 3], seed=seed, maxval=10000, dtype=tf.float32).eval()
 
     # def test_rejection(self):
     #     # TODO how to test rejection?!
     #     seed = [87654321, 4321, 8765431, 87654325, 87654321, 874321, 87654321, 87654321]
+
+
+class TestRandomUniform(unittest.TestCase):
+
+    def test_wrapper(self):
+        with tf.Session():
+            output = random_uniform([3, 3], maxval=10000).eval()
+
+            np.testing.assert_array_equal(output.shape, [3, 3])
+
+    def test_min_val(self):
+        with tf.Session():
+            output = random_uniform([6], minval=-10000, maxval=0).eval()
+
+            for out in output:
+                assert(out < 0)
+
+    def test_invalid_args(self):
+        with tf.Session():
+            # invalid maxval
+            with np.testing.assert_raises(ValueError):
+                random_uniform([3, 3]).eval()
+
+            # invalid dtype
+            with np.testing.assert_raises(ValueError):
+                random_uniform([3, 3], maxval=10000, dtype=tf.float32).eval()
 
 
 if __name__ == '__main__':

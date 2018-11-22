@@ -1,12 +1,10 @@
-#include <tuple>
-
 #include "generators.h"
 
 using shape_inference::DimensionHandle;
 using shape_inference::ShapeHandle;
 using shape_inference::InferenceContext;
 
-static Status SecureRandomShapeCommon(InferenceContext* context) {
+static Status RandomUniformShapeCommon(InferenceContext* context) {
   // Set output shape
   ShapeHandle out;
   TF_RETURN_IF_ERROR(context->MakeShapeFromShapeTensor(0, &out));
@@ -14,17 +12,17 @@ static Status SecureRandomShapeCommon(InferenceContext* context) {
   return Status::OK();
 }
 
-static Status SecureRandomShape(InferenceContext* context) {
+static Status SeededRandomUniformShape(InferenceContext* context) {
   // Check seed shape
   ShapeHandle seed;
   TF_RETURN_IF_ERROR(context->WithRank(context->input(1), 1, &seed));
   DimensionHandle unused;
   TF_RETURN_IF_ERROR(context->WithValue(context->Dim(seed, 0), NUMBER_OF_SEEDS, &unused));
 
-  return SecureRandomShapeCommon(context);
+  return RandomUniformShapeCommon(context);
 }
 
-REGISTER_OP("SeededSecureRandom")
+REGISTER_OP("SeededRandomUniform")
     .Input("shape: T")
     .Input("seed: Tseed")
     .Input("minval: dtype")
@@ -33,21 +31,21 @@ REGISTER_OP("SeededSecureRandom")
     .Attr("dtype: {int32, int64} = DT_INT32")
     .Attr("T: {int32, int64} = DT_INT32")
     .Attr("Tseed: {int32} = DT_INT32")
-    .SetShapeFn(SecureRandomShape);
+    .SetShapeFn(SeededRandomUniformShape);
 
-REGISTER_OP("SecureRandom")
+REGISTER_OP("SecureRandomUniform")
     .Input("shape: T")
     .Input("minval: dtype")
     .Input("maxval: dtype")
     .Output("output: dtype")
     .Attr("dtype: {int32, int64} = DT_INT32")
     .Attr("T: {int32, int64} = DT_INT32")
-    .SetShapeFn(SecureRandomShapeCommon);
+    .SetShapeFn(RandomUniformShapeCommon);
 
 template <typename T, typename Gen>
-class SeededSecureRandomOp : public OpKernel {
+class SeededRandomUniformOp : public OpKernel {
 public:
-  explicit SeededSecureRandomOp(OpKernelConstruction* context) : OpKernel(context) {}
+  explicit SeededRandomUniformOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
     const Tensor& shape_tensor = context->input(0);
@@ -97,9 +95,9 @@ public:
 };
 
 template <typename T, typename Gen>
-class SecureRandomOp : public OpKernel {
+class RandomUniformOp : public OpKernel {
 public:
-  explicit SecureRandomOp(OpKernelConstruction* context) : OpKernel(context) {}
+  explicit RandomUniformOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
     const Tensor& shape_tensor = context->input(0);
@@ -134,23 +132,23 @@ public:
 };
 
 REGISTER_KERNEL_BUILDER(
-  Name("SeededSecureRandom")
+  Name("SeededRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int32>("dtype"),
-  SeededSecureRandomOp<int32, SeededGenerator<int32, int64>>);
+  SeededRandomUniformOp<int32, SeededGenerator<int32, int64>>);
 REGISTER_KERNEL_BUILDER(
-  Name("SeededSecureRandom")
+  Name("SeededRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int64>("dtype"),
-  SeededSecureRandomOp<int64, SeededGenerator<int64, __int128_t>>);
+  SeededRandomUniformOp<int64, SeededGenerator<int64, __int128_t>>);
 
 REGISTER_KERNEL_BUILDER(
-  Name("SecureRandom")
+  Name("SecureRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int32>("dtype"),
-  SecureRandomOp<int32, Generator<int32, int64>>);
+  RandomUniformOp<int32, Generator<int32, int64>>);
 REGISTER_KERNEL_BUILDER(
-  Name("SecureRandom")
+  Name("SecureRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int64>("dtype"),
-  SecureRandomOp<int64, Generator<int64, __int128_t>>);
+  RandomUniformOp<int64, Generator<int64, __int128_t>>);
