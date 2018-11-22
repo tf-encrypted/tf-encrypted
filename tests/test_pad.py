@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 
-from typing import List, Tuple
+from typing import List
 
 
 class TestPad(unittest.TestCase):
@@ -30,7 +30,7 @@ class TestPad(unittest.TestCase):
 
             tf.reset_default_graph()
 
-            pad_out_tf = run_pad([2,3])
+            pad_out_tf = run_pad([2, 3])
 
             np.testing.assert_allclose(out_tfe, pad_out_tf, atol=.01)
 

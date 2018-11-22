@@ -990,88 +990,23 @@ class Pond(Protocol):
             raise TypeError("Don't know how to {}: {}".format(base_name, [type(arg) for arg in args]))
 
     @memoize
-    def zeros_private(
+    def zeros(
         self,
         shape,
+        tensor_type: str = "private",
         apply_scaling: bool = True,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None
-    ) -> 'PondPrivateTensor':
+    ) -> Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor']:
 
-        zeros_array = np.zeros(shape)
+        if tensor_type == "public":
+            out = _zeros_public(self, shape, apply_scaling, name, factory)
+        elif tensor_type == "private":
+            out = _zeros_private(self, shape, apply_scaling, name, factory)
+        elif tensor_type == "masked":
+            out = _zeros_masked(self, shape, apply_scaling, name, factory)
 
-        factory = factory or self.tensor_factory
-
-        with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
-
-            v = self._encode(zeros_array, apply_scaling)
-            v0, v1 = self._share(v)
-
-            with tf.device(self.server_0.device_name):
-                x0 = factory.variable(v0)
-
-            with tf.device(self.server_1.device_name):
-                x1 = factory.variable(v1)
-
-        x = PondPrivateTensor(self, x0, x1, apply_scaling)
-        return x
-
-    @memoize
-    def zeros_public(
-        self,
-        shape,
-        apply_scaling: bool = True,
-        name: Optional[str] = None,
-        factory: Optional[AbstractFactory] = None
-    ) -> 'PondPublicTensor':
-
-        zeros_array = np.zeros(shape)
-
-        factory = factory or self.tensor_factory
-
-        with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
-
-            v = self._encode(zeros_array, apply_scaling)
-            v_on_0, v_on_1 = v, v
-
-            with tf.device(self.server_0.device_name):
-                x0 = factory.variable(v_on_0)
-
-            with tf.device(self.server_1.device_name):
-                x1 = factory.variable(v_on_1)
-
-        x = PondPublicTensor(self, x0, x1, apply_scaling)
-        return x
-
-    @memoize
-    def zeros_masked(
-        self,
-        shape,
-        apply_scaling: bool = True,
-        name: Optional[str] = None,
-        factory: Optional[AbstractFactory] = None
-    ) -> 'PondMaskedTensor':
-
-        zeros_array = np.zeros(shape)
-
-        factory = factory or self.tensor_factory
-
-        with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
-
-            v = self._encode(zeros_array, apply_scaling)
-            v0, v1 = self._share(v)
-
-            with tf.device(self.server_0.device_name):
-                x0 = factory.variable(v0)
-
-            with tf.device(self.server_1.device_name):
-                x1 = factory.variable(v1)
-
-        x = PondPrivateTensor(self, x0, x1, apply_scaling)
-
-        x_masked = _mask_private(self, x)
-
-        return x_masked
+        return out
 
     def pad(self, x, paddings):
 
@@ -1094,11 +1029,11 @@ class Pond(Protocol):
         padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(arrshape))
 
         if isinstance(arr, PondPublicTensor):
-            zeros_array = self.zeros_public(padshape, name=str(zeros_id))
+            zeros_array = self.zeros(padshape, tensor_type='public', name=str(zeros_id))
         elif isinstance(arr, PondPrivateTensor):
-            zeros_array = self.zeros_private(padshape, name=str(zeros_id))
+            zeros_array = self.zeros(padshape, tensor_type='private', name=str(zeros_id))
         elif isinstance(arr, PondMaskedTensor):
-            zeros_array = self.zeros_masked(padshape, name=str(zeros_id))
+            zeros_array = self.zeros(padshape, tensor_type='masked', name=str(zeros_id))
         else:
             raise TypeError("Don't know how to do a zeros tensor {}".format(type(arr)))
 
@@ -1114,11 +1049,11 @@ class Pond(Protocol):
         padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(arrshape))
 
         if isinstance(arr, PondPublicTensor):
-            zeros_array = self.zeros_public(padshape, name=str(zeros_id))
+            zeros_array = self.zeros(padshape, tensor_type='public', name=str(zeros_id))
         elif isinstance(arr, PondPrivateTensor):
-            zeros_array = self.zeros_private(padshape, name=str(zeros_id))
+            zeros_array = self.zeros(padshape, tensor_type='private', name=str(zeros_id))
         elif isinstance(arr, PondMaskedTensor):
-            zeros_array = self.zeros_masked(padshape, name=str(zeros_id))
+            zeros_array = self.zeros(padshape, tensor_type='masked', name=str(zeros_id))
         else:
             raise TypeError("Don't know how to do a zeros tensor {}".format(type(arr)))
 
@@ -3453,3 +3388,89 @@ def _cast_backing_public(prot: Pond, x: PondPublicTensor, backing_dtype) -> Pond
             y_on_1 = x_on_1.cast(backing_dtype)
 
         return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
+
+
+@memoize
+def _zeros_private(
+    prot,
+    shape,
+    apply_scaling: bool = True,
+    name: Optional[str] = None,
+    factory: Optional[AbstractFactory] = None
+) -> 'PondPrivateTensor':
+
+    zeros_array = np.zeros(shape)
+
+    factory = factory or prot.tensor_factory
+
+    with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
+
+        v = prot._encode(zeros_array, apply_scaling)
+        v0, v1 = prot._share(v)
+
+        with tf.device(prot.server_0.device_name):
+            x0 = factory.variable(v0)
+
+        with tf.device(prot.server_1.device_name):
+            x1 = factory.variable(v1)
+
+    x = PondPrivateTensor(prot, x0, x1, apply_scaling)
+    return x
+
+
+@memoize
+def _zeros_public(
+    prot,
+    shape,
+    apply_scaling: bool = True,
+    name: Optional[str] = None,
+    factory: Optional[AbstractFactory] = None
+) -> 'PondPublicTensor':
+
+    zeros_array = np.zeros(shape)
+
+    factory = factory or prot.tensor_factory
+
+    with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
+
+        v = prot._encode(zeros_array, apply_scaling)
+        v_on_0, v_on_1 = v, v
+
+        with tf.device(prot.server_0.device_name):
+            x0 = factory.variable(v_on_0)
+
+        with tf.device(prot.server_1.device_name):
+            x1 = factory.variable(v_on_1)
+
+    x = PondPublicTensor(prot, x0, x1, apply_scaling)
+    return x
+
+
+@memoize
+def _zeros_masked(
+    prot,
+    shape,
+    apply_scaling: bool = True,
+    name: Optional[str] = None,
+    factory: Optional[AbstractFactory] = None
+) -> 'PondMaskedTensor':
+
+    zeros_array = np.zeros(shape)
+
+    factory = factory or prot.tensor_factory
+
+    with tf.name_scope('masked-zeros{}'.format('-' + name if name else '')):
+
+        v = prot._encode(zeros_array, apply_scaling)
+        v0, v1 = prot._share(v)
+
+        with tf.device(prot.server_0.device_name):
+            x0 = factory.variable(v0)
+
+        with tf.device(prot.server_1.device_name):
+            x1 = factory.variable(v1)
+
+    x = PondPrivateTensor(prot, x0, x1, apply_scaling)
+
+    x_masked = _mask_private(prot, x)
+    return x_masked
