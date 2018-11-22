@@ -4,6 +4,8 @@ import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 
+from tf_encrypted.protocol.pond import PondPrivateTensor
+
 
 class TestZeros(unittest.TestCase):
     def setUp(self):
@@ -17,7 +19,7 @@ class TestZeros(unittest.TestCase):
 
             tf.reset_default_graph()
 
-            out = prot.zeros_private(input_shape)
+            out = prot.zeros(input_shape, tensor_type=PondPrivateTensor)
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
