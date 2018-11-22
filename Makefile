@@ -284,7 +284,7 @@ push: pypi-version-check
 # ###############################################
 
 $(LIBSODIUM_OUT):
-	wget -nc https://github.com/jedisct1/libsodium/archive/$(LIBSODIUM_VER_TAG).tar.gz
+	curl -OL https://github.com/jedisct1/libsodium/archive/$(LIBSODIUM_VER_TAG).tar.gz
 	mkdir -p build
 	tar -xvf $(LIBSODIUM_VER_TAG).tar.gz -C build
 	cd $(LIBSODIUM_DIR) && ./autogen.sh && ./configure --disable-shared --enable-static \

@@ -11,6 +11,22 @@ variables:
         python3 -m venv venv
         . venv/bin/activate
         make bootstrap
+  bootstrap-mac: &bootstrap-mac
+    run:
+      name: bootstrap setup
+      command: |
+        if [ ! -f Miniconda3-latest-MacOSX-x86_64.sh ]; then
+          curl -O https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+        fi
+
+        bash Miniconda3-latest-MacOSX-x86_64.sh -b -f
+        ../miniconda3/bin/conda create -n py35 python=3.5 2> /dev/null || true
+        ../miniconda3/envs/py35/bin/python -m venv venv
+        . venv/bin/activate
+
+        HOMEBREW_NO_AUTO_UPDATE=1 brew install libtool automake
+
+        make bootstrap
   docker-login: &docker-login
     run:
       name: Login to Docker
@@ -64,6 +80,22 @@ jobs:
           name: build docker container
           command: make docker
 
+  build-macos:
+    macos:
+        xcode: "10.0.0"
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - *restore-cache-mac
+      - *bootstrap-mac
+      - *save-cache-mac
+      - run:
+          name: run tests and build the docs
+          command: |
+            . venv/bin/activate
+            make test
+            make docs
+
   deploy:
     docker:
       - image: circleci/python:3.5
@@ -83,18 +115,7 @@ jobs:
     steps:
       - checkout
       - *restore-cache-mac
-      - run:
-          name: bootstrap setup
-          command: |
-            if [ ! -f Miniconda3-latest-MacOSX-x86_64.sh ]; then
-              curl -O https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
-            fi
-
-            bash Miniconda3-latest-MacOSX-x86_64.sh -b -f
-            ../miniconda3/bin/conda create -n py35 python=3.5 2> /dev/null || true
-            ../miniconda3/envs/py35/bin/python -m venv venv
-            . venv/bin/activate
-            make bootstrap
+      - *bootstrap-mac
       - run:
           name: release
           command: |
@@ -107,6 +128,13 @@ workflows:
   build-and-deploy:
     jobs:
       - build:
+          filters:
+            tags:
+              # In order for the 'deploy' job to run, we must first kick off
+              # the build job on all tags. By default, Circle CI only kicks off
+              # builds on tags if a filter is defined.
+              only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc[0-9]+)?)$/
+      - build-macos:
           filters:
             tags:
               # In order for the 'deploy' job to run, we must first kick off
