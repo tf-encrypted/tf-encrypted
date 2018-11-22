@@ -14,6 +14,8 @@ from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 
+from test_pad import run_pad
+
 
 global_filename = ''
 
@@ -855,17 +857,6 @@ def export_expand_dims(filename: str, input_shape: List[int]):
     x = tf.expand_dims(a, axis=0)
 
     return export(x, filename)
-
-
-def run_pad(input_shape: List[int]):
-    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-
-    x = tf.pad(a, paddings=tf.constant([[2, 2], [3, 4]]), mode="CONSTANT")
-
-    with tf.Session() as sess:
-        output = sess.run(x, feed_dict={a: np.array([[1, 2, 3], [4, 5, 6]])})
-
-    return output
 
 
 def export_pad(filename: str, input_shape: List[int]):

@@ -4,12 +4,14 @@ import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 
+from typing import List, Tuple
+
 
 class TestPad(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
 
-    def test_zeros(self):
+    def test_pad(self):
 
         with tfe.protocol.Pond() as prot:
 
@@ -18,7 +20,7 @@ class TestPad(unittest.TestCase):
             input = np.array([[1, 2, 3], [4, 5, 6]])
             input_input = prot.define_private_variable(input)
 
-            paddings = [[1, 1], [3, 4]]
+            paddings = [[2, 2], [3, 4]]
 
             out = prot.pad(input_input, paddings)
 
@@ -28,15 +30,20 @@ class TestPad(unittest.TestCase):
 
             tf.reset_default_graph()
 
-            t = tf.constant([[1, 2, 3], [4, 5, 6]], dtype='float32')
-            paddings = tf.constant([[1, 1], [3, 4]])
-            pad_out_tf = tf.pad(t, paddings, constant_values=0)
+            pad_out_tf = run_pad([2,3])
 
-            with tf.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                out_tensorflow = sess.run(pad_out_tf)
+            np.testing.assert_allclose(out_tfe, pad_out_tf, atol=.01)
 
-            np.testing.assert_allclose(out_tfe, out_tensorflow, atol=.01)
+
+def run_pad(input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    x = tf.pad(a, paddings=tf.constant([[2, 2], [3, 4]]), mode="CONSTANT")
+
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: np.array([[1, 2, 3], [4, 5, 6]])})
+
+    return output
 
 
 if __name__ == '__main__':
