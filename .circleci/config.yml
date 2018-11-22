@@ -24,7 +24,7 @@ variables:
         ../miniconda3/envs/py35/bin/python -m venv venv
         . venv/bin/activate
 
-        brew install libtool automake
+        HOMEBREW_NO_AUTO_UPDATE=1 brew install libtool automake
 
         make bootstrap
   docker-login: &docker-login
