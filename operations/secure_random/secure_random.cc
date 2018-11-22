@@ -42,6 +42,9 @@ REGISTER_OP("SecureRandomUniform")
     .Attr("T: {int32, int64} = DT_INT32")
     .SetShapeFn(RandomUniformShapeCommon);
 
+REGISTER_OP("Seed")
+    .Output("output: int32");
+
 template <typename T, typename Gen>
 class SeededRandomUniformOp : public OpKernel {
 public:
@@ -131,6 +134,22 @@ public:
   }
 };
 
+class SeedOp : public OpKernel {
+public:
+  explicit SeedOp(OpKernelConstruction* context) : OpKernel(context) {}
+
+  void Compute(OpKernelContext* context) override {
+    TensorShape shape({NUMBER_OF_SEEDS});
+
+    // Allocate output
+    Tensor* output;
+    OP_REQUIRES_OK(context, context->allocate_output(0, shape, &output));
+    OP_REQUIRES(context, sodium_init() >= 0, errors::Internal("libsodium failed to initialize, try again"));
+
+    randombytes_buf(output->flat<int32>().data(), randombytes_SEEDBYTES);
+  }
+};
+
 REGISTER_KERNEL_BUILDER(
   Name("SeededRandomUniform")
   .Device(DEVICE_CPU)
@@ -152,3 +171,8 @@ REGISTER_KERNEL_BUILDER(
   .Device(DEVICE_CPU)
   .TypeConstraint<int64>("dtype"),
   RandomUniformOp<int64, Generator<int64, __uint128_t>>);
+
+REGISTER_KERNEL_BUILDER(
+  Name("Seed")
+  .Device(DEVICE_CPU),
+  SeedOp);

@@ -2,7 +2,7 @@ import unittest
 
 import tensorflow as tf
 import numpy as np
-from tf_encrypted.operations.secure_random import seeded_random_uniform, random_uniform
+from tf_encrypted.operations.secure_random import seeded_random_uniform, random_uniform, seed as seed_gen
 
 seed = [87654321, 87654321, 87654321, 87654321, 87654321, 87654321, 87654321, 87654321]
 
@@ -72,6 +72,22 @@ class TestRandomUniform(unittest.TestCase):
             # invalid dtype
             with np.testing.assert_raises(ValueError):
                 random_uniform([3, 3], maxval=10000, dtype=tf.float32).eval()
+
+
+class TestSeed(unittest.TestCase):
+    with tf.Session():
+        s = seed_gen()
+
+        minval = -2000
+        maxval = 0
+
+        shape = [2, 3]
+
+        output = seeded_random_uniform(shape, seed=s, minval=minval, maxval=maxval).eval()
+
+        print(output)
+
+        np.testing.assert_array_equal(output.shape, shape)
 
 
 if __name__ == '__main__':

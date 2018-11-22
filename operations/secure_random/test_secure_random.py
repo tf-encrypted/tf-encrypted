@@ -11,6 +11,7 @@ shared_object = dirname + '/operations/secure_random/secure_random_module.so'
 secure_random_module = tf.load_op_library(shared_object)
 seeded_random_uniform = secure_random_module.seeded_random_uniform
 random_uniform = secure_random_module.secure_random_uniform
+seed = secure_random_module.seed
 
 
 class TestSeededSecureRandom(unittest.TestCase):
@@ -93,6 +94,21 @@ class TestSecureRandom(unittest.TestCase):
 
             for out in output:
                 assert(out < 0)
+
+
+class TestSeed(unittest.TestCase):
+    def test_seed(self):
+        with tf.Session():
+            s = seed()
+
+            minval = tf.constant(-2000, dtype=tf.int64)
+            maxval = tf.constant(0, dtype=tf.int64)
+
+            shape = [2, 3]
+
+            output = seeded_random_uniform(shape, s, minval, maxval).eval()
+
+            np.testing.assert_array_equal(output.shape, shape)
 
 
 if __name__ == '__main__':

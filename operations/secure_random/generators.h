@@ -65,8 +65,6 @@ public:
     randombytes_buf(buf_, bytes_count_);
 
     Uniform(minval, maxval - 1);
-
-    std::copy(buf_, buf_ + flat.size(), flat.data());
   }
 
 protected:
@@ -154,8 +152,6 @@ public:
     randombytes_buf_deterministic(this->buf_, this->bytes_count_, seeds);
 
     this->Uniform(minval, maxval - 1);
-
-    std::copy(this->buf_, this->buf_ + flat.size(), flat.data());
   }
 
 private:

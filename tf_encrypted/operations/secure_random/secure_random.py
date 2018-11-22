@@ -72,3 +72,7 @@ def random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, name=None):
     maxval = ops.convert_to_tensor(maxval, dtype=dtype, name="max")
 
     return secure_random_module.secure_random_uniform(shape, minval, maxval, name=name)
+
+
+def seed():
+    return secure_random_module.seed()
