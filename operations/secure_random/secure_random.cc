@@ -80,20 +80,12 @@ public:
     OP_REQUIRES(context, shape.num_elements() > 0, errors::InvalidArgument("Shape contains zero elements"));
     OP_REQUIRES(context, sodium_init() >= 0, errors::Internal("libsodium failed to initialize, try again"));
 
-    int32 *seeds = static_cast<int *>(malloc(sizeof(int32) * NUMBER_OF_SEEDS));
     auto seed_vals = seed_tensor.flat<int32>().data();
-
-    for(auto i = 0; i < NUMBER_OF_SEEDS; i++) {
-      seeds[i] = seed_vals[i];
-    }
-
-    const unsigned char * seed_bytes = reinterpret_cast<const unsigned char*>(seeds);
+    const unsigned char * seed_bytes = reinterpret_cast<const unsigned char*>(seed_vals);
 
     Gen gen(output, seed_bytes);
 
     gen.GenerateData(lo, hi);
-
-    free(seeds);
   }
 };
 

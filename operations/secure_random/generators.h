@@ -134,16 +134,10 @@ public:
 
   SeededGenerator(Tensor* output, const unsigned char * seeds) : Generator<T, Wide>(output), seeds(seeds) {
     elements_per_block_ = CHACHABLOCKSIZE / sizeof(T);
-    extra_block_ = static_cast<T *>(malloc(CHACHABLOCKSIZE));
-
     block_counter_ = this->bytes_count_ / CHACHABLOCKSIZE + 1;
 
     // prepare the extra block if any values get rejected in the rejection sampling
     randombytes_buf_deterministic_ic(extra_block_, CHACHABLOCKSIZE, block_counter_, seeds);
-  }
-
-  ~ SeededGenerator() {
-    free(extra_block_);
   }
 
   void GenerateData(T minval, T maxval) {
@@ -155,7 +149,7 @@ public:
   }
 
 private:
-  T * extra_block_ = NULL;
+  T extra_block_[CHACHABLOCKSIZE];
   uint32 block_counter_ = 0;
   uint32 elements_per_block_ = 0;
   uint32 inner_block_index_ = 0;
