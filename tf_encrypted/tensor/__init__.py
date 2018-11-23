@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+from .odd_implicit import oddInt64factory
+
 from .int100 import (
     int100factory,
     Int100Constant,
@@ -60,4 +62,5 @@ __all__ = [
     'Int64Placeholder',
     'Int64Variable',
     'Int64Constant',
+    'oddInt64factory',
 ]
