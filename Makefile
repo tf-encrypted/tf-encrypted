@@ -19,6 +19,23 @@ PIP_PATH=$(shell which pip)
 DOCKER_PATH=$(shell which docker)
 CURRENT_TF_VERSION=$(shell python -c 'import tensorflow as tf; print(tf.__version__)' 2>/dev/null)
 
+
+# ###############################################
+# libsodium and secure random custom op defines
+# ###############################################
+LIBSODIUM_VER_TAG=1.0.16
+LIBSODIUM_DIR=build/libsodium-$(LIBSODIUM_VER_TAG)
+
+TF_CFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))' 2>/dev/null)
+TF_LFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))' 2>/dev/null)
+PACKAGE_DIR=tf_encrypted/operations
+
+SODIUM_INSTALL = $(shell pwd)/build
+
+SECURE_OUT = $(PACKAGE_DIR)/secure_random/secure_random_module.so
+SECURE_IN = operations/secure_random/secure_random.cc
+LIBSODIUM_OUT = $(SODIUM_INSTALL)/lib/libsodium.a
+
 # Default platform
 # PYPI doesn't allow linux build tags to be pushed and doesn't support
 # specific operating systems such a ubuntu. It only allows build tags for linux
@@ -55,7 +72,7 @@ ifeq (,$(BYPASS_TENSORFLOW_CHECK))
 endif
 endif
 
-bootstrap: pythoncheck pipcheck
+bootstrap: pythoncheck pipcheck build
 	pip install -r requirements.txt
 	pip install -e .
 
@@ -76,7 +93,7 @@ test: lint pythoncheck
 	python -m unittest discover
 
 lint: pythoncheck
-	flake8
+	flake8 --exclude=venv,build
 
 typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
@@ -259,3 +276,36 @@ push: pypi-version-check
 	@echo "Done building and pushing artifacts for $(VERSION)"
 
 .PHONY: push
+
+# ###############################################
+# Secure Random Shared Object
+#
+# Rules for building libsodium and the shared object for secure random.
+# ###############################################
+
+$(LIBSODIUM_OUT):
+	curl -OL https://github.com/jedisct1/libsodium/archive/$(LIBSODIUM_VER_TAG).tar.gz
+	mkdir -p build
+	tar -xvf $(LIBSODIUM_VER_TAG).tar.gz -C build
+	cd $(LIBSODIUM_DIR) && ./autogen.sh && ./configure --disable-shared --enable-static \
+		--disable-debug --disable-dependency-tracking --with-pic --prefix=$(SODIUM_INSTALL)
+	$(MAKE) -C $(LIBSODIUM_DIR)
+	$(MAKE) -C $(LIBSODIUM_DIR) install
+
+
+$(SECURE_OUT): $(LIBSODIUM_OUT) $(SECURE_IN)
+	mkdir -p $(PACKAGE_DIR)/secure_random
+	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT) \
+		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium
+
+build: $(SECURE_OUT)
+
+.PHONY: build
+
+clean:
+	$(MAKE) -C $(LIBSODIUM_DIR) uninstall
+	rm -fR build
+	rm -f $(SECURE_OUT)
+	rm -f $(LIBSODIUM_VER_TAG).tar.gz
+
+.PHONY: clean

@@ -14,5 +14,5 @@ tmp/
 **/*.pb
 data/
 *.egg-info
-*.gz
 *.so
+*.gz

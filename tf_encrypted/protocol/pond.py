@@ -37,13 +37,15 @@ _thismodule = sys.modules[__name__]
 
 class Pond(Protocol):
     """
+    Pond(server_0, server_1, crypto_producer, tensor_factory, fixedpoint_config)
+
     Pond is similar to SPDZ except it has been vectorized plus a few more optimizations.
 
     Pond works with 2 parties for computation and one crypto producer for triples.
 
     :param Player server_0: The "alice" of MPC.
     :param Player server_1: The "bob" of MPC.
-    :param Player crypto_producer: The host to act as the crypto producer.  In pond this party is
+    :param Player crypto_producer: The host to act as the crypto producer.  In `Pond` this party is
         responsible for producing triples to aid in computation.
     :param AbstractFactory tensor_factory: Which backing type of tensor you would like to use, e.g. `int100` or `int64`
     """  # noqa:E501
@@ -93,6 +95,8 @@ class Pond(Protocol):
         factory: Optional[AbstractFactory] = None,
     ) -> "PondConstant":
         """
+        define_constant(value, apply_scaling, name, factory) -> PondConstant
+
         Define a constant to use in computation.
 
         .. code-block:: python
@@ -105,8 +109,6 @@ class Pond(Protocol):
         :param bool apply_scaling: Whether or not to scale the value.
         :param str name: What name to give to this node in the graph.
         :param AbstractFactory factory: Which tensor type to represent this value with.
-
-        :rtype: PondConstant
         """
         assert isinstance(value, (np.ndarray,)), type(value)
 
@@ -130,9 +132,10 @@ class Pond(Protocol):
         apply_scaling: bool = True,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
-    ) -> "PondPublicTensor":
-
+    ) -> "PondPublicPlaceholder":
         """
+        define_public_placeholder(shape, apply_scaling, name, factory) -> PondPublicPlaceholder
+
         Define a `public` placeholder to use in computation.  This will be known to both parties.
 
         .. code-block:: python
@@ -145,8 +148,6 @@ class Pond(Protocol):
         :param bool apply_scaling: Whether or not to scale the value.
         :param str name: What name to give to this node in the graph.
         :param AbstractFactory factory: Which tensor type to represent this value with.
-
-        :rtype: PondPublicTensor
         """
 
         factory = factory or self.tensor_factory
@@ -167,9 +168,10 @@ class Pond(Protocol):
         apply_scaling: bool = True,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
-    ) -> "PondPrivateTensor":
-
+    ) -> "PondPrivatePlaceholder":
         """
+        define_private_placeholder(shape, apply_scaling, name, factory) -> PondPrivatePlaceholder
+
         Define a `private` placeholder to use in computation.  This will only be known by the party
         that defines it.
 
@@ -183,8 +185,6 @@ class Pond(Protocol):
         :param bool apply_scaling: Whether or not to scale the value.
         :param str name: What name to give to this node in the graph.
         :param AbstractFactory factory: Which tensor type to represent this value with.
-
-        :rtype: PondPrivateTensor
         """
 
         factory = factory or self.tensor_factory
@@ -213,6 +213,8 @@ class Pond(Protocol):
         factory: Optional[AbstractFactory] = None,
     ) -> "PondPublicVariable":
         """
+        define_public_variable(initial_value, apply_scaling, name, factory) -> PondPublicVariable
+
         Define a public variable.
 
         This is like defining a variable in tensorflow except it creates one that can be used by
@@ -224,14 +226,12 @@ class Pond(Protocol):
         For those curious, under the hood, the major difference is that this function will pin your
         data to a specific device which will be used to optimize the graph later on.
 
-        :see tf.Variable
+        :see: tf.Variable
 
         :param Union[np.ndarray,tf.Tensor,PondPublicTensor] initial_value: The initial value.
         :param bool apply_scaling: Whether or not to scale the value.
         :param str name: What name to give to this node in the graph.
         :param AbstractFactory factory: Which tensor type to represent this value with.
-
-        :rtype: PondPublicVariable
         """
         assert isinstance(
             initial_value, (np.ndarray, tf.Tensor, PondPublicTensor)
@@ -275,6 +275,8 @@ class Pond(Protocol):
         factory: Optional[AbstractFactory] = None,
     ) -> "PondPrivateVariable":
         """
+        define_private_variable(initial_value, apply_scaling, name, factory) -> PondPrivateVariable
+
         Define a private variable.
 
         This will take the passed value and construct shares that will be split up between
@@ -289,8 +291,6 @@ class Pond(Protocol):
         :param bool apply_scaling: Whether or not to scale the value.
         :param str name: What name to give to this node in the graph.
         :param AbstractFactory factory: Which tensor type to represent this value with.
-
-        :rtype: PondPrivateVariable
         """
         assert isinstance(
             initial_value, (np.ndarray, tf.Tensor, PondPublicTensor, PondPrivateTensor)
@@ -341,6 +341,8 @@ class Pond(Protocol):
     ) -> Union["PondPublicTensor", List["PondPublicTensor"]]:
 
         """
+        define_public_input(player, inputter_fn, apply_scaling, name) -> PondPublicTensor(s)
+
         Define a public input.
 
         This represents a `public` input owned by the specified player into the graph.
@@ -348,8 +350,6 @@ class Pond(Protocol):
         :param Union[str,Player] player: Which player owns this input.
         :param bool apply_scaling: Whether or not to scale the value.
         :param str name: What name to give to this node in the graph.
-
-        :rtype: PondPublicTensor
         """
 
         if isinstance(player, str):
@@ -402,6 +402,8 @@ class Pond(Protocol):
     ]:
 
         """
+        define_private_input(player, inputter_fn, apply_scaling, name, masked, factory) -> PondPrivateTensor(s)
+
         Define a private input.
 
         This represents a `private` input owned by the specified player into the graph.
@@ -411,8 +413,6 @@ class Pond(Protocol):
         :param str name: What name to give to this node in the graph.
         :param bool masked: Whether or not to mask the input.
         :param AbstractFactory factory: Which backing type to use for this input (e.g. `int100` or `int64`).
-
-        :rtype: PondPublicTensor
         """  # noqa:E501
 
         factory = factory or self.tensor_factory
@@ -473,6 +473,8 @@ class Pond(Protocol):
     ) -> tf.Operation:
 
         """
+        define_output(player, xs, outputter_fn, name) -> tensorflow.Operation
+
         Define an output for this graph.
 
         :param Union[str,Player] player: Which player/device this output will be sent to.
@@ -602,6 +604,14 @@ class Pond(Protocol):
 
     @memoize
     def add(self, x, y):
+        """
+        add(x, y) -> PondTensor
+
+        Adds two tensors `x` and `y`.
+
+        :param PondTensor x: The first operand.
+        :param PondTensor y: The second operand.
+        """
         x, y = self.lift(x, y)
         return self.dispatch("add", x, y)
 
@@ -609,9 +619,15 @@ class Pond(Protocol):
         self, x, y=None, apply_scaling: Optional[bool] = None
     ) -> Union["PondTensor", Tuple["PondTensor", "PondTensor"]]:
         """
+        lift(x, y=None, apply_scaling=None) -> PondTensor(s)
+
         Convenience method for working with mixed typed tensors in programs:
         combining any of the Pond objects together with e.g. ints and floats
         will automatically lift the latter into Pond objects.
+
+        :param int,float,PondTensor x: Python object to lift.
+        :param int,float,PondTensor y: Second Python object to lift, optional.
+        :param bool apply_scaling: Whether to apply scaling to the input object(s).
         """
 
         if y is None:
@@ -727,7 +743,15 @@ class Pond(Protocol):
     def indexer(self, x: "PondTensor", slice: Union[Slice, Ellipse]) -> "PondTensor":
         return self.dispatch("indexer", x, slice)
 
-    def transpose(self, x: "PondTensor", perm=None) -> "PondTensor":
+    def transpose(self, x, perm=None) -> "PondTensor":
+        """
+        transpose(x, perm=None) -> PondTensor
+
+        Transposes the input `x`, or permutes the axes of `x` if `perm` is given.
+
+        :param PondTensor x: The tensor to transpose or permute.
+        :param List perm: A permutation of axis indices.
+        """
 
         node_key = ("transpose", x)
         x_t = nodes.get(node_key, None)
@@ -752,6 +776,14 @@ class Pond(Protocol):
 
     @memoize
     def reshape(self, x: "PondTensor", shape: List[int]):
+        """
+        reshape(x, shape) -> PondTensor
+
+        Reshape `x` into a tensor with a new `shape`.
+
+        :param PondTensor x: Input tensor.
+        :param (int,...) shape: Shape of output tensor.
+        """
 
         if isinstance(x, PondPublicTensor):
             return _reshape_public(self, x, shape)
@@ -794,6 +826,8 @@ class Pond(Protocol):
 
     def strided_slice(self, x: "PondTensor", *args: Any, **kwargs: Any):
         """
+        strided_slice(x, *args, **kwargs) -> PondTensor
+
         See https://www.tensorflow.org/api_docs/python/tf/strided_slice for further documentation.
         """
 

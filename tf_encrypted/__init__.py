@@ -10,17 +10,18 @@ from .player import player
 from . import protocol
 from . import layers
 from . import convert
+from . import operations
 
 all_prot_funcs = protocol.get_all_funcs()
 
 
-def prot_func_not_implemented(*args: Any, **kwargs: Any) -> None:
+def _prot_func_not_implemented(*args: Any, **kwargs: Any) -> None:
     raise Exception(
         "This function is not implemented in protocol {}".format(inspect.stack()[1][3])
     )
 
 
-def get_protocol_public_func(prot: protocol.Protocol) -> list:
+def _get_protocol_public_func(prot: protocol.Protocol) -> list:
     methods = inspect.getmembers(prot, predicate=inspect.ismethod)
     public_prot_methods = [method for method in methods if method[0][0] is not "_"]
 
@@ -41,14 +42,14 @@ def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
     protocol.set_protocol(prot)
 
     if prot is not None:
-        funcs = get_protocol_public_func(prot)
+        funcs = _get_protocol_public_func(prot)
 
         for func in funcs:
             globals()[func[0]] = func[1]
 
     for func in all_prot_funcs:
         if func[0] not in globals():
-            globals()[func[0]] = prot_func_not_implemented
+            globals()[func[0]] = _prot_func_not_implemented
 
 
 def set_config(config: Config) -> None:
@@ -84,6 +85,7 @@ __all__ = [
     "protocol",
     "layers",
     "convert",
+    "operations",
     "global_caches_updater",
     "global_variables_initializer",
 ]

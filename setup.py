@@ -7,6 +7,7 @@ setuptools.setup(
     name="tf-encrypted",
     version="0.3.0",
     packages=setuptools.find_packages(),
+    package_data={'tf_encrypted': ['operations/secure_random/secure_random.so']},
     python_requires=">=3.5",
     install_requires=[
         "tensorflow>=1.9.0",
