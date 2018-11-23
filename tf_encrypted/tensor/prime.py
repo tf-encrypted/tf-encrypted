@@ -20,10 +20,10 @@ class PrimeTensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
 
-    def to_bits(self, factory: Optional[AbstractFactory] = None) -> 'PrimeTensor':
-        factory = factory or self.factory
+    def bits(self, dtype: Optional[AbstractFactory] = None):
+        dtype = dtype or self.factory
         bitsize = math.ceil(math.log2(self.modulus))
-        return factory.tensor(binarize(self.value % self.modulus, bitsize))
+        return dtype.tensor(binarize(self.value % self.modulus, bitsize))
 
     def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
         return self.factory.tensor(self.value[slice])
@@ -106,12 +106,13 @@ class PrimeTensor(AbstractTensor):
             tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse) % self.modulus
         )
 
-    def equal_zero(self, out_dtype: Optional[AbstractFactory] = None) -> 'PrimeTensor':
-        out_dtype = out_dtype or self.factory
-        return out_dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=out_dtype.native_type))
+    def equal_zero(self, dtype: Optional[AbstractFactory] = None) -> 'PrimeTensor':
+        dtype = dtype or self.factory
+        return dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=dtype.native_type))
 
-    def cast(self, factory):
-        return factory.tensor(self.value)
+    def cast(self, dtype):
+        assert dtype.native_type == self.factory.native_type
+        return dtype.tensor(self.value)
 
 
 def _lift(x, y) -> Tuple[PrimeTensor, PrimeTensor]:
@@ -189,19 +190,21 @@ class PrimeFactory(AbstractFactory):
     def modulus(self):
         return self._modulus
 
-    def sample_uniform(self,
-                       shape: Union[Tuple[int, ...], tf.TensorShape],
-                       minval: Optional[int] = 0) -> PrimeTensor:
+    def sample_uniform(self, shape, minval: Optional[int] = 0) -> PrimeTensor:
         value = tf.random_uniform(shape=shape,
                                   dtype=self.native_type,
                                   minval=minval,
                                   maxval=self.modulus)
         return PrimeTensor(value, self)
 
-    def sample_bounded(self, shape: List[int], bitlength: int) -> PrimeTensor:
+    def sample_bounded(self, shape, bitlength) -> PrimeTensor:
         maxval = 2 ** bitlength
         assert self.modulus > maxval
         value = tf.random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=maxval)
+        return PrimeTensor(value, self)
+
+    def sample_bits(self, shape) -> PrimeTensor:
+        value = tf.random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=2)
         return PrimeTensor(value, self)
 
     def stack(self, xs: List[PrimeTensor], axis: int = 0) -> PrimeTensor:
@@ -232,8 +235,8 @@ class PrimeFactory(AbstractFactory):
             return PrimeConstant(value, self)
 
         if isinstance(value, PrimeTensor):
-            err = "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
-            assert value.modulus == self.modulus, err
+            assert value.modulus == self.modulus, \
+                "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
             return PrimeConstant(value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
