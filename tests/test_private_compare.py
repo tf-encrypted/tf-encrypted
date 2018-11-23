@@ -9,9 +9,27 @@ from tf_encrypted.protocol.securenn import _private_compare
 
 class TestPrivateCompare(unittest.TestCase):
 
-    def test_private(self):
+    def setUp(self):
+        tf.reset_default_graph()
 
-        prot = tfe.protocol.SecureNN()
+    def test_int64(self):
+        self._core_test(
+            tfe.tensor.int64factory,
+            tfe.tensor.oddInt64factory
+        )
+
+    def test_int100(self):
+        self._core_test(
+            tfe.tensor.int100factory,
+            tfe.tensor.int100factory
+        )
+
+    def _core_test(self, tensor_factory, odd_factory):
+
+        prot = tfe.protocol.SecureNN(
+            tensor_factory=tensor_factory,
+            odd_factory=odd_factory,
+        )
 
         bit_dtype = prot.prime_factory
         val_dtype = prot.tensor_factory
@@ -55,7 +73,7 @@ class TestPrivateCompare(unittest.TestCase):
             prot,
             x_bits=PondPrivateTensor(
                 prot,
-                *prot._share(val_dtype.tensor(tf.convert_to_tensor(x, dtype=val_dtype.native_type)).to_bits(bit_dtype)),
+                *prot._share(val_dtype.tensor(tf.convert_to_tensor(x, dtype=val_dtype.native_type)).bits(bit_dtype)),
                 False),
             r=PondPublicTensor(
                 prot,
