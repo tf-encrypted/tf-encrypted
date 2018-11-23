@@ -9,6 +9,7 @@ RUN mkdir -p /usr/src/tf-encrypted \
 WORKDIR /usr/src/tf-encrypted
 
 COPY . .
+RUN make clean
 RUN make bootstrap
 
 EXPOSE 4440
