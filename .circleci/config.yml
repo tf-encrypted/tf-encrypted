@@ -34,7 +34,9 @@ variables:
   build-release: &build-release
     run:
       name: Build and push release artifacts (e.g. docker containers)
-      command: RELEASE_CONFIRM=yes make push
+      command: |
+        . venv/bin/activate
+        RELEASE_CONFIRM=yes make push
   restore-cache: &restore-cache
     restore_cache:
       keys:
