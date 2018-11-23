@@ -997,14 +997,14 @@ class Pond(Protocol):
         apply_scaling: bool = True,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None
-    ) -> Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor']:
+    ) -> Union['PondPublicTensor', 'PondPrivateTensor']:
 
         if issubclass(tensor_type, PondPublicTensor):
             out = _zeros_public(self, shape, apply_scaling, name, factory)
         elif issubclass(tensor_type, PondPrivateTensor):
             out = _zeros_private(self, shape, apply_scaling, name, factory)
-        elif issubclass(tensor_type, PondMaskedTensor):
-            out = _zeros_masked(self, shape, apply_scaling, name, factory)
+        else:
+            raise TypeError("Don't know how to zeros {}".format(tensor_type))
 
         return out
 
@@ -3442,33 +3442,3 @@ def _zeros_public(
 
     x = PondPublicTensor(prot, x0, x1, apply_scaling)
     return x
-
-
-@memoize
-def _zeros_masked(
-    prot,
-    shape,
-    apply_scaling: bool = True,
-    name: Optional[str] = None,
-    factory: Optional[AbstractFactory] = None
-) -> 'PondMaskedTensor':
-
-    zeros_array = np.zeros(shape)
-
-    factory = factory or prot.tensor_factory
-
-    with tf.name_scope('masked-zeros{}'.format('-' + name if name else '')):
-
-        v = prot._encode(zeros_array, apply_scaling)
-        v0, v1 = prot._share(v)
-
-        with tf.device(prot.server_0.device_name):
-            x0 = factory.variable(v0)
-
-        with tf.device(prot.server_1.device_name):
-            x1 = factory.variable(v1)
-
-    x = PondPrivateTensor(prot, x0, x1, apply_scaling)
-
-    x_masked = _mask_private(prot, x)
-    return x_masked
