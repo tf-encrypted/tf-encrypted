@@ -3463,9 +3463,7 @@ def _equal_public_public(
 #
 
 
-def _cast_backing_public(
-    prot: Pond, x: PondPublicTensor, backing_dtype
-) -> PondPublicTensor:
+def _cast_backing_public(prot: Pond, x: PondPublicTensor, backing_dtype) -> PondPublicTensor:
 
     x_on_0, x_on_1 = x.unwrapped
 
@@ -3478,3 +3476,22 @@ def _cast_backing_public(
             y_on_1 = x_on_1.cast(backing_dtype)
 
         return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
+
+
+def _cast_backing_private(prot: Pond, x: PondPrivateTensor, backing_dtype) -> PondPrivateTensor:
+    # TODO[Morten]
+    # this method is risky as it differs from what the user might expect, which would normally
+    # require more advanced convertion protocols accounting for wrap-around etc;
+    # for this reason we should consider hiding it during refactoring
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope("cast_backing"):
+
+        with tf.device(prot.server_0.device_name):
+            y0 = x0.cast(backing_dtype)
+
+        with tf.device(prot.server_0.device_name):
+            y1 = x1.cast(backing_dtype)
+
+        return PondPrivateTensor(prot, y0, y1, x.is_scaled)
