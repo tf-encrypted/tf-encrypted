@@ -1,19 +1,20 @@
 from __future__ import absolute_import
+
 from typing import Optional, Tuple
-import sys
 import math
+import sys
 
 import tensorflow as tf
 
-from .protocol import memoize, nodes
-from ..protocol.pond import (
+from .odd_tensor import oddInt64factory
+from ..protocol import memoize, nodes
+from ...protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor, _type
 )
-from ..tensor.prime import PrimeFactory
-from ..tensor.factory import AbstractFactory, AbstractTensor
-from ..tensor import int64factory, oddInt64factory
-from ..player import Player
-from ..config import get_config
+from ...tensor import PrimeFactory, int64factory
+from ...tensor.factory import AbstractFactory, AbstractTensor
+from ...player import Player
+from ...config import get_config
 
 
 _thismodule = sys.modules[__name__]
@@ -23,7 +24,7 @@ class SecureNN(Pond):
     """
     SecureNN(server_0, server_1, server_2, prime_factory, odd_factory, **kwargs)
 
-    Implementation of SecureNN from `Wagh et al <https://eprint.iacr.org/2018/442.pdf/>`_.
+    Implementation of SecureNN from `Wagh et al <https://eprint.iacr.org/2018/442/>`_.
     """
 
     def __init__(self,
@@ -53,14 +54,16 @@ class SecureNN(Pond):
         )
         self.server_2 = server_2
 
-        if prime_factory is None:
-            prime_factory = PrimeFactory(107, native_type=self.tensor_factory.native_type)
-
         if odd_factory is None:
             if self.tensor_factory is int64factory:
                 odd_factory = oddInt64factory
             else:
                 odd_factory = self.tensor_factory
+
+        if prime_factory is None:
+            prime = 107
+            assert prime > math.ceil(math.log2(self.tensor_factory.modulus))
+            prime_factory = PrimeFactory(prime, native_type=self.tensor_factory.native_type)
 
         self.prime_factory = prime_factory
         self.odd_factory = odd_factory

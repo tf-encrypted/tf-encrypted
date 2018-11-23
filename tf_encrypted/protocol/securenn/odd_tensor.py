@@ -1,12 +1,13 @@
 from __future__ import absolute_import
+
 from typing import Union, List, Any, Tuple, Type
 import math
 
 import numpy as np
 import tensorflow as tf
 
-from .factory import AbstractFactory, AbstractTensor, AbstractConstant
-from .shared import binarize
+from ...tensor.factory import AbstractFactory, AbstractTensor, AbstractConstant
+from ...tensor.shared import binarize
 
 
 class OddImplicitFactory:

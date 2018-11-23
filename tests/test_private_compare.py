@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 from tf_encrypted.protocol.pond import PondPrivateTensor, PondPublicTensor
-from tf_encrypted.protocol.securenn import _private_compare
+from tf_encrypted.protocol.securenn.securenn import _private_compare
 
 
 class TestPrivateCompare(unittest.TestCase):
@@ -13,23 +13,14 @@ class TestPrivateCompare(unittest.TestCase):
         tf.reset_default_graph()
 
     def test_int64(self):
-        self._core_test(
-            tfe.tensor.int64factory,
-            tfe.tensor.oddInt64factory
-        )
+        self._core_test(tfe.tensor.int64factory)
 
     def test_int100(self):
-        self._core_test(
-            tfe.tensor.int100factory,
-            tfe.tensor.int100factory
-        )
+        self._core_test(tfe.tensor.int100factory)
 
-    def _core_test(self, tensor_factory, odd_factory):
+    def _core_test(self, tensor_factory):
 
-        prot = tfe.protocol.SecureNN(
-            tensor_factory=tensor_factory,
-            odd_factory=odd_factory,
-        )
+        prot = tfe.protocol.SecureNN(tensor_factory=tensor_factory)
 
         bit_dtype = prot.prime_factory
         val_dtype = prot.tensor_factory
