@@ -8,10 +8,7 @@ setuptools.setup(
     version="0.3.0",
     packages=setuptools.find_packages(),
     package_data={'tf_encrypted': [
-        'operations/secure_random/secure_random_module_tf_1.9.0.so',
-        'operations/secure_random/secure_random_module_tf_1.10.0.so',
-        'operations/secure_random/secure_random_module_tf_1.11.0.so',
-        'operations/secure_random/secure_random_module_tf_1.12.0.so',
+        'operations/secure_random/*.so',
     ]},
     python_requires=">=3.5",
     install_requires=[

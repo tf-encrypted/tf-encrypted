@@ -2,11 +2,17 @@ import tensorflow as tf
 import tf_encrypted as tfe
 from tensorflow.python.framework import ops
 from tensorflow.python.framework import dtypes
+from tensorflow.python.framework.errors import NotFoundError
 import os
 
 dirname = os.path.dirname(tfe.__file__)
 shared_object = dirname + '/operations/secure_random/secure_random_module_tf_' + tf.__version__ + '.so'
-secure_random_module = tf.load_op_library(shared_object)
+
+try:
+    secure_random_module = tf.load_op_library(shared_object)
+except NotFoundError:
+    raise Exception("Could not find the secure random shared object for the installed "
+                    "tensorflow version " + tf.__version__)
 
 
 def secure_random(shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=None):
