@@ -142,6 +142,7 @@ workflows:
               # builds on tags if a filter is defined.
               only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc[0-9]+)?)$/
       - deploy:
+          filters:
             tags:
               only: /^(?:[0-9]+)\.(?:[0-9]+)\.(?:[0-9]+)(?:(\-rc[0-9]+)?)$/
       - deploy-macos:
