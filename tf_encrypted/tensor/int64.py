@@ -110,7 +110,7 @@ class Int64Tensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
 
-    def to_bits(self, factory: Optional[AbstractFactory] = None) -> AbstractTensor:
+    def bits(self, factory: Optional[AbstractFactory] = None) -> AbstractTensor:
         factory = factory or int64factory
         return factory.tensor(binarize(self.value))
 
@@ -203,8 +203,8 @@ class Int64Tensor(AbstractTensor):
     def cumsum(self, axis, exclusive, reverse) -> 'Int64Tensor':
         return Int64Tensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
 
-    def equal_zero(self, factory: AbstractFactory = int64factory) -> 'AbstractTensor':
-        return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
+    def equal_zero(self, dtype: AbstractFactory = int64factory) -> 'AbstractTensor':
+        return dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=dtype.native_type))
 
     def equal(self, other, factory: AbstractFactory = int64factory) -> 'AbstractTensor':
         x, y = _lift(self, other)
@@ -229,6 +229,10 @@ class Int64Tensor(AbstractTensor):
 
     def negative(self) -> 'Int64Tensor':
         return Int64Tensor(tf.negative(self.value))
+
+    def cast(self, factory):
+        assert factory.native_type == self.factory.native_type
+        return factory.tensor(self.value)
 
 
 class Int64Constant(Int64Tensor, AbstractConstant):
