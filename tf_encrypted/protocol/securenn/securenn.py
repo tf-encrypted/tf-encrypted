@@ -432,6 +432,10 @@ class SecureNN(Pond):
             maximum = build_comparison_tree(tensors)
             return self.squeeze(maximum, axis=(axis,))
 
+    @memoize
+    def cast_backing(self, x, backing_dtype):
+        return self.dispatch("cast_backing", x, backing_dtype)
+
 
 def _bits_public(prot, x: PondPublicTensor,
                  factory: Optional[AbstractFactory] = None) -> PondPublicTensor:
@@ -492,14 +496,14 @@ def _lsb_private(prot, x: PondPrivateTensor):
                 beta = PondPublicTensor(prot, beta_raw, beta_raw, is_scaled=False)
 
         with tf.name_scope('lsb_compare'):
-            c = (x + r).reveal().cast_backing(out_dtype)
+            c = prot.cast_backing((x + r).reveal(), out_dtype)
             c.is_scaled = False
 
             greater_xor_beta = _private_compare(prot, rbits, c, beta)
             clsb = prot.lsb(c)
 
         with tf.name_scope('lsb_combine'):
-            gamma = prot.bitwise_xor(greater_xor_beta, beta.cast_backing(out_dtype))
+            gamma = prot.bitwise_xor(greater_xor_beta, prot.cast_backing(beta, out_dtype))
             delta = prot.bitwise_xor(rlsb, clsb)
             alpha = prot.bitwise_xor(gamma, delta)
 
@@ -538,7 +542,7 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
         with tf.name_scope('bit_comparisons'):
 
             # use either r or t = r + 1 according to beta
-            s = prot.select(beta.cast_backing(out_dtype), r, r + 1)
+            s = prot.select(prot.cast_backing(beta, out_dtype), r, r + 1)
             s_bits = prot.bits(s, factory=prime_dtype)
             assert s_bits.shape[-1] == bit_length
 
@@ -692,3 +696,42 @@ def _maxpool2d_masked(prot: Pond,
 
     with tf.name_scope('maxpool2d'):
         return prot.maxpool2d(x.unwrapped, pool_size, strides, padding)
+
+
+#
+# cast helpers
+#
+
+
+def _cast_backing_public(prot: Pond, x: PondPublicTensor, backing_dtype) -> PondPublicTensor:
+
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope("cast_backing"):
+
+        with tf.device(prot.server_0.device_name):
+            y_on_0 = x_on_0.cast(backing_dtype)
+
+        with tf.device(prot.server_0.device_name):
+            y_on_1 = x_on_1.cast(backing_dtype)
+
+        return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
+
+
+def _cast_backing_private(prot: Pond, x: PondPrivateTensor, backing_dtype) -> PondPrivateTensor:
+    # TODO[Morten]
+    # this method is risky as it differs from what the user might expect, which would normally
+    # require more advanced convertion protocols accounting for wrap-around etc;
+    # for this reason we should consider hiding it during refactoring
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope("cast_backing"):
+
+        with tf.device(prot.server_0.device_name):
+            y0 = x0.cast(backing_dtype)
+
+        with tf.device(prot.server_0.device_name):
+            y1 = x1.cast(backing_dtype)
+
+        return PondPrivateTensor(prot, y0, y1, x.is_scaled)

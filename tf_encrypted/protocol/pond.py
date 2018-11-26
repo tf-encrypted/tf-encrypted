@@ -1074,10 +1074,6 @@ class Pond(Protocol):
         x, y = self.lift(x, y)
         return self.dispatch("equal", x, y)
 
-    @memoize
-    def cast_backing(self, x, backing_dtype):
-        return self.dispatch("cast_backing", x, backing_dtype)
-
     def dispatch(self, base_name, *args, container=None, **kwargs):
         func_name = "_{}_{}".format(
             base_name,
@@ -1290,9 +1286,6 @@ class PondTensor(abc.ABC):
         :returns: A new tensor with the contents of this tensor, but with the new specified shape.
         """
         return self.prot.reshape(self, shape)
-
-    def cast_backing(self, backing_dtype):
-        return self.prot.cast_backing(self, backing_dtype)
 
     def reduce_max(self, axis: int) -> "PondTensor":
         """
@@ -3490,42 +3483,3 @@ def _equal_public_public(
             z_on_1 = x_on_1.equal(y_on_1)
 
         return PondPublicTensor(prot, z_on_0, z_on_1, False)
-
-
-#
-# cast helpers
-#
-
-
-def _cast_backing_public(prot: Pond, x: PondPublicTensor, backing_dtype) -> PondPublicTensor:
-
-    x_on_0, x_on_1 = x.unwrapped
-
-    with tf.name_scope("cast_backing"):
-
-        with tf.device(prot.server_0.device_name):
-            y_on_0 = x_on_0.cast(backing_dtype)
-
-        with tf.device(prot.server_0.device_name):
-            y_on_1 = x_on_1.cast(backing_dtype)
-
-        return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
-
-
-def _cast_backing_private(prot: Pond, x: PondPrivateTensor, backing_dtype) -> PondPrivateTensor:
-    # TODO[Morten]
-    # this method is risky as it differs from what the user might expect, which would normally
-    # require more advanced convertion protocols accounting for wrap-around etc;
-    # for this reason we should consider hiding it during refactoring
-
-    x0, x1 = x.unwrapped
-
-    with tf.name_scope("cast_backing"):
-
-        with tf.device(prot.server_0.device_name):
-            y0 = x0.cast(backing_dtype)
-
-        with tf.device(prot.server_0.device_name):
-            y1 = x1.cast(backing_dtype)
-
-        return PondPrivateTensor(prot, y0, y1, x.is_scaled)
