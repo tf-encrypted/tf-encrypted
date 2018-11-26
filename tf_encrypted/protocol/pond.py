@@ -989,7 +989,6 @@ class Pond(Protocol):
         else:
             raise TypeError("Don't know how to {}: {}".format(base_name, [type(arg) for arg in args]))
 
-    @memoize
     def zeros(
         self,
         shape,
@@ -3388,7 +3387,6 @@ def _cast_backing_public(prot: Pond, x: PondPublicTensor, backing_dtype) -> Pond
         return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
 
-@memoize
 def _zeros_private(
     prot,
     shape,
@@ -3416,7 +3414,6 @@ def _zeros_private(
     return x
 
 
-@memoize
 def _zeros_public(
     prot,
     shape,
