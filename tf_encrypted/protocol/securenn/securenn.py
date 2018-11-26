@@ -434,7 +434,7 @@ class SecureNN(Pond):
 
     @memoize
     def cast_backing(self, x, backing_dtype):
-        return self.dispatch("cast_backing", x, backing_dtype)
+        return self.dispatch("cast_backing", x, backing_dtype, container=_thismodule)
 
 
 def _bits_public(prot, x: PondPublicTensor,
