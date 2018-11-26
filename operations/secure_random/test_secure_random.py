@@ -7,7 +7,7 @@ import tf_encrypted as tfe
 import os
 
 dirname = os.path.dirname(tfe.__file__)
-shared_object = dirname + '/operations/secure_random/secure_random_module.so'
+shared_object = dirname + '/operations/secure_random/secure_random_module_tf_' + tf.__version__ + '.so'
 secure_random_module = tf.load_op_library(shared_object)
 seeded_random_uniform = secure_random_module.seeded_random_uniform
 random_uniform = secure_random_module.secure_random_uniform
