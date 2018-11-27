@@ -8,7 +8,7 @@ feature request.
 
 - [Getting Started](#getting-started)
 - [Reporting a bug](#reporting-a-bug)
- - [Security disclosure](#security-disclosure)
+ - [Security disclosures](#security-disclosures)
 - [Opening a pull request](#opening-a-pull-request)
 - [Writing Documentation](#writing-documentation)
 
@@ -26,7 +26,7 @@ love to work with you to better tf-encrypted.
 
 **Pre-requisites**
 
-To setup your local development environment, you'll need Python 3.5+ and pip along with the following system tools:
+To setup your local development environment, you'll need Python 3.5 or 3.6 and pip along with the following system tools:
 
 - libtool
 - g++
@@ -34,7 +34,21 @@ To setup your local development environment, you'll need Python 3.5+ and pip alo
 - git
 - curl
 
-You can install these using `brew` via `brew install libtool automake g++ git curl` or your systems package manager (e.g. yum or apt).
+You can install these using `brew` or your systems package manager (e.g. `yum` or `apt`).
+
+**MacOS**
+
+MacOS will have g++ already installed so omit it from the `brew install` command.
+
+```
+brew install libtool automake git curl
+```
+
+**Ubuntu**
+
+```
+sudo apt install libtool automake git curl g++
+```
 
 **Checkout**
 
