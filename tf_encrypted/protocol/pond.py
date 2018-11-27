@@ -1099,6 +1099,74 @@ class Pond(Protocol):
                 )
             )
 
+    def zeros(
+        self,
+        shape,
+        tensor_type,
+        apply_scaling: bool = True,
+        name: Optional[str] = None,
+        factory: Optional[AbstractFactory] = None
+    ) -> Union['PondPublicTensor', 'PondPrivateTensor']:
+
+        if issubclass(tensor_type, PondPublicTensor):
+            out = _zeros_public(self, shape, apply_scaling, name, factory)
+        elif issubclass(tensor_type, PondPrivateTensor):
+            out = _zeros_private(self, shape, apply_scaling, name, factory)
+        else:
+            raise TypeError("Don't know how to zeros {}".format(tensor_type))
+
+        return out
+
+    def pad(self, x: 'PondTensor', paddings: list):
+
+        with tf.name_scope('pad'):
+            zeros_id = 0
+            for axis, (pad_before, pad_after) in enumerate(paddings):
+                x = self._append_zeros(x, pad_after, axis, zeros_id)
+                zeros_id += 1
+                x = self._prepend_zeros(x, pad_before, axis, zeros_id)
+                zeros_id += 1
+
+        return x
+
+    def _prepend_zeros(
+        self,
+        arr: Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor'],
+        pad_amt: int,
+        axis: int,
+        zeros_id: int
+    ) -> Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor']:
+
+        if pad_amt == 0:
+                return arr
+
+        arrshape = arr.shape.as_list()
+        padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(arrshape))
+
+        zeros_array = self.zeros(padshape, tensor_type=type(arr), name=str(zeros_id))
+
+        with tf.name_scope('prepend'):
+            return self.concat([zeros_array, arr], axis=axis)
+
+    def _append_zeros(
+        self,
+        arr: Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor'],
+        pad_amt: int,
+        axis: int,
+        zeros_id: int
+    ) -> Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor']:
+
+        if pad_amt == 0:
+                return arr
+
+        arrshape = arr.shape.as_list()
+        padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(arrshape))
+
+        zeros_array = self.zeros(padshape, tensor_type=type(arr), name=str(zeros_id))
+
+        with tf.name_scope('append'):
+            return self.concat([arr, zeros_array], axis=axis)
+
 
 #
 # Classes representing the base values in the Pond protocol.
@@ -3571,3 +3639,61 @@ def _equal_public_public(
             z_on_1 = x_on_1.equal(y_on_1)
 
         return PondPublicTensor(prot, z_on_0, z_on_1, False)
+
+
+#
+# zeros helpers
+#
+
+def _zeros_private(
+    prot,
+    shape,
+    apply_scaling: bool = True,
+    name: Optional[str] = None,
+    factory: Optional[AbstractFactory] = None
+) -> 'PondPrivateTensor':
+
+    zeros_array = np.zeros(shape)
+
+    factory = factory or prot.tensor_factory
+
+    with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
+
+        v = prot._encode(zeros_array, apply_scaling)
+        v0, v1 = prot._share(v)
+
+        with tf.device(prot.server_0.device_name):
+            x0 = factory.variable(v0)
+
+        with tf.device(prot.server_1.device_name):
+            x1 = factory.variable(v1)
+
+    x = PondPrivateTensor(prot, x0, x1, apply_scaling)
+    return x
+
+
+def _zeros_public(
+    prot,
+    shape,
+    apply_scaling: bool = True,
+    name: Optional[str] = None,
+    factory: Optional[AbstractFactory] = None
+) -> 'PondPublicTensor':
+
+    zeros_array = np.zeros(shape)
+
+    factory = factory or prot.tensor_factory
+
+    with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
+
+        v = prot._encode(zeros_array, apply_scaling)
+        v_on_0, v_on_1 = v, v
+
+        with tf.device(prot.server_0.device_name):
+            x0 = factory.variable(v_on_0)
+
+        with tf.device(prot.server_1.device_name):
+            x1 = factory.variable(v_on_1)
+
+    x = PondPublicTensor(prot, x0, x1, apply_scaling)
+    return x

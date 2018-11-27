@@ -34,6 +34,7 @@ def register() -> Dict[str, Any]:
         'BiasAdd': bias_add,
         # 'Pack': pack,
         'MaxPool': maxpool,
+        'Pad': pad,
     }
 
     return reg
@@ -245,6 +246,17 @@ def squeeze(converter: Converter, node: Any, inputs: List[str]) -> Any:
     axis = node.attr["squeeze_dims"].list.i
 
     return converter.protocol.squeeze(input, list(axis))
+
+
+def pad(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+    p = (converter.outputs[inputs[1]])
+    paddings_t = p.attr["value"].tensor
+
+    paddings_arr = list(array.array('I', paddings_t.tensor_content))
+    paddings_lst = [paddings_arr[i:i + 2] for i in range(0, len(paddings_arr), 2)]
+
+    return converter.protocol.pad(input, paddings_lst)
 
 
 def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
