@@ -10,8 +10,8 @@ from .crt import (
     gen_crt_decompose, gen_crt_recombine_lagrange, gen_crt_recombine_explicit,
     gen_crt_add, gen_crt_sub, gen_crt_mul, gen_crt_matmul, gen_crt_mod,
     gen_crt_reduce_sum, gen_crt_cumsum, crt_im2col, crt_matmul_split,
-    gen_crt_equal_zero, gen_crt_equal,
-    gen_crt_sample_uniform, gen_crt_sample_bounded
+    crt_batch_to_space_nd, crt_space_to_batch_nd, gen_crt_equal_zero,
+    gen_crt_equal, gen_crt_sample_uniform, gen_crt_sample_bounded
 )
 from .helpers import prod, inverse
 from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
@@ -343,6 +343,14 @@ class Int100Tensor(AbstractTensor):
     def conv2d(self, other, strides, padding='SAME') -> 'Int100Tensor':
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
         return conv2d(x, y, strides, padding)  # type: ignore
+
+    def batch_to_space_nd(self, block_shape, crops):
+        backing = crt_batch_to_space_nd(self.backing, block_shape, crops)
+        return Int100Tensor(backing)
+
+    def space_to_batch_nd(self, block_shape, paddings):
+        backing = crt_space_to_batch_nd(self.backing, block_shape, paddings)
+        return Int100Tensor(backing)
 
     def transpose(self, perm: Optional[List[int]] = None) -> 'Int100Tensor':
         backing = [tf.transpose(xi, perm=perm) for xi in self.backing]

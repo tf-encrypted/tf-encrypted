@@ -1069,6 +1069,12 @@ class Pond(Protocol):
 
         return z
 
+    def batch_to_space_nd(self, x, block_shape, crops):
+        return self.dispatch("batch_to_space_nd", x, block_shape, crops)
+
+    def space_to_batch_nd(self, x, block_shape, paddings):
+        return self.dispatch("space_to_batch_nd", x, block_shape, paddings)
+
     @memoize
     def equal(self, x, y):
         x, y = self.lift(x, y)
@@ -2779,6 +2785,88 @@ def _avgpool2d_masked(
             prot, x.unmasked, pool_size, strides, padding
         )
         return PondPrivateTensor(prot, y_on_0, y_on_1, x.is_scaled) * scalar
+
+
+#
+# batch_to_space_nd and space_to_batch_nd helpers
+#
+
+
+def _batch_to_space_nd_core(prot, tensor, block_shape, crops):
+    tensor_on_0, tensor_on_1 = tensor.unwrapped
+
+    with tf.device(prot.server_0.device_name):
+        space_on_0 = tensor_on_0.batch_to_space_nd(block_shape, crops)
+
+    with tf.device(prot.server_1.device_name):
+        space_on_1 = tensor_on_1.batch_to_space_nd(block_shape, crops)
+
+    return space_on_0, space_on_1
+
+
+def _batch_to_space_nd_public(prot, tensor, block_shape, crops):
+
+    with tf.name_scope("batch_to_space_nd"):
+        space_on_0, space_on_1 = _batch_to_space_nd_core(prot, tensor, block_shape, crops)
+
+    return PondPublicTensor(prot, space_on_0, space_on_1, tensor.is_scaled)
+
+
+def _batch_to_space_nd_private(prot, tensor, block_shape, crops):
+
+    with tf.name_scope("batch_to_space_nd"):
+        space_on_0, space_on_1 = _batch_to_space_nd_core(prot, tensor, block_shape, crops)
+
+    return PondPrivateTensor(prot, space_on_0, space_on_1, tensor.is_scaled)
+
+
+def _batch_to_space_nd_masked(prot, tensor, block_shape, crops):
+
+    with tf.name_scope("batch_to_space_nd"):
+        space_on_0, space_on_1 = _batch_to_space_nd_core(prot, tensor.unmasked, block_shape, crops)
+
+    return PondPrivateTensor(prot, space_on_0, space_on_1, tensor.is_scaled)
+
+
+def _space_to_batch_nd_core(prot, tensor, block_shape, paddings):
+    tensor_on_0, tensor_on_1 = tensor.unwrapped
+
+    with tf.name_scope("space_to_batch_nd"):
+
+        with tf.device(prot.server_0.device_name):
+            batch_on_0 = tensor_on_0.space_to_batch_nd(block_shape, paddings)
+
+        with tf.device(prot.server_1.device_name):
+            batch_on_1 = tensor_on_1.space_to_batch_nd(block_shape, paddings)
+
+    return batch_on_0, batch_on_1
+
+
+def _space_to_batch_nd_public(prot, tensor, block_shape, paddings):
+
+    with tf.name_scope("space_to_batch_nd"):
+        batch_on_0, batch_on_1 = _space_to_batch_nd_core(prot, tensor, block_shape, paddings)
+
+    return PondPublicTensor(prot, batch_on_0, batch_on_1, tensor.is_scaled)
+
+
+def _space_to_batch_nd_private(prot, tensor, block_shape, paddings):
+
+    with tf.name_scope("space_to_batch_nd"):
+        batch_on_0, batch_on_1 = _space_to_batch_nd_core(prot, tensor, block_shape, paddings)
+
+    return PondPrivateTensor(prot, batch_on_0, batch_on_1, tensor.is_scaled)
+
+
+def _space_to_batch_nd_masked(prot, tensor, block_shape, paddings):
+
+    with tf.name_scope("space_to_batch_nd"):
+        batch_on_0, batch_on_1 = _space_to_batch_nd_core(prot,
+                                                         tensor.unmasked,
+                                                         block_shape,
+                                                         paddings)
+
+    return PondPrivateTensor(prot, batch_on_0, batch_on_1, tensor.is_scaled)
 
 
 #

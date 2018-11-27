@@ -167,6 +167,16 @@ def crt_im2col(
         return [im2col(xi, h_filter, w_filter, padding, strides) for xi in x]
 
 
+def crt_batch_to_space_nd(x, block_shape, crops):
+    with tf.name_scope("crt_batch_to_space_nd"):
+        return [tf.batch_to_space_nd(xi, block_shape=block_shape, crops=crops) for xi in x]
+
+
+def crt_space_to_batch_nd(x, block_shape, paddings):
+    with tf.name_scope("crt_space_to_batch_nd"):
+        return [tf.space_to_batch_nd(xi, block_shape=block_shape, paddings=paddings) for xi in x]
+
+
 def gen_crt_sample_uniform(m, int_type):
 
     def crt_sample_uniform(shape):

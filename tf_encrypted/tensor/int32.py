@@ -152,6 +152,14 @@ class Int32Tensor(AbstractTensor):
         x, y = _lift(self, other)
         return conv2d(x, y, strides, padding)  # type: ignore
 
+    def batch_to_space_nd(self, block_shape, crops):
+        backing = tf.batch_to_space_nd(self.value, block_shape, crops)
+        return int32factory.tensor(backing)
+
+    def space_to_batch_nd(self, block_shape, paddings):
+        backing = tf.space_to_batch_nd(self.value, block_shape, paddings)
+        return int32factory.tensor(backing)
+
     def mod(self, k: int) -> 'Int32Tensor':
         return int32factory.tensor(self.value % k)
 
