@@ -128,10 +128,10 @@ class TestSpaceToBatchND(unittest.TestCase):
         self._generic_private_test(t, block_shape, paddings)
 
     def test4DSingleCrop(self):
-        backing = [[[[1],   [2],  [3],  [4]],
-                    [[5],   [6],  [7],  [8]]],
-                   [[[9],  [10], [11],  [12]],
-                    [[13], [14], [15],  [16]]]]
+        backing = [[[[1], [2], [3], [4]],
+                    [[5], [6], [7], [8]]],
+                   [[[9], [10], [11], [12]],
+                    [[13], [14], [15], [16]]]]
         t = tf.constant(backing)
         block_shape = [2, 2]
         paddings = [[0, 0], [2, 0]]
