@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Changed**
 
-- There are now separate wheels published to pypi for MacOS and linux.
+- There are now separate wheels published to PyPI for MacOS and Linux.
 - Various documentation updates.
 
 ## [0.3.0]
