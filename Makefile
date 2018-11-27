@@ -55,9 +55,10 @@ ifeq (,$(BYPASS_TENSORFLOW_CHECK))
 endif
 endif
 
-bootstrap: pythoncheck pipcheck build
+bootstrap: pythoncheck pipcheck
 	pip install -r requirements.txt
 	pip install -e .
+	$(MAKE) build
 
 # ###############################################
 # Testing and Linting
