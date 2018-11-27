@@ -14,7 +14,8 @@ from .crt import (
     gen_crt_sample_uniform, gen_crt_sample_bounded
 )
 from .helpers import prod, inverse
-from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
+from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
+                      AbstractConstant, AbstractPlaceholder)
 from .shared import binarize, conv2d
 
 #
@@ -94,6 +95,7 @@ class Int100Factory(AbstractFactory):
             return Int100Tensor(_crt_decompose(value))
 
         if isinstance(value, Int100Tensor):
+            # TODO[Morten] should we just be the identity here to not bypass cached nodes?
             return Int100Tensor(value.backing)
 
         raise TypeError("Don't know how to handle {}", type(value))
@@ -157,7 +159,7 @@ class Int100Tensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return _crt_recombine_explicit(self.backing, 2**32)
 
-    def to_bits(
+    def bits(
         self,
         factory: Optional[AbstractFactory] = None,
         ensure_positive_interpretation: bool = False
@@ -189,7 +191,9 @@ class Int100Tensor(AbstractTensor):
 
                 # this means that chunk[0] is uncorrected and chunk[1] is corrected
                 correction_raw = [0, self.modulus % chunks_modulus[0]]
-                correction = tf.constant(correction_raw, shape=shape_correction, dtype=self.factory.native_type)
+                correction = tf.constant(correction_raw,
+                                         shape=shape_correction,
+                                         dtype=self.factory.native_type)
 
                 remaining = remaining.reshape(shape_value)
 
@@ -210,7 +214,8 @@ class Int100Tensor(AbstractTensor):
                 chunks.append(chunk)
 
                 # perform right shift on remaining
-                remaining = (remaining - int100factory.tensor(chunk)) * inverse(chunk_modulus, self.modulus)
+                shifted = (remaining - int100factory.tensor(chunk))
+                remaining = shifted * inverse(chunk_modulus, self.modulus)
 
             if ensure_positive_interpretation:
                 # pick between corrected and uncorrected based on MSB
@@ -322,7 +327,7 @@ class Int100Tensor(AbstractTensor):
         backing = _crt_cumsum(self.backing, axis=axis, exclusive=exclusive, reverse=reverse)
         return Int100Tensor(backing)
 
-    def equal_zero(self, out_dtype: Optional[AbstractFactory]=None) -> 'Int100Tensor':
+    def equal_zero(self, out_dtype: Optional[AbstractFactory] = None) -> 'Int100Tensor':
         out_dtype = out_dtype or self.factory
         return out_dtype.tensor(_crt_equal_zero(self.backing, out_dtype.native_type))
 
@@ -339,7 +344,7 @@ class Int100Tensor(AbstractTensor):
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
         return conv2d(x, y, strides, padding)  # type: ignore
 
-    def transpose(self, perm: Optional[List[int]]=None) -> 'Int100Tensor':
+    def transpose(self, perm: Optional[List[int]] = None) -> 'Int100Tensor':
         backing = [tf.transpose(xi, perm=perm) for xi in self.backing]
         return Int100Tensor(backing)
 
@@ -347,7 +352,7 @@ class Int100Tensor(AbstractTensor):
         backing = [tf.strided_slice(xi, *args, **kwargs) for xi in self.backing]
         return Int100Tensor(backing)
 
-    def split(self, num_split: int, axis: int=0) -> List['Int100Tensor']:
+    def split(self, num_split: int, axis: int = 0) -> List['Int100Tensor']:
         backings = zip(*[tf.split(xi, num_split, axis=axis) for xi in self.backing])
         return [Int100Tensor(backing) for backing in backings]
 
@@ -355,11 +360,11 @@ class Int100Tensor(AbstractTensor):
         backing = [tf.reshape(xi, axes) for xi in self.backing]
         return Int100Tensor(backing)
 
-    def expand_dims(self, axis: Optional[int]=None) -> 'Int100Tensor':
+    def expand_dims(self, axis: Optional[int] = None) -> 'Int100Tensor':
         backing = [tf.expand_dims(xi, axis) for xi in self.backing]
         return Int100Tensor(backing)
 
-    def squeeze(self, axis: Optional[List[int]]=None) -> 'Int100Tensor':
+    def squeeze(self, axis: Optional[List[int]] = None) -> 'Int100Tensor':
         backing = [tf.squeeze(xi, axis=axis) for xi in self.backing]
         return Int100Tensor(backing)
 
@@ -374,6 +379,10 @@ class Int100Tensor(AbstractTensor):
 
     def right_shift(self, bitlength):
         return self.truncate(bitlength, 2)
+
+    def cast(self, factory):
+        assert factory == self.factory, factory
+        return self
 
 
 class Int100Constant(Int100Tensor, AbstractConstant):

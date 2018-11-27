@@ -90,7 +90,7 @@ class TestPrimeTensor(unittest.TestCase):
             0  # min
         ], shape=[3], dtype=np.int32))
 
-        y = x.to_bits()
+        y = x.bits()
 
         expected = np.array([
             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],

@@ -17,11 +17,10 @@ def tensorflow_supports_int64() -> bool:
             tf.matmul(x, x)
         except TypeError:
             return False
-        else:
-            return True
+        return True
 
 
-def get_docker_cpu_quota() -> Optional[int]:
+def _get_docker_cpu_quota() -> Optional[int]:
     cpu_cores = None
 
     # Check for quotas if we are in a linux container
@@ -41,32 +40,58 @@ def get_docker_cpu_quota() -> Optional[int]:
 
 
 class Config(ABC):
-
     @abstractmethod
     def players(self) -> List[Player]:
+        """
+        players() -> List
+
+        Returns the config's list of :class:`Player` objects.
+        """
         pass
 
     @abstractmethod
     def get_player(self, name: str) -> Player:
+        """
+        get_player(name) -> Player
+
+        Retrieve a specific :class:`Player` object by name.
+        """
+        pass
+
+    @abstractmethod
+    def from_dict(cls, params):
         pass
 
     @abstractmethod
     def to_dict(self) -> Dict:
-        pass
+        """
+        to_dict() -> Dict
+
+        Writes the config to a dictionary.
+        """
 
     @abstractmethod
     def get_tf_config(self) -> Tuple[str, tf.ConfigProto]:
+        """
+        get_tf_config() -> tf.ConfigProto, or str
+
+        Extract the underlying :class:`tf.ConfigProto`.
+        """
         pass
 
 
 class LocalConfig(Config):
     """
+    LocalConfig(player_names, master=None, job_name='localhost', log_device_placement=False)
+
     Configure tf-encrypted to use threads on the local CPU
     to simulate the different players.
     Intended mostly for development/debugging use.
 
-    :param List[str] player_names: List of players to be used in the session.
-    :param Optional[Union[int,str]] master: Mapping of a name to host for the master node.
+    :param (str) player_names: List of players to be used in the session.
+    :param int,str master: Optional pointer to the master node.
+        If `int`, denotes the index of the master's name in the `player_names`.
+        If `str`, denotes the player name.
     :param str job_name: The name of the job.
     :param bool log_device_placement: Whether or not to write device placement in logs.
     """
@@ -93,8 +118,15 @@ class LocalConfig(Config):
             for index, name in enumerate(player_names)
         }
 
-    @staticmethod
-    def from_dict(params: Dict) -> Optional['LocalConfig']:
+    @classmethod
+    def from_dict(cls, params: Dict) -> Optional['LocalConfig']:
+        """
+        from_dict(params) -> LocalConfig
+
+        Produces a LocalConfig class from a dictionary.
+
+        :param dict params: Key-value store of constructor arguments.
+        """
         if not params.get('type', None) == 'local':
             return None
 
@@ -116,7 +148,7 @@ class LocalConfig(Config):
         return list(self._players.values())
 
     def get_player(self, name: str) -> Player:
-        return self._players[name]
+        return self._players.get(name)
 
     def get_players(self, names: Union[List[str], str]) -> List[Player]:
         if isinstance(names, str):
@@ -140,10 +172,15 @@ class LocalConfig(Config):
 
 class RemoteConfig(Config):
     """
+    RemoteConfig(hostmap, master=None, job_name='tfe', log_device_placement=False)
+
     Configure tf-encrypted to use network hosts for the different players.
 
-    :param Union[List[Tuple[str,str]],Dict[str,str]] hostmap: A mapping of hostnames to their IP / domain.
-    :param Optional[Union[int,str]] master: A mapping of the masters IP to his name.
+    :param (str,str),str->str hostmap: A mapping of hostnames to
+        their IP / domain.
+    :param int,str master: Optional pointer to the master node.
+        If `int`, denotes the index of the master name in the hostmap (alphabetical if dict).
+        If `str`, denotes the player name or node URI.
     :param str job_name: The name of the job.
     :param bool log_device_placement: Whether or not to write device placement in logs.
     """
@@ -177,8 +214,15 @@ class RemoteConfig(Config):
             for index, (name, host) in enumerate(hostmap)
         }
 
-    @staticmethod
-    def from_dict(params: Dict) -> Optional['RemoteConfig']:
+    @classmethod
+    def from_dict(cls, params: Dict) -> Optional['RemoteConfig']:
+        """
+        from_dict(params) -> RemoteConfig
+
+        Produces a RemoteConfig class from a dictionary.
+
+        :param dict params: Key-value store of constructor arguments.
+        """
         if not params.get('type', None) == 'remote':
             return None
 
@@ -189,10 +233,11 @@ class RemoteConfig(Config):
         )
 
     def to_dict(self) -> Dict:
+        hostmap = [(p.name, p.host) for p in sorted(self._players.values(), key=lambda p: p.index)]
         params = {
             'type': 'remote',
             'job_name': self._job_name,
-            'hostmap': [(p.name, p.host) for p in sorted(self._players.values(), key=lambda p: p.index)]
+            'hostmap': hostmap
         }
 
         if self._master is not None:
@@ -205,7 +250,7 @@ class RemoteConfig(Config):
         return list(self._players.values())
 
     def get_player(self, name: str) -> Player:
-        return self._players[name]
+        return self._players.get(name)
 
     def get_players(self, names: Union[List[str], str]) -> List[Player]:
         if isinstance(names, str):
@@ -214,10 +259,19 @@ class RemoteConfig(Config):
         return [player for name, player in self._players.items() if name in names]
 
     def server(self, name: str) -> tf.train.Server:
+        """
+        server(name) -> tf.train.Server
+
+        Retrieves the :class:`tf.train.Server` object from the :class:`RemoteConfig` by the
+        corresponding :class:`Player` name.
+
+        :param str name: Name of the server's corresponding player.
+        """
         player = self.get_player(name)
         cluster = tf.train.ClusterSpec({self._job_name: self._hosts})
         server = tf.train.Server(cluster, job_name=self._job_name, task_index=player.index)
-        print("Hi, I'm node '{name}' running as device '{device}' and with session target '{target}'".format(
+        print("Hi, I'm node '{name}' running as device '{device}' \
+               and with session target '{target}'".format(
             name=name,
             device=player.device_name,
             target=server.target
@@ -252,7 +306,7 @@ class RemoteConfig(Config):
         return target
 
     def get_tf_config(self) -> Tuple[str, tf.ConfigProto]:
-        cpu_cores = get_docker_cpu_quota()
+        cpu_cores = _get_docker_cpu_quota()
         target = self._compute_target(self._master)
         # If you witness memory leaks while doing multiple predictions using docker
         # see https://github.com/tensorflow/tensorflow/issues/22098
@@ -273,6 +327,11 @@ class RemoteConfig(Config):
 
 
 def load(filename: str) -> Config:
+    """
+    load(filename) -> Config
+
+    Constructs a Config object from a json file.
+    """
     with open(filename, 'r') as f:
         params = json.load(f)
 
@@ -286,6 +345,14 @@ def load(filename: str) -> Config:
 
 
 def save(config: Config, filename: str) -> None:
+    """
+    save(config, filename)
+
+    Saves a Config object as a json file.
+
+    :param Config config: The Config object to save.
+    :param str filename: Name of the intended json file.
+    """
     with open(filename, 'w') as f:
         json.dump(config.to_dict(), f)
 
@@ -299,10 +366,22 @@ __CONFIG__ = LocalConfig([
 ])
 
 
-def get_config() -> Config:
+def get_config():
+    """
+    get_config() -> Config
+
+    Returns the current config.
+    """
     return __CONFIG__
 
 
 def set_config(config: Config) -> None:
+    """
+    set_config(config)
+
+    Sets the current config.
+
+    :param Config config: Intended Config object.
+    """
     global __CONFIG__
     __CONFIG__ = config

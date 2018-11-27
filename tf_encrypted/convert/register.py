@@ -10,6 +10,7 @@ from tf_encrypted.protocol.pond import PondPublicTensor
 
 
 def register() -> Dict[str, Any]:
+    tf.import_graph_def
     reg = {
         'Placeholder': placeholder,
         'Const': constant,
