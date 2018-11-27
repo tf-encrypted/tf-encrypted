@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Added**
 
 - SecureNN with int64 support has landed, a build with int64 matmul support must be used.
-- Cryptographically secure random numbers feature has been implemented but not integrated.
+- Cryptographically secure random numbers feature has been implemented.
 - Three new ops are now supported: Pad, BatchToSpaceND, SpaceToBatchND
 
 **Changed**

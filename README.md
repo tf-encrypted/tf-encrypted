@@ -70,7 +70,6 @@ tf-encrypted is experimental software not currently intended for use in producti
 ## Known limitations
 
 - Elements of TensorFlow's networking subsystem does not appear to be sufficiently hardened against malicious users. Proxies or other means of access filtering may be sufficient to mitigate this.
-- The pseudo-random generators provided in TensorFlow are not cryptographically strong. Custom ops could easily be used to remedy this.
 
 # Contributing
 
