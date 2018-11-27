@@ -65,13 +65,13 @@ Download for Linux [here](https://storage.googleapis.com/dropoutlabs-tensorflow-
 
 Now you should just be able to install using pip:
 
-MacOS
+**MacOS**
 
 ```
 pip install tensorflow-1.9.0-cp35-cp35m-macosx_10_7_x86_64.whl
 ```
 
-Linux
+**Linux**
 
 ```
 pip install tensorflow-1.9.0-cp35-cp35m-linux_x86_64.whl
