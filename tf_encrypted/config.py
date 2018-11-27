@@ -148,7 +148,7 @@ class LocalConfig(Config):
         return list(self._players.values())
 
     def get_player(self, name: str) -> Player:
-        return self._players[name]
+        return self._players.get(name)
 
     def get_players(self, names: Union[List[str], str]) -> List[Player]:
         if isinstance(names, str):
@@ -250,7 +250,7 @@ class RemoteConfig(Config):
         return list(self._players.values())
 
     def get_player(self, name: str) -> Player:
-        return self._players[name]
+        return self._players.get(name)
 
     def get_players(self, names: Union[List[str], str]) -> List[Player]:
         if isinstance(names, str):

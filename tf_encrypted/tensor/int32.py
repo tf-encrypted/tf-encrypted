@@ -96,7 +96,7 @@ class Int32Tensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
 
-    def to_bits(self, factory: Optional[AbstractFactory] = None) -> AbstractTensor:
+    def bits(self, factory: Optional[AbstractFactory] = None) -> AbstractTensor:
         factory = factory or int32factory
         return factory.tensor(binarize(self.value))
 

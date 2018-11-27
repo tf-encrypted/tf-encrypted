@@ -53,9 +53,12 @@ with tfe.Session() as sess:
 
 For more information, check out our full getting started guide in the [documentation](https://tf-encrypted.readthedocs.io/en/latest/usage/getting_started.html).
 
+If you'd like to develop tf-encrypted locally, please read our [contributing guide](./.github/CONTRIBUTING.md#setup).
+
 # Background & Further Reading
 
 The following texts provide further in-depth presentations of the project:
+
 - [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) describes the initial motivation and implementation
 - [Private Machine Learning in TensorFlow using Secure Computation](https://arxiv.org/abs/1810.08130) further elaborates on the benefits of the approach, outlines the adaptation of a secure computation protocol, and reports on concrete performance numbers
 - [Experimenting with tf-encrypted](https://medium.com/dropoutlabs/experimenting-with-tf-encrypted-fe37977ff03c) walks through a simple example of turning an existing TensorFlow prediction model private
@@ -69,9 +72,9 @@ tf-encrypted is experimental software not currently intended for use in producti
 - Elements of TensorFlow's networking subsystem does not appear to be sufficiently hardened against malicious users. Proxies or other means of access filtering may be sufficient to mitigate this.
 - The pseudo-random generators provided in TensorFlow are not cryptographically strong. Custom ops could easily be used to remedy this.
 
-# Contributions
+# Contributing
 
-Don't hesitate to send a pull request, open an issue, or ask for help!
+Don't hesitate to send a pull request, open an issue, or ask for help! Check out our [contribution guide](./.github/CONTRIBUTING.md) for more information!
 
 Several individuals have already had an impact on the development of this library (in alphabetical order):
 

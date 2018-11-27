@@ -95,6 +95,7 @@ class Int100Factory(AbstractFactory):
             return Int100Tensor(_crt_decompose(value))
 
         if isinstance(value, Int100Tensor):
+            # TODO[Morten] should we just be the identity here to not bypass cached nodes?
             return Int100Tensor(value.backing)
 
         raise TypeError("Don't know how to handle {}", type(value))
@@ -158,7 +159,7 @@ class Int100Tensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return _crt_recombine_explicit(self.backing, 2**32)
 
-    def to_bits(
+    def bits(
         self,
         factory: Optional[AbstractFactory] = None,
         ensure_positive_interpretation: bool = False
@@ -386,6 +387,10 @@ class Int100Tensor(AbstractTensor):
 
     def right_shift(self, bitlength):
         return self.truncate(bitlength, 2)
+
+    def cast(self, factory):
+        assert factory == self.factory, factory
+        return self
 
 
 class Int100Constant(Int100Tensor, AbstractConstant):
