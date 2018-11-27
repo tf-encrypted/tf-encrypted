@@ -697,7 +697,6 @@ class Pond(Protocol):
         return self.dispatch("sub", x, y)
 
     def mask(self, x):
-
         if isinstance(x, (list, tuple)):
             # apply recursively
             return [self.mask(xi) for xi in x]
@@ -3375,10 +3374,13 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
     x0, x1 = x.unwrapped
 
     with tf.name_scope("mask"):
+        print("MASKING")
 
         with tf.device(prot.crypto_producer.device_name):
             seed0 = seed()
             seed1 = seed()
+
+            p0 = tf.Print()
 
             a0 = x.backing_dtype.sample_uniform(x.shape, seed0)
             a1 = x.backing_dtype.sample_uniform(x.shape, seed1)

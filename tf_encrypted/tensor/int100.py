@@ -405,6 +405,7 @@ class Int100SeededTensor():
         self.shape = shape
 
     def expand(self):
+        print("EXPAND")
         backing = _crt_sample_uniform(self.shape, seed=self.seed)
         return Int100Tensor(backing)
 

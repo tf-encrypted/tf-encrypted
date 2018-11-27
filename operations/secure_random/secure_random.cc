@@ -51,6 +51,7 @@ public:
   explicit SeededRandomUniformOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
+    std::cout << "HI" << std::endl;
     const Tensor& shape_tensor = context->input(0);
     const Tensor& seed_tensor = context->input(1);
     const Tensor& minval = context->input(2);
@@ -84,6 +85,7 @@ public:
     const unsigned char * seed_bytes = reinterpret_cast<const unsigned char*>(seed_vals);
 
     Gen gen(output, seed_bytes);
+
 
     gen.GenerateData(lo, hi);
   }

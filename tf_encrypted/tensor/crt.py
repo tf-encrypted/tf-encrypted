@@ -186,6 +186,7 @@ def gen_crt_sample_uniform(m, int_type):
                 # TODO
                 return [tf.random_uniform(shape, maxval=mi, dtype=int_type) for mi in m]
             else:
+                print("SAMPLE_UNIFORM")
                 return [seeded_random_uniform(shape, maxval=mi, seed=seed, dtype=int_type) for mi in m]
 
     return crt_sample_uniform
