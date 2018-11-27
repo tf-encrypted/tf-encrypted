@@ -15,9 +15,9 @@ except NotFoundError:
                     "tensorflow version " + tf.__version__)
 
 
-def secure_random(shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=None):
+def seeded_random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=None):
     """
-    Returns random numbers securely.
+    Returns cryptographically strong random numbers with a seed
 
     .. code-block:: python
 
@@ -46,4 +46,39 @@ def secure_random(shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=
     minval = ops.convert_to_tensor(minval, dtype=dtype, name="min")
     maxval = ops.convert_to_tensor(maxval, dtype=dtype, name="max")
 
-    return secure_random_module.secure_random(shape, seed, minval, maxval, name=name)
+    return secure_random_module.secure_seeded_random_uniform(shape, seed, minval, maxval, name=name)
+
+
+def random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, name=None):
+    """
+    Returns cryptographically strong random numbers.
+
+    .. code-block:: python
+
+        x = secure_random([2, 2], minval=-1000, maxval=1000)
+
+    :param list shape: Shape of the random tensor.
+    :param int minval: Minimum value to return, inclusive.
+    :param int maxval: Maximum value to return, exclusive.
+    :param dtype: Data type of the return random values. Either int32 or int64.
+    :param tf.Tensor seed: The seed to be used when generating the random numbers.
+    :param str name:
+
+    :rtype: tf.Tensor
+    """
+
+    dtype = dtypes.as_dtype(dtype)
+    if dtype not in (dtypes.int32, dtypes.int64):
+        raise ValueError("Invalid dtype %r" % dtype)
+
+    if maxval is None:
+        raise ValueError("Must specify maxval for integer dtype %r" % dtype)
+
+    minval = ops.convert_to_tensor(minval, dtype=dtype, name="min")
+    maxval = ops.convert_to_tensor(maxval, dtype=dtype, name="max")
+
+    return secure_random_module.secure_random_uniform(shape, minval, maxval, name=name)
+
+
+def seed():
+    return secure_random_module.secure_seed()
