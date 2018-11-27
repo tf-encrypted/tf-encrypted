@@ -22,7 +22,7 @@ static Status SeededRandomUniformShape(InferenceContext* context) {
   return RandomUniformShapeCommon(context);
 }
 
-REGISTER_OP("SeededRandomUniform")
+REGISTER_OP("SecureSeededRandomUniform")
     .Input("shape: T")
     .Input("seed: Tseed")
     .Input("minval: dtype")
@@ -42,7 +42,7 @@ REGISTER_OP("SecureRandomUniform")
     .Attr("T: {int32, int64} = DT_INT32")
     .SetShapeFn(RandomUniformShapeCommon);
 
-REGISTER_OP("Seed")
+REGISTER_OP("SecureSeed")
     .Output("output: int32");
 
 template <typename T, typename Gen>
@@ -143,12 +143,12 @@ public:
 };
 
 REGISTER_KERNEL_BUILDER(
-  Name("SeededRandomUniform")
+  Name("SecureSeededRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int32>("dtype"),
   SeededRandomUniformOp<int32, SeededGenerator<int32, int64>>);
 REGISTER_KERNEL_BUILDER(
-  Name("SeededRandomUniform")
+  Name("SecureSeededRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int64>("dtype"),
   SeededRandomUniformOp<int64, SeededGenerator<int64, __uint128_t>>);
@@ -165,6 +165,6 @@ REGISTER_KERNEL_BUILDER(
   RandomUniformOp<int64, Generator<int64, __uint128_t>>);
 
 REGISTER_KERNEL_BUILDER(
-  Name("Seed")
+  Name("SecureSeed")
   .Device(DEVICE_CPU),
   SeedOp);

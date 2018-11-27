@@ -85,8 +85,6 @@ class TestSeed(unittest.TestCase):
 
         output = seeded_random_uniform(shape, seed=s, minval=minval, maxval=maxval).eval()
 
-        print(output)
-
         np.testing.assert_array_equal(output.shape, shape)
 
 

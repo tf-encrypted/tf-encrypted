@@ -46,7 +46,7 @@ def seeded_random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, seed=Non
     minval = ops.convert_to_tensor(minval, dtype=dtype, name="min")
     maxval = ops.convert_to_tensor(maxval, dtype=dtype, name="max")
 
-    return secure_random_module.seeded_random_uniform(shape, seed, minval, maxval, name=name)
+    return secure_random_module.secure_seeded_random_uniform(shape, seed, minval, maxval, name=name)
 
 
 def random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, name=None):
@@ -81,4 +81,4 @@ def random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, name=None):
 
 
 def seed():
-    return secure_random_module.seed()
+    return secure_random_module.secure_seed()
