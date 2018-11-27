@@ -8,6 +8,7 @@ from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
                       AbstractConstant, AbstractPlaceholder)
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
+from ..operations.secure_random import seeded_random_uniform
 
 
 class Int32Factory(AbstractFactory):
@@ -21,6 +22,9 @@ class Int32Factory(AbstractFactory):
             return Int32Tensor(value.value)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
+
+    def seeded_tensor(self, shape, seed):
+        return Int32SeededTensor(shape, seed)
 
     def constant(self, value) -> 'Int32Constant':
 
@@ -194,6 +198,20 @@ class Int32Tensor(AbstractTensor):
 
     def right_shift(self, bitlength):
         return int32factory.tensor(tf.bitwise.right_shift(self.value, bitlength))
+
+
+class Int32SeededTensor():
+    def __init__(self, shape, seed):
+        self.seed = seed
+        self.shape = shape
+
+    def expand(self):
+        backing = seeded_random_uniform(shape=self.shape,
+                                        dtype=self.native_type,
+                                        minval=self.native_type.min,
+                                        maxval=self.native_type.max,
+                                        seed=self.seed)
+        return Int32Tensor(backing)
 
 
 class Int32Constant(Int32Tensor, AbstractConstant):

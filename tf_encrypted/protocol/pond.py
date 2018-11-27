@@ -1136,7 +1136,7 @@ class Pond(Protocol):
     ) -> Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor']:
 
         if pad_amt == 0:
-                return arr
+            return arr
 
         arrshape = arr.shape.as_list()
         padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(arrshape))
@@ -1155,7 +1155,7 @@ class Pond(Protocol):
     ) -> Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor']:
 
         if pad_amt == 0:
-                return arr
+            return arr
 
         arrshape = arr.shape.as_list()
         padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(arrshape))
@@ -3388,10 +3388,10 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
             a1seed = x.backing_dtype.seeded_tensor(x.shape, seed1)
 
         with tf.device(prot.server_0.device_name):
-            alpha0 = x0 - a0
+            alpha0 = x0 - a0seed
 
         with tf.device(prot.server_1.device_name):
-            alpha1 = x1 - a1
+            alpha1 = x1 - a1seed
 
         # exchange of alphas
 
