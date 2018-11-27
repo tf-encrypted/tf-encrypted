@@ -368,6 +368,22 @@ def concat(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.concat([input0, input1], axis.attr["value"].tensor.int_val[0])
 
 
+def batch_to_space_nd(converter, node, inputs):
+    input = converter.outputs[inputs[0]]
+    block_shape = converter.outputs[inputs[1]]
+    crops = converter.outputs[inputs[2]]
+
+    return converter.protocol.batch_to_space_nd(input, block_shape, crops)
+
+
+def space_to_batch_nd(converter, node, inputs):
+    input = converter.outputs[inputs[0]]
+    block_shape = converter.outputs[inputs[1]]
+    paddings = converter.outputs[inputs[2]]
+
+    return converter.protocol.space_to_batch_nd(input, block_shape, paddings)
+
+
 def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
     dtype = x.attr["dtype"].type
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
