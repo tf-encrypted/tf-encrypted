@@ -76,6 +76,14 @@ class PrimeTensor(AbstractTensor):
     def conv2d(self, other, strides, padding='SAME') -> 'PrimeTensor':
         raise NotImplementedError()
 
+    def batch_to_space_nd(self, block_shape, crops):
+        backing = tf.batch_to_space_nd(self.value, block_shape, crops)
+        return self.factory.tensor(backing)
+
+    def space_to_batch_nd(self, block_shape, paddings):
+        backing = tf.space_to_batch_nd(self.value, block_shape, paddings)
+        return self.factory.tensor(backing)
+
     def mod(self, k: int) -> 'PrimeTensor':
         return self.factory.tensor((self.value % k) % self.modulus)
 
