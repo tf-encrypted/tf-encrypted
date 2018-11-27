@@ -17,7 +17,7 @@ except NotFoundError:
 
 def seeded_random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=None):
     """
-    Returns random numbers securely.
+    Returns cryptographically strong random numbers with a seed
 
     .. code-block:: python
 
@@ -51,7 +51,7 @@ def seeded_random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, seed=Non
 
 def random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, name=None):
     """
-    Returns random numbers securely.
+    Returns cryptographically strong random numbers.
 
     .. code-block:: python
 

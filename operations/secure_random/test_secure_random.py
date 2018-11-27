@@ -14,7 +14,7 @@ random_uniform = secure_random_module.secure_random_uniform
 seed = secure_random_module.seed
 
 
-class TestSeededSecureRandom(unittest.TestCase):
+class TestSeededRandomUniform(unittest.TestCase):
 
     def test_int32_return(self):
         expected = [[608, 425, 925], [198, 891, 721]]
@@ -64,7 +64,7 @@ class TestSeededSecureRandom(unittest.TestCase):
             np.testing.assert_array_equal(output, expected)
 
 
-class TestSecureRandom(unittest.TestCase):
+class TestRandomUniform(unittest.TestCase):
     def test_min_max_range(self):
         with tf.Session():
             minval = tf.constant(-10000000, dtype=tf.int32)
