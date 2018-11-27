@@ -6,6 +6,7 @@ from .int100 import (
     Int100Placeholder,
     Int100Variable,
     Int100Tensor,
+    Int100SeededTensor
 )
 
 from .prime import (
@@ -49,6 +50,7 @@ __all__ = [
     'Int100Placeholder',
     'Int100Variable',
     'Int100Tensor',
+    'Int100SeededTensor',
     'PrimeTensor',
     'PrimePlaceholder',
     'PrimeVariable',

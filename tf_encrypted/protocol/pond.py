@@ -22,6 +22,7 @@ from ..types import Slice, Ellipse
 from ..player import Player
 from ..config import get_config, tensorflow_supports_int64
 from .protocol import Protocol, global_cache_updaters, memoize, nodes
+from ..operations.secure_random import seed
 
 
 TFEData = Union[np.ndarray, tf.Tensor]
@@ -339,7 +340,6 @@ class Pond(Protocol):
         apply_scaling: bool = True,
         name: Optional[str] = None,
     ) -> Union["PondPublicTensor", List["PondPublicTensor"]]:
-
         """
         define_public_input(player, inputter_fn, apply_scaling, name) -> PondPublicTensor(s)
 
@@ -400,7 +400,6 @@ class Pond(Protocol):
         "PondMaskedTensor",
         List[Union["PondPrivateTensor", "PondMaskedTensor"]],
     ]:
-
         """
         define_private_input(player, inputter_fn, apply_scaling, name, masked, factory) -> PondPrivateTensor(s)
 
@@ -471,7 +470,6 @@ class Pond(Protocol):
         outputter_fn: Callable[..., Any],
         name: Optional[str] = None,
     ) -> tf.Operation:
-
         """
         define_output(player, xs, outputter_fn, name) -> tensorflow.Operation
 
@@ -3379,8 +3377,15 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
     with tf.name_scope("mask"):
 
         with tf.device(prot.crypto_producer.device_name):
-            a = x.backing_dtype.sample_uniform(x.shape)
-            a0, a1 = prot._share(a)
+            seed0 = seed()
+            seed1 = seed()
+
+            a0 = x.backing_dtype.sample_uniform(x.shape, seed0)
+            a1 = x.backing_dtype.sample_uniform(x.shape, seed1)
+            a = a0 + a1
+
+            a0seed = x.backing_dtype.seeded_tensor(x.shape, seed0)
+            a1seed = x.backing_dtype.seeded_tensor(x.shape, seed1)
 
         with tf.device(prot.server_0.device_name):
             alpha0 = x0 - a0

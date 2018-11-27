@@ -65,8 +65,8 @@ class Int100Factory(AbstractFactory):
     def one(self) -> 'Int100Tensor':
         return Int100Tensor([np.array([1])] * len(m))
 
-    def sample_uniform(self, shape: List[int]) -> 'Int100Tensor':
-        backing = _crt_sample_uniform(shape)
+    def sample_uniform(self, shape: List[int], seed=None) -> 'Int100Tensor':
+        backing = _crt_sample_uniform(shape, seed=seed)
         return Int100Tensor(backing)
 
     def sample_bounded(self, shape: List[int], bitlength: int) -> 'Int100Tensor':
@@ -259,6 +259,9 @@ class Int100Tensor(AbstractTensor):
         if isinstance(x, Int100Tensor):
             return x
 
+        if isinstance(x, Int100SeededTensor):
+            return x.expand()
+
         if type(x) is int:
             return int100factory.tensor(np.array([x]))
 
@@ -391,6 +394,16 @@ class Int100Tensor(AbstractTensor):
     def cast(self, factory):
         assert factory == self.factory, factory
         return self
+
+
+class Int100SeededTensor():
+    def __init__(self, shape, seed):
+        self.seed = seed
+        self.shape = shape
+
+    def expand(self):
+        backing = _crt_sample_uniform(self.shape, seed=self.seed)
+        return Int100Tensor(backing)
 
 
 class Int100Constant(Int100Tensor, AbstractConstant):
