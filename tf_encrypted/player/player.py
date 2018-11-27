@@ -11,7 +11,7 @@ class Player(object):
 
     :param str name: Name of the player
     :param int index: Index of the player (for ordering)
-    :param str device_name: Name of device (e.g. server_0)
+    :param str device_name: Name of device (fully expanded)
     :param str host: IP/domain address of the player's device, defaults to None
     """
     def __init__(self, name: str, index: int, device_name: str, host: Optional[str] = None) -> None:

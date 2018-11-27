@@ -160,12 +160,6 @@ class OddImplicitTensor(AbstractTensor):
     def conv2d(self, other, strides, padding='SAME') -> 'OddImplicitTensor':
         raise NotImplementedError()
 
-    def batch_to_space_nd(self, block_shape, crops):
-        raise NotImplementedError()
-
-    def space_to_batch_nd(self, block_shape, paddings):
-        raise NotImplementedError()
-
     def mod(self, k: int) -> 'OddImplicitTensor':
         raise NotImplementedError()
 

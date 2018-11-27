@@ -2793,13 +2793,13 @@ def _avgpool2d_masked(
 
 
 def _batch_to_space_nd_core(prot, tensor, block_shape, crops):
-    x_on_0, x_on_1 = tensor.unwrapped
+    tensor_on_0, tensor_on_1 = tensor.unwrapped
 
     with tf.device(prot.server_0.device_name):
-        space_on_0 = x_on_0.batch_to_space_nd(block_shape, crops)
+        space_on_0 = tensor_on_0.batch_to_space_nd(block_shape, crops)
 
     with tf.device(prot.server_1.device_name):
-        space_on_1 = x_on_1.batch_to_space_nd(block_shape, crops)
+        space_on_1 = tensor_on_1.batch_to_space_nd(block_shape, crops)
 
     return space_on_0, space_on_1
 
@@ -2829,15 +2829,15 @@ def _batch_to_space_nd_masked(prot, tensor, block_shape, crops):
 
 
 def _space_to_batch_nd_core(prot, tensor, block_shape, paddings):
-    x_on_0, x_on_1 = tensor.unwrapped
+    tensor_on_0, tensor_on_1 = tensor.unwrapped
 
     with tf.name_scope("space_to_batch_nd"):
 
         with tf.device(prot.server_0.device_name):
-            batch_on_0 = x_on_0.space_to_batch_nd(block_shape, paddings)
+            batch_on_0 = tensor_on_0.space_to_batch_nd(block_shape, paddings)
 
         with tf.device(prot.server_1.device_name):
-            batch_on_1 = x_on_1.space_to_batch_nd(block_shape, paddings)
+            batch_on_1 = tensor_on_1.space_to_batch_nd(block_shape, paddings)
 
     return batch_on_0, batch_on_1
 
@@ -2861,7 +2861,10 @@ def _space_to_batch_nd_private(prot, tensor, block_shape, paddings):
 def _space_to_batch_nd_masked(prot, tensor, block_shape, paddings):
 
     with tf.name_scope("space_to_batch_nd"):
-        batch_on_0, batch_on_1 = _space_to_batch_nd_core(prot, tensor.unmasked, block_shape, paddings)
+        batch_on_0, batch_on_1 = _space_to_batch_nd_core(prot,
+                                                         tensor.unmasked,
+                                                         block_shape,
+                                                         paddings)
 
     return PondPrivateTensor(prot, batch_on_0, batch_on_1, tensor.is_scaled)
 
