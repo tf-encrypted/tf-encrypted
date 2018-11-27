@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0]
+
+**Added**
+
+- SecureNN with int64 support has landed.
+- Cryptographically secure random numbers feature has been implemented but not integrated.
+- Three new ops have been added to Pond and the converter: Pad, BatchToSpaceND, SpaceToBatchND
+
+**Changed**
+
+- There are now separate wheels published to pypi for MacOS and linux.
+- Various documentation updates.
+
 ## [0.3.0]
 
 **Breaking**
