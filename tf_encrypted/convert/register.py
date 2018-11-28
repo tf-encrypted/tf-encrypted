@@ -32,9 +32,10 @@ def register() -> Dict[str, Any]:
         'Squeeze': squeeze,
         'ConcatV2': concat,
         'BiasAdd': bias_add,
-        # 'Pack': pack,
         'MaxPool': maxpool,
         'Pad': pad,
+        'BatchToSpaceND': batch_to_space_nd,
+        'SpaceToBatchND': space_to_batch_nd,
     }
 
     return reg
@@ -366,6 +367,22 @@ def concat(converter: Converter, node: Any, inputs: List[str]) -> Any:
     axis = converter.outputs[inputs[2]]
 
     return converter.protocol.concat([input0, input1], axis.attr["value"].tensor.int_val[0])
+
+
+def batch_to_space_nd(converter, node, inputs):
+    input = converter.outputs[inputs[0]]
+    block_shape = converter.outputs[inputs[1]].attr["value"].tensor
+    crops = converter.outputs[inputs[2]].attr["value"].tensor
+
+    return converter.protocol.batch_to_space_nd(input, block_shape, crops)
+
+
+def space_to_batch_nd(converter, node, inputs):
+    input = converter.outputs[inputs[0]]
+    block_shape = converter.outputs[inputs[1]].attr["value"].tensor
+    paddings = converter.outputs[inputs[2]].attr["value"].tensor
+
+    return converter.protocol.space_to_batch_nd(input, block_shape, paddings)
 
 
 def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
