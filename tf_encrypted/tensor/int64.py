@@ -63,20 +63,19 @@ class Int64Factory(AbstractFactory):
     def native_type(self):
         return tf.int64
 
-    def sample_uniform(self, shape: List[int]) -> 'Int64Tensor':
-
-
-<< << << < HEAD
-        value = tf.random_uniform(shape=shape,
+    def sample_uniform(self, shape: List[int], seed=None) -> 'Int64Tensor':
+        if seed is None:
+            value = random_uniform(shape=shape,
+                                   dtype=self.native_type,
+                                   minval=self.native_type.min,
+                                   maxval=self.native_type.max)
+        else:
+            seeded_random_uniform(shape=shape,
+                                  seed=seed,
                                   dtype=self.native_type,
                                   minval=self.native_type.min,
                                   maxval=self.native_type.max)
-== == == =
-        value = random_uniform(shape=shape,
-                               dtype=self.native_type,
-                               minval=tf.int64.min,
-                               maxval=tf.int64.max)
->>>>>> > fdc6c02a7c853f3285b7289a5c8d28e71f8ed2a7
+
         return Int64Tensor(value)
 
     def sample_bounded(self, shape: List[int], bitlength: int) -> 'Int64Tensor':
