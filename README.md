@@ -59,7 +59,7 @@ If you'd like to develop tf-encrypted locally, please read our [contributing gui
 
 To make use of int64 in the SecureNN protocol you'll need to download a special build of tensorflow that contains support for the int64 matrix multiplications. We make no guarantees about these builds and their usage should still be treated as pre-alpha but they make experimenting with int64 possible!
 
-Download for MacOS [here](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.9.0-cp35-cp35m-macosx_10_7_x86_64.whl).
+Download for MacOS [here](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl).
 
 Download for Linux [here](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.9.0-cp35-cp35m-linux_x86_64.whl).
 
