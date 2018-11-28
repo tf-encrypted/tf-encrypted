@@ -1,5 +1,5 @@
 package:
-  name: tf-encrypted
+  name: tf-encrypt
   version: "0.2.0"
 
 source:
