@@ -70,11 +70,11 @@ class Int64Factory(AbstractFactory):
                                    minval=self.native_type.min,
                                    maxval=self.native_type.max)
         else:
-            seeded_random_uniform(shape=shape,
-                                  seed=seed,
-                                  dtype=self.native_type,
-                                  minval=self.native_type.min,
-                                  maxval=self.native_type.max)
+            value = seeded_random_uniform(shape=shape,
+                                          seed=seed,
+                                          dtype=self.native_type,
+                                          minval=self.native_type.min,
+                                          maxval=self.native_type.max)
 
         return Int64Tensor(value)
 
@@ -107,6 +107,9 @@ def _lift(x, y) -> Tuple['Int64Tensor', 'Int64Tensor']:
 
     if isinstance(x, Int64Tensor) and isinstance(y, int):
         return x, x.factory.tensor(np.array([y]))
+
+    if isinstance(x, Int64Tensor) and isinstance(y, Int64SeededTensor):
+        return x, y.expand()
 
     if isinstance(x, int) and isinstance(y, Int64Tensor):
         return y.factory.tensor(np.array([x])), y
@@ -256,6 +259,10 @@ class Int64Tensor(AbstractTensor):
 
 
 class Int64SeededTensor():
+    @property
+    def native_type(self):
+        return tf.int64
+
     def __init__(self, shape, seed):
         self.seed = seed
         self.shape = shape

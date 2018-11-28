@@ -3374,24 +3374,20 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
     x0, x1 = x.unwrapped
 
     with tf.name_scope("mask"):
-        print("MASKING")
-
         with tf.device(prot.crypto_producer.device_name):
-            seed0 = seed()
-            seed1 = seed()
+            s0 = seed()
+            s1 = seed()
 
-            p0 = tf.Print(seed0, [seed0])
-            p1 = tf.Print(seed1, [seed1])
+            print(s0)
+            print(s1)
 
-            print(seed0)
-            print(p0)
+            a0 = x.backing_dtype.sample_uniform(x.shape, s0)
+            a1 = x.backing_dtype.sample_uniform(x.shape, s1)
 
-            a0 = x.backing_dtype.sample_uniform(x.shape, p0)
-            a1 = x.backing_dtype.sample_uniform(x.shape, p1)
             a = a0 + a1
 
-            a0seed = x.backing_dtype.seeded_tensor(x.shape, seed0)
-            a1seed = x.backing_dtype.seeded_tensor(x.shape, seed1)
+            a0seed = x.backing_dtype.seeded_tensor(x.shape, s0)
+            a1seed = x.backing_dtype.seeded_tensor(x.shape, s1)
 
         with tf.device(prot.server_0.device_name):
             alpha0 = x0 - a0seed

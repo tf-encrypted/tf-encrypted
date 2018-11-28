@@ -141,6 +141,13 @@ public:
     OP_REQUIRES(context, sodium_init() >= 0, errors::Internal("libsodium failed to initialize, try again"));
 
     randombytes_buf(output->flat<int32>().data(), randombytes_SEEDBYTES);
+
+    std::cout << "HI" << std::endl;
+
+    auto out = output->flat<int32>().data();
+    for(int i=0; i < 8; i++) {
+      std::cout << out[i] << std::endl;
+    }
   }
 };
 

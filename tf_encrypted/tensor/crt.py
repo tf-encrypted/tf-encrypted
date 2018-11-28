@@ -183,17 +183,10 @@ def gen_crt_sample_uniform(m, int_type):
     def crt_sample_uniform(shape, seed=None):
         with tf.name_scope('sample'):
 
-
-<< << << < HEAD
-    if seed is None:
-                # TODO
-        return [tf.random_uniform(shape, maxval=mi, dtype=int_type) for mi in m]
-    else:
-        print("SAMPLE_UNIFORM")
-        return [seeded_random_uniform(shape, maxval=mi, seed=seed, dtype=int_type) for mi in m]
-== == == =
-    return [random_uniform(shape, maxval=mi, dtype=int_type) for mi in m]
->>>>>> > fdc6c02a7c853f3285b7289a5c8d28e71f8ed2a7
+            if seed is None:
+                return [random_uniform(shape, maxval=mi, dtype=int_type) for mi in m]
+            else:
+                return [seeded_random_uniform(shape, maxval=mi, seed=seed, dtype=int_type) for mi in m]
 
     return crt_sample_uniform
 
