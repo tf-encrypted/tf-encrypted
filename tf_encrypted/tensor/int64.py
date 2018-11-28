@@ -9,7 +9,7 @@ from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
 from .helpers import inverse
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
-from ..operations.secure_random import seeded_random_uniform
+from ..operations.secure_random import seeded_random_uniform, random_uniform
 
 
 class Int64Factory(AbstractFactory):
@@ -64,18 +64,27 @@ class Int64Factory(AbstractFactory):
         return tf.int64
 
     def sample_uniform(self, shape: List[int]) -> 'Int64Tensor':
+
+
+<< << << < HEAD
         value = tf.random_uniform(shape=shape,
                                   dtype=self.native_type,
                                   minval=self.native_type.min,
                                   maxval=self.native_type.max)
+== == == =
+        value = random_uniform(shape=shape,
+                               dtype=self.native_type,
+                               minval=tf.int64.min,
+                               maxval=tf.int64.max)
+>>>>>> > fdc6c02a7c853f3285b7289a5c8d28e71f8ed2a7
         return Int64Tensor(value)
 
     def sample_bounded(self, shape: List[int], bitlength: int) -> 'Int64Tensor':
         # TODO[Morten] verify that uses of this work for signed integers
-        value = tf.random_uniform(shape=shape,
-                                  dtype=self.native_type,
-                                  minval=0,
-                                  maxval=2**bitlength)
+        value = random_uniform(shape=shape,
+                               dtype=self.native_type,
+                               minval=0,
+                               maxval=2**bitlength)
         return Int64Tensor(value)
 
     def stack(self, xs: List['Int64Tensor'], axis: int = 0) -> 'Int64Tensor':

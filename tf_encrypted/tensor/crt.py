@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from ..tensor.shared import im2col
 from .helpers import inverse, prod
-from ..operations.secure_random import seeded_random_uniform
+from ..operations.secure_random import seeded_random_uniform, random_uniform
 
 Decomposed = Union[List[tf.Tensor], List[np.ndarray]]
 
@@ -182,12 +182,18 @@ def gen_crt_sample_uniform(m, int_type):
 
     def crt_sample_uniform(shape, seed=None):
         with tf.name_scope('sample'):
-            if seed is None:
+
+
+<< << << < HEAD
+    if seed is None:
                 # TODO
-                return [tf.random_uniform(shape, maxval=mi, dtype=int_type) for mi in m]
-            else:
-                print("SAMPLE_UNIFORM")
-                return [seeded_random_uniform(shape, maxval=mi, seed=seed, dtype=int_type) for mi in m]
+        return [tf.random_uniform(shape, maxval=mi, dtype=int_type) for mi in m]
+    else:
+        print("SAMPLE_UNIFORM")
+        return [seeded_random_uniform(shape, maxval=mi, seed=seed, dtype=int_type) for mi in m]
+== == == =
+    return [random_uniform(shape, maxval=mi, dtype=int_type) for mi in m]
+>>>>>> > fdc6c02a7c853f3285b7289a5c8d28e71f8ed2a7
 
     return crt_sample_uniform
 
@@ -207,7 +213,7 @@ def gen_crt_sample_bounded(m, int_type):
 
             result = decompose(0)
             for chunk_size in chunk_sizes:
-                chunk_value = tf.random_uniform(shape, minval=0, maxval=2**chunk_size, dtype=int_type)
+                chunk_value = random_uniform(shape, minval=0, maxval=2**chunk_size, dtype=int_type)
                 scale = 2**chunk_size
                 result = add(
                     mul(result, decompose(scale)),

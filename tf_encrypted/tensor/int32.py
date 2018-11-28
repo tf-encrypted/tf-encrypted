@@ -8,7 +8,7 @@ from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
                       AbstractConstant, AbstractPlaceholder)
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
-from ..operations.secure_random import seeded_random_uniform
+from ..operations.secure_random import seeded_random_uniform, random_uniform
 
 
 class Int32Factory(AbstractFactory):
@@ -58,10 +58,10 @@ class Int32Factory(AbstractFactory):
         return tf.int32
 
     def sample_uniform(self, shape: List[int]) -> 'Int32Tensor':
-        value = tf.random_uniform(shape=shape,
-                                  dtype=self.native_type,
-                                  minval=self.native_type.min,
-                                  maxval=self.native_type.max)
+        value = random_uniform(shape=shape,
+                               dtype=self.native_type,
+                               minval=self.native_type.min,
+                               maxval=self.native_type.max)
         return Int32Tensor(value)
 
     def stack(self, xs: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':
