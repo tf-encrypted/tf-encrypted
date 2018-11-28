@@ -232,14 +232,19 @@ ifeq (,$(PYPI_PLATFORM))
 PYPI_PLATFORM=$(DEFAULT_PLATFORM)
 endif
 
-pypi-push-master: build-all pypicheck pypi-version-check pypi-platform-check
-	pip install --user --upgrade setuptools wheel twine
+pypi-push-master: build-all pypicheck pypi-platform-check
+	pip install --upgrade setuptools wheel twine
 	rm -rf dist
-	python setup.py sdist bdist_wheel --plat-name=$(PYPI_PLATFORM)
 
-pypi-push-release-candidate: releasecheck pypi-push-master
+ifeq ($(PYPI_PLATFORM),$(DEFAULT_PLATFORM))
+	python setup.py sdist bdist_wheel --plat-name=$(PYPI_PLATFORM)
+else
+	python setup.py bdist_wheel --plat-name=$(PYPI_PLATFORM)
+endif
+
+pypi-push-release-candidate: releasecheck pypi-version-check pypi-push-master
 	@echo "Attempting to upload to pypi"
-	@PATH=\$PATH:~/.local/bin twine upload -u="$(PYPI_USERNAME)" -p="$(PYPI_PASSWORD)" dist/*
+	twine upload -u="$(PYPI_USERNAME)" -p="$(PYPI_PASSWORD)" dist/*
 
 pypi-push-release: pypi-push-release-candidate
 
@@ -253,7 +258,7 @@ pypi-push: pypi-push-$(PUSHTYPE)
 # The following are meta-rules for building and pushing various different
 # release artifacts to their intended destinations.
 # ###############################################
-push: pypi-version-check
+push:
 	@echo "Attempting to build and push $(VERSION) with push type $(PUSHTYPE) - $(EXACT_TAG)"
 	make docker-push
 	make pypi-push

@@ -117,6 +117,59 @@ class TestConvert(unittest.TestCase):
         test_input = np.ones([2, 2, 4, 1])
         self._test_with_ndarray_input_fn('space_to_batch_nd', 'Pond', test_input)
 
+    def test_batch_to_space_nd_convert(self):
+        global global_filename
+        global_filename = "batch_to_space_nd.pb"
+        input_shape = [8, 1, 3, 1]
+
+        path = export_batch_to_space_nd(global_filename, input_shape)
+        tf.reset_default_graph()
+        graph_def = read_graph(path)
+        tf.reset_default_graph()
+        actual = run_batch_to_space_nd(input_shape)
+        tf.reset_default_graph()
+
+        with tfe.protocol.Pond() as prot:
+            prot.clear_initializers()
+
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
+
+            with tfe.Session() as sess:
+                sess.run(tf.global_variables_initializer())
+                output = sess.run(x.reveal(), tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
+    def test_space_to_batch_nd_convert(self):
+        global global_filename
+        global_filename = "space_to_batch_nd.pb"
+        input_shape = [2, 2, 4, 1]
+        path = export_space_to_batch_nd(global_filename, input_shape)
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+        tf.reset_default_graph()
+
+        actual = run_space_to_batch_nd(input_shape)
+        tf.reset_default_graph()
+
+        with tfe.protocol.Pond() as prot:
+            prot.clear_initializers()
+
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
+
+            with tfe.Session() as sess:
+                sess.run(tf.global_variables_initializer())
+                output = sess.run(x.reveal(), tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
     def test_squeeze_convert(self):
         test_input = np.ones([1, 2, 3, 1])
         self._test_with_ndarray_input_fn('squeeze', 'Pond', test_input)
