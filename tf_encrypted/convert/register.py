@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Union
 from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
 from .convert import Converter
 
-from tf_encrypted.protocol.pond import PondPublicTensor
+from tf_encrypted.protocol.pond import PondPublicTensor, PondPrivateTensor
 
 
 def register() -> Dict[str, Any]:
@@ -36,6 +36,7 @@ def register() -> Dict[str, Any]:
         "Pad": pad,
         "BatchToSpaceND": batch_to_space_nd,
         "SpaceToBatchND": space_to_batch_nd,
+        'FloorMod': floormod,
     }
 
     return reg
@@ -383,6 +384,31 @@ def space_to_batch_nd(converter, node, inputs):
     paddings = converter.outputs[inputs[2]].attr["value"].tensor
 
     return converter.protocol.space_to_batch_nd(input, block_shape, paddings)
+
+def floormod(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    x = converter.outputs[inputs[0]]
+    y = converter.outputs[inputs[1]]
+
+    if isinstance(x, tf.NodeDef):
+        x_out = nodef_to_public_pond(converter, x)
+    else:
+        if isinstance(x, PondPrivateTensor):
+            x_out = x.reveal()
+        else:
+            x_out = x
+
+    if isinstance(y, tf.NodeDef):
+        y_out = nodef_to_public_pond(converter, y)
+    else:
+        if isinstance(y, PondPrivateTensor):
+            y_out = y.reveal()
+        else:
+            y_out = y
+
+    inputter_fn = lambda: tf.floormod(x_out.decode(), y_out.decode())
+
+    out = converter.protocol.define_public_input(converter.model_provider, inputter_fn)
+    return(out)
 
 
 def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:

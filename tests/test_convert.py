@@ -687,6 +687,43 @@ class TestConvert(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
+    def test_floormod_convert(self):
+            tf.reset_default_graph()
+
+            global global_filename
+            global_filename = "floormod.pb"
+
+            input_shape = [4, 1]
+
+            path = export_floormod(global_filename, input_shape)
+
+            tf.reset_default_graph()
+
+            graph_def = read_graph(path)
+
+            tf.reset_default_graph()
+
+            actual = run_floormod(input_shape)
+
+            tf.reset_default_graph()
+
+            with tfe.protocol.Pond() as prot:
+                prot.clear_initializers()
+
+                def provide_input():
+                    return tf.constant(np.array([2, 5, 6, 7]).reshape(4,1))
+
+                converter = Converter(tfe.get_config(), prot, 'model-provider')
+
+                x = converter.convert(graph_def, register(), 'input-provider', provide_input)
+
+                with tfe.Session() as sess:
+                    sess.run(tf.global_variables_initializer())
+
+                    output = sess.run(x, tag='reveal')
+
+            np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
 
 def run_stack(input1, input2, input3):
     x = tf.constant(input1)
@@ -1036,6 +1073,27 @@ def run_strided_slice(input):
         output = sess.run(out)
 
     return output
+
+
+def run_floormod(input_shape: List[int]):
+    x = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    y = tf.constant(np.array([5, 2, 6, 3]).reshape(4,1), dtype=tf.float32)
+
+    out = tf.floormod(x, y)
+
+    with tf.Session() as sess:
+        output = sess.run(out, feed_dict={x: np.array([2, 5, 6, 7]).reshape(4,1)})
+
+    return output
+
+
+def export_floormod(filename: str, input_shape: List[int]):
+    x = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    y = tf.constant(np.array([5, 2, 6, 3]).reshape(4,1), dtype=tf.float32)
+
+    out = tf.floormod(x, y)
+
+    return export(out, filename)
 
 
 def export(x: tf.Tensor, filename: str):
