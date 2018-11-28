@@ -4,6 +4,7 @@ from typing import Optional, Tuple
 import math
 import sys
 
+import numpy as np
 import tensorflow as tf
 
 from .odd_tensor import oddInt64factory
@@ -455,7 +456,7 @@ class SecureNN(Pond):
             def build_comparison_tree(tensors, indices):
                 assert len(tensors) == len(indices)
                 if len(indices) == 1:
-                    return indices[0]
+                    return tensors[0], indices[0]
 
                 halfway = len(tensors) // 2
                 tensors_left, tensors_right = tensors[:halfway], tensors[halfway:]
@@ -471,8 +472,10 @@ class SecureNN(Pond):
                 return maximum, argmax
 
             tensors = self.split(x, int(x.shape[axis]), axis=axis)
-            indices = list(range(len(tensors)))
-
+            indices = [
+                self.define_constant(np.array([i]))
+                for i, _ in enumerate(tensors)
+            ]
             maximum, argmax = build_comparison_tree(tensors, indices)
 
             maximum = self.squeeze(maximum, axis=(axis,))
