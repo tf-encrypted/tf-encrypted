@@ -711,7 +711,7 @@ class TestConvert(unittest.TestCase):
                 prot.clear_initializers()
 
                 def provide_input():
-                    return tf.constant(np.array([2, 5, 6, 7]).reshape(4,1))
+                    return tf.constant(np.array([2, 5, 6, 7]).reshape(4, 1))
 
                 converter = Converter(tfe.get_config(), prot, 'model-provider')
 
@@ -1077,19 +1077,19 @@ def run_strided_slice(input):
 
 def run_floormod(input_shape: List[int]):
     x = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    y = tf.constant(np.array([5, 2, 6, 3]).reshape(4,1), dtype=tf.float32)
+    y = tf.constant(np.array([5, 2, 6, 3]).reshape(4, 1), dtype=tf.float32)
 
     out = tf.floormod(x, y)
 
     with tf.Session() as sess:
-        output = sess.run(out, feed_dict={x: np.array([2, 5, 6, 7]).reshape(4,1)})
+        output = sess.run(out, feed_dict={x: np.array([2, 5, 6, 7]).reshape(4, 1)})
 
     return output
 
 
 def export_floormod(filename: str, input_shape: List[int]):
     x = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    y = tf.constant(np.array([5, 2, 6, 3]).reshape(4,1), dtype=tf.float32)
+    y = tf.constant(np.array([5, 2, 6, 3]).reshape(4, 1), dtype=tf.float32)
 
     out = tf.floormod(x, y)
 
