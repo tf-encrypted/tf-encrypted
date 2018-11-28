@@ -106,8 +106,9 @@ protected:
       // if lo is out of the zone reject and get another number
       while(lo > zone) {
         // rejection sampling, get the next valid number in the stream
-        buf_[i] = GetNextValidData();
+        buf_[i] = this->GetNextValidData();
         unsign = static_cast<uT>(buf_[i]);
+
 
         std::tie(hi, lo) = wmul<uT, Wide>(unsign, range);
       }
@@ -117,7 +118,7 @@ protected:
     }
   }
 
-  T GetNextValidData() {
+  virtual T GetNextValidData() {
     T data;
 
     randombytes_buf(&data, sizeof(T));
@@ -148,13 +149,7 @@ public:
     this->Uniform(minval, maxval - 1);
   }
 
-private:
-  T extra_block_[CHACHABLOCKSIZE];
-  uint32 block_counter_ = 0;
-  uint32 elements_per_block_ = 0;
-  uint32 inner_block_index_ = 0;
-
-  T GetNextValidData() {
+  T GetNextValidData() override {
     // if the extra block has been used up get the next available block
     if(inner_block_index_ + 1 == elements_per_block_) {
       inner_block_index_ = 0;
@@ -168,4 +163,10 @@ private:
 
     return ret;
   }
+
+private:
+  T extra_block_[CHACHABLOCKSIZE];
+  uint32 block_counter_ = 0;
+  uint32 elements_per_block_ = 0;
+  uint32 inner_block_index_ = 0;
 };

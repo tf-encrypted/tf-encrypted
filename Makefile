@@ -281,6 +281,7 @@ SODIUM_INSTALL = $(shell pwd)/build
 SECURE_OUT_PRE = $(PACKAGE_DIR)/secure_random/secure_random_module_tf_
 
 SECURE_IN = operations/secure_random/secure_random.cc
+SECURE_IN_H = operations/secure_random/generators.h
 LIBSODIUM_OUT = $(SODIUM_INSTALL)/lib/libsodium.a
 
 # ###############################################
@@ -298,7 +299,7 @@ $(LIBSODIUM_OUT):
 	$(MAKE) -C $(LIBSODIUM_DIR)
 	$(MAKE) -C $(LIBSODIUM_DIR) install
 
-$(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN)
+$(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECURE_IN_H)
 	mkdir -p $(PACKAGE_DIR)/secure_random
 	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
 		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium
