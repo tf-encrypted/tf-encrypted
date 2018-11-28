@@ -235,8 +235,12 @@ endif
 pypi-push-master: build-all pypicheck pypi-platform-check
 	pip install --upgrade setuptools wheel twine
 	rm -rf dist
+
+ifeq ($(PYPI_PLATFORM),$(DEFAULT_PLATFORM))
 	python setup.py sdist bdist_wheel --plat-name=$(PYPI_PLATFORM)
-	twine upload -u="$(PYPITEST_USERNAME)" -p="$(PYPITEST_PASSWORD)" --repository-url https://test.pypi.org/legacy/ dist/*
+else
+	python setup.py bdist_wheel --plat-name=$(PYPI_PLATFORM)
+endif
 
 pypi-push-release-candidate: releasecheck pypi-version-check pypi-push-master
 	@echo "Attempting to upload to pypi"
