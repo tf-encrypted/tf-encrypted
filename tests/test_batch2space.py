@@ -79,7 +79,7 @@ class TestBatchToSpaceND(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
                 final = sess.run(out)
 
-        np.testing.assert_array_almost_equal(final, actual, decimal=4)
+        np.testing.assert_array_almost_equal(final, actual, decimal=3)
 
     @staticmethod
     def _generic_private_test(t, block_shape, crops):
@@ -94,7 +94,7 @@ class TestBatchToSpaceND(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
                 final = sess.run(out.reveal())
 
-        np.testing.assert_array_almost_equal(final, actual, decimal=4)
+        np.testing.assert_array_almost_equal(final, actual, decimal=3)
 
     @staticmethod
     def _generic_masked_test(t, block_shape, crops):
@@ -109,7 +109,7 @@ class TestBatchToSpaceND(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
                 final = sess.run(out.reveal())
 
-        np.testing.assert_array_almost_equal(final, actual, decimal=4)
+        np.testing.assert_array_almost_equal(final, actual, decimal=3)
 
 
 class TestSpaceToBatchND(unittest.TestCase):
@@ -186,7 +186,7 @@ class TestSpaceToBatchND(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
                 final = sess.run(out)
 
-        np.testing.assert_array_almost_equal(final, actual, decimal=4)
+        np.testing.assert_array_almost_equal(final, actual, decimal=3)
 
     @staticmethod
     def _generic_private_test(t, block_shape, paddings):
@@ -201,7 +201,7 @@ class TestSpaceToBatchND(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
                 final = sess.run(out.reveal())
 
-        np.testing.assert_array_almost_equal(final, actual, decimal=4)
+        np.testing.assert_array_almost_equal(final, actual, decimal=3)
 
     @staticmethod
     def _generic_masked_test(t, block_shape, paddings):
@@ -216,7 +216,7 @@ class TestSpaceToBatchND(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
                 final = sess.run(out.reveal())
 
-        np.testing.assert_array_almost_equal(final, actual, decimal=4)
+        np.testing.assert_array_almost_equal(final, actual, decimal=3)
 
 
 if __name__ == "__main__":
