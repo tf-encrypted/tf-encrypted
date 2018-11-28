@@ -87,7 +87,7 @@ Think you've found a bug? Let us know by opening an [issue in our tracker](https
 
 Security is a top priority for the project. If you have encounter a security
 issue please responsible disclose it by reaching out to us via
-[contact@dropoutlabs.com](mailto:contact@dropoutlabs.com).
+[tfencrypted@gmail.com](mailto:tfencrypted@gmail.com).
 
 We will work with you to mitigate the security issue and responsibly disclose
 it to anyone using the project.
