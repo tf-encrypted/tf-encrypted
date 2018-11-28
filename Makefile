@@ -232,14 +232,19 @@ ifeq (,$(PYPI_PLATFORM))
 PYPI_PLATFORM=$(DEFAULT_PLATFORM)
 endif
 
-pypi-push-master: build-all pypicheck pypi-version-check pypi-platform-check
-	pip install --user --upgrade setuptools wheel twine
+pypi-push-master: build-all pypicheck pypi-platform-check
+	pip install --upgrade setuptools wheel twine
 	rm -rf dist
-	python setup.py sdist bdist_wheel --plat-name=$(PYPI_PLATFORM)
 
-pypi-push-release-candidate: releasecheck pypi-push-master
+ifeq ($(PYPI_PLATFORM),$(DEFAULT_PLATFORM))
+	python setup.py sdist bdist_wheel --plat-name=$(PYPI_PLATFORM)
+else
+	python setup.py bdist_wheel --plat-name=$(PYPI_PLATFORM)
+endif
+
+pypi-push-release-candidate: releasecheck pypi-version-check pypi-push-master
 	@echo "Attempting to upload to pypi"
-	@PATH=\$PATH:~/.local/bin twine upload -u="$(PYPI_USERNAME)" -p="$(PYPI_PASSWORD)" dist/*
+	twine upload -u="$(PYPI_USERNAME)" -p="$(PYPI_PASSWORD)" dist/*
 
 pypi-push-release: pypi-push-release-candidate
 
@@ -253,7 +258,7 @@ pypi-push: pypi-push-$(PUSHTYPE)
 # The following are meta-rules for building and pushing various different
 # release artifacts to their intended destinations.
 # ###############################################
-push: pypi-version-check
+push:
 	@echo "Attempting to build and push $(VERSION) with push type $(PUSHTYPE) - $(EXACT_TAG)"
 	make docker-push
 	make pypi-push
@@ -276,6 +281,7 @@ SODIUM_INSTALL = $(shell pwd)/build
 SECURE_OUT_PRE = $(PACKAGE_DIR)/secure_random/secure_random_module_tf_
 
 SECURE_IN = operations/secure_random/secure_random.cc
+SECURE_IN_H = operations/secure_random/generators.h
 LIBSODIUM_OUT = $(SODIUM_INSTALL)/lib/libsodium.a
 
 # ###############################################
@@ -293,7 +299,7 @@ $(LIBSODIUM_OUT):
 	$(MAKE) -C $(LIBSODIUM_DIR)
 	$(MAKE) -C $(LIBSODIUM_DIR) install
 
-$(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN)
+$(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECURE_IN_H)
 	mkdir -p $(PACKAGE_DIR)/secure_random
 	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
 		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium

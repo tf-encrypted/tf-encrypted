@@ -61,7 +61,7 @@ To make use of int64 in the SecureNN protocol you'll need to download a special 
 
 Download for MacOS [here](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl).
 
-Download for Linux [here](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.9.0-cp35-cp35m-linux_x86_64.whl).
+Download for Linux [here](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl).
 
 Now you should just be able to install using pip:
 
@@ -74,7 +74,7 @@ pip install tensorflow-1.9.0-cp35-cp35m-macosx_10_7_x86_64.whl
 **Linux**
 
 ```
-pip install tensorflow-1.9.0-cp35-cp35m-linux_x86_64.whl
+pip install tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl
 ```
 
 tf-encrypted auto-detects whether int64 support is available or not and uses that by default if so. So no further action will be needed to make use of this cool feature!!
