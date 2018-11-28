@@ -233,7 +233,7 @@ PYPI_PLATFORM=$(DEFAULT_PLATFORM)
 endif
 
 pypi-push-master: build-all pypicheck pypi-version-check pypi-platform-check
-	pip install --user --upgrade setuptools wheel twine
+	pip install --upgrade setuptools wheel twine
 	rm -rf dist
 	python setup.py sdist bdist_wheel --plat-name=$(PYPI_PLATFORM)
 
