@@ -448,8 +448,7 @@ class SecureNN(Pond):
         :param PondTensor x: Input tensor.
         :param int axis: The tensor axis to reduce along.
         :rtype: PondTensor
-        :returns: A new tensor with the specified axis reduced to the indices of 
-            the max value in that axis.
+        :returns: A new tensor with the indices of the max values along specified axis.
         """
         with tf.name_scope('argmax'):
 
@@ -465,10 +464,13 @@ class SecureNN(Pond):
                 maximum_left, argmax_left = build_comparison_tree(tensors_left, indices_left)
                 maximum_right, argmax_right = build_comparison_tree(tensors_right, indices_right)
 
+                # compute binary tensor indicating which side is greater
                 greater = self.greater(maximum_left, maximum_right)
 
+                # use above binary tensor to select maximum and argmax
                 maximum = self.select(greater, maximum_right, maximum_left)
                 argmax = self.select(greater, argmax_right, argmax_left)
+
                 return maximum, argmax
 
             tensors = self.split(x, int(x.shape[axis]), axis=axis)
