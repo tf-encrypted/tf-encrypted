@@ -51,7 +51,6 @@ public:
   explicit SeededRandomUniformOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
-    std::cout << "HI" << std::endl;
     const Tensor& shape_tensor = context->input(0);
     const Tensor& seed_tensor = context->input(1);
     const Tensor& minval = context->input(2);
@@ -141,13 +140,6 @@ public:
     OP_REQUIRES(context, sodium_init() >= 0, errors::Internal("libsodium failed to initialize, try again"));
 
     randombytes_buf(output->flat<int32>().data(), randombytes_SEEDBYTES);
-
-    std::cout << "HI" << std::endl;
-
-    auto out = output->flat<int32>().data();
-    for(int i=0; i < 8; i++) {
-      std::cout << out[i] << std::endl;
-    }
   }
 };
 

@@ -3378,21 +3378,22 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
             s0 = seed()
             s1 = seed()
 
-            print(s0)
-            print(s1)
+            p0 = tf.Print(s0, [s0], summarize=8)
+            p1 = tf.Print(s1, [s1], summarize=8)
 
-            a0 = x.backing_dtype.sample_uniform(x.shape, s0)
-            a1 = x.backing_dtype.sample_uniform(x.shape, s1)
+            print(x.shape)
+
+            a0 = x.backing_dtype.sample_uniform(x.shape, p0)
+            a1 = x.backing_dtype.sample_uniform(x.shape, p1)
 
             a = a0 + a1
 
-            a0seed = x.backing_dtype.seeded_tensor(x.shape, s0)
-            a1seed = x.backing_dtype.seeded_tensor(x.shape, s1)
-
         with tf.device(prot.server_0.device_name):
+            a0seed = x.backing_dtype.seeded_tensor(x.shape, s0)
             alpha0 = x0 - a0seed
 
         with tf.device(prot.server_1.device_name):
+            a1seed = x.backing_dtype.seeded_tensor(x.shape, s1)
             alpha1 = x1 - a1seed
 
         # exchange of alphas
