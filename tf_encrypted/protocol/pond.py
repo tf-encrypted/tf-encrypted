@@ -716,6 +716,22 @@ class Pond(Protocol):
         nodes[node_key] = x_masked
         return x_masked
 
+    def expand(self, x):
+        node_key = ("expand", x)
+        x_expanded = nodes.get(node_key, None)
+
+        if x_expanded is not None:
+            return x_expanded
+
+        if isinstance(x, PondMaskedTensor):
+            x_expanded = _expand_masked(self, x)
+
+        else:
+            raise TypeError("Don't know how to mask {}".format(type(x)))
+
+        nodes[node_key] = x_expanded
+        return x_expanded
+
     @memoize
     def mul(self, x, y):
         x, y = self.lift(x, y)
@@ -1528,17 +1544,21 @@ class PondMaskedTensor(PondTensor):
         self.a1 = a1
         self.alpha_on_0 = alpha_on_0
         self.alpha_on_1 = alpha_on_1
+        self.expanded = True
+
+        if self.a is None:
+            self.expanded = False
 
     def __repr__(self) -> str:
         return "PondMaskedTensor(shape={})".format(self.shape)
 
     @property
     def shape(self) -> List[int]:
-        return self.a.shape
+        return self.unmasked.shape
 
     @property
     def backing_dtype(self):
-        return self.a.factory
+        return self.unmasked.backing_dtype
 
     @property
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
@@ -1818,6 +1838,8 @@ def _cache_private(prot, x):
 
 def _cache_masked(prot, x):
     assert isinstance(x, PondMaskedTensor), type(x)
+
+    x = prot.expand(x)
 
     unmasked = x.unmasked
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
@@ -2445,6 +2467,9 @@ def _mul_masked_masked(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
 
+    x = prot.expand(x)
+    y = prot.expand(y)
+
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
     b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
 
@@ -2499,6 +2524,8 @@ def _square_private(prot, x):
 
 def _square_masked(prot, x):
     assert isinstance(x, PondMaskedTensor), type(x)
+
+    x = prot.expand(x)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
@@ -2620,6 +2647,9 @@ def _matmul_masked_masked(prot, x, y):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
 
+    x = prot.expand(x)
+    y = prot.expand(y)
+
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
     b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
 
@@ -2707,6 +2737,9 @@ def _conv2d_masked_private(prot, x, y, strides, padding):
 def _conv2d_masked_masked(prot, x, y, strides, padding):
     assert isinstance(x, PondMaskedTensor), type(x)
     assert isinstance(y, PondMaskedTensor), type(y)
+
+    x = prot.expand(x)
+    y = prot.expand(y)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
     b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
@@ -2844,6 +2877,7 @@ def _avgpool2d_masked(
     strides: Tuple[int, int],
     padding: str,
 ) -> PondPrivateTensor:
+    x = prot.expand(x)
 
     with tf.name_scope("avgpool2d"):
         y_on_0, y_on_1, scalar = _avgpool2d_core(
@@ -2972,6 +3006,7 @@ def _indexer_private(
 def _indexer_masked(
     prot: Pond, tensor: PondMaskedTensor, slice: Union[Slice, Ellipse]
 ) -> "PondMaskedTensor":
+    tensor = prot.expand(tensor)
 
     with tf.name_scope("index"):
 
@@ -3037,6 +3072,8 @@ def _transpose_private(prot, x, perm=None):
 
 def _transpose_masked(prot, x, perm=None):
     assert isinstance(x, PondMaskedTensor)
+
+    x = prot.expand(x)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
@@ -3104,6 +3141,8 @@ def _strided_slice_private(prot, x: PondPrivateTensor, args: Any, kwargs: Any):
 
 def _strided_slice_masked(prot, x: PondMaskedTensor, args: Any, kwargs: Any):
     assert isinstance(x, PondMaskedTensor)
+
+    x = prot.expand(x)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
@@ -3179,6 +3218,7 @@ def _split_private(
 def _split_masked(
     prot: Pond, x: PondMaskedTensor, num_split: int, axis: int = 0
 ) -> List[PondMaskedTensor]:
+    x = prot.expand(x)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
@@ -3254,6 +3294,8 @@ def _stack_masked(
     prot: Pond, xs: List[PondMaskedTensor], axis: int = 0
 ) -> PondMaskedTensor:
     assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
+
+    xs = [prot.expand(x_i) for x_i in xs]
 
     factory = xs[0].backing_dtype
     is_scaled = xs[0].is_scaled
@@ -3334,6 +3376,8 @@ def _concat_masked(
 ) -> PondMaskedTensor:
     assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
 
+    xs = [prot.expand(x_i) for x_i in xs]
+
     factory = xs[0].backing_dtype
     is_scaled = xs[0].is_scaled
     a, a0, a1, alpha_on_0, alpha_on_1 = zip(*(x.unwrapped for x in xs))
@@ -3377,39 +3421,42 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
         with tf.device(prot.crypto_producer.device_name):
             s0 = seed()
             s1 = seed()
-
-            p0 = tf.Print(s0, [s0], summarize=8)
-            p1 = tf.Print(s1, [s1], summarize=8)
-
-            print(x.shape)
-
-            a0 = x.backing_dtype.sample_uniform(x.shape, p0)
-            a1 = x.backing_dtype.sample_uniform(x.shape, p1)
-
-            a = a0 + a1
-
-        with tf.device(prot.server_0.device_name):
             a0seed = x.backing_dtype.seeded_tensor(x.shape, s0)
-            alpha0 = x0 - a0seed
-
-        with tf.device(prot.server_1.device_name):
             a1seed = x.backing_dtype.seeded_tensor(x.shape, s1)
-            alpha1 = x1 - a1seed
 
-        # exchange of alphas
-
-        with tf.device(prot.server_0.device_name):
-            alpha_on_0 = prot._reconstruct(alpha0, alpha1)
-
-        with tf.device(prot.server_1.device_name):
-            alpha_on_1 = prot._reconstruct(alpha0, alpha1)
-
-        return PondMaskedTensor(prot, x, a, a0, a1, alpha_on_0, alpha_on_1, x.is_scaled)
+        return PondMaskedTensor(prot, x, None, a0seed, a1seed, None, None, x.is_scaled)
 
 
-#
-# reshape helpers
-#
+def _expand_masked(prot: Pond, x: PondMaskedTensor) -> PondMaskedTensor:
+    if x.expanded:
+        return x
+
+    tensor = x.unmasked
+    x0, x1 = x.unmasked.unwrapped
+
+    with tf.device(prot.crypto_producer.device_name):
+        a0 = tensor.backing_dtype.sample_uniform(tensor.shape, x.a0.seed)
+        a1 = tensor.backing_dtype.sample_uniform(tensor.shape, x.a1.seed)
+
+        a = a0 + a1
+
+    with tf.device(prot.server_0.device_name):
+        alpha0 = x0 - x.a0
+
+    with tf.device(prot.server_1.device_name):
+        alpha1 = x1 - x.a1
+
+    with tf.device(prot.server_0.device_name):
+        alpha_on_0 = prot._reconstruct(alpha0, alpha1)
+
+    with tf.device(prot.server_1.device_name):
+        alpha_on_1 = prot._reconstruct(alpha0, alpha1)
+
+    return PondMaskedTensor(prot, tensor, a, a0, a1, alpha_on_0, alpha_on_1, x.is_scaled)
+
+    #
+    # reshape helpers
+    #
 
 
 def _reshape_public(
@@ -3452,6 +3499,7 @@ def _reshape_masked(
     prot: Pond, x: PondMaskedTensor, shape: List[int]
 ) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
+    x = prot.expand(x)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
@@ -3525,6 +3573,7 @@ def _expand_dims_masked(
     prot: Pond, x: PondMaskedTensor, axis: Optional[int] = None
 ) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
+    x = prot.expand(x)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
@@ -3598,6 +3647,7 @@ def _squeeze_masked(
     prot: Pond, x: PondMaskedTensor, axis: Optional[int] = None
 ) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
+    x = prot.expand(x)
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
