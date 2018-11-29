@@ -3,6 +3,7 @@ from typing import Tuple, List, Union, Optional, Any, NewType, Callable
 import abc
 import sys
 from math import log2, ceil
+from random import random
 
 import numpy as np
 import tensorflow as tf
@@ -570,6 +571,19 @@ class Pond(Protocol):
     def _share_and_wrap(self, secret: AbstractTensor, is_scaled) -> "PondPrivateTensor":
         s0, s1 = self._share(secret)
         return PondPrivateTensor(self, s0, s1, is_scaled)
+
+    def _share_one_seed(self, secret):
+        with tf.name_scope("share_one_seed"):
+            s = seed()
+            share0 = secret.factory.seeded_tensor(secret.shape, s)
+            share1 = secret - share0
+
+            # randomize which party gets the seed
+            r = random()
+            if r > 0.5:
+                return share0, share1
+            else:
+                return share1, share0
 
     def _reconstruct(
         self, share0: AbstractTensor, share1: AbstractTensor
@@ -2477,7 +2491,7 @@ def _mul_masked_masked(prot, x, y):
 
         with tf.device(prot.crypto_producer.device_name):
             ab = a * b
-            ab0, ab1 = prot._share(ab)
+            ab0, ab1 = prot._share_one_seed(ab)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -2533,7 +2547,7 @@ def _square_masked(prot, x):
 
         with tf.device(prot.crypto_producer.device_name):
             aa = a * a
-            aa0, aa1 = prot._share(aa)
+            aa0, aa1 = prot._share_one_seed(aa)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -2657,7 +2671,7 @@ def _matmul_masked_masked(prot, x, y):
 
         with tf.device(prot.crypto_producer.device_name):
             ab = a.matmul(b)
-            ab0, ab1 = prot._share(ab)
+            ab0, ab1 = prot._share_one_seed(ab)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -2748,7 +2762,7 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
 
         with tf.device(prot.crypto_producer.device_name):
             a_conv2d_b = a.conv2d(b, strides, padding)
-            a_conv2d_b0, a_conv2d_b1 = prot._share(a_conv2d_b)
+            a_conv2d_b0, a_conv2d_b1 = prot._share_one_seed(a_conv2d_b)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -3431,26 +3445,27 @@ def _expand_masked(prot: Pond, x: PondMaskedTensor) -> PondMaskedTensor:
     if x.expanded:
         return x
 
-    tensor = x.unmasked
-    x0, x1 = x.unmasked.unwrapped
+    with tf.name_scope("expand_seed"):
+        tensor = x.unmasked
+        x0, x1 = x.unmasked.unwrapped
 
-    with tf.device(prot.crypto_producer.device_name):
-        a0 = tensor.backing_dtype.sample_uniform(tensor.shape, x.a0.seed)
-        a1 = tensor.backing_dtype.sample_uniform(tensor.shape, x.a1.seed)
+        with tf.device(prot.crypto_producer.device_name):
+            a0 = tensor.backing_dtype.sample_uniform(tensor.shape, x.a0.seed)
+            a1 = tensor.backing_dtype.sample_uniform(tensor.shape, x.a1.seed)
 
-        a = a0 + a1
+            a = a0 + a1
 
-    with tf.device(prot.server_0.device_name):
-        alpha0 = x0 - x.a0
+        with tf.device(prot.server_0.device_name):
+            alpha0 = x0 - x.a0
 
-    with tf.device(prot.server_1.device_name):
-        alpha1 = x1 - x.a1
+        with tf.device(prot.server_1.device_name):
+            alpha1 = x1 - x.a1
 
-    with tf.device(prot.server_0.device_name):
-        alpha_on_0 = prot._reconstruct(alpha0, alpha1)
+        with tf.device(prot.server_0.device_name):
+            alpha_on_0 = prot._reconstruct(alpha0, alpha1)
 
-    with tf.device(prot.server_1.device_name):
-        alpha_on_1 = prot._reconstruct(alpha0, alpha1)
+        with tf.device(prot.server_1.device_name):
+            alpha_on_1 = prot._reconstruct(alpha0, alpha1)
 
     return PondMaskedTensor(prot, tensor, a, a0, a1, alpha_on_0, alpha_on_1, x.is_scaled)
 
