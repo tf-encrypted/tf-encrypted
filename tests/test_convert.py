@@ -720,7 +720,7 @@ class TestConvert(unittest.TestCase):
                 with tfe.Session() as sess:
                     sess.run(tf.global_variables_initializer())
 
-                    output = sess.run(x, tag='reveal')
+                    output = sess.run(x.reveal(), tag='reveal')
 
             np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
