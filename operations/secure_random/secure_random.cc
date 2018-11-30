@@ -1,8 +1,12 @@
+#include "tensorflow/core/lib/core/threadpool.h"
+#include "tensorflow/core/platform/env.h"
+
 #include "generators.h"
 
 using shape_inference::DimensionHandle;
 using shape_inference::ShapeHandle;
 using shape_inference::InferenceContext;
+using thread::ThreadPool;
 
 static Status RandomUniformShapeCommon(InferenceContext* context) {
   // Set output shape
@@ -119,6 +123,18 @@ public:
     OP_REQUIRES_OK(context, context->allocate_output(0, shape, &output));
     OP_REQUIRES(context, shape.num_elements() > 0, errors::InvalidArgument("Shape contains zero elements"));
     OP_REQUIRES(context, sodium_init() >= 0, errors::Internal("libsodium failed to initialize, try again"));
+
+    ThreadPool * pool = new ThreadPool(Env::Default(), "threadpool", 2);
+
+    pool->TransformRangeConcurrently(shape.num_elements() / 4, shape.num_elements(), 
+            [](int64 start_group, int64 limit_group) {
+              std::cout << "START GROUP: " << start_group << std::endl;
+              std::cout << "LIMIT GROUP: " << limit_group << std::endl;
+            });
+
+    auto shards = pool->NumShardsUsedByTransformRangeConcurrently(shape.num_elements() / 4, shape.num_elements());
+
+    std::cout << shards << std::endl;
 
     Gen gen(output);
 
