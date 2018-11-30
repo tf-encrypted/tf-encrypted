@@ -14,7 +14,7 @@ from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 
-from .test_pad import run_pad
+from test_pad import run_pad
 
 
 global_filename = ''
@@ -686,6 +686,63 @@ class TestConvert(unittest.TestCase):
                 output = sess.run(x.reveal(), tag='reveal')
 
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
+    def test_argmax_convert(self):
+        tf.reset_default_graph()
+
+        global global_filename
+        global_filename = "argmax.pb"
+
+        input_shape = [5]
+        input = [1, 2, 3, 4, 5]
+
+        path = export_argmax(global_filename, input_shape, 0)
+
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+
+        tf.reset_default_graph()
+
+        actual = run_argmax(input, 0)
+
+        tf.reset_default_graph()
+
+        with tfe.protocol.SecureNN() as prot:
+            prot.clear_initializers()
+
+            def provide_input():
+                return tf.constant(np.ones(input_shape))
+
+            converter = Converter(tfe.get_config(), prot, 'model-provider')
+
+            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
+
+            with tfe.Session() as sess:
+                sess.run(tf.global_variables_initializer())
+
+                output = sess.run(x.reveal(), tag='reveal')
+
+        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+
+
+def export_argmax(filename, input_shape, axis):
+    input = tf.placeholder(tf.float32, shape=input_shape)
+
+    output = tf.argmax(input, axis)
+
+    return export(output, filename)
+
+
+def run_argmax(input, axis):
+    inp = tf.constant(input)
+
+    output = tf.argmax(inp, axis)
+
+    with tf.Session() as sess:
+        out = sess.run(output)
+
+    return out
 
 
 def run_stack(input1, input2, input3):
