@@ -48,11 +48,12 @@ class TestConvert(unittest.TestCase):
         np.testing.assert_array_almost_equal(output, actual, decimal=3)
 
     @staticmethod
-    def _construct_conversion_test(op_name, protocol='Pond', *test_inputs, **kwargs):
+    def _construct_conversion_test(op_name, *test_inputs, **kwargs):
         global global_filename
         global_filename = '{}.pb'.format(op_name)
         exporter = globals()['export_{}'.format(op_name)]
         runner = globals()['run_{}'.format(op_name)]
+        protocol = kwargs.pop('protocol')
 
         path = exporter(global_filename, test_inputs[0].shape, **kwargs)
         tf.reset_default_graph()
@@ -72,7 +73,7 @@ class TestConvert(unittest.TestCase):
         # Treat this as an example of how to run tests with a particular kind of input
         graph_def, actual, prot_class = cls._construct_conversion_test(op_name,
                                                                        test_input,
-                                                                       protocol,
+                                                                       protocol=protocol,
                                                                        **kwargs)
         with prot_class() as prot:
             input_fn = cls.ndarray_input_fn(test_input)
@@ -80,140 +81,86 @@ class TestConvert(unittest.TestCase):
 
     def test_cnn_convert(self):
         test_input = np.ones([1, 1, 28, 28])
-        self._test_with_ndarray_input_fn('cnn', 'Pond', test_input)
+        self._test_with_ndarray_input_fn('cnn', test_input, protocol='Pond')
 
         test_input = np.ones([1, 28, 28, 1])
-        self._test_with_ndarray_input_fn('cnn', 'Pond', test_input, data_format='NHWC')
+        self._test_with_ndarray_input_fn('cnn', test_input, protocol='Pond', data_format='NHWC')
 
     def test_matmul_convert(self):
         test_input = np.ones([1, 28])
-        self._test_with_ndarray_input_fn('matmul', 'Pond', test_input)
+        self._test_with_ndarray_input_fn('matmul', test_input, protocol='Pond')
 
     def test_add_convert(self):
         test_input = np.ones([28, 1])
-        self._test_with_ndarray_input_fn('add', 'Pond', test_input)
+        self._test_with_ndarray_input_fn('add', test_input, protocol='Pond')
 
     def test_transpose_convert(self):
         test_input = np.ones([1, 2, 3, 4])
-        self._test_with_ndarray_input_fn('transpose', 'Pond', test_input)
+        self._test_with_ndarray_input_fn('transpose', test_input, protocol='Pond')
 
     def test_reshape_convert(self):
         test_input = np.ones([1, 2, 3, 4])
-        self._test_with_ndarray_input_fn('reshape', 'Pond', test_input)
+        self._test_with_ndarray_input_fn('reshape', test_input, protocol='Pond')
 
     def test_expand_dims_convert(self):
         test_input = np.ones([2, 3, 4])
-        self._test_with_ndarray_input_fn('expand_dims', 'Pond', test_input)
+        self._test_with_ndarray_input_fn('expand_dims', test_input, protocol='Pond')
 
     def test_pad_convert(self):
         test_input = np.ones([2, 3])
-        self._test_with_ndarray_input_fn('pad', 'Pond', test_input)
+        self._test_with_ndarray_input_fn('pad', test_input, protocol='Pond')
 
     def test_batch_to_space_nd_convert(self):
         test_input = np.ones([8, 1, 3, 1])
-        self._test_with_ndarray_input_fn('batch_to_space_nd', 'Pond', test_input)
+        self._test_with_ndarray_input_fn('batch_to_space_nd', test_input, protocol='Pond')
 
     def test_space_to_batch_nd_convert(self):
         test_input = np.ones([2, 2, 4, 1])
-        self._test_with_ndarray_input_fn('space_to_batch_nd', 'Pond', test_input)
-
-    def test_batch_to_space_nd_convert(self):
-        global global_filename
-        global_filename = "batch_to_space_nd.pb"
-        input_shape = [8, 1, 3, 1]
-
-        path = export_batch_to_space_nd(global_filename, input_shape)
-        tf.reset_default_graph()
-        graph_def = read_graph(path)
-        tf.reset_default_graph()
-        actual = run_batch_to_space_nd(input_shape)
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
-
-    def test_space_to_batch_nd_convert(self):
-        global global_filename
-        global_filename = "space_to_batch_nd.pb"
-        input_shape = [2, 2, 4, 1]
-        path = export_space_to_batch_nd(global_filename, input_shape)
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-        tf.reset_default_graph()
-
-        actual = run_space_to_batch_nd(input_shape)
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+        self._test_with_ndarray_input_fn('space_to_batch_nd', test_input, protocol='Pond')
 
     def test_squeeze_convert(self):
         test_input = np.ones([1, 2, 3, 1])
-        self._test_with_ndarray_input_fn('squeeze', 'Pond', test_input)
+        self._test_with_ndarray_input_fn('squeeze', test_input, protocol='Pond')
 
     def test_sub_convert(self):
-        test_input = no.ones([28, 1])
-        self._test_with_ndarray_input_fn('sub', 'Pond', test_input)
+        test_input = np.ones([28, 1])
+        self._test_with_ndarray_input_fn('sub', test_input, protocol='Pond')
 
     def test_mul_convert(self):
         test_input = np.array([[1., 2., 3., 4.]])
-        self._test_with_ndarray_input_fn('mul', 'Pond', test_input)
+        self._test_with_ndarray_input_fn('mul', test_input, protocol='Pond')
 
     def test_strided_slice_convert(self):
-        test_input = np.array([[[1, 1, 1], [2, 2, 2]],
-                               [[3, 3, 3], [4, 4, 4]],
-                               [[5, 5, 5], [6, 6, 6]]])
-        self._test_with_ndarray_input_fn('strided_slice', 'Pond', test_input)
+        test_input = np.ones((3, 2, 3))
+        # test_input = np.array([[[1., 1., 1.], [2., 2., 2.]],
+        #                        [[3., 3., 3.], [4., 4., 4.]],
+        #                        [[5., 5., 5.], [6., 6., 6.]]])
+        self._test_with_ndarray_input_fn('strided_slice', test_input, protocol='Pond')
 
     def test_batchnorm_convert(self):
         test_input = np.ones([1, 1, 28, 28])
-        self._test_with_ndarray_input_fn('batchnorm', 'Pond', test_input)
+        self._test_with_ndarray_input_fn('batchnorm', test_input, protocol='Pond')
 
     def test_avgpool_convert(self):
         test_input = np.ones([1, 28, 28, 1])
-        self._test_with_ndarray_input_fn('avgpooling', 'Pond', test_input)
+        self._test_with_ndarray_input_fn('avgpool', test_input, protocol='Pond')
 
     def test_maxpool_convert(self):
         test_input = np.ones([1, 28, 28, 1])
-        self._test_with_ndarray_input_fn('maxpool', 'SecureNN', test_input)
+        self._test_with_ndarray_input_fn('maxpool', test_input, protocol='SecureNN')
 
     def test_stack_convert(self):
         input1 = np.array([1, 4])
         input2 = np.array([2, 5])
         input3 = np.array([3, 6])
-        graph_def, actual, prot_class = cls._construct_conversion_test('stack',
-                                                                       'Pond',
-                                                                       input1,
-                                                                       input2,
-                                                                       input3,
-                                                                       **kwargs)
+        test_inputs = [input1, input2, input3]
+        graph_def, actual, prot_class = self._construct_conversion_test('stack',
+                                                                        *test_inputs,
+                                                                        protocol='Pond')
 
         with prot_class() as prot:
             input_fns = [self.ndarray_input_fn(x) for x in test_inputs]
-            self._assert_successful_conversion(prot, graph_def, actual, *input_fns, **kwargs)
+            self._assert_successful_conversion(prot, graph_def, actual, *input_fns)
 
 
 def run_stack(input1, input2, input3):
@@ -239,12 +186,12 @@ def export_stack(filename: str, input_shape: Tuple[int]):
 
 
 def run_avgpool(input):
-    input = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
 
-    x = tf.nn.avg_pool(input, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+    x = tf.nn.avg_pool(a, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
 
     with tf.Session() as sess:
-        output = sess.run(x, feed_dict={input: input})
+        output = sess.run(x, feed_dict={a: input})
 
     return output
 
@@ -258,12 +205,12 @@ def export_avgpool(filename, input_shape):
 
 
 def run_maxpool(input):
-    input = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
 
-    x = tf.nn.max_pool(input, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+    x = tf.nn.max_pool(a, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
 
     with tf.Session() as sess:
-        output = sess.run(x, feed_dict={input: input})
+        output = sess.run(x, feed_dict={a: input})
 
     return output
 
@@ -309,9 +256,9 @@ def export_batchnorm(filename: str, input_shape: List[int]):
 def run_cnn(input, data_format="NCHW"):
     feed_me = tf.placeholder(tf.float32, shape=input.shape, name="input")
 
-    x = ph
+    x = feed_me
     if data_format == "NCHW":
-        x = tf.transpose(ph, (0, 2, 3, 1))
+        x = tf.transpose(x, (0, 2, 3, 1))
 
     filter = tf.constant(np.ones((5, 5, 1, 16)), dtype=tf.float32, name="weights")
     x = tf.nn.conv2d(x, filter, (1, 1, 1, 1), "SAME", name="conv2d")
@@ -465,16 +412,16 @@ def _construct_batch_to_space_nd(input_shape):
     block_shape = tf.constant([2, 2], dtype=tf.int32)
     crops = tf.constant([[0, 0], [2, 0]], dtype=tf.int32)
     x = tf.batch_to_space_nd(a, block_shape=block_shape, crops=crops)
-    return x
+    return x, a
 
 
 def export_batch_to_space_nd(filename, input_shape):
-    x = _core_batch_to_space_nd_construct(input_shape)
+    x, _ = _construct_batch_to_space_nd(input_shape)
     return export(x, filename)
 
 
 def run_batch_to_space_nd(input):
-    x = _core_batch_to_space_nd_construct(input.shape)
+    x, a = _construct_batch_to_space_nd(input.shape)
     with tf.Session() as sess:
         output = sess.run(x, feed_dict={a: input})
     return output
@@ -483,18 +430,18 @@ def run_batch_to_space_nd(input):
 def _construct_space_to_batch_nd(input_shape):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
     block_shape = tf.constant([2, 2], dtype=tf.int32)
-    crops = tf.constant([[0, 0], [2, 0]], dtype=tf.int32)
-    x = tf.space_to_batch_nd(a, block_shape=block_shape, crops=crops)
-    return x
+    paddings = tf.constant([[0, 0], [2, 0]], dtype=tf.int32)
+    x = tf.space_to_batch_nd(a, block_shape=block_shape, paddings=paddings)
+    return x, a
 
 
 def export_space_to_batch_nd(filename, input_shape):
-    x = _core_space_to_batch_nd_construct(input_shape)
+    x, _ = _construct_space_to_batch_nd(input_shape)
     return export(x, filename)
 
 
 def run_space_to_batch_nd(input):
-    x = _core_space_to_batch_nd_construct(input.shape)
+    x, a = _construct_space_to_batch_nd(input.shape)
     with tf.Session() as sess:
         output = sess.run(x, feed_dict={a: input})
     return output
@@ -556,7 +503,7 @@ def export_mul(filename, input_shape):
     return export(x, filename)
 
 
-def export_strided_slice(filename: str, input_shape: List[int] = [3, 2, 3]):
+def export_strided_slice(filename, input_shape):
     t = tf.placeholder(tf.float32, shape=input_shape, name="input")
     out = tf.strided_slice(t, [1, 0, 0], [2, 1, 3], [1, 1, 1])
 
@@ -565,10 +512,10 @@ def export_strided_slice(filename: str, input_shape: List[int] = [3, 2, 3]):
 
 def run_strided_slice(input):
     a = tf.placeholder(tf.float32, shape=input.shape, name="input")
-    out = tf.strided_slice(t, [1, 0, 0], [2, 1, 3], [1, 1, 1])
+    out = tf.strided_slice(a, [1, 0, 0], [2, 1, 3], [1, 1, 1])
 
     with tf.Session() as sess:
-        output = sess.run(out).feed_dict({a: input})
+        output = sess.run(out, feed_dict={a: input})
 
     return output
 

@@ -1,7 +1,5 @@
 import unittest
 
-from typing import List
-
 import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
