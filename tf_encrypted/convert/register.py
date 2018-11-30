@@ -388,8 +388,9 @@ def space_to_batch_nd(converter, node, inputs):
 
 def argmax(converter, node, inputs):
     input = converter.outputs[inputs[0]]
+    axis = converter.outputs[inputs[1]].attr["value"].tensor.int_val[0]
 
-    return converter.protocol.argmax(input, axis=node.attr["axis"].i)
+    return converter.protocol.argmax(input, axis=axis)
 
 
 def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
