@@ -90,7 +90,7 @@ public:
     auto seed_vals = seed_tensor.flat<int32>().data();
     const unsigned char * seed_bytes = reinterpret_cast<const unsigned char*>(seed_vals);
 
-    Gen gen(output, seed_bytes);
+    Gen gen(output->flat<T>().data(), output->flat<T>().size(), seed_bytes);
 
     gen.GenerateData(lo, hi);
   }
@@ -127,21 +127,23 @@ public:
     OP_REQUIRES(context, shape.num_elements() > 0, errors::InvalidArgument("Shape contains zero elements"));
     OP_REQUIRES(context, sodium_init() >= 0, errors::Internal("libsodium failed to initialize, try again"));
 
-    ThreadPool * pool = new ThreadPool(Env::Default(), "threadpool", 2);
+    ThreadPool * pool = new ThreadPool(Env::Default(), "threadpool", 8);
 
     pool->TransformRangeConcurrently(shape.num_elements() / 4, shape.num_elements(), 
-            [](int64 start_group, int64 limit_group) {
-              std::cout << "START GROUP: " << start_group << std::endl;
-              std::cout << "LIMIT GROUP: " << limit_group << std::endl;
+            [output, lo, hi](int64 start_group, int64 limit_group) {
+              auto data = output->flat<T>().data();
+              int64 size = limit_group - start_group;
+
+              std::stringstream msg;
+              msg << "START GROUP: " << start_group << std::endl;
+              std::cout << msg.str();
+
+              Gen gen(data + start_group, size);
+
+              gen.GenerateData(lo, hi);
             });
 
-    auto shards = pool->NumShardsUsedByTransformRangeConcurrently(shape.num_elements() / 4, shape.num_elements());
-
-    std::cout << shards << std::endl;
-
-    Gen gen(output);
-
-    gen.GenerateData(lo, hi);
+    std::cout << pool->NumShardsUsedByTransformRangeConcurrently(shape.num_elements() / 4, shape.num_elements()) << std::endl;
   }
 };
 
