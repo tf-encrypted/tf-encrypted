@@ -97,7 +97,7 @@ def _lift(x, y) -> Tuple['Int32Tensor', 'Int32Tensor']:
     if isinstance(x, int) and isinstance(y, Int32Tensor):
         return y.factory.tensor(np.array([x])), y
 
-    if isinstance(x, Int64Tensor) and isinstance(y, Int64SeededTensor):
+    if isinstance(x, Int32Tensor) and isinstance(y, Int32SeededTensor):
         return x, y.expand()
 
     raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
