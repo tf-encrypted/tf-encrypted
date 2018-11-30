@@ -4,6 +4,7 @@ from typing import Optional, Tuple
 import math
 import sys
 
+import numpy as np
 import tensorflow as tf
 
 from .odd_tensor import oddInt64factory
@@ -419,7 +420,6 @@ class SecureNN(Pond):
         with tf.name_scope('reduce_max'):
 
             def build_comparison_tree(ts):
-                assert len(ts) > 0
                 if len(ts) == 1:
                     return ts[0]
                 halfway = len(ts) // 2
@@ -431,6 +431,58 @@ class SecureNN(Pond):
             tensors = self.split(x, int(x.shape[axis]), axis=axis)
             maximum = build_comparison_tree(tensors)
             return self.squeeze(maximum, axis=(axis,))
+
+    @memoize
+    def argmax(self, x, axis=0):
+        """
+        argmax(x, axis) -> PondTensor
+
+        Find the index of the max value along an axis.
+
+        .. code-block:: python
+
+            >>> argmax([[10, 20, 30], [11, 13, 12], [15, 16, 17]], axis=0)
+            [[2], [1], [2]]
+
+        :See: tf.argmax
+        :param PondTensor x: Input tensor.
+        :param int axis: The tensor axis to reduce along.
+        :rtype: PondTensor
+        :returns: A new tensor with the indices of the max values along specified axis.
+        """
+        with tf.name_scope('argmax'):
+
+            def build_comparison_tree(tensors, indices):
+                assert len(tensors) == len(indices)
+                if len(indices) == 1:
+                    return tensors[0], indices[0]
+
+                halfway = len(tensors) // 2
+                tensors_left, tensors_right = tensors[:halfway], tensors[halfway:]
+                indices_left, indices_right = indices[:halfway], indices[halfway:]
+
+                maximum_left, argmax_left = build_comparison_tree(tensors_left, indices_left)
+                maximum_right, argmax_right = build_comparison_tree(tensors_right, indices_right)
+
+                # compute binary tensor indicating which side is greater
+                greater = self.greater(maximum_left, maximum_right)
+
+                # use above binary tensor to select maximum and argmax
+                maximum = self.select(greater, maximum_right, maximum_left)
+                argmax = self.select(greater, argmax_right, argmax_left)
+
+                return maximum, argmax
+
+            tensors = self.split(x, int(x.shape[axis]), axis=axis)
+            indices = [
+                self.define_constant(np.array([i]))
+                for i, _ in enumerate(tensors)
+            ]
+            maximum, argmax = build_comparison_tree(tensors, indices)
+
+            maximum = self.squeeze(maximum, axis=(axis,))
+            argmax = self.squeeze(argmax, axis=(axis,))
+            return argmax
 
     @memoize
     def cast_backing(self, x, backing_dtype):

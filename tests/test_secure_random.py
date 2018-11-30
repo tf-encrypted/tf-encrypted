@@ -43,9 +43,16 @@ class TestSeededRandom(unittest.TestCase):
             with np.testing.assert_raises(ValueError):
                 seeded_random_uniform([3, 3], seed=seed, maxval=10000, dtype=tf.float32).eval()
 
-    # def test_rejection(self):
-    #     # TODO how to test rejection?!
-    #     seed = [87654321, 4321, 8765431, 87654325, 87654321, 874321, 87654321, 87654321]
+    def test_rejection(self):
+        m = 1129
+
+        seed0 = [2108217960, -1340439062, 476173466, -681389164, -1502583120, 1663373136, 2144760032, -1591917499]
+
+        with tf.Session():
+            out0 = seeded_random_uniform([64, 4500], seed=seed0, maxval=m, dtype=tf.int32).eval()
+            out1 = seeded_random_uniform([64, 4500], seed=seed0, maxval=m, dtype=tf.int32).eval()
+
+            np.testing.assert_array_equal(out0, out1)
 
 
 class TestRandomUniform(unittest.TestCase):
