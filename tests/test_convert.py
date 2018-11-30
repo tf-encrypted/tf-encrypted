@@ -14,7 +14,7 @@ from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 
-from test_pad import run_pad
+from .test_pad import run_pad
 
 
 global_filename = ''
