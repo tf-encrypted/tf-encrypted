@@ -1551,7 +1551,7 @@ class PondMaskedTensor(PondTensor):
 
     @property
     def backing_dtype(self):
-        return self.a.backing_dtype
+        return self.a.factory
 
     @property
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
