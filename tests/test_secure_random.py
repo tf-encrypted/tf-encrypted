@@ -84,7 +84,6 @@ class TestRandomUniform(unittest.TestCase):
 class TestSeed(unittest.TestCase):
     with tf.Session():
         s = seed_gen()
-        s0 = seed_gen()
 
         minval = -2000
         maxval = 0
@@ -92,7 +91,6 @@ class TestSeed(unittest.TestCase):
         shape = [2, 3]
 
         output = seeded_random_uniform(shape, seed=s, minval=minval, maxval=maxval).eval()
-        output2 = seeded_random_uniform(shape, seed=s0, minval=minval, maxval=maxval).eval()
 
         np.testing.assert_array_equal(output.shape, shape)
 
