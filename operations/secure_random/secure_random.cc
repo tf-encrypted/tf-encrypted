@@ -31,6 +31,7 @@ REGISTER_OP("SecureSeededRandomUniform")
     .Attr("dtype: {int32, int64} = DT_INT32")
     .Attr("T: {int32, int64} = DT_INT32")
     .Attr("Tseed: {int32} = DT_INT32")
+    .SetIsStateful()
     .SetShapeFn(SeededRandomUniformShape);
 
 REGISTER_OP("SecureRandomUniform")
@@ -40,9 +41,11 @@ REGISTER_OP("SecureRandomUniform")
     .Output("output: dtype")
     .Attr("dtype: {int32, int64} = DT_INT32")
     .Attr("T: {int32, int64} = DT_INT32")
+    .SetIsStateful()
     .SetShapeFn(RandomUniformShapeCommon);
 
 REGISTER_OP("SecureSeed")
+    .SetIsStateful()
     .Output("output: int32");
 
 template <typename T, typename Gen>
