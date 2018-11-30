@@ -1547,11 +1547,11 @@ class PondMaskedTensor(PondTensor):
 
     @property
     def shape(self) -> List[int]:
-        return self.unmasked.shape
+        return self.a.shape
 
     @property
     def backing_dtype(self):
-        return self.unmasked.backing_dtype
+        return self.a.backing_dtype
 
     @property
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
