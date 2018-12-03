@@ -36,7 +36,7 @@ class TestInt64Tensor(unittest.TestCase):
             -3
         ], shape=[2, 2], dtype=tf.int64))
 
-        y = x.to_bits()
+        y = x.bits()
 
         expected = np.array([
             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -58,7 +58,7 @@ class TestInt64Tensor(unittest.TestCase):
         input = np.random.uniform(low=2**63 + 1, high=2**63 - 1, size=2000).astype(np.int64).tolist()
         x = int64factory.tensor(tf.constant(input, dtype=tf.int64))
 
-        y = x.to_bits()
+        y = x.bits()
 
         with tf.Session() as sess:
             actual = sess.run(y.to_native())

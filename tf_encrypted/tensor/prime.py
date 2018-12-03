@@ -5,8 +5,10 @@ import math
 import numpy as np
 import tensorflow as tf
 
-from .factory import AbstractFactory, AbstractTensor, AbstractConstant, AbstractVariable, AbstractPlaceholder
+from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
+                      AbstractConstant, AbstractPlaceholder)
 from .shared import binarize, im2col
+from ..operations.secure_random import random_uniform
 
 
 class PrimeTensor(AbstractTensor):
@@ -19,10 +21,10 @@ class PrimeTensor(AbstractTensor):
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return self.value
 
-    def to_bits(self, factory: Optional[AbstractFactory] = None) -> 'PrimeTensor':
-        factory = factory or self.factory
+    def bits(self, dtype: Optional[AbstractFactory] = None):
+        dtype = dtype or self.factory
         bitsize = math.ceil(math.log2(self.modulus))
-        return factory.tensor(binarize(self.value % self.modulus, bitsize))
+        return dtype.tensor(binarize(self.value % self.modulus, bitsize))
 
     def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
         return self.factory.tensor(self.value[slice])
@@ -75,6 +77,14 @@ class PrimeTensor(AbstractTensor):
     def conv2d(self, other, strides, padding='SAME') -> 'PrimeTensor':
         raise NotImplementedError()
 
+    def batch_to_space_nd(self, block_shape, crops):
+        backing = tf.batch_to_space_nd(self.value, block_shape, crops)
+        return self.factory.tensor(backing)
+
+    def space_to_batch_nd(self, block_shape, paddings):
+        backing = tf.space_to_batch_nd(self.value, block_shape, paddings)
+        return self.factory.tensor(backing)
+
     def mod(self, k: int) -> 'PrimeTensor':
         return self.factory.tensor((self.value % k) % self.modulus)
 
@@ -84,7 +94,7 @@ class PrimeTensor(AbstractTensor):
     def strided_slice(self, args: Any, kwargs: Any) -> 'PrimeTensor':
         return self.factory.tensor(tf.strided_slice(self.value, *args, **kwargs))
 
-    def split(self, num_split: int, axis: int=0) -> List['PrimeTensor']:
+    def split(self, num_split: int, axis: int = 0) -> List['PrimeTensor']:
         values = tf.split(self.value, num_split, axis=axis)
         return [self.factory.tensor(value) for value in values]
 
@@ -105,12 +115,13 @@ class PrimeTensor(AbstractTensor):
             tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse) % self.modulus
         )
 
-    def equal_zero(self, out_dtype: Optional[AbstractFactory]=None) -> 'PrimeTensor':
-        out_dtype = out_dtype or self.factory
-        return out_dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=out_dtype.native_type))
+    def equal_zero(self, dtype: Optional[AbstractFactory] = None) -> 'PrimeTensor':
+        dtype = dtype or self.factory
+        return dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=dtype.native_type))
 
-    def cast(self, factory):
-        return factory.tensor(self.value)
+    def cast(self, dtype):
+        assert dtype.native_type == self.factory.native_type
+        return dtype.tensor(self.value)
 
 
 def _lift(x, y) -> Tuple[PrimeTensor, PrimeTensor]:
@@ -188,14 +199,21 @@ class PrimeFactory(AbstractFactory):
     def modulus(self):
         return self._modulus
 
-    def sample_uniform(self, shape: Union[Tuple[int, ...], tf.TensorShape], minval: Optional[int] = 0) -> PrimeTensor:
-        value = tf.random_uniform(shape=shape, dtype=self.native_type, minval=minval, maxval=self.modulus)
+    def sample_uniform(self, shape, minval: Optional[int] = 0) -> PrimeTensor:
+        value = random_uniform(shape=shape,
+                               dtype=self.native_type,
+                               minval=minval,
+                               maxval=self.modulus)
         return PrimeTensor(value, self)
 
-    def sample_bounded(self, shape: List[int], bitlength: int) -> PrimeTensor:
+    def sample_bounded(self, shape, bitlength) -> PrimeTensor:
         maxval = 2 ** bitlength
         assert self.modulus > maxval
-        value = tf.random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=maxval)
+        value = random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=maxval)
+        return PrimeTensor(value, self)
+
+    def sample_bits(self, shape) -> PrimeTensor:
+        value = random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=2)
         return PrimeTensor(value, self)
 
     def stack(self, xs: List[PrimeTensor], axis: int = 0) -> PrimeTensor:
@@ -214,7 +232,8 @@ class PrimeFactory(AbstractFactory):
             return PrimeTensor(value, self)
 
         if isinstance(value, PrimeTensor):
-            assert value.modulus == self.modulus, "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
+            err = "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
+            assert value.modulus == self.modulus, err
             return PrimeTensor(value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
@@ -225,7 +244,8 @@ class PrimeFactory(AbstractFactory):
             return PrimeConstant(value, self)
 
         if isinstance(value, PrimeTensor):
-            assert value.modulus == self.modulus, "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
+            assert value.modulus == self.modulus, \
+                "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
             return PrimeConstant(value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
@@ -236,7 +256,9 @@ class PrimeFactory(AbstractFactory):
             return PrimeVariable(initial_value, self)
 
         if isinstance(initial_value, PrimeTensor):
-            assert initial_value.modulus == self.modulus, "Incompatible modulus: {}, (expected {})".format(initial_value.modulus, self.modulus)
+            err = "Incompatible modulus: {}, (expected {})".format(initial_value.modulus,
+                                                                   self.modulus)
+            assert initial_value.modulus == self.modulus, err
             return PrimeVariable(initial_value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(initial_value)))

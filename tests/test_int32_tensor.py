@@ -17,7 +17,7 @@ class TestInt32Tensor(unittest.TestCase):
             -3
         ], shape=[2, 2], dtype=tf.int32))
 
-        y = x.to_bits()
+        y = x.bits()
 
         expected = np.array([
             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -35,7 +35,7 @@ class TestInt32Tensor(unittest.TestCase):
         input = np.random.uniform(low=2**31 + 1, high=2**31 - 1, size=2000).astype('int32').tolist()
         x = Int32Tensor(tf.constant(input, dtype=tf.int32))
 
-        y = x.to_bits()
+        y = x.bits()
 
         with tf.Session() as sess:
             actual = sess.run(y.to_native())

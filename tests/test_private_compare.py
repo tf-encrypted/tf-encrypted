@@ -4,12 +4,26 @@ import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 from tf_encrypted.protocol.pond import PondPrivateTensor, PondPublicTensor
-from tf_encrypted.protocol.securenn import _private_compare
+from tf_encrypted.protocol.securenn.securenn import _private_compare
 
 
 class TestPrivateCompare(unittest.TestCase):
 
-    def test_private(self):
+    def setUp(self):
+        tf.reset_default_graph()
+
+    def test_int64(self):
+        self._core_test(tfe.tensor.int64factory)
+
+    def test_int100(self):
+        self._core_test(tfe.tensor.int100factory)
+
+    def _core_test(self, tensor_factory):
+
+        prot = tfe.protocol.SecureNN(tensor_factory=tensor_factory)
+
+        bit_dtype = prot.prime_factory
+        val_dtype = prot.tensor_factory
 
         x = np.array([
             21,
@@ -46,16 +60,11 @@ class TestPrivateCompare(unittest.TestCase):
 
         expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
 
-        prot = tfe.protocol.SecureNN()
-
-        bit_dtype = prot.prime_factory
-        val_dtype = prot.tensor_factory
-
         res = _private_compare(
             prot,
             x_bits=PondPrivateTensor(
                 prot,
-                *prot._share(val_dtype.tensor(tf.convert_to_tensor(x, dtype=val_dtype.native_type)).to_bits(bit_dtype)),
+                *prot._share(val_dtype.tensor(tf.convert_to_tensor(x, dtype=val_dtype.native_type)).bits(bit_dtype)),
                 False),
             r=PondPublicTensor(
                 prot,

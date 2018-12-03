@@ -1,4 +1,6 @@
 import unittest
+import math
+import random
 
 import numpy as np
 import tensorflow as tf
@@ -32,33 +34,55 @@ class TestInt100Tensor(unittest.TestCase):
             expected = np.array([4, 4])
             np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
-    def test_binarize(self) -> None:
+    def core_test_binarize(self, raw, shape, modulus, bitlen, ensure_positive_interpretation) -> None:
 
         def as_bits(x: int, min_bitlength):
             bits = [int(b) for b in '{0:b}'.format(x)]
             bits = [0] * (min_bitlength - len(bits)) + bits
             return list(reversed(bits))
 
-        x = int100factory.tensor(np.array([
-            0,
-            -1,
-            123456789,
-            -123456789,
-        ]).reshape([2, 2]))
+        expected = np.array([
+            as_bits((modulus + x) % modulus, bitlen)
+            for x in raw
+        ]).reshape(shape + (bitlen,))
+
+        x = int100factory.tensor(np.array(raw).reshape(shape)).convert_to_tensor()
+        y = x.bits(ensure_positive_interpretation=ensure_positive_interpretation).to_native()
 
         with tf.Session() as sess:
-            actual = sess.run(
-                x.convert_to_tensor().to_bits().to_native()
-            )
-
-        expected = np.array([
-            as_bits((2**103 + (0)) % 2**103, 103),  # == as_bits(0, 103)
-            as_bits((2**103 + (-1)) % 2**103, 103),
-            as_bits((2**103 + (123456789)) % 2**103, 103),  # == as_bits(123456789, 103)
-            as_bits((2**103 + (-123456789)) % 2**103, 103),
-        ]).reshape([2, 2, 103])
+            actual = sess.run(y)
 
         np.testing.assert_array_equal(actual, expected)
+
+    def test_binarize_positive(self) -> None:
+        lower = -int100factory.modulus // 2 + 1
+        upper = int100factory.modulus // 2
+
+        random.seed(1234)
+        raw = [-1, 0, 1] + [
+            random.randint(lower, upper)
+            for _ in range(256 - 3)
+        ]
+        shape = (2, 2, 2, -1)
+
+        bitlen = math.ceil(math.log2(int100factory.modulus))
+        modulus = int100factory.modulus
+        self.core_test_binarize(raw, shape, modulus, bitlen, True)
+
+    def test_binarize_symmetric(self) -> None:
+        lower = -int100factory.modulus // 2 + 1
+        upper = int100factory.modulus // 2
+
+        random.seed(1234)
+        raw = [-1, 0, 1] + [
+            random.randint(lower, upper)
+            for _ in range(256 - 3)
+        ]
+        shape = (2, 2, 2, -1)
+
+        bitlen = math.ceil(math.log2(int100factory.modulus))
+        modulus = 2**bitlen
+        self.core_test_binarize(raw, shape, modulus, bitlen, False)
 
 
 class TestConv2D(unittest.TestCase):

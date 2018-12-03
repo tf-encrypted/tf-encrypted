@@ -5,8 +5,11 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tf-encrypted",
-    version="0.2.0",
+    version="0.4.0-rc2",
     packages=setuptools.find_packages(),
+    package_data={'tf_encrypted': [
+        'operations/secure_random/*.so',
+    ]},
     python_requires=">=3.5",
     install_requires=[
         "tensorflow>=1.9.0",

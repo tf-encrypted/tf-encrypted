@@ -10,6 +10,7 @@ from tf_encrypted.protocol.pond import PondPublicTensor
 
 
 def register() -> Dict[str, Any]:
+    tf.import_graph_def
     reg = {
         'Placeholder': placeholder,
         'Const': constant,
@@ -31,8 +32,11 @@ def register() -> Dict[str, Any]:
         'Squeeze': squeeze,
         'ConcatV2': concat,
         'BiasAdd': bias_add,
-        # 'Pack': pack,
         'MaxPool': maxpool,
+        'Pad': pad,
+        'BatchToSpaceND': batch_to_space_nd,
+        'SpaceToBatchND': space_to_batch_nd,
+        'ArgMax': argmax,
     }
 
     return reg
@@ -246,6 +250,17 @@ def squeeze(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.squeeze(input, list(axis))
 
 
+def pad(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+    p = (converter.outputs[inputs[1]])
+    paddings_t = p.attr["value"].tensor
+
+    paddings_arr = list(array.array('I', paddings_t.tensor_content))
+    paddings_lst = [paddings_arr[i:i + 2] for i in range(0, len(paddings_arr), 2)]
+
+    return converter.protocol.pad(input, paddings_lst)
+
+
 def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
@@ -353,6 +368,29 @@ def concat(converter: Converter, node: Any, inputs: List[str]) -> Any:
     axis = converter.outputs[inputs[2]]
 
     return converter.protocol.concat([input0, input1], axis.attr["value"].tensor.int_val[0])
+
+
+def batch_to_space_nd(converter, node, inputs):
+    input = converter.outputs[inputs[0]]
+    block_shape = converter.outputs[inputs[1]].attr["value"].tensor
+    crops = converter.outputs[inputs[2]].attr["value"].tensor
+
+    return converter.protocol.batch_to_space_nd(input, block_shape, crops)
+
+
+def space_to_batch_nd(converter, node, inputs):
+    input = converter.outputs[inputs[0]]
+    block_shape = converter.outputs[inputs[1]].attr["value"].tensor
+    paddings = converter.outputs[inputs[2]].attr["value"].tensor
+
+    return converter.protocol.space_to_batch_nd(input, block_shape, paddings)
+
+
+def argmax(converter, node, inputs):
+    input = converter.outputs[inputs[0]]
+    axis = converter.outputs[inputs[1]].attr["value"].tensor.int_val[0]
+
+    return converter.protocol.argmax(input, axis=axis)
 
 
 def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
