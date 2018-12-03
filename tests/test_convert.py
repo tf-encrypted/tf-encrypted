@@ -162,6 +162,7 @@ class TestConvert(unittest.TestCase):
             input_fns = [self.ndarray_input_fn(x) for x in test_inputs]
             self._assert_successful_conversion(prot, graph_def, actual, *input_fns)
 
+    @unittest.skipUnless(tfe.config.tensorflow_supports_int64(), "Too slow on Circle CI otherwise")
     def test_argmax_convert(self):
         tf.reset_default_graph()
 
