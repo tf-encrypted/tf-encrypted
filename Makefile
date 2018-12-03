@@ -222,6 +222,9 @@ pypi-version-check:
 ifeq (,$(shell grep -e $(VERSION) setup.py))
 	$(error "Version specified in setup.py does not match $(VERSION)")
 endif
+ifeq (,$(shell grep -e $(VERSION) meta.yaml))
+	$(error "Version specified in meta.yaml does not match $(VERSION)")
+endif
 ifeq (,$(shell grep -e $(VERSION) docs/source/conf.py))
 	$(error "Version specified in docs/source/conf.py does not match $(VERSION)")
 endif

@@ -1,6 +1,6 @@
 package:
   name: tf-encrypt
-  version: "0.2.0"
+  version: "0.4.0-rc2"
 
 source:
   git_url: https://github.com/mortendahl/tf-encrypted.git
