@@ -3388,19 +3388,17 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
 
     with tf.name_scope("mask"):
         with tf.device(prot.crypto_producer.device_name):
-            a0seed = seed()
-            a1seed = seed()
+            a0 = x.backing_dtype.seeded_tensor(x.shape, seed())
+            a1 = x.backing_dtype.seeded_tensor(x.shape, seed())
 
-            a0 = x.backing_dtype.sample_uniform(x.shape, a0seed)
-            a1 = x.backing_dtype.sample_uniform(x.shape, a1seed)
-
-            a = a0 + a1
+            a = a0.expand() + a1.expand()
 
         with tf.device(prot.server_0.device_name):
-            alpha0 = x0 - x.backing_dtype.seeded_tensor(x.shape, a0seed)
-
+            a0 = a0.expand()
+            alpha0 = x0 - a0
         with tf.device(prot.server_1.device_name):
-            alpha1 = x1 - x.backing_dtype.seeded_tensor(x.shape, a1seed)
+            a1 = a1.expand()
+            alpha1 = x1 - a1
 
         with tf.device(prot.server_0.device_name):
             alpha_on_0 = prot._reconstruct(alpha0, alpha1)
@@ -3408,7 +3406,7 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
         with tf.device(prot.server_1.device_name):
             alpha_on_1 = prot._reconstruct(alpha0, alpha1)
 
-    return PondMaskedTensor(prot, x, a, a0, a1, alpha_on_0, alpha_on_1, x.is_scaled)
+        return PondMaskedTensor(prot, x, a, a0, a1, alpha_on_0, alpha_on_1, x.is_scaled)
 
 
 #
