@@ -1,5 +1,6 @@
 #include "tensorflow/core/lib/core/threadpool.h"
 #include "tensorflow/core/platform/env.h"
+#include "tensorflow/core/util/work_sharder.h"
 
 #include "generators.h"
 
@@ -90,9 +91,28 @@ public:
     auto seed_vals = seed_tensor.flat<int32>().data();
     const unsigned char * seed_bytes = reinterpret_cast<const unsigned char*>(seed_vals);
 
-    Gen gen(output->flat<T>().data(), output->flat<T>().size(), seed_bytes);
+    auto worker_threads = *(context->device()->tensorflow_cpu_worker_threads());
+    int num_threads = worker_threads.num_threads;
 
-    gen.GenerateData(lo, hi);
+    ThreadPool * pool = worker_threads.workers;
+
+    //pool->TransformRangeConcurrently(shape.num_elements() / num_threads, shape.num_elements(),
+    Shard(num_threads, pool, shape.num_elements(), 50 * shape.num_elements(),
+        [pool, output, lo, hi, seed_bytes](int64 start_group, int64 limit_group) {
+          auto data = output->flat<T>().data();
+          int64 size = limit_group - start_group;
+
+          int elements_per_block = CHACHABLOCKSIZE / sizeof(T);
+          auto start_block = (start_group / elements_per_block) * pool->CurrentThreadId();
+
+          std::stringstream msg;
+          msg << start_block << " " << pool->CurrentThreadId() << std::endl;
+          std::cout << msg.str();
+
+          Gen gen(data + start_group, size, seed_bytes, start_block);
+
+          gen.GenerateData(lo, hi);
+      });
   }
 };
 
@@ -128,7 +148,6 @@ public:
     OP_REQUIRES(context, sodium_init() >= 0, errors::Internal("libsodium failed to initialize, try again"));
 
     auto worker_threads = *(context->device()->tensorflow_cpu_worker_threads());
-
     int num_threads = worker_threads.num_threads;
 
     ThreadPool * pool = new ThreadPool(Env::Default(), "threadpool", num_threads);

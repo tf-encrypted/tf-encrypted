@@ -134,16 +134,18 @@ class SeededGenerator : public Generator<T, Wide> {
 public:
   const unsigned char * seeds = nullptr;
 
-  SeededGenerator(T* output, int count, const unsigned char * seeds) : Generator<T, Wide>(output, count), seeds(seeds) {
+  SeededGenerator(T* output, int count, const unsigned char * seeds, int start_block) 
+                            : Generator<T, Wide>(output, count), seeds(seeds) {
     elements_per_block_ = CHACHABLOCKSIZE / sizeof(T);
     block_counter_ = this->bytes_count_ / CHACHABLOCKSIZE + 1;
+    start_block_ = start_block;
 
     // prepare the extra block if any values get rejected in the rejection sampling
     randombytes_buf_deterministic_ic(extra_block_, CHACHABLOCKSIZE, block_counter_, seeds);
   }
 
   void GenerateData(T minval, T maxval) {
-    randombytes_buf_deterministic(this->buf_, this->bytes_count_, seeds);
+    randombytes_buf_deterministic_ic(this->buf_, this->bytes_count_, start_block_, seeds);
 
     this->Uniform(minval, maxval - 1);
   }
@@ -164,6 +166,7 @@ public:
   }
 
 private:
+  uint32 start_block_ = 0;
   T extra_block_[CHACHABLOCKSIZE];
   uint32 block_counter_ = 0;
   uint32 elements_per_block_ = 0;
