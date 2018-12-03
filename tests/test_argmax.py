@@ -10,7 +10,7 @@ class TestArgMax(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
 
-    @unittest.skip("killing Circle CI on int100")
+    @unittest.skipUnless(tfe.config.tensorflow_supports_int64(), "Too slow on Circle CI otherwise")
     def test_argmax_1d(self):
 
         t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).astype(float)
@@ -28,7 +28,7 @@ class TestArgMax(unittest.TestCase):
 
         np.testing.assert_array_equal(actual, expected)
 
-    @unittest.skip("killing Circle CI on int100")
+    @unittest.skipUnless(tfe.config.tensorflow_supports_int64(), "Too slow on Circle CI otherwise")
     def test_argmax_2d_axis0(self):
 
         t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape(2, 4).astype(float)
@@ -46,7 +46,7 @@ class TestArgMax(unittest.TestCase):
 
         np.testing.assert_array_equal(actual, expected)
 
-    @unittest.skip("killing Circle CI on int100")
+    @unittest.skipUnless(tfe.config.tensorflow_supports_int64(), "Too slow on Circle CI otherwise")
     def test_argmax_2d_axis1(self):
 
         t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape(2, 4).astype(float)
@@ -64,10 +64,10 @@ class TestArgMax(unittest.TestCase):
 
         np.testing.assert_array_equal(actual, expected)
 
-    @unittest.skip("killing Circle CI on int100")
+    @unittest.skipUnless(tfe.config.tensorflow_supports_int64(), "Too slow on Circle CI otherwise")
     def test_argmax_3d_axis0(self):
 
-        t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape(2, 2, 2)
+        t = np.array(np.arange(128)).reshape(8, 2, 2, 2, 2)
 
         with tf.Session() as sess:
             out = tf.argmax(t, axis=0)
