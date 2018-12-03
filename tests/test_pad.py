@@ -1,10 +1,10 @@
 import unittest
 
-from typing import List
-
 import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
+
+from .test_convert import run_pad
 
 
 class TestPad(unittest.TestCase):
@@ -30,20 +30,9 @@ class TestPad(unittest.TestCase):
 
             tf.reset_default_graph()
 
-            out_tensorflow = run_pad([2, 3])
+            out_tensorflow = run_pad(input)
 
             np.testing.assert_allclose(out_tfe, out_tensorflow, atol=.01)
-
-
-def run_pad(input_shape: List[int]):
-    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-
-    x = tf.pad(a, paddings=tf.constant([[2, 2], [3, 4]]), mode="CONSTANT")
-
-    with tf.Session() as sess:
-        output = sess.run(x, feed_dict={a: np.array([[1, 2, 3], [4, 5, 6]])})
-
-    return output
 
 
 if __name__ == '__main__':

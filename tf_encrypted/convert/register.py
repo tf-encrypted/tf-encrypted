@@ -12,30 +12,31 @@ from tf_encrypted.protocol.pond import PondPublicTensor
 def register() -> Dict[str, Any]:
     tf.import_graph_def
     reg = {
-        "Placeholder": placeholder,
-        "Const": constant,
-        "Conv2D": conv2d,
-        "Relu": relu,
-        "Sigmoid": sigmoid,
-        "MatMul": matmul,
-        "Shape": shape,
-        "StridedSlice": strided_slice,
-        "Add": add,
-        "Sub": sub,
-        "Transpose": transpose,
-        "Reshape": reshape,
-        "Pack": pack,
-        "Rsqrt": rsqrt,
-        "Mul": mul,
-        "ExpandDims": expand_dims,
-        "AvgPool": avgpool,
-        "Squeeze": squeeze,
-        "ConcatV2": concat,
-        "BiasAdd": bias_add,
-        "MaxPool": maxpool,
-        "Pad": pad,
-        "BatchToSpaceND": batch_to_space_nd,
-        "SpaceToBatchND": space_to_batch_nd,
+        'Placeholder': placeholder,
+        'Const': constant,
+        'Conv2D': conv2d,
+        'Relu': relu,
+        'Sigmoid': sigmoid,
+        'MatMul': matmul,
+        'Shape': shape,
+        'StridedSlice': strided_slice,
+        'Add': add,
+        'Sub': sub,
+        'Transpose': transpose,
+        'Reshape': reshape,
+        'Pack': pack,
+        'Rsqrt': rsqrt,
+        'Mul': mul,
+        'ExpandDims': expand_dims,
+        'AvgPool': avgpool,
+        'Squeeze': squeeze,
+        'ConcatV2': concat,
+        'BiasAdd': bias_add,
+        'MaxPool': maxpool,
+        'Pad': pad,
+        'BatchToSpaceND': batch_to_space_nd,
+        'SpaceToBatchND': space_to_batch_nd,
+        'ArgMax': argmax,
     }
 
     return reg
@@ -383,6 +384,13 @@ def space_to_batch_nd(converter, node, inputs):
     paddings = converter.outputs[inputs[2]].attr["value"].tensor
 
     return converter.protocol.space_to_batch_nd(input, block_shape, paddings)
+
+
+def argmax(converter, node, inputs):
+    input = converter.outputs[inputs[0]]
+    axis = converter.outputs[inputs[1]].attr["value"].tensor.int_val[0]
+
+    return converter.protocol.argmax(input, axis=axis)
 
 
 def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
