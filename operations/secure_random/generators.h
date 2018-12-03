@@ -46,6 +46,10 @@ void randombytes_buf_deterministic_ic(void * const buf, const size_t size, uint3
                                        nonce, count, seed);
 }
 
+void generate_seed(void * buf) {
+    randombytes_buf(buf, randombytes_SEEDBYTES);
+}
+
 template <typename T, typename Wide>
 class Generator {
 public:
@@ -56,7 +60,10 @@ public:
   }
 
   void GenerateData(T minval, T maxval) {
-    randombytes_buf(buf_, bytes_count_);
+    unsigned char seeds[randombytes_SEEDBYTES];
+    generate_seed(seeds);
+
+    randombytes_buf_deterministic(buf_, bytes_count_, seeds);
 
     Uniform(minval, maxval - 1);
   }

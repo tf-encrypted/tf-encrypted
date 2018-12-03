@@ -478,7 +478,9 @@ class SecureNN(Pond):
                 self.define_constant(np.array([i]))
                 for i, _ in enumerate(tensors)
             ]
-            maximum, argmax = build_comparison_tree(tensors, indices)
+
+            with tf.name_scope('comparison-tree'):
+                maximum, argmax = build_comparison_tree(tensors, indices)
 
             maximum = self.squeeze(maximum, axis=(axis,))
             argmax = self.squeeze(argmax, axis=(axis,))
