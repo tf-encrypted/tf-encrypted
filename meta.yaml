@@ -10,3 +10,9 @@ source:
     license: APACHE-2
     license_file: LICENSE
     summary: "Layer on top of TensorFlow for doing machine learning on encrypted data."
+
+requirements:
+  run:
+    - python
+    - tensorflow >= 1.9.0
+    - numpy >= 1.14.0
