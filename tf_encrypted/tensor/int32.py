@@ -8,7 +8,7 @@ from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
                       AbstractConstant, AbstractPlaceholder)
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
-from ..operations.secure_random import random_uniform
+from ..operations.secure_random import seeded_random_uniform, random_uniform
 
 
 class Int32Factory(AbstractFactory):
@@ -22,6 +22,9 @@ class Int32Factory(AbstractFactory):
             return Int32Tensor(value.value)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
+
+    def seeded_tensor(self, shape, seed):
+        return Int32SeededTensor(shape, seed)
 
     def constant(self, value) -> 'Int32Constant':
 
@@ -54,11 +57,19 @@ class Int32Factory(AbstractFactory):
     def native_type(self):
         return tf.int32
 
-    def sample_uniform(self, shape: List[int]) -> 'Int32Tensor':
-        value = random_uniform(shape=shape,
-                               dtype=self.native_type,
-                               minval=self.native_type.min,
-                               maxval=self.native_type.max)
+    def sample_uniform(self, shape: List[int], seed=None) -> 'Int32Tensor':
+        if seed is None:
+            value = random_uniform(shape=shape,
+                                   dtype=self.native_type,
+                                   minval=self.native_type.min,
+                                   maxval=self.native_type.max)
+        else:
+            value = seeded_random_uniform(shape=shape,
+                                          seed=seed,
+                                          dtype=self.native_type,
+                                          minval=self.native_type.min,
+                                          maxval=self.native_type.max)
+
         return Int32Tensor(value)
 
     def stack(self, xs: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':
@@ -85,6 +96,9 @@ def _lift(x, y) -> Tuple['Int32Tensor', 'Int32Tensor']:
 
     if isinstance(x, int) and isinstance(y, Int32Tensor):
         return y.factory.tensor(np.array([x])), y
+
+    if isinstance(x, Int32Tensor) and isinstance(y, Int32SeededTensor):
+        return x, y.expand()
 
     raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
 
@@ -195,6 +209,20 @@ class Int32Tensor(AbstractTensor):
 
     def right_shift(self, bitlength):
         return int32factory.tensor(tf.bitwise.right_shift(self.value, bitlength))
+
+
+class Int32SeededTensor():
+    def __init__(self, shape, seed):
+        self.seed = seed
+        self.shape = shape
+
+    def expand(self):
+        backing = seeded_random_uniform(shape=self.shape,
+                                        dtype=self.native_type,
+                                        minval=self.native_type.min,
+                                        maxval=self.native_type.max,
+                                        seed=self.seed)
+        return Int32Tensor(backing)
 
 
 class Int32Constant(Int32Tensor, AbstractConstant):

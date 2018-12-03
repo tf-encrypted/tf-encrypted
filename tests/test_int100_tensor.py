@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 
-from tf_encrypted.tensor import int100factory, fixed100_ni
+from tf_encrypted.tensor import int100factory, fixed100_ni, Int100SeededTensor
 
 
 class TestInt100Tensor(unittest.TestCase):
@@ -83,6 +83,23 @@ class TestInt100Tensor(unittest.TestCase):
         bitlen = math.ceil(math.log2(int100factory.modulus))
         modulus = 2**bitlen
         self.core_test_binarize(raw, shape, modulus, bitlen, False)
+
+    def test_seeded_tensor(self):
+        with tf.Session() as sess:
+            x = int100factory.tensor(np.array([50, 50, 50, 50, 50, 50, 50, 50, 50]).reshape(3, 3))
+            y = Int100SeededTensor([3, 3], seed=[1, 1, 1, 1, 1, 1, 1, 1])
+
+            z = x + y
+
+            out = z.to_native()
+
+            expected = [[1112650318, -984239654, -173681861],
+                        [-397194275, -900020684, 465784224],
+                        [-1434287180, -1982959292, -7957219]]
+
+            actual = sess.run(out)
+
+        np.testing.assert_array_equal(actual, expected)
 
 
 class TestConv2D(unittest.TestCase):

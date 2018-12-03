@@ -32,7 +32,6 @@ def seeded_random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, seed=Non
 
     :rtype: tf.Tensor
     """
-
     dtype = dtypes.as_dtype(dtype)
     if dtype not in (dtypes.int32, dtypes.int64):
         raise ValueError("Invalid dtype %r" % dtype)

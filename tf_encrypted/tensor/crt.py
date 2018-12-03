@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from ..tensor.shared import im2col
 from .helpers import inverse, prod
-from ..operations.secure_random import random_uniform
+from ..operations.secure_random import seeded_random_uniform, random_uniform
 
 Decomposed = Union[List[tf.Tensor], List[np.ndarray]]
 
@@ -180,9 +180,13 @@ def crt_space_to_batch_nd(x, block_shape, paddings):
 
 def gen_crt_sample_uniform(m, int_type):
 
-    def crt_sample_uniform(shape):
+    def crt_sample_uniform(shape, seed=None):
         with tf.name_scope('sample'):
-            return [random_uniform(shape, maxval=mi, dtype=int_type) for mi in m]
+
+            if seed is None:
+                return [random_uniform(shape, maxval=mi, dtype=int_type) for mi in m]
+            else:
+                return [seeded_random_uniform(shape, maxval=mi, seed=seed, dtype=int_type) for mi in m]
 
     return crt_sample_uniform
 
