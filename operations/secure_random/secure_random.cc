@@ -141,7 +141,7 @@ public:
     OP_REQUIRES_OK(context, context->allocate_output(0, shape, &output));
     OP_REQUIRES(context, sodium_init() >= 0, errors::Internal("libsodium failed to initialize, try again"));
 
-    randombytes_buf(output->flat<int32>().data(), randombytes_SEEDBYTES);
+    generate_seed(output->flat<int32>().data());
   }
 };
 
