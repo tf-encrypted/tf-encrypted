@@ -14,7 +14,7 @@ Run the following to create the template instance
 ```shell
 gcloud compute instances create tfe-template \
     --machine-type=n1-standard-4 \
-    --image=ubuntu-minimal-1804-bionic-v20180814 \
+    --image=ubuntu-minimal-1804-bionic-v20181203 \
     --image-project=ubuntu-os-cloud \
     --boot-disk-size=20GB
 ```
