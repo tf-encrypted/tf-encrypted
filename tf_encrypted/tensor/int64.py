@@ -9,7 +9,7 @@ from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
 from .helpers import inverse
 from .shared import binarize, conv2d, im2col
 from ..types import Slice, Ellipse
-from ..operations.secure_random import random_uniform
+from ..operations.secure_random import seeded_random_uniform, random_uniform
 
 
 class Int64Factory(AbstractFactory):
@@ -28,6 +28,9 @@ class Int64Factory(AbstractFactory):
             return Int64Tensor(value.value)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
+
+    def seeded_tensor(self, shape, seed):
+        return Int64SeededTensor(shape, seed)
 
     def constant(self, value) -> 'Int64Constant':
 
@@ -60,11 +63,19 @@ class Int64Factory(AbstractFactory):
     def native_type(self):
         return tf.int64
 
-    def sample_uniform(self, shape: List[int]) -> 'Int64Tensor':
-        value = random_uniform(shape=shape,
-                               dtype=self.native_type,
-                               minval=tf.int64.min,
-                               maxval=tf.int64.max)
+    def sample_uniform(self, shape: List[int], seed=None) -> 'Int64Tensor':
+        if seed is None:
+            value = random_uniform(shape=shape,
+                                   dtype=self.native_type,
+                                   minval=self.native_type.min,
+                                   maxval=self.native_type.max)
+        else:
+            value = seeded_random_uniform(shape=shape,
+                                          seed=seed,
+                                          dtype=self.native_type,
+                                          minval=self.native_type.min,
+                                          maxval=self.native_type.max)
+
         return Int64Tensor(value)
 
     def sample_bounded(self, shape: List[int], bitlength: int) -> 'Int64Tensor':
@@ -96,6 +107,9 @@ def _lift(x, y) -> Tuple['Int64Tensor', 'Int64Tensor']:
 
     if isinstance(x, Int64Tensor) and isinstance(y, int):
         return x, x.factory.tensor(np.array([y]))
+
+    if isinstance(x, Int64Tensor) and isinstance(y, Int64SeededTensor):
+        return x, y.expand()
 
     if isinstance(x, int) and isinstance(y, Int64Tensor):
         return y.factory.tensor(np.array([x])), y
@@ -242,6 +256,24 @@ class Int64Tensor(AbstractTensor):
     def cast(self, factory):
         assert factory.native_type == self.factory.native_type
         return factory.tensor(self.value)
+
+
+class Int64SeededTensor():
+    @property
+    def native_type(self):
+        return tf.int64
+
+    def __init__(self, shape, seed):
+        self.seed = seed
+        self.shape = shape
+
+    def expand(self):
+        backing = seeded_random_uniform(shape=self.shape,
+                                        dtype=self.native_type,
+                                        minval=self.native_type.min,
+                                        maxval=self.native_type.max,
+                                        seed=self.seed)
+        return Int64Tensor(backing)
 
 
 class Int64Constant(Int64Tensor, AbstractConstant):

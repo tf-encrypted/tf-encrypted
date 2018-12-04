@@ -44,7 +44,6 @@ class TestMatMul(unittest.TestCase):
         np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=2)
 
     def test_big_middle_matmul(self) -> None:
-
         with tfe.protocol.Pond() as prot:
 
             input_shape = [64, 4500]

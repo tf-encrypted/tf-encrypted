@@ -109,10 +109,15 @@ public:
           msg << start_block << " " << pool->CurrentThreadId() << std::endl;
           std::cout << msg.str();
 
+<<<<<<< HEAD
           Gen gen(data + start_group, size, seed_bytes, start_block);
 
           gen.GenerateData(lo, hi);
       });
+=======
+
+    gen.GenerateData(lo, hi);
+>>>>>>> ea389273c372a020047b19a1fe38a08e76453199
   }
 };
 

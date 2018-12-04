@@ -54,7 +54,7 @@ class AbstractFactory(abc.ABC, Generic[T, C, V, P]):
         pass
 
     @abc.abstractmethod
-    def sample_uniform(self, shape: List[int]) -> T:
+    def sample_uniform(self, shape: List[int], seed=None) -> T:
         pass
 
     @abc.abstractmethod
