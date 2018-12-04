@@ -96,22 +96,15 @@ public:
 
     ThreadPool * pool = worker_threads.workers;
 
-    //pool->TransformRangeConcurrently(shape.num_elements() / num_threads, shape.num_elements(),
-    Shard(num_threads, pool, shape.num_elements(), 50 * shape.num_elements(),
-        [pool, output, lo, hi, seed_bytes](int64 start_group, int64 limit_group) {
+    pool->TransformRangeConcurrently(shape.num_elements() / num_threads, shape.num_elements(),
+    //Shard(num_threads, pool, shape.num_elements(), 50 * shape.num_elements(),
+        [pool, output, lo, hi, seed_bytes, shape](int64 start_group, int64 limit_group) {
           auto data = output->flat<T>().data();
           int64 size = limit_group - start_group;
 
-          int elements_per_block = CHACHABLOCKSIZE / sizeof(T);
-          auto start_block = (start_group / elements_per_block) * pool->CurrentThreadId();
+          Gen gen(data + start_group, size, seed_bytes);
 
-          std::stringstream msg;
-          msg << start_block << " " << pool->CurrentThreadId() << std::endl;
-          std::cout << msg.str();
-
-          Gen gen(data + start_group, size, seed_bytes, start_block);
-
-          gen.GenerateData(lo, hi);
+          gen.GenerateData(start_group, lo, hi);
       });
   }
 };
