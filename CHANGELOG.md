@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - SecureNN with int64 support has landed, a tensorflow build with int64 matmul support must be used. See details on how to do that [here](./README.md#securenn-int64-support)
 - Cryptographically secure random numbers feature has been implemented.
-- Three new ops are now supported: Pad, BatchToSpaceND, SpaceToBatchND
+- Seeds are sent from crypto-producer instead of full random tensors during masking and multiplication related ops (e.g. mul, matmul, conv2d, square).
+- Four new ops are now supported: Pad, BatchToSpaceND, SpaceToBatchND, ArgMax
 
 **Changed**
 
