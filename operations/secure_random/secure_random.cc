@@ -91,21 +91,10 @@ public:
     auto seed_vals = seed_tensor.flat<int32>().data();
     const unsigned char * seed_bytes = reinterpret_cast<const unsigned char*>(seed_vals);
 
-    auto worker_threads = *(context->device()->tensorflow_cpu_worker_threads());
-    int num_threads = worker_threads.num_threads;
+    auto data = output->flat<T>().data();
+    Gen gen(data, shape.num_elements(), seed_bytes);
 
-    ThreadPool * pool = worker_threads.workers;
-
-    pool->TransformRangeConcurrently(shape.num_elements() / num_threads, shape.num_elements(),
-    //Shard(num_threads, pool, shape.num_elements(), 50 * shape.num_elements(),
-        [pool, output, lo, hi, seed_bytes, shape](int64 start_group, int64 limit_group) {
-          auto data = output->flat<T>().data();
-          int64 size = limit_group - start_group;
-
-          Gen gen(data + start_group, size, seed_bytes);
-
-          gen.GenerateData(start_group, lo, hi);
-      });
+    gen.GenerateData(lo, hi);
   }
 };
 
@@ -143,9 +132,15 @@ public:
     auto worker_threads = *(context->device()->tensorflow_cpu_worker_threads());
     int num_threads = worker_threads.num_threads;
 
-    ThreadPool * pool = new ThreadPool(Env::Default(), "threadpool", num_threads);
-
-    pool->TransformRangeConcurrently(shape.num_elements() / num_threads, shape.num_elements(),
+    // this calculated number doesn't seem to make much difference in the
+    // time it takes but its meant to just be an estimation of how many compute cycles
+    // each numbers takes to generate so that the shard function can efficiently schedule
+    // the shards to take advantage of as much parallelizism as possible
+    int estimated_chacha_cpb = 3;
+    int estimated_chacha_per_number = 3 * sizeof(T);
+    int uniform_dist_per_number = 11;
+    int total_cycles = (estimated_chacha_per_number + uniform_dist_per_number) * shape.num_elements();
+    Shard(num_threads, worker_threads.workers, shape.num_elements(), total_cycles,
             [output, lo, hi](int64 start_group, int64 limit_group) {
               auto data = output->flat<T>().data();
               int64 size = limit_group - start_group;

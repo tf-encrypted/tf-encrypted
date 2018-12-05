@@ -134,7 +134,7 @@ class SeededGenerator : public Generator<T, Wide> {
 public:
   const unsigned char * seeds = nullptr;
 
-  SeededGenerator(T* output, int count, const unsigned char * seeds) 
+  SeededGenerator(T* output, uint32 count, const unsigned char * seeds)
                             : Generator<T, Wide>(output, count), seeds(seeds) {
     elements_per_block_ = CHACHABLOCKSIZE / sizeof(T);
     block_counter_ = this->bytes_count_ / CHACHABLOCKSIZE + 1;
@@ -143,20 +143,10 @@ public:
     randombytes_buf_deterministic_ic(extra_block_, CHACHABLOCKSIZE, block_counter_, seeds);
   }
 
-  void GenerateData(int64 start_group, T minval, T maxval) {
-    uint32 start_block = start_group / elements_per_block_;
-    uint32 offset = start_group % elements_per_block_;
-    uint32 offset_bytes = offset * sizeof(T);
-
-    T * tmp_buf = new T[this->count_ + offset];
-
-    randombytes_buf_deterministic_ic(tmp_buf, this->bytes_count_ + offset_bytes, start_block, seeds);
-
-    std::copy(tmp_buf + offset, tmp_buf + offset + this->count_, this->buf_);
+  void GenerateData(T minval, T maxval) {
+    randombytes_buf_deterministic(this->buf_, this->bytes_count_, seeds);
 
     this->Uniform(minval, maxval - 1);
-
-    delete[] tmp_buf;
   }
 
   T GetNextValidData() override {
