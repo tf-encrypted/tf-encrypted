@@ -65,82 +65,82 @@ else:
 
     def provide_input_conv11weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv11_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w11:")
+        return tf.print(w, [w], message="w11:")
 
     def provide_input_conv12weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv12_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w12:")
+        return tf.print(w, [w], message="w12:")
 
     def provide_input_pool1weights() -> tf.Tensor:
         w = tf.random_normal(shape=pool1_shape, dtype=tf.float32)
-        return tf.Print(w, [w], message="p1:")
+        return tf.print(w, [w], message="p1:")
 
     def provide_input_conv21weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv21_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w21:")
+        return tf.print(w, [w], message="w21:")
 
     def provide_input_conv22weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv22_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w22:")
+        return tf.print(w, [w], message="w22:")
 
     def provide_input_pool2weights() -> tf.Tensor:
         w = tf.random_normal(shape=pool2_shape, dtype=tf.float32)
-        return tf.Print(w, [w], message="p2:")
+        return tf.print(w, [w], message="p2:")
 
     def provide_input_conv31weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv31_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w31:")
+        return tf.print(w, [w], message="w31:")
 
     def provide_input_conv32weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv32_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w32:")
+        return tf.print(w, [w], message="w32:")
 
     def provide_input_conv33weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv33_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w33:")
+        return tf.print(w, [w], message="w33:")
 
     def provide_input_pool3weights() -> tf.Tensor:
         w = tf.random_normal(shape=pool3_shape, dtype=tf.float32)
-        return tf.Print(w, [w], message="p3:")
+        return tf.print(w, [w], message="p3:")
 
     def provide_input_conv41weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv41_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w41:")
+        return tf.print(w, [w], message="w41:")
 
     def provide_input_conv42weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv42_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w42:")
+        return tf.print(w, [w], message="w42:")
 
     def provide_input_conv43weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv43_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w43:")
+        return tf.print(w, [w], message="w43:")
 
     def provide_input_pool4weights() -> tf.Tensor:
         w = tf.random_normal(shape=pool4_shape, dtype=tf.float32)
-        return tf.Print(w, [w], message="p4:")
+        return tf.print(w, [w], message="p4:")
 
     def provide_input_conv51weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv51_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w51:")
+        return tf.print(w, [w], message="w51:")
 
     def provide_input_conv52weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv52_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w52:")
+        return tf.print(w, [w], message="w52:")
 
     def provide_input_conv53weights() -> tf.Tensor:
         w = tf.random_normal(shape=conv53_fshape, dtype=tf.float32)
-        return tf.Print(w, [w], message="w53:")
+        return tf.print(w, [w], message="w53:")
 
     def provide_input_pool5weights() -> tf.Tensor:
         w = tf.random_normal(shape=pool5_shape, dtype=tf.float32)
-        return tf.Print(w, [w], message="p5:")
+        return tf.print(w, [w], message="p5:")
 
     def provide_input_prediction() -> tf.Tensor:
         x = tf.random_normal(shape=input_shape, dtype=tf.float32)
-        return tf.Print(x, [x], message="x:")
+        return tf.print(x, [x], message="x:")
 
     def receive_output(tensor: tf.Tensor) -> tf.Operation:
-        return tf.Print(tensor, [tensor, tf.shape(tensor)], message="output:")
+        return tf.print(tensor, [tensor, tf.shape(tensor)], message="output:")
 
     with tfe.protocol.Pond(*config.get_players('server0, server1, crypto-producer')) as prot:
 

@@ -27,14 +27,14 @@ else:
     def provide_weights() -> tf.Tensor:
         raw_w = np.array([5, 5, 5, 5]).reshape((2, 2))
         w = tf.constant(raw_w)
-        return tf.Print(w, [w])
+        return tf.print(w, [w])
 
     def provide_input() -> tf.Tensor:
         x = tf.constant([1, 2, 3, 4], shape=(2, 2), dtype=tf.float32)
-        return tf.Print(x, [x])
+        return tf.print(x, [x])
 
     def receive_output(prediction):
-        return tf.Print([], [prediction], summarize=4)
+        return tf.print([], [prediction], summarize=4)
 
     with tfe.protocol.Pond() as prot:
 

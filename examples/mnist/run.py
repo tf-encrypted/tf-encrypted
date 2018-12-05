@@ -78,7 +78,7 @@ class ModelTrainer():
         loop = tf.while_loop(lambda i: i < self.ITERATIONS * self.EPOCHS, loop_body, (0,))
 
         # return model parameters after training
-        loop = tf.Print(loop, [], message="Training complete")
+        loop = tf.print(loop, [], message="Training complete")
         with tf.control_dependencies([loop]):
             return [w0.read_value(), b0.read_value(), w1.read_value(), b1.read_value()]
 
@@ -116,7 +116,7 @@ class PredictionClient():
     def provide_input(self) -> tf.Tensor:
         with tf.name_scope('loading'):
             prediction_input, expected_result = self.build_data_pipeline().get_next()
-            prediction_input = tf.Print(prediction_input, [expected_result], summarize=self.BATCH_SIZE, message="EXPECT ")
+            prediction_input = tf.print(prediction_input, [expected_result], summarize=self.BATCH_SIZE, message="EXPECT ")
 
         with tf.name_scope('pre-processing'):
             prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 28 * 28))
@@ -126,7 +126,7 @@ class PredictionClient():
     def receive_output(self, likelihoods: tf.Tensor) -> tf.Operation:
         with tf.name_scope('post-processing'):
             prediction = tf.argmax(likelihoods, axis=1)
-            op = tf.Print([], [prediction], summarize=self.BATCH_SIZE, message="ACTUAL ")
+            op = tf.print([], [prediction], summarize=self.BATCH_SIZE, message="ACTUAL ")
             return op
 
 
