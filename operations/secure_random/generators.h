@@ -53,14 +53,10 @@ void generate_seed(void * buf) {
 template <typename T, typename Wide>
 class Generator {
 public:
-  Tensor *output = NULL;
-
-  Generator(Tensor* output) : output(output) {
-    auto flat = output->flat<T>();
-
-    count_ = flat.size();
+  Generator(T* output, int count) {
+    count_ = count;
     bytes_count_ = count_ * sizeof(T);
-    buf_ = static_cast<T *>(flat.data());
+    buf_ = output;
   }
 
   void GenerateData(T minval, T maxval) {
@@ -73,7 +69,7 @@ public:
   }
 
 protected:
-  T *buf_ = NULL;
+  T *buf_ = nullptr;
   uint32 count_ = 0;
   uint32 bytes_count_ = 0;
 
@@ -136,9 +132,10 @@ protected:
 template <typename T, typename Wide>
 class SeededGenerator : public Generator<T, Wide> {
 public:
-  const unsigned char * seeds = NULL;
+  const unsigned char * seeds = nullptr;
 
-  SeededGenerator(Tensor* output, const unsigned char * seeds) : Generator<T, Wide>(output), seeds(seeds) {
+  SeededGenerator(T* output, uint32 count, const unsigned char * seeds)
+                            : Generator<T, Wide>(output, count), seeds(seeds) {
     elements_per_block_ = CHACHABLOCKSIZE / sizeof(T);
     block_counter_ = this->bytes_count_ / CHACHABLOCKSIZE + 1;
 
@@ -147,8 +144,6 @@ public:
   }
 
   void GenerateData(T minval, T maxval) {
-    auto flat = this->output->template flat<T>();
-
     randombytes_buf_deterministic(this->buf_, this->bytes_count_, seeds);
 
     this->Uniform(minval, maxval - 1);
