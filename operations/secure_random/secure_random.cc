@@ -1,5 +1,3 @@
-#include "tensorflow/core/lib/core/threadpool.h"
-#include "tensorflow/core/platform/env.h"
 #include "tensorflow/core/util/work_sharder.h"
 
 #include "generators.h"
@@ -7,7 +5,6 @@
 using shape_inference::DimensionHandle;
 using shape_inference::ShapeHandle;
 using shape_inference::InferenceContext;
-using thread::ThreadPool;
 
 static Status RandomUniformShapeCommon(InferenceContext* context) {
   // Set output shape
