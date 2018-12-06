@@ -68,7 +68,7 @@ Now you should just be able to install using pip:
 **MacOS**
 
 ```
-pip install tensorflow-1.9.0-cp35-cp35m-macosx_10_7_x86_64.whl
+pip install tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl
 ```
 
 **Linux**
