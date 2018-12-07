@@ -1,10 +1,13 @@
 from typing import Dict, List, Any, Union, Optional
+import collections
 
 from ..player import Player
 from ..protocol import Protocol, get_protocol
 from ..protocol.pond import TFEInputter
 from ..config import Config, get_config
 
+special_ops = ['required_space_to_batch_paddings']
+special_op_two_outputs = ['required_space_to_batch_paddings']
 
 class Converter():
 
@@ -42,12 +45,10 @@ class Converter():
         else:
             inputs = [inputter_fn]
         inputs_iterable = enumerate(inputs)
-
-        for node in graph_def.node:
             
-            if is_there_special_op(special_ops[0], graph_def):
-                input_list = find_inputs(special_ops[0], graph_def)
-                output_list = find_outputs(special_ops[0], graph_def)
+        if is_there_special_op(special_ops[0], graph_def):
+            input_list = find_inputs(special_ops[0], graph_def)
+            output_list = find_outputs(special_ops[0], graph_def)
 
             pb_trimmed = collections.OrderedDict()
 
@@ -85,22 +86,21 @@ class Converter():
                     else:
                         self.outputs[node.name] = register[special_ops[0]](self, node, inputs)
 
-            else:
-                output = node_name(node.name)
-                inputs = [node_name(x) for x in node.input]
+        else:
+            output = node_name(node.name)
+            inputs = [node_name(x) for x in node.input]
 
-                if node.op == "Placeholder":
-                    try:
-                        count, item = inputs_iterable.__next__()
-                    except StopIteration:
-                        raise InvalidArgumentError("Not enough placeholders supplied")
+            if node.op == "Placeholder":
+                try:
+                    count, item = inputs_iterable.__next__()
+                except StopIteration:
+                    raise InvalidArgumentError("Not enough placeholders supplied")
 
-                    x = self.protocol.define_private_input(input_player, item)
+                x = self.protocol.define_private_input(input_player, item)
 
-                    self.outputs[output] = x
-                    continue
+                self.outputs[output] = x
 
-                self.outputs[output] = register[node.op](self, node, inputs)
+            self.outputs[output] = register[node.op](self, node, inputs)
 
         return self.outputs[graph_def.node[-1].name]
 

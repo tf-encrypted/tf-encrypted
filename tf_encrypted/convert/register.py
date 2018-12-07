@@ -37,6 +37,7 @@ def register() -> Dict[str, Any]:
         'BatchToSpaceND': batch_to_space_nd,
         'SpaceToBatchND': space_to_batch_nd,
         'ArgMax': argmax,
+        'required_space_to_batch_paddings': required_space_to_batch_paddings,
     }
 
     return reg
