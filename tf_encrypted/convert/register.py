@@ -384,6 +384,27 @@ def space_to_batch_nd(converter, node, inputs):
     paddings = converter.outputs[inputs[2]].attr["value"].tensor
 
     return converter.protocol.space_to_batch_nd(input, block_shape, paddings)
+    
+
+def required_space_to_batch_paddings(converter: Converter, node: Any, inputs: List[str]):
+    x = converter.outputs[inputs[0]]
+    y = converter.outputs[inputs[1]]
+    p = converter.outputs[inputs[2]]
+
+    x_out = tf.cast(x.reveal().decode(), tf.int32)
+
+    y_nums = array.array('i', y.attr["value"].tensor.tensor_content)
+    y_array = np.array(y_nums, dtype='int32').reshape(3)
+
+    p_nums = array.array('i', p.attr["value"].tensor.tensor_content)
+    p_array = np.array(p_nums, dtype='int32').reshape(3, 2)
+
+    inputter_pad = lambda: tf.cast(tf.required_space_to_batch_paddings(x_out, y_array, base_paddings=p_array)[0], tf.float64)
+    inputter_crop = lambda: tf.cast(tf.required_space_to_batch_paddings(x_out, y_array, base_paddings=p_array)[1], tf.float64)
+
+    pad_private = converter.protocol.define_public_input(converter.model_provider, inputter_pad)
+    crop_private = converter.protocol.define_public_input(converter.model_provider, inputter_crop)
+    return (pad_private, crop_private)
 
 
 def argmax(converter, node, inputs):

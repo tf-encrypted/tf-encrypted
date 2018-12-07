@@ -44,21 +44,63 @@ class Converter():
         inputs_iterable = enumerate(inputs)
 
         for node in graph_def.node:
-            output = node_name(node.name)
-            inputs = [node_name(x) for x in node.input]
+            
+            if is_there_special_op(special_ops[0], graph_def):
+                input_list = find_inputs(special_ops[0], graph_def)
+                output_list = find_outputs(special_ops[0], graph_def)
 
-            if node.op == "Placeholder":
-                try:
-                    count, item = inputs_iterable.__next__()
-                except StopIteration:
-                    raise InvalidArgumentError("Not enough placeholders supplied")
+            pb_trimmed = collections.OrderedDict()
 
-                x = self.protocol.define_private_input(input_player, item)
+            for n in graph_def.node:
+                if special_ops[0] in n.name: 
+                    if  n.name in input_list or n.name in output_list:
+                        pb_trimmed[n.name] = n
+                else:
+                    pb_trimmed[n.name] = n
 
-                self.outputs[output] = x
-                continue
+            node_list = pb_trimmed.values()
 
-            self.outputs[output] = register[node.op](self, node, inputs)
+            for node in node_list:
+                if node.name not in output_list:
+
+                    output = node_name(node.name)
+                    inputs = [node_name(x) for x in node.input]
+                    if node.op == "Placeholder":
+                        try:
+                            count, item = inputs_iterable.__next__()
+                        except StopIteration:
+                            raise InvalidArgumentError("Not enough placeholders supplied")
+
+                        x = self.protocol.define_private_input(input_player, item)  
+                        
+                        self.outputs[output] = x
+                        continue
+
+                    self.outputs[output] = register[node.op](self, node, inputs)
+                else:
+                    if special_ops[0] in special_op_two_outputs :
+                        a, b = register[special_ops[0]](self, node, input_list)
+                        self.outputs[output_list[0]] = a
+                        self.outputs[output_list[1]] = b
+                    else:
+                        self.outputs[node.name] = register[special_ops[0]](self, node, inputs)
+
+            else:
+                output = node_name(node.name)
+                inputs = [node_name(x) for x in node.input]
+
+                if node.op == "Placeholder":
+                    try:
+                        count, item = inputs_iterable.__next__()
+                    except StopIteration:
+                        raise InvalidArgumentError("Not enough placeholders supplied")
+
+                    x = self.protocol.define_private_input(input_player, item)
+
+                    self.outputs[output] = x
+                    continue
+
+                self.outputs[output] = register[node.op](self, node, inputs)
 
         return self.outputs[graph_def.node[-1].name]
 
@@ -72,3 +114,46 @@ def node_name(n: str) -> str:
 
 class InvalidArgumentError(Exception):
     pass
+
+
+def find_inputs(special_ops, graph_def):
+    potential_ops_input = []
+    graph_nodes_not_in_special_ops = []
+
+    for node in graph_def.node:
+        if special_ops in node.name:
+            potential_ops_input += node.input
+        else:
+            graph_nodes_not_in_special_ops.append(node.name)
+
+    potential_ops_input_unique = collections.OrderedDict.fromkeys(potential_ops_input)
+    graph_nodes_not_in_special_ops_unique = collections.OrderedDict.fromkeys(graph_nodes_not_in_special_ops)
+
+    final_input = collections.OrderedDict.fromkeys(x for x in graph_nodes_not_in_special_ops_unique if x in potential_ops_input_unique)
+    final_list = list(final_input.keys())
+    return final_list
+
+
+def find_outputs(special_ops, graph_def):
+    potential_ops_output = []
+    graph_nodes_in_special_ops = []
+
+    for node in graph_def.node:
+        if special_ops not in node.name.split('/'):
+            potential_ops_output += node.input
+        else:
+            graph_nodes_in_special_ops.append(node.name)
+
+    potential_ops_output_unique = collections.OrderedDict.fromkeys(potential_ops_output)
+    graph_nodes_in_special_ops_unique = collections.OrderedDict.fromkeys(graph_nodes_in_special_ops)
+
+    final_output = collections.OrderedDict.fromkeys(x for x in graph_nodes_in_special_ops_unique if x in potential_ops_output_unique)
+    final_list = list(final_output.keys())
+    return final_list
+
+def is_there_special_op(special_op, graph_def):
+    for n in graph_def.node:
+        if special_op in n.name:
+            return True
+        
+    return False
