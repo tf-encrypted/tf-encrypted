@@ -87,20 +87,22 @@ class Converter():
                         self.outputs[node.name] = register[special_ops[0]](self, node, inputs)
 
         else:
-            output = node_name(node.name)
-            inputs = [node_name(x) for x in node.input]
+            for node in graph_def.node:
+                output = node_name(node.name)
+                inputs = [node_name(x) for x in node.input]
 
-            if node.op == "Placeholder":
-                try:
-                    count, item = inputs_iterable.__next__()
-                except StopIteration:
-                    raise InvalidArgumentError("Not enough placeholders supplied")
+                if node.op == "Placeholder":
+                    try:
+                        count, item = inputs_iterable.__next__()
+                    except StopIteration:
+                        raise InvalidArgumentError("Not enough placeholders supplied")
 
-                x = self.protocol.define_private_input(input_player, item)
+                    x = self.protocol.define_private_input(input_player, item)
 
-                self.outputs[output] = x
+                    self.outputs[output] = x
+                    continue
 
-            self.outputs[output] = register[node.op](self, node, inputs)
+                self.outputs[output] = register[node.op](self, node, inputs)
 
         return self.outputs[graph_def.node[-1].name]
 
