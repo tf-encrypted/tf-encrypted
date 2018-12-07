@@ -388,20 +388,23 @@ def space_to_batch_nd(converter, node, inputs):
     
 
 def required_space_to_batch_paddings(converter: Converter, node: Any, inputs: List[str]):
-    x = converter.outputs[inputs[0]]
-    y = converter.outputs[inputs[1]]
-    p = converter.outputs[inputs[2]]
 
-    x_out = tf.cast(x.reveal().decode(), tf.int32)
+    inputs_node = [converter.outputs[inputs[i]] for i in range(len(inputs))]
 
-    y_nums = array.array('i', y.attr["value"].tensor.tensor_content)
-    y_array = np.array(y_nums, dtype='int32').reshape(3)
+    inputs_int32 = []
 
-    p_nums = array.array('i', p.attr["value"].tensor.tensor_content)
-    p_array = np.array(p_nums, dtype='int32').reshape(3, 2)
+    for i in range(len(inputs_node)):
+        if isinstance(inputs_node[i], tf.NodeDef):
+            inputs_int32.append(nodef_to_numpy_array(inputs_node[i]))
+        else:
+            inputs_int32.append(tf.cast(inputs_node[i].reveal().decode(), tf.int32))
 
-    inputter_pad = lambda: tf.cast(tf.required_space_to_batch_paddings(x_out, y_array, base_paddings=p_array)[0], tf.float64)
-    inputter_crop = lambda: tf.cast(tf.required_space_to_batch_paddings(x_out, y_array, base_paddings=p_array)[1], tf.float64)
+    if len(inputs_int32) ==  2:
+        inputter_pad = lambda: tf.cast(tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1])[0], tf.float64)
+        inputter_crop = lambda: tf.cast(tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1])[1], tf.float64)
+    else:
+        inputter_pad = lambda: tf.cast(tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1], base_paddings=inputs_int32[2])[0], tf.float64)
+        inputter_crop = lambda: tf.cast(tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1], base_paddings=inputs_int32[2])[1], tf.float64)
 
     pad_private = converter.protocol.define_public_input(converter.model_provider, inputter_pad)
     crop_private = converter.protocol.define_public_input(converter.model_provider, inputter_crop)
@@ -482,6 +485,8 @@ def nodef_to_numpy_array(x: Any) -> np.ndarray:
         nums = array.array('f', x.attr["value"].tensor.tensor_content)
     elif dtype == tf.float64:
         nums = array.array('d', x.attr["value"].tensor.tensor_content)
+    elif dtype == tf.int32:
+        nums = array.array('i', x.attr["value"].tensor.tensor_content)
     else:
         raise TypeError("Unsupported dtype")
 

@@ -54,10 +54,6 @@ class TestConvert(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
 
                 pad_tfe, crop_tfe = sess.run(x, tag='reveal')
-                print("pad_tfe",pad_tfe)
-                print("crop_tfe", crop_tfe)
-                print("pad_tfe_shape",pad_tfe.shape)
-                print("crop_tfe_shape", crop_tfe.shape)
 
         np.testing.assert_array_almost_equal(pad_tfe, pad_tf, decimal=3)
         np.testing.assert_array_almost_equal(crop_tfe, crop_tf, decimal=3)
