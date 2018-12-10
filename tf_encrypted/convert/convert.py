@@ -167,14 +167,6 @@ def find_outputs(special_ops, graph_def):
     return final_list
 
 
-def are_there_special_ops(special_op, graph_def):
-    for n in graph_def.node:
-        if special_op in n.name:
-            return True
-        
-    return False
-
-
 def special_ops_name_space(special_ops_name, graph):
 
     special_op_name_space = set()
