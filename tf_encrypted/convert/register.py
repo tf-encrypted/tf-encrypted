@@ -400,14 +400,19 @@ def required_space_to_batch_paddings(converter: Converter, node: Any, inputs: Li
             inputs_int32.append(tf.cast(inputs_node[i].reveal().decode(), tf.int32))
 
     if len(inputs_int32) ==  2:
-        inputter_pad = lambda: tf.cast(tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1])[0], tf.float64)
-        inputter_crop = lambda: tf.cast(tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1])[1], tf.float64)
+        inputter_pad = lambda: tf.cast(tf.required_space_to_batch_paddings(inputs_int32[0], 
+                                        inputs_int32[1])[0], tf.float64)
+        inputter_crop = lambda: tf.cast(tf.required_space_to_batch_paddings(inputs_int32[0], 
+                                        inputs_int32[1])[1], tf.float64)
     else:
-        inputter_pad = lambda: tf.cast(tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1], base_paddings=inputs_int32[2])[0], tf.float64)
-        inputter_crop = lambda: tf.cast(tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1], base_paddings=inputs_int32[2])[1], tf.float64)
+        inputter_pad = lambda: tf.cast(tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1], 
+                                        base_paddings=inputs_int32[2])[0], tf.float64)
+        inputter_crop = lambda: tf.cast(tf.required_space_to_batch_paddings(inputs_int32[0], 
+                                        inputs_int32[1], base_paddings=inputs_int32[2])[1], tf.float64)
 
     pad_private = converter.protocol.define_public_input(converter.model_provider, inputter_pad)
     crop_private = converter.protocol.define_public_input(converter.model_provider, inputter_crop)
+    
     return (pad_private, crop_private)
 
 

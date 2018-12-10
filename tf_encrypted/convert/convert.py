@@ -1,5 +1,5 @@
 from typing import Dict, List, Any, Union, Optional
-import collections
+from collections import OrderedDict
 
 from ..player import Player
 from ..protocol import Protocol, get_protocol
@@ -45,24 +45,32 @@ class Converter():
         else:
             inputs = [inputter_fn]
         inputs_iterable = enumerate(inputs)
-            
-        if is_there_special_op(special_ops[0], graph_def):
-            input_list = find_inputs(special_ops[0], graph_def)
-            output_list = find_outputs(special_ops[0], graph_def)
 
-            pb_trimmed = collections.OrderedDict()
+        # Identify if there are special ops in pb file, e.g. required_space_to_batch_paddings 
+        # If yes, identify the inputs and outputs of this special ops.
+        if are_there_special_ops(special_ops[0], graph_def):
+            input_special_op = find_inputs(special_ops[0], graph_def)
+            output_special_op = find_outputs(special_ops[0], graph_def)
+
+            # Create a dictionary excluding all the sub ops related to required_space_to_batch_paddings
+            # Except the sub ops related to the input or output of this special ops.
+            pb_trimmed = OrderedDict()
 
             for n in graph_def.node:
                 if special_ops[0] in n.name: 
-                    if  n.name in input_list or n.name in output_list:
+                    if  n.name in input_special_op or n.name in output_special_op:
                         pb_trimmed[n.name] = n
                 else:
                     pb_trimmed[n.name] = n
 
             node_list = pb_trimmed.values()
 
+
+            # If the ops are not related to the special ops, use the existing approach to regist the ops. 
+            # Otherwise for the special ops replace the output from the sub ops by the output from the 
+            # high level operation then register. 
             for node in node_list:
-                if node.name not in output_list:
+                if node.name not in output_special_op:
 
                     output = node_name(node.name)
                     inputs = [node_name(x) for x in node.input]
@@ -79,10 +87,11 @@ class Converter():
 
                     self.outputs[output] = register[node.op](self, node, inputs)
                 else:
+                    # Handle edge cased if the ops return two outputs
                     if special_ops[0] in special_op_two_outputs :
-                        a, b = register[special_ops[0]](self, node, input_list)
-                        self.outputs[output_list[0]] = a
-                        self.outputs[output_list[1]] = b
+                        a, b = register[special_ops[0]](self, node, input_special_op)
+                        self.outputs[output_special_op[0]] = a
+                        self.outputs[output_special_op[1]] = b
                     else:
                         self.outputs[node.name] = register[special_ops[0]](self, node, inputs)
 
@@ -128,10 +137,10 @@ def find_inputs(special_ops, graph_def):
         else:
             graph_nodes_not_in_special_ops.append(node.name)
 
-    potential_ops_input_unique = collections.OrderedDict.fromkeys(potential_ops_input)
-    graph_nodes_not_in_special_ops_unique = collections.OrderedDict.fromkeys(graph_nodes_not_in_special_ops)
+    potential_ops_input_unique = OrderedDict.fromkeys(potential_ops_input)
+    graph_nodes_not_in_special_ops_unique = OrderedDict.fromkeys(graph_nodes_not_in_special_ops)
 
-    final_input = collections.OrderedDict.fromkeys(x for x in graph_nodes_not_in_special_ops_unique if x in potential_ops_input_unique)
+    final_input = OrderedDict.fromkeys(x for x in graph_nodes_not_in_special_ops_unique if x in potential_ops_input_unique)
     final_list = list(final_input.keys())
     return final_list
 
@@ -146,14 +155,14 @@ def find_outputs(special_ops, graph_def):
         else:
             graph_nodes_in_special_ops.append(node.name)
 
-    potential_ops_output_unique = collections.OrderedDict.fromkeys(potential_ops_output)
-    graph_nodes_in_special_ops_unique = collections.OrderedDict.fromkeys(graph_nodes_in_special_ops)
+    potential_ops_output_unique = OrderedDict.fromkeys(potential_ops_output)
+    graph_nodes_in_special_ops_unique = OrderedDict.fromkeys(graph_nodes_in_special_ops)
 
-    final_output = collections.OrderedDict.fromkeys(x for x in graph_nodes_in_special_ops_unique if x in potential_ops_output_unique)
+    final_output = OrderedDict.fromkeys(x for x in graph_nodes_in_special_ops_unique if x in potential_ops_output_unique)
     final_list = list(final_output.keys())
     return final_list
 
-def is_there_special_op(special_op, graph_def):
+def are_there_special_ops(special_op, graph_def):
     for n in graph_def.node:
         if special_op in n.name:
             return True
