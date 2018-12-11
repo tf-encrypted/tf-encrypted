@@ -51,53 +51,20 @@ class Converter():
         # If yes, identify the inputs and outputs of this special ops.
         special_op_dict, all_special_op_inputs, all_special_op_outputs = find_special_ops(special_ops, graph_def)
 
-        # Check if there are special ops in the graph, if not, use the existing approach.
-        if len(special_op_dict.keys()) != 0:
+        # Create a dictionary excluding all the sub ops related to required_space_to_batch_paddings
+        # Except the sub ops related to the input or output of this special ops.
+        pb_trimmed = select_relevant_ops(special_ops, all_special_op_inputs, all_special_op_outputs, graph_def)
 
-            # Create a dictionary excluding all the sub ops related to required_space_to_batch_paddings
-            # Except the sub ops related to the input or output of this special ops.
-            pb_trimmed = select_relevant_ops(special_ops, all_special_op_inputs, all_special_op_outputs, graph_def)
+        node_list = pb_trimmed.values()
 
-            node_list = pb_trimmed.values()
+        # If the ops are not related to the special ops, use the existing approach to register the ops.
+        # Otherwise for the special ops replace the output from the sub ops by the output from the
+        # high level operation then register.
+        for node in node_list:
+            if node.name not in all_special_op_outputs:
 
-            # If the ops are not related to the special ops, use the existing approach to register the ops.
-            # Otherwise for the special ops replace the output from the sub ops by the output from the
-            # high level operation then register.
-            for node in node_list:
-                if node.name not in all_special_op_outputs:
-
-                    output = node_name(node.name)
-                    inputs = [node_name(x) for x in node.input]
-                    if node.op == "Placeholder":
-                        try:
-                            count, item = inputs_iterable.__next__()
-                        except StopIteration:
-                            raise InvalidArgumentError("Not enough placeholders supplied")
-
-                        x = self.protocol.define_private_input(input_player, item)
-
-                        self.outputs[output] = x
-                        continue
-
-                    self.outputs[output] = register[node.op](self, node, inputs)
-                else:
-                    # Register high level special operations
-                    for s in special_op_dict.keys():
-                        input_list, output_list = special_op_dict[s]['inputs'], special_op_dict[s]['outputs']
-
-                        # Handle edge cased if the ops return two outputs
-                        if len(output_list) == 2:
-                            a, b = register[special_op_dict[s]['op']](self, node, input_list)
-                            self.outputs[output_list[0]] = a
-                            self.outputs[output_list[1]] = b
-                        else:
-                            self.outputs[output_list[0]] = register[special_ops[0]](self, node, inputs)
-
-        else:
-            for node in graph_def.node:
                 output = node_name(node.name)
                 inputs = [node_name(x) for x in node.input]
-
                 if node.op == "Placeholder":
                     try:
                         count, item = inputs_iterable.__next__()
@@ -110,6 +77,15 @@ class Converter():
                     continue
 
                 self.outputs[output] = register[node.op](self, node, inputs)
+            else:
+                # Register high level special operations
+                for s in special_op_dict.keys():
+                    input_list, output_list = special_op_dict[s]['inputs'], special_op_dict[s]['outputs']
+
+                    # Handle edge cased if the ops return two outputs
+                    outs = register[special_op_dict[s]['op']](self, node, input_list)
+                    for i, x in enumerate(outs):
+                        self.outputs[output_list[i]] = x
 
         return self.outputs[graph_def.node[-1].name]
 
@@ -125,43 +101,37 @@ class InvalidArgumentError(Exception):
     pass
 
 
-def find_inputs(special_ops: list, graph_def: Any):
-    potential_ops_input = []
-    graph_nodes_not_in_special_ops = []
+def find_leaves(special_ops, graph_def, lookahead):
+    potential_leaf_ops = []
+    graph_minus_special = []
+    graph_plus_special = []
 
     for node in graph_def.node:
-        if special_ops in node.name:
-            potential_ops_input += node.input
+        if lookahead:
+            if special_ops in node.name:
+                potential_leaf_ops += node.input
+            else:
+                graph_minus_special.append(node.name)
         else:
-            graph_nodes_not_in_special_ops.append(node.name)
+            if special_ops not in node.name.split('/'):
+                potential_leaf_ops += node.input
+            else:
+                graph_plus_special.append(node.name)
 
-    potential_ops_input_unique = OrderedDict.fromkeys(potential_ops_input)
-    graph_nodes_not_in_special_ops_unique = OrderedDict.fromkeys(graph_nodes_not_in_special_ops)
+    potential_leaf_ops_unique = OrderedDict.fromkeys(potential_leaf_ops)
+    graph_minus_special_unique = OrderedDict.fromkeys(graph_minus_special)
 
-    final_input = OrderedDict.fromkeys(x for x in graph_nodes_not_in_special_ops_unique if x in potential_ops_input_unique)
-    final_list = list(final_input.keys())
+    def gen_leaf_keys():
+        for x in graph_minus_special_unique:
+            if x in potential_leaf_ops_unique:
+                yield x
+
+    final_leaves = OrderedDict.fromkeys(key for key in gen_leaf_keys())
+    final_list = list(final_leaves.keys())
     return final_list
 
 
-def find_outputs(special_ops_list: str, graph_def: Any):
-    potential_ops_output = []
-    graph_nodes_in_special_ops = []
-
-    for node in graph_def.node:
-        if special_ops_list not in node.name.split('/'):
-            potential_ops_output += node.input
-        else:
-            graph_nodes_in_special_ops.append(node.name)
-
-    potential_ops_output_unique = OrderedDict.fromkeys(potential_ops_output)
-    graph_nodes_in_special_ops_unique = OrderedDict.fromkeys(graph_nodes_in_special_ops)
-
-    final_output = OrderedDict.fromkeys(x for x in graph_nodes_in_special_ops_unique if x in potential_ops_output_unique)
-    final_list = list(final_output.keys())
-    return final_list
-
-
-def special_ops_name_space(special_ops_name: str, graph_def: Any):
+def special_ops_namespace(special_ops_name: str, graph_def: Any):
 
     special_op_name_space = set()
     for n in graph_def.node:
@@ -184,19 +154,18 @@ def find_special_ops(special_ops_list: list, graph_def: Any):
 
     for s in special_ops_list:
 
-        special_ops_name_space_list = special_ops_name_space(s, graph_def)
+        special_ops_namespace_list = special_ops_namespace(s, graph_def)
 
-        for n in special_ops_name_space_list:
+        for n in special_ops_namespace_list:
 
             special_ops_dict[n] = OrderedDict()
-
             special_ops_dict[n]['op'] = s
 
-            inputs = find_inputs(n, graph_def)
+            inputs = find_leaves(n, graph_def, lookahead=False)
             special_ops_dict[n]['inputs'] = inputs
             all_special_op_inputs += inputs
 
-            outputs = find_outputs(n, graph_def)
+            outputs = find_leaves(n, graph_def, lookahead=True)
             special_ops_dict[n]['outputs'] = outputs
             all_special_op_outputs += outputs
 
@@ -208,14 +177,14 @@ def select_relevant_ops(special_ops: list,
                         all_special_op_outputs: list,
                         graph_def: Any):
 
-    pb_trimmed = OrderedDict()
+    trimmed_graph = OrderedDict()
 
     for i in range(len(special_ops)):
         for n in graph_def.node:
             if special_ops[i] in n.name:
                 if n.name in all_special_op_inputs or n.name in all_special_op_outputs:
-                    pb_trimmed[n.name] = n
+                    trimmed_graph[n.name] = n
             else:
-                pb_trimmed[n.name] = n
+                trimmed_graph[n.name] = n
 
-    return pb_trimmed
+    return trimmed_graph
