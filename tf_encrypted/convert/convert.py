@@ -48,21 +48,14 @@ class Converter():
 
         # Identify if there are special ops in pb file, e.g. required_space_to_batch_paddings 
         # If yes, identify the inputs and outputs of this special ops.
-        special_op_dict, all_special_op_inputs, all_special_op_outputs = find_special_ops(special_ops[0], graph_def)
+        special_op_dict, all_special_op_inputs, all_special_op_outputs = find_special_ops(special_ops, graph_def)
 
         # Check if there are special ops in the graph, if not, use the existing approach.
         if len(special_op_dict.keys()) != 0:
 
             # Create a dictionary excluding all the sub ops related to required_space_to_batch_paddings
             # Except the sub ops related to the input or output of this special ops.
-            pb_trimmed = OrderedDict()
-
-            for n in graph_def.node:
-                if special_ops[0] in n.name: 
-                    if  n.name in all_special_op_inputs or n.name in all_special_op_outputs:
-                        pb_trimmed[n.name] = n
-                else:
-                    pb_trimmed[n.name] = n
+            pb_trimmed = select_relevant_ops(special_ops, all_special_op_inputs, all_special_op_outputs, graph_def)
 
             node_list = pb_trimmed.values()
 
@@ -182,28 +175,45 @@ def special_ops_name_space(special_ops_name, graph):
     return list(special_op_name_space)
 
 
-def find_special_ops(special_ops_name, graph):
+def find_special_ops(special_ops_list, graph):
   
-    special_ops_name_space_list = special_ops_name_space(special_ops_name, graph)
-    
-    special_op_dict = OrderedDict()
+    special_ops_dict = OrderedDict()
     all_special_op_inputs = []
     all_special_op_outputs = []
     
-    for n in special_ops_name_space_list:
-        
-        special_op_dict[n] = OrderedDict()
-        
-        special_op_dict[n]['op'] = special_ops_name
-        
-        inputs = find_inputs(n, graph)
-        special_op_dict[n]['inputs'] = inputs
-        all_special_op_inputs += inputs
+    for s in special_ops_list:
     
+        special_ops_name_space_list = special_ops_name_space(s, graph)
+
+        for n in special_ops_name_space_list:
+
+            special_ops_dict[n] = OrderedDict()
+
+            special_ops_dict[n]['op'] = s
+
+            inputs = find_inputs(n, graph)
+            special_ops_dict[n]['inputs'] = inputs
+            all_special_op_inputs += inputs
+
+
+            outputs = find_outputs(n, graph)
+            special_ops_dict[n]['outputs'] = outputs
+            all_special_op_outputs += outputs
     
-        outputs = find_outputs(n, graph)
-        special_op_dict[n]['outputs'] = outputs
-        all_special_op_outputs += outputs
+    return special_ops_dict, all_special_op_inputs, all_special_op_outputs
+
+
+def select_relevant_ops(special_ops, all_special_op_inputs, all_special_op_outputs, graph):
+  
+    pb_trimmed = OrderedDict()
     
-    return special_op_dict, all_special_op_inputs, all_special_op_outputs
+    for i in range(len(special_ops)):
+        for n in graph.node:
+            if special_ops[i] in n.name: 
+                if  n.name in all_special_op_inputs or n.name in all_special_op_outputs:
+                    pb_trimmed[n.name] = n
+            else:
+                pb_trimmed[n.name] = n
+            
+    return pb_trimmed
     
