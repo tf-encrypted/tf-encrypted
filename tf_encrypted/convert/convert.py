@@ -125,7 +125,7 @@ class InvalidArgumentError(Exception):
     pass
 
 
-def find_inputs(special_ops, graph_def):
+def find_inputs(special_ops: list, graph_def: Any):
     potential_ops_input = []
     graph_nodes_not_in_special_ops = []
 
@@ -143,12 +143,12 @@ def find_inputs(special_ops, graph_def):
     return final_list
 
 
-def find_outputs(special_ops, graph_def):
+def find_outputs(special_ops_list: str, graph_def: Any):
     potential_ops_output = []
     graph_nodes_in_special_ops = []
 
     for node in graph_def.node:
-        if special_ops not in node.name.split('/'):
+        if special_ops_list not in node.name.split('/'):
             potential_ops_output += node.input
         else:
             graph_nodes_in_special_ops.append(node.name)
@@ -161,10 +161,10 @@ def find_outputs(special_ops, graph_def):
     return final_list
 
 
-def special_ops_name_space(special_ops_name, graph):
+def special_ops_name_space(special_ops_name: str, graph_def: Any):
 
     special_op_name_space = set()
-    for n in graph.node:
+    for n in graph_def.node:
         name = n.name.split('/')
 
         special_op_idx = 0
@@ -176,7 +176,7 @@ def special_ops_name_space(special_ops_name, graph):
     return list(special_op_name_space)
 
 
-def find_special_ops(special_ops_list, graph):
+def find_special_ops(special_ops_list: list, graph_def: Any):
 
     special_ops_dict = OrderedDict()
     all_special_op_inputs = []
@@ -184,7 +184,7 @@ def find_special_ops(special_ops_list, graph):
 
     for s in special_ops_list:
 
-        special_ops_name_space_list = special_ops_name_space(s, graph)
+        special_ops_name_space_list = special_ops_name_space(s, graph_def)
 
         for n in special_ops_name_space_list:
 
@@ -192,23 +192,26 @@ def find_special_ops(special_ops_list, graph):
 
             special_ops_dict[n]['op'] = s
 
-            inputs = find_inputs(n, graph)
+            inputs = find_inputs(n, graph_def)
             special_ops_dict[n]['inputs'] = inputs
             all_special_op_inputs += inputs
 
-            outputs = find_outputs(n, graph)
+            outputs = find_outputs(n, graph_def)
             special_ops_dict[n]['outputs'] = outputs
             all_special_op_outputs += outputs
 
     return special_ops_dict, all_special_op_inputs, all_special_op_outputs
 
 
-def select_relevant_ops(special_ops, all_special_op_inputs, all_special_op_outputs, graph):
+def select_relevant_ops(special_ops: list,
+                        all_special_op_inputs: list,
+                        all_special_op_outputs: list,
+                        graph_def: Any):
 
     pb_trimmed = OrderedDict()
 
     for i in range(len(special_ops)):
-        for n in graph.node:
+        for n in graph_def.node:
             if special_ops[i] in n.name:
                 if n.name in all_special_op_inputs or n.name in all_special_op_outputs:
                     pb_trimmed[n.name] = n
