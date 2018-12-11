@@ -6,7 +6,9 @@ from ..protocol import Protocol, get_protocol
 from ..protocol.pond import TFEInputter
 from ..config import Config, get_config
 
+
 special_ops = ['required_space_to_batch_paddings']
+
 
 class Converter():
 
@@ -45,8 +47,7 @@ class Converter():
             inputs = [inputter_fn]
         inputs_iterable = enumerate(inputs)
 
-
-        # Identify if there are special ops in pb file, e.g. required_space_to_batch_paddings 
+        # Identify if there are special ops in pb file, e.g. required_space_to_batch_paddings
         # If yes, identify the inputs and outputs of this special ops.
         special_op_dict, all_special_op_inputs, all_special_op_outputs = find_special_ops(special_ops, graph_def)
 
@@ -59,9 +60,9 @@ class Converter():
 
             node_list = pb_trimmed.values()
 
-            # If the ops are not related to the special ops, use the existing approach to register the ops. 
-            # Otherwise for the special ops replace the output from the sub ops by the output from the 
-            # high level operation then register. 
+            # If the ops are not related to the special ops, use the existing approach to register the ops.
+            # Otherwise for the special ops replace the output from the sub ops by the output from the
+            # high level operation then register.
             for node in node_list:
                 if node.name not in all_special_op_outputs:
 
@@ -73,8 +74,8 @@ class Converter():
                         except StopIteration:
                             raise InvalidArgumentError("Not enough placeholders supplied")
 
-                        x = self.protocol.define_private_input(input_player, item)  
-                        
+                        x = self.protocol.define_private_input(input_player, item)
+
                         self.outputs[output] = x
                         continue
 
@@ -84,7 +85,7 @@ class Converter():
                     for s in special_op_dict.keys():
                         input_list, output_list = special_op_dict[s]['inputs'], special_op_dict[s]['outputs']
 
-                         # Handle edge cased if the ops return two outputs
+                        # Handle edge cased if the ops return two outputs
                         if len(output_list) == 2:
                             a, b = register[special_op_dict[s]['op']](self, node, input_list)
                             self.outputs[output_list[0]] = a
@@ -176,13 +177,13 @@ def special_ops_name_space(special_ops_name, graph):
 
 
 def find_special_ops(special_ops_list, graph):
-  
+
     special_ops_dict = OrderedDict()
     all_special_op_inputs = []
     all_special_op_outputs = []
-    
+
     for s in special_ops_list:
-    
+
         special_ops_name_space_list = special_ops_name_space(s, graph)
 
         for n in special_ops_name_space_list:
@@ -195,25 +196,23 @@ def find_special_ops(special_ops_list, graph):
             special_ops_dict[n]['inputs'] = inputs
             all_special_op_inputs += inputs
 
-
             outputs = find_outputs(n, graph)
             special_ops_dict[n]['outputs'] = outputs
             all_special_op_outputs += outputs
-    
+
     return special_ops_dict, all_special_op_inputs, all_special_op_outputs
 
 
 def select_relevant_ops(special_ops, all_special_op_inputs, all_special_op_outputs, graph):
-  
+
     pb_trimmed = OrderedDict()
-    
+
     for i in range(len(special_ops)):
         for n in graph.node:
-            if special_ops[i] in n.name: 
-                if  n.name in all_special_op_inputs or n.name in all_special_op_outputs:
+            if special_ops[i] in n.name:
+                if n.name in all_special_op_inputs or n.name in all_special_op_outputs:
                     pb_trimmed[n.name] = n
             else:
                 pb_trimmed[n.name] = n
-            
+
     return pb_trimmed
-    
