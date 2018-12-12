@@ -1,12 +1,11 @@
-import tensorflow as tf
-import numpy as np
 import array
-from typing import Any, Dict, List, Union
+import logging
+import numpy as np
+import tensorflow as tf
+from typing import Any, Dict, List
 
 from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
 from .convert import Converter
-
-from tf_encrypted.protocol.pond import PondPublicTensor
 
 
 def register() -> Dict[str, Any]:
@@ -37,6 +36,7 @@ def register() -> Dict[str, Any]:
         'BatchToSpaceND': batch_to_space_nd,
         'SpaceToBatchND': space_to_batch_nd,
         'ArgMax': argmax,
+        'required_space_to_batch_paddings': required_space_to_batch_paddings,
     }
 
     return reg
@@ -386,6 +386,45 @@ def space_to_batch_nd(converter, node, inputs):
     return converter.protocol.space_to_batch_nd(input, block_shape, paddings)
 
 
+def required_space_to_batch_paddings(converter: Converter, node: Any, inputs: List[str]):
+
+    inputs_node = [converter.outputs[inputs[i]] for i in range(len(inputs))]
+    inputs_int32 = []
+    for i in range(len(inputs_node)):
+        if isinstance(inputs_node[i], tf.NodeDef):
+            inputs_int32.append(nodef_to_numpy_array(inputs_node[i]))
+        else:
+            msg = "Revealing private input: required_space_to_batch_paddings assumes public input."
+            logging.warn(msg)
+            inputs_int32.append(tf.cast(inputs_node[i].reveal().decode(), tf.int32))
+
+    if len(inputs_int32) == 2:
+        def inputter_pad():
+            pads, _ = tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1])
+            return tf.cast(pads, tf.float64)
+
+        def inputter_crop():
+            _, crops = tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1])
+            return tf.cast(crops, tf.float64)
+    else:
+        def inputter_pad():
+            pads, _ = tf.required_space_to_batch_paddings(inputs_int32[0],
+                                                          inputs_int32[1],
+                                                          base_paddings=inputs_int32[2])
+            return tf.cast(pads, tf.float64)
+
+        def inputter_crop():
+            _, crops = tf.required_space_to_batch_paddings(inputs_int32[0],
+                                                           inputs_int32[1],
+                                                           base_paddings=inputs_int32[2])
+            return tf.cast(crops, tf.float64)
+
+    pad_private = converter.protocol.define_public_input(converter.model_provider, inputter_pad)
+    crop_private = converter.protocol.define_public_input(converter.model_provider, inputter_crop)
+
+    return (pad_private, crop_private)
+
+
 def argmax(converter, node, inputs):
     input = converter.outputs[inputs[0]]
     axis = converter.outputs[inputs[1]].attr["value"].tensor.int_val[0]
@@ -393,7 +432,7 @@ def argmax(converter, node, inputs):
     return converter.protocol.argmax(input, axis=axis)
 
 
-def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
+def nodef_to_public_pond(converter, x):
     dtype = x.attr["dtype"].type
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
@@ -405,7 +444,9 @@ def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
         else:
             raise TypeError("Unsupported dtype")
 
-        inputter_fn = lambda: tf.constant(np.array(nums).reshape(1, 1))
+        def inputter_fn():
+            return tf.constant(np.array(nums).reshape(1, 1))
+
     else:
         if dtype == tf.float32:
             nums = array.array('f', x.attr["value"].tensor.tensor_content)
@@ -414,17 +455,15 @@ def nodef_to_public_pond(converter: Converter, x: Any) -> PondPublicTensor:
         else:
             raise TypeError("Unsupported dtype")
 
-        inputter_fn = lambda: tf.constant(np.array(nums).reshape(x_shape))
+        def inputter_fn():
+            return tf.constant(np.array(nums).reshape(x_shape))
 
     x_public = converter.protocol.define_public_input(converter.model_provider, inputter_fn)
 
     return x_public
 
 
-def nodef_to_private_pond(
-    converter: Converter,
-    x: Any
-) -> Union['tfe.protocol.pond.PondPrivateTensor', 'tfe.protocol.pond.PondMaskedTensor', List[Union['tfe.protocol.pond.PondPrivateTensor', 'tfe.protocol.pond.PondMaskedTensor']]]:
+def nodef_to_private_pond(converter, x):
     dtype = x.attr["dtype"].type
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
@@ -436,7 +475,9 @@ def nodef_to_private_pond(
         else:
             raise TypeError("Unsupported dtype")
 
-        inputter_fn = lambda: tf.constant(np.array(nums).reshape(1, 1))
+        def inputter_fn():
+            tf.constant(np.array(nums).reshape(1, 1))
+
     else:
         if dtype == tf.float32:
             nums = array.array('f', x.attr["value"].tensor.tensor_content)
@@ -445,14 +486,15 @@ def nodef_to_private_pond(
         else:
             raise TypeError("Unsupported dtype")
 
-        inputter_fn = lambda: tf.constant(np.array(nums).reshape(x_shape))
+        def inputter_fn():
+            return tf.constant(np.array(nums).reshape(x_shape))
 
     x_private = converter.protocol.define_private_input(converter.model_provider, inputter_fn)
 
     return x_private
 
 
-def nodef_to_numpy_array(x: Any) -> np.ndarray:
+def nodef_to_numpy_array(x):
     dtype = x.attr["dtype"].type
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
@@ -460,6 +502,8 @@ def nodef_to_numpy_array(x: Any) -> np.ndarray:
         nums = array.array('f', x.attr["value"].tensor.tensor_content)
     elif dtype == tf.float64:
         nums = array.array('d', x.attr["value"].tensor.tensor_content)
+    elif dtype == tf.int32:
+        nums = array.array('i', x.attr["value"].tensor.tensor_content)
     else:
         raise TypeError("Unsupported dtype")
 
