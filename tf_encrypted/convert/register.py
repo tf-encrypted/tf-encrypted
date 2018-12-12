@@ -1,6 +1,7 @@
-import tensorflow as tf
-import numpy as np
 import array
+import logging
+import numpy as np
+import tensorflow as tf
 from typing import Any, Dict, List
 
 from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
@@ -393,6 +394,8 @@ def required_space_to_batch_paddings(converter: Converter, node: Any, inputs: Li
         if isinstance(inputs_node[i], tf.NodeDef):
             inputs_int32.append(nodef_to_numpy_array(inputs_node[i]))
         else:
+            msg = "Revealing private input: required_space_to_batch_paddings assumes public input."
+            logging.warn(msg)
             inputs_int32.append(tf.cast(inputs_node[i].reveal().decode(), tf.int32))
 
     if len(inputs_int32) == 2:

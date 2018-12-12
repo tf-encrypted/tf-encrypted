@@ -43,22 +43,18 @@ class TestConvert(unittest.TestCase):
 
         with tfe.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            if isinstance(x, (list, tuple)):
-                assert isinstance(actual, (list, tuple)), "expected output to be tensor sequence"
-                try:
-                    output = sess.run([xi.reveal() for xi in x], tag='reveal')
-                except AttributeError:
-                    # assume all xi are all public
-                    output = sess.run([xi for xi in x], tag='reveal')
-                for o_i, a_i in zip(output, actual):
-                    np.testing.assert_array_almost_equal(o_i, a_i, decimal=3)
+            if not isinstance(x, (list, tuple)):
+                x = [x]
+                actual = [actual]
             else:
-                try:
-                    output = sess.run(x.reveal(), tag='reveal')
-                except AttributeError:
-                    # assume x is public
-                    output = sess.run(x, tag='reveal')
-                np.testing.assert_array_almost_equal(output, actual, decimal=3)
+                assert isinstance(actual, (list, tuple)), "expected output to be tensor sequence"
+            try:
+                output = sess.run([xi.reveal() for xi in x], tag='reveal')
+            except AttributeError:
+                # assume all xi are all public
+                output = sess.run([xi for xi in x], tag='reveal')
+            for o_i, a_i in zip(output, actual):
+                np.testing.assert_array_almost_equal(o_i, a_i, decimal=3)
 
     @staticmethod
     def _construct_conversion_test(op_name, *test_inputs, **kwargs):
