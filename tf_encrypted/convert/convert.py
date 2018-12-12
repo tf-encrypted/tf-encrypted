@@ -49,19 +49,23 @@ class Converter():
 
         # Identify if there are special ops in pb file, e.g. required_space_to_batch_paddings
         # If yes, identify the inputs and outputs of this special ops.
-        special_op_dict, all_special_op_inputs, all_special_op_outputs = find_special_ops(special_ops, graph_def)
+        special_op_dict, special_op_inputs, special_op_outputs = find_special_ops(special_ops,
+                                                                                  graph_def)
 
         # Create a dictionary excluding all the sub ops related to required_space_to_batch_paddings
         # Except the sub ops related to the input or output of this special ops.
-        pb_trimmed = select_relevant_ops(special_ops, all_special_op_inputs, all_special_op_outputs, graph_def)
+        pb_trimmed = select_relevant_ops(special_ops,
+                                         special_op_inputs,
+                                         special_op_outputs,
+                                         graph_def)
 
         node_list = pb_trimmed.values()
 
-        # If the ops are not related to the special ops, use the existing approach to register the ops.
+        # If the ops are not related to the special ops, use the existing approach to register them.
         # Otherwise for the special ops replace the output from the sub ops by the output from the
         # high level operation then register.
         for node in node_list:
-            if node.name not in all_special_op_outputs:
+            if node.name not in special_op_outputs:
 
                 output = node_name(node.name)
                 inputs = [node_name(x) for x in node.input]
@@ -80,10 +84,12 @@ class Converter():
             else:
                 # Register high level special operations
                 for s in special_op_dict.keys():
-                    input_list, output_list = special_op_dict[s]['inputs'], special_op_dict[s]['outputs']
+                    input_list = special_op_dict[s]['inputs']
+                    output_list = special_op_dict[s]['outputs']
 
-                    # Handle edge cased if the ops return two outputs
+                    # Handle edge cased if the ops return multiple outputs
                     outs = register[special_op_dict[s]['op']](self, node, input_list)
+
                     for i, x in enumerate(outs):
                         self.outputs[output_list[i]] = x
 
@@ -103,26 +109,25 @@ class InvalidArgumentError(Exception):
 
 def find_leaves(special_ops, graph_def, lookahead):
     potential_leaf_ops = []
-    graph_minus_special = []
-    graph_plus_special = []
+    graph_plusminus_special = []
 
     for node in graph_def.node:
-        if lookahead:
+        if not lookahead:
             if special_ops in node.name:
                 potential_leaf_ops += node.input
             else:
-                graph_minus_special.append(node.name)
+                graph_plusminus_special.append(node.name)
         else:
             if special_ops not in node.name.split('/'):
                 potential_leaf_ops += node.input
             else:
-                graph_plus_special.append(node.name)
+                graph_plusminus_special.append(node.name)
 
     potential_leaf_ops_unique = OrderedDict.fromkeys(potential_leaf_ops)
-    graph_minus_special_unique = OrderedDict.fromkeys(graph_minus_special)
+    uniques = OrderedDict.fromkeys(graph_plusminus_special)
 
     def gen_leaf_keys():
-        for x in graph_minus_special_unique:
+        for x in uniques:
             if x in potential_leaf_ops_unique:
                 yield x
 
