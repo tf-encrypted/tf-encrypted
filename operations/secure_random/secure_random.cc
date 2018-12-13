@@ -1,3 +1,5 @@
+#include "tensorflow/core/util/work_sharder.h"
+
 #include "generators.h"
 
 using shape_inference::DimensionHandle;
@@ -86,7 +88,8 @@ public:
     auto seed_vals = seed_tensor.flat<int32>().data();
     const unsigned char * seed_bytes = reinterpret_cast<const unsigned char*>(seed_vals);
 
-    Gen gen(output, seed_bytes);
+    auto data = output->flat<T>().data();
+    Gen gen(data, shape.num_elements(), seed_bytes);
 
     gen.GenerateData(lo, hi);
   }
@@ -123,9 +126,26 @@ public:
     OP_REQUIRES(context, shape.num_elements() > 0, errors::InvalidArgument("Shape contains zero elements"));
     OP_REQUIRES(context, sodium_init() >= 0, errors::Internal("libsodium failed to initialize, try again"));
 
-    Gen gen(output);
+    auto worker_threads = *(context->device()->tensorflow_cpu_worker_threads());
+    int num_threads = worker_threads.num_threads;
 
-    gen.GenerateData(lo, hi);
+    // this calculated number doesn't seem to make much difference in the
+    // time it takes but its meant to just be an estimation of how many compute cycles
+    // each numbers takes to generate so that the shard function can efficiently schedule
+    // the shards to take advantage of as much parallelizism as possible
+    int estimated_chacha_cpb = 3;
+    int estimated_chacha_per_number = 3 * sizeof(T);
+    int uniform_dist_per_number = 11;
+    int total_cycles = (estimated_chacha_per_number + uniform_dist_per_number) * shape.num_elements();
+    Shard(num_threads, worker_threads.workers, shape.num_elements(), total_cycles,
+            [output, lo, hi](int64 start_group, int64 limit_group) {
+              auto data = output->flat<T>().data();
+              int64 size = limit_group - start_group;
+
+              Gen gen(data + start_group, size);
+
+              gen.GenerateData(lo, hi);
+            });
   }
 };
 

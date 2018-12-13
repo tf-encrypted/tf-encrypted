@@ -74,7 +74,7 @@ test: lint pythoncheck
 	python examples/pond-simple.py
 	python examples/securenn-playground.py
 	python examples/federated-average/run.py
-	python -m unittest discover
+	python -m unittest discover -f
 
 lint: pythoncheck
 	flake8 --exclude=venv,build

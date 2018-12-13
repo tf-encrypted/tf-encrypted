@@ -43,9 +43,18 @@ class TestConvert(unittest.TestCase):
 
         with tfe.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+            if not isinstance(x, (list, tuple)):
+                x = [x]
+                actual = [actual]
+            else:
+                assert isinstance(actual, (list, tuple)), "expected output to be tensor sequence"
+            try:
+                output = sess.run([xi.reveal() for xi in x], tag='reveal')
+            except AttributeError:
+                # assume all xi are all public
+                output = sess.run([xi for xi in x], tag='reveal')
+            for o_i, a_i in zip(output, actual):
+                np.testing.assert_array_almost_equal(o_i, a_i, decimal=3)
 
     @staticmethod
     def _construct_conversion_test(op_name, *test_inputs, **kwargs):
@@ -162,43 +171,14 @@ class TestConvert(unittest.TestCase):
             input_fns = [self.ndarray_input_fn(x) for x in test_inputs]
             self._assert_successful_conversion(prot, graph_def, actual, *input_fns)
 
+    @unittest.skipUnless(tfe.config.tensorflow_supports_int64(), "Too slow on Circle CI otherwise")
     def test_argmax_convert(self):
-        tf.reset_default_graph()
+        test_input = np.array([1., 2., 3., 4.])
+        self._test_with_ndarray_input_fn('argmax', test_input, protocol='SecureNN', axis=0)
 
-        global global_filename
-        global_filename = "argmax.pb"
-
-        input_shape = [5]
-        input = [1, 2, 3, 4, 5]
-
-        path = export_argmax(global_filename, input_shape, 0)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_argmax(input, 0)
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.SecureNN() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+    def test_required_space_to_batch_paddings_convert(self):
+        test_input = np.array([4, 1, 3], dtype=np.int32)
+        self._test_with_ndarray_input_fn('required_space_to_batch_paddings', test_input, protocol='Pond')
 
 
 def export_argmax(filename, input_shape, axis):
@@ -575,6 +555,31 @@ def run_strided_slice(input):
         output = sess.run(out, feed_dict={a: input})
 
     return output
+
+
+def run_required_space_to_batch_paddings(input):
+
+    x = tf.placeholder(tf.int32, shape=input.shape, name="input_shape")
+    y = tf.constant(np.array([2, 3, 2]), dtype=tf.int32)
+    p = tf.constant(np.array([[2, 3], [4, 3], [5, 2]]), dtype=tf.int32)
+
+    out = tf.required_space_to_batch_paddings(x, y, base_paddings=p)
+
+    with tf.Session() as sess:
+        output = sess.run(out, feed_dict={x: input})
+
+    return output
+
+
+def export_required_space_to_batch_paddings(filename: str, input_shape: List[int]):
+
+    x = tf.placeholder(tf.int32, shape=input_shape, name="input")
+    y = tf.constant(np.array([2, 3, 2]), dtype=tf.int32)
+    p = tf.constant(np.array([[2, 3], [4, 3], [5, 2]]), dtype=tf.int32)
+
+    out = tf.required_space_to_batch_paddings(x, y, base_paddings=p)
+
+    return export(out, filename)
 
 
 def export(x: tf.Tensor, filename: str):

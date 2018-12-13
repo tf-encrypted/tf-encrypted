@@ -3,6 +3,7 @@ from typing import Tuple, List, Union, Optional, Any, NewType, Callable
 import abc
 import sys
 from math import log2, ceil
+from random import random
 
 import numpy as np
 import tensorflow as tf
@@ -22,6 +23,7 @@ from ..types import Slice, Ellipse
 from ..player import Player
 from ..config import get_config, tensorflow_supports_int64
 from .protocol import Protocol, global_cache_updaters, memoize, nodes
+from ..operations.secure_random import seed
 
 
 TFEData = Union[np.ndarray, tf.Tensor]
@@ -339,7 +341,6 @@ class Pond(Protocol):
         apply_scaling: bool = True,
         name: Optional[str] = None,
     ) -> Union["PondPublicTensor", List["PondPublicTensor"]]:
-
         """
         define_public_input(player, inputter_fn, apply_scaling, name) -> PondPublicTensor(s)
 
@@ -400,7 +401,6 @@ class Pond(Protocol):
         "PondMaskedTensor",
         List[Union["PondPrivateTensor", "PondMaskedTensor"]],
     ]:
-
         """
         define_private_input(player, inputter_fn, apply_scaling, name, masked, factory) -> PondPrivateTensor(s)
 
@@ -471,7 +471,6 @@ class Pond(Protocol):
         outputter_fn: Callable[..., Any],
         name: Optional[str] = None,
     ) -> tf.Operation:
-
         """
         define_output(player, xs, outputter_fn, name) -> tensorflow.Operation
 
@@ -572,6 +571,18 @@ class Pond(Protocol):
     def _share_and_wrap(self, secret: AbstractTensor, is_scaled) -> "PondPrivateTensor":
         s0, s1 = self._share(secret)
         return PondPrivateTensor(self, s0, s1, is_scaled)
+
+    def _share_one_seed(self, secret):
+        with tf.name_scope("share_one_seed"):
+            s = seed()
+            share0 = secret.factory.seeded_tensor(secret.shape, s)
+            share1 = secret - share0
+
+            # randomize which party gets the seed
+            if random() < 0.5:
+                return share0, share1
+            else:
+                return share1, share0
 
     def _reconstruct(
         self, share0: AbstractTensor, share1: AbstractTensor
@@ -699,7 +710,6 @@ class Pond(Protocol):
         return self.dispatch("sub", x, y)
 
     def mask(self, x):
-
         if isinstance(x, (list, tuple)):
             # apply recursively
             return [self.mask(xi) for xi in x]
@@ -1138,7 +1148,7 @@ class Pond(Protocol):
     ) -> Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor']:
 
         if pad_amt == 0:
-                return arr
+            return arr
 
         arrshape = arr.shape.as_list()
         padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(arrshape))
@@ -1157,7 +1167,7 @@ class Pond(Protocol):
     ) -> Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor']:
 
         if pad_amt == 0:
-                return arr
+            return arr
 
         arrshape = arr.shape.as_list()
         padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(arrshape))
@@ -2455,7 +2465,7 @@ def _mul_masked_masked(prot, x, y):
 
         with tf.device(prot.crypto_producer.device_name):
             ab = a * b
-            ab0, ab1 = prot._share(ab)
+            ab0, ab1 = prot._share_one_seed(ab)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -2509,7 +2519,7 @@ def _square_masked(prot, x):
 
         with tf.device(prot.crypto_producer.device_name):
             aa = a * a
-            aa0, aa1 = prot._share(aa)
+            aa0, aa1 = prot._share_one_seed(aa)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -2630,7 +2640,7 @@ def _matmul_masked_masked(prot, x, y):
 
         with tf.device(prot.crypto_producer.device_name):
             ab = a.matmul(b)
-            ab0, ab1 = prot._share(ab)
+            ab0, ab1 = prot._share_one_seed(ab)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -2718,7 +2728,7 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
 
         with tf.device(prot.crypto_producer.device_name):
             a_conv2d_b = a.conv2d(b, strides, padding)
-            a_conv2d_b0, a_conv2d_b1 = prot._share(a_conv2d_b)
+            a_conv2d_b0, a_conv2d_b1 = prot._share_one_seed(a_conv2d_b)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -3377,18 +3387,18 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
     x0, x1 = x.unwrapped
 
     with tf.name_scope("mask"):
-
         with tf.device(prot.crypto_producer.device_name):
-            a = x.backing_dtype.sample_uniform(x.shape)
-            a0, a1 = prot._share(a)
+            a0 = x.backing_dtype.seeded_tensor(x.shape, seed())
+            a1 = x.backing_dtype.seeded_tensor(x.shape, seed())
+
+            a = a0.expand() + a1.expand()
 
         with tf.device(prot.server_0.device_name):
+            a0 = a0.expand()
             alpha0 = x0 - a0
-
         with tf.device(prot.server_1.device_name):
+            a1 = a1.expand()
             alpha1 = x1 - a1
-
-        # exchange of alphas
 
         with tf.device(prot.server_0.device_name):
             alpha_on_0 = prot._reconstruct(alpha0, alpha1)
@@ -3402,8 +3412,6 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
 #
 # reshape helpers
 #
-
-
 def _reshape_public(
     prot: Pond, x: PondPublicTensor, shape: List[int]
 ) -> PondPublicTensor:
@@ -3444,7 +3452,6 @@ def _reshape_masked(
     prot: Pond, x: PondMaskedTensor, shape: List[int]
 ) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
-
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
     with tf.name_scope("reshape"):
@@ -3517,7 +3524,6 @@ def _expand_dims_masked(
     prot: Pond, x: PondMaskedTensor, axis: Optional[int] = None
 ) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
-
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
     with tf.name_scope("expand"):
@@ -3590,7 +3596,6 @@ def _squeeze_masked(
     prot: Pond, x: PondMaskedTensor, axis: Optional[int] = None
 ) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
-
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
     with tf.name_scope("squeeze"):
