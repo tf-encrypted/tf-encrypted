@@ -83,8 +83,23 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
     filter = converter.outputs[inputs[1]]
 
-    shape = [i.size for i in filter.attr["value"].tensor.tensor_shape.dim]
-    dtype = filter.attr["dtype"].type
+    if isinstance(filter, tf.NodeDef):
+        shape = [i.size for i in filter.attr["value"].tensor.tensor_shape.dim]
+        dtype = filter.attr["dtype"].type
+
+        if dtype == tf.float32:
+            nums = array.array('f', filter.attr["value"].tensor.tensor_content)
+        elif dtype == tf.float64:
+            nums = array.array('d', filter.attr["value"].tensor.tensor_content)
+        else:
+            raise TypeError("Unsupported dtype for weights")
+
+        inputter_fn = lambda: tf.constant(np.array(nums).reshape(shape))
+        w = converter.protocol.define_private_input(converter.model_provider, inputter_fn)
+    else:
+        w = filter
+        shape = filter.shape.as_list()
+
     format = node.attr["data_format"].s.decode('ascii')
 
     layer = Conv2D(
@@ -93,16 +108,6 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
         padding=node.attr["padding"].s.decode('ascii'),
         channels_first=format == "NCHW"
     )
-
-    if dtype == tf.float32:
-        nums = array.array('f', filter.attr["value"].tensor.tensor_content)
-    elif dtype == tf.float64:
-        nums = array.array('d', filter.attr["value"].tensor.tensor_content)
-    else:
-        raise TypeError("Unsupported dtype for weights")
-
-    inputter_fn = lambda: tf.constant(np.array(nums).reshape(shape))
-    w = converter.protocol.define_private_input(converter.model_provider, inputter_fn)
 
     layer.initialize(initial_weights=w)
 
@@ -236,15 +241,20 @@ def transpose(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 def expand_dims(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
-    # axis = converter.outputs[inputs[1]]
+
+    if isinstance(input, tf.NodeDef):
+        input_out = nodef_to_private_pond(converter, input)
+    else:
+        input_out = input
 
     axis_val = node.attr["axis"].i
 
-    return converter.protocol.expand_dims(input, axis_val)
+    return converter.protocol.expand_dims(input_out, axis_val)
 
 
 def squeeze(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
+
     axis = node.attr["squeeze_dims"].list.i
 
     return converter.protocol.squeeze(input, list(axis))
@@ -253,6 +263,7 @@ def squeeze(converter: Converter, node: Any, inputs: List[str]) -> Any:
 def pad(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
     p = (converter.outputs[inputs[1]])
+
     paddings_t = p.attr["value"].tensor
 
     paddings_arr = list(array.array('I', paddings_t.tensor_content))
