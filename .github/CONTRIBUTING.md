@@ -62,6 +62,8 @@ $ git clone https://github.com/mortendahl/tf-encrypted.git
 
 Once the clone is complete, you can switch into the tf-encrypted library using `cd tf-encrypted` and then install the dependencies using `make bootstrap` which will error if any dependencies are missing.
 
+Note: tf-encrypted currently only supports running alongside tensorflow 1.12.0+.
+
 ```
 $ cd tf-encrypted
 $ make bootstrap
