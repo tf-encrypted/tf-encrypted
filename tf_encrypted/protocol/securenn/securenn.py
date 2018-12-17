@@ -550,7 +550,8 @@ def _lsb_private(prot, x: PondPrivateTensor):
                 beta = PondPublicTensor(prot, beta_raw, beta_raw, is_scaled=False)
 
         with tf.name_scope('lsb_compare'):
-            c = prot.cast_backing((x + r).reveal(), out_dtype)
+            c = (x + r).reveal()
+            c = prot.cast_backing(c, out_dtype)
             c.is_scaled = False
 
             greater_xor_beta = _private_compare(prot, rbits, c, beta)
