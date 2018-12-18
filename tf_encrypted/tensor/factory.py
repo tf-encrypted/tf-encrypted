@@ -1,19 +1,17 @@
 import abc
-from typing import List, Tuple, Union, TypeVar, Generic
-
-import tensorflow as tf
+from typing import List, TypeVar, Generic, Optional
 
 
 class AbstractTensor(abc.ABC):
 
     @property
-    @abc.abstractmethod
+    @abc.abstractproperty
     def factory(self) -> 'AbstractFactory':
         pass
 
     @property
-    @abc.abstractmethod
-    def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
+    @abc.abstractproperty
+    def shape(self):
         pass
 
 
@@ -50,11 +48,15 @@ class AbstractFactory(abc.ABC, Generic[T, C, V, P]):
         pass
 
     @abc.abstractmethod
-    def placeholder(self, shape: List[int]) -> P:
+    def placeholder(self, shape) -> P:
         pass
 
     @abc.abstractmethod
-    def sample_uniform(self, shape: List[int], seed=None) -> T:
+    def sample_uniform(self, shape, minval: Optional[int] = None) -> T:
+        pass
+
+    @abc.abstractmethod
+    def sample_bounded(self, shape, bitlength: int) -> T:
         pass
 
     @abc.abstractmethod
