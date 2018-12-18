@@ -23,7 +23,6 @@ from ..types import Slice, Ellipse
 from ..player import Player
 from ..config import get_config, tensorflow_supports_int64
 from .protocol import Protocol, global_cache_updaters, memoize, nodes
-from ..operations.secure_random import seed
 
 
 TFEData = Union[np.ndarray, tf.Tensor]
@@ -194,16 +193,7 @@ class Pond(Protocol):
         pl = factory.placeholder(shape)
 
         with tf.name_scope("private-placeholder{}".format("-" + name if name else "")):
-
-            v0, v1 = self._share(pl)
-
-            # TODO[Morten] should we inject from tf.identity here?
-
-            with tf.device(self.server_0.device_name):
-                x0 = v0
-
-            with tf.device(self.server_1.device_name):
-                x1 = v1
+            x0, x1 = self._share(pl)
 
         return PondPrivatePlaceholder(self, pl, x0, x1, apply_scaling)
 
@@ -269,9 +259,7 @@ class Pond(Protocol):
 
     def define_private_variable(
         self,
-        initial_value: Union[
-            np.ndarray, tf.Tensor, "PondPublicTensor", "PondPrivateTensor"
-        ],
+        initial_value: Union[np.ndarray, tf.Tensor, "PondPublicTensor", "PondPrivateTensor"],
         apply_scaling: bool = True,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
@@ -422,9 +410,7 @@ class Pond(Protocol):
         assert isinstance(player, Player)
 
         def helper(v: tf.Tensor) -> Union["PondPrivateTensor", "PondMaskedTensor"]:
-            assert (
-                v.shape.is_fully_defined()
-            ), "Shape of input '{}' on '{}' is not fully defined".format(
+            assert v.shape.is_fully_defined(), "Shape of '{}' on '{}' not fully defined".format(
                 name if name else "", player.name
             )
 
@@ -435,8 +421,9 @@ class Pond(Protocol):
                 return x
             else:
                 with tf.name_scope("local_mask"):
-                    a = factory.sample_uniform(v.shape)
-                    a0, a1 = self._share(a)
+                    a0 = factory.sample_uniform(v.shape)
+                    a1 = factory.sample_uniform(v.shape)
+                    a = a0 + a1
                     alpha = w - a
                 return PondMaskedTensor(self, x, a, a0, a1, alpha, alpha, apply_scaling)
 
@@ -563,26 +550,19 @@ class Pond(Protocol):
     def _share(self, secret: AbstractTensor) -> Tuple[AbstractTensor, AbstractTensor]:
 
         with tf.name_scope("share"):
+
             share0 = secret.factory.sample_uniform(secret.shape)
             share1 = secret - share0
 
-        return share0, share1
+            # randomized swap to distribute load between two servers wrt to who gets seed
+            if random() < 0.5:
+                share0, share1 = share1, share0
 
-    def _share_and_wrap(self, secret: AbstractTensor, is_scaled) -> "PondPrivateTensor":
+            return share0, share1
+
+    def _share_and_wrap(self, secret: AbstractTensor, is_scaled: bool) -> "PondPrivateTensor":
         s0, s1 = self._share(secret)
         return PondPrivateTensor(self, s0, s1, is_scaled)
-
-    def _share_one_seed(self, secret):
-        with tf.name_scope("share_one_seed"):
-            s = seed()
-            share0 = secret.factory.seeded_tensor(secret.shape, s)
-            share1 = secret - share0
-
-            # randomize which party gets the seed
-            if random() < 0.5:
-                return share0, share1
-            else:
-                return share1, share0
 
     def _reconstruct(
         self, share0: AbstractTensor, share1: AbstractTensor
@@ -2465,7 +2445,7 @@ def _mul_masked_masked(prot, x, y):
 
         with tf.device(prot.crypto_producer.device_name):
             ab = a * b
-            ab0, ab1 = prot._share_one_seed(ab)
+            ab0, ab1 = prot._share(ab)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -2519,7 +2499,7 @@ def _square_masked(prot, x):
 
         with tf.device(prot.crypto_producer.device_name):
             aa = a * a
-            aa0, aa1 = prot._share_one_seed(aa)
+            aa0, aa1 = prot._share(aa)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -2640,7 +2620,7 @@ def _matmul_masked_masked(prot, x, y):
 
         with tf.device(prot.crypto_producer.device_name):
             ab = a.matmul(b)
-            ab0, ab1 = prot._share_one_seed(ab)
+            ab0, ab1 = prot._share(ab)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
@@ -2728,13 +2708,14 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
 
         with tf.device(prot.crypto_producer.device_name):
             a_conv2d_b = a.conv2d(b, strides, padding)
-            a_conv2d_b0, a_conv2d_b1 = prot._share_one_seed(a_conv2d_b)
+            a_conv2d_b0, a_conv2d_b1 = prot._share(a_conv2d_b)
 
         with tf.device(prot.server_0.device_name):
             alpha = alpha_on_0
             beta = beta_on_0
             z0 = (
-                a_conv2d_b0 + a0.conv2d(beta, strides, padding)
+                a_conv2d_b0
+                + a0.conv2d(beta, strides, padding)
                 + alpha.conv2d(b0, strides, padding)
                 + alpha.conv2d(beta, strides, padding)
             )
@@ -3387,24 +3368,23 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
     x0, x1 = x.unwrapped
 
     with tf.name_scope("mask"):
-        with tf.device(prot.crypto_producer.device_name):
-            a0 = x.backing_dtype.seeded_tensor(x.shape, seed())
-            a1 = x.backing_dtype.seeded_tensor(x.shape, seed())
 
-            a = a0.expand() + a1.expand()
+        with tf.device(prot.crypto_producer.device_name):
+            a0 = x.backing_dtype.sample_uniform(x.shape)
+            a1 = x.backing_dtype.sample_uniform(x.shape)
+            a = a0 + a1
 
         with tf.device(prot.server_0.device_name):
-            a0 = a0.expand()
             alpha0 = x0 - a0
+
         with tf.device(prot.server_1.device_name):
-            a1 = a1.expand()
             alpha1 = x1 - a1
 
         with tf.device(prot.server_0.device_name):
-            alpha_on_0 = prot._reconstruct(alpha0, alpha1)
+            alpha_on_0 = alpha0 + alpha1
 
         with tf.device(prot.server_1.device_name):
-            alpha_on_1 = prot._reconstruct(alpha0, alpha1)
+            alpha_on_1 = alpha0 + alpha1
 
         return PondMaskedTensor(prot, x, a, a0, a1, alpha_on_0, alpha_on_1, x.is_scaled)
 
@@ -3649,6 +3629,7 @@ def _equal_public_public(
 #
 # zeros helpers
 #
+
 
 def _zeros_private(
     prot,
