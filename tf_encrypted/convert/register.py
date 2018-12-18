@@ -136,6 +136,13 @@ def sigmoid(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
+    print(input)
+
+    if isinstance(input, tf.NodeDef):
+        input_out = nodef_to_private_pond(converter, input)
+    else:
+        input_out = a
+
     begin = converter.outputs[inputs[1]]
     end = converter.outputs[inputs[2]]
     strides = converter.outputs[inputs[3]]
@@ -150,7 +157,7 @@ def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
     end = tf.constant(end.attr["value"].tensor)
     strides = tf.constant(strides.attr["value"].tensor)
 
-    return converter.protocol.strided_slice(input, begin, end, strides=strides,
+    return converter.protocol.strided_slice(input_out, begin, end, strides=strides,
                                             begin_mask=begin_mask,
                                             end_mask=end_mask,
                                             ellipsis_mask=ellipsis_mask,
@@ -460,6 +467,8 @@ def nodef_to_public_pond(converter, x):
             nums = x.attr["value"].tensor.float_val
         elif dtype == tf.float64:
             nums = x.attr["value"].tensor.float_val
+        elif dtype == tf.int32:
+            nums = x.attr["value"].tensor.int_val
         else:
             raise TypeError("Unsupported dtype")
 
@@ -471,6 +480,8 @@ def nodef_to_public_pond(converter, x):
             nums = array.array('f', x.attr["value"].tensor.tensor_content)
         elif dtype == tf.float64:
             nums = array.array('d', x.attr["value"].tensor.tensor_content)
+        elif dtype == tf.int32:
+            nums = array.array('i', x.attr["value"].tensor.tensor_content)
         else:
             raise TypeError("Unsupported dtype")
 
@@ -491,6 +502,8 @@ def nodef_to_private_pond(converter, x):
             nums = x.attr["value"].tensor.float_val
         elif dtype == tf.float64:
             nums = x.attr["value"].tensor.float_val
+        elif dtype == tf.int32:
+            nums = x.attr["value"].tensor.int_val
         else:
             raise TypeError("Unsupported dtype")
 
@@ -502,6 +515,8 @@ def nodef_to_private_pond(converter, x):
             nums = array.array('f', x.attr["value"].tensor.tensor_content)
         elif dtype == tf.float64:
             nums = array.array('d', x.attr["value"].tensor.tensor_content)
+        elif dtype == tf.int32:
+            nums = array.array('i', x.attr["value"].tensor.tensor_content)
         else:
             raise TypeError("Unsupported dtype")
 
