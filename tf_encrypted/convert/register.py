@@ -141,7 +141,7 @@ def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
     if isinstance(input, tf.NodeDef):
         input_out = nodef_to_private_pond(converter, input)
     else:
-        input_out = a
+        input_out = input
 
     begin = converter.outputs[inputs[1]]
     end = converter.outputs[inputs[2]]
