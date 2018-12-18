@@ -81,6 +81,7 @@ def matmul(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
+    print("conv2d", input.shape)
     filter = converter.outputs[inputs[1]]
 
     if isinstance(filter, tf.NodeDef):
@@ -118,6 +119,7 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 def relu(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
+    print("relu input", input.shape)
 
     return Relu(input.shape.as_list()).forward(input)
 
@@ -247,7 +249,10 @@ def expand_dims(converter: Converter, node: Any, inputs: List[str]) -> Any:
     else:
         input_out = input
 
-    axis_val = node.attr["axis"].i
+    input_axis = converter.outputs[inputs[1]]
+    axis_attr = input_axis.attr["value"].tensor.int_val
+    axis_val= array.array('i', axis_attr )[0]
+ 
 
     return converter.protocol.expand_dims(input_out, axis_val)
 
@@ -262,6 +267,7 @@ def squeeze(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 def pad(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
+    print("pad input", input.shape)
     p = (converter.outputs[inputs[1]])
 
     paddings_t = p.attr["value"].tensor
@@ -391,6 +397,7 @@ def batch_to_space_nd(converter, node, inputs):
 
 def space_to_batch_nd(converter, node, inputs):
     input = converter.outputs[inputs[0]]
+    print("space_to_batch_nd input", input.shape)
     block_shape = converter.outputs[inputs[1]].attr["value"].tensor
     paddings = converter.outputs[inputs[2]].attr["value"].tensor
 
