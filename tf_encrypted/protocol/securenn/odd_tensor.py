@@ -1,6 +1,6 @@
 from __future__ import absolute_import
-
-from typing import Union, List, Any, Tuple, Type
+from typing import Union, List, Any, Tuple, Type, Optional
+import abc
 import math
 
 import numpy as np
@@ -8,44 +8,16 @@ import tensorflow as tf
 
 from ...tensor.factory import AbstractFactory, AbstractTensor, AbstractConstant
 from ...tensor.shared import binarize
-from ...operations.secure_random import random_uniform
+from ...operations.secure_random import seeded_random_uniform, seed
 
 
-class OddImplicitFactory:
+SUPPORTED_NATIVE_TYPES = Union[Type['tf.int32'], Type['tf.int64']]
 
-    def __init__(self, native_type: Union[Type['tf.int32'], Type['tf.int64']]) -> None:
+
+class OddFactory:
+
+    def __init__(self, native_type: SUPPORTED_NATIVE_TYPES) -> None:
         self.native_type = native_type
-
-    def tensor(self, value) -> 'OddImplicitTensor':
-
-        if isinstance(value, (tf.Tensor, np.ndarray)):
-            return OddImplicitTensor(value, self)
-
-        if isinstance(value, OddImplicitTensor):
-            assert value.factory == self
-            raw = value.value
-            # map all -1 values to zero since the former value is out of bounds in this ring
-            raw = tf.where(raw == -1, tf.zeros(shape=raw.shape, dtype=self.native_type), raw)
-            return OddImplicitTensor(raw, self)
-
-        raise TypeError("Don't know how to handle {}".format(type(value)))
-
-    def constant(self, value) -> 'OddImplicitTensor':
-
-        if isinstance(value, (tf.Tensor, np.ndarray)):
-            return OddImplicitConstant(value, self)
-
-        if isinstance(value, OddImplicitTensor):
-            assert value.factory == self
-            return OddImplicitConstant(value.value, self)
-
-        raise TypeError("Don't know how to handle {}".format(type(value)))
-
-    def variable(self, initial_value) -> 'OddImplicitTensor':
-        raise NotImplementedError()
-
-    def placeholder(self, shape) -> 'OddImplicitTensor':
-        raise NotImplementedError()
 
     @property
     def modulus(self):
@@ -58,160 +30,211 @@ class OddImplicitFactory:
 
         raise NotImplementedError("Don't know how to handle {}".format(self.native_type))
 
-    def sample_uniform(self, shape: Union[Tuple[int, ...], tf.TensorShape]) -> 'OddImplicitTensor':
-        value = random_uniform(
-            shape=shape,
-            dtype=self.native_type,
-            minval=self.native_type.min,
-            maxval=self.native_type.max)
-        # map all -1 values to zero since the former value is out of bounds in this ring
-        # TODO[Morten] introducing bias; fix once secure randomness is in place
-        value = tf.where(value == -1, tf.zeros(shape=value.shape, dtype=self.native_type), value)
-        return OddImplicitTensor(value, self)
+    def tensor(self, value) -> 'OddTensor':
 
-    def sample_bounded(self, shape: List[int], bitlength: int) -> 'OddImplicitTensor':
+        if isinstance(value, tf.Tensor):
+            # NOTE we make no assumptions about the value here and hence need to apply correction
+            if value.dtype is not self.native_type:
+                value = tf.cast(value, dtype=self.native_type)
+            value = _map_invalid(value, self.native_type)
+            return OddDenseTensor(value, self)
+
+        if isinstance(value, OddTensor):
+            # NOTE we assumpe that the value here has already been corrected
+
+            assert value.factory == self
+            return OddDenseTensor(value.value, self)
+
+        raise TypeError("Don't know how to handle {}".format(type(value)))
+
+    def constant(self, value) -> 'OddTensor':
         raise NotImplementedError()
 
-    def stack(self, xs: List['OddImplicitTensor'], axis: int = 0) -> 'OddImplicitTensor':
-        assert all(isinstance(x, OddImplicitTensor) for x in xs)
-        value = tf.stack([x.value for x in xs], axis=axis)
-        return OddImplicitTensor(value, self)
+    def variable(self, initial_value) -> 'OddTensor':
+        raise NotImplementedError()
 
-    def concat(self, xs: List['OddImplicitTensor'], axis: int) -> 'OddImplicitTensor':
-        assert all(isinstance(x, OddImplicitTensor) for x in xs)
-        value = tf.concat([x.value for x in xs], axis=axis)
-        return OddImplicitTensor(value, self)
+    def placeholder(self, shape) -> 'OddTensor':
+        raise NotImplementedError()
+
+    def sample_uniform(self,
+                       shape,
+                       minval: Optional[int] = None,
+                       maxval: Optional[int] = None) -> 'OddTensor':
+        assert minval is None
+        assert maxval is None
+        return OddUniformTensor(shape=shape,
+                               seed=seed(),
+                               factory=self)
+
+    def sample_bounded(self, shape: List[int], bitlength: int) -> 'OddTensor':
+        raise NotImplementedError()
+
+    def stack(self, xs: List['OddTensor'], axis: int = 0) -> 'OddTensor':
+        raise NotImplementedError()
+
+    def concat(self, xs: List['OddTensor'], axis: int) -> 'OddTensor':
+        raise NotImplementedError()
 
 
-oddInt32factory = OddImplicitFactory(tf.int32)
-oddInt64factory = OddImplicitFactory(tf.int64)
+oddInt32factory = OddFactory(tf.int32)
+oddInt64factory = OddFactory(tf.int64)
 
 
-class OddImplicitTensor(AbstractTensor):
-
-    def __init__(self, value: Union[np.ndarray, tf.Tensor], factory: OddImplicitFactory) -> None:
-        self._factory = factory
-        self.value = value
-
-    def __repr__(self) -> str:
-        return 'OddImplicitTensor(shape={}, native_type={})'.format(self.shape, self._factory.native_type)
-
-    def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
-        return OddImplicitTensor(self.value[slice], self.factory)
+class OddTensor(AbstractTensor):
 
     @property
-    def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
+    @abc.abstractproperty
+    def value(self) -> tf.Tensor:
+        pass
+
+    @property
+    @abc.abstractproperty
+    def factory(self):
+        pass
+
+    @property
+    def shape(self):
         return self.value.shape
 
-    @property
-    def factory(self) -> AbstractFactory:
-        return self._factory
+    def __repr__(self) -> str:
+        return '{}(shape={}, native_type={})'.format(
+            type(self),
+            self.shape,
+            self.factory.native_type
+        )
 
-    def __add__(self, other) -> 'OddImplicitTensor':
+    def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
+        return self.factory.tensor(self.value[slice])
+
+    def __add__(self, other) -> 'OddTensor':
         return self.add(other)
 
-    def __sub__(self, other) -> 'OddImplicitTensor':
+    def __sub__(self, other) -> 'OddTensor':
         return self.sub(other)
 
-    def __mul__(self, other) -> 'OddImplicitTensor':
-        return self.mul(other)
-
-    def __mod__(self, k: int) -> 'OddImplicitTensor':
-        return self.mod(k)
-
-    def add(self, other) -> 'OddImplicitTensor':
+    def add(self, other) -> 'OddTensor':
         x, y = _lift(self, other)
         bitlength = math.ceil(math.log2(self.factory.modulus))
 
-        z = x.value + y.value
+        with tf.name_scope('add'):
+            z = x.value + y.value
 
-        # We want to compute `pos(x) + pos(y) >= m - 1` for correction purposes
-        # which, since `m - 1 == 1` for signed integers, can be rewritten as
-        #  -> `pos(x) >= m - 1 - pos(y)`
-        #  -> `m - 1 - pos(y) - 1 < pos(x)`
-        #  -> `-1 - pos(y) - 1 < pos(x)`
-        wrapped_around = _lessthan_as_unsigned(-2 - y.value, x.value, bitlength)
-        z += wrapped_around
+            with tf.name_scope('correct-wraparound'):
+                # we want to compute whether we wrapped around, ie `pos(x) + pos(y) >= m - 1`,
+                # for correction purposes which, since `m - 1 == 1` for signed integers, can
+                # be rewritten as
+                #  -> `pos(x) >= m - 1 - pos(y)`
+                #  -> `m - 1 - pos(y) - 1 < pos(x)`
+                #  -> `-1 - pos(y) - 1 < pos(x)`
+                #  -> `-2 - pos(y) < pos(x)`
+                wrapped_around = _lessthan_as_unsigned(-2 - y.value, x.value, bitlength)
+                z += wrapped_around
 
-        return OddImplicitTensor(z, self.factory)
+        return OddDenseTensor(z, self.factory)
 
-    def sub(self, other) -> 'OddImplicitTensor':
+    def sub(self, other) -> 'OddTensor':
         x, y = _lift(self, other)
         bitlength = math.ceil(math.log2(self.factory.modulus))
 
-        z = x.value - y.value
+        with tf.name_scope('sub'):
+            z = x.value - y.value
 
-        # We want to compute `pos(x) - pos(y) < 0` for correction purposes
-        # which can be rewritten as
-        #  -> `pos(x) < pos(y)`
-        wrapped_around = _lessthan_as_unsigned(x.value, y.value, bitlength)
-        z -= wrapped_around
+            with tf.name_scope('correct-wraparound'):
+                # we want to compute whther we wrapped around, ie `pos(x) - pos(y) < 0`,
+                # for correction purposes which can be rewritten as
+                #  -> `pos(x) < pos(y)`
+                wrapped_around = _lessthan_as_unsigned(x.value, y.value, bitlength)
+                z -= wrapped_around
 
-        return OddImplicitTensor(z, self.factory)
-
-    def mul(self, other) -> 'OddImplicitTensor':
-        raise NotImplementedError()
-
-    def matmul(self, other) -> 'OddImplicitTensor':
-        raise NotImplementedError()
-
-    def im2col(self, h_filter, w_filter, padding, strides) -> 'OddImplicitTensor':
-        raise NotImplementedError()
-
-    def conv2d(self, other, strides, padding='SAME') -> 'OddImplicitTensor':
-        raise NotImplementedError()
-
-    def mod(self, k: int) -> 'OddImplicitTensor':
-        raise NotImplementedError()
+        return OddDenseTensor(z, self.factory)
 
     def bits(self, factory=None) -> AbstractTensor:
         factory = factory or self.factory
         return factory.tensor(binarize(self.value))
 
-    def transpose(self, perm: Union[List[int], Tuple[int]]) -> 'OddImplicitTensor':
-        return OddImplicitTensor(tf.transpose(self.value, perm), self.factory)
-
-    def strided_slice(self, args: Any, kwargs: Any) -> 'OddImplicitTensor':
-        return OddImplicitTensor(tf.strided_slice(self.value, *args, **kwargs), self.factory)
-
-    def reshape(self, axes: Union[tf.Tensor, List[int]]) -> 'OddImplicitTensor':
-        return OddImplicitTensor(tf.reshape(self.value, axes), self.factory)
-
     def cast(self, dtype):
         return dtype.tensor(self.value)
 
 
-class OddImplicitConstant(OddImplicitTensor, AbstractConstant):
+class OddDenseTensor(OddTensor):
 
     def __init__(self, value, factory) -> None:
-        v = tf.constant(value, dtype=tf.int64)
-        super(OddImplicitConstant, self).__init__(v, factory)
+        """
+        This constructor is for internal use where corrections have already been applied.
+        """
+        self._factory = factory
+        self._value = value
 
-    def __repr__(self) -> str:
-        return 'OddImplicitConstant(shape={})'.format(self.shape)
+    @property
+    def value(self) -> tf.Tensor:
+        return self._value
+
+    @property
+    def shape(self):
+        return self._value.shape
+
+    @property
+    def factory(self) -> AbstractFactory:
+        return self._factory
 
 
-def _lift(x, y) -> Tuple[OddImplicitTensor, OddImplicitTensor]:
+class OddUniformTensor(OddTensor):
 
-    if isinstance(x, OddImplicitTensor) and isinstance(y, OddImplicitTensor):
-        assert x.factory == y.factory, "Incompatible data types: {} and {}".format(x.factory, y.factory)
+    def __init__(self, shape, seed, factory):
+        self._seed = seed
+        self._shape = shape
+        self._factory = factory
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @property
+    def factory(self) -> AbstractFactory:
+        return self._factory
+
+    @property
+    def value(self) -> tf.Tensor:
+        with tf.name_scope('expand-seed'):
+            value = seeded_random_uniform(shape=self._shape,
+                                        dtype=self.factory.native_type,
+                                        minval=self.factory.native_type.min,
+                                        maxval=self.factory.native_type.max,
+                                        seed=self._seed)
+        # TODO[Morten] mapping introducing bias; fix once secure randomness is in place
+        value = _map_invalid(value, self.factory.native_type)
+        return value
+
+    def expand(self):
+        return OddDenseTensor(self.value, self.factory)
+
+
+#
+# helper methods
+#
+
+
+def _lift(x, y) -> Tuple[OddTensor, OddTensor]:
+
+    if isinstance(x, OddTensor) and isinstance(y, OddTensor):
+        assert x.factory == y.factory, "Incompatible types: {} and {}".format(x.factory, y.factory)
         return x, y
 
-    if isinstance(x, OddImplicitTensor):
+    if isinstance(x, OddTensor):
 
         if isinstance(y, int):
             return x, x.factory.tensor(np.array([y]))
 
-        if isinstance(y, np.ndarray):
-            return x, x.factory.tensor(y)
+        # if isinstance(y, np.ndarray):
+        #     return x, x.factory.tensor(y)
 
-    if isinstance(y, OddImplicitTensor):
+    if isinstance(y, OddTensor):
 
         if isinstance(x, int):
             return y.factory.tensor(np.array([x])), y
 
-        if isinstance(x, np.ndarray):
-            return y.factory.tensor(x), y
+        # if isinstance(x, np.ndarray):
+        #     return y.factory.tensor(x), y
 
     raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
 
@@ -225,3 +248,9 @@ def _lessthan_as_unsigned(x, y, bitlength):
     z = tf.bitwise.right_shift(tf.bitwise.bitwise_or(lhs, rhs), bitlength - 1)
     # turn 0/-1 into 0/1 before returning
     return tf.bitwise.bitwise_and(z, tf.ones(shape=z.shape, dtype=z.dtype))
+
+
+def _map_invalid(value, native_type):
+    # map all -1 values to zero since the former value is out of bounds in this ring
+    with tf.name_scope('map-invalid'):
+        return tf.where(value == -1, tf.zeros(shape=value.shape, dtype=native_type), value)
