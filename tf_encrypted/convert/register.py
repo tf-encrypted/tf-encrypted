@@ -166,7 +166,7 @@ def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 def pack(converter: Converter, node: Any, inputs: List[str]) -> Any:
     final_inputs = []
-    
+
     for input in inputs:
         input_c = converter.outputs[input]
         if isinstance(input_c, tf.NodeDef):
@@ -392,6 +392,7 @@ def avgpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 
 def concat(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    print("input list", inputs)
     input0 = converter.outputs[inputs[0]]
     input1 = converter.outputs[inputs[1]]
     axis = converter.outputs[inputs[2]]
