@@ -2441,21 +2441,24 @@ def _mul_masked_masked(prot, x, y):
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
     b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
 
-    with tf.name_scope("mul"):
+    with tf.name_scope('mul'):
 
         with tf.device(prot.crypto_producer.device_name):
-            ab = a * b
-            ab0, ab1 = prot._share(ab)
+            with tf.name_scope('triple'):
+                ab = a * b
+                ab0, ab1 = prot._share(ab)
 
         with tf.device(prot.server_0.device_name):
-            alpha = alpha_on_0
-            beta = beta_on_0
-            z0 = ab0 + (a0 * beta) + (alpha * b0) + (alpha * beta)
+            with tf.name_scope('combine'):
+                alpha = alpha_on_0
+                beta = beta_on_0
+                z0 = ab0 + (a0 * beta) + (alpha * b0) + (alpha * beta)
 
         with tf.device(prot.server_1.device_name):
-            alpha = alpha_on_1
-            beta = beta_on_1
-            z1 = ab1 + (a1 * beta) + (alpha * b1)
+            with tf.name_scope('combine'):
+                alpha = alpha_on_1
+                beta = beta_on_1
+                z1 = ab1 + (a1 * beta) + (alpha * b1)
 
         z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
         z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
@@ -2616,21 +2619,24 @@ def _matmul_masked_masked(prot, x, y):
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
     b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
 
-    with tf.name_scope("matmul"):
+    with tf.name_scope('matmul'):
 
         with tf.device(prot.crypto_producer.device_name):
-            ab = a.matmul(b)
-            ab0, ab1 = prot._share(ab)
+            with tf.name_scope('triple'):
+                ab = a.matmul(b)
+                ab0, ab1 = prot._share(ab)
 
         with tf.device(prot.server_0.device_name):
-            alpha = alpha_on_0
-            beta = beta_on_0
-            z0 = ab0 + a0.matmul(beta) + alpha.matmul(b0) + alpha.matmul(beta)
+            with tf.name_scope('combine'):
+                alpha = alpha_on_0
+                beta = beta_on_0
+                z0 = ab0 + a0.matmul(beta) + alpha.matmul(b0) + alpha.matmul(beta)
 
         with tf.device(prot.server_1.device_name):
-            alpha = alpha_on_1
-            beta = beta_on_1
-            z1 = ab1 + a1.matmul(beta) + alpha.matmul(b1)
+            with tf.name_scope('combine'):
+                alpha = alpha_on_1
+                beta = beta_on_1
+                z1 = ab1 + a1.matmul(beta) + alpha.matmul(b1)
 
         z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
         z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
@@ -2704,30 +2710,33 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
     b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
 
-    with tf.name_scope("conv2d"):
+    with tf.name_scope('conv2d'):
 
         with tf.device(prot.crypto_producer.device_name):
-            a_conv2d_b = a.conv2d(b, strides, padding)
-            a_conv2d_b0, a_conv2d_b1 = prot._share(a_conv2d_b)
+            with tf.name_scope('triple'):
+                a_conv2d_b = a.conv2d(b, strides, padding)
+                a_conv2d_b0, a_conv2d_b1 = prot._share(a_conv2d_b)
 
         with tf.device(prot.server_0.device_name):
-            alpha = alpha_on_0
-            beta = beta_on_0
-            z0 = (
-                a_conv2d_b0
-                + a0.conv2d(beta, strides, padding)
-                + alpha.conv2d(b0, strides, padding)
-                + alpha.conv2d(beta, strides, padding)
-            )
+            with tf.name_scope('combine'):
+                alpha = alpha_on_0
+                beta = beta_on_0
+                z0 = (
+                    a_conv2d_b0
+                    + a0.conv2d(beta, strides, padding)
+                    + alpha.conv2d(b0, strides, padding)
+                    + alpha.conv2d(beta, strides, padding)
+                )
 
         with tf.device(prot.server_1.device_name):
-            alpha = alpha_on_1
-            beta = beta_on_1
-            z1 = (
-                a_conv2d_b1
-                + a1.conv2d(beta, strides, padding)
-                + alpha.conv2d(b1, strides, padding)
-            )
+            with tf.name_scope('combine'):
+                alpha = alpha_on_1
+                beta = beta_on_1
+                z1 = (
+                    a_conv2d_b1
+                    + a1.conv2d(beta, strides, padding)
+                    + alpha.conv2d(b1, strides, padding)
+                )
 
         z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
         z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
