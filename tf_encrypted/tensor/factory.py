@@ -35,6 +35,16 @@ P = TypeVar('P')
 
 class AbstractFactory(abc.ABC, Generic[T, C, V, P]):
 
+    @property
+    @abc.abstractproperty
+    def modulus(self) -> int:
+        pass
+
+    @property
+    @abc.abstractproperty
+    def native_type(self):
+        pass
+
     @abc.abstractmethod
     def tensor(self, value) -> T:
         pass
@@ -65,9 +75,4 @@ class AbstractFactory(abc.ABC, Generic[T, C, V, P]):
 
     @abc.abstractmethod
     def concat(self, xs: List[T], axis: int) -> T:
-        pass
-
-    @property
-    @abc.abstractmethod
-    def modulus(self) -> int:
         pass
