@@ -236,7 +236,7 @@ class Int64Tensor(AbstractTensor):
 
     def cast(self, factory):
         assert factory.native_type == self.factory.native_type
-        return Int64DenseTensor(self.value)
+        return factory.tensor(self.value)
 
 
 class Int64DenseTensor(Int64Tensor):
