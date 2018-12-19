@@ -20,13 +20,15 @@ if small:
 else:
   print("Running CNN with large input")
 
-config = tfe.LocalConfig([
-    'server0',
-    'server1',
-    'crypto-producer',
-    'weights-provider',
-    'prediction-client'
-])
+# config = tfe.LocalConfig([
+#     'server0',
+#     'server1',
+#     'crypto-producer',
+#     'weights-provider',
+#     'prediction-client'
+# ])
+
+config = tfe.config.load('config.json')
 
 #config = tfe.RemoteConfig([
 #  ('server0', 'server0:4441'),
