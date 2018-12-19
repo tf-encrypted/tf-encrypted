@@ -193,11 +193,15 @@ class PrimeFactory(AbstractFactory):
 
     def __init__(self, modulus, native_type=tf.int32):
         self._modulus = modulus
-        self.native_type = native_type
+        self._native_type = native_type
 
     @property
     def modulus(self):
         return self._modulus
+
+    @property
+    def native_type(self):
+        return self._native_type
 
     def sample_uniform(self, shape, minval: Optional[int] = 0) -> PrimeTensor:
         value = random_uniform(shape=shape,
