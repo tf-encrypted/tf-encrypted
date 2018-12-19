@@ -54,8 +54,4 @@ __all__ = [
     'Int32Placeholder',
     'Int32Variable',
     'Int32Constant',
-    'Int64Tensor',
-    'Int64Placeholder',
-    'Int64Variable',
-    'Int64Constant',
 ]
