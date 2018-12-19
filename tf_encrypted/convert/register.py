@@ -136,7 +136,6 @@ def sigmoid(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
-    print(input)
 
     if isinstance(input, tf.NodeDef):
         input_out = nodef_to_private_pond(converter, input)
@@ -167,9 +166,13 @@ def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 def pack(converter: Converter, node: Any, inputs: List[str]) -> Any:
     final_inputs = []
-
+    
     for input in inputs:
-        final_inputs.append(converter.outputs[input])
+        input_c = converter.outputs[input]
+        if isinstance(input_c, tf.NodeDef):
+            final_inputs.append(nodef_to_private_pond(converter, input_c))
+        else:
+            final_inputs.append(input_c)
 
     return converter.protocol.stack(final_inputs, axis=node.attr["axis"].i)
 
@@ -495,6 +498,7 @@ def nodef_to_public_pond(converter, x):
 
 def nodef_to_private_pond(converter, x):
     dtype = x.attr["dtype"].type
+
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
     if len(x_shape) == 0:
@@ -508,7 +512,7 @@ def nodef_to_private_pond(converter, x):
             raise TypeError("Unsupported dtype")
 
         def inputter_fn():
-            tf.constant(np.array(nums).reshape(1, 1))
+            return tf.constant(np.array(nums).reshape(1, 1))
 
     else:
         if dtype == tf.float32:
