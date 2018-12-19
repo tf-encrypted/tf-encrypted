@@ -72,6 +72,11 @@ class Int32Factory(AbstractFactory):
 
         return Int32Tensor(value)
 
+    def sample_bounded(self,
+                       shape,
+                       bitlength: int) -> 'Int64Tensor':
+        raise NotImplementedError()
+
     def stack(self, xs: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':
         assert all(isinstance(x, Int32Tensor) for x in xs)
         value = tf.stack([x.value for x in xs], axis=axis)

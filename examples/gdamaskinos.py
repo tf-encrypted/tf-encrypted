@@ -14,7 +14,7 @@ print("Support for int64: ", tfe.config.tensorflow_supports_int64())
 tf.set_random_seed(42)
 np.random.seed(42)
 
-small = True
+small = False
 if small:
   print("Running CNN with small input")
 else:
