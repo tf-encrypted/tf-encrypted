@@ -1109,73 +1109,70 @@ class Pond(Protocol):
                 )
             )
 
-    def zeros(
-        self,
-        shape,
-        tensor_type,
-        apply_scaling: bool = True,
-        name: Optional[str] = None,
-        factory: Optional[AbstractFactory] = None
-    ) -> Union['PondPublicTensor', 'PondPrivateTensor']:
-
-        if issubclass(tensor_type, PondPublicTensor):
-            out = _zeros_public(self, shape, apply_scaling, name, factory)
-        elif issubclass(tensor_type, PondPrivateTensor):
-            out = _zeros_private(self, shape, apply_scaling, name, factory)
-        else:
-            raise TypeError("Don't know how to zeros {}".format(tensor_type))
-
-        return out
-
     def pad(self, x: 'PondTensor', paddings: list):
 
+        backing_type = x.backing_dtype
+
+        if isinstance(x, PondPublicTensor):
+            tensor_type = PondPublicTensor
+        elif isinstance(x, PondPrivateTensor):
+            tensor_type = PondPrivateTensor
+        else:
+            raise ValueError("Don't know how to handle type {}".format(type(x)))
+
+        def zeros(shape):
+            # NOTE
+            # this is a cheating way of getting zeros for the case where tensor_type is private,
+            # in particular because non-interactive truncation may fail if applied to these
+            # tensors only; for this reason we here use the assumption that truncation will only
+            # ever be applied after these zeros have been mix with proper shares
+
+            with tf.device(self.server_0.device_name):
+                zeros0 = backing_type.tensor(
+                    tf.zeros(shape, dtype=backing_type.native_type)
+                )
+
+            with tf.device(self.server_1.device_name):
+                zeros1 = backing_type.tensor(
+                    tf.zeros(shape, dtype=backing_type.native_type)
+                )
+
+            return tensor_type(self, zeros0, zeros1, True)
+
+        def prepend_zeros(tensor, pad_amt, axis):
+
+            with tf.name_scope('prepend'):
+
+                if pad_amt == 0:
+                    return tensor
+
+                padshape = tuple(
+                    dim if i != axis else pad_amt
+                    for (i, dim) in enumerate(tensor.shape.as_list())
+                )
+
+                return self.concat([zeros(padshape), tensor], axis=axis)
+
+        def append_zeros(tensor, pad_amt, axis):
+
+            with tf.name_scope('append'):
+
+                if pad_amt == 0:
+                    return tensor
+
+                padshape = tuple(
+                    dim if i != axis else pad_amt
+                    for (i, dim) in enumerate(tensor.shape.as_list())
+                )
+
+                return self.concat([tensor, zeros(padshape)], axis=axis)
+
         with tf.name_scope('pad'):
-            zeros_id = 0
             for axis, (pad_before, pad_after) in enumerate(paddings):
-                x = self._append_zeros(x, pad_after, axis, zeros_id)
-                zeros_id += 1
-                x = self._prepend_zeros(x, pad_before, axis, zeros_id)
-                zeros_id += 1
+                x = append_zeros(x, pad_after, axis)
+                x = prepend_zeros(x, pad_before, axis)
 
         return x
-
-    def _prepend_zeros(
-        self,
-        arr: Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor'],
-        pad_amt: int,
-        axis: int,
-        zeros_id: int
-    ) -> Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor']:
-
-        if pad_amt == 0:
-            return arr
-
-        arrshape = arr.shape.as_list()
-        padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(arrshape))
-
-        zeros_array = self.zeros(padshape, tensor_type=type(arr), name=str(zeros_id))
-
-        with tf.name_scope('prepend'):
-            return self.concat([zeros_array, arr], axis=axis)
-
-    def _append_zeros(
-        self,
-        arr: Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor'],
-        pad_amt: int,
-        axis: int,
-        zeros_id: int
-    ) -> Union['PondPublicTensor', 'PondPrivateTensor', 'PondMaskedTensor']:
-
-        if pad_amt == 0:
-            return arr
-
-        arrshape = arr.shape.as_list()
-        padshape = tuple(x if i != axis else pad_amt for (i, x) in enumerate(arrshape))
-
-        zeros_array = self.zeros(padshape, tensor_type=type(arr), name=str(zeros_id))
-
-        with tf.name_scope('append'):
-            return self.concat([arr, zeros_array], axis=axis)
 
 
 #
