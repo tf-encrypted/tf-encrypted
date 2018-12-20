@@ -118,7 +118,7 @@ else:
 
 with tfe.Session() as sess:
     print("initing!!!")
-    sess.run(tfe.global_variables_initializer(), tag='init')
+    sess.run(tf.global_variables_initializer())
 
     print("running")
     feed_dict = {
@@ -130,3 +130,4 @@ with tfe.Session() as sess:
         tag='prediction'
     )
     print(output)
+    np.save("tfe_tcn_logits.npy",output)
