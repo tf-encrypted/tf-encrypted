@@ -120,7 +120,6 @@ class PrimeTensor(AbstractTensor):
         return dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=dtype.native_type))
 
     def cast(self, dtype):
-        assert dtype.native_type == self.factory.native_type
         return dtype.tensor(self.value)
 
 
@@ -232,12 +231,16 @@ class PrimeFactory(AbstractFactory):
 
     def tensor(self, value) -> PrimeTensor:
 
-        if isinstance(value, (tf.Tensor, np.ndarray)):
+        if isinstance(value, np.ndarray):
             return PrimeTensor(value, self)
 
+        if isinstance(value, tf.Tensor):
+            if value.dtype != self.native_type:
+                value = tf.cast(value, self.native_type)
+            return PrimeTensor(value, self)
+        
         if isinstance(value, PrimeTensor):
-            err = "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
-            assert value.modulus == self.modulus, err
+            assert value.factory == self
             return PrimeTensor(value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))

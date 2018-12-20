@@ -14,21 +14,21 @@ print("Support for int64: ", tfe.config.tensorflow_supports_int64())
 tf.set_random_seed(42)
 np.random.seed(42)
 
-small = True
+small = False
 if small:
   print("Running CNN with small input")
 else:
   print("Running CNN with large input")
 
-# config = tfe.LocalConfig([
-#     'server0',
-#     'server1',
-#     'crypto-producer',
-#     'weights-provider',
-#     'prediction-client'
-# ])
+config = tfe.LocalConfig([
+    'server0',
+    'server1',
+    'crypto-producer',
+    'weights-provider',
+    'prediction-client'
+])
 
-config = tfe.config.load('config.json')
+# config = tfe.config.load('config.json')
 
 #config = tfe.RemoteConfig([
 #  ('server0', 'server0:4441'),
@@ -169,7 +169,7 @@ with tf.Graph().as_default():
       sess.run(tf.global_variables_initializer())
 
       print("Predict")
-      for i in range(3):
+      for i in range(1):
         t = time.time()
         sess.run(prediction_op)
         print("Inference time: %g" % (time.time() - t))

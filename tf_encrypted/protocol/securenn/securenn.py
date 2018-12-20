@@ -65,11 +65,11 @@ class SecureNN(Pond):
         if prime_factory is None:
             prime = 107
             assert prime > math.ceil(math.log2(self.tensor_factory.modulus))
-            prime_factory = PrimeFactory(prime, native_type=self.tensor_factory.native_type)
+            prime_factory = PrimeFactory(prime, native_type=tf.int32)
 
         self.prime_factory = prime_factory
         self.odd_factory = odd_factory
-        assert self.prime_factory.native_type == self.tensor_factory.native_type
+        # assert self.prime_factory.native_type == self.tensor_factory.native_type
         assert self.odd_factory.native_type == self.tensor_factory.native_type
 
     @memoize

@@ -7,18 +7,31 @@ import numpy as np
 from .factory import AbstractTensor
 
 
+# def binarize(tensor: tf.Tensor, bitsize: Optional[int] = None) -> tf.Tensor:
+
+#     with tf.name_scope('binarize'):
+#         bitsize = bitsize or (tensor.dtype.size * 8)
+
+#         bit_indices_shape = [1] * len(tensor.shape) + [bitsize]
+#         bit_indices = tf.range(bitsize, dtype=tensor.dtype)
+#         bit_indices = tf.reshape(bit_indices, bit_indices_shape)
+
+#         val = tf.expand_dims(tensor, -1)
+#         val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bit_indices), 1)
+
+#         return val
+
 def binarize(tensor: tf.Tensor, bitsize: Optional[int] = None) -> tf.Tensor:
 
     with tf.name_scope('binarize'):
         bitsize = bitsize or (tensor.dtype.size * 8)
 
-        bit_indices_shape = [1] * len(tensor.shape) + [bitsize]
-        bit_indices = tf.range(bitsize, dtype=tensor.dtype)
-        bit_indices = tf.reshape(bit_indices, bit_indices_shape)
+        bits = [ 
+            tf.bitwise.bitwise_and(tf.bitwise.right_shift(tensor, i), 1)
+            for i in range(bitsize)
+        ]
 
-        val = tf.expand_dims(tensor, -1)
-        val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bit_indices), 1)
-
+        val = tf.stack(bits, axis=-1)
         return val
 
 
