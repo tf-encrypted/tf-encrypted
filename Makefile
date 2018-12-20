@@ -11,7 +11,7 @@ all: test
 # ###############################################
 DOCKER_REQUIRED_VERSION=18.
 PYTHON_REQUIRED_VERSION=3.5.
-TENSORFLOW_REQUIRED_VERSION=1.9
+TENSORFLOW_REQUIRED_VERSION=1.12
 SHELL := /bin/bash
 
 CURRENT_DIR=$(shell pwd)
@@ -140,7 +140,7 @@ endif
 DOCKER_BUILD=docker build -t mortendahl/tf-encrypted:$(1) -f Dockerfile $(2) .
 docker: Dockerfile dockercheck
 	$(call DOCKER_BUILD,latest,)
-	$(call DOCKER_BUILD,latest-int64,--build-arg TF_WHL_URL=https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.9.0-cp35-cp35m-linux_x86_64.whl)
+	$(call DOCKER_BUILD,latest-int64,--build-arg TF_WHL_URL=https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl)
 
 .PHONY: docker
 
@@ -221,6 +221,9 @@ endif
 pypi-version-check:
 ifeq (,$(shell grep -e $(VERSION) setup.py))
 	$(error "Version specified in setup.py does not match $(VERSION)")
+endif
+ifeq (,$(shell grep -e $(VERSION) meta.yaml))
+	$(error "Version specified in meta.yaml does not match $(VERSION)")
 endif
 ifeq (,$(shell grep -e $(VERSION) docs/source/conf.py))
 	$(error "Version specified in docs/source/conf.py does not match $(VERSION)")
@@ -307,12 +310,6 @@ $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECUR
 build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
 
 build-all:
-	pip install tensorflow==1.9.0
-	$(MAKE) $(SECURE_OUT_PRE)1.9.0.so
-	pip install tensorflow==1.10.0
-	$(MAKE) $(SECURE_OUT_PRE)1.10.0.so
-	pip install tensorflow==1.11.0
-	$(MAKE) $(SECURE_OUT_PRE)1.11.0.so
 	pip install tensorflow==1.12.0
 	$(MAKE) $(SECURE_OUT_PRE)1.12.0.so
 

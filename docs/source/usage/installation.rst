@@ -1,11 +1,11 @@
 Installation
 =============
 
-tf-encrypted is available as a package on `PyPA`_ and supports Python 3.5+. You can install the package using pip::
+tf-encrypted is available as a package on `PyPA`_ and supports Python 3.5+ and tensorflow 1.12.0+. You can install the package using pip::
 
    pip install tf-encrypted
 
-A `change log`_ is kept for each version of tf-encrypted released which can be found on `GitHub`_. 
+A `change log`_ is kept for each version of tf-encrypted released which can be found on `GitHub`_.
 
 Once installed, you can import the package into your code as shown below::
 

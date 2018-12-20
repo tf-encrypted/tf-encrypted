@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import glob
 import json
 import argparse
@@ -46,11 +48,26 @@ for filename in glob.glob(trace_path):
         duration = parse_tracefile(filename)
         durations.append(duration)
 
+summary = """Summary statistics
+
+Number of Predictions: {}
+Average Prediction Time: {} ms
+Median Prediction Time: {} ms
+Standard Deviation Time: {} ms
+Min Prediction Time: {} ms
+Max Prediction Time: {} ms
+""".format(
+    len(durations),
+    (float(sum(durations)) / len(durations)) / 1000,
+    np.median(durations) / 1000,
+    np.std(durations) / 1000,
+    np.min(durations) / 1000,
+    np.max(durations) / 1000
+)
+
 # Export duration for 100 predictions:
-np.save(trace_dir + "prediction_durations_list.npy", durations)
-print("Summary statistics for {} predictions:".format(len(durations)))
-print('Average Prediction Time:', float(sum(durations)) / len(durations) / 1000, "ms")
-print('Median Prediction Time:', np.median(durations) / 1000, "ms")
-print('Standard Deviation Time:', np.std(durations) / 1000, "ms")
-print('Min Prediction Time:', np.min(durations) / 1000, "ms")
-print('Max Prediction Time:', np.max(durations) / 1000, "ms")
+np.save('results.npy', durations)
+print(summary)
+
+with open("summary.txt", "w") as summary_file:
+    summary_file.write(summary)
