@@ -8,38 +8,19 @@ import time
 from google.cloud import storage
 from google.auth import compute_engine
 
-
-def create_service_account():
-    service_account = {
-            'type': 'service_account',
-            'project_id': os.environ.get('PROJECT_ID'),
-            'private_key_id': os.environ.get('PRIVATE_KEY_ID'),
-            'private_key': os.environ.get('PRIVATE_KEY').replace('\\n', '\n'),
-            'client_email': os.environ.get('CLIENT_EMAIL'),
-            'client_id': os.environ.get('CLIENT_ID'),
-            'auth_uri': os.environ.get('AUTH_URI'),
-            'token_uri': os.environ.get('TOKEN_URI'),
-            'auth_provider_x509_cert_url': os.environ.get('AUTH_PROVIDER_X509_CERT_URL'),
-            'client_x509_cert_url': os.environ.get('CLIENT_X509_CERT_URL')
-    }
-
-    with open('service_account.json', 'w') as fp:
-        json.dump(service_account, fp)
+NAME = os.environ.get('TFE_BENCHMARK_NAME', calendar.timegm(time.gmtime()))
 
 
-create_service_account()
 storage_client = storage.Client.from_service_account_json('service_account.json')
-
 bucket = storage_client.get_bucket('tfe-benchmark-results')
-prefix = calendar.timegm(time.gmtime())
 
-results_blob_name = '{}/results.npy'.format(prefix)
+results_blob_name = '{}/results.npy'.format(NAME)
 results_blob = bucket.blob(results_blob_name)
 
-summary_blob_name = '{}/summary.txt'.format(prefix)
+summary_blob_name = '{}/summary.txt'.format(NAME)
 summary_blob = bucket.blob(summary_blob_name)
 
 results_blob.upload_from_filename('results.npy')
 summary_blob.upload_from_filename('summary.txt')
 
-print('Results uploaded to {}.'.format(prefix))
+print('Results uploaded to {}.'.format(NAME))
