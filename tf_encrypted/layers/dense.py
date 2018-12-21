@@ -72,6 +72,6 @@ class Dense(core.Layer):
 
         if self.bias:
             d_bias = d_y.reduce_sum(axis=0)
-            self.bias.assign((d_bias * learning_rate).neg() + self.bias)
+            self.bias -= (d_bias * learning_rate)
 
         return d_x
