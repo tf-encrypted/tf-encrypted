@@ -45,13 +45,14 @@ class Dense(core.Layer):
 
         self.weights = self.prot.define_private_variable(initial_weights)
 
+        if self.transpose_weight:
+            self.weights = self.weights.transpose()
+
     def forward(self, x):
         self.layer_input = x
 
         if self.transpose_input:
             self.layer_input = self.layer_input.transpose()
-        if self.transpose_weight:
-            self.weights = self.weights.transpose()
 
         if self.bias:
             y = x.matmul(self.weights) + self.bias
@@ -63,8 +64,6 @@ class Dense(core.Layer):
         x = self.layer_input
         if self.transpose_input:
             self.layer_input = self.layer_input.transpose()
-        if self.transpose_weight:
-            self.weights = self.weights.transpose()
 
         d_x = d_y.matmul(self.weights.transpose())
 
