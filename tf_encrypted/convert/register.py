@@ -392,7 +392,6 @@ def avgpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
 
 def concat(converter: Converter, node: Any, inputs: List[str]) -> Any:
-    print("input list", inputs)
     input0 = converter.outputs[inputs[0]]
     input1 = converter.outputs[inputs[1]]
     axis = converter.outputs[inputs[2]]
