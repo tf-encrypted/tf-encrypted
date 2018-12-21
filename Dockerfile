@@ -1,4 +1,4 @@
-FROM python:3.5
+FROM python:3.5-jessie
 
 ARG TF_WHL_URL="https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-1.9.0-cp35-cp35m-linux_x86_64.whl"
 
