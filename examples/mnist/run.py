@@ -78,7 +78,7 @@ class ModelTrainer():
         loop = tf.while_loop(lambda i: i < self.ITERATIONS * self.EPOCHS, loop_body, (0,))
 
         # return model parameters after training
-        loop = tf.print(loop, [], message="Training complete")
+        tf.print(loop, [], message="Training complete")
         with tf.control_dependencies([loop]):
             return [w0.read_value(), b0.read_value(), w1.read_value(), b1.read_value()]
 
