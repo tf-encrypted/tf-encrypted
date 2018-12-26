@@ -156,11 +156,11 @@ else:
     def provide_input_prediction() -> tf.Tensor:
         x = tf.random_normal(shape=input_shape, dtype=tf.float32)
         tf.print(x, [x], message="x:")
-        return x
+        return w
 
     def receive_output(tensor: tf.Tensor) -> tf.Operation:
         tf.print(tensor, [tensor, tf.shape(tensor)], message="output:")
-        return tensor
+        return w
 
     with tfe.protocol.Pond(*config.get_players('server0, server1, crypto-producer')) as prot:
 

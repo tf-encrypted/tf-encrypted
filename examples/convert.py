@@ -52,7 +52,8 @@ def provide_input() -> tf.Tensor:
 
 
 def receive_output(tensor: tf.Tensor) -> tf.Tensor:
-    return tf.Print(tensor, [tensor])
+    tf.print(tensor, [tensor])
+    return tensor
 
 
 with tfe.protocol.Pond(*config.get_players('server0, server1, crypto-producer')) as prot:

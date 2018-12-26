@@ -169,7 +169,8 @@ in plaintext then provides the weights to perform private predictions.
                 #tf_print(tensor, transform=None)
                 #res = tf_print(avg_loss)
                 #return res
-                return tf.Print(to_continue, data=[avg_loss], message="avg_loss: ")
+                tf.print(to_continue, data=[avg_loss], message="avg_loss: ")
+                return to_continue
 
             def false_fn() -> tf.Tensor:
                 return to_continue
@@ -223,7 +224,7 @@ in plaintext then provides the weights to perform private predictions.
             loop, _, _, _ = tf.while_loop(self.cond, loop_body, [0, self.ITERATIONS, self.EPOCHS, 0.])
 
             # return model parameters after training
-            loop = tf.Print(loop, [], message="Training complete")
+            tf.print(loop, [], message="Training complete")
             with tf.control_dependencies([loop]):
                 return [param.read_value() for param in params]
 
@@ -263,10 +264,13 @@ The `PredictionClient` object will provide the private input that will be used t
                prediction = tf.argmax(likelihoods, axis=1)
                eq_values = tf.equal(prediction, tf.cast(y_true, tf.int64))
                acc = tf.reduce_mean(tf.cast(eq_values, tf.float32))
-               op = tf.Print([], [y_true], summarize=self.BATCH_SIZE, message="EXPECT: ")
-               op = tf.Print(op, [prediction], summarize=self.BATCH_SIZE, message="ACTUAL: ")
-               op = tf_print(prediction)
-               op = tf.Print([op], [acc], summarize=self.BATCH_SIZE, message="Acuraccy: ")
+               tf.print([], [y_true], summarize=self.BATCH_SIZE, message="EXPECT: ")
+               op=[]
+               tf.print(op, [prediction], summarize=self.BATCH_SIZE, message="ACTUAL: ")
+               op=prediction
+               tf_print(prediction)
+               op = [op]
+               tf.print([op], [acc], summarize=self.BATCH_SIZE, message="Acuraccy: ")
                return op
 
 
