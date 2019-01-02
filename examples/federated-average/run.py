@@ -29,7 +29,8 @@ def provide_input() -> tf.Tensor:
 def receive_output(*args: List[tf.Tensor]) -> tf.Operation:
     average, = args
     # simply print average
-    return tf.Print([], [average], summarize=10, message="Average:")
+    tf.print([], [average], summarize=10, message="Average:")
+    return []
 
 
 # create players based on names from above

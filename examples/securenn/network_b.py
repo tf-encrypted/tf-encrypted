@@ -70,7 +70,8 @@ class ModelTrainer():
         to_continue = tf.cast(i < max_iter * nb_epochs, tf.bool)
 
         def true_fn() -> tf.Tensor:
-            return tf.Print(to_continue, data=[avg_loss], message="avg_loss: ")
+            tf.print(to_continue, data=[avg_loss], message="avg_loss: ")
+            return to_continue
 
         def false_fn() -> tf.Tensor:
             return to_continue
@@ -129,7 +130,7 @@ class ModelTrainer():
         loop, _, _, _ = tf.while_loop(self.cond, loop_body, [0, self.ITERATIONS, self.EPOCHS, 0.])
 
         # return model parameters after training
-        loop = tf.Print(loop, [], message="Training complete")
+        tf.print(loop, [], message="Training complete")
         with tf.control_dependencies([loop]):
             return [param.read_value() for param in params]
 
@@ -163,9 +164,12 @@ class PredictionClient():
             prediction = tf.argmax(likelihoods, axis=1)
             eq_values = tf.equal(prediction, tf.cast(y_true, tf.int64))
             acc = tf.reduce_mean(tf.cast(eq_values, tf.float32))
-            op = tf.Print([], [y_true], summarize=self.BATCH_SIZE, message="EXPECT: ")
-            op = tf.Print(op, [prediction], summarize=self.BATCH_SIZE, message="ACTUAL: ")
-            op = tf.Print([op], [acc], summarize=self.BATCH_SIZE, message="Acuraccy: ")
+            op=[]
+            tf.print([], [y_true], summarize=self.BATCH_SIZE, message="EXPECT: ")
+            op=op
+            tf.print(op, [prediction], summarize=self.BATCH_SIZE, message="ACTUAL: ")
+            op=[op]
+            tf.print([op], [acc], summarize=self.BATCH_SIZE, message="Acuraccy: ")
             return op
 
 

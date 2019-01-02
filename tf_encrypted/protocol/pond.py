@@ -1749,7 +1749,7 @@ def _type(x):
 # TODO[Morten] this is just a very first step; far from finished
 def debug(x: PondTensor, summarize=None, message=""):
     if isinstance(x, PondPublicTensor):
-        x.value_on_0.value = tf.Print(
+        tf.print(
             x.value_on_0.value,
             [x.value_on_0.value],
             summarize=summarize,
@@ -1757,7 +1757,7 @@ def debug(x: PondTensor, summarize=None, message=""):
         )
 
     elif isinstance(x, PondPrivateTensor):
-        x.share0.value = tf.Print(
+         tf.print(
             x.share0.value,
             [x.reveal().value_on_0.value],
             summarize=summarize,
