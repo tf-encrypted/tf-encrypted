@@ -168,12 +168,8 @@ class PredictionClient():
             prediction = tf.argmax(likelihoods, axis=1)
             eq_values = tf.equal(prediction, tf.cast(y_true, tf.int64))
             acc = tf.reduce_mean(tf.cast(eq_values, tf.float32))
-            op=[]
-            op = tf.print([], [y_true], summarize=self.BATCH_SIZE, message="EXPECT: ")
-            op=op
-            op = tf.print(op, [prediction], summarize=self.BATCH_SIZE, message="ACTUAL: ")
-            op=[op]
-            op = tf.print([op], [acc], summarize=self.BATCH_SIZE, message="Acuraccy: ")
+            op = tf.print('Expected:', y_true, '\nActual:', prediction, '\nAccuracy:', acc)
+
             return op
 
 
