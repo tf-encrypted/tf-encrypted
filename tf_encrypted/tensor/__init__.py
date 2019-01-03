@@ -24,13 +24,7 @@ from .int32 import (
     Int32Constant,
 )
 
-from .int64 import (
-    int64factory,
-    Int64Tensor,
-    Int64Placeholder,
-    Int64Variable,
-    Int64Constant,
-)
+from .int64 import int64factory
 
 from .fixed import (
     _validate_fixedpoint_config,
@@ -60,8 +54,4 @@ __all__ = [
     'Int32Placeholder',
     'Int32Variable',
     'Int32Constant',
-    'Int64Tensor',
-    'Int64Placeholder',
-    'Int64Variable',
-    'Int64Constant',
 ]
