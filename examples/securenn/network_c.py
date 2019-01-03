@@ -169,14 +169,9 @@ class PredictionClient():
             prediction = tf.argmax(likelihoods, axis=1)
             eq_values = tf.equal(prediction, tf.cast(y_true, tf.int64))
             acc = tf.reduce_mean(tf.cast(eq_values, tf.float32))
+            op = tf.print('Expected:', y_true, '\nActual:', prediction, '\nAccuracy:', acc)
 
-            expect_out = tf.print("EXPECT: ", y_true, summarize=self.BATCH_SIZE)
-
-            actual_out = tf.print("ACTUAL: ", prediction, summarize=self.BATCH_SIZE)
-        
-            accuracy_out = tf.print("Acuraccy: ", acc, summarize=self.BATCH_SIZE)
-      
-            return [expect_out, actual_out, accuracy_out]
+            return op
 
 
 model_trainer = ModelTrainer()
