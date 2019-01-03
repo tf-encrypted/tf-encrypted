@@ -425,7 +425,7 @@ def required_space_to_batch_paddings(converter: Converter, node: Any, inputs: Li
             inputs_int32.append(nodef_to_numpy_array(inputs_node[i]))
         else:
             msg = "Revealing private input: required_space_to_batch_paddings assumes public input."
-            logging.warn(msg)
+            logging.warning(msg)
             inputs_int32.append(tf.cast(inputs_node[i].reveal().decode(), tf.int32))
 
     if len(inputs_int32) == 2:
