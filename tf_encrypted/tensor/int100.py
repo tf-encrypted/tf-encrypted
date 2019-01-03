@@ -65,8 +65,13 @@ class Int100Factory(AbstractFactory):
     def one(self) -> 'Int100Tensor':
         return Int100Tensor([np.array([1])] * len(m))
 
-    def sample_uniform(self, shape: List[int], seed=None) -> 'Int100Tensor':
-        backing = _crt_sample_uniform(shape, seed=seed)
+    def sample_uniform(self,
+                       shape,
+                       minval: Optional[int] = None,
+                       maxval: Optional[int] = None) -> 'Int100Tensor':
+        assert minval is None
+        assert maxval is None
+        backing = _crt_sample_uniform(shape, seed=None)
         return Int100Tensor(backing)
 
     def sample_bounded(self, shape: List[int], bitlength: int) -> 'Int100Tensor':
@@ -253,7 +258,7 @@ class Int100Tensor(AbstractTensor):
         return 'Int100Tensor({})'.format(self.shape)
 
     @property
-    def shape(self) -> List[int]:
+    def shape(self):
         return self.backing[0].shape
 
     @staticmethod
