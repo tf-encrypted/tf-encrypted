@@ -43,7 +43,7 @@ class ModelTrainer():
 
         def true_fn() -> tf.Tensor:
 
-            tf.print(to_continue, data=[avg_loss], message="avg_loss: ")
+            to_continue = tf.print("avg_loss: ",avg_loss)
             return(to_continue)
 
         def false_fn() -> tf.Tensor:
@@ -98,7 +98,8 @@ class ModelTrainer():
         loop, _, _, _ = tf.while_loop(self.cond, loop_body, [0, self.ITERATIONS, self.EPOCHS, 0.])
 
         # return model parameters after training
-        tf.print(loop, [], message="Training complete")
+        loop = tf.print("Training complete", loop)
+
         with tf.control_dependencies([loop]):
             return [param.read_value() for param in params]
 
@@ -131,13 +132,14 @@ class PredictionClient():
             prediction = tf.argmax(likelihoods, axis=1)
             eq_values = tf.equal(prediction, tf.cast(y_true, tf.int64))
             acc = tf.reduce_mean(tf.cast(eq_values, tf.float32))
-            tf.print([], [y_true], summarize=self.BATCH_SIZE, message="EXPECT: ")
-            op=[]
-            tf.print(op, [prediction], summarize=self.BATCH_SIZE, message="ACTUAL: ")
-            op=op
-            tf.print([op], [acc], summarize=self.BATCH_SIZE, message="Acuraccy: ")
-            op=[op]
-            return op
+
+            expect_out = tf.print("EXPECT: ", y_true, summarize=self.BATCH_SIZE)
+
+            actual_out = tf.print("ACTUAL: ", prediction, summarize=self.BATCH_SIZE)
+        
+            accuracy_out = tf.print("Acuraccy: ", acc, summarize=self.BATCH_SIZE)
+      
+            return [expect_out, actual_out, accuracy_out]
 
 
 model_trainer = ModelTrainer()

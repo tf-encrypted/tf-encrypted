@@ -72,7 +72,8 @@ class ModelTrainer():
         to_continue = tf.cast(i < max_iter * nb_epochs, tf.bool)
 
         def true_fn() -> tf.Tensor:
-            tf.print(to_continue, data=[avg_loss], message="avg_loss: ")
+            #tf.print(to_continue, data=[avg_loss], message="avg_loss: ")
+            to_continue = tf.print("avg_loss: ", avg_loss)
             return to_continue
 
         def false_fn() -> tf.Tensor:
@@ -135,7 +136,7 @@ class ModelTrainer():
         loop, _, _, _ = tf.while_loop(self.cond, loop_body, [0, self.ITERATIONS, self.EPOCHS, 0.])
 
         # return model parameters after training
-        tf.print(loop, [], message="Training complete")
+        loop = tf.print("Training complete", loop)
         with tf.control_dependencies([loop]):
             return [param.read_value() for param in params]
 
@@ -168,13 +169,14 @@ class PredictionClient():
             prediction = tf.argmax(likelihoods, axis=1)
             eq_values = tf.equal(prediction, tf.cast(y_true, tf.int64))
             acc = tf.reduce_mean(tf.cast(eq_values, tf.float32))
-            op=[]
-            op = tf.print([], [y_true], summarize=self.BATCH_SIZE, message="EXPECT: ")
-            op=op
-            op = tf.print(op, [prediction], summarize=self.BATCH_SIZE, message="ACTUAL: ")
-            op=[op]
-            op = tf.print([op], [acc], summarize=self.BATCH_SIZE, message="Acuraccy: ")
-            return op
+
+            expect_out = tf.print("EXPECT: ", y_true, summarize=self.BATCH_SIZE)
+
+            actual_out = tf.print("ACTUAL: ", prediction, summarize=self.BATCH_SIZE)
+        
+            accuracy_out = tf.print("Acuraccy: ", acc, summarize=self.BATCH_SIZE)
+      
+            return [expect_out, actual_out, accuracy_out]
 
 
 model_trainer = ModelTrainer()
@@ -201,8 +203,8 @@ bconv2 = tfe.reshape(bconv2, [-1, 1, 1])
 layer1 = pool(tfe.relu(conv(x, Wconv1) + bconv1))
 layer2 = pool(tfe.relu(conv(layer1, Wconv2) + bconv2))
 layer2 = tfe.reshape(layer2, [-1, ModelTrainer.HIDDEN_FC1])
-layer3 = tfe.matmul(layer2, Wfc1) + bfc1
-layer4 = tfe.matmul(layer3, Wfc2) + bfc2
+layer3 = tfe.relu(tfe.matmul(layer2, Wfc1) + bfc1)
+layer4 = tfe.relu(tfe.matmul(layer3, Wfc2) + bfc2)
 logits = tfe.matmul(layer4, Wfc3) + bfc3
 
 # send prediction output back to client

@@ -47,7 +47,7 @@ def bias_variable(shape):
 
 
 conv2d = lambda x, w, s: tf.nn.conv2d(x, w, strides=[1, s, s, 1], padding='VALID')
-pooling = lambda x: tf.nn.avg_pool(x, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+pooling = lambda x: tf.nn.avg_pool(x, [1, 2, 2, 1], [1, 2, 2, 1], padding='VALID')
 
 
 class ModelTrainer():
@@ -70,7 +70,7 @@ class ModelTrainer():
         to_continue = tf.cast(i < max_iter * nb_epochs, tf.bool)
 
         def true_fn() -> tf.Tensor:
-            tf.print(to_continue, data=[avg_loss], message="avg_loss: ")
+            to_continue = tf.print("avg_loss: ", avg_loss)
             return to_continue
 
         def false_fn() -> tf.Tensor:
@@ -130,7 +130,7 @@ class ModelTrainer():
         loop, _, _, _ = tf.while_loop(self.cond, loop_body, [0, self.ITERATIONS, self.EPOCHS, 0.])
 
         # return model parameters after training
-        tf.print(loop, [], message="Training complete")
+        loop = tf.print("Training complete", loop)
         with tf.control_dependencies([loop]):
             return [param.read_value() for param in params]
 
@@ -164,13 +164,14 @@ class PredictionClient():
             prediction = tf.argmax(likelihoods, axis=1)
             eq_values = tf.equal(prediction, tf.cast(y_true, tf.int64))
             acc = tf.reduce_mean(tf.cast(eq_values, tf.float32))
-            op=[]
-            tf.print([], [y_true], summarize=self.BATCH_SIZE, message="EXPECT: ")
-            op=op
-            tf.print(op, [prediction], summarize=self.BATCH_SIZE, message="ACTUAL: ")
-            op=[op]
-            tf.print([op], [acc], summarize=self.BATCH_SIZE, message="Acuraccy: ")
-            return op
+
+            expect_out = tf.print("EXPECT: ", y_true, summarize=self.BATCH_SIZE)
+
+            actual_out = tf.print("ACTUAL: ", prediction, summarize=self.BATCH_SIZE)
+        
+            accuracy_out = tf.print("Acuraccy: ", acc, summarize=self.BATCH_SIZE)
+      
+            return [expect_out, actual_out, accuracy_out]
 
 
 model_trainer = ModelTrainer()
@@ -186,17 +187,19 @@ params = tfe.cache(params)
 x, y = tfe.define_private_input('prediction-client', prediction_client.provide_input, masked=True)  # pylint: disable=E0632
 
 # helpers
-conv = lambda x, w: tfe.conv2d(x, w, 1, 'VALID')
-pool = lambda x: tfe.avgpool2d(x, (2, 2), (2, 2), 'VALID')
+conv = lambda x, w: tfe.conv2d(x, w, strides=1, padding='VALID')
+pool = lambda x: tfe.avgpool2d(x, pool_size=(2, 2), strides=(2, 2), padding='VALID')
+
 
 # compute prediction
 Wconv1, bconv1, Wconv2, bconv2, Wfc1, bfc1, Wfc2, bfc2 = params
+
 bconv1 = tfe.reshape(bconv1, [-1, 1, 1])
 bconv2 = tfe.reshape(bconv2, [-1, 1, 1])
 layer1 = pool(tfe.relu(conv(x, Wconv1) + bconv1))
 layer2 = pool(tfe.relu(conv(layer1, Wconv2) + bconv2))
 layer2 = tfe.reshape(layer2, [-1, ModelTrainer.HIDDEN_FC1])
-layer3 = tfe.matmul(layer2, Wfc1) + bfc1
+layer3 = tfe.relu(tfe.matmul(layer2, Wfc1) + bfc1)
 logits = tfe.matmul(layer3, Wfc2) + bfc2
 
 # send prediction output back to client
