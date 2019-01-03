@@ -12,81 +12,6 @@ from ...tensor.shared import binarize
 from ...operations.secure_random import seeded_random_uniform, seed
 
 
-class OddFactory:
-    """
-    Represents a native integer data type with one value removed in order to obtain an odd modulus.
-    More concretely, this data type wraps either tf.int32 or tf.int64 but removes -1 (mapped to 0).
-    It is currently not considered for general use but only to support subprotocols of SecureNN.
-    """
-
-    def __init__(self, native_type):
-        assert native_type in (tf.int32, tf.int64)
-        self.native_type = native_type
-
-    def tensor(self, value) -> 'OddTensor':
-        """
-        Wrap `value` in this data type.
-        Internal use should consider explicit construction to avoid redundant correction.
-        """
-
-        if isinstance(value, tf.Tensor):
-            assert value.dtype == self.native_type
-            # no assumptions are made about the tensor here and hence we need to
-            # apply our mapping for invalid values
-            value = _map_minusone_to_zero(value, self.native_type)
-            return OddDenseTensor(value, self)
-
-        if isinstance(value, OddTensor):
-            assert value.factory == self
-            # we assume that the tensor has no invalid values
-            return OddDenseTensor(value, self)
-
-        raise TypeError("Don't know how to handle {}".format(type(value)))
-
-    def constant(self, value) -> 'OddTensor':
-        raise NotImplementedError()
-
-    def variable(self, initial_value) -> 'OddTensor':
-        raise NotImplementedError()
-
-    def placeholder(self, shape) -> 'OddTensor':
-        raise NotImplementedError()
-
-    @property
-    def modulus(self):
-
-        if self.native_type is tf.int32:
-            return 2**32 - 1
-
-        if self.native_type is tf.int64:
-            return 2**64 - 1
-
-        raise NotImplementedError("Don't know how to handle {}".format(self.native_type))
-
-    def sample_uniform(self,
-                       shape,
-                       minval: Optional[int] = None,
-                       maxval: Optional[int] = None) -> 'OddTensor':
-        assert minval is None
-        assert maxval is None
-        return OddUniformTensor(shape=shape,
-                                seed=seed(),
-                                factory=self)
-
-    def sample_bounded(self, shape, bitlength: int) -> 'OddTensor':
-        raise NotImplementedError()
-
-    def stack(self, xs: List['OddTensor'], axis: int = 0) -> 'OddTensor':
-        raise NotImplementedError()
-
-    def concat(self, xs: List['OddTensor'], axis: int) -> 'OddTensor':
-        raise NotImplementedError()
-
-
-oddInt32factory = OddFactory(tf.int32)
-oddInt64factory = OddFactory(tf.int64)
-
-
 class OddTensor(AbstractTensor):
     """
     Base class for the concrete odd tensors types. Implements basic functionality needed by
@@ -240,6 +165,81 @@ class OddUniformTensor(OddTensor):
 
     def expand(self):
         return OddDenseTensor(self.value, self.factory)
+
+
+class OddFactory:
+    """
+    Represents a native integer data type with one value removed in order to obtain an odd modulus.
+    More concretely, this data type wraps either tf.int32 or tf.int64 but removes -1 (mapped to 0).
+    It is currently not considered for general use but only to support subprotocols of SecureNN.
+    """
+
+    def __init__(self, native_type):
+        assert native_type in (tf.int32, tf.int64)
+        self.native_type = native_type
+
+    def tensor(self, value) -> OddTensor:
+        """
+        Wrap `value` in this data type.
+        Internal use should consider explicit construction to avoid redundant correction.
+        """
+
+        if isinstance(value, tf.Tensor):
+            assert value.dtype == self.native_type
+            # no assumptions are made about the tensor here and hence we need to
+            # apply our mapping for invalid values
+            value = _map_minusone_to_zero(value, self.native_type)
+            return OddDenseTensor(value, self)
+
+        if isinstance(value, OddTensor):
+            assert value.factory == self
+            # we assume that the tensor has no invalid values
+            return OddDenseTensor(value, self)
+
+        raise TypeError("Don't know how to handle {}".format(type(value)))
+
+    def constant(self, value) -> OddTensor:
+        raise NotImplementedError()
+
+    def variable(self, initial_value) -> OddTensor:
+        raise NotImplementedError()
+
+    def placeholder(self, shape) -> OddTensor:
+        raise NotImplementedError()
+
+    @property
+    def modulus(self):
+
+        if self.native_type is tf.int32:
+            return 2**32 - 1
+
+        if self.native_type is tf.int64:
+            return 2**64 - 1
+
+        raise NotImplementedError("Don't know how to handle {}".format(self.native_type))
+
+    def sample_uniform(self,
+                       shape,
+                       minval: Optional[int] = None,
+                       maxval: Optional[int] = None) -> OddTensor:
+        assert minval is None
+        assert maxval is None
+        return OddUniformTensor(shape=shape,
+                                seed=seed(),
+                                factory=self)
+
+    def sample_bounded(self, shape, bitlength: int) -> OddTensor:
+        raise NotImplementedError()
+
+    def stack(self, xs: List[OddTensor], axis: int = 0) -> OddTensor:
+        raise NotImplementedError()
+
+    def concat(self, xs: List[OddTensor], axis: int) -> OddTensor:
+        raise NotImplementedError()
+
+
+oddInt32factory = OddFactory(tf.int32)
+oddInt64factory = OddFactory(tf.int64)
 
 
 #
