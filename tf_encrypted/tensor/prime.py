@@ -193,47 +193,59 @@ class PrimeFactory(AbstractFactory):
 
     def __init__(self, modulus, native_type=tf.int32):
         self._modulus = modulus
-        self.native_type = native_type
+        self._native_type = native_type
 
     @property
     def modulus(self):
         return self._modulus
 
-    def sample_uniform(self, shape, minval: Optional[int] = 0) -> PrimeTensor:
+    @property
+    def native_type(self):
+        return self._native_type
+
+    def sample_uniform(self,
+                       shape,
+                       minval: Optional[int] = None,
+                       maxval: Optional[int] = None):
+        minval = minval or 0
+        maxval = maxval or self.modulus
         value = random_uniform(shape=shape,
                                dtype=self.native_type,
                                minval=minval,
-                               maxval=self.modulus)
+                               maxval=maxval)
         return PrimeTensor(value, self)
 
-    def sample_bounded(self, shape, bitlength) -> PrimeTensor:
+    def sample_bounded(self, shape, bitlength):
         maxval = 2 ** bitlength
         assert self.modulus > maxval
         value = random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=maxval)
         return PrimeTensor(value, self)
 
-    def sample_bits(self, shape) -> PrimeTensor:
+    def sample_bits(self, shape):
         value = random_uniform(shape=shape, dtype=self.native_type, minval=0, maxval=2)
         return PrimeTensor(value, self)
 
-    def stack(self, xs: List[PrimeTensor], axis: int = 0) -> PrimeTensor:
+    def stack(self, xs: list, axis: int = 0):
         assert all(isinstance(x, PrimeTensor) for x in xs)
         value = tf.stack([x.value for x in xs], axis=axis)
         return PrimeTensor(value, self)
 
-    def concat(self, xs: List[PrimeTensor], axis: int = 0) -> PrimeTensor:
+    def concat(self, xs: list, axis: int = 0):
         assert all(isinstance(x, PrimeTensor) for x in xs)
         value = tf.concat([v.value for v in xs], axis=axis)
         return PrimeTensor(value, self)
 
     def tensor(self, value) -> PrimeTensor:
 
-        if isinstance(value, (tf.Tensor, np.ndarray)):
+        if isinstance(value, np.ndarray):
+            return PrimeTensor(value, self)
+
+        if isinstance(value, tf.Tensor):
+            assert value.dtype == self.native_type
             return PrimeTensor(value, self)
 
         if isinstance(value, PrimeTensor):
-            err = "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
-            assert value.modulus == self.modulus, err
+            assert value.factory == self
             return PrimeTensor(value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))

@@ -1,19 +1,17 @@
 import abc
-from typing import List, Tuple, Union, TypeVar, Generic
-
-import tensorflow as tf
+from typing import Optional
 
 
 class AbstractTensor(abc.ABC):
 
     @property
-    @abc.abstractmethod
-    def factory(self) -> 'AbstractFactory':
+    @abc.abstractproperty
+    def factory(self):
         pass
 
     @property
-    @abc.abstractmethod
-    def shape(self) -> Union[Tuple[int, ...], tf.TensorShape]:
+    @abc.abstractproperty
+    def shape(self):
         pass
 
 
@@ -29,43 +27,51 @@ class AbstractVariable(AbstractTensor):
     pass
 
 
-T = TypeVar('T')
-C = TypeVar('C')
-V = TypeVar('V')
-P = TypeVar('P')
-
-
-class AbstractFactory(abc.ABC, Generic[T, C, V, P]):
-
-    @abc.abstractmethod
-    def tensor(self, value) -> T:
-        pass
-
-    @abc.abstractmethod
-    def constant(self, value) -> C:
-        pass
-
-    @abc.abstractmethod
-    def variable(self, initial_value) -> V:
-        pass
-
-    @abc.abstractmethod
-    def placeholder(self, shape: List[int]) -> P:
-        pass
-
-    @abc.abstractmethod
-    def sample_uniform(self, shape: List[int], seed=None) -> T:
-        pass
-
-    @abc.abstractmethod
-    def stack(self, xs: List[T], axis: int = 0) -> T:
-        pass
-
-    @abc.abstractmethod
-    def concat(self, xs: List[T], axis: int) -> T:
-        pass
+class AbstractFactory(abc.ABC):
 
     @property
-    @abc.abstractmethod
+    @abc.abstractproperty
     def modulus(self) -> int:
-        pass
+        """ The modulus used by this data type. """
+
+    @property
+    @abc.abstractproperty
+    def native_type(self):
+        """ The underlying TensorFlow dtype used by this data type. """
+
+    @abc.abstractmethod
+    def tensor(self, value):
+        """ Wrap raw `value` in this data type as a tensor. """
+
+    @abc.abstractmethod
+    def constant(self, value):
+        """ Create a constant of this data type using raw `value`. """
+
+    @abc.abstractmethod
+    def variable(self, initial_value):
+        """ Create a variable of this data type using raw `initial_value`. """
+
+    @abc.abstractmethod
+    def placeholder(self, shape):
+        """ Create a placeholder of this data type. """
+
+    @abc.abstractmethod
+    def sample_uniform(self,
+                       shape,
+                       minval: Optional[int] = None,
+                       maxval: Optional[int] = None):
+        """ Sample uniform random value of this data type. """
+
+    @abc.abstractmethod
+    def sample_bounded(self,
+                       shape,
+                       bitlength: int):
+        """ Sample uniform random value of this data type. """
+
+    @abc.abstractmethod
+    def stack(self, xs: list, axis: int = 0):
+        """ Stack tensors of this data type together. """
+
+    @abc.abstractmethod
+    def concat(self, xs: list, axis: int):
+        """ Concatenate tensors of this data type together. """

@@ -57,27 +57,27 @@ class Int32Factory(AbstractFactory):
     def native_type(self):
         return tf.int32
 
-    def sample_uniform(self, shape: List[int], seed=None) -> 'Int32Tensor':
-        if seed is None:
-            value = random_uniform(shape=shape,
-                                   dtype=self.native_type,
-                                   minval=self.native_type.min,
-                                   maxval=self.native_type.max)
-        else:
-            value = seeded_random_uniform(shape=shape,
-                                          seed=seed,
-                                          dtype=self.native_type,
-                                          minval=self.native_type.min,
-                                          maxval=self.native_type.max)
-
+    def sample_uniform(self,
+                       shape,
+                       minval: Optional[int] = None,
+                       maxval: Optional[int] = None):
+        minval = minval or self.native_type.min
+        maxval = maxval or self.native_type.max
+        value = random_uniform(shape=shape,
+                               dtype=self.native_type,
+                               minval=minval,
+                               maxval=maxval)
         return Int32Tensor(value)
 
-    def stack(self, xs: List['Int32Tensor'], axis: int = 0) -> 'Int32Tensor':
+    def sample_bounded(self, shape, bitlength: int):
+         raise NotImplementedError()
+
+    def stack(self, xs: List['Int32Tensor'], axis: int = 0):
         assert all(isinstance(x, Int32Tensor) for x in xs)
         value = tf.stack([x.value for x in xs], axis=axis)
         return Int32Tensor(value)
 
-    def concat(self, xs: List['Int32Tensor'], axis: int) -> 'Int32Tensor':
+    def concat(self, xs: List['Int32Tensor'], axis: int):
         assert all(isinstance(x, Int32Tensor) for x in xs)
         value = tf.concat([x.value for x in xs], axis=axis)
         return Int32Tensor(value)
