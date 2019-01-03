@@ -6,16 +6,17 @@ import math
 
 import tensorflow as tf
 
-from .protocol import memoize, Protocol
-from ..tensor import AbstractTensor
-from ..player import Player
-from ..config import get_config
+from ..protocol import memoize, Protocol
+from ...tensor.factory import AbstractTensor
+from ...player import Player
+from ...config import get_config
 
 
 class PlayerState:
     def __init__(self, left, right):
         self.left = left
         self.right = right
+
 
 class ReplicatedTensor(abc.ABC):
     pass
@@ -31,10 +32,10 @@ class ReplicatedPrivateTensor(ReplicatedTensor):
 
     def __init__(
         self,
-        prot: Protocol,
+        prot,
         shares0: Tuple[AbstractTensor, AbstractTensor],
         shares1: Tuple[AbstractTensor, AbstractTensor],
-        shares2: Tuple[AbstractTensor, AbstractTensor]
+        shares2: Tuple[AbstractTensor, AbstractTensor],
     ) -> None:
         # assert share0.shape.as_list() == share1.shape.as_list() == share2.shape.as_list()
 
@@ -64,12 +65,34 @@ class Replicated(Protocol):
         self.server1 = server1 or get_config().get_player('server1')
         self.server2 = server2 or get_config().get_player('server2')
 
-    def _add_private_private(self, x: ReplicatedPrivateTensor, y: ReplicatedPrivateTensor) -> ReplicatedPrivateTensor:
-
-        with tf.device(self.server0.device_name):
-            x1, x2 = x.shares0
-            y1, y2 = y.shares0
-            z1 = x1 + y1
-            z2 = x2 + y2
+    def initializer(self) -> tf.Operation:
+        return 
 
 
+def _private_input(prot, player, input_fn) -> ReplicatedPrivateTensor:
+
+
+
+def _add_private_private(prot, x: ReplicatedPrivateTensor, y: ReplicatedPrivateTensor) -> ReplicatedPrivateTensor:
+
+    (x1_0, x2_0), (x0_1, x2_1), (x0_2, x1_2) = x.unwrapped
+    (y1_0, y2_0), (y0_1, y2_1), (y0_2, y1_2) = y.unwrapped
+
+    with tf.device(prot.server0.device_name):
+        z1_0 = x1_0 + y1_0
+        z2_0 = x2_0 + y2_0
+
+    with tf.device(prot.server1.device_name):
+        z0_1 = x0_1 + y0_1
+        z2_1 = x2_1 + y2_1
+
+    with tf.device(prot.server2.device_name):
+        z0_2 = x0_2 + y0_2
+        z1_2 = x1_2 + y1_2
+
+    return ReplicatedPrivateTensor(
+        prot,
+        (z1_0, z2_0),
+        (z0_1, z2_1),
+        (z0_2, z1_2),
+    )
