@@ -14,8 +14,8 @@ class TestOddImplicitTensor(unittest.TestCase):
     def test_add(self) -> None:
 
         # regular, overflow, underflow
-        x = oddInt64factory.tensor(tf.constant([2, -2], dtype=tf.int32))
-        y = oddInt64factory.tensor(tf.constant([3, 3], dtype=tf.int32))
+        x = oddInt64factory.tensor(tf.constant([2, -2], dtype=tf.int64))
+        y = oddInt64factory.tensor(tf.constant([3, 3], dtype=tf.int64))
 
         z = x + y
 
@@ -29,8 +29,8 @@ class TestOddImplicitTensor(unittest.TestCase):
     def test_sub(self) -> None:
 
         # regular, overflow, underflow
-        x = oddInt64factory.tensor(tf.constant([2, -2], dtype=tf.int32))
-        y = oddInt64factory.tensor(tf.constant([3, 3], dtype=tf.int32))
+        x = oddInt64factory.tensor(tf.constant([2, -2], dtype=tf.int64))
+        y = oddInt64factory.tensor(tf.constant([3, 3], dtype=tf.int64))
 
         z = x - y
 
