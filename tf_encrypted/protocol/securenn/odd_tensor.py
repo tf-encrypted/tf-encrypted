@@ -167,7 +167,7 @@ class OddUniformTensor(OddTensor):
         return OddDenseTensor(self.value, self.factory)
 
 
-class OddFactory:
+class Factory:
     """
     Represents a native integer data type with one value removed in order to obtain an odd modulus.
     More concretely, this data type wraps either tf.int32 or tf.int64 but removes -1 (mapped to 0).
@@ -180,7 +180,7 @@ class OddFactory:
 
     def tensor(self, value) -> OddTensor:
         """
-        Wrap `value` in this data type.
+        Wrap `value` in this data type, performing type conversion as needed.
         Internal use should consider explicit construction to avoid redundant correction.
         """
 
@@ -193,7 +193,7 @@ class OddFactory:
 
         if isinstance(value, OddTensor):
             assert value.factory == self
-            # we assume that the tensor has no invalid values
+            # we assume that the tensor only has valid values
             return OddDenseTensor(value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
@@ -238,8 +238,8 @@ class OddFactory:
         raise NotImplementedError()
 
 
-oddInt32factory = OddFactory(tf.int32)
-oddInt64factory = OddFactory(tf.int64)
+oddInt32factory = Factory(tf.int32)
+oddInt64factory = Factory(tf.int64)
 
 
 #
