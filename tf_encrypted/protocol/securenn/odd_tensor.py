@@ -111,6 +111,8 @@ class OddDenseTensor(OddTensor):
     """
 
     def __init__(self, value, factory):
+        assert isinstance(value, tf.Tensor)
+        assert value.dtype == factory.native_type
         self._value = value
         self._factory = factory
 
@@ -189,11 +191,6 @@ class Factory:
             # no assumptions are made about the tensor here and hence we need to
             # apply our mapping for invalid values
             value = _map_minusone_to_zero(value, self.native_type)
-            return OddDenseTensor(value, self)
-
-        if isinstance(value, OddTensor):
-            assert value.factory == self
-            # we assume that the tensor only has valid values
             return OddDenseTensor(value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))

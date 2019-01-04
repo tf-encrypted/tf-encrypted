@@ -237,16 +237,13 @@ class PrimeFactory(AbstractFactory):
 
     def tensor(self, value) -> PrimeTensor:
 
+        if isinstance(value, tf.Tensor):
+            if value.dtype is not self.native_type:
+                value = tf.cast(value, dtype=self.native_type)
+            return PrimeTensor(value, self)
+
         if isinstance(value, np.ndarray):
             return PrimeTensor(value, self)
-
-        if isinstance(value, tf.Tensor):
-            assert value.dtype == self.native_type
-            return PrimeTensor(value, self)
-
-        if isinstance(value, PrimeTensor):
-            assert value.factory == self
-            return PrimeTensor(value.value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
 
