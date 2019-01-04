@@ -516,9 +516,11 @@ class Pond(Protocol):
     def clear_initializers(self) -> None:
         del _initializers[:]
 
-    def _encode(
-        self, rationals, apply_scaling, factory: Optional[AbstractFactory] = None
-    ) -> AbstractTensor:
+    def _encode(self,
+                rationals: Union[tf.Tensor, np.ndarray],
+                apply_scaling: bool,
+                factory: Optional[AbstractFactory] = None
+                ) -> AbstractTensor:
         """ Encode tensor of rational numbers into tensor of ring elements """
 
         factory = factory or self.tensor_factory
@@ -534,10 +536,8 @@ class Pond(Protocol):
             # and then we round to integers
             if isinstance(scaled, np.ndarray):
                 integers = scaled.astype(int).astype(object)
-
             elif isinstance(scaled, tf.Tensor):
                 integers = tf.cast(scaled, factory.native_type)
-
             else:
                 raise TypeError("Don't know how to encode {}".format(type(rationals)))
 

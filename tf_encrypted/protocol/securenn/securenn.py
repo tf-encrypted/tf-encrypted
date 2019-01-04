@@ -625,8 +625,8 @@ def _private_compare(prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta:
 
             # tensor for edge cases: one zero and the rest ones
             c_edge_case_raw = prime_dtype.tensor(tf.constant([0] + [1] * (bit_length - 1),
-                                                 dtype=prime_dtype.native_type,
-                                                 shape=(1, bit_length)))
+                                                             dtype=prime_dtype.native_type,
+                                                             shape=(1, bit_length)))
             c_edge_case = prot._share_and_wrap(c_edge_case_raw, False)
 
             c = prot.select(

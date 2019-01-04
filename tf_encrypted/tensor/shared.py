@@ -8,6 +8,7 @@ from .factory import AbstractTensor
 
 
 def binarize(tensor: tf.Tensor, bitsize: Optional[int] = None) -> tf.Tensor:
+    """ Extract bits of values in `tensor`, returning a `tf.Tensor` with same dtype. """
 
     with tf.name_scope('binarize'):
         bitsize = bitsize or (tensor.dtype.size * 8)
@@ -19,6 +20,7 @@ def binarize(tensor: tf.Tensor, bitsize: Optional[int] = None) -> tf.Tensor:
         val = tf.expand_dims(tensor, -1)
         val = tf.bitwise.bitwise_and(tf.bitwise.right_shift(val, bit_indices), 1)
 
+        assert val.dtype == tensor.dtype
         return val
 
 
