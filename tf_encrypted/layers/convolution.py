@@ -4,6 +4,8 @@ from typing import List
 
 from . import core
 
+from tf_encrypted.protocol.pond import PondPrivateTensor, PondMaskedTensor
+
 
 class Conv2D(core.Layer):
 
@@ -66,7 +68,12 @@ class Conv2D(core.Layer):
         if initial_weights is None:
             initial_weights = self.filter_init(self.fshape)
 
-        self.weights = self.prot.define_private_variable(initial_weights)
+        if (isinstance(initial_weights, PondPrivateTensor) or 
+            isinstance(initial_weights, PondMaskedTensor)):
+            self.weights = initial_weights
+        else:
+            self.weights = self.prot.define_private_variable(initial_weights)
+
         self.bias = self.prot.define_private_variable(np.zeros(self.output_shape[1:]))
 
     def forward(self, x):
