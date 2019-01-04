@@ -17,15 +17,12 @@ class Factory(AbstractFactory):
     def tensor(self, value):
 
         if isinstance(value, tf.Tensor):
-            if value.dtype is not tf.int64:
-                value = tf.cast(value, dtype=tf.int64)
+            if value.dtype is not self.native_type:
+                value = tf.cast(value, dtype=self.native_type)
             return Int64DenseTensor(value)
 
         if isinstance(value, np.ndarray):
             return Int64DenseTensor(value)
-
-        if isinstance(value, Int64DenseTensor):
-            return Int64DenseTensor(value.value)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
 
@@ -116,7 +113,8 @@ def _lift(x, y) -> Tuple['Int64DenseTensor', 'Int64DenseTensor']:
 
 class Int64DenseTensor(AbstractTensor):
 
-    def __init__(self, value: Union[np.ndarray, tf.Tensor]) -> None:
+    def __init__(self, value) -> None:
+        assert isinstance(value, (tf.Tensor, np.ndarray))
         self.value = value
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:

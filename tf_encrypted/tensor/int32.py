@@ -15,11 +15,13 @@ class Int32Factory(AbstractFactory):
 
     def tensor(self, value) -> 'Int32Tensor':
 
-        if isinstance(value, (tf.Tensor, np.ndarray)):
+        if isinstance(value, tf.Tensor):
+            if value.dtype is not self.native_type:
+                value = tf.cast(value, dtype=self.native_type)
             return Int32Tensor(value)
 
-        if isinstance(value, Int32Tensor):
-            return Int32Tensor(value.value)
+        if isinstance(value, np.ndarray):
+            return Int32Tensor(value)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
 

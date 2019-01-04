@@ -96,12 +96,13 @@ class Int100Factory(AbstractFactory):
 
     def tensor(self, value) -> 'Int100Tensor':
 
-        if isinstance(value, (tf.Tensor, np.ndarray)):
+        if isinstance(value, tf.Tensor):
+            if value.dtype is not self.native_type:
+                value = tf.cast(value, dtype=self.native_type)
             return Int100Tensor(_crt_decompose(value))
 
-        if isinstance(value, Int100Tensor):
-            # TODO[Morten] should we just be the identity here to not bypass cached nodes?
-            return Int100Tensor(value.backing)
+        if isinstance(value, np.ndarray):
+            return Int100Tensor(_crt_decompose(value))
 
         raise TypeError("Don't know how to handle {}", type(value))
 

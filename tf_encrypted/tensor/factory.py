@@ -1,5 +1,8 @@
 import abc
-from typing import Optional
+from typing import Optional, Union
+
+import numpy as np
+import tensorflow as tf
 
 
 class AbstractTensor(abc.ABC):
@@ -40,7 +43,7 @@ class AbstractFactory(abc.ABC):
         """ The underlying TensorFlow dtype used by this data type. """
 
     @abc.abstractmethod
-    def tensor(self, value):
+    def tensor(self, value: Union[tf.Tensor, np.ndarray]):
         """ Wrap raw `value` in this data type as a tensor. """
 
     @abc.abstractmethod
