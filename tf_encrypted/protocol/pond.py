@@ -1757,7 +1757,7 @@ def debug(x: PondTensor, summarize=None, message=""):
         )
 
     elif isinstance(x, PondPrivateTensor):
-         tf.print(
+        tf.print(
             x.share0.value,
             [x.reveal().value_on_0.value],
             summarize=summarize,
