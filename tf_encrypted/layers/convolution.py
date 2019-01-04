@@ -68,8 +68,9 @@ class Conv2D(core.Layer):
         if initial_weights is None:
             initial_weights = self.filter_init(self.fshape)
 
-        if (isinstance(initial_weights, PondPrivateTensor) or 
-            isinstance(initial_weights, PondMaskedTensor)):
+        if isinstance(initial_weights, PondPrivateTensor):
+            self.weights = initial_weights
+        elif isinstance(initial_weights, PondMaskedTensor):
             self.weights = initial_weights
         else:
             self.weights = self.prot.define_private_variable(initial_weights)

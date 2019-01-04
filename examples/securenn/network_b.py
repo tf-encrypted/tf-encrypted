@@ -152,7 +152,7 @@ class PredictionClient():
     def provide_input(self) -> List[tf.Tensor]:
         with tf.name_scope('loading'):
             prediction_input, expected_result = get_data_from_tfrecord("./data/test.tfrecord", self.BATCH_SIZE).get_next()
- 
+
         with tf.name_scope('pre-processing'):
             prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 784))
             expected_result = tf.reshape(expected_result, shape=(self.BATCH_SIZE,))
@@ -164,9 +164,7 @@ class PredictionClient():
             prediction = tf.argmax(likelihoods, axis=1)
             eq_values = tf.equal(prediction, tf.cast(y_true, tf.int64))
             acc = tf.reduce_mean(tf.cast(eq_values, tf.float32))
-
             op = tf.print('Expected:', y_true, '\nActual:', prediction, '\nAccuracy:', acc)
-            #op = tf.print('Expected:', likelihoods)
 
             return op
 
@@ -183,50 +181,41 @@ params = tfe.cache(params)
 # get prediction input from client
 x, y = tfe.define_private_input('prediction-client', prediction_client.provide_input, masked=True)  # pylint: disable=E0632
 
-# helpers
-# conv = lambda x, w: tfe.conv2d(x, w, strides=1, padding='VALID')
-# pool = lambda x: tfe.avgpool2d(x, pool_size=(2, 2), strides=(2, 2), padding='VALID')
-
 
 # compute prediction
 Wconv1, bconv1, Wconv2, bconv2, Wfc1, bfc1, Wfc2, bfc2 = params
 
-cv1_tfe = tfe.layers.Conv2D(
-        input_shape=[-1, 28, 28, 1], filter_shape=[5, 5, 1, 16],
-        strides=1,
-        padding='VALID',
-        channels_first=False
-)
+conv1_tfe = tfe.layers.Conv2D(input_shape=[-1, 28, 28, 1],
+                              filter_shape=[5, 5, 1, 16],
+                              strides=1,
+                              padding='VALID',
+                              channels_first=False)
 
-cv1_tfe.initialize(initial_weights=Wconv1)
+conv1_tfe.initialize(initial_weights=Wconv1)
 
-cv2_tfe = tfe.layers.Conv2D(
-        input_shape=[-1, 12, 12, 16], filter_shape=[5, 5, 16, 16],
-        strides=1,
-        padding='VALID',
-        channels_first=False
-)
+conv2_tfe = tfe.layers.Conv2D(input_shape=[-1, 12, 12, 16],
+                              filter_shape=[5, 5, 16, 16],
+                              strides=1,
+                              padding='VALID',
+                              channels_first=False)
 
-cv2_tfe.initialize(initial_weights=Wconv2)
+conv2_tfe.initialize(initial_weights=Wconv2)
 
-avg1 = tfe.layers.AveragePooling2D(input_shape=[-1, 24, 24, 16],
-                                    pool_size=(2, 2),
-                                    strides=(2,2),
-                                    padding='VALID',
-                                    channels_first=False)
+avg_pool1 = tfe.layers.AveragePooling2D(input_shape=[-1, 24, 24, 16],
+                                        pool_size=(2, 2),
+                                        strides=(2, 2),
+                                        padding='VALID',
+                                        channels_first=False)
 
-avg2 = tfe.layers.AveragePooling2D(input_shape=[-1, 8, 8, 16],
-                                    pool_size=(2, 2),
-                                    strides=(2,2),
-                                    padding='VALID',
-                                    channels_first=False)
+avg_pool1 = tfe.layers.AveragePooling2D(input_shape=[-1, 8, 8, 16],
+                                        pool_size=(2, 2),
+                                        strides=(2, 2),
+                                        padding='VALID',
+                                        channels_first=False)
 
 x = tfe.reshape(x, [-1, 28, 28, 1])
-
-bconv1 = tfe.reshape(bconv1, [1, 1, -1])
-bconv2 = tfe.reshape(bconv2, [1, 1, -1])
-layer1 = avg1.forward(tfe.relu(cv1_tfe.forward(x) + bconv1))
-layer2 = avg2.forward(tfe.relu(cv2_tfe.forward(layer1) + bconv2))
+layer1 = avg_pool1.forward(tfe.relu(conv1_tfe.forward(x) + bconv1))
+layer2 = avg_pool1.forward(tfe.relu(conv2_tfe.forward(layer1) + bconv2))
 
 layer2 = tfe.reshape(layer2, [-1, ModelTrainer.HIDDEN_FC1])
 layer3 = tfe.relu(tfe.matmul(layer2, Wfc1) + bfc1)

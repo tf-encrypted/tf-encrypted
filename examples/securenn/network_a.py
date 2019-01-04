@@ -42,8 +42,7 @@ class ModelTrainer():
         to_continue = tf.cast(i < max_iter * nb_epochs, tf.bool)
 
         def true_fn() -> tf.Tensor:
-
-            to_continue = tf.print("avg_loss: ",avg_loss)
+            to_continue = tf.print("avg_loss: ", avg_loss)
             return(to_continue)
 
         def false_fn() -> tf.Tensor:

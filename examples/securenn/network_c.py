@@ -71,7 +71,6 @@ class ModelTrainer():
         to_continue = tf.cast(i < max_iter * nb_epochs, tf.bool)
 
         def true_fn() -> tf.Tensor:
-            #tf.print(to_continue, data=[avg_loss], message="avg_loss: ")
             to_continue = tf.print("avg_loss: ", avg_loss)
             return to_continue
 
@@ -183,47 +182,40 @@ params = tfe.cache(params)
 # get prediction input from client
 x, y = tfe.define_private_input('prediction-client', prediction_client.provide_input, masked=True)  # pylint: disable=E0632
 
-# helpers
-# conv = lambda x, w: tfe.conv2d(x, w, ModelTrainer.STRIDE, 'VALID')
-# pool = lambda x: tfe.avgpool2d(x, (2, 2), (2, 2), 'VALID')
-
 # compute prediction
 Wconv1, bconv1, Wconv2, bconv2, Wfc1, bfc1, Wfc2, bfc2 = params
 
-cv1_tfe = tfe.layers.Conv2D(
-        input_shape=[-1, 28, 28, 1], filter_shape=[5, 5, 1, 20],
-        strides=1,
-        padding='VALID',
-        channels_first=False
-)
+conv1_tfe = tfe.layers.Conv2D(input_shape=[-1, 28, 28, 1],
+                              filter_shape=[5, 5, 1, 20],
+                              strides=1,
+                              padding='VALID',
+                              channels_first=False)
 
-cv1_tfe.initialize(initial_weights=Wconv1)
+conv1_tfe.initialize(initial_weights=Wconv1)
 
-cv2_tfe = tfe.layers.Conv2D(
-        input_shape=[-1, 12, 12, 20], filter_shape=[5, 5, 20, 50],
-        strides=1,
-        padding='VALID',
-        channels_first=False)
+conv2_tfe = tfe.layers.Conv2D(input_shape=[-1, 12, 12, 20],
+                              filter_shape=[5, 5, 20, 50],
+                              strides=1,
+                              padding='VALID',
+                              channels_first=False)
 
-cv2_tfe.initialize(initial_weights=Wconv2)
+conv2_tfe.initialize(initial_weights=Wconv2)
 
-avg1 = tfe.layers.AveragePooling2D(input_shape=[-1, 24, 24, 20],
-                                    pool_size=(2, 2),
-                                    strides=(2,2),
-                                    padding='VALID',
-                                    channels_first=False)
+avg_pool1 = tfe.layers.AveragePooling2D(input_shape=[-1, 24, 24, 20],
+                                        pool_size=(2, 2),
+                                        strides=(2, 2),
+                                        padding='VALID',
+                                        channels_first=False)
 
-avg2 = tfe.layers.AveragePooling2D(input_shape=[-1, 8, 8, 50],
-                                    pool_size=(2, 2),
-                                    strides=(2,2),
-                                    padding='VALID',
-                                    channels_first=False)
+avg_pool2 = tfe.layers.AveragePooling2D(input_shape=[-1, 8, 8, 50],
+                                        pool_size=(2, 2),
+                                        strides=(2, 2),
+                                        padding='VALID',
+                                        channels_first=False)
 
 x = tfe.reshape(x, [-1, 28, 28, 1])
-bconv1 = tfe.reshape(bconv1, [1, 1, -1])
-bconv2 = tfe.reshape(bconv2, [1, 1, -1])
-layer1 = avg1.forward(tfe.relu(cv1_tfe.forward(x) + bconv1))
-layer2 = avg2.forward(tfe.relu(cv2_tfe.forward(layer1) + bconv2))
+layer1 = avg_pool1.forward(tfe.relu(conv1_tfe.forward(x) + bconv1))
+layer2 = avg_pool2.forward(tfe.relu(conv2_tfe.forward(layer1) + bconv2))
 layer2 = tfe.reshape(layer2, [-1, ModelTrainer.HIDDEN_FC1])
 layer3 = tfe.relu(tfe.matmul(layer2, Wfc1) + bfc1)
 logits = tfe.matmul(layer3, Wfc2) + bfc2
