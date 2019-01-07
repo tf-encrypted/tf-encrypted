@@ -31,7 +31,7 @@ TFEVariable = Union["PondPublicVariable", "PondPrivateVariable", tf.Variable]
 TFEPublicTensor = NewType("TFEPublicTensor", "PondPublicTensor")
 TFETensor = Union[TFEPublicTensor, "PondPrivateTensor", "PondMaskedTensor"]
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
-
+TF_INT_TYPES = [tf.int8, tf.int16, tf.int32, tf.int64]
 
 _initializers = list()
 _thismodule = sys.modules[__name__]
@@ -112,11 +112,11 @@ class Pond(Protocol):
         :param str name: What name to give to this node in the graph.
         :param AbstractFactory factory: Which tensor type to represent this value with.
         """
-        assert isinstance(value, (np.ndarray,)), type(value)
+        assert isinstance(value, np.ndarray), type(value)
 
         factory = factory or self.tensor_factory
 
-        v = self._encode(value, apply_scaling, factory)
+        v = self._encode(value, apply_scaling)
 
         with tf.name_scope("constant{}".format("-" + name if name else "")):
 
@@ -243,8 +243,12 @@ class Pond(Protocol):
 
         with tf.name_scope("public-var{}".format("-" + name if name else "")):
 
-            if isinstance(initial_value, (np.ndarray, tf.Tensor)):
+            if isinstance(initial_value, np.ndarray):
                 v = self._encode(initial_value, apply_scaling)
+                v_on_0, v_on_1 = v, v
+
+            elif isinstance(initial_value, tf.Tensor):
+                v = self._encode(initial_value, apply_scaling, tf_int_type=factory.native_type)
                 v_on_0, v_on_1 = v, v
 
             elif isinstance(initial_value, PondPublicTensor):
@@ -302,8 +306,13 @@ class Pond(Protocol):
 
         with tf.name_scope("private-var{}".format("-" + name if name else "")):
 
-            if isinstance(initial_value, (np.ndarray, tf.Tensor)):
-                v = self._encode(initial_value, apply_scaling)
+            if isinstance(initial_value, np.ndarray):
+                v = factory.tensor(self._encode(initial_value, apply_scaling))
+                v0, v1 = self._share(v)
+
+            elif isinstance(initial_value, tf.Tensor):
+                v = factory.tensor(self._encode(initial_value, apply_scaling,
+                                                tf_int_type=factory.native_type))
                 v0, v1 = self._share(v)
 
             elif isinstance(initial_value, PondPublicTensor):
@@ -357,13 +366,16 @@ class Pond(Protocol):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
 
+        factory = self.tensor_factory
+
         def helper(v: tf.Tensor) -> "PondPublicTensor":
             assert (
                 v.shape.is_fully_defined()
             ), "Shape of input '{}' on '{}' is not fully defined".format(
                 name if name else "", player.name
             )
-            w = self._encode(v, apply_scaling)
+            w = factory.tensor(self._encode(v, apply_scaling,
+                                            tf_int_type=factory.native_type))
             return PondPublicTensor(self, w, w, apply_scaling)
 
         with tf.name_scope("public-input{}".format("-" + name if name else "")):
@@ -428,7 +440,8 @@ class Pond(Protocol):
                 name if name else "", player.name
             )
 
-            w = self._encode(v, apply_scaling)
+            w = factory.tensor(self._encode(v, apply_scaling,
+                                            tf_int_type=factory.native_type))
             x = self._share_and_wrap(w, apply_scaling)
 
             if not masked:
@@ -519,30 +532,39 @@ class Pond(Protocol):
     def _encode(self,
                 rationals: Union[tf.Tensor, np.ndarray],
                 apply_scaling: bool,
-                factory: Optional[AbstractFactory] = None
-                ) -> AbstractTensor:
-        """ Encode tensor of rational numbers into tensor of ring elements """
-
-        factory = factory or self.tensor_factory
+                tf_int_type = None,
+                ) -> Union[tf.Tensor, np.ndarray]:
+        """
+        Encode tensor of rational numbers into tensor of ring elements. Output is of same type
+        as input to allow function to be used for constants.
+        """
 
         with tf.name_scope("encode"):
 
             # we first scale as needed
+
             if apply_scaling:
                 scaled = rationals * self.fixedpoint_config.scaling_factor
             else:
                 scaled = rationals
 
             # and then we round to integers
+
             if isinstance(scaled, np.ndarray):
                 integers = scaled.astype(int).astype(object)
+
             elif isinstance(scaled, tf.Tensor):
-                integers = tf.cast(scaled, factory.native_type)
+                tf_int_type = tf_int_type or (scaled.dtype
+                                              if scaled.dtype in TF_INT_TYPES
+                                              else self.tensor_factory.native_type)
+                assert tf_int_type in TF_INT_TYPES
+                integers = tf.cast(scaled, dtype=tf_int_type)
+                    
             else:
                 raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
-            # and finally wrap in tensor type
-            return factory.tensor(integers)
+            assert type(rationals) == type(integers)
+            return integers
 
     @memoize
     def _decode(
@@ -1626,9 +1648,9 @@ class PondPrivatePlaceholder(PondPrivateTensor):
         return "PondPrivatePlaceholder(shape={})".format(self.shape)
 
     def feed_from_native(self, value):
-        assert type(value) in [np.ndarray], type(value)
+        assert isinstance(value, np.ndarray), type(value)
 
-        v = self.prot._encode(value, self.is_scaled)
+        v = self.prot.tensor_factory.tensor(self.prot._encode(value, self.is_scaled))
         return {p: v for p, v in zip(self.placeholders, v.backing)}
 
 
@@ -3661,7 +3683,7 @@ def _zeros_private(
 
     with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
 
-        v = prot._encode(zeros_array, apply_scaling)
+        v = factory.tensor(prot._encode(zeros_array, apply_scaling))
         v0, v1 = prot._share(v)
 
         with tf.device(prot.server_0.device_name):
@@ -3688,14 +3710,13 @@ def _zeros_public(
 
     with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
 
-        v = prot._encode(zeros_array, apply_scaling)
-        v_on_0, v_on_1 = v, v
+        v = factory.tensor(prot._encode(zeros_array, apply_scaling))
 
         with tf.device(prot.server_0.device_name):
-            x0 = factory.variable(v_on_0)
+            x0 = factory.variable(v)
 
         with tf.device(prot.server_1.device_name):
-            x1 = factory.variable(v_on_1)
+            x1 = factory.variable(v)
 
     x = PondPublicTensor(prot, x0, x1, apply_scaling)
     return x
