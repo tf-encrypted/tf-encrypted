@@ -22,6 +22,7 @@ class Factory(AbstractFactory):
             return Int64DenseTensor(value)
 
         if isinstance(value, np.ndarray):
+            value = tf.convert_to_tensor(value, dtype=self.native_type)
             return Int64DenseTensor(value)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
@@ -31,11 +32,9 @@ class Factory(AbstractFactory):
 
     def constant(self, value):
 
-        if isinstance(value, (tf.Tensor, np.ndarray)):
+        if isinstance(value, np.ndarray):
+            value = tf.constant(value, dtype=self.native_type)
             return Int64Constant(value)
-
-        if isinstance(value, Int64DenseTensor):
-            return Int64Constant(value.value)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
 
@@ -113,11 +112,11 @@ def _lift(x, y) -> Tuple['Int64DenseTensor', 'Int64DenseTensor']:
 
 class Int64DenseTensor(AbstractTensor):
 
-    def __init__(self, value) -> None:
-        assert isinstance(value, (tf.Tensor, np.ndarray))
+    def __init__(self, value: tf.Tensor) -> None:
+        assert isinstance(value, tf.Tensor)
         self.value = value
 
-    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
+    def to_native(self) -> tf.Tensor:
         return self.value
 
     def bits(self, factory=None) -> AbstractTensor:
@@ -275,8 +274,9 @@ class Int64SeededTensor():
 
 class Int64Constant(Int64DenseTensor, AbstractConstant):
 
-    def __init__(self, value: Union[tf.Tensor, np.ndarray]) -> None:
-        super(Int64Constant, self).__init__(tf.constant(value, dtype=tf.int64))
+    def __init__(self, constant: tf.Tensor) -> None:
+        assert isinstance(constant, tf.Tensor)
+        super(Int64Constant, self).__init__(constant)
 
     def __repr__(self) -> str:
         return 'int64.Constant(shape={})'.format(self.shape)

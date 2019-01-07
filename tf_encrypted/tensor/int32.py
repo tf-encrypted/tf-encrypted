@@ -21,6 +21,7 @@ class Int32Factory(AbstractFactory):
             return Int32Tensor(value)
 
         if isinstance(value, np.ndarray):
+            value = tf.convert_to_tensor(value, dtype=self.native_type)
             return Int32Tensor(value)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
@@ -30,11 +31,9 @@ class Int32Factory(AbstractFactory):
 
     def constant(self, value) -> 'Int32Constant':
 
-        if isinstance(value, (tf.Tensor, np.ndarray)):
+        if isinstance(value, np.ndarray):
+            value = tf.constant(value, dtype=self.native_type)
             return Int32Constant(value)
-
-        if isinstance(value, Int32Tensor):
-            return Int32Constant(value.value)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
 
@@ -107,10 +106,11 @@ def _lift(x, y) -> Tuple['Int32Tensor', 'Int32Tensor']:
 
 class Int32Tensor(AbstractTensor):
 
-    def __init__(self, value: Union[np.ndarray, tf.Tensor]) -> None:
+    def __init__(self, value: tf.Tensor) -> None:
+        assert isinstance(value, tf.Tensor)
         self.value = value
 
-    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
+    def to_native(self) -> tf.Tensor:
         return self.value
 
     def bits(self, factory: Optional[AbstractFactory] = None) -> AbstractTensor:
@@ -229,9 +229,9 @@ class Int32SeededTensor():
 
 class Int32Constant(Int32Tensor, AbstractConstant):
 
-    def __init__(self, value: Union[tf.Tensor, np.ndarray]) -> None:
-        v = tf.constant(value, dtype=tf.int32)
-        super(Int32Constant, self).__init__(v)
+    def __init__(self, constant: tf.Tensor):
+        assert isinstance(constant, tf.Tensor)
+        super(Int32Constant, self).__init__(constant)
 
     def __repr__(self) -> str:
         return 'Int32Constant(shape={})'.format(self.shape)

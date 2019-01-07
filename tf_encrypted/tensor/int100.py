@@ -54,16 +54,18 @@ _crt_equal = gen_crt_equal(m, INT_TYPE)
 _crt_sample_uniform = gen_crt_sample_uniform(m, INT_TYPE)
 _crt_sample_bounded = gen_crt_sample_bounded(m, INT_TYPE)
 
-Backing = Union[List[np.ndarray], List[tf.Tensor]]
+Backing = List[tf.Tensor]
 
 
 class Int100Factory(AbstractFactory):
 
     def zero(self) -> 'Int100Tensor':
-        return Int100Tensor([np.array([0])] * len(m))
+        backing = [tf.constant(0, dtype=INT_TYPE)] * len(m)
+        return Int100Tensor(backing)
 
     def one(self) -> 'Int100Tensor':
-        return Int100Tensor([np.array([1])] * len(m))
+        backing = [tf.constant(1, dtype=INT_TYPE)] * len(m)
+        return Int100Tensor(backing)
 
     def sample_uniform(self,
                        shape,
@@ -97,12 +99,18 @@ class Int100Factory(AbstractFactory):
     def tensor(self, value) -> 'Int100Tensor':
 
         if isinstance(value, tf.Tensor):
-            if value.dtype is not self.native_type:
-                value = tf.cast(value, dtype=self.native_type)
-            return Int100Tensor(_crt_decompose(value))
+            backing = [
+                tf.cast(v, dtype=INT_TYPE)
+                for v in _crt_decompose(value)
+            ]
+            return Int100Tensor(backing)
 
         if isinstance(value, np.ndarray):
-            return Int100Tensor(_crt_decompose(value))
+            backing = [
+                tf.convert_to_tensor(v, dtype=INT_TYPE)
+                for v in _crt_decompose(value)
+            ]
+            return Int100Tensor(backing)
 
         raise TypeError("Don't know how to handle {}", type(value))
 
@@ -111,11 +119,12 @@ class Int100Factory(AbstractFactory):
 
     def constant(self, value) -> 'Int100Constant':
 
-        if isinstance(value, (tf.Tensor, np.ndarray)):
-            return Int100Constant(_crt_decompose(value))
-
-        if isinstance(value, Int100Tensor):
-            return Int100Constant(value.backing)
+        if isinstance(value, np.ndarray):
+            backing = [
+                tf.constant(v, dtype=INT_TYPE)
+                for v in _crt_decompose(value)
+            ]
+            return Int100Constant(backing)
 
         raise TypeError("Don't know how to handle {}", type(value))
 
@@ -153,10 +162,10 @@ class Int100Tensor(AbstractTensor):
         return int100factory
 
     def __init__(self, backing: Backing) -> None:
-        # TODO[Morten] turn any np.ndarray into a tf.Constant to only store tf.Tensors?
-        assert type(backing) in [tuple, list], type(backing)
+        assert isinstance(backing, (tuple, list))
+        assert all(isinstance(component, tf.Tensor) for component in backing)
         assert len(backing) == len(m), len(backing)
-        self.backing = backing  # type: Union[List[np.ndarray], List[tf.Tensor]]
+        self.backing = backing
 
     def convert_to_tensor(self) -> 'Int100Tensor':
         converted_backing = [
@@ -418,7 +427,9 @@ class Int100SeededTensor():
 class Int100Constant(Int100Tensor, AbstractConstant):
 
     def __init__(self, backing: Backing) -> None:
-        super(Int100Constant, self).__init__([tf.constant(vi, dtype=INT_TYPE) for vi in backing])
+        assert isinstance(backing, (list, tuple))
+        assert all(isinstance(component, tf.Tensor) for component in backing)
+        super(Int100Constant, self).__init__(backing)
 
     def __repr__(self) -> str:
         return 'Int100Constant({})'.format(self.shape)

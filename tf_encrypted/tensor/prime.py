@@ -13,12 +13,13 @@ from ..operations.secure_random import random_uniform
 
 class PrimeTensor(AbstractTensor):
 
-    def __init__(self, value: Union[np.ndarray, tf.Tensor], factory: 'PrimeFactory') -> None:
+    def __init__(self, value, factory) -> None:
+        assert isinstance(value, tf.Tensor)
         self._factory = factory
         self.modulus = factory.modulus
         self.value = value
 
-    def to_native(self) -> Union[tf.Tensor, np.ndarray]:
+    def to_native(self) -> tf.Tensor:
         return self.value
 
     def bits(self, dtype: Optional[AbstractFactory] = None):
@@ -26,7 +27,7 @@ class PrimeTensor(AbstractTensor):
         bitsize = math.ceil(math.log2(self.modulus))
         return dtype.tensor(binarize(self.value % self.modulus, bitsize))
 
-    def __getitem__(self, slice: Any) -> Union[tf.Tensor, np.ndarray]:
+    def __getitem__(self, slice):
         return self.factory.tensor(self.value[slice])
 
     def __repr__(self) -> str:
@@ -141,9 +142,9 @@ def _lift(x, y) -> Tuple[PrimeTensor, PrimeTensor]:
 
 class PrimeConstant(PrimeTensor, AbstractConstant):
 
-    def __init__(self, value: Union[tf.Tensor, np.ndarray], factory) -> None:
-        v = tf.constant(value, dtype=factory.native_type)
-        super(PrimeConstant, self).__init__(v, factory)
+    def __init__(self, constant: tf.Tensor, factory) -> None:
+        assert isinstance(constant, tf.Tensor)
+        super(PrimeConstant, self).__init__(constant, factory)
 
     def __repr__(self) -> str:
         return 'PrimeConstant({})'.format(self.shape)
@@ -243,19 +244,16 @@ class PrimeFactory(AbstractFactory):
             return PrimeTensor(value, self)
 
         if isinstance(value, np.ndarray):
+            value = tf.convert_to_tensor(value, dtype=self.native_type)
             return PrimeTensor(value, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
 
     def constant(self, value) -> PrimeConstant:
 
-        if isinstance(value, (tf.Tensor, np.ndarray)):
-            return PrimeConstant(value, self)
-
-        if isinstance(value, PrimeTensor):
-            assert value.modulus == self.modulus, \
-                "Incompatible modulus: {}, (expected {})".format(value.modulus, self.modulus)
-            return PrimeConstant(value.value, self)
+        if isinstance(value, np.ndarray):
+            constant = tf.constant(value, dtype=self.native_type)
+            return PrimeConstant(constant, self)
 
         raise TypeError("Don't know how to handle {}".format(type(value)))
 

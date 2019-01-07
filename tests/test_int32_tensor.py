@@ -68,8 +68,8 @@ class TestConv2D(unittest.TestCase):
         filter_shape = (h_filter, w_filter, channels_in, channels_out)
         filter_values = np.random.normal(size=filter_shape).astype(np.int32)
 
-        inp = Int32Tensor(input_conv)
-        out = inp.conv2d(Int32Tensor(filter_values), strides)
+        inp = Int32Tensor(tf.constant(input_conv))
+        out = inp.conv2d(Int32Tensor(tf.constant(filter_values)), strides)
         with tf.Session() as sess:
             actual = sess.run(out.to_native())
 
