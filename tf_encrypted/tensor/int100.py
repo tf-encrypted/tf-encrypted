@@ -446,7 +446,10 @@ class Int100Placeholder(Int100Tensor, AbstractPlaceholder):
 
     def feed_from_native(self, value):
         assert isinstance(value, np.ndarray), type(value)
-        return self.feed_from_same(int100factory.tensor(value))
+        backing = _crt_decompose(value)
+        return {
+            p: v for p, v in zip(self.placeholders, backing)
+        }
 
     def feed_from_same(self, value):
         assert isinstance(value, Int100Tensor), type(value)

@@ -1,14 +1,9 @@
 import numpy as np
 import tf_encrypted as tfe
-import tf_encrypted.tensor.int32 as tensor_type
+from tf_encrypted.tensor import int32factory as int32
 
-Int32Tensor = tensor_type.Int32Tensor
-Int32Constant = tensor_type.Int32Constant
-Int32Variable = tensor_type.Int32Variable
-Int32Placeholder = tensor_type.Int32Placeholder
-
-x = Int32Tensor(np.array([1, 2, 3]))
-y = Int32Tensor(np.array([1, 2, 3]))
+x = int32.tensor(np.array([1, 2, 3]))
+y = int32.tensor(np.array([1, 2, 3]))
 
 z = x + y
 
@@ -16,9 +11,9 @@ z = x - y
 
 z = x * y
 
-c = Int32Constant(np.array([4, 4, 4]))
-v = Int32Variable(np.array([1, 1, 1]))
-p = Int32Placeholder((3, ))
+c = int32.constant(np.array([4, 4, 4]))
+v = int32.variable(np.array([1, 1, 1]))
+p = int32.placeholder((3, ))
 
 with tfe.Session() as sess:
 

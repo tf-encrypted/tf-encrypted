@@ -162,7 +162,9 @@ class PrimePlaceholder(PrimeTensor, AbstractPlaceholder):
 
     def feed_from_native(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
         assert isinstance(value, np.ndarray), type(value)
-        return self.feed_from_same(self.factory.tensor(value))
+        return {
+            self.placeholder: value
+        }
 
     def feed_from_same(self, value: PrimeTensor) -> Dict[tf.Tensor, np.ndarray]:
         assert isinstance(value, PrimeTensor), type(value)
