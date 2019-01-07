@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from typing import Union, List, Dict, Any, Tuple, Optional
+from typing import Union, List, Dict, Tuple, Optional
 
 import numpy as np
 import tensorflow as tf
@@ -8,7 +8,6 @@ from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
                       AbstractConstant, AbstractPlaceholder)
 from .helpers import inverse
 from .shared import binarize, conv2d, im2col
-from ..types import Slice, Ellipse
 from ..operations.secure_random import seeded_random_uniform, random_uniform
 
 
@@ -293,7 +292,9 @@ class Int64Placeholder(Int64DenseTensor, AbstractPlaceholder):
 
     def feed_from_native(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
         assert type(value) in [np.ndarray], type(value)
-        return self.feed_from_same(int64factory.tensor(value))
+        return {
+            self.placeholder: value
+        }
 
     def feed_from_same(self, value: Int64DenseTensor) -> Dict[tf.Tensor, np.ndarray]:
         assert isinstance(value, Int64DenseTensor), type(value)

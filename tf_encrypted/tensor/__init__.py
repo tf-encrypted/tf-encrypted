@@ -22,6 +22,7 @@ from .int32 import (
     Int32Placeholder,
     Int32Variable,
     Int32Constant,
+    int32factory
 )
 
 from .int64 import int64factory
@@ -50,6 +51,7 @@ __all__ = [
     'PrimeVariable',
     'PrimeConstant',
     'PrimeFactory',
+    'int32factory',
     'Int32Tensor',
     'Int32Placeholder',
     'Int32Variable',

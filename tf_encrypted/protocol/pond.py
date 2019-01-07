@@ -532,7 +532,7 @@ class Pond(Protocol):
     def _encode(self,
                 rationals: Union[tf.Tensor, np.ndarray],
                 apply_scaling: bool,
-                tf_int_type = None,
+                tf_int_type=None,
                 ) -> Union[tf.Tensor, np.ndarray]:
         """
         Encode tensor of rational numbers into tensor of ring elements. Output is of same type
@@ -559,7 +559,7 @@ class Pond(Protocol):
                                               else self.tensor_factory.native_type)
                 assert tf_int_type in TF_INT_TYPES
                 integers = tf.cast(scaled, dtype=tf_int_type)
-                    
+
             else:
                 raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
