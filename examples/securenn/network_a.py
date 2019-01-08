@@ -42,8 +42,7 @@ class ModelTrainer():
         to_continue = tf.cast(i < max_iter * nb_epochs, tf.bool)
 
         def true_fn() -> tf.Tensor:
-
-            tf.print(to_continue, data=[avg_loss], message="avg_loss: ")
+            to_continue = tf.print("avg_loss: ", avg_loss)
             return(to_continue)
 
         def false_fn() -> tf.Tensor:
@@ -98,7 +97,8 @@ class ModelTrainer():
         loop, _, _, _ = tf.while_loop(self.cond, loop_body, [0, self.ITERATIONS, self.EPOCHS, 0.])
 
         # return model parameters after training
-        tf.print(loop, [], message="Training complete")
+        loop = tf.print("Training complete", loop)
+
         with tf.control_dependencies([loop]):
             return [param.read_value() for param in params]
 
