@@ -100,15 +100,15 @@ class Int100Factory(AbstractFactory):
 
         if isinstance(value, tf.Tensor):
             backing = [
-                tf.cast(v, dtype=INT_TYPE)
-                for v in _crt_decompose(value)
+                tf.cast(component, dtype=INT_TYPE)
+                for component in _crt_decompose(value)
             ]
             return Int100Tensor(backing)
 
         if isinstance(value, np.ndarray):
             backing = [
-                tf.convert_to_tensor(v, dtype=INT_TYPE)
-                for v in _crt_decompose(value)
+                tf.convert_to_tensor(component, dtype=INT_TYPE)
+                for component in _crt_decompose(value)
             ]
             return Int100Tensor(backing)
 

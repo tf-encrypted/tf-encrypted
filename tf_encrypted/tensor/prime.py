@@ -116,9 +116,9 @@ class PrimeTensor(AbstractTensor):
             tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse) % self.modulus
         )
 
-    def equal_zero(self, dtype: Optional[AbstractFactory] = None) -> 'PrimeTensor':
-        dtype = dtype or self.factory
-        return dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=dtype.native_type))
+    def equal_zero(self, factory=None) -> 'PrimeTensor':
+        factory = factory or self.factory
+        return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
 
     def cast(self, dtype):
         assert dtype.native_type == self.factory.native_type

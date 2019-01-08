@@ -202,11 +202,13 @@ class Int32Tensor(AbstractTensor):
                                              exclusive=exclusive,
                                              reverse=reverse))
 
-    def equal_zero(self, factory: AbstractFactory = int32factory) -> 'AbstractTensor':
+    def equal_zero(self, factory=None) -> 'AbstractTensor':
+        factory = factory or int32factory
         return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
 
-    def equal(self, other, factory: AbstractFactory = int32factory) -> 'AbstractTensor':
+    def equal(self, other, factory=None) -> 'AbstractTensor':
         x, y = _lift(self, other)
+        factory = factory or int32factory
         return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
 
     def right_shift(self, bitlength):
