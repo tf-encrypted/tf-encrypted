@@ -183,11 +183,13 @@ class Factory:
     def tensor(self, value) -> OddTensor:
         """
         Wrap `value` in this data type, performing type conversion as needed.
-        Internal use should consider explicit construction to avoid redundant correction.
+        Internal use should consider explicit construction as an optimization that
+        avoids redundant correction.
         """
 
         if isinstance(value, tf.Tensor):
-            assert value.dtype == self.native_type
+            if value.dtype is not self.native_type:
+                value = tf.cast(value, dtype=self.native_type)
             # no assumptions are made about the tensor here and hence we need to
             # apply our mapping for invalid values
             value = _map_minusone_to_zero(value, self.native_type)

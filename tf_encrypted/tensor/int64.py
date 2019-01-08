@@ -219,13 +219,13 @@ class Int64DenseTensor(AbstractTensor):
     def cumsum(self, axis, exclusive, reverse):
         return Int64DenseTensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
 
-    def equal_zero(self, dtype=None):
-        dtype = dtype or int64factory
-        return dtype.tensor(tf.cast(tf.equal(self.value, 0), dtype=dtype.native_type))
+    def equal_zero(self, factory=None):
+        factory = factory or int64factory
+        return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
 
     def equal(self, other, factory=None):
-        factory = factory or int64factory
         x, y = _lift(self, other)
+        factory = factory or int64factory
         return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
 
     def truncate(self, amount, base=2):
