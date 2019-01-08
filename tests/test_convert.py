@@ -1,15 +1,14 @@
-import unittest
-import os
-import logging
-
 from typing import List, Tuple
+
+import unittest
+import logging
+import os
 
 import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 from tf_encrypted.convert import Converter
 from tf_encrypted.convert.register import register
-
 from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
@@ -19,14 +18,19 @@ global_filename = ''
 
 
 class TestConvert(unittest.TestCase):
+
     def setUp(self):
         tf.reset_default_graph()
 
+        self.previous_logging_level = logging.getLogger().level
+        logging.getLogger().setLevel(logging.ERROR)
+
     def tearDown(self):
         global global_filename
-
         logging.debug("Cleaning file: %s" % global_filename)
         os.remove(global_filename)
+
+        logging.getLogger().setLevel(self.previous_logging_level)
 
     @staticmethod
     def ndarray_input_fn(x):
