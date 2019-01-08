@@ -147,7 +147,6 @@ class TestConvert(unittest.TestCase):
         self._test_with_ndarray_input_fn('strided_slice', test_input, protocol='Pond')
 
     def test_slice_convert(self):
-        #test_input = np.ones((3, 2, 3))
         test_input = np.array([[[1., 1., 1.], [2., 2., 2.]],
                                [[3., 3., 3.], [4., 4., 4.]],
                                [[5., 5., 5.], [6., 6., 6.]]])
