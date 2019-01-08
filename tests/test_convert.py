@@ -146,6 +146,13 @@ class TestConvert(unittest.TestCase):
         #                        [[5., 5., 5.], [6., 6., 6.]]])
         self._test_with_ndarray_input_fn('strided_slice', test_input, protocol='Pond')
 
+    def test_slice_convert(self):
+        #test_input = np.ones((3, 2, 3))
+        test_input = np.array([[[1., 1., 1.], [2., 2., 2.]],
+                               [[3., 3., 3.], [4., 4., 4.]],
+                               [[5., 5., 5.], [6., 6., 6.]]])
+        self._test_with_ndarray_input_fn('slice', test_input, protocol='Pond')
+
     def test_batchnorm_convert(self):
         test_input = np.ones([1, 1, 28, 28])
         self._test_with_ndarray_input_fn('batchnorm', test_input, protocol='Pond')
@@ -550,6 +557,23 @@ def export_strided_slice(filename, input_shape):
 def run_strided_slice(input):
     a = tf.placeholder(tf.float32, shape=input.shape, name="input")
     out = tf.strided_slice(a, [1, 0, 0], [2, 1, 3], [1, 1, 1])
+
+    with tf.Session() as sess:
+        output = sess.run(out, feed_dict={a: input})
+
+    return output
+
+
+def export_slice(filename, input_shape):
+    t = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    out = tf.slice(t, [1, 0, 0], [2, 1, 3])
+
+    return export(out, filename)
+
+
+def run_slice(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    out = tf.slice(a, [1, 0, 0], [2, 1, 3])
 
     with tf.Session() as sess:
         output = sess.run(out, feed_dict={a: input})
