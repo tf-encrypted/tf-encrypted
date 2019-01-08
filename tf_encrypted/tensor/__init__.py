@@ -1,31 +1,9 @@
 from __future__ import absolute_import
 
-from .int100 import (
-    int100factory,
-    Int100Constant,
-    Int100Placeholder,
-    Int100Variable,
-    Int100Tensor,
-    Int100SeededTensor
-)
-
-from .prime import (
-    PrimeTensor,
-    PrimePlaceholder,
-    PrimeVariable,
-    PrimeConstant,
-    PrimeFactory,
-)
-
-from .int32 import (
-    Int32Tensor,
-    Int32Placeholder,
-    Int32Variable,
-    Int32Constant,
-    int32factory
-)
-
+from .prime import PrimeFactory
+from .int32 import int32factory
 from .int64 import int64factory
+from .int100 import int100factory
 
 from .fixed import (
     _validate_fixedpoint_config,
@@ -41,19 +19,8 @@ assert _validate_fixedpoint_config(fixed64, int64factory)
 assert _validate_fixedpoint_config(fixed64_ni, int64factory)
 
 __all__ = [
-    'Int100Constant',
-    'Int100Placeholder',
-    'Int100Variable',
-    'Int100Tensor',
-    'Int100SeededTensor',
-    'PrimeTensor',
-    'PrimePlaceholder',
-    'PrimeVariable',
-    'PrimeConstant',
     'PrimeFactory',
     'int32factory',
-    'Int32Tensor',
-    'Int32Placeholder',
-    'Int32Variable',
-    'Int32Constant',
+    'int64factory',
+    'int100factory',
 ]

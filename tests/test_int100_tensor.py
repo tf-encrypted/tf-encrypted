@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 
-from tf_encrypted.tensor import int100factory, fixed100_ni, Int100SeededTensor
+from tf_encrypted.tensor import int100factory, fixed100_ni
 
 
 class TestInt100Tensor(unittest.TestCase):
@@ -87,7 +87,7 @@ class TestInt100Tensor(unittest.TestCase):
     def test_seeded_tensor(self):
         with tf.Session() as sess:
             x = int100factory.tensor(np.array([50, 50, 50, 50, 50, 50, 50, 50, 50]).reshape(3, 3))
-            y = Int100SeededTensor([3, 3], seed=[1, 1, 1, 1, 1, 1, 1, 1])
+            y = int100factory.seeded_tensor([3, 3], seed=[1, 1, 1, 1, 1, 1, 1, 1])
 
             z = x + y
 
