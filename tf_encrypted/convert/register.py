@@ -37,6 +37,7 @@ def register() -> Dict[str, Any]:
         'SpaceToBatchND': space_to_batch_nd,
         'ArgMax': argmax,
         'required_space_to_batch_paddings': required_space_to_batch_paddings,
+        'Slice': slice,
     }
 
     return reg
@@ -459,6 +460,21 @@ def argmax(converter, node, inputs):
     axis = converter.outputs[inputs[1]].attr["value"].tensor.int_val[0]
 
     return converter.protocol.argmax(input, axis=axis)
+
+
+def slice(converter, node, inputs):
+    input = converter.outputs[inputs[0]]
+    begin = nodef_to_numpy_array(converter.outputs[inputs[1]])
+    size = nodef_to_numpy_array(converter.outputs[inputs[2]])
+
+    if isinstance(input, tf.NodeDef):
+        input_out = nodef_to_private_pond(converter, input)
+    else:
+        input_out = input
+
+    end = begin + size
+
+    return converter.protocol.strided_slice(input_out, begin, end)
 
 
 def nodef_to_public_pond(converter, x):
