@@ -25,9 +25,9 @@ with tfe.Session() as sess:
     print(sess.run(v))
 
     print('Placeholder')
-    print(sess.run(p, feed_dict=p.feed_from_native(np.array([5, 5, 5]))))
+    print(sess.run(p, feed_dict=p.feed(np.array([5, 5, 5]))))
 
     print('Assignment')
     w = c - p
-    sess.run(v.assign_from_same(w), feed_dict=p.feed_from_native(np.array([5, 5, 5])))
+    sess.run(v.assign_from_same(w), feed_dict=p.feed(np.array([5, 5, 5])))
     print(sess.run(v))

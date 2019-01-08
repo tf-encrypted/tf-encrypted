@@ -290,16 +290,10 @@ class Int64Placeholder(Int64DenseTensor, AbstractPlaceholder):
     def __repr__(self) -> str:
         return 'Int64Placeholder(shape={})'.format(self.shape)
 
-    def feed_from_native(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
+    def feed(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
         assert type(value) in [np.ndarray], type(value)
         return {
             self.placeholder: value
-        }
-
-    def feed_from_same(self, value: Int64DenseTensor) -> Dict[tf.Tensor, np.ndarray]:
-        assert isinstance(value, Int64DenseTensor), type(value)
-        return {
-            self.placeholder: value.value
         }
 
 
