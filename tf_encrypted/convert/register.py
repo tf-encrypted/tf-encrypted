@@ -477,7 +477,6 @@ def slice(converter, node, inputs):
     return converter.protocol.strided_slice(input_out, begin, end)
 
 
-
 def nodef_to_public_pond(converter, x):
     dtype = x.attr["dtype"].type
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
