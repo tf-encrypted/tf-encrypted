@@ -164,51 +164,51 @@ class Int64DenseTensor(AbstractTensor):
         return self.mul(-1)
 
     def __getitem__(self, slice):
-        return int64factory.tensor(self.value[slice])
+        return Int64DenseTensor(self.value[slice])
 
     def add(self, other):
         x, y = _lift(self, other)
-        return int64factory.tensor(x.value + y.value)
+        return Int64DenseTensor(x.value + y.value)
 
     def sub(self, other):
         x, y = _lift(self, other)
-        return int64factory.tensor(x.value - y.value)
+        return Int64DenseTensor(x.value - y.value)
 
     def mul(self, other):
         x, y = _lift(self, other)
-        return int64factory.tensor(x.value * y.value)
+        return Int64DenseTensor(x.value * y.value)
 
     def matmul(self, other):
         x, y = _lift(self, other)
-        return int64factory.tensor(tf.matmul(x.value, y.value))
+        return Int64DenseTensor(tf.matmul(x.value, y.value))
 
     def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int):
-        return int64factory.tensor(im2col(self.value, h_filter, w_filter, padding, strides))
+        return Int64DenseTensor(im2col(self.value, h_filter, w_filter, padding, strides))
 
     def conv2d(self, other, strides: int, padding: str = 'SAME'):
         x, y = _lift(self, other)
         return conv2d(x, y, strides, padding)  # type: ignore
 
     def batch_to_space_nd(self, block_shape, crops):
-        backing = tf.batch_to_space_nd(self.value, block_shape, crops)
-        return int64factory.tensor(backing)
+        value = tf.batch_to_space_nd(self.value, block_shape, crops)
+        return Int64DenseTensor(value)
 
     def space_to_batch_nd(self, block_shape, paddings):
-        backing = tf.space_to_batch_nd(self.value, block_shape, paddings)
-        return int64factory.tensor(backing)
+        value = tf.space_to_batch_nd(self.value, block_shape, paddings)
+        return Int64DenseTensor(value)
 
     def mod(self, k: int):
-        return int64factory.tensor(self.value % k)
+        return Int64DenseTensor(self.value % k)
 
     def transpose(self, perm):
-        return int64factory.tensor(tf.transpose(self.value, perm))
+        return Int64DenseTensor(tf.transpose(self.value, perm))
 
     def strided_slice(self, args, kwargs):
-        return int64factory.tensor(tf.strided_slice(self.value, *args, **kwargs))
+        return Int64DenseTensor(tf.strided_slice(self.value, *args, **kwargs))
 
     def split(self, num_split: int, axis: int = 0):
         values = tf.split(self.value, num_split, axis=axis)
-        return [int64factory.tensor(value) for value in values]
+        return [Int64DenseTensor(value) for value in values]
 
     def reshape(self, axes: Union[tf.Tensor, List[int]]):
         return Int64DenseTensor(tf.reshape(self.value, axes))
@@ -249,7 +249,6 @@ class Int64DenseTensor(AbstractTensor):
         return Int64DenseTensor(tf.negative(self.value))
 
     def cast(self, factory):
-        assert factory.native_type == self.factory.native_type
         return factory.tensor(self.value)
 
 
