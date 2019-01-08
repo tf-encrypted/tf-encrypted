@@ -160,16 +160,10 @@ class PrimePlaceholder(PrimeTensor, AbstractPlaceholder):
     def __repr__(self) -> str:
         return 'PrimePlaceholder({})'.format(self.shape)
 
-    def feed_from_native(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
+    def feed(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
         assert isinstance(value, np.ndarray), type(value)
         return {
             self.placeholder: value
-        }
-
-    def feed_from_same(self, value: PrimeTensor) -> Dict[tf.Tensor, np.ndarray]:
-        assert isinstance(value, PrimeTensor), type(value)
-        return {
-            self.placeholder: value.value
         }
 
 

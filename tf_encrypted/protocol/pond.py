@@ -1647,7 +1647,7 @@ class PondPrivatePlaceholder(PondPrivateTensor):
     def __repr__(self) -> str:
         return "PondPrivatePlaceholder(shape={})".format(self.shape)
 
-    def feed_from_native(self, value):
+    def feed(self, value):
         assert isinstance(value, np.ndarray), type(value)
 
         v = self.prot.tensor_factory.tensor(self.prot._encode(value, self.is_scaled))

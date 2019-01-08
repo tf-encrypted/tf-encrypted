@@ -246,16 +246,10 @@ class Int32Placeholder(Int32Tensor, AbstractPlaceholder):
     def __repr__(self) -> str:
         return 'Int32Placeholder(shape={})'.format(self.shape)
 
-    def feed_from_native(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
+    def feed(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
         assert type(value) in [np.ndarray], type(value)
         return {
             self.placeholder: value
-        }
-
-    def feed_from_same(self, value: Int32Tensor) -> Dict[tf.Tensor, np.ndarray]:
-        assert isinstance(value, Int32Tensor), type(value)
-        return {
-            self.placeholder: value.value
         }
 
 
