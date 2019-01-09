@@ -84,23 +84,6 @@ class TestInt100Tensor(unittest.TestCase):
         modulus = 2**bitlen
         self.core_test_binarize(raw, shape, modulus, bitlen, False)
 
-    def test_seeded_tensor(self):
-        with tf.Session() as sess:
-            x = int100factory.tensor(np.array([50, 50, 50, 50, 50, 50, 50, 50, 50]).reshape(3, 3))
-            y = int100factory.seeded_tensor([3, 3], seed=[1, 1, 1, 1, 1, 1, 1, 1])
-
-            z = x + y
-
-            out = z.to_native()
-
-            expected = [[1112650318, -984239654, -173681861],
-                        [-397194275, -900020684, 465784224],
-                        [-1434287180, -1982959292, -7957219]]
-
-            actual = sess.run(out)
-
-        np.testing.assert_array_equal(actual, expected)
-
 
 class TestConv2D(unittest.TestCase):
 
