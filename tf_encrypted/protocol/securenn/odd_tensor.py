@@ -53,22 +53,26 @@ class OddTensor(AbstractTensor):
         x, y = _lift(self, other)
         bitlength = math.ceil(math.log2(self.factory.modulus))
 
-        # the below avoids redundant seed expansion; can be removed once
-        # we have a (per-device) caching mechanism in place
-        x_value = x.value
-        y_value = y.value
+        with tf.name_scope('add'):
 
-        z = x_value + y_value
+            # the below avoids redundant seed expansion; can be removed once
+            # we have a (per-device) caching mechanism in place
+            x_value = x.value
+            y_value = y.value
 
-        # we want to compute whether we wrapped around, ie `pos(x) + pos(y) >= m - 1`,
-        # for correction purposes which, since `m - 1 == 1` for signed integers, can be
-        # rewritten as:
-        #  -> `pos(x) >= m - 1 - pos(y)`
-        #  -> `m - 1 - pos(y) - 1 < pos(x)`
-        #  -> `-1 - pos(y) - 1 < pos(x)`
-        #  -> `-2 - pos(y) < pos(x)`
-        wrapped_around = _lessthan_as_unsigned(-2 - y_value, x_value, bitlength)
-        z += wrapped_around
+            z = x_value + y_value
+
+            with tf.name_scope('correct_wrap'):
+
+                # we want to compute whether we wrapped around, ie `pos(x) + pos(y) >= m - 1`,
+                # for correction purposes which, since `m - 1 == 1` for signed integers, can be
+                # rewritten as:
+                #  -> `pos(x) >= m - 1 - pos(y)`
+                #  -> `m - 1 - pos(y) - 1 < pos(x)`
+                #  -> `-1 - pos(y) - 1 < pos(x)`
+                #  -> `-2 - pos(y) < pos(x)`
+                wrapped_around = _lessthan_as_unsigned(-2 - y_value, x_value, bitlength)
+                z += wrapped_around
 
         return OddDenseTensor(z, self.factory)
 
@@ -76,18 +80,22 @@ class OddTensor(AbstractTensor):
         x, y = _lift(self, other)
         bitlength = math.ceil(math.log2(self.factory.modulus))
 
-        # the below avoids redundant seed expansion; can be removed once
-        # we have a (per-device) caching mechanism in place
-        x_value = x.value
-        y_value = y.value
+        with tf.name_scope('sub'):
 
-        z = x_value - y_value
+            # the below avoids redundant seed expansion; can be removed once
+            # we have a (per-device) caching mechanism in place
+            x_value = x.value
+            y_value = y.value
 
-        # we want to compute whether we wrapped around, ie `pos(x) - pos(y) < 0`,
-        # for correction purposes which can be rewritten as
-        #  -> `pos(x) < pos(y)`
-        wrapped_around = _lessthan_as_unsigned(x_value, y_value, bitlength)
-        z -= wrapped_around
+            z = x_value - y_value
+
+            with tf.name_scope('correct-wrap'):
+
+                # we want to compute whether we wrapped around, ie `pos(x) - pos(y) < 0`,
+                # for correction purposes which can be rewritten as
+                #  -> `pos(x) < pos(y)`
+                wrapped_around = _lessthan_as_unsigned(x_value, y_value, bitlength)
+                z -= wrapped_around
 
         return OddDenseTensor(z, self.factory)
 
