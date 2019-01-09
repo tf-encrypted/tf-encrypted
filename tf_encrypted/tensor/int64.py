@@ -10,306 +10,313 @@ from .helpers import inverse
 from .shared import binarize, conv2d, im2col
 from ..operations.secure_random import seeded_random_uniform, random_uniform
 
+def native_tensor():
 
-class Factory(AbstractFactory):
+    class Factory(AbstractFactory):
 
-    def tensor(self, value):
+        def tensor(self, value):
 
-        if isinstance(value, tf.Tensor):
-            if value.dtype is not self.native_type:
-                value = tf.cast(value, dtype=self.native_type)
+            if isinstance(value, tf.Tensor):
+                if value.dtype is not self.native_type:
+                    value = tf.cast(value, dtype=self.native_type)
+                return Int64DenseTensor(value)
+
+            if isinstance(value, np.ndarray):
+                value = tf.convert_to_tensor(value, dtype=self.native_type)
+                return Int64DenseTensor(value)
+
+            raise TypeError("Don't know how to handle {}".format(type(value)))
+
+        def seeded_tensor(self, shape, seed):
+            return Int64SeededTensor(shape, seed)
+
+        def constant(self, value):
+
+            if isinstance(value, np.ndarray):
+                value = tf.constant(value, dtype=self.native_type)
+                return Int64Constant(value)
+
+            raise TypeError("Don't know how to handle {}".format(type(value)))
+
+        def variable(self, initial_value):
+
+            if isinstance(initial_value, (tf.Tensor, np.ndarray)):
+                return Int64Variable(initial_value)
+
+            if isinstance(initial_value, Int64DenseTensor):
+                return Int64Variable(initial_value.value)
+
+            raise TypeError("Don't know how to handle {}".format(type(initial_value)))
+
+        def placeholder(self, shape):
+            return Int64Placeholder(shape)
+
+        @property
+        def modulus(self) -> int:
+            return 2**64
+
+        @property
+        def native_type(self):
+            return tf.int64
+
+        def sample_uniform(self,
+                           shape,
+                           minval: Optional[int] = None,
+                           maxval: Optional[int] = None):
+            minval = minval or self.native_type.min
+            maxval = maxval or self.native_type.max
+            value = random_uniform(shape=shape,
+                                   dtype=self.native_type,
+                                   minval=minval,
+                                   maxval=maxval)
             return Int64DenseTensor(value)
 
-        if isinstance(value, np.ndarray):
-            value = tf.convert_to_tensor(value, dtype=self.native_type)
+        def sample_bounded(self, shape, bitlength: int):
+            # TODO[Morten] verify that uses of this work for signed integers
+            value = random_uniform(shape=shape,
+                                   dtype=self.native_type,
+                                   minval=0,
+                                   maxval=2**bitlength)
             return Int64DenseTensor(value)
 
-        raise TypeError("Don't know how to handle {}".format(type(value)))
+        def stack(self, xs: list, axis: int = 0):
+            assert all(isinstance(x, Int64DenseTensor) for x in xs)
+            value = tf.stack([x.value for x in xs], axis=axis)
+            return Int64DenseTensor(value)
 
-    def seeded_tensor(self, shape, seed):
-        return Int64SeededTensor(shape, seed)
+        def concat(self, xs: list, axis: int):
+            assert all(isinstance(x, Int64DenseTensor) for x in xs)
+            value = tf.concat([x.value for x in xs], axis=axis)
+            return Int64DenseTensor(value)
 
-    def constant(self, value):
 
-        if isinstance(value, np.ndarray):
-            value = tf.constant(value, dtype=self.native_type)
-            return Int64Constant(value)
+    int64factory = Factory()
 
-        raise TypeError("Don't know how to handle {}".format(type(value)))
 
-    def variable(self, initial_value):
+    def _lift(x, y) -> Tuple['Int64DenseTensor', 'Int64DenseTensor']:
 
-        if isinstance(initial_value, (tf.Tensor, np.ndarray)):
-            return Int64Variable(initial_value)
+        if isinstance(x, Int64DenseTensor) and isinstance(y, Int64DenseTensor):
+            return x, y
 
-        if isinstance(initial_value, Int64DenseTensor):
-            return Int64Variable(initial_value.value)
+        if isinstance(x, Int64DenseTensor) and isinstance(y, int):
+            return x, x.factory.tensor(np.array([y]))
 
-        raise TypeError("Don't know how to handle {}".format(type(initial_value)))
+        if isinstance(x, Int64DenseTensor) and isinstance(y, Int64SeededTensor):
+            return x, y.expand()
 
-    def placeholder(self, shape):
-        return Int64Placeholder(shape)
+        if isinstance(x, int) and isinstance(y, Int64DenseTensor):
+            return y.factory.tensor(np.array([x])), y
 
-    @property
-    def modulus(self) -> int:
-        return 2**64
+        raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
 
-    @property
-    def native_type(self):
-        return tf.int64
 
-    def sample_uniform(self,
-                       shape,
-                       minval: Optional[int] = None,
-                       maxval: Optional[int] = None):
-        minval = minval or self.native_type.min
-        maxval = maxval or self.native_type.max
-        value = random_uniform(shape=shape,
-                               dtype=self.native_type,
-                               minval=minval,
-                               maxval=maxval)
-        return Int64DenseTensor(value)
+    class Int64DenseTensor(AbstractTensor):
 
-    def sample_bounded(self, shape, bitlength: int):
-        # TODO[Morten] verify that uses of this work for signed integers
-        value = random_uniform(shape=shape,
-                               dtype=self.native_type,
-                               minval=0,
-                               maxval=2**bitlength)
-        return Int64DenseTensor(value)
+        def __init__(self, value: tf.Tensor) -> None:
+            assert isinstance(value, tf.Tensor)
+            self.value = value
 
-    def stack(self, xs: list, axis: int = 0):
-        assert all(isinstance(x, Int64DenseTensor) for x in xs)
-        value = tf.stack([x.value for x in xs], axis=axis)
-        return Int64DenseTensor(value)
+        def to_native(self) -> tf.Tensor:
+            return self.value
 
-    def concat(self, xs: list, axis: int):
-        assert all(isinstance(x, Int64DenseTensor) for x in xs)
-        value = tf.concat([x.value for x in xs], axis=axis)
-        return Int64DenseTensor(value)
+        def bits(self, factory=None) -> AbstractTensor:
+            factory = factory or int64factory
+            return factory.tensor(binarize(self.value))
 
+        def __repr__(self) -> str:
+            return 'Int64DenseTensor(shape={})'.format(self.shape)
 
-int64factory = Factory()
+        @property
+        def shape(self):
+            return self.value.shape
 
+        @property
+        def factory(self):
+            return int64factory
 
-def _lift(x, y) -> Tuple['Int64DenseTensor', 'Int64DenseTensor']:
+        def __add__(self, other):
+            x, y = _lift(self, other)
+            return x.add(y)
 
-    if isinstance(x, Int64DenseTensor) and isinstance(y, Int64DenseTensor):
-        return x, y
+        def __radd__(self, other):
+            x, y = _lift(self, other)
+            return x.add(y)
 
-    if isinstance(x, Int64DenseTensor) and isinstance(y, int):
-        return x, x.factory.tensor(np.array([y]))
+        def __sub__(self, other):
+            x, y = _lift(self, other)
+            return x.sub(y)
 
-    if isinstance(x, Int64DenseTensor) and isinstance(y, Int64SeededTensor):
-        return x, y.expand()
+        def __rsub__(self, other):
+            x, y = _lift(self, other)
+            return x.sub(y)
 
-    if isinstance(x, int) and isinstance(y, Int64DenseTensor):
-        return y.factory.tensor(np.array([x])), y
+        def __mul__(self, other):
+            x, y = _lift(self, other)
+            return x.mul(y)
 
-    raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
+        def __rmul__(self, other):
+            x, y = _lift(self, other)
+            return x.mul(y)
 
+        def __mod__(self, k: int):
+            return self.mod(k)
 
-class Int64DenseTensor(AbstractTensor):
+        def __neg__(self):
+            return self.mul(-1)
 
-    def __init__(self, value: tf.Tensor) -> None:
-        assert isinstance(value, tf.Tensor)
-        self.value = value
+        def __getitem__(self, slice):
+            return Int64DenseTensor(self.value[slice])
 
-    def to_native(self) -> tf.Tensor:
-        return self.value
+        def add(self, other):
+            x, y = _lift(self, other)
+            return Int64DenseTensor(x.value + y.value)
 
-    def bits(self, factory=None) -> AbstractTensor:
-        factory = factory or int64factory
-        return factory.tensor(binarize(self.value))
+        def sub(self, other):
+            x, y = _lift(self, other)
+            return Int64DenseTensor(x.value - y.value)
 
-    def __repr__(self) -> str:
-        return 'Int64DenseTensor(shape={})'.format(self.shape)
+        def mul(self, other):
+            x, y = _lift(self, other)
+            return Int64DenseTensor(x.value * y.value)
 
-    @property
-    def shape(self):
-        return self.value.shape
+        def matmul(self, other):
+            x, y = _lift(self, other)
+            return Int64DenseTensor(tf.matmul(x.value, y.value))
 
-    @property
-    def factory(self):
-        return int64factory
+        def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int):
+            return Int64DenseTensor(im2col(self.value, h_filter, w_filter, padding, strides))
 
-    def __add__(self, other):
-        x, y = _lift(self, other)
-        return x.add(y)
+        def conv2d(self, other, strides: int, padding: str = 'SAME'):
+            x, y = _lift(self, other)
+            return conv2d(x, y, strides, padding)  # type: ignore
 
-    def __radd__(self, other):
-        x, y = _lift(self, other)
-        return x.add(y)
+        def batch_to_space_nd(self, block_shape, crops):
+            value = tf.batch_to_space_nd(self.value, block_shape, crops)
+            return Int64DenseTensor(value)
 
-    def __sub__(self, other):
-        x, y = _lift(self, other)
-        return x.sub(y)
+        def space_to_batch_nd(self, block_shape, paddings):
+            value = tf.space_to_batch_nd(self.value, block_shape, paddings)
+            return Int64DenseTensor(value)
 
-    def __rsub__(self, other):
-        x, y = _lift(self, other)
-        return x.sub(y)
+        def mod(self, k: int):
+            return Int64DenseTensor(self.value % k)
 
-    def __mul__(self, other):
-        x, y = _lift(self, other)
-        return x.mul(y)
+        def transpose(self, perm):
+            return Int64DenseTensor(tf.transpose(self.value, perm))
 
-    def __rmul__(self, other):
-        x, y = _lift(self, other)
-        return x.mul(y)
+        def strided_slice(self, args, kwargs):
+            return Int64DenseTensor(tf.strided_slice(self.value, *args, **kwargs))
 
-    def __mod__(self, k: int):
-        return self.mod(k)
+        def split(self, num_split: int, axis: int = 0):
+            values = tf.split(self.value, num_split, axis=axis)
+            return [Int64DenseTensor(value) for value in values]
 
-    def __neg__(self):
-        return self.mul(-1)
+        def reshape(self, axes: Union[tf.Tensor, List[int]]):
+            return Int64DenseTensor(tf.reshape(self.value, axes))
 
-    def __getitem__(self, slice):
-        return Int64DenseTensor(self.value[slice])
+        def reduce_sum(self, axis, keepdims=None):
+            return Int64DenseTensor(tf.reduce_sum(self.value, axis, keepdims))
 
-    def add(self, other):
-        x, y = _lift(self, other)
-        return Int64DenseTensor(x.value + y.value)
+        def cumsum(self, axis, exclusive, reverse):
+            return Int64DenseTensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
 
-    def sub(self, other):
-        x, y = _lift(self, other)
-        return Int64DenseTensor(x.value - y.value)
+        def equal_zero(self, factory=None):
+            factory = factory or int64factory
+            return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
 
-    def mul(self, other):
-        x, y = _lift(self, other)
-        return Int64DenseTensor(x.value * y.value)
+        def equal(self, other, factory=None):
+            x, y = _lift(self, other)
+            factory = factory or int64factory
+            return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
 
-    def matmul(self, other):
-        x, y = _lift(self, other)
-        return Int64DenseTensor(tf.matmul(x.value, y.value))
+        def truncate(self, amount, base=2):
+            if base == 2:
+                return self.right_shift(amount)
+            else:
+                factor = base**amount
+                factor_inverse = inverse(factor, self.factory.modulus)
+                return (self - (self % factor)) * factor_inverse
 
-    def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int):
-        return Int64DenseTensor(im2col(self.value, h_filter, w_filter, padding, strides))
+        def right_shift(self, bitlength):
+            return Int64DenseTensor(tf.bitwise.right_shift(self.value, bitlength))
 
-    def conv2d(self, other, strides: int, padding: str = 'SAME'):
-        x, y = _lift(self, other)
-        return conv2d(x, y, strides, padding)  # type: ignore
+        def expand_dims(self, axis: Optional[int] = None):
+            return Int64DenseTensor(tf.expand_dims(self.value, axis))
 
-    def batch_to_space_nd(self, block_shape, crops):
-        value = tf.batch_to_space_nd(self.value, block_shape, crops)
-        return Int64DenseTensor(value)
+        def squeeze(self, axis: Optional[List[int]] = None):
+            return Int64DenseTensor(tf.squeeze(self.value, axis=axis))
 
-    def space_to_batch_nd(self, block_shape, paddings):
-        value = tf.space_to_batch_nd(self.value, block_shape, paddings)
-        return Int64DenseTensor(value)
+        def negative(self):
+            return Int64DenseTensor(tf.negative(self.value))
 
-    def mod(self, k: int):
-        return Int64DenseTensor(self.value % k)
+        def cast(self, factory):
+            return factory.tensor(self.value)
 
-    def transpose(self, perm):
-        return Int64DenseTensor(tf.transpose(self.value, perm))
 
-    def strided_slice(self, args, kwargs):
-        return Int64DenseTensor(tf.strided_slice(self.value, *args, **kwargs))
+    class Int64SeededTensor():
+        @property
+        def native_type(self):
+            return tf.int64
 
-    def split(self, num_split: int, axis: int = 0):
-        values = tf.split(self.value, num_split, axis=axis)
-        return [Int64DenseTensor(value) for value in values]
+        def __init__(self, shape, seed):
+            self.seed = seed
+            self.shape = shape
 
-    def reshape(self, axes: Union[tf.Tensor, List[int]]):
-        return Int64DenseTensor(tf.reshape(self.value, axes))
+        def expand(self):
+            backing = seeded_random_uniform(shape=self.shape,
+                                            dtype=self.native_type,
+                                            minval=self.native_type.min,
+                                            maxval=self.native_type.max,
+                                            seed=self.seed)
+            return Int64DenseTensor(backing)
 
-    def reduce_sum(self, axis, keepdims=None):
-        return Int64DenseTensor(tf.reduce_sum(self.value, axis, keepdims))
 
-    def cumsum(self, axis, exclusive, reverse):
-        return Int64DenseTensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
+    class Int64Constant(Int64DenseTensor, AbstractConstant):
 
-    def equal_zero(self, factory=None):
-        factory = factory or int64factory
-        return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
+        def __init__(self, constant: tf.Tensor) -> None:
+            assert isinstance(constant, tf.Tensor)
+            super(Int64Constant, self).__init__(constant)
 
-    def equal(self, other, factory=None):
-        x, y = _lift(self, other)
-        factory = factory or int64factory
-        return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
+        def __repr__(self) -> str:
+            return 'int64.Constant(shape={})'.format(self.shape)
 
-    def truncate(self, amount, base=2):
-        if base == 2:
-            return self.right_shift(amount)
-        else:
-            factor = base**amount
-            factor_inverse = inverse(factor, self.factory.modulus)
-            return (self - (self % factor)) * factor_inverse
 
-    def right_shift(self, bitlength):
-        return Int64DenseTensor(tf.bitwise.right_shift(self.value, bitlength))
+    class Int64Placeholder(Int64DenseTensor, AbstractPlaceholder):
 
-    def expand_dims(self, axis: Optional[int] = None):
-        return Int64DenseTensor(tf.expand_dims(self.value, axis))
+        def __init__(self, shape: List[int]) -> None:
+            self.placeholder = tf.placeholder(tf.int64, shape=shape)
+            super(Int64Placeholder, self).__init__(self.placeholder)
 
-    def squeeze(self, axis: Optional[List[int]] = None):
-        return Int64DenseTensor(tf.squeeze(self.value, axis=axis))
+        def __repr__(self) -> str:
+            return 'Int64Placeholder(shape={})'.format(self.shape)
 
-    def negative(self):
-        return Int64DenseTensor(tf.negative(self.value))
+        def feed(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
+            assert type(value) in [np.ndarray], type(value)
+            return {
+                self.placeholder: value
+            }
 
-    def cast(self, factory):
-        return factory.tensor(self.value)
 
+    class Int64Variable(Int64DenseTensor, AbstractVariable):
 
-class Int64SeededTensor():
-    @property
-    def native_type(self):
-        return tf.int64
+        def __init__(self, initial_value: Union[tf.Tensor, np.ndarray]) -> None:
+            self.variable = tf.Variable(initial_value, dtype=tf.int64, trainable=False)
+            self.initializer = self.variable.initializer
+            super(Int64Variable, self).__init__(self.variable.read_value())
 
-    def __init__(self, shape, seed):
-        self.seed = seed
-        self.shape = shape
+        def __repr__(self) -> str:
+            return 'Int64Variable(shape={})'.format(self.shape)
 
-    def expand(self):
-        backing = seeded_random_uniform(shape=self.shape,
-                                        dtype=self.native_type,
-                                        minval=self.native_type.min,
-                                        maxval=self.native_type.max,
-                                        seed=self.seed)
-        return Int64DenseTensor(backing)
+        def assign_from_native(self, value: np.ndarray) -> tf.Operation:
+            assert type(value) in [np.ndarray], type(value)
+            return self.assign_from_same(int64factory.tensor(value))
 
+        def assign_from_same(self, value: Int64DenseTensor) -> tf.Operation:
+            assert isinstance(value, Int64DenseTensor), type(value)
+            return tf.assign(self.variable, value.value).op
 
-class Int64Constant(Int64DenseTensor, AbstractConstant):
 
-    def __init__(self, constant: tf.Tensor) -> None:
-        assert isinstance(constant, tf.Tensor)
-        super(Int64Constant, self).__init__(constant)
+    return int64factory
 
-    def __repr__(self) -> str:
-        return 'int64.Constant(shape={})'.format(self.shape)
 
-
-class Int64Placeholder(Int64DenseTensor, AbstractPlaceholder):
-
-    def __init__(self, shape: List[int]) -> None:
-        self.placeholder = tf.placeholder(tf.int64, shape=shape)
-        super(Int64Placeholder, self).__init__(self.placeholder)
-
-    def __repr__(self) -> str:
-        return 'Int64Placeholder(shape={})'.format(self.shape)
-
-    def feed(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
-        assert type(value) in [np.ndarray], type(value)
-        return {
-            self.placeholder: value
-        }
-
-
-class Int64Variable(Int64DenseTensor, AbstractVariable):
-
-    def __init__(self, initial_value: Union[tf.Tensor, np.ndarray]) -> None:
-        self.variable = tf.Variable(initial_value, dtype=tf.int64, trainable=False)
-        self.initializer = self.variable.initializer
-        super(Int64Variable, self).__init__(self.variable.read_value())
-
-    def __repr__(self) -> str:
-        return 'Int64Variable(shape={})'.format(self.shape)
-
-    def assign_from_native(self, value: np.ndarray) -> tf.Operation:
-        assert type(value) in [np.ndarray], type(value)
-        return self.assign_from_same(int64factory.tensor(value))
-
-    def assign_from_same(self, value: Int64DenseTensor) -> tf.Operation:
-        assert isinstance(value, Int64DenseTensor), type(value)
-        return tf.assign(self.variable, value.value).op
+int64factory = native_tensor()
