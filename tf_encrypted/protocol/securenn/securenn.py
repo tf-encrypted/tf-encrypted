@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 from typing import Optional, Tuple
 import math
+import random
 import sys
 
 import numpy as np
@@ -138,9 +139,10 @@ class SecureNN(Pond):
 
         :param PondTensor x: The tensor to take the most significant bit of
         """
-        # when the modulus is odd msb reduces to lsb via x -> 2*x
-        x = self.cast_backing(x, self.odd_factory)
-        return self.lsb(x + x)
+        with tf.name_scope('msb'):
+            # when the modulus is odd msb reduces to lsb via x -> 2*x
+            x = self.cast_backing(x, self.odd_factory)
+            return self.lsb(x + x)
 
     @memoize
     def lsb(self, x: PondTensor) -> PondTensor:
@@ -511,7 +513,7 @@ def _bits_public(prot, x: PondPublicTensor,
 
 def _lsb_public(prot, x: PondPublicTensor):
     # TODO[Morten]
-    # we chould call through and ask the underlying dtype for its lsb instead as there might
+    # we could call through and ask the underlying dtype for its lsb instead as there might
     # be more efficient ways of getting it for some types (ie without getting all bits)
     x_bits = prot.bits(x)
     x_lsb = x_bits[..., 0]
@@ -530,14 +532,15 @@ def _lsb_private(prot, x: PondPrivateTensor):
 
     with tf.name_scope('lsb'):
 
-        with tf.name_scope('lsb_mask'):
+        with tf.name_scope('blind'):
 
+            # ask server2 to generate r mask and its bits
             with tf.device(prot.server_2.device_name):
-                r0_raw = odd_dtype.sample_uniform(x.shape)
-                r1_raw = odd_dtype.sample_uniform(x.shape)
-                r_raw = r0_raw + r1_raw
-                r = PondPrivateTensor(prot, r0_raw, r1_raw, False)
+                r0 = odd_dtype.sample_uniform(x.shape)
+                r1 = odd_dtype.sample_uniform(x.shape)
+                r = PondPrivateTensor(prot, r0, r1, False)
 
+                r_raw = r0 + r1
                 rbits_raw = r_raw.bits(factory=prime_dtype)
                 rbits = prot._share_and_wrap(rbits_raw, False)
 
@@ -545,18 +548,23 @@ def _lsb_private(prot, x: PondPrivateTensor):
                 rlsb_raw = rbits_raw[..., 0].cast(out_dtype)
                 rlsb = prot._share_and_wrap(rlsb_raw, False)
 
-            with tf.device(prot.server_0.device_name):
+            # blind and reveal
+            c = (x + r).reveal()
+            c = prot.cast_backing(c, out_dtype)
+            c.is_scaled = False
+
+        with tf.name_scope('compare'):
+
+            # ask either server0 and server1 to generate beta (distributing load)
+            server = random.choice([prot.server_0, prot.server_1])
+            with tf.device(server.device_name):
                 beta_raw = prime_dtype.sample_bits(x.shape)
                 beta = PondPublicTensor(prot, beta_raw, beta_raw, is_scaled=False)
-
-        with tf.name_scope('lsb_compare'):
-            c = prot.cast_backing((x + r).reveal(), out_dtype)
-            c.is_scaled = False
 
             greater_xor_beta = _private_compare(prot, rbits, c, beta)
             clsb = prot.lsb(c)
 
-        with tf.name_scope('lsb_combine'):
+        with tf.name_scope('unblind'):
             gamma = prot.bitwise_xor(greater_xor_beta, prot.cast_backing(beta, out_dtype))
             delta = prot.bitwise_xor(rlsb, clsb)
             alpha = prot.bitwise_xor(gamma, delta)
