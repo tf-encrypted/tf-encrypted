@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from typing import Union, List, Dict, Tuple, Optional
+import math
 
 import numpy as np
 import tensorflow as tf
@@ -11,7 +12,7 @@ from .shared import binarize, conv2d, im2col
 from ..operations.secure_random import seeded_random_uniform, random_uniform
 
 
-def native_tensor(native_type, modulus):
+def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS):
 
     class Factory(AbstractFactory):
 
@@ -53,19 +54,36 @@ def native_tensor(native_type, modulus):
             return Placeholder(shape)
 
         @property
+        def min(self):
+            if EXPLICIT_MODULUS is not None:
+                return 0
+            else:
+                return NATIVE_TYPE.min
+
+        @property
+        def max(self):
+            if EXPLICIT_MODULUS is not None:
+                return EXPLICIT_MODULUS
+            else:
+                return NATIVE_TYPE.max
+
+        @property
         def modulus(self) -> int:
-            return modulus
+            if EXPLICIT_MODULUS is not None:
+                return EXPLICIT_MODULUS
+            else:
+                return NATIVE_TYPE.max - NATIVE_TYPE.min + 1
 
         @property
         def native_type(self):
-            return native_type
+            return NATIVE_TYPE
 
         def sample_uniform(self,
                            shape,
                            minval: Optional[int] = None,
                            maxval: Optional[int] = None):
-            minval = minval or self.native_type.min
-            maxval = maxval or self.native_type.max
+            minval = minval or self.min
+            maxval = maxval or self.max  # TODO(Morten) believe this should be native_type.max+1
             value = random_uniform(shape=shape,
                                    dtype=self.native_type,
                                    minval=minval,
@@ -73,11 +91,19 @@ def native_tensor(native_type, modulus):
             return DenseTensor(value)
 
         def sample_bounded(self, shape, bitlength: int):
-            # TODO[Morten] verify that uses of this work for signed integers
+            maxval = 2 ** bitlength
+            assert self.max > maxval
             value = random_uniform(shape=shape,
                                    dtype=self.native_type,
                                    minval=0,
-                                   maxval=2**bitlength)
+                                   maxval=maxval)
+            return DenseTensor(value)
+
+        def sample_bits(self, shape):
+            value = random_uniform(shape=shape,
+                                   dtype=self.native_type,
+                                   minval=0,
+                                   maxval=2)
             return DenseTensor(value)
 
         def stack(self, xs: list, axis: int = 0):
@@ -119,7 +145,11 @@ def native_tensor(native_type, modulus):
 
         def bits(self, factory=None) -> AbstractTensor:
             factory = factory or FACTORY
-            return factory.tensor(binarize(self.value))
+            if EXPLICIT_MODULUS is not None:
+                bitsize = bitsize = math.ceil(math.log2(EXPLICIT_MODULUS))
+                return factory.tensor(binarize(self.value % EXPLICIT_MODULUS, bitsize))
+            else:
+                return factory.tensor(binarize(self.value))
 
         def __repr__(self) -> str:
             return 'DenseTensor(shape={})'.format(self.shape)
@@ -167,26 +197,42 @@ def native_tensor(native_type, modulus):
 
         def add(self, other):
             x, y = _lift(self, other)
-            return DenseTensor(x.value + y.value)
+            value = x.value + y.value
+            if EXPLICIT_MODULUS is not None:
+                value %= EXPLICIT_MODULUS
+            return DenseTensor(value)
 
         def sub(self, other):
             x, y = _lift(self, other)
-            return DenseTensor(x.value - y.value)
+            value = x.value - y.value
+            if EXPLICIT_MODULUS is not None:
+                value %= EXPLICIT_MODULUS
+            return DenseTensor(value)
 
         def mul(self, other):
             x, y = _lift(self, other)
-            return DenseTensor(x.value * y.value)
+            value = x.value * y.value
+            if EXPLICIT_MODULUS is not None:
+                value %= EXPLICIT_MODULUS
+            return DenseTensor(value)
 
         def matmul(self, other):
             x, y = _lift(self, other)
-            return DenseTensor(tf.matmul(x.value, y.value))
+            value = tf.matmul(x.value, y.value)
+            if EXPLICIT_MODULUS is not None:
+                value %= EXPLICIT_MODULUS
+            return DenseTensor(value)
 
         def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int):
             return DenseTensor(im2col(self.value, h_filter, w_filter, padding, strides))
 
         def conv2d(self, other, strides: int, padding: str = 'SAME'):
-            x, y = _lift(self, other)
-            return conv2d(x, y, strides, padding)  # type: ignore
+            if EXPLICIT_MODULUS is not None:
+                # TODO(Morten) any good reason this wasn't implemented for PrimeTensor?
+                raise NotImplementedError()
+            else:
+                x, y = _lift(self, other)
+                return conv2d(x, y, strides, padding)  # type: ignore
 
         def batch_to_space_nd(self, block_shape, crops):
             value = tf.batch_to_space_nd(self.value, block_shape, crops)
@@ -197,7 +243,10 @@ def native_tensor(native_type, modulus):
             return DenseTensor(value)
 
         def mod(self, k: int):
-            return DenseTensor(self.value % k)
+            value = self.value % k
+            if EXPLICIT_MODULUS is not None:
+                value %= EXPLICIT_MODULUS
+            return DenseTensor(value)
 
         def transpose(self, perm):
             return DenseTensor(tf.transpose(self.value, perm))
@@ -213,13 +262,19 @@ def native_tensor(native_type, modulus):
             return DenseTensor(tf.reshape(self.value, axes))
 
         def reduce_sum(self, axis, keepdims=None):
-            return DenseTensor(tf.reduce_sum(self.value, axis, keepdims))
+            value = tf.reduce_sum(self.value, axis, keepdims)
+            if EXPLICIT_MODULUS is not None:
+                value %= EXPLICIT_MODULUS
+            return DenseTensor(value)
 
         def cumsum(self, axis, exclusive, reverse):
-            return DenseTensor(tf.cumsum(self.value,
-                                         axis=axis,
-                                         exclusive=exclusive,
-                                         reverse=reverse))
+            value = tf.cumsum(self.value,
+                              axis=axis,
+                              exclusive=exclusive,
+                              reverse=reverse)
+            if EXPLICIT_MODULUS is not None:
+                value %= EXPLICIT_MODULUS
+            return DenseTensor(value)
 
         def equal_zero(self, factory=None):
             factory = factory or FACTORY
@@ -250,7 +305,10 @@ def native_tensor(native_type, modulus):
             return DenseTensor(tf.squeeze(self.value, axis=axis))
 
         def negative(self):
-            return DenseTensor(tf.negative(self.value))
+            value = tf.negative(self.value)
+            if EXPLICIT_MODULUS is not None:
+                value %= EXPLICIT_MODULUS
+            return DenseTensor(value)
 
         def cast(self, factory):
             return factory.tensor(self.value)
@@ -291,7 +349,7 @@ def native_tensor(native_type, modulus):
             return 'Placeholder(shape={})'.format(self.shape)
 
         def feed(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
-            assert type(value) in [np.ndarray], type(value)
+            assert isinstance(value, np.ndarray), type(value)
             return {
                 self.placeholder: value
             }
@@ -307,7 +365,7 @@ def native_tensor(native_type, modulus):
             return 'Variable(shape={})'.format(self.shape)
 
         def assign_from_native(self, value: np.ndarray) -> tf.Operation:
-            assert type(value) in [np.ndarray], type(value)
+            assert isinstance(value, np.ndarray), type(value)
             return self.assign_from_same(FACTORY.tensor(value))
 
         def assign_from_same(self, value: DenseTensor) -> tf.Operation:
@@ -315,7 +373,3 @@ def native_tensor(native_type, modulus):
             return tf.assign(self.variable, value.value).op
 
     return FACTORY
-
-
-int64factory = native_tensor(tf.int64, 2**64)
-int32factory = native_tensor(tf.int32, 2**32)
