@@ -69,22 +69,24 @@ def conv2d(
     padding: str
 ) -> AbstractTensor:
 
-    h_filter, w_filter, d_filters, n_filters = map(int, y.shape)
-    n_x, d_x, h_x, w_x = map(int, x.shape)
-    if padding == 'SAME':
-        h_out = int(math.ceil(float(h_x) / float(strides)))
-        w_out = int(math.ceil(float(w_x) / float(strides)))
-    elif padding == 'VALID':
-        h_out = int(math.ceil(float(h_x - h_filter + 1) / float(strides)))
-        w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
-    else:
-        raise ValueError("Don't know padding method '{}'".format(padding))
+    with tf.name_scope('conv2d'):
 
-    X_col = x.im2col(h_filter, w_filter, padding, strides)
-    W_col = y.transpose([3, 2, 0, 1]).reshape([int(n_filters), -1])
-    out = W_col.matmul(X_col)
+        h_filter, w_filter, d_filters, n_filters = map(int, y.shape)
+        n_x, d_x, h_x, w_x = map(int, x.shape)
+        if padding == 'SAME':
+            h_out = int(math.ceil(float(h_x) / float(strides)))
+            w_out = int(math.ceil(float(w_x) / float(strides)))
+        elif padding == 'VALID':
+            h_out = int(math.ceil(float(h_x - h_filter + 1) / float(strides)))
+            w_out = int(math.ceil(float(w_x - w_filter + 1) / float(strides)))
+        else:
+            raise ValueError("Don't know padding method '{}'".format(padding))
 
-    out = out.reshape([n_filters, h_out, w_out, n_x])
-    out = out.transpose([3, 0, 1, 2])
+        X_col = x.im2col(h_filter, w_filter, padding, strides)
+        W_col = y.transpose([3, 2, 0, 1]).reshape([int(n_filters), -1])
+        out = W_col.matmul(X_col)
 
-    return out
+        out = out.reshape([n_filters, h_out, w_out, n_x])
+        out = out.transpose([3, 0, 1, 2])
+
+        return out
