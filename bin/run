@@ -81,14 +81,14 @@ with gfile.FastGFile(model_file, 'rb') as f:
 
 inputs = []
 for i, spec in enumerate(input_spec):
-    def scope(i: int) -> Callable[[], tf.Tensor]:
+    def scope(i: int, spec: dict) -> Callable[[], tf.Tensor]:
         def provide_input() -> tf.Tensor:
             pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
             return pl
 
         return provide_input
 
-    inputs.append(scope(i))
+    inputs.append(scope(i, spec))
 
 c = tfe.convert.convert.Converter()
 y = c.convert(graph_def, tfe.convert.register(), 'input-provider', inputs)
