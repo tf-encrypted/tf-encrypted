@@ -447,8 +447,9 @@ class Pond(Protocol):
                 return x
             else:
                 with tf.name_scope("local_mask"):
-                    a = factory.sample_uniform(v.shape)
-                    a0, a1 = self._share(a)
+                    a0 = factory.sample_uniform(v.shape)
+                    a1 = factory.sample_uniform(v.shape)
+                    a = a0 + a1
                     alpha = w - a
                 return PondMaskedTensor(self, x, a, a0, a1, alpha, alpha, apply_scaling)
 
