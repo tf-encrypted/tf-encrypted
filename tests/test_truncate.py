@@ -19,7 +19,7 @@ class TestTruncate(unittest.TestCase):
         )
 
         # TODO[Morten] remove this condition
-        if prot.tensor_factory not in [tfe.tensor.int64.int64factory]:
+        if prot.tensor_factory not in [tfe.tensor.int64factory]:
 
             expected = np.array([12345.6789])
 

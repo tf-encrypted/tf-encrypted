@@ -1,8 +1,7 @@
 from __future__ import absolute_import
 
 from .prime import PrimeFactory
-from .int32 import int32factory
-from .int64 import int64factory
+from .native import int64factory, int32factory
 from .int100 import int100factory
 
 from .fixed import (
