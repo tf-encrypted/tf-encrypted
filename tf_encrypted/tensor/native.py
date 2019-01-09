@@ -13,7 +13,7 @@ from .shared import binarize, conv2d, im2col
 from ..operations.secure_random import seeded_random_uniform, seed
 
 
-def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS):
+def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
 
     class Factory(AbstractFactory):
 
