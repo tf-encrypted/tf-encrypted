@@ -114,9 +114,6 @@ class Int100Factory(AbstractFactory):
 
         raise TypeError("Don't know how to handle {}", type(value))
 
-    def seeded_tensor(self, shape, seed):
-        return Int100SeededTensor(shape, seed)
-
     def constant(self, value) -> 'Int100Constant':
 
         if isinstance(value, np.ndarray):
