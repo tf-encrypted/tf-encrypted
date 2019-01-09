@@ -766,13 +766,14 @@ def _cast_backing_public(prot: Pond, x: PondPublicTensor, backing_dtype) -> Pond
         with tf.device(prot.server_0.device_name):
             y_on_0 = x_on_0.cast(backing_dtype)
 
-        with tf.device(prot.server_0.device_name):
+        with tf.device(prot.server_1.device_name):
             y_on_1 = x_on_1.cast(backing_dtype)
 
         return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
 
 def _cast_backing_private(prot: Pond, x: PondPrivateTensor, backing_dtype) -> PondPrivateTensor:
+
     # TODO[Morten]
     # this method is risky as it differs from what the user might expect, which would normally
     # require more advanced convertion protocols accounting for wrap-around etc;
@@ -785,7 +786,7 @@ def _cast_backing_private(prot: Pond, x: PondPrivateTensor, backing_dtype) -> Po
         with tf.device(prot.server_0.device_name):
             y0 = x0.cast(backing_dtype)
 
-        with tf.device(prot.server_0.device_name):
+        with tf.device(prot.server_1.device_name):
             y1 = x1.cast(backing_dtype)
 
         return PondPrivateTensor(prot, y0, y1, x.is_scaled)
