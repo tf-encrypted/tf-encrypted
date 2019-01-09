@@ -12,7 +12,7 @@ from ..protocol import memoize, nodes
 from ...protocol.pond import (
     Pond, PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor, _type
 )
-from ...tensor import PrimeFactory, int64factory
+from ...tensor import native_factory, int64factory
 from ...tensor.factory import AbstractFactory, AbstractTensor
 from ...player import Player
 from ...config import get_config
@@ -64,7 +64,7 @@ class SecureNN(Pond):
         if prime_factory is None:
             prime = 107
             assert prime > math.ceil(math.log2(self.tensor_factory.modulus))
-            prime_factory = PrimeFactory(prime, native_type=self.tensor_factory.native_type)
+            prime_factory = native_factory(self.tensor_factory.native_type, prime)
 
         self.prime_factory = prime_factory
         self.odd_factory = odd_factory

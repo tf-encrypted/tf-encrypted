@@ -3,8 +3,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
-from tf_encrypted.tensor.prime import PrimeFactory
-from tf_encrypted.tensor import int64factory, int100factory
+from tf_encrypted.tensor import int64factory, int100factory, native_factory
 
 
 class TestShare(unittest.TestCase):
@@ -31,7 +30,7 @@ class TestShare(unittest.TestCase):
         self._core_test_sharing(int100factory)
 
     def test_prime(self):
-        self._core_test_sharing(PrimeFactory(67))
+        self._core_test_sharing(native_factory(tf.int32, 67))
 
 
 if __name__ == '__main__':
