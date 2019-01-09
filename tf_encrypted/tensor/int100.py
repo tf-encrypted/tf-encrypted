@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from typing import Union, Optional, List, Any
 from functools import reduce
+import abc
 import math
 
 import numpy as np
@@ -17,6 +18,7 @@ from .helpers import prod, inverse
 from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
                       AbstractConstant, AbstractPlaceholder)
 from .shared import binarize, conv2d
+from ..operations.secure_random import seed, seeded_random_uniform
 
 #
 # 32 bit CRT
@@ -61,24 +63,24 @@ class Int100Factory(AbstractFactory):
 
     def zero(self) -> 'Int100Tensor':
         backing = [tf.constant(0, dtype=INT_TYPE)] * len(m)
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def one(self) -> 'Int100Tensor':
         backing = [tf.constant(1, dtype=INT_TYPE)] * len(m)
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def sample_uniform(self,
                        shape,
                        minval: Optional[int] = None,
-                       maxval: Optional[int] = None) -> 'Int100Tensor':
+                       maxval: Optional[int] = None):
         assert minval is None
         assert maxval is None
-        backing = _crt_sample_uniform(shape, seed=None)
-        return Int100Tensor(backing)
+        return Int100UniformTensor(shape=shape,
+                                   seeds=[seed() for _ in m])
 
-    def sample_bounded(self, shape: List[int], bitlength: int) -> 'Int100Tensor':
+    def sample_bounded(self, shape, bitlength: int) -> 'Int100Tensor':
         backing = _crt_sample_bounded(shape, bitlength)
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def stack(self, xs: List['Int100Tensor'], axis: int = 0) -> 'Int100Tensor':
         assert all(isinstance(x, Int100Tensor) for x in xs)
@@ -86,7 +88,7 @@ class Int100Factory(AbstractFactory):
             tf.stack([x.backing[i] for x in xs], axis=axis)
             for i in range(len(xs[0].backing))
         ]
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def concat(self, xs: List['Int100Tensor'], axis: int = 0) -> 'Int100Tensor':
         assert all(isinstance(x, Int100Tensor) for x in xs)
@@ -94,7 +96,7 @@ class Int100Factory(AbstractFactory):
             tf.concat([x.backing[i] for x in xs], axis=axis)
             for i in range(len(xs[0].backing))
         ]
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def tensor(self, value) -> 'Int100Tensor':
 
@@ -103,14 +105,14 @@ class Int100Factory(AbstractFactory):
                 tf.cast(component, dtype=INT_TYPE)
                 for component in _crt_decompose(value)
             ]
-            return Int100Tensor(backing)
+            return Int100DenseTensor(backing)
 
         if isinstance(value, np.ndarray):
             backing = [
                 tf.convert_to_tensor(component, dtype=INT_TYPE)
                 for component in _crt_decompose(value)
             ]
-            return Int100Tensor(backing)
+            return Int100DenseTensor(backing)
 
         raise TypeError("Don't know how to handle {}", type(value))
 
@@ -152,24 +154,28 @@ int100factory = Int100Factory()
 
 class Int100Tensor(AbstractTensor):
 
+    @abc.abstractproperty
+    @property
+    def backing(self):
+        pass
+
+    @abc.abstractproperty
+    @property
+    def shape(self):
+        pass
+
     modulus = M
 
     @property
     def factory(self):
         return int100factory
 
-    def __init__(self, backing: Backing) -> None:
-        assert isinstance(backing, (tuple, list))
-        assert all(isinstance(component, tf.Tensor) for component in backing)
-        assert len(backing) == len(m), len(backing)
-        self.backing = backing
-
     def convert_to_tensor(self) -> 'Int100Tensor':
         converted_backing = [
             tf.convert_to_tensor(xi, dtype=self.factory.native_type)
             for xi in self.backing
         ]
-        return Int100Tensor(converted_backing)
+        return Int100DenseTensor(converted_backing)
 
     def to_native(self) -> Union[tf.Tensor, np.ndarray]:
         return _crt_recombine_explicit(self.backing, 2**32)
@@ -259,23 +265,16 @@ class Int100Tensor(AbstractTensor):
         return _crt_recombine_lagrange(self.backing)
 
     def __getitem__(self, slice):
-        return Int100Tensor([x[slice] for x in self.backing])
+        return Int100DenseTensor([x[slice] for x in self.backing])
 
     def __repr__(self) -> str:
         return 'Int100Tensor({})'.format(self.shape)
-
-    @property
-    def shape(self):
-        return self.backing[0].shape
 
     @staticmethod
     def lift(x) -> 'Int100Tensor':
 
         if isinstance(x, Int100Tensor):
             return x
-
-        if isinstance(x, Int100SeededTensor):
-            return x.expand()
 
         if type(x) is int:
             return int100factory.tensor(np.array([x]))
@@ -311,15 +310,15 @@ class Int100Tensor(AbstractTensor):
 
     def add(self, other) -> 'Int100Tensor':
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
-        return Int100Tensor(_crt_add(x.backing, y.backing))
+        return Int100DenseTensor(_crt_add(x.backing, y.backing))
 
     def sub(self, other) -> 'Int100Tensor':
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
-        return Int100Tensor(_crt_sub(x.backing, y.backing))
+        return Int100DenseTensor(_crt_sub(x.backing, y.backing))
 
     def mul(self, other) -> 'Int100Tensor':
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
-        return Int100Tensor(_crt_mul(x.backing, y.backing))
+        return Int100DenseTensor(_crt_mul(x.backing, y.backing))
 
     def matmul(self, other) -> 'Int100Tensor':
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
@@ -332,18 +331,18 @@ class Int100Tensor(AbstractTensor):
             split_products = [_crt_matmul(xi, yi) for xi, yi in split_backing]
             z_backing = reduce(_crt_add, split_products)
 
-        return Int100Tensor(z_backing)
+        return Int100DenseTensor(z_backing)
 
     def mod(self, k: int) -> 'Int100Tensor':
-        return Int100Tensor(_crt_decompose(_crt_mod(self.backing, k)))
+        return Int100DenseTensor(_crt_decompose(_crt_mod(self.backing, k)))
 
     def reduce_sum(self, axis=None, keepdims=None) -> 'Int100Tensor':
         backing = _crt_reduce_sum(self.backing, axis, keepdims)
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def cumsum(self, axis, exclusive, reverse) -> 'Int100Tensor':
         backing = _crt_cumsum(self.backing, axis=axis, exclusive=exclusive, reverse=reverse)
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def equal_zero(self, out_dtype: Optional[AbstractFactory] = None) -> 'Int100Tensor':
         out_dtype = out_dtype or self.factory
@@ -356,7 +355,7 @@ class Int100Tensor(AbstractTensor):
 
     def im2col(self, h_filter, w_filter, padding, strides) -> 'Int100Tensor':
         backing = crt_im2col(self.backing, h_filter, w_filter, padding, strides)
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def conv2d(self, other, strides, padding='SAME') -> 'Int100Tensor':
         x, y = Int100Tensor.lift(self), Int100Tensor.lift(other)
@@ -364,35 +363,35 @@ class Int100Tensor(AbstractTensor):
 
     def batch_to_space_nd(self, block_shape, crops):
         backing = crt_batch_to_space_nd(self.backing, block_shape, crops)
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def space_to_batch_nd(self, block_shape, paddings):
         backing = crt_space_to_batch_nd(self.backing, block_shape, paddings)
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def transpose(self, perm: Optional[List[int]] = None) -> 'Int100Tensor':
         backing = [tf.transpose(xi, perm=perm) for xi in self.backing]
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def strided_slice(self, args: Any, kwargs: Any) -> 'Int100Tensor':
         backing = [tf.strided_slice(xi, *args, **kwargs) for xi in self.backing]
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def split(self, num_split: int, axis: int = 0) -> List['Int100Tensor']:
         backings = zip(*[tf.split(xi, num_split, axis=axis) for xi in self.backing])
-        return [Int100Tensor(backing) for backing in backings]
+        return [Int100DenseTensor(backing) for backing in backings]
 
     def reshape(self, axes: List[int]) -> 'Int100Tensor':
         backing = [tf.reshape(xi, axes) for xi in self.backing]
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def expand_dims(self, axis: Optional[int] = None) -> 'Int100Tensor':
         backing = [tf.expand_dims(xi, axis) for xi in self.backing]
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def squeeze(self, axis: Optional[List[int]] = None) -> 'Int100Tensor':
         backing = [tf.squeeze(xi, axis=axis) for xi in self.backing]
-        return Int100Tensor(backing)
+        return Int100DenseTensor(backing)
 
     def negative(self) -> 'Int100Tensor':
         # TODO[Morten] there's probably a more efficient way
@@ -411,17 +410,41 @@ class Int100Tensor(AbstractTensor):
         return self
 
 
-class Int100SeededTensor():
-    def __init__(self, shape, seed):
-        self.seed = seed
-        self.shape = shape
+class Int100DenseTensor(Int100Tensor):
 
-    def expand(self):
-        backing = _crt_sample_uniform(self.shape, seed=self.seed)
-        return Int100Tensor(backing)
+    def __init__(self, backing):
+        assert isinstance(backing, (tuple, list))
+        assert all(isinstance(component, tf.Tensor) for component in backing)
+        assert len(backing) == len(m), len(backing)
+        self._backing = backing
+
+    @property
+    def shape(self):
+        return self._backing[0].shape
+
+    @property
+    def backing(self):
+        return self._backing
 
 
-class Int100Constant(Int100Tensor, AbstractConstant):
+class Int100UniformTensor(Int100Tensor):
+
+    def __init__(self, shape, seeds):
+        self._seeds = seeds
+        self._shape = shape
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @property
+    def backing(self):
+        with tf.name_scope('expand-seed'):
+            return _crt_sample_uniform(shape=self._shape,
+                                       seeds=self._seeds)
+
+
+class Int100Constant(Int100DenseTensor, AbstractConstant):
 
     def __init__(self, backing: Backing) -> None:
         assert isinstance(backing, (list, tuple))
@@ -432,7 +455,7 @@ class Int100Constant(Int100Tensor, AbstractConstant):
         return 'Int100Constant({})'.format(self.shape)
 
 
-class Int100Placeholder(Int100Tensor, AbstractPlaceholder):
+class Int100Placeholder(Int100DenseTensor, AbstractPlaceholder):
 
     def __init__(self, shape: List[int]) -> None:
         self.placeholders = [tf.placeholder(INT_TYPE, shape=shape) for _ in m]
@@ -449,7 +472,7 @@ class Int100Placeholder(Int100Tensor, AbstractPlaceholder):
         }
 
 
-class Int100Variable(Int100Tensor, AbstractVariable):
+class Int100Variable(Int100DenseTensor, AbstractVariable):
 
     def __init__(self, initial_value: Backing) -> None:
         self.variables = [

@@ -180,13 +180,14 @@ def crt_space_to_batch_nd(x, block_shape, paddings):
 
 def gen_crt_sample_uniform(m, int_type):
 
-    def crt_sample_uniform(shape, seed=None):
-        with tf.name_scope('sample'):
+    def crt_sample_uniform(shape, seeds):
 
-            if seed is None:
-                return [random_uniform(shape, maxval=mi, dtype=int_type) for mi in m]
-            else:
-                return [seeded_random_uniform(shape, maxval=mi, seed=seed, dtype=int_type) for mi in m]
+        with tf.name_scope('crt_sample_uniform'):
+            return [seeded_random_uniform(shape,
+                                          maxval=mi,
+                                          seed=seed,
+                                          dtype=int_type)
+                    for (mi, seed) in zip(m, seeds)]
 
     return crt_sample_uniform
 
@@ -200,7 +201,7 @@ def gen_crt_sample_bounded(m, int_type):
 
     def crt_sample_bounded(shape, bitlength):
 
-        with tf.name_scope('sample_bounded'):
+        with tf.name_scope('crt_sample_bounded'):
             q, r = bitlength // CHUNK_MAX_BITLENGTH, bitlength % CHUNK_MAX_BITLENGTH
             chunk_sizes = [CHUNK_MAX_BITLENGTH] * q + ([r] if r > 0 else [])
 
