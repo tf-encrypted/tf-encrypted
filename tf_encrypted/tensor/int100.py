@@ -18,15 +18,19 @@ from ..operations.secure_random import seeded_random_uniform, random_uniform, se
 
 def crt_factory(INT_TYPE, MODULI):
 
+    MATMUL_THRESHOLD = 1024
+
     MODULUS = prod(MODULI)
     BITSIZE = math.ceil(math.log2(MODULUS))
-
+    
     # make sure we have room for lazy reductions:
     # - 1 multiplication followed by 1024 additions
     for mi in MODULI:
         assert 2 * math.log2(mi) + math.log2(1024) < math.log2(INT_TYPE.max)
 
-    MATMUL_THRESHOLD = 1024
+    #
+    # methods benefitting from precomputation
+    #
 
     def gen_crt_recombine_lagrange():
 
@@ -121,8 +125,12 @@ def crt_factory(INT_TYPE, MODULI):
     _crt_recombine_explicit = gen_crt_recombine_explicit()
     _crt_mod = gen_crt_mod()
 
+    #
+    # methods used in more than one place
+    #
+
     def _crt_decompose(x):
-        return tuple(x % mi for mi in MODULI)
+        return [x % mi for mi in MODULI]
 
     def _crt_add(x, y):
         return [(xi + yi) % mi for xi, yi, mi in zip(x, y, MODULI)]
@@ -160,6 +168,7 @@ def crt_factory(INT_TYPE, MODULI):
             CHUNK_MAX_BITLENGTH = 30  # TODO[Morten] bump to full range once signed numbers is settled (change minval etc)
 
             with tf.name_scope('crt_sample_bounded'):
+
                 q, r = bitlength // CHUNK_MAX_BITLENGTH, bitlength % CHUNK_MAX_BITLENGTH
                 chunk_sizes = [CHUNK_MAX_BITLENGTH] * q + ([r] if r > 0 else [])
 
@@ -176,34 +185,26 @@ def crt_factory(INT_TYPE, MODULI):
 
         def stack(self, xs: list, axis: int = 0):
             assert all(isinstance(x, Tensor) for x in xs)
-            backing = [
-                tf.stack([x.backing[i] for x in xs], axis=axis)
-                for i in range(len(xs[0].backing))
-            ]
+            backing = [tf.stack([x.backing[i] for x in xs], axis=axis)
+                       for i in range(len(xs[0].backing))]
             return DenseTensor(backing)
 
         def concat(self, xs: list, axis: int = 0):
             assert all(isinstance(x, Tensor) for x in xs)
-            backing = [
-                tf.concat([x.backing[i] for x in xs], axis=axis)
-                for i in range(len(xs[0].backing))
-            ]
+            backing = [tf.concat([x.backing[i] for x in xs], axis=axis)
+                       for i in range(len(xs[0].backing))]
             return DenseTensor(backing)
 
         def tensor(self, value):
 
             if isinstance(value, tf.Tensor):
-                backing = [
-                    tf.cast(component, dtype=INT_TYPE)
-                    for component in _crt_decompose(value)
-                ]
+                backing = [tf.cast(component, dtype=INT_TYPE)
+                           for component in _crt_decompose(value)]
                 return DenseTensor(backing)
 
             if isinstance(value, np.ndarray):
-                backing = [
-                    tf.convert_to_tensor(component, dtype=INT_TYPE)
-                    for component in _crt_decompose(value)
-                ]
+                backing = [tf.convert_to_tensor(component, dtype=INT_TYPE)
+                           for component in _crt_decompose(value)]
                 return DenseTensor(backing)
 
             raise TypeError("Don't know how to handle {}", type(value))
@@ -211,10 +212,8 @@ def crt_factory(INT_TYPE, MODULI):
         def constant(self, value):
 
             if isinstance(value, np.ndarray):
-                backing = [
-                    tf.constant(v, dtype=INT_TYPE)
-                    for v in _crt_decompose(value)
-                ]
+                backing = [tf.constant(v, dtype=INT_TYPE)
+                           for v in _crt_decompose(value)]
                 return Constant(backing)
 
             raise TypeError("Don't know how to handle {}", type(value))
@@ -449,22 +448,22 @@ def crt_factory(INT_TYPE, MODULI):
                 return DenseTensor(z_backing)
 
         def mod(self, k: int):
-            return DenseTensor(_crt_decompose(_crt_mod(self.backing, k)))
+            backing = _crt_decompose(_crt_mod(self.backing, k))
+            return DenseTensor(backing)
 
         def reduce_sum(self, axis, keepdims=None):
             with tf.name_scope('crt_reduce_sum'):
-                backing = [
-                    tf.reduce_sum(xi, axis, keepdims) % mi
-                    for xi, mi in zip(self.backing, MODULI)
-                ]
+                backing = [tf.reduce_sum(xi, axis, keepdims) % mi
+                           for xi, mi in zip(self.backing, MODULI)]
                 return DenseTensor(backing)
 
         def cumsum(self, axis, exclusive, reverse):
             with tf.name_scope('crt_cumsum'):
-                backing = [
-                    tf.cumsum(xi, axis=axis, exclusive=exclusive, reverse=reverse) % mi
-                    for xi, mi in zip(self.backing, MODULI)
-                ]
+                backing = [tf.cumsum(xi,
+                                     axis=axis,
+                                     exclusive=exclusive,
+                                     reverse=reverse) % mi
+                           for xi, mi in zip(self.backing, MODULI)]
                 return DenseTensor(backing)
 
         def equal_zero(self, factory=None):
@@ -492,10 +491,12 @@ def crt_factory(INT_TYPE, MODULI):
 
         def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int):
             with tf.name_scope('crt_im2col'):
-                backing = [
-                    im2col(xi, h_filter, w_filter, padding, strides)
-                    for xi in self.backing
-                ]
+                backing = [im2col(xi,
+                                  h_filter=h_filter,
+                                  w_filter=w_filter,
+                                  padding=padding,
+                                  strides=strides)
+                           for xi in self.backing]
                 return DenseTensor(backing)
 
         def conv2d(self, other, strides: int, padding: str = 'SAME'):
@@ -504,18 +505,18 @@ def crt_factory(INT_TYPE, MODULI):
 
         def batch_to_space_nd(self, block_shape, crops):
             with tf.name_scope("crt_batch_to_space_nd"):
-                backing = [
-                    tf.batch_to_space_nd(xi, block_shape=block_shape, crops=crops)
-                    for xi in self.backing
-                ]
+                backing = [tf.batch_to_space_nd(xi,
+                                                block_shape=block_shape,
+                                                crops=crops)
+                           for xi in self.backing]
                 return DenseTensor(backing)
 
         def space_to_batch_nd(self, block_shape, paddings):
             with tf.name_scope("crt_space_to_batch_nd"):
-                backing = [
-                    tf.space_to_batch_nd(xi, block_shape=block_shape, paddings=paddings)
-                    for xi in self.backing
-                ]
+                backing = [tf.space_to_batch_nd(xi,
+                                                block_shape=block_shape,
+                                                paddings=paddings)
+                           for xi in self.backing]
                 return DenseTensor(backing)
 
         def transpose(self, perm):
@@ -548,7 +549,7 @@ def crt_factory(INT_TYPE, MODULI):
 
         def truncate(self, amount, base=2):
             factor = base**amount
-            factor_inverse = inverse(factor, self.factory.modulus)
+            factor_inverse = inverse(factor, MODULUS)
             return (self - (self % factor)) * factor_inverse
 
         def right_shift(self, bitlength):
@@ -563,9 +564,6 @@ def crt_factory(INT_TYPE, MODULI):
     class DenseTensor(Tensor):
 
         def __init__(self, backing):
-            assert isinstance(backing, (tuple, list))
-            assert all(isinstance(component, tf.Tensor) for component in backing)
-            assert len(backing) == len(MODULI), len(backing)
             self._backing = backing
 
         @property
@@ -589,20 +587,16 @@ def crt_factory(INT_TYPE, MODULI):
         @property
         def backing(self):
             with tf.name_scope('expand-seed'):
-                return [
-                    seeded_random_uniform(
-                        self._shape,
-                        minval=0,
-                        maxval=mi,
-                        seed=seed,
-                        dtype=INT_TYPE)
-                    for (mi, seed) in zip(MODULI, self._seeds)
-                ]
+                return [seeded_random_uniform(self._shape,
+                                              minval=0,
+                                              maxval=mi,
+                                              seed=seed,
+                                              dtype=INT_TYPE)
+                        for (mi, seed) in zip(MODULI, self._seeds)]
 
     class Constant(DenseTensor, AbstractConstant):
 
         def __init__(self, backing) -> None:
-            assert isinstance(backing, (list, tuple))
             assert all(isinstance(component, tf.Tensor) for component in backing)
             super(Constant, self).__init__(backing)
 
@@ -611,7 +605,7 @@ def crt_factory(INT_TYPE, MODULI):
 
     class Placeholder(DenseTensor, AbstractPlaceholder):
 
-        def __init__(self, shape: List[int]) -> None:
+        def __init__(self, shape) -> None:
             self.placeholders = [tf.placeholder(INT_TYPE, shape=shape) for _ in MODULI]
             super(Placeholder, self).__init__(self.placeholders)
 
@@ -628,15 +622,12 @@ def crt_factory(INT_TYPE, MODULI):
     class Variable(DenseTensor, AbstractVariable):
 
         def __init__(self, initial_backing) -> None:
-            self.variables = [
-                tf.Variable(val, dtype=INT_TYPE, trainable=False)
-                for val in initial_backing
-            ]
+            self.variables = [tf.Variable(val,
+                                          dtype=INT_TYPE,
+                                          trainable=False)
+                              for val in initial_backing]
             self.initializer = tf.group(*[var.initializer for var in self.variables])
-            backing = [
-                var.read_value()
-                for var in self.variables
-            ]
+            backing = [var.read_value() for var in self.variables]
             super(Variable, self).__init__(backing)
 
         def __repr__(self):
@@ -660,7 +651,5 @@ def crt_factory(INT_TYPE, MODULI):
 # - 10 components for modulus ~100 bits
 #
 
-int100factory = crt_factory(
-    INT_TYPE=tf.int32,
-    MODULI=[1201, 1433, 1217, 1237, 1321, 1103, 1129, 1367, 1093, 1039]
-)
+int100factory = crt_factory(INT_TYPE=tf.int32,
+                            MODULI=[1201, 1433, 1217, 1237, 1321, 1103, 1129, 1367, 1093, 1039])
