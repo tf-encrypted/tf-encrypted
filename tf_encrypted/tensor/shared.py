@@ -24,6 +24,19 @@ def binarize(tensor: tf.Tensor, bitsize: Optional[int] = None) -> tf.Tensor:
         return val
 
 
+def bits(tensor: tf.Tensor, bitsize: Optional[int] = None) -> list:
+    """ Extract bits of values in `tensor`, returning a list of tensors """
+
+    with tf.name_scope('bits'):
+        bitsize = bitsize or (tensor.dtype.size * 8)
+        bits = [
+            tf.bitwise.bitwise_and(tf.bitwise.right_shift(tensor, i), 1)
+            for i in range(bitsize)
+        ]
+        return bits
+        # return tf.stack(bits, axis=-1)
+
+
 def im2col(
     x: Union[tf.Tensor, np.ndarray],
     h_filter: int,
