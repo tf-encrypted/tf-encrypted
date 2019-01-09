@@ -12,8 +12,8 @@ from .fixed import (
     fixed64_ni,
 )
 
-int32factory = native_factory(tf.int32, None)
-int64factory = native_factory(tf.int64, None)
+int32factory = native_factory(tf.int32)
+int64factory = native_factory(tf.int64)
 
 assert _validate_fixedpoint_config(fixed100, int100factory)
 assert _validate_fixedpoint_config(fixed100_ni, int100factory)
