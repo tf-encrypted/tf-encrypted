@@ -46,7 +46,7 @@ class TestInt100Tensor(unittest.TestCase):
             for x in raw
         ]).reshape(shape + (bitlen,))
 
-        x = int100factory.tensor(np.array(raw).reshape(shape)).convert_to_tensor()
+        x = int100factory.tensor(np.array(raw).reshape(shape))
         y = x.bits(ensure_positive_interpretation=ensure_positive_interpretation).to_native()
 
         with tf.Session() as sess:
