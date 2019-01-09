@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from typing import Union, List, Dict, Tuple, Optional
+import abc
 import math
 
 import numpy as np
@@ -9,7 +10,7 @@ from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
                       AbstractConstant, AbstractPlaceholder)
 from .helpers import inverse
 from .shared import binarize, conv2d, im2col
-from ..operations.secure_random import seeded_random_uniform, random_uniform
+from ..operations.secure_random import seeded_random_uniform, seed
 
 
 def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS):
@@ -29,9 +30,6 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS):
 
             raise TypeError("Don't know how to handle {}".format(type(value)))
 
-        def seeded_tensor(self, shape, seed):
-            return SeededTensor(shape, seed)
-
         def constant(self, value):
 
             if isinstance(value, np.ndarray):
@@ -45,7 +43,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS):
             if isinstance(initial_value, (tf.Tensor, np.ndarray)):
                 return Variable(initial_value)
 
-            if isinstance(initial_value, DenseTensor):
+            if isinstance(initial_value, Tensor):
                 return Variable(initial_value.value)
 
             raise TypeError("Don't know how to handle {}".format(type(initial_value)))
@@ -84,61 +82,65 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS):
                            maxval: Optional[int] = None):
             minval = minval or self.min
             maxval = maxval or self.max  # TODO(Morten) believe this should be native_type.max+1
-            value = random_uniform(shape=shape,
-                                   dtype=self.native_type,
-                                   minval=minval,
-                                   maxval=maxval)
-            return DenseTensor(value)
+            return UniformTensor(shape=shape,
+                                 seed=seed(),
+                                 minval=minval,
+                                 maxval=maxval)
 
         def sample_bounded(self, shape, bitlength: int):
             maxval = 2 ** bitlength
-            assert self.max > maxval
-            value = random_uniform(shape=shape,
-                                   dtype=self.native_type,
-                                   minval=0,
-                                   maxval=maxval)
-            return DenseTensor(value)
+            assert maxval <= self.max
+            return UniformTensor(shape=shape,
+                                 seed=seed(),
+                                 minval=0,
+                                 maxval=maxval)
 
         def sample_bits(self, shape):
-            value = random_uniform(shape=shape,
-                                   dtype=self.native_type,
-                                   minval=0,
-                                   maxval=2)
-            return DenseTensor(value)
+            return UniformTensor(shape=shape,
+                                 seed=seed(),
+                                 minval=0,
+                                 maxval=2)
 
         def stack(self, xs: list, axis: int = 0):
-            assert all(isinstance(x, DenseTensor) for x in xs)
+            assert all(isinstance(x, Tensor) for x in xs)
             value = tf.stack([x.value for x in xs], axis=axis)
             return DenseTensor(value)
 
         def concat(self, xs: list, axis: int):
-            assert all(isinstance(x, DenseTensor) for x in xs)
+            assert all(isinstance(x, Tensor) for x in xs)
             value = tf.concat([x.value for x in xs], axis=axis)
             return DenseTensor(value)
 
     FACTORY = Factory()
 
-    def _lift(x, y) -> Tuple['DenseTensor', 'DenseTensor']:
+    def _lift(x, y) -> Tuple['Tensor', 'Tensor']:
 
-        if isinstance(x, DenseTensor) and isinstance(y, DenseTensor):
+        if isinstance(x, Tensor) and isinstance(y, Tensor):
             return x, y
 
-        if isinstance(x, DenseTensor) and isinstance(y, int):
-            return x, x.factory.tensor(np.array([y]))
+        if isinstance(x, Tensor):
 
-        if isinstance(x, DenseTensor) and isinstance(y, SeededTensor):
-            return x, y.expand()
+            if isinstance(y, int):
+                return x, x.factory.tensor(np.array([y]))
 
-        if isinstance(x, int) and isinstance(y, DenseTensor):
-            return y.factory.tensor(np.array([x])), y
+        if isinstance(y, Tensor):
+
+            if isinstance(x, int):
+                return y.factory.tensor(np.array([x])), y
 
         raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
 
-    class DenseTensor(AbstractTensor):
+    class Tensor(AbstractTensor):
 
-        def __init__(self, value: tf.Tensor) -> None:
-            assert isinstance(value, tf.Tensor)
-            self.value = value
+        @property
+        @abc.abstractproperty
+        def value(self):
+            pass
+
+        @property
+        @abc.abstractproperty
+        def shape(self):
+            pass
 
         def to_native(self) -> tf.Tensor:
             return self.value
@@ -152,11 +154,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS):
                 return factory.tensor(binarize(self.value))
 
         def __repr__(self) -> str:
-            return 'DenseTensor(shape={})'.format(self.shape)
-
-        @property
-        def shape(self):
-            return self.value.shape
+            return '{}(shape={})'.format(type(self), self.shape)
 
         @property
         def factory(self):
@@ -313,22 +311,39 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS):
         def cast(self, factory):
             return factory.tensor(self.value)
 
-    class SeededTensor():
+    class DenseTensor(Tensor):
+
+        def __init__(self, value):
+            self._value = value
+
         @property
-        def native_type(self):
-            return FACTORY.native_type
+        def shape(self):
+            return self._value.shape
 
-        def __init__(self, shape, seed):
-            self.seed = seed
-            self.shape = shape
+        @property
+        def value(self):
+            return self._value
 
-        def expand(self):
-            backing = seeded_random_uniform(shape=self.shape,
-                                            dtype=self.native_type,
-                                            minval=self.native_type.min,
-                                            maxval=self.native_type.max,
-                                            seed=self.seed)
-            return DenseTensor(backing)
+    class UniformTensor(Tensor):
+
+        def __init__(self, shape, seed, minval, maxval):
+            self._seed = seed
+            self._shape = shape
+            self._minval = minval
+            self._maxval = maxval
+
+        @property
+        def shape(self):
+            return self._shape
+
+        @property
+        def value(self):
+            with tf.name_scope('expand-seed'):
+                return seeded_random_uniform(shape=self._shape,
+                                             dtype=FACTORY.native_type,
+                                             minval=self._minval,
+                                             maxval=self._maxval,
+                                             seed=self._seed)
 
     class Constant(DenseTensor, AbstractConstant):
 
@@ -368,8 +383,8 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS):
             assert isinstance(value, np.ndarray), type(value)
             return self.assign_from_same(FACTORY.tensor(value))
 
-        def assign_from_same(self, value: DenseTensor) -> tf.Operation:
-            assert isinstance(value, DenseTensor), type(value)
+        def assign_from_same(self, value: Tensor) -> tf.Operation:
+            assert isinstance(value, Tensor), type(value)
             return tf.assign(self.variable, value.value).op
 
     return FACTORY
