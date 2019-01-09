@@ -13,7 +13,7 @@ from .factory import (
     AbstractConstant, AbstractPlaceholder
 )
 from .shared import binarize, conv2d, im2col
-from ..operations.secure_random import seeded_random_uniform, random_uniform, seed
+from ..operations.secure_random import seeded_random_uniform, seed
 
 
 def crt_factory(INT_TYPE, MODULI):
@@ -22,7 +22,7 @@ def crt_factory(INT_TYPE, MODULI):
 
     MODULUS = prod(MODULI)
     BITSIZE = math.ceil(math.log2(MODULUS))
-    
+
     # make sure we have room for lazy reductions:
     # - 1 multiplication followed by 1024 additions
     for mi in MODULI:
@@ -163,25 +163,18 @@ def crt_factory(INT_TYPE, MODULI):
             return UniformTensor(shape=shape,
                                  seeds=[seed() for _ in MODULI])
 
-        def sample_bounded(self, shape, bitlength: int):
+        def sample_bounded(self,
+                           shape,
+                           bitlength: int):
 
             CHUNK_MAX_BITLENGTH = 30  # TODO[Morten] bump to full range once signed numbers is settled (change minval etc)
 
-            with tf.name_scope('crt_sample_bounded'):
+            q, r = bitlength // CHUNK_MAX_BITLENGTH, bitlength % CHUNK_MAX_BITLENGTH
+            chunk_sizes = [CHUNK_MAX_BITLENGTH] * q + ([r] if r > 0 else [])
 
-                q, r = bitlength // CHUNK_MAX_BITLENGTH, bitlength % CHUNK_MAX_BITLENGTH
-                chunk_sizes = [CHUNK_MAX_BITLENGTH] * q + ([r] if r > 0 else [])
-
-                backing = _crt_decompose(0)
-                for chunk_size in chunk_sizes:
-                    chunk_value = random_uniform(shape, minval=0, maxval=2**chunk_size, dtype=INT_TYPE)
-                    scale = 2**chunk_size
-                    backing = _crt_add(
-                        _crt_mul(backing, _crt_decompose(scale)),
-                        _crt_decompose(chunk_value)
-                    )
-
-                return DenseTensor(backing)
+            return BoundedTensor(shape=shape,
+                                 seeds=[seed() for _ in chunk_sizes],
+                                 chunk_sizes=chunk_sizes)
 
         def stack(self, xs: list, axis: int = 0):
             assert all(isinstance(x, Tensor) for x in xs)
@@ -593,6 +586,34 @@ def crt_factory(INT_TYPE, MODULI):
                                               seed=seed,
                                               dtype=INT_TYPE)
                         for (mi, seed) in zip(MODULI, self._seeds)]
+
+    class BoundedTensor(Tensor):
+
+        def __init__(self, shape, seeds, chunk_sizes):
+            self._shape = shape
+            self._seeds = seeds
+            self._chunk_sizes = chunk_sizes
+
+        @property
+        def shape(self):
+            return self._shape
+
+        @property
+        def backing(self):
+            with tf.name_scope('expand-seed'):
+                backing = _crt_decompose(0)
+                for chunk_size, seed_value in zip(self._chunk_sizes, self._seeds):
+                    chunk_value = seeded_random_uniform(self._shape,
+                                                        minval=0,
+                                                        maxval=2**chunk_size,
+                                                        seed=seed_value,
+                                                        dtype=INT_TYPE)
+                    scale = 2**chunk_size
+                    backing = _crt_add(
+                        _crt_mul(backing, _crt_decompose(scale)),
+                        _crt_decompose(chunk_value)
+                    )
+                return backing
 
     class Constant(DenseTensor, AbstractConstant):
 
