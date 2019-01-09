@@ -10,6 +10,7 @@ from .helpers import inverse
 from .shared import binarize, conv2d, im2col
 from ..operations.secure_random import seeded_random_uniform, random_uniform
 
+
 def native_tensor():
 
     class Factory(AbstractFactory):
@@ -89,9 +90,7 @@ def native_tensor():
             value = tf.concat([x.value for x in xs], axis=axis)
             return Int64DenseTensor(value)
 
-
     int64factory = Factory()
-
 
     def _lift(x, y) -> Tuple['Int64DenseTensor', 'Int64DenseTensor']:
 
@@ -108,7 +107,6 @@ def native_tensor():
             return y.factory.tensor(np.array([x])), y
 
         raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
-
 
     class Int64DenseTensor(AbstractTensor):
 
@@ -252,7 +250,6 @@ def native_tensor():
         def cast(self, factory):
             return factory.tensor(self.value)
 
-
     class Int64SeededTensor():
         @property
         def native_type(self):
@@ -270,7 +267,6 @@ def native_tensor():
                                             seed=self.seed)
             return Int64DenseTensor(backing)
 
-
     class Int64Constant(Int64DenseTensor, AbstractConstant):
 
         def __init__(self, constant: tf.Tensor) -> None:
@@ -279,7 +275,6 @@ def native_tensor():
 
         def __repr__(self) -> str:
             return 'int64.Constant(shape={})'.format(self.shape)
-
 
     class Int64Placeholder(Int64DenseTensor, AbstractPlaceholder):
 
@@ -295,7 +290,6 @@ def native_tensor():
             return {
                 self.placeholder: value
             }
-
 
     class Int64Variable(Int64DenseTensor, AbstractVariable):
 
@@ -314,7 +308,6 @@ def native_tensor():
         def assign_from_same(self, value: Int64DenseTensor) -> tf.Operation:
             assert isinstance(value, Int64DenseTensor), type(value)
             return tf.assign(self.variable, value.value).op
-
 
     return int64factory
 
