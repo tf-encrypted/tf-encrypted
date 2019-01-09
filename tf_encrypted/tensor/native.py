@@ -216,16 +216,21 @@ def native_tensor(native_type, modulus):
             return DenseTensor(tf.reduce_sum(self.value, axis, keepdims))
 
         def cumsum(self, axis, exclusive, reverse):
-            return DenseTensor(tf.cumsum(self.value, axis=axis, exclusive=exclusive, reverse=reverse))
+            return DenseTensor(tf.cumsum(self.value,
+                                         axis=axis,
+                                         exclusive=exclusive,
+                                         reverse=reverse))
 
         def equal_zero(self, factory=None):
             factory = factory or FACTORY
-            return factory.tensor(tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
+            return factory.tensor(tf.cast(tf.equal(self.value, 0),
+                                          dtype=factory.native_type))
 
         def equal(self, other, factory=None):
             x, y = _lift(self, other)
             factory = factory or FACTORY
-            return factory.tensor(tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
+            return factory.tensor(tf.cast(tf.equal(x.value, y.value),
+                                          dtype=factory.native_type))
 
         def truncate(self, amount, base=2):
             if base == 2:
@@ -313,3 +318,4 @@ def native_tensor(native_type, modulus):
 
 
 int64factory = native_tensor(tf.int64, 2**64)
+int32factory = native_tensor(tf.int32, 2**32)
