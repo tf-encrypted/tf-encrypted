@@ -10,7 +10,7 @@ from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
                       AbstractConstant, AbstractPlaceholder)
 from .helpers import inverse
 from .shared import binarize, conv2d, im2col
-from ..operations.secure_random import seeded_random_uniform, seed
+from ..operations import secure_random
 
 
 def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
@@ -82,24 +82,55 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
                            maxval: Optional[int] = None):
             minval = minval or self.min
             maxval = maxval or self.max  # TODO(Morten) believe this should be native_type.max+1
-            return UniformTensor(shape=shape,
-                                 seed=seed(),
-                                 minval=minval,
-                                 maxval=maxval)
+
+            if secure_random.supports_seeded_randomness():
+                seed = secure_random.seed()
+                return UniformTensor(shape=shape,
+                                     seed=seed,
+                                     minval=minval,
+                                     maxval=maxval)
+
+            elif secure_random.supports_secure_randomness():
+                value = secure_random.random_uniform(shape=shape,
+                                                     minval=minval,
+                                                     maxval=maxval,
+                                                     dtype=FACTORY.native_type)
+                return DenseTensor(value)
+
+            else:
+                value = tf.random_uniform(shape=shape,
+                                          minval=minval,
+                                          maxval=maxval,
+                                          dtype=FACTORY.native_type)
+                return DenseTensor(value)
 
         def sample_bounded(self, shape, bitlength: int):
             maxval = 2 ** bitlength
             assert maxval <= self.max
-            return UniformTensor(shape=shape,
-                                 seed=seed(),
-                                 minval=0,
-                                 maxval=maxval)
+
+            if secure_random.supports_seeded_randomness():
+                seed = secure_random.seed()
+                return UniformTensor(shape=shape,
+                                     seed=seed,
+                                     minval=0,
+                                     maxval=maxval)
+
+            elif secure_random.supports_secure_randomness():
+                value = secure_random.random_uniform(shape=shape,
+                                                     minval=0,
+                                                     maxval=maxval,
+                                                     dtype=FACTORY.native_type)
+                return DenseTensor(value)
+
+            else:
+                value = tf.random_uniform(shape=shape,
+                                          minval=0,
+                                          maxval=maxval,
+                                          dtype=FACTORY.native_type)
+                return DenseTensor(value)
 
         def sample_bits(self, shape):
-            return UniformTensor(shape=shape,
-                                 seed=seed(),
-                                 minval=0,
-                                 maxval=2)
+            return self.sample_bounded(shape, bitlength=1)
 
         def stack(self, xs: list, axis: int = 0):
             assert all(isinstance(x, Tensor) for x in xs)
@@ -339,11 +370,11 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
         @property
         def value(self):
             with tf.name_scope('expand-seed'):
-                return seeded_random_uniform(shape=self._shape,
-                                             dtype=FACTORY.native_type,
-                                             minval=self._minval,
-                                             maxval=self._maxval,
-                                             seed=self._seed)
+                return secure_random.seeded_random_uniform(shape=self._shape,
+                                                           dtype=FACTORY.native_type,
+                                                           minval=self._minval,
+                                                           maxval=self._maxval,
+                                                           seed=self._seed)
 
     class Constant(DenseTensor, AbstractConstant):
 
