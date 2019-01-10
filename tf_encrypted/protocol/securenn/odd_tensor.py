@@ -259,12 +259,13 @@ def odd_factory(NATIVE_TYPE):
         Performs comparison `x < y` on signed integers *as if* they were unsigned, e.g. `1 < -1`.
         Taken from Section 2-12, page 23, of [Hacker's Delight](https://www.hackersdelight.org/).
         """
-        not_x = tf.bitwise.invert(x)
-        lhs = tf.bitwise.bitwise_and(not_x, y)
-        rhs = tf.bitwise.bitwise_and(tf.bitwise.bitwise_or(not_x, y), x - y)
-        z = tf.bitwise.right_shift(tf.bitwise.bitwise_or(lhs, rhs), bitlength - 1)
-        # turn 0/-1 into 0/1 before returning
-        return tf.bitwise.bitwise_and(z, tf.ones(shape=z.shape, dtype=z.dtype))
+        with tf.name_scope('unsigned-compare'):
+            not_x = tf.bitwise.invert(x)
+            lhs = tf.bitwise.bitwise_and(not_x, y)
+            rhs = tf.bitwise.bitwise_and(tf.bitwise.bitwise_or(not_x, y), x - y)
+            z = tf.bitwise.right_shift(tf.bitwise.bitwise_or(lhs, rhs), bitlength - 1)
+            # turn 0/-1 into 0/1 before returning
+            return tf.bitwise.bitwise_and(z, tf.ones(shape=z.shape, dtype=z.dtype))
 
     def _map_minusone_to_zero(value, native_type):
         """ Maps all -1 values to zero. """
