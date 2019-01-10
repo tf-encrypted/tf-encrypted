@@ -569,14 +569,14 @@ def run_strided_slice(input):
 
 def export_slice(filename, input_shape):
     t = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    out = tf.slice(t, [1, 0, 0], [2, 1, 3])
+    out = tf.slice(t, [1, 0, 0], [2, 1, -1])
 
     return export(out, filename)
 
 
 def run_slice(input):
     a = tf.placeholder(tf.float32, shape=input.shape, name="input")
-    out = tf.slice(a, [1, 0, 0], [2, 1, 3])
+    out = tf.slice(a, [1, 0, 0], [2, 1, -1])
 
     with tf.Session() as sess:
         output = sess.run(out, feed_dict={a: input})

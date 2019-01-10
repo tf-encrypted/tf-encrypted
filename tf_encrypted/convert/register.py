@@ -472,7 +472,21 @@ def slice(converter, node, inputs):
     else:
         input_out = input
 
-    end = begin + size
+    # Slice is a special case of strided_slice. Slice takes size (the number of
+    # elements we want to slice) as an input. However strided_slice takes end
+    # (integer until which the slicing takes place) as input.
+    # We can infere the end parameter with : end[i] = begin[i] + size[i].
+    # If size is negative, the stepping go towards smaller indices.
+    # In this case we can infer the end parameter with: end[i] = input_shape[i] - size[i] + 1
+    end = np.zeros(len(begin))
+    input_shape = input.shape.as_list()
+
+    # if size is negative take the input dimension
+    for i in range(len(end)):
+        if size[i] < 0:
+            end[i] = input_shape[i] - size[i] + 1
+        else:
+            end[i] = begin[i] + size[i]
 
     return converter.protocol.strided_slice(input_out, begin, end)
 
