@@ -15,9 +15,10 @@ shared_object = dirname + '/operations/secure_random/secure_random_module_tf_' +
 try:
     secure_random_module = tf.load_op_library(shared_object)
 except NotFoundError:
-    logging.warning("Falling back to insecure randomness since required custom op could not be "
-                    "found for the installed version of TensorFlow (" + tf.__version__ + "). "
-                    "Fix this by compiling custom ops.")
+    logging.warning(
+        "Falling back to insecure randomness since required custom op could not be "
+        "found for the installed version of TensorFlow (" + tf.__version__ + "). "
+        "Fix this by compiling custom ops.")
     secure_random_module = None
 
 

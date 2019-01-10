@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from typing import Tuple, List, Union, Optional, Any, NewType, Callable
 import abc
 import sys
+import logging
 from math import log2, ceil
 from random import random
 
@@ -70,6 +71,10 @@ class Pond(Protocol):
             if tensorflow_supports_int64():
                 tensor_factory = int64factory
             else:
+                logging.warning(
+                    "Falling back to using int100 tensors due to lack of int64 support. "
+                    "Performance may be improved by installing a version of TensorFlow "
+                    "supporting this (1.13+ or custom build).")
                 tensor_factory = int100factory
 
         if fixedpoint_config is None:
