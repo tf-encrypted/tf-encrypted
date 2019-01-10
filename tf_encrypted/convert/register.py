@@ -111,7 +111,7 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
 
     layer = Conv2D(
         input.shape.as_list(), shape,
-        strides=int(node.attr["strides"].list.i[0]),
+        strides=int(max(node.attr["strides"].list.i)),
         padding=node.attr["padding"].s.decode('ascii'),
         channels_first=format == "NCHW"
     )
