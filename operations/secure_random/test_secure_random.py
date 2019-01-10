@@ -1,19 +1,27 @@
 import unittest
+import os
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import errors
-import numpy as np
+from tensorflow.python.framework.errors import NotFoundError
+
 import tf_encrypted as tfe
-import os
+
 
 dirname = os.path.dirname(tfe.__file__)
 shared_object = dirname + '/operations/secure_random/secure_random_module_tf_' + tf.__version__ + '.so'
-secure_random_module = tf.load_op_library(shared_object)
-seeded_random_uniform = secure_random_module.secure_seeded_random_uniform
-random_uniform = secure_random_module.secure_random_uniform
-seed = secure_random_module.secure_seed
+
+try:
+    secure_random_module = tf.load_op_library(shared_object)
+    seeded_random_uniform = secure_random_module.secure_seeded_random_uniform
+    random_uniform = secure_random_module.secure_random_uniform
+    seed = secure_random_module.secure_seed
+except NotFoundError:
+    secure_random_module = None
 
 
+@unittest.skipIf(secure_random_module is None, "secure_random_module not found")
 class TestSeededRandomUniform(unittest.TestCase):
 
     def test_int32_return(self):
@@ -64,6 +72,7 @@ class TestSeededRandomUniform(unittest.TestCase):
             np.testing.assert_array_equal(output, expected)
 
 
+@unittest.skipIf(secure_random_module is None, "secure_random_module not found")
 class TestRandomUniform(unittest.TestCase):
     def test_min_max_range(self):
         with tf.Session():
@@ -96,6 +105,7 @@ class TestRandomUniform(unittest.TestCase):
                 assert(out < 0)
 
 
+@unittest.skipIf(secure_random_module is None, "secure_random_module not found")
 class TestSeed(unittest.TestCase):
     def test_seed(self):
         with tf.Session():
