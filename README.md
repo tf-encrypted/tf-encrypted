@@ -12,18 +12,35 @@ In particular, the library focuses on:
 - **Community**: With a primary goal of pushing the technology forward the project encourages collaboration and open source over proprietary and closed solutions.
 - **Security**: Cryptographic protocols are evaluated against strong notions of security and [known limitations](#known-limitations) are highlighted.
 
-See below for more [background material](#background--further-reading) or visit the [documentation](https://tf-encrypted.readthedocs.io/en/latest/index.html) to learn more about how to use the library.
+See below for more [background material](#background--further-reading), explore the [examples](./examples/), or visit the [documentation](https://tf-encrypted.readthedocs.io/en/latest/index.html) to learn more about how to use the library.
 
 The project has benefitted enormously from the efforts of several contributors following its original implementation, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community. See below for further [details](#contributions).
 
+# Installation
 
-# Installation & Usage
-
-tf-encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.5+ and tensorflow 1.12.0+ which can be installed using pip:
+tf-encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.5+ and TensorFlow 1.12.0+ which can be installed using:
 
 ```bash
-$ pip install tf-encrypted
+pip3 install tf-encrypted
 ```
+
+Alternatively, installing from source can be done using:
+
+```bash
+git clone https://github.com/mortendahl/tf-encrypted.git
+cd tf-encrypted
+pip3 install -e .
+```
+
+This latter is useful on platforms for which the pip package has not yet been compiled but is also needed for [development](./.github/CONTRIBUTING.md). Note that this will get you a working basic installation, yet [a few more steps](./INSTALL.md) are required to match the performance and security of the version shipped in the pip package.
+
+## Custom build of TensorFlow
+
+While tf-encrypted will work with the official release of [TensorFlow](https://pypi.org/project/tensorflow/) (version 1.12+), some features currently depend on improvements that have not yet been shipped. In particular, to get speed improvements by using int64 tensors instead of int100 tensors you currently need a custom build of TensorFlow.
+
+Such builds are available for [macOS](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl) and [Linux](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl) as a temporary solution until the next official release of TensorFlow is out (version 1.13), but no guarantees are made about them and they should be treated as pre-alpha. See more in the [installation instructions](./INSTALL.md#custom-tensorflow).
+
+# Usage
 
 The following is an example of simple matmul on encrypted data using tf-encrypted:
 
@@ -53,31 +70,6 @@ with tfe.Session() as sess:
 
 For more information, check out our full getting started guide in the [documentation](https://tf-encrypted.readthedocs.io/en/latest/usage/getting_started.html).
 
-If you'd like to develop tf-encrypted locally, please read our [contributing guide](./.github/CONTRIBUTING.md#setup).
-
-# SecureNN Int64 Support
-
-To make use of int64 in the SecureNN protocol you'll need to download a special build of tensorflow that contains support for the int64 matrix multiplications. We make no guarantees about these builds and their usage should still be treated as pre-alpha but they make experimenting with int64 possible!
-
-Download for MacOS [here](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl).
-
-Download for Linux [here](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl).
-
-Now you should just be able to install using pip:
-
-**MacOS**
-
-```
-pip install tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl
-```
-
-**Linux**
-
-```
-pip install tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl
-```
-
-tf-encrypted auto-detects whether int64 support is available or not and uses that by default if so. So no further action will be needed to make use of this cool feature!!
 
 # Background & Further Reading
 

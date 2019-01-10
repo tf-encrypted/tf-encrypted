@@ -1,121 +1,59 @@
 # Contribution Guide
 
-Contributions are always welcome, however, it's helpful to read this document
-in its entirety before submitting a Pull Request, report a bug, or submit a
-feature request.
+The goal of `tf-encrypted` is to make it easy for researchers and practitioners to experiment with various tricks and techniques for privacy-preserving machine learning. As such, contributions are more than welcome and we're always looking for use cases, feature ideas, cryptographic protocols, or machine learning optimizations!
 
-### Table of Contents
+This document helps you get started on:
 
-- [Getting Started](#getting-started)
+- [Submitting a pull request](#submitting-a-pull-request)
+- [Writing documentation](#writing-documentation)
 - [Reporting a bug](#reporting-a-bug)
- - [Security disclosures](#security-disclosures)
-- [Opening a pull request](#opening-a-pull-request)
-- [Writing Documentation](#writing-documentation)
 
-# Getting Started
+Please visit the [installation instructions](/INSTALL.md) for help on setting up for development.
 
-tf-encrypted's goal is to realize the possibilities of secure,
-privacy-preserving machine learning by making it easy for researchers and
-practitioners to experiment with various different protocols.
-
-We're always looking for feature ideas, protocol improvements, and
-contributions! Please don't hesitate to open an issue or pull request, we'd
-love to work with you to better tf-encrypted.
-
-### Setup
-
-**Pre-requisites**
-
-To setup your local development environment, you'll need Python 3.5 or 3.6 and pip along with the following system tools:
-
-- libtool
-- g++
-- automake
-- git
-- curl
-
-You can install these using `brew` or your systems package manager (e.g. `yum` or `apt`).
-
-**MacOS**
-
-MacOS will have g++ already installed so omit it from the `brew install` command.
-
-```
-brew install libtool automake git curl
-```
-
-**Ubuntu**
-
-```
-sudo apt install libtool automake git curl g++
-```
-
-**Checkout**
-
-You can checkout the project using git:
-
-```
-$ git clone https://github.com/mortendahl/tf-encrypted.git
-```
-
-**Install Dependencies**
-
-Once the clone is complete, you can switch into the tf-encrypted library using `cd tf-encrypted` and then install the dependencies using `make bootstrap` which will error if any dependencies are missing.
-
-Note: tf-encrypted currently only supports running alongside tensorflow 1.12.0+.
-
-```
-$ cd tf-encrypted
-$ make bootstrap
-```
-
-**Begin Developing**
-
-You should now be able to begin developing! You can check that your setup works by running our tests via `make test`.
-
-### Finding Your First Issue
-
-Looking to contribute to tf-encrypted but not sure what to tackle? We've labelled all of the ready issues with [help wanted](https://github.com/mortendahl/tf-encrypted/labels/help%20wanted). For those just looking to get their feet wet we've labelled bite sized issues with [good first issue](https://github.com/mortendahl/tf-encrypted/labels/good%20first%20issue).
-
-Have an idea but an issue doesn't exist or it's not labelled with `help wanted`? No problem, feel free to kick off the conversation by suggesting a possible solution or by opening a pull request!
-
-If you ever need help, don't hesitate to ask!
-
-# Reporting a bug
-
-Think you've found a bug? Let us know by opening an [issue in our tracker](https://github.com/mortendahl/tf-encrypted/issues) and apply the "bug" label!
-
-### Security Disclosures
-
-Security is a top priority for the project. If you have encounter a security
-issue please responsible disclose it by reaching out to us via
-[tfencrypted@gmail.com](mailto:tfencrypted@gmail.com).
-
-We will work with you to mitigate the security issue and responsibly disclose
-it to anyone using the project.
-
-# Opening a Pull Request
+# Submitting a Pull Request
 
 To contribute, [fork](https://help.github.com/articles/fork-a-repo/) `tf-encrypted`, commit your changes, and [open a pull request](https://help.github.com/articles/using-pull-requests/).
 
-You may be asked to make changes to your submission during the review process, we'll work with you on figuring out how to get your pull request ready to be merged and if any changes need to be made.
+While you may be asked to make changes to your submission during the review process, we will work with you on this and suggest changes. Consider giving us [push rights to your branch](https://help.github.com/articles/allowing-changes-to-a-pull-request-branch-created-from-a-fork/) so we can potentially also help via commits.
 
-#### Before submitting
+## Commit history and merging
 
-- Run the tests using `make test` which will also lint the code base
+For the sake of transparency our key rule is to keep a logical and intelligible commit history, meaning anyone stepping through the commits on either the `master` branch or as part of a review should be able to easily follow the changes made and their potential implications.
+
+To this end we ask all contributors to sanitise pull requests before submitting them as our preferred way of merging pull requests is rebasing.
+
+Some guidelines:
+
+- even simple code changes such as moving code around can obscure semantic changes, and in those case there should be two commits: one that e.g. only moves code (with a note of this in the commit description) and one that performs the semantic change
+
+- progressions that have no logical justification for being split into several commits should be squeezed
+
+- code does not have to compile or pass all tests at each commit, but leave a remark and a plan in the commit description so reviewers are aware and can plan accordingly
+
+Useful tricks:
+
+- [GitHub Desktop](https://desktop.github.com/) provides a useful interface for inspecting and committing code changes
+- `git add -p` lets you leave out some changes in a file (GitHub Desktop can be used for this as well)
+- `git commit --amend` allows you to add to the previous commit instead of creating a new one
+- `git rebase -i HEAD~N` allows you to [squeeze and reorder commits](https://git-scm.com/book/en/v2/Git-Tools-Rewriting-History) and last `N` commits
+- `git rebase master` to [pull in latest updates](https://git-scm.com/book/en/v2/Git-Branching-Rebasing) on `master`
+
+## Before submitting for review
+
+Make sure to give some context and overview in the body of your pull request to make it easier for reviewers to understand your changes. Ideally explain why your particular changes were made the way they are.
+
+Importantly, use [Waffle keywords](https://help.waffle.io/dependencies/which-keywords-are-supported-with-dependencies) such as `Closes #<issue-number>` to indicate any issues or other pull requests related to your work.
+
+Furthermore:
+
+- Run tests using `make test` which will also perform linting
 - Test your change thoroughly with unit tests where appropriate
-- Don't forget to add a relevant line to the [CHANGELOG.md](../CHANGELOG.md)!
-- Update the documentation if required inside the `docs` folder and any appropriate doc strings have been added or updated to public functions you changed.
+- Update the relevant documentation inside the `docs` folder and for any appropriate doc strings in the code base
+- Add a line in [CHANGELOG.md](../CHANGELOG.md) for any major change
 
-#### Continuous Integration
+## Continuous integration
 
 All pull requests are run against our continuous integration suite on [Circle CI](https://circleci.com/gh/mortendahl/workflows/tf-encrypted). The entire suite must pass before a pull request is accepted.
-
-#### Body
-
-- Supply examples of command behaviour (command output, daemon logs, etc)
-- Explain why your particular changes were made the way they are
-- Reference the issue your request closes in the body of the PR with `Closes #`
 
 # Writing Documentation
 
@@ -126,7 +64,23 @@ consumers of this project the corresponding documentation should be updated so
 users always have up to date documentation that reflects the true behaviour of
 the library.
 
-You can build the project locally using the `make docs` command which will
+You can build the project locally using the 
+
+```sh
+make docs
+```
+
+command which will
 subsequently output the html version of our docs to your `build` folder. You
-can view the docs after their built using your browser by running the command
-`open build/html/index.html`.
+can view the docs after their built using your browser by running
+```sh
+open build/html/index.html
+```
+
+# Reporting a Bug
+
+Think you've found a bug? Let us know by opening an [issue in our tracker](https://github.com/mortendahl/tf-encrypted/issues) and apply the "bug" label!
+
+## Security disclosures
+
+If you encounter a security issue then please responsible disclose it by reaching out to us via [tfencrypted@gmail.com](mailto:tfencrypted@gmail.com). We will work with you to mitigate the issue and responsibly disclose it to anyone using the project.
