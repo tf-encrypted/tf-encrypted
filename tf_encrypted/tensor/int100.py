@@ -13,7 +13,7 @@ from .factory import (
     AbstractConstant, AbstractPlaceholder
 )
 from .shared import binarize, conv2d, im2col
-from ..operations.secure_random import seeded_random_uniform, seed
+from ..operations import secure_random
 
 
 def crt_factory(INT_TYPE, MODULI):
@@ -144,6 +144,16 @@ def crt_factory(INT_TYPE, MODULI):
     def _crt_matmul(x, y):
         return [tf.matmul(xi, yi) % mi for xi, yi, mi in zip(x, y, MODULI)]
 
+    def _construct_backing_from_chunks(chunk_sizes, chunk_values):
+        backing = _crt_decompose(0)
+        for chunk_size, chunk_value in zip(chunk_sizes, chunk_values):
+            scale = 2**chunk_size
+            backing = _crt_add(
+                _crt_mul(backing, _crt_decompose(scale)),
+                _crt_decompose(chunk_value)
+            )
+        return backing
+
     class Factory(AbstractFactory):
 
         def zero(self):
@@ -160,8 +170,26 @@ def crt_factory(INT_TYPE, MODULI):
                            maxval: Optional[int] = None):
             assert minval is None
             assert maxval is None
-            return UniformTensor(shape=shape,
-                                 seeds=[seed() for _ in MODULI])
+
+            if secure_random.supports_seeded_randomness():
+                seeds = [secure_random.seed() for _ in MODULI]
+                return UniformTensor(shape, seeds)
+
+            elif secure_random.supports_secure_randomness():
+                backing = [secure_random.random_uniform(shape,
+                                                        minval=0,
+                                                        maxval=mi,
+                                                        dtype=INT_TYPE)
+                           for mi in MODULI]
+                return DenseTensor(backing)
+
+            else:
+                backing = [tf.random_uniform(shape,
+                                             minval=0,
+                                             maxval=mi,
+                                             dtype=INT_TYPE)
+                           for mi in MODULI]
+                return DenseTensor(backing)
 
         def sample_bounded(self,
                            shape,
@@ -172,9 +200,29 @@ def crt_factory(INT_TYPE, MODULI):
             q, r = bitlength // CHUNK_MAX_BITLENGTH, bitlength % CHUNK_MAX_BITLENGTH
             chunk_sizes = [CHUNK_MAX_BITLENGTH] * q + ([r] if r > 0 else [])
 
-            return BoundedTensor(shape=shape,
-                                 seeds=[seed() for _ in chunk_sizes],
-                                 chunk_sizes=chunk_sizes)
+            if secure_random.supports_seeded_randomness():
+                seeds = [secure_random.seed() for _ in chunk_sizes]
+                return BoundedTensor(shape=shape,
+                                     seeds=seeds,
+                                     chunk_sizes=chunk_sizes)
+
+            elif secure_random.supports_secure_randomness():
+                chunk_values = [secure_random.random_uniform(shape=shape,
+                                                             minval=0,
+                                                             maxval=2**chunk_size,
+                                                             dtype=INT_TYPE)
+                                for chunk_size in chunk_sizes]
+                backing = _construct_backing_from_chunks(chunk_sizes, chunk_values)
+                return DenseTensor(backing)
+
+            else:
+                chunk_values = [tf.random_uniform(shape=shape,
+                                                  minval=0,
+                                                  maxval=2**chunk_size,
+                                                  dtype=INT_TYPE)
+                                for chunk_size in chunk_sizes]
+                backing = _construct_backing_from_chunks(chunk_sizes, chunk_values)
+                return DenseTensor(backing)
 
         def stack(self, xs: list, axis: int = 0):
             assert all(isinstance(x, Tensor) for x in xs)
@@ -580,11 +628,11 @@ def crt_factory(INT_TYPE, MODULI):
         @property
         def backing(self):
             with tf.name_scope('expand-seed'):
-                return [seeded_random_uniform(self._shape,
-                                              minval=0,
-                                              maxval=mi,
-                                              seed=seed,
-                                              dtype=INT_TYPE)
+                return [secure_random.seeded_random_uniform(self._shape,
+                                                            minval=0,
+                                                            maxval=mi,
+                                                            seed=seed,
+                                                            dtype=INT_TYPE)
                         for (mi, seed) in zip(MODULI, self._seeds)]
 
     class BoundedTensor(Tensor):
@@ -601,19 +649,13 @@ def crt_factory(INT_TYPE, MODULI):
         @property
         def backing(self):
             with tf.name_scope('expand-seed'):
-                backing = _crt_decompose(0)
-                for chunk_size, seed_value in zip(self._chunk_sizes, self._seeds):
-                    chunk_value = seeded_random_uniform(self._shape,
-                                                        minval=0,
-                                                        maxval=2**chunk_size,
-                                                        seed=seed_value,
-                                                        dtype=INT_TYPE)
-                    scale = 2**chunk_size
-                    backing = _crt_add(
-                        _crt_mul(backing, _crt_decompose(scale)),
-                        _crt_decompose(chunk_value)
-                    )
-                return backing
+                chunk_values = [secure_random.seeded_random_uniform(self._shape,
+                                                                    minval=0,
+                                                                    maxval=2**chunk_size,
+                                                                    seed=seed_value,
+                                                                    dtype=INT_TYPE)
+                                for chunk_size, seed_value in zip(self._chunk_sizes, self._seeds)]
+                return _construct_backing_from_chunks(self._chunk_sizes, chunk_values)
 
     class Constant(DenseTensor, AbstractConstant):
 

@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from typing import Tuple, Optional
+from functools import partial
 
 import abc
 import math
@@ -9,7 +10,7 @@ import tensorflow as tf
 
 from ...tensor.factory import AbstractTensor
 from ...tensor.shared import binarize
-from ...operations.secure_random import seeded_random_uniform, seed
+from ...operations import secure_random
 
 
 def odd_factory(NATIVE_TYPE):
@@ -70,7 +71,20 @@ def odd_factory(NATIVE_TYPE):
                            maxval: Optional[int] = None):
             assert minval is None
             assert maxval is None
-            return OddUniformTensor(shape=shape, seed=seed())
+
+            if secure_random.supports_seeded_randomness():
+                seed = secure_random.seed()
+                return OddUniformTensor(shape=shape, seed=seed)
+
+            elif secure_random.supports_secure_randomness():
+                value = _construct_value_from_sampler(sampler=secure_random.random_uniform,
+                                                      shape=shape)
+                return OddDenseTensor(value)
+
+            else:
+                value = _construct_value_from_sampler(sampler=tf.random_uniform,
+                                                      shape=shape)
+                return OddDenseTensor(value)
 
         def sample_bounded(self, shape, bitlength: int):
             raise NotImplementedError()
@@ -217,21 +231,10 @@ def odd_factory(NATIVE_TYPE):
         def value(self) -> tf.Tensor:
             # TODO(Morten) result should be stored in a (per-device) cache
             with tf.name_scope('expand-seed'):
-                # to get uniform distribution over [min, max] without -1 we sample
-                # [min+1, max] and shift negative values down by one
-                unshifted_value = seeded_random_uniform(shape=self._shape,
-                                                        dtype=NATIVE_TYPE,
-                                                        minval=NATIVE_TYPE.min + 1,
-                                                        maxval=NATIVE_TYPE.max,
-                                                        seed=self._seed)
-                value = tf.where(unshifted_value < 0,
-                                 unshifted_value + tf.ones(shape=unshifted_value.shape,
-                                                           dtype=unshifted_value.dtype),
-                                 unshifted_value)
+                value = _construct_value_from_sampler(
+                    sampler=partial(secure_random.seeded_random_uniform, seed=self._seed),
+                    shape=self._shape)
                 return value
-
-        def expand(self):
-            return OddDenseTensor(self.value)
 
     def _lift(x, y) -> Tuple[OddTensor, OddTensor]:
         """
@@ -253,6 +256,19 @@ def odd_factory(NATIVE_TYPE):
                 return y.factory.tensor(np.array([x])), y
 
         raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
+
+    def _construct_value_from_sampler(sampler, shape):
+        # to get uniform distribution over [min, max] without -1 we sample
+        # [min+1, max] and shift negative values down by one
+        unshifted_value = sampler(shape=shape,
+                                  dtype=NATIVE_TYPE,
+                                  minval=NATIVE_TYPE.min + 1,
+                                  maxval=NATIVE_TYPE.max)
+        value = tf.where(unshifted_value < 0,
+                         unshifted_value + tf.ones(shape=unshifted_value.shape,
+                                                   dtype=unshifted_value.dtype),
+                         unshifted_value)
+        return value
 
     def _lessthan_as_unsigned(x, y, bitlength):
         """
