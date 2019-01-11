@@ -43,6 +43,10 @@ However, running code may at this point generate warnings related to sub-optimal
 
 Certains operations, such as secure randomness generation, rely on C++ extentions of TensorFlow known as [custom ops](https://www.tensorflow.org/guide/extend/op). These come precompiled with the [tf-encrypted pip package](https://pypi.org/project/tf-encrypted/) but need to be manually compiled when installing from source code as we did above.
 
+## MacOS
+
+## Debian & Ubuntu
+
 Tensorflow custom ops must be built in a docker container to avoid ABI compatibility issues. First, you'll have to pull down the docker image:
 
 ```
@@ -105,7 +109,36 @@ tf-encrypted auto-detects which features are available so no further actions are
 
 ## macOS
 
-<i>(coming)</i>
+These steps have been tested on MacOS Mojave (10.14.2).
+
+Homebrew is used to install dependencies required in these instructions. This can be installed with:
+
+```
+./ $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+```
+
+We'll be installing in a virtual python environment so make sure we have virtualenv installed.
+
+```
+./ $ pip install virtualenv
+```
+
+then create a virtual environment:
+
+```
+./ $ virtualenv -p python3 venv
+./ $ source venv/bin/activate
+```
+
+and follow the [basic instructions](#basics).
+
+To compile custom ops some system packages needed (libtool, automake, etc.) install these with brew:
+
+```
+./ $ brew install libtool automake git curl
+```
+
+and follow these [instructions](#compiling-custom-ops).
 
 ## Debian and Ubuntu
 
@@ -114,9 +147,9 @@ These steps have been tested on Debian 9, Ubuntu 16.04, and Ubuntu 18.04.
 First install the system tools needed for basic installations:
 
 ```
-$ sudo apt update
-$ sudo apt upgrade -y
-$ sudo apt install -y virtualenv python3-pip git
+./ $ sudo apt update
+./ $ sudo apt upgrade -y
+./ $ sudo apt install -y virtualenv python3-pip git
 ```
 
 then create a virtual environment (on Ubuntu 16.04 we needed to `export LC_ALL=C` first):
@@ -131,7 +164,7 @@ and follow the [basic instructions](#basics).
 To compile custom ops first install docker
 
 ```
-./ $ apt install docker.io
+./ $ sudo apt install -y docker.io
 ```
 
 and follow these [instructions](#compiling-custom-ops).
