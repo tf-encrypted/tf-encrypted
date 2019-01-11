@@ -59,8 +59,6 @@ Tensorflow custom ops must be built in a docker container to avoid ABI compatibi
 ./tf-encrypted/ $ sudo docker pull tensorflow/tensorflow:custom-op
 ```
 
-Note: Docker commands may have to be run with sudo!
-
 Once the docker image has been retrieved we need to open up a shell to input the following commands.
 
 ```
