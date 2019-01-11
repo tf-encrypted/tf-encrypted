@@ -123,10 +123,16 @@ Homebrew is used to install dependencies required in these instructions. This ca
 ./ $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 ```
 
+We'll also need python3 from brew so install it with:
+
+```
+./ $ brew install python
+```
+
 We'll be installing in a virtual python environment so make sure we have virtualenv installed.
 
 ```
-./ $ pip install virtualenv
+./ $ pip3 install virtualenv
 ```
 
 then create a virtual environment:
