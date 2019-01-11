@@ -45,12 +45,18 @@ Certains operations, such as secure randomness generation, rely on C++ extention
 
 ## MacOS
 
+On MacOS it is as simple as building the operation with make:
+
+```
+./tf-encrypted/ $ make build
+```
+
 ## Debian & Ubuntu
 
 Tensorflow custom ops must be built in a docker container to avoid ABI compatibility issues. First, you'll have to pull down the docker image:
 
 ```
-./tf-encrypted/ $ docker pull tensorflow/tensorflow:custom-op
+./tf-encrypted/ $ sudo docker pull tensorflow/tensorflow:custom-op
 ```
 
 Note: Docker commands may have to be run with sudo!
@@ -58,7 +64,7 @@ Note: Docker commands may have to be run with sudo!
 Once the docker image has been retrieved we need to open up a shell to input the following commands.
 
 ```
-./tf-encrypted/ $ docker run -it -v `pwd`:/opt/tf_encrypted \
+./tf-encrypted/ $ sudo docker run -it -v `pwd`:/opt/tf_encrypted \
                   -w /opt/tf_encrypted \
                   tensorflow/tensorflow:custom-op /bin/bash
 ```
