@@ -39,23 +39,45 @@ That's it - you should now have a working copy ready for development!
 
 However, running code may at this point generate warnings related to sub-optimal performance and security. The reason for this is twofold: some features have not yet shipped as part of the official TensorFlow distribution, and some features rely on [custom ops](https://www.tensorflow.org/guide/extend/op) that first needs to be compiled. We address both below but stress that these steps can be skipped for initial experiments.
 
-# Custom Ops
+# Compiling Custom Ops
 
 Certains operations, such as secure randomness generation, rely on C++ extentions of TensorFlow known as [custom ops](https://www.tensorflow.org/guide/extend/op). These come precompiled with the [tf-encrypted pip package](https://pypi.org/project/tf-encrypted/) but need to be manually compiled when installing from source code as we did above.
 
-To do so you need the following system tools installed: curl, libtool, automake, and g++. These can typically be installed using your system's package manager (see below) and once done allows for building the custom ops using:
+Tensorflow custom ops must be built in a docker container to avoid ABI compatibility issues. First, you'll have to pull down the docker image:
 
 ```
-(venv) ./tf-encrypted/ $ make build
-``` 
+./tf-encrypted/ $ docker pull tensorflow/tensorflow:custom-op
+```
+
+Note: Docker commands may have to be run with sudo!
+
+Once the docker image has been retrieved we need to open up a shell to input the following commands.
+
+```
+./tf-encrypted/ $ docker run -it -v `pwd`:/opt/tf_encrypted \
+                  -w /opt/tf_encrypted \
+                  tensorflow/tensorflow:custom-op /bin/bash
+```
+
+We need to start by installing tensorflow:
+
+```
+/opt/tf_encrypted $ pip install tensorflow
+```
+
+Then we build the actual custom op:
+
+```
+/opt/tf_encrypted $ make build
+```
 
 # Testing
 
-To run unit tests as part of development you need to run 
+To run unit tests as part of development you need to run
 
 ```
 (venv) ./tf-encrypted/ $ make test
-``` 
+```
 
 after having installed flake8
 
@@ -106,10 +128,10 @@ then create a virtual environment (on Ubuntu 16.04 we needed to `export LC_ALL=C
 
 and follow the [basic instructions](#basics).
 
-To compile custom ops first install the additional system tools
+To compile custom ops first install docker
 
 ```
-$ sudo apt install -y libtool automake g++ curl
+./ $ apt install docker.io
 ```
 
-and then follow [instructions](#custom-ops).
+and follow these [instructions](#compiling-custom-ops).
