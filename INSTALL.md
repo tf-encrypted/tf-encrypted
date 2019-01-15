@@ -1,6 +1,6 @@
 # Installation
 
-The most convinient way of installing tf-encrypted is via [the official pip package](https://pypi.org/project/tf-encrypted/):
+The most convenient way of installing tf-encrypted is via [the official pip package](https://pypi.org/project/tf-encrypted/):
 
 ```
 pip3 install tf-encrypted
@@ -35,7 +35,7 @@ instead and check that you have all dependencies installed if you encounter any 
 
 That's it - you should now have a working copy ready for development!
 
-Running code at this point may however generate warnings related to sub-optimal performance and security. The reason for this is twofold: 
+Running code at this point may however generate warnings related to sub-optimal performance and security. The reason for this is twofold:
 
 - some features rely on [custom ops](https://www.tensorflow.org/guide/extend/op) that first needs to be compiled;
 - some features have not yet shipped as part of the official TensorFlow distribution.
@@ -44,7 +44,7 @@ We address both below but stress that they can be skipped for initial experiment
 
 # Custom Ops
 
-Certains operations, such as secure randomness generation, rely on C++ extentions of TensorFlow known as [custom ops](https://www.tensorflow.org/guide/extend/op). These come precompiled with the [tf-encrypted pip package](https://pypi.org/project/tf-encrypted/) but need to be manually compiled when installing from source code as done above.
+Certains operations, such as secure randomness generation, rely on C++ extensions of TensorFlow known as [custom ops](https://www.tensorflow.org/guide/extend/op). These come precompiled with the [tf-encrypted pip package](https://pypi.org/project/tf-encrypted/) but need to be manually compiled when installing from source code as done above.
 
 On macOS this is straight forward once libtool and automake are installed (see the [detailed instructions](#complete-instructions)):
 

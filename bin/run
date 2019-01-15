@@ -38,14 +38,10 @@ if config.protocol_name == 'securenn':
     tfe.set_protocol(SecureNN())
 else:
     tfe.set_protocol(Pond())
-    
-model_file = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)),
-    "..",
-    "models",
-    "{}.pb".format(config.model_name),
-)
+
+model_file = config.model_name
 model_path = Path(model_file)
+
 if not model_path.is_file() and config.model_url is not '':
     regex = re.compile(
         r'^(?:http|ftp)s?://'  # http:// or https://
@@ -64,7 +60,7 @@ if not model_path.is_file() and config.model_url is not '':
 tf.reset_default_graph()
 
 input_spec = []
-with gfile.FastGFile(model_file, 'rb') as f:
+with gfile.GFile(model_file, 'rb') as f:
     print('Loading model: {}'.format(model_file))
     graph_def = tf.GraphDef()
     graph_def.ParseFromString(f.read())
@@ -108,7 +104,8 @@ if config.input_file != '':
     # If we want to load models with multiple diffrent inputs
     # We will need to save our inputs as a list of np.array
     input_data = [np.load(config.input_file)]
-    assert len(input_data) == len(input_spec), 'the input_data length ({}) should be equal the number of inputs required by the loaded model ({})'.format(len(input_data), len(input_spec))
+    assert len(input_data) == len(input_spec), 'the input_data length ({}) should be equal the number of inputs required by the loaded model ({})'.format(
+        len(input_data), len(input_spec))
 else:
     input_data = []
     for spec in input_spec:
