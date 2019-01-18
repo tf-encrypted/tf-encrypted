@@ -104,7 +104,8 @@ While tf-encrypted will work with the official release of [TensorFlow](https://p
 
 We provide such builds as a temporary solution until the next official release of TensorFlow is out (version 1.13), but no guarantees are made about them and they should be treated as experimental:
 
-We provide such builds for [macOS](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl) and [Linux](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl) as a temporary solution until the next official release of TensorFlow is out (version 1.13), but no guarantees are made about them and they should be treated as pre-alpha.
+- [macOS](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl) <small>(sha256: <tt>734b7c1efd0afa09da1ac22c45be04c89ced3edf203b42dead8fa842b38c278e</tt>)</small>
+- [Linux](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl) <small>(sha256: <tt>5cd9d36f7fdee0b8d8367aa4aa95a1244c09c8dba87ebb4ccff9631058f57c1f</tt>)</small>
 
 Alternatively you can build TensorFlow on your own by e.g. following the [official instructions](https://www.tensorflow.org/install/source).
 
