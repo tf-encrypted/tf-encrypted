@@ -149,7 +149,7 @@ Once complete follow these [instructions](#custom-ops).
 
 ## Debian and Ubuntu
 
-These steps have been tested on Debian 9, Ubuntu 16.04, and Ubuntu 18.04.
+These steps have been tested on Debian 9, Ubuntu 16.04, and Ubuntu 18.04. See below for comment on [Raspberry Pi](#raspberry-pi).
 
 First install the system tools needed for basic installations:
 
@@ -174,4 +174,47 @@ To compile custom ops first install docker
 ./ $ sudo apt install -y docker.io
 ```
 
-and follow these [instructions](#compiling-custom-ops).
+and follow these [instructions](#custom-ops).
+
+## Raspberry Pi
+
+The instructions essentially follow those of Debian but mitigates issues that may arise:
+- numpy may not work if installed via pip
+- numpy installed via apt may not work in virtual environments
+- TensorFlow is only currently available in version 1.11 for Raspberry Pi
+
+The latter of these means that we have only tested using Raspberry Pi as servers.
+
+First install Python 3:
+
+```
+./ $ sudo apt update
+./ $ sudo apt upgrade -y
+./ $ sudo apt install -y python3-pip git
+```
+
+followed by TensorFlow and its dependencies:
+
+```
+./ $ pip3 install tensorflow
+```
+
+However, the version of numpy installed this way may cause issues related to missing files. To get around these we can replace it with a version installed through apt:
+
+```
+./ $ pip3 uninstall -y numpy
+./ $ sudo apt install -y python3-numpy
+```
+
+We finally close the repository:
+
+```
+./ $ git clone https://github.com/mortendahl/tf-encrypted.git
+./ $ cd tf-encrypted
+```
+
+install tf-encrypted outside a virtual environment and without dependencies:
+
+```
+./tf-encrypted/ $ pip3 install -e . --no-deps
+```
