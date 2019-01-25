@@ -626,7 +626,7 @@ def export(x: tf.Tensor, filename: str):
 
 
 def read_graph(path: str):
-    with gfile.FastGFile(path, 'rb') as f:
+    with gfile.GFile(path, 'rb') as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
 

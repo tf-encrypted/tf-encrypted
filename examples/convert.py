@@ -34,7 +34,7 @@ export_cnn()
 tf.reset_default_graph()
 
 model_filename = 'cnn.pb'
-with gfile.FastGFile(model_filename, 'rb') as f:
+with gfile.GFile(model_filename, 'rb') as f:
     graph_def = tf.GraphDef()
     graph_def.ParseFromString(f.read())
 
