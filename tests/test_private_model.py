@@ -7,7 +7,7 @@ from .test_convert import export_matmul, read_graph
 from tf_encrypted.private_model import PrivateModel
 
 
-class TestArgMax(unittest.TestCase):
+class TestPrivateModel(unittest.TestCase):
     def test_private_model(self):
         def provide_input():
             return tf.placeholder(dtype=tf.float32, shape=[1, 2], name="api/0")
