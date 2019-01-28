@@ -12,7 +12,7 @@ class PrivateModel():
         self.output_node = output_node
 
     # TODO support multiple inputs
-    def predict(self, input):
+    def private_predict(self, input):
         name = "private-input/api/0:0"
         pl = tf.get_default_graph().get_tensor_by_name(name)
 
