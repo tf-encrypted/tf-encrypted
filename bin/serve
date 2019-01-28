@@ -118,7 +118,7 @@ else:
 
     input_spec = []
     model_file = 'model.pb'
-    with gfile.FastGFile(model_file, 'rb') as f:
+    with gfile.GFile(model_file, 'rb') as f:
         print('Loading model: {}'.format(model_file))
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
