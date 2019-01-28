@@ -3,8 +3,13 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
-from .test_convert import export_matmul, read_graph
 from tf_encrypted.private_model import PrivateModel
+from tf_encrypted.protocol import get_protocol
+from tensorflow.python.platform import gfile
+from tensorflow.python.framework import graph_util
+from tensorflow.python.framework import graph_io
+from tf_encrypted.protocol import get_protocol
+from .test_convert import read_graph, export_matmul
 
 
 class TestPrivateModel(unittest.TestCase):
@@ -16,12 +21,13 @@ class TestPrivateModel(unittest.TestCase):
 
         graph_def = read_graph("matmul.pb")
 
-        c = tfe.convert.convert.Converter()
-        y = c.convert(graph_def, tfe.convert.register(), 'input-provider', provide_input)
+        with tfe.protocol.Pond():
+            c = tfe.convert.convert.Converter()
+            y = c.convert(graph_def, tfe.convert.register(), 'input-provider', provide_input)
 
-        model = PrivateModel(y)
+            model = PrivateModel(y)
 
-        output = model.predict(np.ones([1, 2]))
+            output = model.predict(np.ones([1, 2]))
 
         np.testing.assert_array_equal(output, [[2.]])
 
