@@ -6,7 +6,6 @@ from tf_encrypted.convert import convert
 from tf_encrypted.convert.register import register
 import numpy as np
 import tf_encrypted as tfe
-from tf_encrypted
 
 
 def export_cnn() -> None:

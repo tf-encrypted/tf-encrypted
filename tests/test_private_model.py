@@ -4,11 +4,6 @@ import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 from tf_encrypted.private_model import PrivateModel
-from tf_encrypted.protocol import get_protocol
-from tensorflow.python.platform import gfile
-from tensorflow.python.framework import graph_util
-from tensorflow.python.framework import graph_io
-from tf_encrypted.protocol import get_protocol
 from .test_convert import read_graph, export_matmul
 
 
