@@ -22,7 +22,7 @@ class TestPrivateModel(unittest.TestCase):
 
             model = PrivateModel(y)
 
-            output = model.predict(np.ones([1, 2]))
+            output = model.private_predict(np.ones([1, 2]))
 
         np.testing.assert_array_equal(output, [[2.]])
 

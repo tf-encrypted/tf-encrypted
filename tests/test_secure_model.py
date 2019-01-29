@@ -21,7 +21,7 @@ class TestSecureModel(unittest.TestCase):
             output = model.predict(input)
 
             s_model = secure_model(model)
-            s_output = s_model.predict(input)
+            s_output = s_model.private_predict(input)
 
             np.testing.assert_array_almost_equal(s_output, output, 4)
 
