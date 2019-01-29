@@ -8,6 +8,12 @@ from tf_encrypted.private_model import secure_model
 
 class TestSecureModel(unittest.TestCase):
 
+    def setUp(self):
+        tf.reset_default_graph()
+
+    def tearDown(self):
+        tf.reset_default_graph()
+
     def test_secure_model(self):
         with tfe.protocol.Pond():
             tf.random.set_random_seed(42)
