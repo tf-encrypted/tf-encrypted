@@ -17,6 +17,7 @@ from tf_encrypted.protocol import Pond, SecureNN
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
 enable_debug = os.environ.get('TFE_DEBUG') is not None
+
 tfe.setMonitorStatsFlag(enable_stats_monitor)
 tfe.setTFETraceFlag(enable_traces)
 tfe.setTFEDebugFlag(enable_debug)
@@ -32,6 +33,10 @@ parser.add_argument(
     "--model_url", type=str, default='', help="Model's public URL")
 parser.add_argument(
     '--input_file', type=str, default="", help='load the data from a numpy file format (.npy)')
+parser.add_argument(
+    '--plaintext', action='store_true', help='Run the model in plaintext')
+parser.add_argument(
+    '--epochs', type=int, default=10, help='Number of times to run a prediction')
 config = parser.parse_args()
 
 if config.protocol_name == 'securenn':
@@ -86,18 +91,6 @@ for i, spec in enumerate(input_spec):
 
     inputs.append(scope(i, spec))
 
-c = tfe.convert.convert.Converter()
-y = c.convert(graph_def, tfe.convert.register(), 'input-provider', inputs)
-
-pls = []
-for i in range(len(input_spec)):
-    if i == 0:
-        name = "private-input/api/{}:0".format(i)
-    else:
-        name = "private-input_{}/api/{}:0".format(i, i)
-    pls.append(
-        tf.get_default_graph().get_tensor_by_name(name)
-    )
 
 if config.input_file != '':
     # TODO: Currently this allows for only one input
@@ -113,17 +106,78 @@ else:
             np.random.standard_normal(spec['shape']).tolist()
         )
 
-with tfe.Session() as sess:
-    print("initing!!!")
-    sess.run(tf.global_variables_initializer())
 
-    print("running")
-    feed_dict = {
-        pl: input_data[i] for i, pl in enumerate(pls)
-    }
-    output = sess.run(
-        y.reveal(),
-        feed_dict=feed_dict,
-        tag='prediction'
-    )
-    print(output)
+runs = config.epochs
+if config.plaintext:
+    print('running prediction in plaintext')
+    with tfe.Session() as sess:
+        sess.graph.as_default()
+        tf.import_graph_def(graph_def, name='')
+        sess.run(tf.global_variables_initializer())
+
+        # TODO This isn't a good way to get the input/output nodes and we shouldn't
+        #      hardcode the input either!
+        print('running', runs, 'predictions')
+        for x in range(0, runs + 1): # first run is warmup
+            output = sess.graph.get_operations()[-2].values()[0]
+            input = sess.graph.get_operations()[0].values()[0]
+
+            sess.run(output, {input: input_data}, tag='prediction')
+
+            if x % 10 == 0:
+                print('ran', x, 'epochs')
+
+        print('ran', x, 'epochs')
+
+
+else:
+    print('running prediction securely')
+    c = tfe.convert.convert.Converter()
+    y = c.convert(graph_def, tfe.convert.register(), 'input-provider', inputs)
+
+    pls = []
+    for i in range(len(input_spec)):
+        if i == 0:
+            name = "private-input/api/{}:0".format(i)
+        else:
+            name = "private-input_{}/api/{}:0".format(i, i)
+        pls.append(
+            tf.get_default_graph().get_tensor_by_name(name)
+        )
+
+
+    with tfe.Session() as sess:
+        print("initing!!!")
+        sess.run(tf.global_variables_initializer())
+
+        print("warming up")
+        feed_dict = {
+            pl: input_data[i] for i, pl in enumerate(pls)
+        }
+
+        print('feed_dict', feed_dict)
+
+        output = sess.run(
+            y.reveal(),
+            feed_dict=feed_dict,
+            tag='prediction'
+        )
+        print(output)
+
+        print('running', runs, 'predictions')
+        for x in range(0, runs):
+            feed_dict = {
+                pl: input_data[i] for i, pl in enumerate(pls)
+            }
+
+            output = sess.run(
+                y.reveal(),
+                feed_dict=feed_dict,
+                tag='prediction'
+            )
+
+            if x % 10 == 0:
+                print(x, 'epochs complete')
+
+        print(x, 'epochs complete')
+        print('done')
