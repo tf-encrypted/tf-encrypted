@@ -37,6 +37,7 @@ def register() -> Dict[str, Any]:
         'SpaceToBatchND': space_to_batch_nd,
         'ArgMax': argmax,
         'required_space_to_batch_paddings': required_space_to_batch_paddings,
+        'flatten': flatten,
         'Slice': slice,
     }
 
@@ -414,6 +415,11 @@ def space_to_batch_nd(converter, node, inputs):
     paddings = converter.outputs[inputs[2]].attr["value"].tensor
 
     return converter.protocol.space_to_batch_nd(input, block_shape, paddings)
+
+
+def flatten(converter, node, inputs):
+    input = converter.outputs[inputs[0]]
+    return converter.protocol.reshape(input, [1, -1])
 
 
 def required_space_to_batch_paddings(converter: Converter, node: Any, inputs: List[str]):

@@ -7,7 +7,7 @@ from ..protocol.pond import TFEInputter
 from ..config import Config, get_config
 
 
-special_ops = ['required_space_to_batch_paddings']
+special_ops = ['required_space_to_batch_paddings', 'flatten']
 
 
 class Converter():
@@ -50,7 +50,8 @@ class Converter():
         # Identify if there are special ops in pb file, e.g. required_space_to_batch_paddings
         # If yes, identify the inputs and outputs of this special ops.
         special_op_dict, special_op_inputs, special_op_outputs = find_special_ops(special_ops,
-                                                                                  graph_def)
+                                                                                  graph_def,
+                                                                                  graph_def.node[-1].name)
 
         # Create a dictionary excluding all the sub ops related to required_space_to_batch_paddings
         # Except the sub ops related to the input or output of this special ops.
@@ -89,9 +90,11 @@ class Converter():
 
                     # Handle edge cased if the ops return multiple outputs
                     outs = register[special_op_dict[s]['op']](self, node, input_list)
-
-                    for i, x in enumerate(outs):
-                        self.outputs[output_list[i]] = x
+                    if isinstance(outs, list) or isinstance(outs, tuple):
+                        for i, x in enumerate(outs):
+                            self.outputs[output_list[i]] = x
+                    else:
+                        self.outputs[output_list[0]] = outs
 
         return self.outputs[graph_def.node[-1].name]
 
@@ -151,7 +154,7 @@ def special_ops_namespace(special_ops_name: str, graph_def: Any):
     return list(special_op_name_space)
 
 
-def find_special_ops(special_ops_list: list, graph_def: Any):
+def find_special_ops(special_ops_list, graph_def, output_name):
 
     special_ops_dict = OrderedDict()
     all_special_op_inputs = []
@@ -171,6 +174,10 @@ def find_special_ops(special_ops_list: list, graph_def: Any):
             all_special_op_inputs += inputs
 
             outputs = find_leaves(n, graph_def, lookahead=True)
+
+            # if no outputs found assume output to model is the special op output
+            if len(outputs) == 0:
+                outputs = [output_name]
             special_ops_dict[n]['outputs'] = outputs
             all_special_op_outputs += outputs
 
@@ -184,12 +191,17 @@ def select_relevant_ops(special_ops: list,
 
     trimmed_graph = OrderedDict()
 
-    for i in range(len(special_ops)):
-        for n in graph_def.node:
-            if special_ops[i] in n.name:
-                if n.name in all_special_op_inputs or n.name in all_special_op_outputs:
-                    trimmed_graph[n.name] = n
-            else:
+    for n in graph_def.node:
+        exists = False
+        for op in special_ops:
+            if op in n.name:
+                exists = True
+                break
+
+        if exists:
+            if n.name in all_special_op_inputs or n.name in all_special_op_outputs:
                 trimmed_graph[n.name] = n
+        else:
+            trimmed_graph[n.name] = n
 
     return trimmed_graph
