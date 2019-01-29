@@ -31,7 +31,6 @@ class PrivateModel():
 def load_graph(model_file):
 
     input_spec = []
-    tf.reset_default_graph()
     with gfile.GFile(model_file, 'rb') as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
