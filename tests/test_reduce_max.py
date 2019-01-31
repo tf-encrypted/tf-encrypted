@@ -3,16 +3,21 @@ import unittest
 import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
+import pytest
 
 
+@pytest.mark.slow
 class TestReduceMax(unittest.TestCase):
 
     def setUp(self):
         tf.reset_default_graph()
 
+    def tearDown(self):
+        tf.reset_default_graph()
+
     def test_reduce_max_1d(self):
 
-        t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).astype(float)
+        t = np.array([1, 2, 3, 4]).astype(float)
 
         with tf.Session() as sess:
             out_tf = tf.reduce_max(t)

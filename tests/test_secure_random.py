@@ -11,6 +11,11 @@ SEED = [87654321, 87654321, 87654321, 87654321, 87654321, 87654321, 87654321, 87
 
 @unittest.skipUnless(secure_random.supports_seeded_randomness(), "Secure random disabled")
 class TestSeededRandom(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
+    def tearDown(self):
+        tf.reset_default_graph()
 
     def test_wrapper(self):
         expected = [[6610, 5100, 676],

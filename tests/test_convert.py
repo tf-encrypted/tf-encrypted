@@ -12,6 +12,10 @@ from tf_encrypted.convert.register import register
 from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Flatten, Conv2D
+from tensorflow.keras import backend as K
+import pytest
 
 
 global_filename = ''
@@ -21,12 +25,17 @@ class TestConvert(unittest.TestCase):
 
     def setUp(self):
         tf.reset_default_graph()
+        K.clear_session()
 
         self.previous_logging_level = logging.getLogger().level
         logging.getLogger().setLevel(logging.ERROR)
 
     def tearDown(self):
         global global_filename
+
+        tf.reset_default_graph()
+        K.clear_session()
+
         logging.debug("Cleaning file: %s" % global_filename)
         os.remove(global_filename)
 
@@ -39,7 +48,7 @@ class TestConvert(unittest.TestCase):
         return input_fn
 
     @staticmethod
-    def _assert_successful_conversion(prot, graph_def, actual, *input_fns, **kwargs):
+    def _assert_successful_conversion(prot, graph_def, actual, *input_fns, decimals=3, **kwargs):
         prot.clear_initializers()
 
         converter = Converter(tfe.get_config(), prot, 'model-provider')
@@ -58,7 +67,7 @@ class TestConvert(unittest.TestCase):
                 # assume all xi are all public
                 output = sess.run([xi for xi in x], tag='reveal')
             for o_i, a_i in zip(output, actual):
-                np.testing.assert_array_almost_equal(o_i, a_i, decimal=3)
+                np.testing.assert_array_almost_equal(o_i, a_i, decimal=decimals)
 
     @staticmethod
     def _construct_conversion_test(op_name, *test_inputs, **kwargs):
@@ -82,7 +91,7 @@ class TestConvert(unittest.TestCase):
         return graph_def, actual, prot_class
 
     @classmethod
-    def _test_with_ndarray_input_fn(cls, op_name, test_input, protocol='Pond', **kwargs):
+    def _test_with_ndarray_input_fn(cls, op_name, test_input, protocol='Pond', decimals=3, **kwargs):
         # Treat this as an example of how to run tests with a particular kind of input
         graph_def, actual, prot_class = cls._construct_conversion_test(op_name,
                                                                        test_input,
@@ -90,7 +99,7 @@ class TestConvert(unittest.TestCase):
                                                                        **kwargs)
         with prot_class() as prot:
             input_fn = cls.ndarray_input_fn(test_input)
-            cls._assert_successful_conversion(prot, graph_def, actual, input_fn, **kwargs)
+            cls._assert_successful_conversion(prot, graph_def, actual, input_fn, decimals=decimals, **kwargs)
 
     def test_cnn_convert(self):
         test_input = np.ones([1, 1, 28, 28])
@@ -164,8 +173,9 @@ class TestConvert(unittest.TestCase):
         test_input = np.ones([1, 28, 28, 1])
         self._test_with_ndarray_input_fn('avgpool', test_input, protocol='Pond')
 
+    @pytest.mark.convert_maxpool
     def test_maxpool_convert(self):
-        test_input = np.ones([1, 28, 28, 1])
+        test_input = np.ones([1, 4, 4, 1])
         self._test_with_ndarray_input_fn('maxpool', test_input, protocol='SecureNN')
 
     def test_stack_convert(self):
@@ -189,6 +199,10 @@ class TestConvert(unittest.TestCase):
     def test_required_space_to_batch_paddings_convert(self):
         test_input = np.array([4, 1, 3], dtype=np.int32)
         self._test_with_ndarray_input_fn('required_space_to_batch_paddings', test_input, protocol='Pond')
+
+    def test_flatten_convert(self):
+        test_input = np.random.uniform(size=(1, 5, 5, 5)).astype(np.float32)
+        self._test_with_ndarray_input_fn('flatten', test_input, decimals=2, protocol='Pond')
 
 
 def export_argmax(filename, input_shape, axis):
@@ -584,6 +598,27 @@ def run_slice(input):
     return output
 
 
+def export_flatten(filename, input_shape):
+    model = Sequential()
+    model.add(Conv2D(20, kernel_size=(5, 5), input_shape=input_shape[1:]))
+    model.add(Flatten())
+
+    model.predict(np.random.uniform(size=input_shape))
+
+    sess = K.get_session()
+    output = sess.graph.get_tensor_by_name('flatten/Reshape:0')
+
+    return export(output, filename, sess=sess)
+
+
+def run_flatten(input):
+    model = Sequential()
+    model.add(Conv2D(20, kernel_size=(5, 5), input_shape=input.shape[1:]))
+    model.add(Flatten())
+
+    return model.predict(input)
+
+
 def run_required_space_to_batch_paddings(input):
 
     x = tf.placeholder(tf.int32, shape=input.shape, name="input_shape")
@@ -609,18 +644,24 @@ def export_required_space_to_batch_paddings(filename: str, input_shape: List[int
     return export(out, filename)
 
 
-def export(x: tf.Tensor, filename: str):
-    with tf.Session() as sess:
-        pred_node_names = ["output"]
-        tf.identity(x, name=pred_node_names[0])
+def export(x: tf.Tensor, filename: str, sess=None):
+    should_close = False
+    if sess is None:
+        should_close = True
+        sess = tf.Session()
 
-        graph = graph_util.convert_variables_to_constants(sess,
-                                                          sess.graph.as_graph_def(),
-                                                          pred_node_names)
+    pred_node_names = ["output"]
+    tf.identity(x, name=pred_node_names[0])
+    graph = graph_util.convert_variables_to_constants(sess,
+                                                      sess.graph.as_graph_def(),
+                                                      pred_node_names)
 
-        graph = graph_util.remove_training_nodes(graph)
+    graph = graph_util.remove_training_nodes(graph)
 
-        path = graph_io.write_graph(graph, ".", filename, as_text=False)
+    path = graph_io.write_graph(graph, ".", filename, as_text=False)
+
+    if should_close:
+        sess.close()
 
     return path
 

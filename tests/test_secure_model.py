@@ -4,15 +4,16 @@ import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 from tf_encrypted.private_model import secure_model
+from tensorflow.keras import backend as K
 
 
 class TestSecureModel(unittest.TestCase):
 
     def setUp(self):
-        tf.reset_default_graph()
+        K.clear_session()
 
     def tearDown(self):
-        tf.reset_default_graph()
+        K.clear_session()
 
     def test_secure_model(self):
         with tfe.protocol.Pond():

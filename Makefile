@@ -74,7 +74,10 @@ test: lint pythoncheck
 	python examples/pond-simple.py
 	python examples/securenn-playground.py
 	python examples/federated-average/run.py
-	python -m unittest discover -f
+	pytest -n 8 -x -m "not slow and not convert_maxpool"
+	pytest -n 8 -x -m slow
+	pytest -n 8 -x -m convert_maxpool
+
 
 lint: pythoncheck
 	flake8 --exclude=venv,build
