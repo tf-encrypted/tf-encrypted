@@ -1,6 +1,5 @@
 from typing import List
 import sys
-from functools import reduce
 
 import tensorflow as tf
 import tf_encrypted as tfe
@@ -45,7 +44,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     ]
 
     # sum all inputs and divide by count
-    result = reduce(lambda x, y: x + y, inputs) * (1 / len(inputs))
+    result = prot.add_n(inputs) / len(inputs)
 
     # send result to receiver
     result_op = prot.define_output('result-receiver', result, receive_output)
