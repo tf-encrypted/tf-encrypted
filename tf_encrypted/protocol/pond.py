@@ -5,6 +5,7 @@ import sys
 import logging
 from math import log2, ceil
 from random import random
+from functools import reduce
 
 import numpy as np
 import tensorflow as tf
@@ -699,6 +700,11 @@ class Pond(Protocol):
             raise TypeError("Don't know how to lift {}, {}".format(type(x), type(y)))
 
     @memoize
+    def add_n(self, tensors):
+        # TODO(Morten) we could optimize by doing lazy reductions, potentially segmenting as needed
+        return reduce(lambda x, y: x + y, tensors)
+
+    @memoize
     def reduce_sum(self, x, axis=None, keepdims=None):
         x = self.lift(x)
         return self.dispatch("reduce_sum", x, axis=axis, keepdims=keepdims)
@@ -752,6 +758,27 @@ class Pond(Protocol):
 
     def dot(self, x, y):
         return self.matmul(x, y)
+
+    @memoize
+    def div(self, x, y):
+        """
+        Performs a true division of `x` by `y` where `y` is public.
+
+        No flooring is performing if `y` is an integer type as it is implicitly treated as a float.
+        """
+
+        assert isinstance(x, PondTensor)
+
+        if isinstance(y, float):
+            y_inverse = 1. / y
+        if isinstance(y, int):
+            y_inverse = 1. / float(y)
+        elif isinstance(y, PondPublicTensor):
+            y_inverse = 1. / y.decode()
+        else:
+            raise TypeError("Don't know how to divide by type {}".format(type(y)))
+
+        return self.mul(x, y_inverse)
 
     @memoize
     def truncate(self, x: "PondTensor"):
@@ -1297,6 +1324,9 @@ class PondTensor(abc.ABC):
 
     def __rmul__(self, other):
         return self.prot.mul(self, other)
+
+    def __truediv__(self, other):
+        return self.prot.div(self, other)
 
     def __mod__(self, other):
         return self.prot.mod(self, other)
