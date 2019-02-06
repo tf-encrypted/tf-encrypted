@@ -1,12 +1,18 @@
-import json
-import math
 from typing import Dict, List, Optional, Union, Tuple
 from abc import ABC, abstractmethod
+import json
+import math
+import logging
 from pathlib import Path
 
 import tensorflow as tf
 
 from .player import Player
+
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def tensorflow_supports_int64() -> bool:
@@ -98,25 +104,32 @@ class LocalConfig(Config):
 
     def __init__(
         self,
-        player_names,
+        player_names=None,
         master=None,
         job_name='localhost',
-        log_device_placement=False
+        log_device_placement=False,
+        auto_add_unknown_players=True,
     ) -> None:
+        if player_names is None:
+            player_names = []
         self._master = master
         self._log_device_placement = log_device_placement
         self._job_name = job_name
-        self._players = {
-            name: Player(
-                name=name,
-                index=index,
-                device_name='/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'.format(
-                    job_name=job_name,
-                    cpu_id=index
-                )
-            )
-            for index, name in enumerate(player_names)
-        }
+        self._auto_add_unknown_players = auto_add_unknown_players
+        self._players = {}
+        for name in player_names:
+            self._players[name] = self._create_player(name)
+
+    def _create_player(self, name):
+        index = len(self._players)
+        return Player(
+            name=name,
+            index=index,
+            device_name='/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'.format(
+                job_name=self._job_name,
+                cpu_id=index,
+            ),
+        )
 
     @classmethod
     def from_dict(cls, params: Dict) -> Optional['LocalConfig']:
@@ -148,7 +161,11 @@ class LocalConfig(Config):
         return list(self._players.values())
 
     def get_player(self, name: str) -> Player:
-        return self._players.get(name)
+        player = self._players.get(name, None)
+        if player is None and self._auto_add_unknown_players:
+            player = self._create_player(name)
+            self._players[name] = player
+        return player
 
     def get_players(self, names: Union[List[str], str]) -> List[Player]:
         if isinstance(names, str):
@@ -158,7 +175,9 @@ class LocalConfig(Config):
 
     def get_tf_config(self) -> Tuple[str, tf.ConfigProto]:
         if self._master is not None:
-            print("WARNING: master '{}' is ignored, always using first player".format(self._master))
+            logger.warning("Master '{}' is ignored, always using first player".format(self._master))
+
+        logger.info("Players: {}".format(' '.join(player.name for player in self.players)))
 
         target = ''
         config = tf.ConfigProto(
