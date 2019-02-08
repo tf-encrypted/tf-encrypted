@@ -58,15 +58,33 @@ def load_graph(model_file):
 
     return graph_def, inputs
 
-
-def secure_model(model):
-    session = K.get_session()
-    min_graph = graph_util.convert_variables_to_constants(session, session.graph_def, [node.op.name for node in model.outputs])
-    tf.train.write_graph(min_graph, '/tmp', 'model.pb', as_text=False)
-
+def _secure_model_str(model):
     graph_def, inputs = load_graph('/tmp/model.pb')
-
     c = tfe.convert.convert.Converter()
     y = c.convert(remove_training_nodes(graph_def), tfe.convert.register(), 'input-provider', inputs)
 
     return PrivateModel(y)
+
+
+def _secure_model_keras(model):
+    session = K.get_session()
+    min_graph = graph_util.convert_variables_to_constants(session, session.graph_def, [node.op.name for node in model.outputs])
+    tf.train.write_graph(min_graph, '/tmp', 'model.pb', as_text=False)
+
+    return _secure_model_str('/tmp/model.pb')
+
+
+"""
+Secure a model.
+
+This will take whatever plaintext model you pass it
+and return a model ready to be used in a secure computation.
+
+You may pass a tensorflow model or a path to a .pb graphdef model.
+"""
+
+def secure_model(model):
+    if isinstance(model, str):
+        return _secure_model_str(model)
+
+    return _secure_model_keras(model)
