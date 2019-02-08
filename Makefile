@@ -322,7 +322,8 @@ build-all:
 clean:
 	$(MAKE) -C $(LIBSODIUM_DIR) uninstall
 	rm -fR build
-	rm -f $(SECURE_OUT)
 	rm -f $(LIBSODIUM_VER_TAG).tar.gz
+	find ./tf_encrypted/operations -name '*.so' -delete
+
 
 .PHONY: clean
