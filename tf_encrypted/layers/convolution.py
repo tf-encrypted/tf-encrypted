@@ -93,10 +93,10 @@ class Conv2D(core.Layer):
 
         out = self.prot.conv2d(x, self.weights, self.strides, self.padding)
 
+        out = out + self.bias
+
         if not self.channels_first:
             out = self.prot.transpose(out, perm=[0, 2, 3, 1])
-
-        out = out + self.bias
 
         return out
 
