@@ -64,7 +64,7 @@ class Conv2D(core.Layer):
 
         return [n_x, n_filters, h_out, w_out]
 
-    def initialize(self, initial_weights=None) -> None:
+    def initialize(self, initial_weights=None, initial_bias=None) -> None:
         if initial_weights is None:
             initial_weights = self.filter_init(self.fshape)
 
@@ -75,7 +75,14 @@ class Conv2D(core.Layer):
         else:
             self.weights = self.prot.define_private_variable(initial_weights)
 
-        self.bias = self.prot.define_private_variable(np.zeros(self.output_shape[1:]))
+        if initial_bias is None:
+            self.bias = self.prot.define_private_variable(np.zeros(self.output_shape[1:]))
+        elif isinstance(initial_bias, PondPrivateTensor):
+            self.bias = initial_bias
+        elif isinstance(initial_bias, PondMaskedTensor):
+            self.bias = initial_bias
+        else:
+            self.bias = self.prot.define_private_variable(initial_bias)
 
     def forward(self, x):
         self.cached_input_shape = x.shape
