@@ -61,7 +61,7 @@ def load_graph(model_file):
 def _secure_model_str(model):
     graph_def, inputs = load_graph('/tmp/model.pb')
     c = tfe.convert.convert.Converter()
-    y = c.convert(remove_training_nodes(graph_def), tfe.convert.register(), 'input-provider', inputs)
+    y = c.convert(graph_def, tfe.convert.register(), 'input-provider', inputs)
 
     return PrivateModel(y)
 
