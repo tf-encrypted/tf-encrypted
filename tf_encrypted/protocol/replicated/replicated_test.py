@@ -3,7 +3,11 @@ import unittest
 import tf_encrypted as tfe
 import numpy as np
 
-from .replicated import Replicated, ReplicatedPrivateTensor, _add_private_private
+from .replicated import (
+    ReplicatedPrivateTensor,
+    _add_private_private,
+    _mul_private_private,
+)
 
 
 class TestReplicated(unittest.TestCase):
@@ -14,16 +18,17 @@ class TestReplicated(unittest.TestCase):
             'server0', 'server1', 'server2'
         ]))
 
-        prot = Replicated()
+        players = tfe.get_config().get_players('server0, server1, server2')
 
-        x = ReplicatedPrivateTensor(prot, (1,2), (0,2), (0,1))
-        y = ReplicatedPrivateTensor(prot, (1,2), (0,2), (0,1))
+        x = ReplicatedPrivateTensor(players, ((None,1,2), (0,None,2), (0,1,None)))
+        y = ReplicatedPrivateTensor(players, ((None,1,2), (0,None,2), (0,1,None)))
 
-        z = _add_private_private(prot, x, y)
+        z = _add_private_private(x, y)
 
-        assert z.shares0 == (1+1, 2+2)
-        assert z.shares1 == (0+0, 2+2)
-        assert z.shares2 == (0+0, 1+1)
+        assert z.shares[0][1] + z.shares[1][2] + z.shares[2][0] == 6
+        assert z.shares[0][0] is None
+        assert z.shares[1][1] is None
+        assert z.shares[2][2] is None
 
     def test_mul(self):
 
@@ -31,16 +36,17 @@ class TestReplicated(unittest.TestCase):
             'server0', 'server1', 'server2'
         ]))
 
-        prot = Replicated()
+        players = tfe.get_config().get_players('server0, server1, server2')
 
-        x = ReplicatedPrivateTensor(prot, (1,2), (0,2), (0,1))
-        y = 10
+        x = ReplicatedPrivateTensor(players, ((None,1,2), (0,None,2), (0,1,None)))
+        y = ReplicatedPrivateTensor(players, ((None,1,2), (0,None,2), (0,1,None)))
 
-        z = _mul_private_public(prot, x, y)
+        z = _mul_private_private(x, y)
 
-        assert z.shares0 == (10, 20)
-        assert z.shares1 == (0+0, 2+2)
-        assert z.shares2 == (0+0, 1+1)
+        assert z.shares[0][1] + z.shares[1][2] + z.shares[2][0] == 9
+        assert z.shares[0][0] is None
+        assert z.shares[1][1] is None
+        assert z.shares[2][2] is None
 
 
 if __name__ == '__main__':
