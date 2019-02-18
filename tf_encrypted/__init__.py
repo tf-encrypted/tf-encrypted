@@ -12,7 +12,8 @@ from . import layers
 from . import convert
 from . import operations
 
-all_prot_funcs = protocol.get_all_funcs()
+
+_all_prot_funcs = protocol.get_all_funcs()
 
 
 def _prot_func_not_implemented(*args: Any, **kwargs: Any) -> None:
@@ -21,35 +22,27 @@ def _prot_func_not_implemented(*args: Any, **kwargs: Any) -> None:
     )
 
 
-def _get_protocol_public_func(prot: protocol.Protocol) -> list:
-    methods = inspect.getmembers(prot, predicate=inspect.ismethod)
-    public_prot_methods = [method for method in methods if method[0][0] is not "_"]
-
-    return public_prot_methods
-
-
 def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
     """
-    Sets the global protocol.  See :class:`~tensorflow_encrypted.protocol.protocol.Protocol` for
+    Sets the global protocol. See :class:`~tf_encrypted.protocol.protocol.Protocol` for
     more info.
 
-    :param ~tensorflow_encrypted.protocol.protocol.Protocol prot: A protocol instance.
+    :param ~tf_encrypted.protocol.protocol.Protocol prot: A protocol instance.
     """
-    for func in all_prot_funcs:
-        if func[0] in globals():
-            del globals()[func[0]]
 
-    protocol.set_protocol(prot)
+    # reset all names
+    for func_name in _all_prot_funcs:
+        globals()[func_name] = _prot_func_not_implemented
 
+    # add global names according to new protocol
     if prot is not None:
-        funcs = _get_protocol_public_func(prot)
+        methods = inspect.getmembers(prot, predicate=inspect.ismethod)
+        public_methods = [method for method in methods if not method[0].startswith('_')]
+        for name, func in public_methods:
+            globals()[name] = func
 
-        for func in funcs:
-            globals()[func[0]] = func[1]
-
-    for func in all_prot_funcs:
-        if func[0] not in globals():
-            globals()[func[0]] = _prot_func_not_implemented
+    # record new protocol
+    protocol.set_protocol(prot)
 
 
 def set_config(config: Config) -> None:
@@ -68,6 +61,7 @@ def global_variables_initializer() -> Optional[tf.Operation]:
 
 
 set_protocol(Pond())
+
 
 __all__ = [
     "LocalConfig",

@@ -66,14 +66,6 @@ bootstrap: pythoncheck pipcheck
 # Rules for running our tests and for running various different linters
 # ###############################################
 test: lint pythoncheck
-	python examples/convert.py
-	python examples/inputs.py
-	python examples/int32.py
-	python examples/int100.py
-	python examples/matmul.py
-	python examples/pond-simple.py
-	python examples/securenn-playground.py
-	python examples/federated-average/run.py
 	pytest -n 8 -x -m "not slow and not convert_maxpool"
 	pytest -n 8 -x -m slow
 	pytest -n 8 -x -m convert_maxpool
