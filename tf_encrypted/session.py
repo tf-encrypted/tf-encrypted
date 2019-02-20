@@ -40,12 +40,15 @@ class Session(tf.Session):
     def __init__(
         self,
         graph=None,
-        config=None
+        config=None,
+        target=None,
     ) -> None:
         if config is None:
             config = get_config()
 
-        target, configProto = config.get_tf_config()
+        default_target, configProto = config.get_tf_config()
+        if target is None:
+            target = default_target
 
         if isinstance(config, RemoteConfig):
             print("Starting session on target '{}' using config {}".format(target, configProto))

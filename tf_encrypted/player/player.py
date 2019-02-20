@@ -5,8 +5,6 @@ import tensorflow as tf
 
 class Player(object):
     """
-    Player(name, index, device_name, host=None)
-
     An abstraction for players in the game-theoretic model of a secure computation.
 
     :param str name: Name of the player
@@ -23,8 +21,6 @@ class Player(object):
 
 def player(player: Player):
     """
-    player(player) -> tf.device
-
     Retrieves the tf.device associated with a :class:`Player` object.
 
     :param Player player: The :class:`Player` object.
