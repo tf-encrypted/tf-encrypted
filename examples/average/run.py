@@ -4,6 +4,15 @@ import tensorflow as tf
 import tf_encrypted as tfe
 
 
+# use configuration from file if specified (otherwise fall back to default LocalConfig)
+if len(sys.argv) >= 2:
+    # config file was specified
+    config_file = sys.argv[1]
+    config = tfe.RemoteConfig.load(config_file)
+    tfe.set_config(config)
+    tfe.set_protocol(tfe.protocol.Pond())
+
+
 def provide_input() -> tf.Tensor:
     # pick random tensor to be averaged
     return tf.random_normal(shape=(10,))
@@ -14,26 +23,13 @@ def receive_output(average: tf.Tensor) -> tf.Operation:
     return tf.print("Average:", average)
 
 
-player_names_inputter = [
-    'inputter-1',
-    'inputter-2',
-    'inputter-3',
-    'inputter-4',
-    'inputter-5',
-]
-
-# use configuration from file if specified (otherwise fall back to default LocalConfig)
-if len(sys.argv) >= 2:
-    # config file was specified
-    config_file = sys.argv[1]
-    config = tfe.config.load(config_file)
-    tfe.set_config(config)
-    tfe.set_protocol(tfe.protocol.Pond())
-
 # get input from inputters as private values
 inputs = [
-    tfe.define_private_input(name, provide_input)
-    for name in player_names_inputter
+    tfe.define_private_input(
+        'inputter-{}'.format(index),
+        provide_input
+    )
+    for index in range(5)
 ]
 
 # sum all inputs and divide by count

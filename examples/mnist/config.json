@@ -1,0 +1,7 @@
+{
+    "server0": "localhost:4440",
+    "server1": "localhost:4441",
+    "crypto-producer": "localhost:4442",
+    "model-owner": "localhost:4450",
+    "prediction-client": "localhost:4460"
+}

@@ -8,7 +8,7 @@ echo 'export LC_ALL=C' >> .bashrc
 # install OS packages
 sudo apt update
 sudo apt -y upgrade
-sudo apt install -y python3-pip 
+sudo apt install -y python3-pip
 sudo apt install -y git
 sudo apt install -y screen # for running a tf server
 sudo apt install -y psmisc # for killall

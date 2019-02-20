@@ -9,19 +9,9 @@ from convert import decode
 if len(sys.argv) > 1:
     # config file was specified
     config_file = sys.argv[1]
-    config = tfe.config.load(config_file)
-else:
-    # default to using local config
-    config = tfe.LocalConfig([
-        'server0',
-        'server1',
-        'crypto-producer',
-        'model-trainer',
-        'prediction-client'
-    ])
-
-tfe.set_config(config)
-tfe.set_protocol(tfe.protocol.Pond())
+    config = tfe.RemoteConfig.load(config_file)
+    tfe.set_config(config)
+    tfe.set_protocol(tfe.protocol.Pond())
 
 
 class ModelTrainer():
@@ -156,7 +146,8 @@ prediction_op = tfe.define_output(prediction_client.player_name, [logits], predi
 
 
 target = sys.argv[2] if len(sys.argv) > 2 else None
-with tfe.Session(target) as sess:
+print(target)
+with tfe.Session(target=target) as sess:
 
     print("Init")
     sess.run(tf.global_variables_initializer(), tag='init')
