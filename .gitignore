@@ -1,13 +1,18 @@
 **/.DS_Store
 */.idea/*
+.vscode/**
+
 **/*.pyc
 **/__pycache__/
 .mypy_cache/
 .pytest_cache/
 
 build/
+docs/build
 dist/
 tmp/
-examples/api/*.pb
+**/*.pb
 data/
 *.egg-info
+*.so
+*.gz

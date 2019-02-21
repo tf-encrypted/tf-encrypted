@@ -2,7 +2,7 @@ import sys
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 config = tfe.get_config()
 
@@ -27,14 +27,18 @@ else:
     def provide_weights() -> tf.Tensor:
         raw_w = np.array([5, 5, 5, 5]).reshape((2, 2))
         w = tf.constant(raw_w)
-        return tf.Print(w, [w])
+        tf.print(w, [w])
+        return w
 
     def provide_input() -> tf.Tensor:
         x = tf.constant([1, 2, 3, 4], shape=(2, 2), dtype=tf.float32)
-        return tf.Print(x, [x])
+        tf.print(x, [x])
+        return x
 
     def receive_output(prediction):
-        return tf.Print([], [prediction], summarize=4)
+
+        tf.print([], [prediction], summarize=4)
+        return []
 
     with tfe.protocol.Pond() as prot:
 

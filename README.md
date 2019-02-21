@@ -1,131 +1,112 @@
-# TensorFlow Encrypted
+# tf-encrypted
 
-![Status](https://img.shields.io/badge/status-alpha-blue.svg)  [![License](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg)](./LICENSE)  [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master)
+![Status](https://img.shields.io/badge/status-alpha-blue.svg)  [![License](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg)](./LICENSE)  [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master) [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://tf-encrypted.readthedocs.io/en/latest/)
 
-This library provides a layer on top of TensorFlow for doing machine learning on encrypted data as initially described in [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/), with the aim of making it easy for researchers and practitioners to experiment with private machine learning using familiar tools and without being an expert in both machine learning and cryptography. To this end the code is structured into roughly three modules:
+tf-encrypted is a Python library built on top of [TensorFlow](https://www.tensorflow.org) for researchers and practitioners to experiment with privacy-preserving machine learning. It provides an interface similar to that of TensorFlow, and aims at making the technology readily available without first becoming an expert in machine learning, cryptography, distributed systems, and high performance computing.
 
-- secure operations for computing on encrypted tensors
-- basic machine learning operations built on top of these
-- ready-to-use components for private prediction and training
+In particular, the library focuses on:
 
-that are all exposed through Python interfaces, and all resulting in ordinary TensorFlow graphs for easy integration with other TensorFlow mechanisms and efficient execution.
+- **Usability**: The API and its underlying design philosophy make it easy to get started, use, and integrate privacy-preserving technology into pre-existing machine learning processes.
+- **Extensibility**: The architecture supports and encourages experimentation and benchmarking of new cryptographic protocols and machine learning algorithms.
+- **Performance**: Optimizing for tensor-based applications and relying on TensorFlow's backend means runtime performance comparable to that of specialized stand-alone frameworks.
+- **Community**: With a primary goal of pushing the technology forward the project encourages collaboration and open source over proprietary and closed solutions.
+- **Security**: Cryptographic protocols are evaluated against strong notions of security and [known limitations](#known-limitations) are highlighted.
 
-Several contributors have put resources into the development of this library, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community (see below for [details](#contributions)).
+See below for more [background material](#background--further-reading), explore the [examples](./examples/), or visit the [documentation](https://tf-encrypted.readthedocs.io/en/latest/index.html) to learn more about how to use the library.
 
-**Important**: this is experimental software that should not be used in production for security reasons.
+The project has benefitted enormously from the efforts of several contributors following its original implementation, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community. See below for further [details](#contributions).
 
-## Usage
+# Installation
 
-The following secure computation calculates the average of private inputs from a group of *inputters* running on different machines. Two *servers* and a *crypto producer* are doing the actual computation on encrypted data, with only the *result receiver* being able to decrypt the final result.
+tf-encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.5+ and TensorFlow 1.12.0+ which can be installed using:
 
-```python
-# get named players from hostmap configuration
-server0 = config.get_player('server0')
-server1 = config.get_player('server1')
-crypto_producer = config.get_player('crypto_producer')
-
-# perform secure operations using the Pond protocol
-with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
-
-    # get input from inputters as private values
-    inputs = [prot.define_private_input(inputter) for inputter in inputters]
-
-    # sum all inputs and multiply by count inverse (ie divide)
-    result = reduce(lambda x, y: x + y, inputs) * (1 / len(inputs))
-
-    # send result to receiver who can finally decrypt
-    result_op = prot.define_output([result], result_receiver)
-
-    with tfe.Session() as sess:
-        tfe.run(sess, result_op, tag='average')
+```bash
+pip3 install tf-encrypted
 ```
 
-To get this running we first have to import `tensorflow_encrypted`, and since we also want to use ordinary Tensorflow locally on both the inputters and the result receiver we also import `tensorflow`.
+Alternatively, installing from source can be done using:
+
+```bash
+git clone https://github.com/mortendahl/tf-encrypted.git
+cd tf-encrypted
+pip3 install -e .
+```
+
+This latter is useful on platforms for which the pip package has not yet been compiled but is also needed for [development](./.github/CONTRIBUTING.md). Note that this will get you a working basic installation, yet [a few more steps](./INSTALL.md) are required to match the performance and security of the version shipped in the pip package.
+
+## Custom build of TensorFlow
+
+While tf-encrypted will work with the official release of [TensorFlow](https://pypi.org/project/tensorflow/) (version 1.12+), some features currently depend on improvements that have not yet been shipped. In particular, to get speed improvements by using int64 tensors instead of int100 tensors you currently need a custom build of TensorFlow.
+
+Such builds are available for [macOS](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl) and [Linux](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl) as a temporary solution until the next official release of TensorFlow is out (version 1.13), but no guarantees are made about them and they should be treated as pre-alpha. See more in the [installation instructions](./INSTALL.md#custom-tensorflow).
+
+# Usage
+
+The following is an example of simple matmul on encrypted data using tf-encrypted:
 
 ```python
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
+
+def provide_input():
+    # local TensorFlow operations can be run locally
+    # as part of defining a private input, in this
+    # case on the machine of the input provider
+    return tf.ones(shape=(5, 10))
+
+# define inputs
+w = tfe.define_private_variable(tf.ones(shape=(10,10)))
+x = tfe.define_private_input('input-provider', provide_input)
+
+# define computation
+y = tfe.matmul(x, w)
+
+with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(y.reveal())
 ```
 
-Furthermore, we also need to specify the *local* behaviour of the inputters and the receiver by defining classes deriving from respectively `tfe.io.InputProvider` and `tfe.io.OutputReceiver`.
+For more information, check out our full getting started guide in the [documentation](https://tf-encrypted.readthedocs.io/en/latest/usage/getting_started.html).
 
-```python
-class Inputter(tfe.io.InputProvider):
-    def provide_input(self) -> tf.Tensor:
-        # use TensorFlow to pick random tensor as this player's input
-        return tf.random_normal(shape=(10,))
 
-class ResultReceiver(tfe.io.OutputReceiver):
-    def receive_output(self, average:tf.Tensor) -> tf.Operation:
-        # when value is received here it has already been decrypted locally
-        return tf.Print([], [average], summarize=10, message="Average:")
+# Background & Further Reading
 
-inputters = [
-    Inputter(config.get_player('inputter-0')),
-    Inputter(config.get_player('inputter-1')),
-    Inputter(config.get_player('inputter-2')),
-    Inputter(config.get_player('inputter-3')),
-    Inputter(config.get_player('inputter-4'))
-]
+The following texts provide further in-depth presentations of the project:
 
-result_receiver = ResultReceiver(config.get_player('result_receiver'))
-```
+- [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) describes the initial motivation and implementation
+- [Private Machine Learning in TensorFlow using Secure Computation](https://arxiv.org/abs/1810.08130) further elaborates on the benefits of the approach, outlines the adaptation of a secure computation protocol, and reports on concrete performance numbers
+- [Experimenting with tf-encrypted](https://medium.com/dropoutlabs/experimenting-with-tf-encrypted-fe37977ff03c) walks through a simple example of turning an existing TensorFlow prediction model private
 
-Finally, we also loaded the pre-specified hostmap configuration from file using.
+# Project Status
 
-```python
-# load host map configuration from file
-config = tfe.config.load('config.json')
-```
+tf-encrypted is experimental software not currently intended for use in production environments. The focus is on building the underlying primitives and techniques, with some practical security issues post-poned for a later stage. However, care is taken to ensure that none of these represent fundamental issues that cannot be fixed as needed.
 
-Take a look at [`/tools/gcp/link`](./tools/gcp/link) as an example to generate the config file for gcp. If you run it locally, you can use simply `tfe.LocalConfig`. You can find an example [here](./examples/federated-average/run.py).
+## Known limitations
 
-See [`examples/federated-average/`](./examples/federated-average/) for ready-to-run code and further details, and see the [`examples`](./examples/) directory for additional and more advanced examples.
+- Elements of TensorFlow's networking subsystem does not appear to be sufficiently hardened against malicious users. Proxies or other means of access filtering may be sufficient to mitigate this.
 
-## Installation
+# Contributing
 
-To install the library simply run the following from within your preferred Python environment:
+Don't hesitate to send a pull request, open an issue, or ask for help! Check out our [contribution guide](./.github/CONTRIBUTING.md) for more information!
 
-```shell
-git clone https://github.com/mortendahl/tf-encrypted.git
-cd tf-encrypted
-pip install -e .
-```
+Several individuals have already had an impact on the development of this library (in alphabetical order):
 
-Note however that currently **only Python 3.5 and 3.6 are supported**; to manage this we recommend using a package manager like pip or conda.
+- [Ben DeCoste](https://github.com/bendecoste) (Dropout Labs)
+- [Yann Dupis](https://github.com/yanndupis) (Dropout Labs)
+- [Morgan Giraud](https://github.com/morgangiraud) (while at Dropout Labs)
+- [Ian Livingstone](https://github.com/ianlivingstone) (Dropout Labs)
+- [Jason Mancuso](https://github.com/jvmancuso) (Dropout Labs)
+- [Justin Patriquin](https://github.com/justin1121) (Dropout Labs)
+- [Andrew Trask](https://github.com/iamtrask) (OpenMined)
+- [Koen van der Veen](https://github.com/koenvanderveen) (OpenMined)
 
-After successful installation you should be able to e.g. run the examples
-
-```shell
-python3 examples/federated-average/run.py
-```
-
-using a local configuration.
-
-### Google Cloud Platform
-
-Please see [`tools/gcp/`](./tools/gcp/) for further information about setting up and running on the Google Cloud Platform.
-
-### Development
-
-Please see [`DEVELOP`](./DEVELOP.md) for guidelines and further instructions for setting up the project for development.
-
-# License
-
-Licensed under Apache License, Version 2.0 (see [LICENSE](./LICENSE) or http://www.apache.org/licenses/LICENSE-2.0). Copyright as specified in [NOTICE](./NOTICE).
-
-# Contributions
-
-Several people have had an impact on the development of this library (in alphabetical order):
-
-- [Andrew Trask](https://github.com/iamtrask)
-- [Koen van der Veen](https://github.com/koenvanderveen)
-
-and several companies have invested significant resources (in alphabetical order):
+and several companies have invested significant resources:
 
 - [Dropout Labs](https://dropoutlabs.com/) continues to sponsor a large amount of both research and engineering
 - [OpenMined](https://openmined.org) was the breeding ground for the initial idea and continues to support discussions and guidance
 
-## Reported uses
+# License
 
-Happy to hear all!
+Licensed under Apache License, Version 2.0 (see [LICENSE](./LICENSE) or http://www.apache.org/licenses/LICENSE-2.0). Copyright as specified in [NOTICE](./NOTICE).

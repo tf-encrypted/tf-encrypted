@@ -5,15 +5,18 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tf-encrypted",
-    version="0.1.0",
+    version="0.4.0",
     packages=setuptools.find_packages(),
+    package_data={'tf_encrypted': [
+        'operations/secure_random/*.so',
+    ]},
     python_requires=">=3.5",
     install_requires=[
-        "tensorflow>=1.9.0",
+        "tensorflow>=1.12.0",
         "numpy>=1.14.0"
     ],
     extra_requires={
-        "tf": ["tensorflow>=1.9.0"]
+        "tf": ["tensorflow>=1.12.0"]
     },
     license="Apache License 2.0",
     url="https://github.com/mortendahl/tf-encrypted",
@@ -21,7 +24,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Morten Dahl",
-    author_email="morten@dropoutlabs.com",
+    author_email="mortendahlcs@gmail.com",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",

@@ -2,18 +2,12 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 
 class TestSelectShare(unittest.TestCase):
 
     def test_selectShare(self):
-
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
 
         alice = np.array([1, 1, 1, 1]).astype(np.float32)
         bob = np.array([2, 2, 2, 2]).astype(np.float32)
@@ -21,10 +15,10 @@ class TestSelectShare(unittest.TestCase):
 
         expected = np.array([2, 1, 2, 1]).astype(np.float32)
 
-        with tfe.protocol.SecureNN(*config.get_players('server0, server1, crypto_producer')) as prot:
-            alice_input = prot.define_private_variable(alice)
-            bob_input = prot.define_private_variable(bob)
-            bit_input = prot.define_private_variable(bit)
+        with tfe.protocol.SecureNN() as prot:
+            alice_input = prot.define_private_variable(alice, apply_scaling=True)
+            bob_input = prot.define_private_variable(bob, apply_scaling=True)
+            bit_input = prot.define_private_variable(bit, apply_scaling=False)
 
             select = prot.select(bit_input, alice_input, bob_input)
 
@@ -32,7 +26,7 @@ class TestSelectShare(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
                 chosen = sess.run(select.reveal())
 
-                assert(np.array_equal(expected, chosen))
+                np.testing.assert_equal(expected, chosen)
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 from data import gen_training_input, gen_test_input
 
@@ -42,7 +42,8 @@ pred_test = tfe.sigmoid(tfe.matmul(xp_test, W) + b)
 def print_accuracy(pred_test_tf, y_test_tf: tf.Tensor) -> tf.Operation:
     correct_prediction = tf.equal(tf.round(pred_test_tf), y_test_tf)
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    return tf.Print(accuracy, data=[accuracy], message="Accuracy: ")
+    tf.print(accuracy, data=[accuracy], message="Accuracy: ")
+    return accuracy
 
 
 print_acc_op = tfe.define_output('input-provider', [pred_test, yp_test], print_accuracy)

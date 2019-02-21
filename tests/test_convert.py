@@ -1,563 +1,227 @@
-import unittest
-import os
-import logging
-
 from typing import List, Tuple
+
+import unittest
+import logging
+import os
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.convert import Converter
-from tensorflow_encrypted.convert.register import register
-
+import tf_encrypted as tfe
+from tf_encrypted.convert import Converter
+from tf_encrypted.convert.register import register
 from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Flatten, Conv2D
+from tensorflow.keras import backend as K
+import pytest
 
 
 global_filename = ''
 
 
 class TestConvert(unittest.TestCase):
+
     def setUp(self):
         tf.reset_default_graph()
+        K.clear_session()
+
+        self.previous_logging_level = logging.getLogger().level
+        logging.getLogger().setLevel(logging.ERROR)
 
     def tearDown(self):
         global global_filename
 
+        tf.reset_default_graph()
+        K.clear_session()
+
         logging.debug("Cleaning file: %s" % global_filename)
         os.remove(global_filename)
 
+        logging.getLogger().setLevel(self.previous_logging_level)
+
+    @staticmethod
+    def ndarray_input_fn(x):
+        def input_fn():
+            return tf.constant(x)
+        return input_fn
+
+    @staticmethod
+    def _assert_successful_conversion(prot, graph_def, actual, *input_fns, decimals=3, **kwargs):
+        prot.clear_initializers()
+
+        converter = Converter(tfe.get_config(), prot, 'model-provider')
+        x = converter.convert(graph_def, register(), 'input-provider', list(input_fns))
+
+        with tfe.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            if not isinstance(x, (list, tuple)):
+                x = [x]
+                actual = [actual]
+            else:
+                assert isinstance(actual, (list, tuple)), "expected output to be tensor sequence"
+            try:
+                output = sess.run([xi.reveal() for xi in x], tag='reveal')
+            except AttributeError:
+                # assume all xi are all public
+                output = sess.run([xi for xi in x], tag='reveal')
+            for o_i, a_i in zip(output, actual):
+                np.testing.assert_array_almost_equal(o_i, a_i, decimal=decimals)
+
+    @staticmethod
+    def _construct_conversion_test(op_name, *test_inputs, **kwargs):
+        global global_filename
+        global_filename = '{}.pb'.format(op_name)
+        exporter = globals()['export_{}'.format(op_name)]
+        runner = globals()['run_{}'.format(op_name)]
+        protocol = kwargs.pop('protocol')
+
+        path = exporter(global_filename, test_inputs[0].shape, **kwargs)
+        tf.reset_default_graph()
+
+        graph_def = read_graph(path)
+        tf.reset_default_graph()
+
+        actual = runner(*test_inputs, **kwargs)
+        tf.reset_default_graph()
+
+        prot_class = getattr(tfe.protocol, protocol)
+
+        return graph_def, actual, prot_class
+
+    @classmethod
+    def _test_with_ndarray_input_fn(cls, op_name, test_input, protocol='Pond', decimals=3, **kwargs):
+        # Treat this as an example of how to run tests with a particular kind of input
+        graph_def, actual, prot_class = cls._construct_conversion_test(op_name,
+                                                                       test_input,
+                                                                       protocol=protocol,
+                                                                       **kwargs)
+        with prot_class() as prot:
+            input_fn = cls.ndarray_input_fn(test_input)
+            cls._assert_successful_conversion(prot, graph_def, actual, input_fn, decimals=decimals, **kwargs)
+
     def test_cnn_convert(self):
-        tf.reset_default_graph()
+        test_input = np.ones([1, 1, 28, 28])
+        self._test_with_ndarray_input_fn('cnn', test_input, protocol='Pond')
 
-        global global_filename
-        global_filename = "cnn.pb"
-
-        input_shape = [1, 1, 28, 28]
-
-        path = export_cnn(global_filename, input_shape)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_cnn(input_shape)
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
-
-    def test_cnn_NHWC_convert(self):
-        tf.reset_default_graph()
-
-        global global_filename
-        global_filename = "cnn_nhwc.pb"
-
-        input_shape = [1, 28, 28, 1]
-
-        path = export_cnn(global_filename, input_shape, data_format="NHWC")
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_cnn(input_shape, data_format="NHWC")
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+        test_input = np.ones([1, 28, 28, 1])
+        self._test_with_ndarray_input_fn('cnn', test_input, protocol='Pond', data_format='NHWC')
 
     def test_matmul_convert(self):
-        tf.reset_default_graph()
-
-        global global_filename
-        global_filename = "matmul.pb"
-
-        input_shape = [1, 28]
-
-        path = export_matmul(global_filename, input_shape)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_matmul(input_shape)
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+        test_input = np.ones([1, 28])
+        self._test_with_ndarray_input_fn('matmul', test_input, protocol='Pond')
 
     def test_add_convert(self):
-        tf.reset_default_graph()
-
-        global global_filename
-        global_filename = "add.pb"
-
-        input_shape = [28, 1]
-
-        path = export_add(global_filename, input_shape)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_add(input_shape)
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+        test_input = np.ones([28, 1])
+        self._test_with_ndarray_input_fn('add', test_input, protocol='Pond')
 
     def test_transpose_convert(self):
-        tf.reset_default_graph()
-
-        global global_filename
-        global_filename = "transpose.pb"
-
-        input_shape = [1, 2, 3, 4]
-
-        path = export_transpose(global_filename, input_shape)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_transpose(input_shape)
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+        test_input = np.ones([1, 2, 3, 4])
+        self._test_with_ndarray_input_fn('transpose', test_input, protocol='Pond')
 
     def test_reshape_convert(self):
-        tf.reset_default_graph()
-
-        global global_filename
-        global_filename = "reshape.pb"
-
-        input_shape = [1, 2, 3, 4]
-
-        path = export_reshape(global_filename, input_shape)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_reshape(input_shape)
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-            np.testing.assert_array_almost_equal(output, actual, decimal=3)
+        test_input = np.ones([1, 2, 3, 4])
+        self._test_with_ndarray_input_fn('reshape', test_input, protocol='Pond')
 
     def test_expand_dims_convert(self):
-        tf.reset_default_graph()
+        test_input = np.ones([2, 3, 4])
+        self._test_with_ndarray_input_fn('expand_dims', test_input, protocol='Pond')
 
-        global global_filename
-        global_filename = "expand_dims.pb"
+    def test_pad_convert(self):
+        test_input = np.ones([2, 3])
+        self._test_with_ndarray_input_fn('pad', test_input, protocol='Pond')
 
-        input_shape = [2, 3, 4]
+    def test_batch_to_space_nd_convert(self):
+        test_input = np.ones([8, 1, 3, 1])
+        self._test_with_ndarray_input_fn('batch_to_space_nd', test_input, protocol='Pond')
 
-        path = export_expand_dims(global_filename, input_shape)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_expand_dims(input_shape)
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+    def test_space_to_batch_nd_convert(self):
+        test_input = np.ones([2, 2, 4, 1])
+        self._test_with_ndarray_input_fn('space_to_batch_nd', test_input, protocol='Pond')
 
     def test_squeeze_convert(self):
-        tf.reset_default_graph()
-
-        global global_filename
-        global_filename = "squeeze.pb"
-
-        input_shape = [1, 2, 3, 1]
-
-        path = export_squeeze(global_filename, input_shape)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_squeeze(input_shape)
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+        test_input = np.ones([1, 2, 3, 1])
+        self._test_with_ndarray_input_fn('squeeze', test_input, protocol='Pond')
 
     def test_sub_convert(self):
-        tf.reset_default_graph()
-
-        global global_filename
-        global_filename = "sub.pb"
-
-        input_shape = [28, 1]
-
-        path = export_sub(global_filename, input_shape)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_sub(input_shape)
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+        test_input = np.ones([28, 1])
+        self._test_with_ndarray_input_fn('sub', test_input, protocol='Pond')
 
     def test_mul_convert(self):
-        tf.reset_default_graph()
-
-        global global_filename
-        global_filename = "mul.pb"
-
-        input_shape = [4, 1]
-
-        path = export_mul(global_filename, input_shape)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_mul(input_shape)
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+        test_input = np.array([[1., 2., 3., 4.]])
+        self._test_with_ndarray_input_fn('mul', test_input, protocol='Pond')
 
     def test_strided_slice_convert(self):
-        tf.reset_default_graph()
+        test_input = np.ones((3, 2, 3))
+        # test_input = np.array([[[1., 1., 1.], [2., 2., 2.]],
+        #                        [[3., 3., 3.], [4., 4., 4.]],
+        #                        [[5., 5., 5.], [6., 6., 6.]]])
+        self._test_with_ndarray_input_fn('strided_slice', test_input, protocol='Pond')
 
-        global global_filename
-        global_filename = "strided_slice.pb"
-
-        path = export_strided_slice(global_filename)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        input = [[[1, 1, 1], [2, 2, 2]],
-                 [[3, 3, 3], [4, 4, 4]],
-                 [[5, 5, 5], [6, 6, 6]]]
-
-        actual = run_strided_slice(input)
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant([[[1, 1, 1], [2, 2, 2]],
-                                    [[3, 3, 3], [4, 4, 4]],
-                                    [[5, 5, 5], [6, 6, 6]]])
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+    def test_slice_convert(self):
+        test_input = np.array([[[1., 1., 1.], [2., 2., 2.]],
+                               [[3., 3., 3.], [4., 4., 4.]],
+                               [[5., 5., 5.], [6., 6., 6.]]])
+        self._test_with_ndarray_input_fn('slice', test_input, protocol='Pond')
 
     def test_batchnorm_convert(self):
-        tf.reset_default_graph()
+        test_input = np.ones([1, 1, 28, 28])
+        self._test_with_ndarray_input_fn('batchnorm', test_input, protocol='Pond')
 
-        global global_filename
-        global_filename = "batchnrom.pb"
+    def test_avgpool_convert(self):
+        test_input = np.ones([1, 28, 28, 1])
+        self._test_with_ndarray_input_fn('avgpool', test_input, protocol='Pond')
 
-        input_shape = [1, 1, 28, 28]
-
-        path = export_batchnorm(global_filename, input_shape)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_batchnorm(input_shape)
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
-
-    def test_avgpooling_convert(self):
-        tf.reset_default_graph()
-
-        global global_filename
-        global_filename = "avgpool.pb"
-
-        input_shape = [1, 28, 28, 1]
-
-        path = export_avgpool(global_filename, input_shape)
-
-        tf.reset_default_graph()
-
-        graph_def = read_graph(path)
-
-        tf.reset_default_graph()
-
-        actual = run_avgpool(input_shape)
-
-        tf.reset_default_graph()
-
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
-
-            def provide_input():
-                return tf.constant(np.ones(input_shape))
-
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
-
-            x = converter.convert(graph_def, register(), 'input-provider', provide_input)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+    @pytest.mark.convert_maxpool
+    def test_maxpool_convert(self):
+        test_input = np.ones([1, 4, 4, 1])
+        self._test_with_ndarray_input_fn('maxpool', test_input, protocol='SecureNN')
 
     def test_stack_convert(self):
-        tf.reset_default_graph()
-
-        global global_filename
-        global_filename = "stack.pb"
-
         input1 = np.array([1, 4])
         input2 = np.array([2, 5])
         input3 = np.array([3, 6])
+        test_inputs = [input1, input2, input3]
+        graph_def, actual, prot_class = self._construct_conversion_test('stack',
+                                                                        *test_inputs,
+                                                                        protocol='Pond')
 
-        path = export_stack(global_filename, input1.shape)
+        with prot_class() as prot:
+            input_fns = [self.ndarray_input_fn(x) for x in test_inputs]
+            self._assert_successful_conversion(prot, graph_def, actual, *input_fns)
 
-        tf.reset_default_graph()
+    @unittest.skipUnless(tfe.config.tensorflow_supports_int64(), "Too slow on Circle CI otherwise")
+    def test_argmax_convert(self):
+        test_input = np.array([1., 2., 3., 4.])
+        self._test_with_ndarray_input_fn('argmax', test_input, protocol='SecureNN', axis=0)
 
-        graph_def = read_graph(path)
+    def test_required_space_to_batch_paddings_convert(self):
+        test_input = np.array([4, 1, 3], dtype=np.int32)
+        self._test_with_ndarray_input_fn('required_space_to_batch_paddings', test_input, protocol='Pond')
 
-        tf.reset_default_graph()
+    def test_flatten_convert(self):
+        test_input = np.random.uniform(size=(1, 5, 5, 5)).astype(np.float32)
+        self._test_with_ndarray_input_fn('flatten', test_input, decimals=2, protocol='Pond')
 
-        actual = run_stack(input1, input2, input3)
 
-        tf.reset_default_graph()
+def export_argmax(filename, input_shape, axis):
+    input = tf.placeholder(tf.float32, shape=input_shape)
 
-        with tfe.protocol.Pond() as prot:
-            prot.clear_initializers()
+    output = tf.argmax(input, axis)
 
-            def provide_input1() -> tf.Tensor:
-                return tf.constant(input1)
+    return export(output, filename)
 
-            def provide_input2() -> tf.Tensor:
-                return tf.constant(input2)
 
-            def provide_input3() -> tf.Tensor:
-                return tf.constant(input3)
+def run_argmax(input, axis):
+    inp = tf.constant(input)
 
-            inputs = [provide_input1, provide_input2, provide_input3]
+    output = tf.argmax(inp, axis)
 
-            converter = Converter(tfe.get_config(), prot, 'model-provider')
+    with tf.Session() as sess:
+        out = sess.run(output)
 
-            x = converter.convert(graph_def, register(), 'input-provider', inputs)
-
-            with tfe.Session() as sess:
-                sess.run(prot.initializer, tag='init')
-
-                output = sess.run(x.reveal(), tag='reveal')
-
-        np.testing.assert_array_almost_equal(output, actual, decimal=3)
+    return out
 
 
 def run_stack(input1, input2, input3):
@@ -582,18 +246,18 @@ def export_stack(filename: str, input_shape: Tuple[int]):
     return export(out, filename)
 
 
-def run_avgpool(input_shape: List[int]):
-    input = tf.placeholder(tf.float32, shape=input_shape, name="input")
+def run_avgpool(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
 
-    x = tf.nn.avg_pool(input, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+    x = tf.nn.avg_pool(a, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
 
     with tf.Session() as sess:
-        output = sess.run(x, feed_dict={input: np.ones(input_shape)})
+        output = sess.run(x, feed_dict={a: input})
 
     return output
 
 
-def export_avgpool(filename: str, input_shape: List[int]):
+def export_avgpool(filename, input_shape):
     input = tf.placeholder(tf.float32, shape=input_shape, name="input")
 
     x = tf.nn.avg_pool(input, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
@@ -601,18 +265,38 @@ def export_avgpool(filename: str, input_shape: List[int]):
     return export(x, filename)
 
 
-def run_batchnorm(input_shape: List[int]):
-    input = tf.placeholder(tf.float32, shape=input_shape, name="input")
+def run_maxpool(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
 
-    mean = np.ones((1, 1, 1, input_shape[3])) * 1
-    variance = np.ones((1, 1, 1, input_shape[3])) * 2
-    offset = np.ones((1, 1, 1, input_shape[3])) * 3
-    scale = np.ones((1, 1, 1, input_shape[3])) * 4
-
-    x = tf.nn.batch_normalization(input, mean, variance, offset, scale, 0.00001)
+    x = tf.nn.max_pool(a, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
 
     with tf.Session() as sess:
-        output = sess.run(x, feed_dict={input: np.ones(input_shape)})
+        output = sess.run(x, feed_dict={a: input})
+
+    return output
+
+
+def export_maxpool(filename, input_shape):
+    input = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    x = tf.nn.max_pool(input, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+
+    return export(x, filename)
+
+
+def run_batchnorm(input):
+    x = tf.placeholder(tf.float32, shape=input.shape, name="input")
+
+    dim = input.shape[3]
+    mean = np.ones((1, 1, 1, dim)) * 1
+    variance = np.ones((1, 1, 1, dim)) * 2
+    offset = np.ones((1, 1, 1, dim)) * 3
+    scale = np.ones((1, 1, 1, dim)) * 4
+
+    y = tf.nn.batch_normalization(x, mean, variance, offset, scale, 0.00001)
+
+    with tf.Session() as sess:
+        output = sess.run(y, feed_dict={x: input})
 
     return output
 
@@ -630,18 +314,18 @@ def export_batchnorm(filename: str, input_shape: List[int]):
     return export(x, filename)
 
 
-def run_cnn(input_shape: List[int], data_format="NCHW"):
-    input = tf.placeholder(tf.float32, shape=input_shape, name="input")
+def run_cnn(input, data_format="NCHW"):
+    feed_me = tf.placeholder(tf.float32, shape=input.shape, name="input")
 
-    x = input
+    x = feed_me
     if data_format == "NCHW":
-        x = tf.transpose(input, (0, 2, 3, 1))
+        x = tf.transpose(x, (0, 2, 3, 1))
 
     filter = tf.constant(np.ones((5, 5, 1, 16)), dtype=tf.float32, name="weights")
     x = tf.nn.conv2d(x, filter, (1, 1, 1, 1), "SAME", name="conv2d")
 
     with tf.Session() as sess:
-        output = sess.run(x, feed_dict={input: np.ones(input_shape)})
+        output = sess.run(x, feed_dict={feed_me: input})
 
         if data_format == "NCHW":
             output = output.transpose(0, 3, 1, 2)
@@ -658,14 +342,14 @@ def export_cnn(filename: str, input_shape: List[int], data_format="NCHW"):
     return export(x, filename)
 
 
-def run_matmul(input_shape: List[int]):
-    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    b = tf.constant(np.ones((input_shape[1], 1)), dtype=tf.float32)
+def run_matmul(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    b = tf.constant(np.ones((input.shape[1], 1)), dtype=tf.float32)
 
     x = tf.matmul(a, b)
 
     with tf.Session() as sess:
-        output = sess.run(x, feed_dict={a: np.ones(input_shape)})
+        output = sess.run(x, feed_dict={a: input})
 
     return output
 
@@ -679,14 +363,14 @@ def export_matmul(filename: str, input_shape: List[int]):
     return export(x, filename)
 
 
-def run_add(input_shape: List[int]):
-    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    b = tf.constant(np.ones((input_shape[1], 1)), dtype=tf.float32)
+def run_add(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    b = tf.constant(np.ones((input.shape[1], 1)), dtype=tf.float32)
 
     x = tf.add(a, b)
 
     with tf.Session() as sess:
-        output = sess.run(x, feed_dict={a: np.ones(input_shape)})
+        output = sess.run(x, feed_dict={a: input})
 
     return output
 
@@ -700,13 +384,13 @@ def export_add(filename: str, input_shape: List[int]):
     return export(x, filename)
 
 
-def run_transpose(input_shape: List[int]):
-    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+def run_transpose(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
 
     x = tf.transpose(a, perm=(0, 3, 1, 2))
 
     with tf.Session() as sess:
-        output = sess.run(x, feed_dict={a: np.ones(input_shape)})
+        output = sess.run(x, feed_dict={a: input})
 
     return output
 
@@ -719,17 +403,17 @@ def export_transpose(filename: str, input_shape: List[int]):
     return export(x, filename)
 
 
-def run_reshape(input_shape: List[int]):
-    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+def run_reshape(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
 
     last_size = 1
-    for i in input_shape[1:]:
+    for i in input.shape[1:]:
         last_size *= i
 
     x = tf.reshape(a, [-1, last_size])
 
     with tf.Session() as sess:
-        output = sess.run(x, feed_dict={a: np.ones(input_shape)})
+        output = sess.run(x, feed_dict={a: input})
 
     return output
 
@@ -746,13 +430,13 @@ def export_reshape(filename: str, input_shape: List[int]):
     return export(x, filename)
 
 
-def run_expand_dims(input_shape: List[int]):
-    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+def run_expand_dims(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
 
     x = tf.expand_dims(a, axis=0)
 
     with tf.Session() as sess:
-        output = sess.run(x, feed_dict={a: np.ones(input_shape)})
+        output = sess.run(x, feed_dict={a: input})
 
     return output
 
@@ -765,59 +449,113 @@ def export_expand_dims(filename: str, input_shape: List[int]):
     return export(x, filename)
 
 
-def run_squeeze(input_shape: List[int]):
-    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+def run_pad(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
 
-    x = tf.squeeze(a, axis=[0, 3])
+    x = tf.pad(a, paddings=tf.constant([[2, 2], [3, 4]]), mode="CONSTANT")
 
     with tf.Session() as sess:
-        output = sess.run(x, feed_dict={a: np.ones(input_shape)})
+        output = sess.run(x, feed_dict={a: input})
 
     return output
 
 
-def export_squeeze(filename: str, input_shape: List[int]):
+def export_pad(filename: str, input_shape: List[int]):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
 
-    x = tf.squeeze(a, axis=[0, 3])
+    x = tf.pad(a, paddings=tf.constant([[2, 2], [3, 4]]), mode="CONSTANT")
 
     return export(x, filename)
 
 
-def run_sub(input_shape: List[int]):
+def _construct_batch_to_space_nd(input_shape):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    block_shape = tf.constant([2, 2], dtype=tf.int32)
+    crops = tf.constant([[0, 0], [2, 0]], dtype=tf.int32)
+    x = tf.batch_to_space_nd(a, block_shape=block_shape, crops=crops)
+    return x, a
+
+
+def export_batch_to_space_nd(filename, input_shape):
+    x, _ = _construct_batch_to_space_nd(input_shape)
+    return export(x, filename)
+
+
+def run_batch_to_space_nd(input):
+    x, a = _construct_batch_to_space_nd(input.shape)
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: input})
+    return output
+
+
+def _construct_space_to_batch_nd(input_shape):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    block_shape = tf.constant([2, 2], dtype=tf.int32)
+    paddings = tf.constant([[0, 0], [2, 0]], dtype=tf.int32)
+    x = tf.space_to_batch_nd(a, block_shape=block_shape, paddings=paddings)
+    return x, a
+
+
+def export_space_to_batch_nd(filename, input_shape):
+    x, _ = _construct_space_to_batch_nd(input_shape)
+    return export(x, filename)
+
+
+def run_space_to_batch_nd(input):
+    x, a = _construct_space_to_batch_nd(input.shape)
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: input})
+    return output
+
+
+def run_squeeze(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    x = tf.squeeze(a, axis=[0, 3])
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: input})
+    return output
+
+
+def export_squeeze(filename, input_shape):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    x = tf.squeeze(a, axis=[0, 3])
+    return export(x, filename)
+
+
+def run_sub(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    b = tf.constant(np.ones((input.shape[0], 1)), dtype=tf.float32)
+
+    x = tf.subtract(a, b)
+
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: input})
+
+    return output
+
+
+def export_sub(filename, input_shape):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
     b = tf.constant(np.ones((input_shape[0], 1)), dtype=tf.float32)
 
     x = tf.subtract(a, b)
 
-    with tf.Session() as sess:
-        output = sess.run(x, feed_dict={a: np.ones(input_shape)})
-
-    return output
-
-
-def export_sub(filename: str, input_shape: List[int]):
-    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    b = tf.constant(np.ones((input_shape[0], 1)), dtype=tf.float32)
-
-    x = tf.subtract(a, b)
-
     return export(x, filename)
 
 
-def run_mul(input_shape: List[int]):
-    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape), dtype=tf.float32)
+def run_mul(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input.shape), dtype=tf.float32)
 
     x = tf.multiply(a, b)
 
     with tf.Session() as sess:
-        output = sess.run(x, feed_dict={a: np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape)})
+        output = sess.run(x, feed_dict={a: input})
 
     return output
 
 
-def export_mul(filename: str, input_shape: List[int]):
+def export_mul(filename, input_shape):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
     b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape), dtype=tf.float32)
 
@@ -826,7 +564,7 @@ def export_mul(filename: str, input_shape: List[int]):
     return export(x, filename)
 
 
-def export_strided_slice(filename: str, input_shape: List[int] = [3, 2, 3]):
+def export_strided_slice(filename, input_shape):
     t = tf.placeholder(tf.float32, shape=input_shape, name="input")
     out = tf.strided_slice(t, [1, 0, 0], [2, 1, 3], [1, 1, 1])
 
@@ -834,33 +572,102 @@ def export_strided_slice(filename: str, input_shape: List[int] = [3, 2, 3]):
 
 
 def run_strided_slice(input):
-    t = tf.constant(input, dtype=tf.float32)
-    out = tf.strided_slice(t, [1, 0, 0], [2, 1, 3], [1, 1, 1])
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    out = tf.strided_slice(a, [1, 0, 0], [2, 1, 3], [1, 1, 1])
 
     with tf.Session() as sess:
-        output = sess.run(out)
+        output = sess.run(out, feed_dict={a: input})
 
     return output
 
 
-def export(x: tf.Tensor, filename: str):
+def export_slice(filename, input_shape):
+    t = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    out = tf.slice(t, [1, 0, 0], [2, 1, -1])
+
+    return export(out, filename)
+
+
+def run_slice(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    out = tf.slice(a, [1, 0, 0], [2, 1, -1])
+
     with tf.Session() as sess:
-        pred_node_names = ["output"]
-        tf.identity(x, name=pred_node_names[0])
+        output = sess.run(out, feed_dict={a: input})
 
-        graph = graph_util.convert_variables_to_constants(sess,
-                                                          sess.graph.as_graph_def(),
-                                                          pred_node_names)
+    return output
 
-        graph = graph_util.remove_training_nodes(graph)
 
-        path = graph_io.write_graph(graph, ".", filename, as_text=False)
+def export_flatten(filename, input_shape):
+    model = Sequential()
+    model.add(Conv2D(20, kernel_size=(5, 5), input_shape=input_shape[1:]))
+    model.add(Flatten())
+
+    model.predict(np.random.uniform(size=input_shape))
+
+    sess = K.get_session()
+    output = sess.graph.get_tensor_by_name('flatten/Reshape:0')
+
+    return export(output, filename, sess=sess)
+
+
+def run_flatten(input):
+    model = Sequential()
+    model.add(Conv2D(20, kernel_size=(5, 5), input_shape=input.shape[1:]))
+    model.add(Flatten())
+
+    return model.predict(input)
+
+
+def run_required_space_to_batch_paddings(input):
+
+    x = tf.placeholder(tf.int32, shape=input.shape, name="input_shape")
+    y = tf.constant(np.array([2, 3, 2]), dtype=tf.int32)
+    p = tf.constant(np.array([[2, 3], [4, 3], [5, 2]]), dtype=tf.int32)
+
+    out = tf.required_space_to_batch_paddings(x, y, base_paddings=p)
+
+    with tf.Session() as sess:
+        output = sess.run(out, feed_dict={x: input})
+
+    return output
+
+
+def export_required_space_to_batch_paddings(filename: str, input_shape: List[int]):
+
+    x = tf.placeholder(tf.int32, shape=input_shape, name="input")
+    y = tf.constant(np.array([2, 3, 2]), dtype=tf.int32)
+    p = tf.constant(np.array([[2, 3], [4, 3], [5, 2]]), dtype=tf.int32)
+
+    out = tf.required_space_to_batch_paddings(x, y, base_paddings=p)
+
+    return export(out, filename)
+
+
+def export(x: tf.Tensor, filename: str, sess=None):
+    should_close = False
+    if sess is None:
+        should_close = True
+        sess = tf.Session()
+
+    pred_node_names = ["output"]
+    tf.identity(x, name=pred_node_names[0])
+    graph = graph_util.convert_variables_to_constants(sess,
+                                                      sess.graph.as_graph_def(),
+                                                      pred_node_names)
+
+    graph = graph_util.remove_training_nodes(graph)
+
+    path = graph_io.write_graph(graph, ".", filename, as_text=False)
+
+    if should_close:
+        sess.close()
 
     return path
 
 
 def read_graph(path: str):
-    with gfile.FastGFile(path, 'rb') as f:
+    with gfile.GFile(path, 'rb') as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
 

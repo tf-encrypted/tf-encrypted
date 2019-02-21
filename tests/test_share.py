@@ -2,9 +2,8 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.prime import PrimeFactory
-from tensorflow_encrypted.tensor.int100 import int100factory
+import tf_encrypted as tfe
+from tf_encrypted.tensor import int64factory, int100factory, native_factory
 
 
 class TestShare(unittest.TestCase):
@@ -12,34 +11,26 @@ class TestShare(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
 
-        t = np.array([[1, 2, 3], [4, 5, 6]])
-        self.prime_factory = PrimeFactory(67)
-        self.int100tensor = int100factory.tensor(t)
-        self.primetensor = self.prime_factory.tensor(t)
+    def _core_test_sharing(self, dtype):
 
-    def test_share(self):
+        expected = np.array([[1, 2, 3], [4, 5, 6]])
 
-        with tfe.protocol.Pond(tfe.get_config().get_players('server0, server1, crypto_producer')) as prot:
-            shares = prot._share(self.int100tensor)
-            out = prot._reconstruct(*shares)
+        with tfe.protocol.Pond() as prot:
 
             with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                final = sess.run(out)
+                shares = prot._share(dtype.tensor(expected))
+                actual = sess.run(prot._reconstruct(*shares).to_native())
 
-        np.testing.assert_array_equal(final, self.int100tensor.to_native())
+        np.testing.assert_array_equal(actual, expected)
 
-    def test_factory_share(self):
+    def test_int64(self):
+        self._core_test_sharing(int64factory)
 
-        with tfe.protocol.Pond(tfe.get_config().get_players('server0, server1, crypto_producer')) as prot:
-            shares = prot._share(self.primetensor)
-            out = prot._reconstruct(*shares)
+    def test_int100(self):
+        self._core_test_sharing(int100factory)
 
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                final = sess.run(out)
-
-            np.testing.assert_array_equal(final, self.primetensor.value)
+    def test_prime(self):
+        self._core_test_sharing(native_factory(tf.int32, 67))
 
 
 if __name__ == '__main__':

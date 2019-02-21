@@ -2,8 +2,9 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.layers.activation import Relu
+
+import tf_encrypted as tfe
+from tf_encrypted.layers.activation import Relu
 
 
 class TestRelu(unittest.TestCase):
@@ -11,10 +12,9 @@ class TestRelu(unittest.TestCase):
         tf.reset_default_graph()
 
     def test_forward(self):
-        input_shape = [4]
-        input_relu = np.array([-1.0, -0.5, 0.5, 3.0]).astype(np.float32)
+        input_shape = [2, 2, 2, 50]
+        input_relu = np.random.randn(np.prod(input_shape)).astype(np.float32).reshape(input_shape)
 
-        # with tfe.protocol.Pond() as prot:
         with tfe.protocol.SecureNN() as prot:
 
             tf.reset_default_graph()
@@ -34,7 +34,7 @@ class TestRelu(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
                 out_tensorflow = sess.run(relu_out_tf)
 
-        assert(np.isclose(out_pond, out_tensorflow, atol=0.6).all())
+        np.testing.assert_allclose(out_pond, out_tensorflow, atol=.01), out_pond
 
 
 if __name__ == '__main__':

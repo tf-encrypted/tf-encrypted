@@ -2,8 +2,9 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.int64 import Int64Factory, Int64Tensor
+import tf_encrypted as tfe
+
+from tf_encrypted.tensor import int64factory, fixed64
 
 
 class TestInt64Tensor(unittest.TestCase):
@@ -11,15 +12,12 @@ class TestInt64Tensor(unittest.TestCase):
         tf.reset_default_graph()
 
     def test_pond(self) -> None:
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
 
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer'),
-                               tensor_factory=Int64Factory(), use_noninteractive_truncation=True,
-                               verify_precision=False) as prot:
+        with tfe.protocol.Pond(
+            tensor_factory=int64factory,
+            fixedpoint_config=fixed64,
+        ) as prot:
+
             x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
             y = prot.define_public_variable(np.array([2, 2]), apply_scaling=False)
 
@@ -31,14 +29,14 @@ class TestInt64Tensor(unittest.TestCase):
                 np.testing.assert_array_almost_equal(out, [4, 4], decimal=3)
 
     def test_binarize(self) -> None:
-        x = Int64Tensor(tf.constant([
+        x = int64factory.tensor(tf.constant([
             2**62 + 3,
             2**63 - 1,
             2**63 - 2,
             -3
         ], shape=[2, 2], dtype=tf.int64))
 
-        y = x.to_bits()
+        y = x.bits()
 
         expected = np.array([
             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -58,9 +56,9 @@ class TestInt64Tensor(unittest.TestCase):
 
     def test_random_binarize(self) -> None:
         input = np.random.uniform(low=2**63 + 1, high=2**63 - 1, size=2000).astype(np.int64).tolist()
-        x = Int64Tensor(tf.constant(input, dtype=tf.int64))
+        x = int64factory.tensor(tf.constant(input, dtype=tf.int64))
 
-        y = x.to_bits()
+        y = x.bits()
 
         with tf.Session() as sess:
             actual = sess.run(y.to_native())

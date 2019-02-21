@@ -1,13 +1,14 @@
 from __future__ import absolute_import
 import sys
-from typing import List
+from typing import List, Tuple
 import math
 
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
-from examples.securenn.conv_convert import decode
+from examples.mnist.convert import get_data_from_tfrecord
 
+# tfe.setMonitorStatsFlag(True)
 
 if len(sys.argv) >= 2:
     # config file was specified
@@ -22,6 +23,8 @@ else:
         'model-trainer',
         'prediction-client'
     ])
+tfe.set_config(config)
+tfe.set_protocol(tfe.protocol.SecureNN(*tfe.get_config().get_players(['server0', 'server1', 'crypto-producer'])))
 
 
 def weight_variable(shape, gain):
@@ -48,38 +51,33 @@ pooling = lambda x: tf.nn.avg_pool(x, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
 
 
 class ModelTrainer():
-    BATCH_SIZE = 32
+
+    BATCH_SIZE = 256
     ITERATIONS = 60000 // BATCH_SIZE
-    EPOCHS = 15
+    EPOCHS = 3
+    LEARNING_RATE = 3e-3
     IN_DIM = 28
     KERNEL = 5
     STRIDE = 1
     IN_CHANNELS = 1
-    HIDDEN_C1 = 6
-    HIDDEN_C2 = 16
-    HIDDEN_FC1 = 256
-    HIDDEN_FC2 = 120
-    HIDDEN_FC3 = 84
+    HIDDEN_C1 = 20
+    HIDDEN_C2 = 50
+    HIDDEN_FC1 = 800
+    HIDDEN_FC2 = 500
     OUT_N = 10
 
-    def __init__(self, player: tfe.player.Player) -> None:
-        self.player = player
+    def cond(self, i: tf.Tensor, max_iter: tf.Tensor, nb_epochs: tf.Tensor, avg_loss: tf.Tensor) -> tf.Tensor:
+        is_end_epoch = tf.equal(i % max_iter, 0)
+        to_continue = tf.cast(i < max_iter * nb_epochs, tf.bool)
 
-    def build_data_pipeline(self):
+        def true_fn() -> tf.Tensor:
+            to_continue = tf.print("avg_loss: ", avg_loss)
+            return to_continue
 
-        def normalize(image, label):
-            x = tf.cast(image, tf.float32) / 255.
-            image = (x - 0.1307) / 0.3081  # image = (x - mean) / std
-            return image, label
+        def false_fn() -> tf.Tensor:
+            return to_continue
 
-        dataset = tf.data.TFRecordDataset(["./data/train.tfrecord"])
-        dataset = dataset.map(decode)
-        dataset = dataset.map(normalize)
-        dataset = dataset.repeat()
-        dataset = dataset.batch(self.BATCH_SIZE)
-
-        iterator = dataset.make_one_shot_iterator()
-        return iterator
+        return tf.cond(is_end_epoch, true_fn, false_fn)
 
     def build_training_graph(self, training_data) -> List[tf.Tensor]:
 
@@ -96,17 +94,15 @@ class ModelTrainer():
         bconv2 = bias_variable([1, 1, self.HIDDEN_C2])
         Wfc1 = weight_variable([self.HIDDEN_FC1, self.HIDDEN_FC2], 1.)
         bfc1 = bias_variable([self.HIDDEN_FC2])
-        Wfc2 = weight_variable([self.HIDDEN_FC2, self.HIDDEN_FC3], 1.)
-        bfc2 = bias_variable([self.HIDDEN_FC3])
-        Wfc3 = weight_variable([self.HIDDEN_FC3, self.OUT_N], 1.)
-        bfc3 = bias_variable([self.OUT_N])
-        params = [Wconv1, bconv1, Wconv2, bconv2, Wfc1, bfc1, Wfc2, bfc2, Wfc3, bfc3]
+        Wfc2 = weight_variable([self.HIDDEN_FC2, self.OUT_N], 1.)
+        bfc2 = bias_variable([self.OUT_N])
+        params = [Wconv1, bconv1, Wconv2, bconv2, Wfc1, bfc1, Wfc2, bfc2]
 
         # optimizer and data pipeline
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.LEARNING_RATE)
 
         # training loop
-        def loop_body(i):
+        def loop_body(i: tf.Tensor, max_iter: tf.Tensor, nb_epochs: tf.Tensor, avg_loss: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
 
             # get next batch
             x, y = training_data.get_next()
@@ -117,23 +113,31 @@ class ModelTrainer():
             layer2 = pooling(tf.nn.relu(conv2d(layer1, Wconv2, self.STRIDE) + bconv2))
             layer2 = tf.reshape(layer2, [-1, self.HIDDEN_FC1])
             layer3 = tf.nn.relu(tf.matmul(layer2, Wfc1) + bfc1)
-            layer4 = tf.nn.relu(tf.matmul(layer3, Wfc2) + bfc2)
-            logits = tf.matmul(layer4, Wfc3) + bfc3
+            logits = tf.matmul(layer3, Wfc2) + bfc2
 
             loss = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(logits=logits, labels=y))
-            with tf.control_dependencies([optimizer.minimize(loss)]):
-                return i + 1
 
-        loop = tf.while_loop(lambda i: i < self.ITERATIONS * self.EPOCHS, loop_body, (0,))
+            is_end_epoch = tf.equal(i % max_iter, 0)
+
+            def true_fn() -> tf.Tensor:
+                return loss
+
+            def false_fn() -> tf.Tensor:
+                return (tf.cast(i - 1, tf.float32) * avg_loss + loss) / tf.cast(i, tf.float32)
+
+            with tf.control_dependencies([optimizer.minimize(loss)]):
+                return i + 1, max_iter, nb_epochs, tf.cond(is_end_epoch, true_fn, false_fn)
+
+        loop, _, _, _ = tf.while_loop(self.cond, loop_body, [0, self.ITERATIONS, self.EPOCHS, 0.])
 
         # return model parameters after training
-        loop = tf.Print(loop, [], message="Training complete")
+        loop = tf.print("Training complete", loop)
         with tf.control_dependencies([loop]):
             return [param.read_value() for param in params]
 
     def provide_input(self) -> List[tf.Tensor]:
         with tf.name_scope('loading'):
-            training_data = self.build_data_pipeline()
+            training_data = get_data_from_tfrecord("./data/train.tfrecord", self.BATCH_SIZE)
 
         with tf.name_scope('training'):
             parameters = self.build_training_graph(training_data)
@@ -145,76 +149,79 @@ class PredictionClient():
 
     BATCH_SIZE = 20
 
-    def __init__(self, player: tfe.player.Player) -> None:
-        self.player = player
-
-    def build_data_pipeline(self):
-
-        def normalize(image, label):
-            x = tf.cast(image, tf.float32) / 255.
-            image = (x - 0.1307) / 0.3081  # image = (x - mean) / std
-            return image, label
-
-        dataset = tf.data.TFRecordDataset(["./data/test.tfrecord"])
-        dataset = dataset.map(decode)
-        dataset = dataset.map(normalize)
-        dataset = dataset.batch(self.BATCH_SIZE)
-
-        iterator = dataset.make_one_shot_iterator()
-        return iterator
-
     def provide_input(self) -> List[tf.Tensor]:
         with tf.name_scope('loading'):
-            prediction_input, expected_result = self.build_data_pipeline().get_next()
-            prediction_input = tf.Print(prediction_input, [expected_result], summarize=self.BATCH_SIZE, message="EXPECT ")
+            prediction_input, expected_result = get_data_from_tfrecord("./data/test.tfrecord", self.BATCH_SIZE).get_next()
 
         with tf.name_scope('pre-processing'):
-            prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 1, 28, 28))
+            prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 784))
+            expected_result = tf.reshape(expected_result, shape=(self.BATCH_SIZE,))
 
-        return [prediction_input]
+        return [prediction_input, expected_result]
 
-    def receive_output(self, likelihoods: tf.Tensor) -> tf.Operation:
+    def receive_output(self, likelihoods: tf.Tensor, y_true: tf.Tensor) -> tf.Tensor:
         with tf.name_scope('post-processing'):
             prediction = tf.argmax(likelihoods, axis=1)
-            op = tf.Print([], [prediction], summarize=self.BATCH_SIZE, message="ACTUAL ")
+            eq_values = tf.equal(prediction, tf.cast(y_true, tf.int64))
+            acc = tf.reduce_mean(tf.cast(eq_values, tf.float32))
+            op = tf.print('Expected:', y_true, '\nActual:', prediction, '\nAccuracy:', acc)
+
             return op
 
 
-model_trainer = ModelTrainer(config.get_player('model-trainer'))
-prediction_client = PredictionClient(config.get_player('prediction-client'))
+model_trainer = ModelTrainer()
+prediction_client = PredictionClient()
 
-server0 = config.get_player('server0')
-server1 = config.get_player('server1')
-crypto_producer = config.get_player('crypto-producer')
 
-with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
+# get model parameters as private tensors from model owner
+params = tfe.define_private_input('model-trainer', model_trainer.provide_input, masked=True)  # pylint: disable=E0632
 
-    # get model parameters as private tensors from model owner
-    params = prot.define_private_input(model_trainer.player, model_trainer.provide_input, masked=True)  # pylint: disable=E0632
+# we'll use the same parameters for each prediction so we cache them to avoid re-training each time
+params = tfe.cache(params)
 
-    # we'll use the same parameters for each prediction so we cache them to avoid re-training each time
-    params = prot.cache(params)
+# get prediction input from client
+x, y = tfe.define_private_input('prediction-client', prediction_client.provide_input, masked=True)  # pylint: disable=E0632
 
-    # get prediction input from client
-    x, = prot.define_private_input(prediction_client.player, prediction_client.provide_input, masked=True)  # pylint: disable=E0632
+# compute prediction
+Wconv1, bconv1, Wconv2, bconv2, Wfc1, bfc1, Wfc2, bfc2 = params
 
-    # helpers
-    conv = lambda x, w: prot.conv2d(x, w, ModelTrainer.STRIDE, 'VALID')
-    pool = lambda x: prot.avgpool2d(x, (2, 2), (2, 2), 'VALID')
+conv1_tfe = tfe.layers.Conv2D(input_shape=[-1, 28, 28, 1],
+                              filter_shape=[5, 5, 1, 20],
+                              strides=1,
+                              padding='VALID',
+                              channels_first=False)
 
-    # compute prediction
-    Wconv1, bconv1, Wconv2, bconv2, Wfc1, bfc1, Wfc2, bfc2, Wfc3, bfc3 = params
-    bconv1 = prot.reshape(bconv1, [-1, 1, 1])
-    bconv2 = prot.reshape(bconv2, [-1, 1, 1])
-    layer1 = pool(prot.relu(conv(x, Wconv1) + bconv1))
-    layer2 = pool(prot.relu(conv(layer1, Wconv2) + bconv2))
-    layer2 = prot.reshape(layer2, [-1, ModelTrainer.HIDDEN_FC1])
-    layer3 = prot.matmul(layer2, Wfc1) + bfc1
-    layer4 = prot.matmul(layer3, Wfc2) + bfc2
-    logits = prot.matmul(layer4, Wfc3) + bfc3
+conv1_tfe.initialize(initial_weights=Wconv1)
 
-    # send prediction output back to client
-    prediction_op = prot.define_output(prediction_client.player, [logits], prediction_client.receive_output)
+conv2_tfe = tfe.layers.Conv2D(input_shape=[-1, 12, 12, 20],
+                              filter_shape=[5, 5, 20, 50],
+                              strides=1,
+                              padding='VALID',
+                              channels_first=False)
+
+conv2_tfe.initialize(initial_weights=Wconv2)
+
+avg_pool1 = tfe.layers.AveragePooling2D(input_shape=[-1, 24, 24, 20],
+                                        pool_size=(2, 2),
+                                        strides=(2, 2),
+                                        padding='VALID',
+                                        channels_first=False)
+
+avg_pool2 = tfe.layers.AveragePooling2D(input_shape=[-1, 8, 8, 50],
+                                        pool_size=(2, 2),
+                                        strides=(2, 2),
+                                        padding='VALID',
+                                        channels_first=False)
+
+x = tfe.reshape(x, [-1, 28, 28, 1])
+layer1 = avg_pool1.forward(tfe.relu(conv1_tfe.forward(x) + bconv1))
+layer2 = avg_pool2.forward(tfe.relu(conv2_tfe.forward(layer1) + bconv2))
+layer2 = tfe.reshape(layer2, [-1, ModelTrainer.HIDDEN_FC1])
+layer3 = tfe.relu(tfe.matmul(layer2, Wfc1) + bfc1)
+logits = tfe.matmul(layer3, Wfc2) + bfc2
+
+# send prediction output back to client
+prediction_op = tfe.define_output('prediction-client', [logits, y], prediction_client.receive_output)
 
 
 with tfe.Session() as sess:
@@ -222,7 +229,7 @@ with tfe.Session() as sess:
     sess.run(tf.global_variables_initializer(), tag='init')
 
     print("Training")
-    sess.run(tfe.global_caches_updator(), tag='training')
+    sess.run(tfe.global_caches_updater(), tag='training')
 
     for _ in range(5):
         print("Predicting")

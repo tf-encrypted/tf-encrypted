@@ -3,10 +3,10 @@ import sys
 from functools import reduce
 
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
 
-player_names_fixed = ['server0', 'server1', 'crypto_producer', 'result_receiver']
+player_names_fixed = ['server0', 'server1', 'crypto-producer', 'result-receiver']
 
 if len(sys.argv) >= 2:
     # config file was specified
@@ -29,13 +29,13 @@ def provide_input() -> tf.Tensor:
 def receive_output(*args: List[tf.Tensor]) -> tf.Operation:
     average, = args
     # simply print average
-    return tf.Print([], [average], summarize=10, message="Average:")
+    return tf.print("Average:", average)
 
 
 # create players based on names from above
 server0 = config.get_player('server0')
 server1 = config.get_player('server1')
-crypto_producer = config.get_player('crypto_producer')
+crypto_producer = config.get_player('crypto-producer')
 
 with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
 
@@ -48,7 +48,7 @@ with tfe.protocol.Pond(server0, server1, crypto_producer) as prot:
     result = reduce(lambda x, y: x + y, inputs) * (1 / len(inputs))
 
     # send result to receiver
-    result_op = prot.define_output('result_receiver', result, receive_output)
+    result_op = prot.define_output('result-receiver', result, receive_output)
 
     with tfe.Session(config=config) as sess:
         for _ in range(3):

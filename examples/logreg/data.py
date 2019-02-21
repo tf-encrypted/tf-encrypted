@@ -23,7 +23,7 @@ def gen_training_input(total_size: int, nb_feats: int, bs: int) -> Tuple[tf.Tens
     x = tf.reshape(x, [bs, nb_feats])
     y = tf.reshape(y, [bs, 1])
 
-    # return tf.Print(x, data=[x], message="x: ", summarize=6), y
+    # tf.print(x, data=[x], message="x: ", summarize=6)
     return x, y
 
 

@@ -2,10 +2,13 @@
 
 import sys
 import os
+import json
 import uuid
 import time
 import re
 import argparse
+import time
+import calendar
 from pathlib import Path
 from urllib import request as urlDownloader
 from threading import Thread
@@ -17,8 +20,8 @@ import numpy as np
 from flask import Flask, request, jsonify  # type: ignore
 from flask_cors import CORS  # type: ignore
 
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.protocol import Pond, SecureNN
+import tf_encrypted as tfe
+from tf_encrypted.protocol import Pond, SecureNN
 
 node_name = os.environ.get('TFE_NODE_NAME')
 server0_address = os.environ.get('TFE_SERVER0_ADDRESS')
@@ -26,12 +29,36 @@ server1_address = os.environ.get('TFE_SERVER1_ADDRESS')
 producer_address = os.environ.get('TFE_CRYPTO_PRODUCER_ADDRESS')
 provider_address = os.environ.get('TFE_WEIGHTS_PROVIDER_ADDRESS')
 master_address = os.environ.get('TFE_MASTER_ADDRESS')
+number_of_reqs = os.environ.get('TFE_NUMBER_REQUESTS')
 port = int(os.environ.get('TFE_API_PORT', "8080"))
 batch_size = int(os.environ.get('TFE_BATCH_SIZE', 1))
 protocol_name = str(os.environ.get('TFE_PROTOCOL_NAME', 'securenn'))
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
 enable_debug = os.environ.get('TFE_DEBUG') is not None
+
+env_truncation = os.environ.get('TFE_TRUNCATION_TYPE') or ""
+interactive_truncation = True
+if str.upper(env_truncation) == 'NON_INTERACTIVE':
+    interactive_truncation = False
+
+
+def fixed_config():
+    if tensorflow_supports_int64():
+        if interactive_truncation:
+            print('using fixed64 interactive truncation')
+            return fixed.fixed64
+        else:
+            print('using fixed64 non interactive truncation')
+            return fixed.fixed64_ni
+
+    if interactive_truncation:
+        print('using fixed100 interactive truncation')
+        return fixed.fixed100
+    else:
+        print('using fixed100 non interactive truncation')
+        return fixed.fixed100_ni
+
 
 if node_name is None:
     print("The node_name of this node must be provided via the 'TFE_NODE_NAME' environment variable")
@@ -61,74 +88,37 @@ tfe.setMonitorStatsFlag(enable_stats_monitor)
 tfe.setTFETraceFlag(enable_traces)
 tfe.setTFEDebugFlag(enable_debug)
 
+remote_config = tfe.RemoteConfig(
+    {
+        'master': master_address,
+        'server0': server0_address,
+        'server1': server1_address,
+        'crypto-producer': producer_address,
+        'weights-provider': provider_address
+    },
+    master='master'
+)
+
+tfe.set_config(remote_config)
+
 if protocol_name == 'securenn':
-    print('Using protocol: {}'.format(protocol_name))
-    remote_config = tfe.RemoteConfig(
-        {
-            'master': master_address,
-            'server0': server0_address,
-            'server1': server1_address,
-            'crypto_producer': producer_address,
-            'weights_provider': provider_address
-        },
-        master='master'
-    )
-    tfe.set_config(remote_config)
     tfe.set_protocol(SecureNN())
 else:
-    print('Using protocol: {}'.format('pond'))
-    remote_config = tfe.RemoteConfig(
-        {
-            'master': master_address,
-            'server0': server0_address,
-            'server1': server1_address,
-            'crypto_producer': producer_address,
-            'weights_provider': provider_address
-        },
-        master='master'
-    )
-    tfe.set_config(remote_config)
     tfe.set_protocol(Pond())
 
+print('Using protocol: {}'.format(protocol_name))
 server = remote_config.server(node_name)
 if node_name != 'master':
     server.join()
 else:
+
     _global_memory = {}
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--model_name", type=str, default='', help="Model name")
-    parser.add_argument(
-        "--model_url", type=str, default='', help="Model's public URL")
-    config = parser.parse_args()
-
-    model_file = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)),
-        "..",
-        "models",
-        "{}.pb".format(config.model_name),
-    )
-    model_path = Path(model_file)
-    if not model_path.is_file() and config.model_url is not '':
-        regex = re.compile(
-            r'^(?:http|ftp)s?://'  # http:// or https://
-            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
-            r'localhost|'  # localhost...
-            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
-            r'(?::\d+)?'  # optional port
-            r'(?:/?|[/?]\S+)$', re.IGNORECASE
-        )
-        if re.match(regex, config.model_url) is not None:
-            print('Downloading model from URL: {}'.format(config.model_url))
-            model_file, _ = urlDownloader.urlretrieve(config.model_url)
-        else:
-            raise Exception('Invalid URL given: {}'.format(config.model_url))
 
     tf.reset_default_graph()
 
     input_spec = []
-    with gfile.FastGFile(model_file, 'rb') as f:
+    model_file = 'model.pb'
+    with gfile.GFile(model_file, 'rb') as f:
         print('Loading model: {}'.format(model_file))
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
@@ -158,15 +148,13 @@ else:
 
         inputs.append(scope(i))
 
-    def predict(request_id: str, input_data: List[np.ndarray]) -> None:
+    def predict(input_data: List[np.ndarray]) -> None:
         feed_dict = {pl: input_data[i] for i, pl in enumerate(pls)}
         output_data = sess.run(y, feed_dict=feed_dict, tag='prediction')
 
-        _global_memory[request_id] = output_data.tolist()
-
     print('Securing computation')
     secure_start = time.time()
-    c = tfe.convert.convert.Converter(remote_config, tfe.get_protocol(), remote_config.get_player('weights_provider'))
+    c = tfe.convert.convert.Converter(remote_config, tfe.get_protocol(), remote_config.get_player('weights-provider'))
     y = c.convert(graph_def, tfe.convert.register(), remote_config.get_player('master'), inputs)
     # TODO: do not reveal on the master server
     y = y.reveal()
@@ -182,66 +170,15 @@ else:
     print("Warming up the graph")
     warmup_data = [np.random.standard_normal(spec['shape']).tolist() for spec in input_spec]
     warmup_start = time.time()
-    predict("warm-up-id", warmup_data)
-    _global_memory.pop("warm-up-id")
+    predict(warmup_data)
     warmup_end = time.time()
     print("Graph warmed up in {}".format(warmup_end - warmup_start))
+    print('Serving model')
 
-    print('Serving model: %s' % config.model_name)
+    print('running the graph')
 
-
-    # define the app
-    app = Flask(__name__)
-    CORS(app)  # needed for cross-domain requests, allow everything by default
-
-    @app.route('/input_spec')  # type: ignore
-    def api_input_spec() -> str:
-        return jsonify(input_spec)
-
-    @app.route('/predict', methods=['POST'])  # type: ignore
-    def api_predict() -> str:
-        input_data = request.json
-        app.logger.info("api_predict_input: " + str(input_data))
-
-        request_id = str(uuid.uuid4())
-        thread = Thread(target=predict, kwargs={
-            'request_id': request_id,
-            'input_data': input_data
-        })
-        thread.start()
-
-        app.logger.info("api_predict_output: " + request_id)
-
-        data = {'request_id': request_id}
-        return jsonify(data)
-
-    @app.route('/poll', methods=['POST'])  # type: ignore
-    def api_poll() -> str:
-        request_id = request.json
-        app.logger.info("api_poll_input: " + str(request_id))
-
-        output_data = _global_memory.pop(request_id, None)
-
-        app.logger.info("api_poll_output: " + str(output_data))
-        response = jsonify(output_data)
-        return response
-
-    @app.route('/')  # type: ignore
-    def index() -> str:
-        return "Welcome to PartyDB! An crypto-friendly production environment for serving machine learning models"
-
-    # HTTP Errors handlers
-    @app.errorhandler(404)  # type: ignore
-    def url_error(e: str) -> Tuple[str, int]:
-        return """
-        Wrong URL!
-        <pre>{}</pre>""".format(e), 404
-
-    @app.errorhandler(500)  # type: ignore
-    def server_error(e: str) -> Tuple[str, int]:
-        return """
-        An internal error occurred: <pre>{}</pre>
-        See logs for full stacktrace.
-        """.format(e), 500
-
-    app.run(host='0.0.0.0', debug=True, use_reloader=False, port=port)
+    run_data = [np.random.standard_normal(spec['shape']).tolist() for spec in input_spec]
+    runs = []
+    for x in range(0, int(number_of_reqs)):
+        predict(run_data)
+        print('finished epoch {} of {}'.format(x + 1, number_of_reqs))

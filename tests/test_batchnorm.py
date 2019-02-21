@@ -2,9 +2,9 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
-from tensorflow_encrypted.layers import Batchnorm
+from tf_encrypted.layers import Batchnorm
 
 
 class TestBatchnorm(unittest.TestCase):
@@ -26,13 +26,7 @@ class TestBatchnorm(unittest.TestCase):
         offset = np.array([1.5, 1.2, 1.4]).reshape(1, channels_in, 1, 1).astype(np.float32)
         variance_epsilon = 1e-8
 
-        config = tfe.LocalConfig([
-            'server0',
-            'server1',
-            'crypto_producer'
-        ])
-
-        with tfe.protocol.Pond(*config.get_players('server0, server1, crypto_producer')) as prot:
+        with tfe.protocol.Pond() as prot:
             batchnorm_input = prot.define_private_variable(input_batchnorm)
 
             batchnorm_layer = Batchnorm(input_shape, mean, variance, scale, offset)
@@ -55,7 +49,7 @@ class TestBatchnorm(unittest.TestCase):
 
                 out_tensorflow = sess.run(batchnorm_out_tf)
 
-                np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=3)
+                np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=1)
 
 
 if __name__ == '__main__':

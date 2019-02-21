@@ -6,6 +6,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0]
+
 **Added**
 
+- SecureNN with int64 support has landed, a tensorflow build with int64 matmul support must be used. See details on how to do that [here](./README.md#securenn-int64-support)
+- Cryptographically secure random numbers feature has been implemented.
+- We now send random seeds from the crypto-producer instead of full tensors when masking and computing multiplications. This reduces the amount of data sent across the wire between parties effecting operations such as mul, matmul, conv2d, and square.
+- Four new operations are now supported: Pad, BatchToSpaceND, SpaceToBatchND, ArgMax
+
+**Changed**
+
+- There are now separate wheels published to PyPI for MacOS and Linux.
+- Various documentation updates.
+
+## [0.3.0]
+
+**Breaking**
+
+- Default naming of crypto producer and weights provider have been changed to `crypto-producer` and `weights-provider` respectively.
+
+**Changed**
+
+- Various documentation updates.
+
+## [0.2.0]
+
+**Breaking**
+
+- Import path renamed from `tensorflow_encrypted` to `tf_encrypted`
+
+**Added**
+
+- Added the beginnings of documentation which is available on [readthedocs](https://tf-encrypted.readthedocs.io/en/latest/)
 - Added a CHANGELOG.md file to the project root.

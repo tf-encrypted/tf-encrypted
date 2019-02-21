@@ -1,23 +1,31 @@
 import unittest
-import tensorflow_encrypted as tfe
+
+import tf_encrypted as tfe
 import tensorflow as tf
 import numpy as np
-from tensorflow_encrypted.layers.pooling import MaxPooling2D
+import pytest
+
+from tf_encrypted.layers.pooling import MaxPooling2D
 
 
+@pytest.mark.slow
 class TestMaxPooling2D(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
+    def tearDown(self):
+        tf.reset_default_graph()
+
     def test_maxpool2d(self):
-        with tfe.protocol.SecureNN(
-            use_noninteractive_truncation=True,
-            verify_precision=False
-        ) as prot:
+        with tfe.protocol.SecureNN() as prot:
+
             input = np.array([[[[1, 2, 3, 4],
                                 [3, 2, 4, 1],
                                 [1, 2, 3, 4],
                                 [3, 2, 4, 1]]]])
 
             expected = np.array([[[[3, 4],
-                                  [3, 4]]]], dtype=np.float64)
+                                   [3, 4]]]], dtype=np.float64)
 
             input = prot.define_private_variable(input)
             pool = MaxPooling2D([0, 1, 4, 4], pool_size=2, padding="VALID")

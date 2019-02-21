@@ -1,7 +1,7 @@
 import numpy as np
-import tensorflow_encrypted as tfe
+import tf_encrypted as tfe
 
-from tensorflow_encrypted.tensor.int100 import int100factory as int100
+from tf_encrypted.tensor.int100 import int100factory as int100
 
 x = int100.tensor(np.array([1, 2, 3]))
 y = int100.tensor(np.array([1, 2, 3]))
@@ -29,9 +29,9 @@ with tfe.Session() as sess:
     print(sess.run(v))
 
     print('Placeholder')
-    print(sess.run(p, feed_dict=p.feed_from_native(np.array([5, 5, 5]))))
+    print(sess.run(p, feed_dict=p.feed(np.array([5, 5, 5]))))
 
     print('Assignment')
     w = c - p
-    sess.run(v.assign_from_same(w), feed_dict=p.feed_from_native(np.array([5, 5, 5])))
+    sess.run(v.assign_from_same(w), feed_dict=p.feed(np.array([5, 5, 5])))
     print(sess.run(v))

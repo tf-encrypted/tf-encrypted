@@ -25,9 +25,10 @@ created by pushing a tag to GitHub! We've documented the flow for releasing
 tf-encrypted below:
 
 1. Create a release candidate branch based off master (e.g.
-   `release-0.1.0-rc0`) and update the `setup.py` and `CHANGELOG.md` and
-   attempt to merge it into master. If this is the first release candidate in
-   the series for this version the number should begin at 0 (e.g. `0.1.0-rc0`).
+   `release-0.1.0-rc0`) and update the `setup.py`, `CHANGELOG.md` and
+   `docs/source/conf.py` and attempt to merge it into master. If this
+   is the first release candidate in the series for this version the
+   number should begin at 0 (e.g. `0.1.0-rc0`).
 2. Create a tag off of the commit that merges the release candidate branch into
    master for the given version in setup.py (e.g. `git tag 0.1.0-rc0`) and push
    to GitHub (e.g. `git push origin 0.1.0-rc0`). This will trigger a deploy on

@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from tensorflow_encrypted.tensor.odd_implicit import oddInt32factory
+from tf_encrypted.protocol.securenn.odd_tensor import oddInt64factory
 
 
 class TestOddImplicitTensor(unittest.TestCase):
@@ -14,12 +14,12 @@ class TestOddImplicitTensor(unittest.TestCase):
     def test_add(self) -> None:
 
         # regular, overflow, underflow
-        x = oddInt32factory.tensor(tf.constant([5, 2**31 - 1, -2147483643], dtype=tf.int32))
-        y = oddInt32factory.tensor(tf.constant([3, 5, -6], dtype=tf.int32))
+        x = oddInt64factory.tensor(tf.constant([2, -2], dtype=tf.int64))
+        y = oddInt64factory.tensor(tf.constant([3, 3], dtype=tf.int64))
 
         z = x + y
 
-        expected = np.array([8, -2147483643, 2147483646])
+        expected = np.array([5, 2])
 
         with tf.Session() as sess:
             actual = sess.run(z.value)
@@ -29,12 +29,12 @@ class TestOddImplicitTensor(unittest.TestCase):
     def test_sub(self) -> None:
 
         # regular, overflow, underflow
-        x = oddInt32factory.tensor(tf.constant([10, 6, -6], dtype=tf.int32))
-        y = oddInt32factory.tensor(tf.constant([5, -2**31 + 1, -2**31 + 1], dtype=tf.int32))
+        x = oddInt64factory.tensor(tf.constant([2, -2], dtype=tf.int64))
+        y = oddInt64factory.tensor(tf.constant([3, 3], dtype=tf.int64))
 
         z = x - y
 
-        expected = np.array([5, -2147483642, 2147483641])
+        expected = np.array([-2, -5])
 
         with tf.Session() as sess:
             actual = sess.run(z.value)

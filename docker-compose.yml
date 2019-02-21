@@ -30,7 +30,7 @@ services:
     ports:
       - 4442:4440
     environment:
-      TFE_NODE_NAME: crypto_producer
+      TFE_NODE_NAME: crypto-producer
       TFE_SERVER0_ADDRESS: server0:4440
       TFE_SERVER1_ADDRESS: server1:4440
       TFE_CRYPTO_PRODUCER_ADDRESS: 0.0.0.0:4440
@@ -42,7 +42,7 @@ services:
     ports:
       - 4443:4440
     environment:
-      TFE_NODE_NAME: weights_provider
+      TFE_NODE_NAME: weights-provider
       TFE_SERVER0_ADDRESS: server0:4440
       TFE_SERVER1_ADDRESS: server1:4440
       TFE_CRYPTO_PRODUCER_ADDRESS: producer:4440

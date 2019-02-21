@@ -2,36 +2,22 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_encrypted as tfe
-from tensorflow_encrypted.tensor.int32 import Int32Factory, Int32Tensor
+from tf_encrypted.tensor import int32factory
 
 
 class TestInt32Tensor(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
 
-    def test_pond(self) -> None:
-        with tfe.protocol.Pond(tensor_factory=Int32Factory(), use_noninteractive_truncation=True,
-                               verify_precision=False) as prot:
-            x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
-            y = prot.define_public_variable(np.array([2, 2]), apply_scaling=False)
-
-            z = x * y
-
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                out = sess.run(z.reveal())
-                np.testing.assert_array_almost_equal(out, [4, 4], decimal=3)
-
     def test_binarize(self) -> None:
-        x = Int32Tensor(tf.constant([
+        x = int32factory.tensor(np.array([
             2**32 + 3,  # == 3
             2**31 - 1,  # max
             2**31,  # min
             -3
-        ], shape=[2, 2], dtype=tf.int32))
+        ]).reshape(2, 2))
 
-        y = x.to_bits()
+        y = x.bits()
 
         expected = np.array([
             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -46,16 +32,16 @@ class TestInt32Tensor(unittest.TestCase):
         np.testing.assert_array_equal(actual, expected)
 
     def test_random_binarize(self) -> None:
-        input = np.random.uniform(low=2**31 + 1, high=2**31 - 1, size=2000).astype('int32').tolist()
-        x = Int32Tensor(tf.constant(input, dtype=tf.int32))
+        input = np.random.uniform(low=2**31 + 1, high=2**31 - 1, size=2000).astype('int32')
+        x = int32factory.tensor(input)
 
-        y = x.to_bits()
+        y = x.bits()
 
         with tf.Session() as sess:
             actual = sess.run(y.to_native())
 
         j = 0
-        for i in input:
+        for i in input.tolist():
             if i < 0:
                 binary = bin(((1 << 32) - 1) & i)[2:][::-1]
             else:
@@ -82,8 +68,8 @@ class TestConv2D(unittest.TestCase):
         filter_shape = (h_filter, w_filter, channels_in, channels_out)
         filter_values = np.random.normal(size=filter_shape).astype(np.int32)
 
-        inp = Int32Tensor(input_conv)
-        out = inp.conv2d(Int32Tensor(filter_values), strides)
+        inp = int32factory.tensor(input_conv)
+        out = inp.conv2d(int32factory.tensor(filter_values), strides)
         with tf.Session() as sess:
             actual = sess.run(out.to_native())
 

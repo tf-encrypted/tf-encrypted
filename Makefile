@@ -11,13 +11,19 @@ all: test
 # ###############################################
 DOCKER_REQUIRED_VERSION=18.
 PYTHON_REQUIRED_VERSION=3.5.
-TENSORFLOW_REQUIRED_VERSION=1.9
+TENSORFLOW_REQUIRED_VERSION=1.12
 SHELL := /bin/bash
 
 CURRENT_DIR=$(shell pwd)
 PIP_PATH=$(shell which pip)
 DOCKER_PATH=$(shell which docker)
 CURRENT_TF_VERSION=$(shell python -c 'import tensorflow as tf; print(tf.__version__)' 2>/dev/null)
+
+# Default platform
+# PYPI doesn't allow linux build tags to be pushed and doesn't support
+# specific operating systems such a ubuntu. It only allows build tags for linux
+# to be pushed as manylinux.
+DEFAULT_PLATFORM=manylinux1_x86_64
 
 dockercheck:
 ifeq (,$(DOCKER_PATH))
@@ -52,13 +58,14 @@ endif
 bootstrap: pythoncheck pipcheck
 	pip install -r requirements.txt
 	pip install -e .
+	$(MAKE) build
 
 # ###############################################
 # Testing and Linting
 #
 # Rules for running our tests and for running various different linters
 # ###############################################
-test: lint pythoncheck tensorflowcheck
+test: lint pythoncheck
 	python examples/convert.py
 	python examples/inputs.py
 	python examples/int32.py
@@ -67,16 +74,34 @@ test: lint pythoncheck tensorflowcheck
 	python examples/pond-simple.py
 	python examples/securenn-playground.py
 	python examples/federated-average/run.py
-	python -m unittest discover
+	pytest -n 8 -x -m "not slow and not convert_maxpool"
+	pytest -n 8 -x -m slow
+	pytest -n 8 -x -m convert_maxpool
 
-lint: pythoncheck tensorflowcheck
-	flake8
 
-typecheck: pythoncheck tensorflowcheck
-	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tensorflow_encrypted
+lint: pythoncheck
+	flake8 --exclude=venv,build
+
+typecheck: pythoncheck
+	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
 
 
 .PHONY: lint test typecheck
+
+# ##############################################
+# Documentation
+#
+# Rules for building our documentation
+# ##############################################
+SPHINXOPTS    =
+SPHINXBUILD   = sphinx-build
+SOURCEDIR     = docs/source
+BUILDDIR      = build
+
+docs:
+	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+.PHONY: docs
 
 # ###############################################
 # Version Derivation
@@ -118,7 +143,7 @@ endif
 DOCKER_BUILD=docker build -t mortendahl/tf-encrypted:$(1) -f Dockerfile $(2) .
 docker: Dockerfile dockercheck
 	$(call DOCKER_BUILD,latest,)
-	$(call DOCKER_BUILD,latest-int64,--build-arg TF_WHL_URL=https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.9.0-cp35-cp35m-linux_x86_64.whl)
+	$(call DOCKER_BUILD,latest-int64,--build-arg TF_WHL_URL=https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl)
 
 .PHONY: docker
 
@@ -184,8 +209,9 @@ docker-push: docker-push-$(PUSHTYPE)
 # ###############################################
 # Targets for publishing to pypi
 #
-# These targets required a PYPI_USERNAME and PYPI_PASSWORD environment
-# variables to be set to be executed properly.
+# These targets required a PYPI_USERNAME, PYPI_PASSWORD
+# and PYPI_PLATFORM, environment variables to be set to be
+# executed properly.
 # ##############################################
 
 pypicheck: pipcheck pythoncheck
@@ -199,15 +225,32 @@ pypi-version-check:
 ifeq (,$(shell grep -e $(VERSION) setup.py))
 	$(error "Version specified in setup.py does not match $(VERSION)")
 endif
+ifeq (,$(shell grep -e $(VERSION) meta.yaml))
+	$(error "Version specified in meta.yaml does not match $(VERSION)")
+endif
+ifeq (,$(shell grep -e $(VERSION) docs/source/conf.py))
+	$(error "Version specified in docs/source/conf.py does not match $(VERSION)")
+endif
 
-pypi-push-master: pypicheck pypi-version-check
-	pip install --user --upgrade setuptools wheel twine
+# default to manylinux
+pypi-platform-check:
+ifeq (,$(PYPI_PLATFORM))
+PYPI_PLATFORM=$(DEFAULT_PLATFORM)
+endif
+
+pypi-push-master: build-all pypicheck pypi-platform-check
+	pip install --upgrade setuptools wheel twine
 	rm -rf dist
-	python setup.py sdist bdist_wheel
 
-pypi-push-release-candidate: releasecheck pypi-push-master
+ifeq ($(PYPI_PLATFORM),$(DEFAULT_PLATFORM))
+	python setup.py sdist bdist_wheel --plat-name=$(PYPI_PLATFORM)
+else
+	python setup.py bdist_wheel --plat-name=$(PYPI_PLATFORM)
+endif
+
+pypi-push-release-candidate: releasecheck pypi-version-check pypi-push-master
 	@echo "Attempting to upload to pypi"
-	@PATH=\$PATH:~/.local/bin twine upload -u="$(PYPI_USERNAME)" -p="$(PYPI_PASSWORD)" dist/*
+	twine upload -u="$(PYPI_USERNAME)" -p="$(PYPI_PASSWORD)" dist/*
 
 pypi-push-release: pypi-push-release-candidate
 
@@ -228,3 +271,59 @@ push:
 	@echo "Done building and pushing artifacts for $(VERSION)"
 
 .PHONY: push
+
+# ###############################################
+# libsodium and secure random custom op defines
+# ###############################################
+LIBSODIUM_VER_TAG=1.0.16
+LIBSODIUM_DIR=build/libsodium-$(LIBSODIUM_VER_TAG)
+
+TF_CFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))' 2>/dev/null)
+TF_LFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))' 2>/dev/null)
+PACKAGE_DIR=tf_encrypted/operations
+
+SODIUM_INSTALL = $(shell pwd)/build
+
+SECURE_OUT_PRE = $(PACKAGE_DIR)/secure_random/secure_random_module_tf_
+
+SECURE_IN = operations/secure_random/secure_random.cc
+SECURE_IN_H = operations/secure_random/generators.h
+LIBSODIUM_OUT = $(SODIUM_INSTALL)/lib/libsodium.a
+
+# ###############################################
+# Secure Random Shared Object
+#
+# Rules for building libsodium and the shared object for secure random.
+# ###############################################
+
+$(LIBSODIUM_OUT):
+	curl -OL https://github.com/jedisct1/libsodium/archive/$(LIBSODIUM_VER_TAG).tar.gz
+	mkdir -p build
+	tar -xvf $(LIBSODIUM_VER_TAG).tar.gz -C build
+	cd $(LIBSODIUM_DIR) && ./autogen.sh && ./configure --disable-shared --enable-static \
+		--disable-debug --disable-dependency-tracking --with-pic --prefix=$(SODIUM_INSTALL)
+	$(MAKE) -C $(LIBSODIUM_DIR)
+	$(MAKE) -C $(LIBSODIUM_DIR) install
+
+$(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECURE_IN_H)
+	mkdir -p $(PACKAGE_DIR)/secure_random
+	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
+		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium
+
+build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
+
+build-all:
+	pip install tensorflow==1.12.0
+	$(MAKE) $(SECURE_OUT_PRE)1.12.0.so
+
+
+.PHONY: build build-all
+
+clean:
+	$(MAKE) -C $(LIBSODIUM_DIR) uninstall
+	rm -fR build
+	rm -f $(LIBSODIUM_VER_TAG).tar.gz
+	find ./tf_encrypted/operations -name '*.so' -delete
+
+
+.PHONY: clean
