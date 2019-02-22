@@ -68,10 +68,10 @@ class Dense(core.Layer):
         d_x = d_y.matmul(self.weights.transpose())
 
         d_weights = x.transpose().matmul(d_y)
-        self.weights.assign((d_weights * learning_rate).neg() + self.weights)
+        self.weights -= (d_weights * learning_rate)
 
         if self.bias:
             d_bias = d_y.reduce_sum(axis=0)
             self.bias -= (d_bias * learning_rate)
 
-        return d_x
+        return d_x, d_weights
