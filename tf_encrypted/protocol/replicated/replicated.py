@@ -1,51 +1,6 @@
-from typing import Optional, Tuple, List
 import abc
-import sys
-import math
-import enum
-
 import tensorflow as tf
-
 from tf_encrypted.operations.secure_random import seed, seeded_random_uniform
-
-
-#
-#
-# class ReplicatedPublicTensor(ReplicatedTensor):
-#     pass
-#
-#
-
-#
-#
-# class Tensor(abc.ABC):
-#
-#     @property
-#     def extended_dtype(self):
-#         return (self.dtype, self.protection)
-
-# class ThreeReplicated(Tensor):
-#
-#     @property
-#     def dtype(self):
-#         return self._dtype
-#
-#     @property
-#     def dtype_extended(self):
-#         return (self.dtype, replicated_three)
-
-@enum.unique
-class Protection(enum.Enum):
-
-    # values that can be freely revealed to anyone
-    PUBLIC = 1
-
-    # values intended to be kept private
-    PRIVATE = 2
-
-    # values intended to only be shared in encrypted form
-    ENCRYPTED = 3
-
 
 maxval = 100
 
@@ -190,21 +145,21 @@ class MulPrivatePrivate(Kernel):
         alpha0, alpha1, alpha2 = zero_share(players, x.shape)
 
         with tf.device(player0.device_name):
-            z2_on_0 = (x_on_0[2] * y_on_0[2] +
-                       x_on_0[2] * y_on_0[1] +
-                       x_on_0[1] * y_on_0[2])
+            z2_on_0 = (x_on_0[2] * y_on_0[2]
+                       + x_on_0[2] * y_on_0[1]
+                       + x_on_0[1] * y_on_0[2])
             z2_on_1 = z2_on_0 + alpha0
 
         with tf.device(player1.device_name):
-            z0_on_1 = (x_on_1[0] * y_on_1[0] +
-                       x_on_1[0] * y_on_1[2] +
-                       x_on_1[2] * y_on_1[0])
+            z0_on_1 = (x_on_1[0] * y_on_1[0]
+                       + x_on_1[0] * y_on_1[2]
+                       + x_on_1[2] * y_on_1[0])
             z0_on_2 = z0_on_1 + alpha1
 
         with tf.device(player2.device_name):
-            z1_on_2 = (x_on_2[1] * y_on_2[1] +
-                       x_on_2[1] * y_on_2[0] +
-                       x_on_2[0] * y_on_2[1])
+            z1_on_2 = (x_on_2[1] * y_on_2[1]
+                       + x_on_2[1] * y_on_2[0]
+                       + x_on_2[0] * y_on_2[1])
             z1_on_0 = z1_on_2 + alpha2
 
         z0 = (None, z1_on_0, z2_on_0)
