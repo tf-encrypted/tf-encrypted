@@ -10,7 +10,7 @@ However, for development or on certain platforms this is not sufficient. In thes
 
 **Important:** For the rest of this document we assume that `pip` refers to version 3, which will be the case if you are using a virtual environment such as [conda](https://conda.io/) or [virtualenv](https://virtualenv.pypa.io/). The steps for a [basic installation](#basics) can be completed without this assumptions by simply using `pip3` instead, however the [`Makefile`](./Makefile) used for [building custom ops](#custom-ops) is written with a virtual environment in mind and will hence require a bit of adaptation.
 
-# Basics
+## Basics
 
 All you need to get started is to have Python 3.5 or 3.6 installed along with [pip](https://pypi.org/project/pip/). The first step is then to clone the source code available on [GitHub](https://github.com/mortendahl/tf-encrypted):
 
@@ -42,7 +42,7 @@ Running code at this point may however generate warnings related to sub-optimal 
 
 We address both below but stress that they can be skipped for initial experiments.
 
-# Custom Ops
+## Custom Ops
 
 Certains operations, such as secure randomness generation, rely on C++ extensions of TensorFlow known as [custom ops](https://www.tensorflow.org/guide/extend/op). These come precompiled with the [pip package](https://pypi.org/project/tf-encrypted/) but need to be manually compiled when installing from source code as done above.
 
@@ -54,7 +54,7 @@ On macOS this is straight forward once libtool and automake are installed (see t
 
 however on Debian and Ubuntu this can cause some issues as described next.
 
-## Debian and Ubuntu
+### Debian and Ubuntu
 
 For these platforms we recommend building custom ops in the [official docker container](https://github.com/tensorflow/custom-op) to avoid ABI compatibility issues. First, pull down the docker image:
 
@@ -84,7 +84,7 @@ and finally build the actual custom op:
 
 You then can exit docker at this point.
 
-# Testing
+## Testing
 
 To run unit tests as part of development you need to run:
 
@@ -98,7 +98,7 @@ after making sure flake8 is installed:
 (venv) ./tf-encrypted/ $ pip install flake8
 ```
 
-# Custom TensorFlow
+## Custom TensorFlow
 
 While TF Encrypted will work with the official release of [TensorFlow](https://pypi.org/project/tensorflow/) (version 1.12+), some features currently depend on improvements that have not yet been shipped. In particular, to get speed improvements from using int64 instead of int100 tensors you currently need a custom build of TensorFlow.
 
@@ -117,9 +117,9 @@ In both cases should you end up with a wheel file that you can install using pip
 
 TF Encrypted auto-detects which features are available so no further actions are needed.
 
-# Complete Instructions
+## Complete Instructions
 
-## macOS
+### macOS
 
 These steps have been tested on macOS Mojave (10.14).
 
@@ -147,7 +147,7 @@ To also be able to compile custom ops we need to make sure a few system pakcages
 
 Once complete follow these [instructions](#custom-ops).
 
-## Debian and Ubuntu
+### Debian and Ubuntu
 
 These steps have been tested on Debian 9, Ubuntu 16.04, and Ubuntu 18.04. See below for comment on [Raspberry Pi](#raspberry-pi).
 
@@ -176,7 +176,7 @@ To compile custom ops first install docker
 
 and follow these [instructions](#custom-ops).
 
-## Raspberry Pi
+### Raspberry Pi
 
 The instructions essentially follow those of Debian but mitigates issues that may arise:
 - numpy may not work if installed via pip

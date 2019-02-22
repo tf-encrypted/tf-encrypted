@@ -12,7 +12,7 @@ In particular, the library focuses on:
 - **Community**: With a primary goal of pushing the technology forward the project encourages collaboration and open source over proprietary and closed solutions.
 - **Security**: Cryptographic protocols are evaluated against strong notions of security and [known limitations](#known-limitations) are highlighted.
 
-See below for more [background material](#background--further-reading), explore the [examples](./examples/), or visit the [documentation](https://tf-encrypted.readthedocs.io/en/latest/index.html) to learn more about how to use the library.
+See below for more [background material](#background--further-reading), explore the [examples](./examples/), or visit the [documentation](./docs/) to learn more about how to use the library.
 
 The project has benefitted enormously from the efforts of several contributors following its original implementation, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community. See below for further [details](#contributions).
 
@@ -32,7 +32,7 @@ cd tf-encrypted
 pip3 install -e .
 ```
 
-This latter is useful on platforms for which the pip package has not yet been compiled but is also needed for [development](./.github/CONTRIBUTING.md). Note that this will get you a working basic installation, yet a few more steps are required to match the performance and security of the version shipped in the pip package, see [INSTALL.md](./docs/INSTALL.md).
+This latter is useful on platforms for which the pip package has not yet been compiled but is also needed for [development](./docs/CONTRIBUTING.md). Note that this will get you a working basic installation, yet a few more steps are required to match the performance and security of the version shipped in the pip package, see the [installation instructions](./docs/INSTALL.md).
 
 ## Custom build of TensorFlow
 
@@ -68,7 +68,7 @@ with tfe.Session() as sess:
     result = sess.run(y.reveal())
 ```
 
-For more information, check out our full getting started guide in the [documentation](https://tf-encrypted.readthedocs.io/en/latest/usage/getting_started.html).
+For more information, check out the [documentation](./docs/) or the [examples](./examples/).
 
 
 # Background & Further Reading
@@ -89,7 +89,7 @@ TF Encrypted is experimental software not currently intended for use in producti
 
 # Contributing
 
-Don't hesitate to send a pull request, open an issue, or ask for help! Check out our [contribution guide](./.github/CONTRIBUTING.md) for more information!
+Don't hesitate to send a pull request, open an issue, or ask for help! Check out our [contribution guide](./docs/CONTRIBUTING.md) for more information!
 
 Several individuals have already had an impact on the development of this library (in alphabetical order):
 

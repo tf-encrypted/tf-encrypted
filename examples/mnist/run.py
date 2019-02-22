@@ -1,5 +1,4 @@
 import sys
-from typing import List
 
 import tensorflow as tf
 import tf_encrypted as tfe
@@ -13,8 +12,10 @@ if len(sys.argv) > 1:
     tfe.set_config(config)
     tfe.set_protocol(tfe.protocol.Pond())
 
+session_target = sys.argv[2] if len(sys.argv) > 2 else None
 
-class ModelTrainer():
+
+class ModelOwner():
 
     BATCH_SIZE = 30
     ITERATIONS = 60000 // BATCH_SIZE
@@ -23,7 +24,7 @@ class ModelTrainer():
     def __init__(self, player_name):
         self.player_name = player_name
 
-    def build_data_pipeline(self):
+    def _build_data_pipeline(self):
 
         def normalize(image, label):
             image = tf.cast(image, tf.float32) / 255.0
@@ -38,7 +39,7 @@ class ModelTrainer():
         iterator = dataset.make_one_shot_iterator()
         return iterator
 
-    def build_training_graph(self, training_data) -> List[tf.Tensor]:
+    def _build_training_graph(self, training_data):
 
         # model parameters and initial values
         w0 = tf.Variable(tf.random_normal([28 * 28, 512]))
@@ -73,12 +74,12 @@ class ModelTrainer():
         with tf.control_dependencies([print_op]):
             return [w0.read_value(), b0.read_value(), w1.read_value(), b1.read_value()]
 
-    def provide_input(self) -> List[tf.Tensor]:
+    def provide_input(self):
         with tf.name_scope('loading'):
-            training_data = self.build_data_pipeline()
+            training_data = self._build_data_pipeline()
 
         with tf.name_scope('training'):
-            parameters = self.build_training_graph(training_data)
+            parameters = self._build_training_graph(training_data)
 
         return parameters
 
@@ -90,7 +91,7 @@ class PredictionClient():
     def __init__(self, player_name):
         self.player_name = player_name
 
-    def build_data_pipeline(self):
+    def _build_data_pipeline(self):
 
         def normalize(image, label):
             image = tf.cast(image, tf.float32) / 255.0
@@ -106,8 +107,8 @@ class PredictionClient():
 
     def provide_input(self) -> tf.Tensor:
         with tf.name_scope('loading'):
-            prediction_input, expected_result = self.build_data_pipeline().get_next()
-            print_op = tf.print("EXPECT", expected_result, summarize=self.BATCH_SIZE)
+            prediction_input, expected_result = self._build_data_pipeline().get_next()
+            print_op = tf.print("Expect", expected_result, summarize=self.BATCH_SIZE)
             with tf.control_dependencies([print_op]):
                 prediction_input = tf.identity(prediction_input)
 
@@ -116,18 +117,18 @@ class PredictionClient():
 
         return prediction_input
 
-    def receive_output(self, likelihoods: tf.Tensor) -> tf.Operation:
+    def receive_output(self, logits: tf.Tensor) -> tf.Operation:
         with tf.name_scope('post-processing'):
-            prediction = tf.argmax(likelihoods, axis=1)
-            op = tf.print("ACTUAL", prediction, summarize=self.BATCH_SIZE)
+            prediction = tf.argmax(logits, axis=1)
+            op = tf.print("Result", prediction, summarize=self.BATCH_SIZE)
             return op
 
 
-model_trainer = ModelTrainer('model-trainer')
+model_owner = ModelOwner('model-owner')
 prediction_client = PredictionClient('prediction-client')
 
 # get model parameters as private tensors from model owner
-params = tfe.define_private_input(model_trainer.player_name, model_trainer.provide_input, masked=True)  # pylint: disable=E0632
+params = tfe.define_private_input(model_owner.player_name, model_owner.provide_input, masked=True)  # pylint: disable=E0632
 
 # we'll use the same parameters for each prediction so we cache them to avoid re-training each time
 params = tfe.cache(params)
@@ -142,14 +143,10 @@ layer1 = tfe.sigmoid(layer0 * 0.1)  # input normalized to avoid large values
 logits = tfe.matmul(layer1, w1) + b1
 
 # send prediction output back to client
-prediction_op = tfe.define_output(prediction_client.player_name, [logits], prediction_client.receive_output)
+prediction_op = tfe.define_output(prediction_client.player_name, logits, prediction_client.receive_output)
 
+with tfe.Session(target=session_target) as sess:
 
-target = sys.argv[2] if len(sys.argv) > 2 else None
-print(target)
-with tfe.Session(target=target) as sess:
-
-    print("Init")
     sess.run(tf.global_variables_initializer(), tag='init')
 
     print("Training")
