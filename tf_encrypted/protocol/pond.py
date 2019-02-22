@@ -61,12 +61,11 @@ class Pond(Protocol):
         tensor_factory: Optional[AbstractFactory] = None,
         fixedpoint_config: Optional[FixedpointConfig] = None,
     ) -> None:
-
         self.server_0 = server_0 or get_config().get_player("server0")
         self.server_1 = server_1 or get_config().get_player("server1")
-        self.crypto_producer = crypto_producer or get_config().get_player(
-            "crypto-producer"
-        )
+        crypto_producer = crypto_producer or get_config().get_player("server2")
+        crypto_producer = crypto_producer or get_config().get_player("crypto-producer")
+        self.crypto_producer = crypto_producer
 
         if tensor_factory is None:
             if tensorflow_supports_int64():
