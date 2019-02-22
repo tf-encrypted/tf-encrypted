@@ -1,12 +1,9 @@
 import unittest
 
-import tensorflow as tf
-
 import tf_encrypted as tfe
 import numpy as np
 
 from replicated import (
-    ReplicatedPrivateTensor,
     AddPrivatePrivate,
     MulPrivatePrivate,
     zero_share,
