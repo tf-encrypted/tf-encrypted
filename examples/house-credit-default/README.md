@@ -1,6 +1,6 @@
 ## Private Logistic Regression Tutorial
 
-This tutorial shows how we can easily take a basic logistic regression problem and quickly begin making private predictions on the resulting model. We'll end up with a model that can run in both tf-encrypted and a [Trusted Execution Environment](https://en.wikipedia.org/wiki/Trusted_execution_environment) and has a reasonable runtime in both platforms!
+This tutorial shows how we can easily take a basic logistic regression problem and quickly begin making private predictions on the resulting model. We'll end up with a model that can run in both TF Encrypted and a [Trusted Execution Environment](https://en.wikipedia.org/wiki/Trusted_execution_environment) and has a reasonable runtime in both platforms!
 
 ### The Problem
 
@@ -56,7 +56,7 @@ There are some interesting metrics there that could probably better but the most
 saved the frozen graph (ready for inference) at:  ./house_credit_default.pb
 ```
 
-All this is saying is that the script saved the model and weights to a protobuf file which can then be used for prediction/inference. We'll make use of this later when doing private predictions in tf-encrypted and in a Trusted Execution Environment.
+All this is saying is that the script saved the model and weights to a protobuf file which can then be used for prediction/inference. We'll make use of this later when doing private predictions in TF Encrypted and in a Trusted Execution Environment.
 
 ## Predicting in Plaintext
 
@@ -80,9 +80,9 @@ Prediction: 0.04397624
 
 Rounding down indicates that the client in question will not default.
 
-## Predicting in tf-encrypted
+## Predicting in TF Encrypted
 
-Now we're ready to make a prediction inside tf-encrypted. First, we'll have to make sure tf-encrypted is installed. This can be done by following [these](../../INSTALL.md) instructions.
+Now we're ready to make a prediction inside TF Encrypted. First, we'll have to make sure TF Encrypted is installed. This can be done by following [these](../../docs/INSTALL.md) instructions.
 
 The other thing we need to do is convert a row from the big .csv into a .npy file. This is currently the easiest way to do a quick prediction in tfe. There is a helper tool so we can just run:
 
@@ -114,9 +114,9 @@ Where 0.41815186 is the prediction.
 
 ## Predicting in Trusted Execution Environment
 
-Next up is predicting inside of Trusted Execution Environment. To do this we'll have to clone [tf-trusted](https://github.com/dropoutlabs/tf-trusted) and follow the instructions in the README to build the necessary binaries. tf-trusted is an interface for running models inside of a TEE. tft uses Tensorflow [custom operations](https://www.tensorflow.org/guide/extend/op) to send [gRPC](https://grpc.io/) messages into the TEE device. tft uses [Asylo](https://asylo.dev/) to build the executable that runs inside of the TEE. Depending on the configuration of tft the TEE is either an Intel SGX Simulator or a real hardware Intel SGX device.
+Next up is predicting inside of Trusted Execution Environment. To do this we'll have to clone [tf-trusted](https://github.com/dropoutlabs/tf-trusted) and follow the instructions in the README to build the necessary binaries. tf-trusted is an interface for running models inside of a TEE. tft uses TensorFlow [custom operations](https://www.tensorflow.org/guide/extend/op) to send [gRPC](https://grpc.io/) messages into the TEE device. tft uses [Asylo](https://asylo.dev/) to build the executable that runs inside of the TEE. Depending on the configuration of tft the TEE is either an Intel SGX Simulator or a real hardware Intel SGX device.
 
-Running the model can be done similarly to how we ran the model in tf-encrypted but we need to make sure the gRPC server is running inside of the TEE. If not already done so open a new terminal and run the following command from with the tf-trusted repo:
+Running the model can be done similarly to how we ran the model in TF Encrypted but we need to make sure the gRPC server is running inside of the TEE. If not already done so open a new terminal and run the following command from with the tf-trusted repo:
 
 ```
 $ docker run -it --rm \
@@ -145,7 +145,7 @@ $ model_run.py --model_file house_credit_default.pb \
                --output_name "dense/Sigmoid"
 ```
 
-We've already generated the `.pb` and `.npy` files from the tf-encrypted example so they should already exists in this directory!
+We've already generated the `.pb` and `.npy` files from the TF Encrypted example so they should already exists in this directory!
 
 You should now see an output similar to this:
 

@@ -157,7 +157,7 @@ def setTFEDebugFlag(debug: bool = False) -> None:
     """
     setTFEDebugFlag(debug)
 
-    Set flag to enable or disable debugging mode for tf-encrypted.
+    Set flag to enable or disable debugging mode for TF Encrypted.
 
     :param bool debug: Enable or disable debugging, disabled by default.
     """
@@ -172,7 +172,7 @@ def setTFETraceFlag(trace: bool = False) -> None:
     """
     setTFETraceFlag(trace)
 
-    Set flag to enable or disable tracing in tf-encrypted.
+    Set flag to enable or disable tracing in TF Encrypted.
 
     :param bool trace: Enable or disable tracing, disabled by default.
     """

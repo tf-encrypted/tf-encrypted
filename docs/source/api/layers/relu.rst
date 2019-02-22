@@ -7,7 +7,7 @@ Classicly, `Relu` computes the following on input:
 
     Relu(x) = max(0, x)
 
-In `tf-encrypted`, how `Relu` behaves will depend on the underlying protocol
+In TF Encrypted, how `Relu` behaves will depend on the underlying protocol
 you are using.
 
 | With :class:`~tf_encrypted.protocol.pond.Pond`, `Relu` will be approximated using `Chebyshev Polynomial Approximation`_

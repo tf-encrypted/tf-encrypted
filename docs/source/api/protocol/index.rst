@@ -1,7 +1,7 @@
 `protocol`
 ===========
 
-In `tf-encrypted`, a protocol represents a certain type of cryptographic protocol
+In TF Encrypted, a protocol represents a certain type of cryptographic protocol
 to achieve security.
 
 The goal is to allow you to easily play with or use different cryptographic methods
