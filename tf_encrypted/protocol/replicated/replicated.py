@@ -79,7 +79,7 @@ def share(players, x):
     with tf.device(players[0].device_name):
         x0 = x + alpha0
 
-    xs = ReplicatedPrivateTensor(players, ((None, x1, x2), (x0, None, x2), (x0, x2, None)))
+    xs = ReplicatedPrivateTensor(players, ((None, x1, x2), (x0, None, x2), (x0, x1, None)))
 
     return xs
 
