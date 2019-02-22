@@ -301,20 +301,20 @@ class MulPrivatePrivate(Kernel):
 
         with tf.device(player0.device_name):
             z2_on_0 = (x_on_0[2] * y_on_0[2] +
-                    x_on_0[2] * y_on_0[1] +
-                    x_on_0[1] * y_on_0[2])
+                       x_on_0[2] * y_on_0[1] +
+                       x_on_0[1] * y_on_0[2])
             z2_on_1 = z2_on_0 + alpha0
 
         with tf.device(player1.device_name):
             z0_on_1 = (x_on_1[0] * y_on_1[0] +
-                    x_on_1[0] * y_on_1[2] +
-                    x_on_1[2] * y_on_1[0])
+                       x_on_1[0] * y_on_1[2] +
+                       x_on_1[2] * y_on_1[0])
             z0_on_2 = z0_on_1 + alpha1
 
         with tf.device(player2.device_name):
             z1_on_2 = (x_on_2[1] * y_on_2[1] +
-                    x_on_2[1] * y_on_2[0] +
-                    x_on_2[0] * y_on_2[1])
+                       x_on_2[1] * y_on_2[0] +
+                       x_on_2[0] * y_on_2[1])
             z1_on_0 = z1_on_2 + alpha2
 
         z0 = (None, z1_on_0, z2_on_0)
