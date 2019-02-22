@@ -1,6 +1,6 @@
 # Contribution Guide
 
-The goal of `tf-encrypted` is to make it easy for researchers and practitioners to experiment with various tricks and techniques for privacy-preserving machine learning. As such, contributions are more than welcome and we're always looking for use cases, feature ideas, cryptographic protocols, or machine learning optimizations!
+The goal of TF Encrypted is to make it easy for researchers and practitioners to experiment with various tricks and techniques for privacy-preserving machine learning. As such, contributions are more than welcome and we're always looking for use cases, feature ideas, cryptographic protocols, or machine learning optimizations!
 
 This document helps you get started on:
 
@@ -8,11 +8,11 @@ This document helps you get started on:
 - [Writing documentation](#writing-documentation)
 - [Reporting a bug](#reporting-a-bug)
 
-Please visit the [installation instructions](/INSTALL.md) for help on setting up for development.
+Please visit the [installation instructions](./INSTALL.md) for help on setting up for development.
 
 # Submitting a Pull Request
 
-To contribute, [fork](https://help.github.com/articles/fork-a-repo/) `tf-encrypted`, commit your changes, and [open a pull request](https://help.github.com/articles/using-pull-requests/).
+To contribute, [fork](https://help.github.com/articles/fork-a-repo/) TF Encrypted, commit your changes, and [open a pull request](https://help.github.com/articles/using-pull-requests/).
 
 While you may be asked to make changes to your submission during the review process, we will work with you on this and suggest changes. Consider giving us [push rights to your branch](https://help.github.com/articles/allowing-changes-to-a-pull-request-branch-created-from-a-fork/) so we can potentially also help via commits.
 
@@ -20,7 +20,7 @@ While you may be asked to make changes to your submission during the review proc
 
 For the sake of transparency our key rule is to keep a logical and intelligible commit history, meaning anyone stepping through the commits on either the `master` branch or as part of a review should be able to easily follow the changes made and their potential implications.
 
-To this end we ask all contributors to sanitise pull requests before submitting them as our preferred way of merging pull requests is rebasing.
+To this end we ask all contributors to sanitize pull requests before submitting them as our preferred way of merging pull requests is rebasing.
 
 Some guidelines:
 
@@ -73,6 +73,7 @@ make docs
 command which will
 subsequently output the html version of our docs to your `build` folder. You
 can view the docs after their built using your browser by running
+
 ```sh
 open build/html/index.html
 ```

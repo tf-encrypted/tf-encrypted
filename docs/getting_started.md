@@ -1,4 +1,4 @@
-# Getting Started with tf-encrypted
+# Getting Started with TF Encrypted
 
 This guide assumes that you have followed the installation instructions in [README](https://github.com/mortendahl/tf-encrypted).
 
@@ -12,14 +12,14 @@ This guide assumes that you have followed the installation instructions in [READ
 
 ## Introduction to the API
 
-tf-encrypted has a simple API to make it easy for data scientists to make private predictions and training.
+TF Encrypted has a simple API to make it easy for data scientists to make private predictions and training.
 
-To define a machine learning model, tf-encrypted and TensorFlow follow a very similar API.
+To define a machine learning model, TF Encrypted and TensorFlow follow a very similar API.
 
 <table>
 <tr>
 <th>TensorFlow</th>
-<th>tf-encrypted</th>
+<th>TF Encrypted</th>
 </tr>
 <tr>
 <td><pre lang="python">layer0 = tf.matmul(x, w0) + b0
@@ -69,7 +69,7 @@ Two servers and a crypto producer are doing the actual computation on encrypted 
 ## Private Predictions
 ### a. Locally
 
-With tf-encrypted, you can very easily make private predictions with a pre-trained model saved as a [protobuf](https://www.tensorflow.org/extend/tool_developers/) file.
+With TF Encrypted, you can very easily make private predictions with a pre-trained model saved as a [protobuf](https://www.tensorflow.org/extend/tool_developers/) file.
 
 1. In the [`examples/`](./examples/) folder run the following line of code in your terminal to train a convolution network on MNIST dataset, then save the model as a protobuf file :
 ```bash

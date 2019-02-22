@@ -1,8 +1,8 @@
-# tf-encrypted
+# TF Encrypted
 
 ![Status](https://img.shields.io/badge/status-alpha-blue.svg)  [![License](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg)](./LICENSE)  [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master) [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://tf-encrypted.readthedocs.io/en/latest/)
 
-tf-encrypted is a Python library built on top of [TensorFlow](https://www.tensorflow.org) for researchers and practitioners to experiment with privacy-preserving machine learning. It provides an interface similar to that of TensorFlow, and aims at making the technology readily available without first becoming an expert in machine learning, cryptography, distributed systems, and high performance computing.
+TF Encrypted is a Python library built on top of [TensorFlow](https://www.tensorflow.org) for researchers and practitioners to experiment with privacy-preserving machine learning. It provides an interface similar to that of TensorFlow, and aims at making the technology readily available without first becoming an expert in machine learning, cryptography, distributed systems, and high performance computing.
 
 In particular, the library focuses on:
 
@@ -18,7 +18,7 @@ The project has benefitted enormously from the efforts of several contributors f
 
 # Installation
 
-tf-encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.5+ and TensorFlow 1.12.0+ which can be installed using:
+TF Encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.5+ and TensorFlow 1.12.0+ which can be installed using:
 
 ```bash
 pip3 install tf-encrypted
@@ -32,17 +32,17 @@ cd tf-encrypted
 pip3 install -e .
 ```
 
-This latter is useful on platforms for which the pip package has not yet been compiled but is also needed for [development](./.github/CONTRIBUTING.md). Note that this will get you a working basic installation, yet [a few more steps](./INSTALL.md) are required to match the performance and security of the version shipped in the pip package.
+This latter is useful on platforms for which the pip package has not yet been compiled but is also needed for [development](./.github/CONTRIBUTING.md). Note that this will get you a working basic installation, yet a few more steps are required to match the performance and security of the version shipped in the pip package, see [INSTALL.md](./docs/INSTALL.md).
 
 ## Custom build of TensorFlow
 
-While tf-encrypted will work with the official release of [TensorFlow](https://pypi.org/project/tensorflow/) (version 1.12+), some features currently depend on improvements that have not yet been shipped. In particular, to get speed improvements by using int64 tensors instead of int100 tensors you currently need a custom build of TensorFlow.
+While TF Encrypted will work with the official release of [TensorFlow](https://pypi.org/project/tensorflow/) (version 1.12+), some features currently depend on improvements that have not yet been shipped. In particular, to get speed improvements by using int64 tensors instead of int100 tensors you currently need a custom build of TensorFlow.
 
-Such builds are available for [macOS](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl) and [Linux](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl) as a temporary solution until the next official release of TensorFlow is out (version 1.13), but no guarantees are made about them and they should be treated as pre-alpha. See more in the [installation instructions](./INSTALL.md#custom-tensorflow).
+Such builds are available for [macOS](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl) and [Linux](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl) as a temporary solution until the next official release of TensorFlow is out (version 1.13), but no guarantees are made about them and they should be treated as pre-alpha. See more in the [installation instructions](./docs/INSTALL.md#custom-tensorflow).
 
 # Usage
 
-The following is an example of simple matmul on encrypted data using tf-encrypted:
+The following is an example of simple matmul on encrypted data using TF Encrypted:
 
 ```python
 import tensorflow as tf
@@ -81,7 +81,7 @@ The following texts provide further in-depth presentations of the project:
 
 # Project Status
 
-tf-encrypted is experimental software not currently intended for use in production environments. The focus is on building the underlying primitives and techniques, with some practical security issues post-poned for a later stage. However, care is taken to ensure that none of these represent fundamental issues that cannot be fixed as needed.
+TF Encrypted is experimental software not currently intended for use in production environments. The focus is on building the underlying primitives and techniques, with some practical security issues postponed for a later stage. However, care is taken to ensure that none of these represent fundamental issues that cannot be fixed as needed.
 
 ## Known limitations
 

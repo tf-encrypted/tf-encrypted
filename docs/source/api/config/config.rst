@@ -1,7 +1,7 @@
 `Config`
 ============
 
-| Config determines how a session should run in tf-encrypted.
+| Config determines how a session should run in TF Encrypted.
 | There are two primary ways in which config can be used:
 
 .. py:class:: tf_encrypted.config.LocalConfig

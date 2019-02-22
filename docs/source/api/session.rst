@@ -3,7 +3,7 @@
 
 Session is an extension of `tf.Session` that lets the graph run in a secure manner.
 
-The aim of `tf-encrypted` is to look as close to `TensorFlow` as possible.  With this goal in mind,
+The aim of TF Encrypted is to look as close to `TensorFlow` as possible.  With this goal in mind,
 you get and use a session the same way that you're used to with Tensorflow::
 
     import tf_encrypted as tfe

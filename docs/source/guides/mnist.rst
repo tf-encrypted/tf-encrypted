@@ -4,7 +4,7 @@ MNIST
 This tutorial is also available on `Google Collab`_, feel free to follow along there!
 
 In this tutorial, we will train our model in plaintext with Tensorflow, then
-make private predictions with `tf-encrypted`. we will use the `MNIST dataset`_.
+make private predictions with TF Encrypted. we will use the `MNIST dataset`_.
 
 .. _Google Collab: https://colab.research.google.com/drive/1BbOcMc8npAfQH91-2jtCWkTvpXY0aThC
 .. _MNIST dataset: http://yann.lecun.com/exdb/mnist/
@@ -276,7 +276,7 @@ The `PredictionClient` object will provide the private input that will be used t
 
 Once you instantiate the `ModelTrainer` and `PredictionClient` objects, you can very
 easily get the weights trained in plaintext, get the private input from the client
-and finally make private predictions. As you can see, to create a model, `tf-encrypted`
+and finally make private predictions. As you can see, to create a model, TF Encrypted
 and TensorFlow follow a very similar API
 
 .. code-block:: python

@@ -15,7 +15,7 @@ nodes = dict()
 
 class Protocol(ABC):
     """
-    Protocol is the base class that other protocols in tf-encrypted will extend from.
+    Protocol is the base class that other protocols in TF Encrypted will extend from.
 
     Do not directly instantiate this class.  You should use a subclass instead,
     such as :class:`~tf_encrypted.protocol.protocol.SecureNN`

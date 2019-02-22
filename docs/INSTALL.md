@@ -1,6 +1,6 @@
 # Installation
 
-The most convenient way of installing tf-encrypted is via [the official pip package](https://pypi.org/project/tf-encrypted/):
+The most convenient way of installing TF Encrypted is via [the official pip package](https://pypi.org/project/tf-encrypted/):
 
 ```
 pip3 install tf-encrypted
@@ -44,7 +44,7 @@ We address both below but stress that they can be skipped for initial experiment
 
 # Custom Ops
 
-Certains operations, such as secure randomness generation, rely on C++ extensions of TensorFlow known as [custom ops](https://www.tensorflow.org/guide/extend/op). These come precompiled with the [tf-encrypted pip package](https://pypi.org/project/tf-encrypted/) but need to be manually compiled when installing from source code as done above.
+Certains operations, such as secure randomness generation, rely on C++ extensions of TensorFlow known as [custom ops](https://www.tensorflow.org/guide/extend/op). These come precompiled with the [pip package](https://pypi.org/project/tf-encrypted/) but need to be manually compiled when installing from source code as done above.
 
 On macOS this is straight forward once libtool and automake are installed (see the [detailed instructions](#complete-instructions)):
 
@@ -100,7 +100,7 @@ after making sure flake8 is installed:
 
 # Custom TensorFlow
 
-While tf-encrypted will work with the official release of [TensorFlow](https://pypi.org/project/tensorflow/) (version 1.12+), some features currently depend on improvements that have not yet been shipped. In particular, to get speed improvements from using int64 instead of int100 tensors you currently need a custom build of TensorFlow.
+While TF Encrypted will work with the official release of [TensorFlow](https://pypi.org/project/tensorflow/) (version 1.12+), some features currently depend on improvements that have not yet been shipped. In particular, to get speed improvements from using int64 instead of int100 tensors you currently need a custom build of TensorFlow.
 
 We provide such builds as a temporary solution until the next official release of TensorFlow is out (version 1.13), but no guarantees are made about them and they should be treated as experimental:
 
@@ -115,7 +115,7 @@ In both cases should you end up with a wheel file that you can install using pip
 (venv) ./ $ pip install tensorflow-1.13.0-XXX.whl
 ```
 
-tf-encrypted auto-detects which features are available so no further actions are needed.
+TF Encrypted auto-detects which features are available so no further actions are needed.
 
 # Complete Instructions
 
@@ -213,7 +213,7 @@ We finally close the repository:
 ./ $ cd tf-encrypted
 ```
 
-install tf-encrypted outside a virtual environment and without dependencies:
+install TF Encrypted outside a virtual environment and without dependencies:
 
 ```
 ./tf-encrypted/ $ pip3 install -e . --no-deps

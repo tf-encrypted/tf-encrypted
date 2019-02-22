@@ -129,7 +129,7 @@ endif
 # ###############################################
 # Building Docker Image
 #
-# Builds a docker image for tf-encrypted that can be used to deploy and
+# Builds a docker image for TF Encrypted that can be used to deploy and
 # test.
 # ###############################################
 DOCKER_BUILD=docker build -t mortendahl/tf-encrypted:$(1) -f Dockerfile $(2) .
