@@ -6,9 +6,17 @@ from .replicated import (
     zero_share,
     share,
     recombine,
+    encode,
+    truncate,
 )
 
 
 __all__ = [
-    'Replicated',
+    'AddPrivatePrivate',
+    'MulPrivatePrivate',
+    'zero_share',
+    'share',
+    'recombine',
+    'encode',
+    'truncate',
 ]
