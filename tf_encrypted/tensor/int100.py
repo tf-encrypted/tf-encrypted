@@ -12,7 +12,7 @@ from .factory import (
     AbstractFactory, AbstractTensor, AbstractVariable,
     AbstractConstant, AbstractPlaceholder
 )
-from .shared import binarize, conv2d, im2col
+from .shared import binarize, conv2d, im2col, conv2d_bw
 from ..operations import secure_random
 
 
@@ -543,6 +543,9 @@ def crt_factory(INT_TYPE, MODULI):
         def conv2d(self, other, strides: int, padding: str = 'SAME'):
             x, y = _lift(self, other)
             return conv2d(x, y, strides, padding)  # type: ignore
+
+        def conv2d_bw(self, other, w_shape, strides, padding) -> 'Int100Tensor':
+            return conv2d_bw(self, other, w_shape, strides, padding)
 
         def batch_to_space_nd(self, block_shape, crops):
             with tf.name_scope("crt_batch_to_space_nd"):

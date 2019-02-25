@@ -103,3 +103,24 @@ def conv2d(
         out = out.transpose([3, 0, 1, 2])
 
         return out
+
+
+def conv2d_bw(
+    x: AbstractTensor,
+    d_y: AbstractTensor,
+    w: AbstractTensor,
+    strides: int,
+    padding: int
+) -> AbstractTensor:
+
+    with tf.name_scope('conv2d_bw'):
+
+        h_filter, w_filter, d_filters, n_filters = map(int, w.shape)
+        x_col = x.im2col(h_filter, w_filter, padding, strides)
+        dout_reshaped = d_y.transpose((1, 2, 3, 0)).reshape([n_filters, -1])
+        d_w = dout_reshaped.matmul(x_col.transpose())
+        d_w = d_w.reshape([n_filters, d_filters, h_filter, w_filter]).transpose([2, 3, 1, 0])
+    
+    return d_w
+    
+

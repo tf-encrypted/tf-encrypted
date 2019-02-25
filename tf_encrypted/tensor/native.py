@@ -9,7 +9,7 @@ import tensorflow as tf
 from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
                       AbstractConstant, AbstractPlaceholder)
 from .helpers import inverse
-from .shared import binarize, conv2d, im2col
+from .shared import binarize, conv2d, im2col, conv2d_bw
 from ..operations import secure_random
 
 
@@ -263,6 +263,9 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
                 x, y = _lift(self, other)
                 return conv2d(x, y, strides, padding)  # type: ignore
 
+        def conv2d_bw(self, other, w_shape, strides, padding) -> 'Int100Tensor':
+            return conv2d_bw(self, other, w_shape, strides, padding)
+
         def batch_to_space_nd(self, block_shape, crops):
             value = tf.batch_to_space_nd(self.value, block_shape, crops)
             return DenseTensor(value)
@@ -277,7 +280,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
                 value %= EXPLICIT_MODULUS
             return DenseTensor(value)
 
-        def transpose(self, perm):
+        def transpose(self, perm=None):
             return DenseTensor(tf.transpose(self.value, perm))
 
         def strided_slice(self, args, kwargs):
