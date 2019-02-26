@@ -71,24 +71,24 @@ with tfe.Session() as sess:
 
 ## Running
 
-This is the easiest way of running the example, however it doesn't provide any security and doesn't give accurate performance numbers (may even be slower than [running on GCP](#remotely-on-gcp)).
+Make sure to have the training and test data sets downloaded before running the example:
 
-The first step is to download and convert the MNIST dataset: from the project root directory simply run
-```shell
-python3 ./examples/mnist/download.py
+```sh
+python3 examples/federated-learning/download.py
 ```
-which will place the converted files in the `./data` subdirectory. Next, to execute the example run
-```shell
-python3 ./examples/mnist/run.py
-```
-again from the project root directory.
 
-To get debugging and profiling data on the run use
-```shell
-TFE_STATS=1 python3 ./examples/mnist/run.py
+which will place the converted files in the `./data` subdirectory.
+
+To then run locally use:
+
+```sh
+python3 examples/federated-learning/run.py
 ```
-instead, which will write files to `/tmp/tensorboard` that can be inspected using TensorBoard, e.g.
-```shell
-tensorboard --logdir=/tmp/tensorboard
+
+or remotely using:
+
+```sh
+python3 examples/federated-learning/run.py config.json
 ```
-and navigating to http://localhost:6006 in a browser.
+
+See more details in the [documentation](/docs/RUNNING.md).
