@@ -40,30 +40,24 @@ iteration_op = tfe.define_output(model_owner.player_name, aggregated_model_grads
 
 ## Running
 
-Make sure to have downloaded the training and test data sets before running the actual example:
+Make sure to have the training and test data sets downloaded before running the example:
 
 ```sh
-python examples/federated-learning/download.py
+python3 examples/federated-learning/download.py
 ```
 
-### Locally
+which will place the converted files in the `./data` subdirectory
 
-The example may be run locally using a `LocalConfig`:
+To then run locally use:
 
 ```sh
-python examples/federated-learning/run.py
+python3 examples/federated-learning/run.py
 ```
 
-which also reveals the full set of players involved:
-
-```
-INFO:tf_encrypted:Players: ['server0', 'server1', 'server2', 'model-owner', 'data-owner-0', 'data-owner-1', 'data-owner-2']
-```
-
-### Remotely
-
-By specifying a configuration file the example may also be run remotely on distinct machines:
+or remotely using:
 
 ```sh
-python examples/federated-learning/run.py config.json
+python3 examples/federated-learning/run.py config.json
 ```
+
+See more details in the [documentation](/docs/RUNNING.md).

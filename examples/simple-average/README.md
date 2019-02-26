@@ -6,17 +6,6 @@ The set of players consists of five *inputters*, a *result receiver*, and the th
 
 <p align="center"><img src="./flow.png" style="width: 50%;"/></p>
 
-Note that the involved players can also be determined by simply running the example using the default `LocalConfig`:
-
-```sh
-python examples/simple-average/run.py
-```
-
-and looking in the log:
-
-```sh
-INFO:tf_encrypted:Players: ['server0', 'server1', 'server2', 'inputter-0', 'inputter-1', 'inputter-2', 'inputter-3', 'inputter-4', 'result-receiver']
-```
 
 ## Computation
 
@@ -67,42 +56,16 @@ Note that we are using `tfe.Session` here instead of `tf.Session`.
 
 ## Running
 
-As noted earlier, the default configuration is a `LocalConfig` which serves as a convenient way of testing computations by running everything locally, using different threads for each player:
+The example may be run using either an insecure local configuration, using different threads for the players:
 
 ```sh
-python examples/simple-average/run.pu
+python examples/simple-average/run.py
 ```
 
-To use separate machines for each player instead we simply specify and distribute a hostmap configuration file, mapping player names to IP endpoints, and launch a TensorFlow server on each machine.
-
-Concretely, we first create a `config.json` file, say:
-
-```json
-{
-    "server0": "10.0.0.10:4440",
-    "server1": "10.0.0.11:4440",
-    "server2": "10.0.0.12:4440",
-    "inputter-0": "10.0.0.20:4440",
-    "inputter-1": "10.0.0.21:4440",
-    "inputter-2": "10.0.0.22:4440",
-    "inputter-3": "10.0.0.23:4440",
-    "inputter-4": "10.0.0.24:4440",
-    "result-receiver": "10.0.0.30:4440"
-}
-```
-
-reflecting our network setup. Note that all machines must be able to talk to each other.
-
-We then distribute this file to each machine with TensorFlow and TF Encrypted pre-installed, and launch a server by passing in the name of the player operating that particular machine:
-
-```sh
-python -m tf_encrypted.player <name> --config config.json
-```
-
-Finally we run the example:
+or remotely using different network hosts for the players as defined in a `config.json` configuration file:
 
 ```sh
 python examples/simple-average/run.py config.json
 ```
 
-Note that running the script can be done on any machine, including one that is not listed in the hostmap: it will just need access to the endpoint of the first player, as this machine is used for coordinating the computation. As a side note, it is occasionally convenient to use a dedicated `master` machine for this, which will have to be the first entry in the configuration.
+See the [documentation](/docs/RUNNING.md) for more details.
