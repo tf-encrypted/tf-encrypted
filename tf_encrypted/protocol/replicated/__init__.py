@@ -6,8 +6,20 @@ from .replicated import (
     zero_share,
     share,
     recombine,
-    encode,
     truncate,
+)
+
+from .kernels import (
+    dispatch,
+    register_all,
+)
+
+from .context import (
+    Context
+)
+
+from .types import (
+    Dtypes
 )
 
 
@@ -19,4 +31,7 @@ __all__ = [
     'recombine',
     'encode',
     'truncate',
+    'dispatch',
+    'Context',
+    'register_all',
 ]

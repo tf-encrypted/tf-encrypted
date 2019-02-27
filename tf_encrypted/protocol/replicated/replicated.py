@@ -3,17 +3,15 @@ import tensorflow as tf
 from tf_encrypted.operations.secure_random import seed, seeded_random_uniform
 from tf_encrypted.tensor.helpers import inverse
 import numpy as np
+from .tensor import Tensor
+from .fixed import Fixed10, Fixed16
+from .ops import *
+from .types import Dtypes
 
 maxval = 9223372036854775807
 minval = -9223372036854775808
 dtype = tf.int64
 modulus = 18446744073709551616
-base = 2
-precision_fractional = 10
-
-
-def encode(value):
-    return tf.cast(value * (base ** precision_fractional), tf.int64)
 
 
 def truncate(players, value):
@@ -41,7 +39,7 @@ def truncate(players, value):
     z_on_2 = (z0_on_2, z1_on_2, None)
     shares = (z_on_0, z_on_1, z_on_2)
 
-    return ReplicatedPrivateTensor(players, shares)
+    return ReplicatedPrivate(players, shares)
 
 
 def zero_share(players, shape):
@@ -74,9 +72,19 @@ def share(players, x):
     x2 = alpha2
 
     with tf.device(players[0].device_name):
-        x0 = x + alpha0
+        x0 = x.backing + alpha0
 
-    xs = ReplicatedPrivateTensor(players, ((None, x1, x2), (x0, None, x2), (x0, x1, None)))
+    # TODO Dtypes to type lookup?
+    if x.dtype is Dtypes.FIXED10:
+        x0 = Fixed10(x0)
+        x1 = Fixed10(x1)
+        x2 = Fixed10(x2)
+    elif x.dtype is Dtypes.FIXED16:
+        x0 = Fixed16(x0)
+        x1 = Fixed16(x1)
+        x2 = Fixed16(x2)
+
+    xs = ReplicatedPrivate(players, ((None, x1, x2), (x0, None, x2), (x0, x1, None)))
 
     return xs
 
@@ -88,36 +96,42 @@ def recombine(players, z):
     return final
 
 
-class ReplicatedTensor(abc.ABC):
-    pass
-
-
-class ReplicatedPrivateTensor(ReplicatedTensor):
-    def __init__(
-        self,
-        players,
-        shares,
-    ) -> None:
+class ReplicatedPrivate(Tensor):
+    def __init__(self, players, shares):
         self.players = players
         self.shares = shares
 
-    @property
-    def shape(self):
-        # cache shape?!
         for share in self.shares[0]:
             if share is not None:
-                return share[0].shape
+                self._shape = share.shape
+                self._extra_dtype = share.dtype
+                break
+
+    @property
+    def dtype(self):
+        return (Dtypes.REPLICATED3, self._extra_dtype)
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @property
+    def backing(self):
+        return self.shares
 
 
+# TODO benefits of a bass class??
 class Kernel:
     def __call__(self, *args):
         pass
 
 
 class AddPrivatePrivate(Kernel):
-    def __call__(self, x: ReplicatedPrivateTensor, y: ReplicatedPrivateTensor) -> ReplicatedPrivateTensor:
+    op = Add
+
+    def __call__(self, context, x, y):
         players = x.players
-        assert y.players == players
+
         player0, player1, player2 = players
 
         x_on_0, x_on_1, x_on_2 = x.shares
@@ -144,10 +158,10 @@ class AddPrivatePrivate(Kernel):
 
 
 class SubPrivatePrivate(Kernel):
+    op = Sub
 
-    def __call__(self, x: ReplicatedPrivateTensor, y: ReplicatedPrivateTensor) -> ReplicatedPrivateTensor:
+    def __call__(self, context, x, y):
         players = x.players
-        assert y.players == players
         player0, player1, player2 = players
 
         x_on_0, x_on_1, x_on_2 = x.shares
@@ -174,10 +188,10 @@ class SubPrivatePrivate(Kernel):
 
 
 class MulPrivatePrivate(Kernel):
+    op = Mul
 
-    def __call__(self, x: ReplicatedPrivateTensor, y: ReplicatedPrivateTensor) -> ReplicatedPrivateTensor:
+    def __call__(self, context, x, y):
         players = x.players
-        assert y.players == players
         player0, player1, player2 = players
 
         x_on_0, x_on_1, x_on_2 = x.shares
@@ -209,4 +223,31 @@ class MulPrivatePrivate(Kernel):
         z2 = (z0_on_2, z1_on_2, None)
         shares = (z0, z1, z2)
 
-        return ReplicatedPrivateTensor(players, shares)
+        return ReplicatedPrivate(players, shares)
+
+
+class CastReplicated3(Kernel):
+    op = Cast
+
+    def __call__(self, context, value, dtype, players=None):
+        return share(players, value)
+
+# TODO parameraterized this class to determine encode width
+
+
+class CastFixed16(Kernel):
+    op = Cast
+
+    def __call__(self, context, value, dtype, players=None):
+        fixed = tf.cast(value * (Fixed16.base ** Fixed16.precision_fractional), tf.int64)
+
+        return Fixed16(fixed)
+
+
+class CastFixed10(Kernel):
+    op = Cast
+
+    def __call__(self, context, value, dtype, players=None):
+        fixed = tf.cast(value * (Fixed10.base ** Fixed10.precision_fractional), tf.int64)
+
+        return Fixed10(fixed)
