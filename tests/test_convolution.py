@@ -139,7 +139,7 @@ class TestConv2D(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 # outputs
-                d_w_pond = sess.run(d_w.reveal())
+                d_x_pond, d_w_pond = sess.run([d_x, d_w.reveal()])
 
         # reset graph
         tf.reset_default_graph()
@@ -166,6 +166,7 @@ class TestConv2D(unittest.TestCase):
 
         # match derivative of weights
         np.testing.assert_array_almost_equal(d_w_tensorflow, d_w_pond, decimal=2)
+        np.testing.assert_array_almost_equal(d_x_tensorflow, d_x_pond, decimal=2)
 
 
 if __name__ == '__main__':

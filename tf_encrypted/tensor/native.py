@@ -9,7 +9,7 @@ import tensorflow as tf
 from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
                       AbstractConstant, AbstractPlaceholder)
 from .helpers import inverse
-from .shared import binarize, conv2d, im2col, conv2d_bw
+from .shared import binarize, conv2d, im2col, conv2d_bw, col2im
 from ..operations import secure_random
 
 
@@ -254,6 +254,10 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
 
         def im2col(self, h_filter: int, w_filter: int, padding: str, strides: int):
             return DenseTensor(im2col(self.value, h_filter, w_filter, padding, strides))
+
+        def col2im(self, output_shape: Union[List[int], Tuple[int]], h_filter: int, w_filter: int,
+               padding: str, strides: int):
+            return DenseTensor(col2im(self.value, output_shape, h_filter, w_filter, padding, strides))
 
         def conv2d(self, other, strides: int, padding: str = 'SAME'):
             if EXPLICIT_MODULUS is not None:

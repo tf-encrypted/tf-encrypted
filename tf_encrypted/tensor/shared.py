@@ -75,6 +75,55 @@ def im2col(
         return x_col_tensor
 
 
+def tf_repeat(f_w, f_h):
+  idx = tf.range(f_w)
+  idx = tf.reshape(idx, [-1, 1])  
+  idx = tf.tile(idx, [1, f_h])  
+  idx = tf.reshape(idx, [-1]) 
+  return idx
+
+
+def get_im2col_indices_tf(x_shape, h_filter, w_filter, padding=1, stride=1):
+    # First figure out what the size of the output should be
+    N, C, H, W = x_shape
+    assert (H + 2 * padding - h_filter) % stride == 0
+    assert (W + 2 * padding - h_filter) % stride == 0
+    out_height = int((H + 2 * padding - h_filter) / stride + 1)
+    out_width = int((W + 2 * padding - w_filter) / stride + 1)
+
+    i0 = tf_repeat(w_filter, h_filter)
+    i0 = tf.tile(i0, [C])
+    i1 = tf.scalar_mul(stride, tf_repeat(out_height, out_width))
+
+    j0 = tf.tile(tf.range(w_filter), [h_filter * C])
+    j1 = tf.scalar_mul(stride, tf.tile(tf.range(out_width), [out_height]))
+    i = tf.math.add(tf.reshape(i0,[-1, 1]), tf.reshape(i1,[1, -1]))
+    j = tf.math.add(tf.reshape(j0, [-1, 1]), tf.reshape(j1, [1, -1]))
+
+    k = tf.reshape(tf_repeat(C, h_filter * w_filter), [-1, 1])
+
+    return (k, i, j)
+
+
+def col2im(cols, x_shape, h_filter=3, w_filter=3, padding=1,
+                   stride=1):
+    """ An implementation of col2im based on fancy indexing and np.add.at """
+    N, C, H, W = x_shape
+    H_padded, W_padded = H + 2 * padding, W + 2 * padding
+    x_padded = np.zeros((N, C, H_padded, W_padded))
+    k, i, j = get_im2col_indices_tf(x_shape, h_filter, w_filter, padding,
+                                 stride)
+    cols_reshaped = tf.reshape(cols, [C * h_filter * w_filter, -1, N])
+    cols_reshaped = tf.transpose(cols_reshaped, [2, 0, 1])
+
+    ## find the equivalent in TensorFlow 
+    np.add.at(x_padded, (slice(None), k, i, j), cols_reshaped)
+    
+    if padding == 0:
+        return x_padded, 
+    return x_padded[:, :, padding:-padding, padding:-padding]
+
+
 def conv2d(
     x: AbstractTensor,
     y: AbstractTensor,

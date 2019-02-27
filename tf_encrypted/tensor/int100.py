@@ -540,6 +540,17 @@ def crt_factory(INT_TYPE, MODULI):
                            for xi in self.backing]
                 return DenseTensor(backing)
 
+        def col2im(self, output_shape: Union[List[int], Tuple[int]], h_filter: int, w_filter: int,
+               padding: str, strides: int):
+               backing = [col2im(xi,
+                                output_shape, 
+                                h_filter, 
+                                w_filter, 
+                                padding, 
+                                strides) 
+                          for xi in self.backing]
+            return DenseTensor(backing)
+
         def conv2d(self, other, strides: int, padding: str = 'SAME'):
             x, y = _lift(self, other)
             return conv2d(x, y, strides, padding)  # type: ignore
