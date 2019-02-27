@@ -100,9 +100,9 @@ after making sure flake8 is installed:
 
 ## Custom TensorFlow
 
-While TF Encrypted will work with the official release of [TensorFlow](https://pypi.org/project/tensorflow/) (version 1.12+), some features currently depend on improvements that have not yet been shipped. In particular, to get speed improvements from using int64 instead of int100 tensors you currently need a custom build of TensorFlow.
+TF Encrypted officially supports TensorFlow 1.13.1 but if you have a need to run on 1.12.0 and want to take advantage of the int64 tensor speed improvements you'll have to make use of a custom build.
 
-We provide such builds as a temporary solution until the next official release of TensorFlow is out (version 1.13), but no guarantees are made about them and they should be treated as experimental:
+We provide such builds as a temporary solution and no guarantees are made about them and they should be treated as experimental:
 
 - [macOS](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl) <small>(sha256: <tt>734b7c1efd0afa09da1ac22c45be04c89ced3edf203b42dead8fa842b38c278e</tt>)</small>
 - [Linux](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl) <small>(sha256: <tt>5cd9d36f7fdee0b8d8367aa4aa95a1244c09c8dba87ebb4ccff9631058f57c1f</tt>)</small>

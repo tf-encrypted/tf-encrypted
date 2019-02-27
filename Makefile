@@ -11,7 +11,6 @@ all: test
 # ###############################################
 DOCKER_REQUIRED_VERSION=18.
 PYTHON_REQUIRED_VERSION=3.5.
-TENSORFLOW_REQUIRED_VERSION=1.12
 SHELL := /bin/bash
 
 CURRENT_DIR=$(shell pwd)
@@ -45,13 +44,6 @@ pipcheck:
 ifeq (,$(PIP_PATH))
 ifeq (,$(BYPASS_PIP_CHECK))
 	$(error "Pip must be installed")
-endif
-endif
-
-tensorflowcheck:
-ifeq (,$(findstring $(TENSORFLOW_REQUIRED_VERSION),$(CURRENT_TF_VERSION)))
-ifeq (,$(BYPASS_TENSORFLOW_CHECK))
-	$(error "Tensorflow version $(TENSORFLOW_REQUIRED_VERSION) is required.")
 endif
 endif
 
@@ -135,7 +127,6 @@ endif
 DOCKER_BUILD=docker build -t mortendahl/tf-encrypted:$(1) -f Dockerfile $(2) .
 docker: Dockerfile dockercheck
 	$(call DOCKER_BUILD,latest,)
-	$(call DOCKER_BUILD,latest-int64,--build-arg TF_WHL_URL=https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl)
 
 .PHONY: docker
 
@@ -267,7 +258,7 @@ push:
 # ###############################################
 # libsodium and secure random custom op defines
 # ###############################################
-LIBSODIUM_VER_TAG=1.0.16
+LIBSODIUM_VER_TAG=1.0.17
 LIBSODIUM_DIR=build/libsodium-$(LIBSODIUM_VER_TAG)
 
 TF_CFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))' 2>/dev/null)
@@ -305,8 +296,8 @@ $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECUR
 build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
 
 build-all:
-	pip install tensorflow==1.12.0
-	$(MAKE) $(SECURE_OUT_PRE)1.12.0.so
+	pip install tensorflow==1.13.1
+	$(MAKE) $(SECURE_OUT_PRE)1.13.1.so
 
 
 .PHONY: build build-all

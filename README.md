@@ -34,9 +34,9 @@ pip3 install -e .
 
 This latter is useful on platforms for which the pip package has not yet been compiled but is also needed for [development](./docs/CONTRIBUTING.md). Note that this will get you a working basic installation, yet a few more steps are required to match the performance and security of the version shipped in the pip package, see the [installation instructions](./docs/INSTALL.md).
 
-## Custom build of TensorFlow
+## Custom build of TensorFlow For 1.12.0
 
-While TF Encrypted will work with the official release of [TensorFlow](https://pypi.org/project/tensorflow/) (version 1.12+), some features currently depend on improvements that have not yet been shipped. In particular, to get speed improvements by using int64 tensors instead of int100 tensors you currently need a custom build of TensorFlow.
+TF Encrypted officially supports TensorFlow 1.13.1 but if you have a need to run on 1.12.0 and want to take advantage of the int64 tensor speed improvements you'll have to make use of a custom build.
 
 Such builds are available for [macOS](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl) and [Linux](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl) as a temporary solution until the next official release of TensorFlow is out (version 1.13), but no guarantees are made about them and they should be treated as pre-alpha. See more in the [installation instructions](./docs/INSTALL.md#custom-tensorflow).
 
