@@ -18,5 +18,11 @@ class Tensor(ABC):
     def backing(self):
         pass
 
-    def __repr__(self):
-        return self.backing.__repr__()
+    # def __repr__(self):
+    #     return self.backing.__repr__()
+
+    def __add__(self, y):
+        return type(self)(self.backing + y.backing)
+
+    def __mul__(self, y):
+        return type(self)(self.backing * y.backing)

@@ -1,9 +1,12 @@
 import tensorflow as tf
 
 from .types import Dtypes
-from .replicated import AddPrivatePrivate, SubPrivatePrivate, \
-    MulPrivatePrivate, CastFixed10, CastFixed16, \
-    CastReplicated3
+from .replicated import (
+    AddPrivatePrivate, SubPrivatePrivate,
+    MulPrivatePrivate, CastFloat32Fixed10, CastFloat32Fixed16,
+    CastIntReplicated3, CastReplicated3Int, CastFixed10Float32,
+    CastFixed16Float32
+)
 
 kernels = {}
 
@@ -30,10 +33,12 @@ def dispatch(context, name, *args, **kwargs):
         try:
             dtype_list.append(arg.dtype)
         except AttributeError:
+            # TODO make sure arg is a Dtypes
             dtype_list.append(arg)
 
     dtype_tuple = tuple(dtype_list)
     kernel = kernels[name][dtype_tuple]
+
     op = kernel.op
 
     if len(op.attrs) > 0:
@@ -55,9 +60,15 @@ def register_all():
     register(SubPrivatePrivate(), (integer_replicated3, integer_replicated3))
     register(MulPrivatePrivate(), (integer_replicated3, integer_replicated3))
 
-    register(CastFixed10(), (tf.float32, Dtypes.FIXED10))
-    register(CastFixed16(), (tf.float32, Dtypes.FIXED16))
-
-    register(CastReplicated3(), (Dtypes.FIXED10, Dtypes.REPLICATED3))
-    register(CastReplicated3(), (tf.int32, Dtypes.REPLICATED3))
     # TODO float right to replicated3
+    register(CastFloat32Fixed10(), (tf.float32, Dtypes.FIXED10))
+    register(CastFloat32Fixed16(), (tf.float32, Dtypes.FIXED16))
+    register(CastIntReplicated3(), (Dtypes.FIXED10, Dtypes.REPLICATED3))
+    register(CastIntReplicated3(), (Dtypes.FIXED16, Dtypes.REPLICATED3))
+    register(CastIntReplicated3(), (tf.int32, Dtypes.REPLICATED3))
+
+    register(CastReplicated3Int(), (fixed10_replicated3, Dtypes.FIXED10))
+    register(CastReplicated3Int(), (fixed16_replicated3, Dtypes.FIXED16))
+    register(CastReplicated3Int(), (integer_replicated3, tf.int32))
+    register(CastFixed10Float32(), (Dtypes.FIXED10, tf.float32))
+    register(CastFixed16Float32(), (Dtypes.FIXED16, tf.float32))

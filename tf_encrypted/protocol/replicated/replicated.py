@@ -14,10 +14,19 @@ dtype = tf.int64
 modulus = 18446744073709551616
 
 
-def truncate(players, value):
-    player0, player1, player2 = players
+def encode(value, base, exp):
+    return value * (base ** exp)
+
+
+def decode(value, base, exp):
+    return value / (base ** exp)
+
+
+def truncate(value):
+    player0, player1, player2 = value.players
 
     x_on_0, x_on_1, x_on_2 = value.shares
+    precision_fractional = x_on_0[1].precision_fractional
 
     with tf.device(player0.device_name):
         s = seed()
@@ -72,7 +81,10 @@ def share(players, x):
     x2 = alpha2
 
     with tf.device(players[0].device_name):
-        x0 = x.backing + alpha0
+        try:
+            x0 = x.backing + alpha0
+        except AttributeError:
+            x0 = x + alpha0
 
     # TODO Dtypes to type lookup?
     if x.dtype is Dtypes.FIXED10:
@@ -96,7 +108,8 @@ def recombine(players, z):
     return final
 
 
-class ReplicatedPrivate(Tensor):
+# TODO Subclass ProtocolTensor?
+class ReplicatedPrivate():
     def __init__(self, players, shares):
         self.players = players
         self.shares = shares
@@ -104,12 +117,12 @@ class ReplicatedPrivate(Tensor):
         for share in self.shares[0]:
             if share is not None:
                 self._shape = share.shape
-                self._extra_dtype = share.dtype
+                self._base_dtype = share.dtype
                 break
 
     @property
     def dtype(self):
-        return (Dtypes.REPLICATED3, self._extra_dtype)
+        return (Dtypes.REPLICATED3, self._base_dtype)
 
     @property
     def shape(self):
@@ -154,7 +167,7 @@ class AddPrivatePrivate(Kernel):
         z_on_2 = (z0_on_2, z1_on_2, None)
         shares = (z_on_0, z_on_1, z_on_2)
 
-        return ReplicatedPrivateTensor(players, shares)
+        return ReplicatedPrivate(players, shares)
 
 
 class SubPrivatePrivate(Kernel):
@@ -184,7 +197,7 @@ class SubPrivatePrivate(Kernel):
         z_on_2 = (z0_on_2, z1_on_2, None)
         shares = (z_on_0, z_on_1, z_on_2)
 
-        return ReplicatedPrivateTensor(players, shares)
+        return ReplicatedPrivate(players, shares)
 
 
 class MulPrivatePrivate(Kernel):
@@ -199,6 +212,15 @@ class MulPrivatePrivate(Kernel):
 
         # get the next zero triple defined by seeds (s0, s1, s2) shared between the three players
         alpha0, alpha1, alpha2 = zero_share(players, x.shape)
+
+        if x._base_dtype is Dtypes.FIXED10:
+            alpha0 = Fixed10(alpha0)
+            alpha1 = Fixed10(alpha1)
+            alpha2 = Fixed10(alpha2)
+        elif x._base_dtype is Dtypes.FIXED16:
+            alpha0 = Fixed16(alpha0)
+            alpha1 = Fixed16(alpha1)
+            alpha2 = Fixed16(alpha2)
 
         with tf.device(player0.device_name):
             z2_on_0 = (x_on_0[2] * y_on_0[2]
@@ -223,10 +245,13 @@ class MulPrivatePrivate(Kernel):
         z2 = (z0_on_2, z1_on_2, None)
         shares = (z0, z1, z2)
 
+        if x._base_dtype is Dtypes.FIXED10 or x._base_dtype is Dtypes.Fixed16:
+            return truncate(ReplicatedPrivate(players, shares))
+
         return ReplicatedPrivate(players, shares)
 
 
-class CastReplicated3(Kernel):
+class CastIntReplicated3(Kernel):
     op = Cast
 
     def __call__(self, context, value, dtype, players=None):
@@ -235,19 +260,40 @@ class CastReplicated3(Kernel):
 # TODO parameraterized this class to determine encode width
 
 
-class CastFixed16(Kernel):
+class CastFloat32Fixed16(Kernel):
     op = Cast
 
     def __call__(self, context, value, dtype, players=None):
-        fixed = tf.cast(value * (Fixed16.base ** Fixed16.precision_fractional), tf.int64)
+        fixed = tf.cast(encode(value, Fixed16.base, Fixed16.precision_fractional), tf.int64)
 
         return Fixed16(fixed)
 
 
-class CastFixed10(Kernel):
+class CastFloat32Fixed10(Kernel):
     op = Cast
 
     def __call__(self, context, value, dtype, players=None):
-        fixed = tf.cast(value * (Fixed10.base ** Fixed10.precision_fractional), tf.int64)
+        fixed = tf.cast(encode(value, Fixed10.base, Fixed10.precision_fractional), tf.int64)
 
         return Fixed10(fixed)
+
+
+class CastReplicated3Int(Kernel):
+    op = Cast
+
+    def __call__(self, context, value, dtype, players=None):
+        return recombine(players, value)
+
+
+class CastFixed10Float32(Kernel):
+    op = Cast
+
+    def __call__(self, context, value, dtype, players=None):
+        return decode(value.backing, Fixed10.base, Fixed10.precision_fractional)
+
+
+class CastFixed16Float32(Kernel):
+    op = Cast
+
+    def __call__(self, context, value, dtype, players=None):
+        return decode(value.backing, Fixed16.base, Fixed16.precision_fractional)
