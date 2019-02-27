@@ -16,3 +16,4 @@ data/
 *.egg-info
 *.so
 *.gz
+.cache
