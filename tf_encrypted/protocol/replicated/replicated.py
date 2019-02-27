@@ -44,25 +44,25 @@ def truncate(players, value):
     return ReplicatedPrivateTensor(players, shares)
 
 
-def zero_share(players, shape):
-    player1, player2, player3 = players
+def zero_share(players, shape, backing_dtype):
 
-    with tf.device(player3.device_name):
-        s2 = seed()
+    with tf.device(players[0].device_name):
+        r0 = backing_dtype.sample_uniform(shape)
 
-    with tf.device(player2.device_name):
-        s1 = seed()
-        alpha1 = seeded_random_uniform(shape, dtype=dtype, seed=s1, minval=minval, maxval=maxval) - \
-            seeded_random_uniform(shape, dtype=dtype, seed=s2, minval=minval, maxval=maxval)
+    with tf.device(players[1].device_name):
+        r1 = backing_dtype.sample_uniform(shape)
 
-    with tf.device(player1.device_name):
-        s0 = seed()
-        alpha0 = seeded_random_uniform(shape, dtype=dtype, seed=s0, minval=minval, maxval=maxval) - \
-            seeded_random_uniform(shape, dtype=dtype, seed=s1, minval=minval, maxval=maxval)
+    with tf.device(players[2].device_name):
+        r2 = backing_dtype.sample_uniform(shape)
 
-    with tf.device(player3.device_name):
-        alpha2 = seeded_random_uniform(shape, dtype=dtype, seed=s2, minval=minval, maxval=maxval) - \
-            seeded_random_uniform(shape, dtype=dtype, seed=s0, minval=minval, maxval=maxval)
+    with tf.device(players[0].device_name):
+        alpha0 = r0 - r1
+
+    with tf.device(players[1].device_name):
+        alpha1 = r1 - r2
+    
+    with tf.device(players[2].device_name):
+        alpha2 = r2 - r0
 
     return alpha0, alpha1, alpha2
 
