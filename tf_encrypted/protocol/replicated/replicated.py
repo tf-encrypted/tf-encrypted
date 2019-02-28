@@ -1,12 +1,7 @@
-import abc
 import tensorflow as tf
 from tf_encrypted.operations.secure_random import seed, seeded_random_uniform
-from tf_encrypted.tensor.helpers import inverse
-import numpy as np
-from .tensor import Tensor
-from .fixed import Fixed10, Fixed16
-from .ops import *
-from .types import Dtypes
+from .ops import Add, Mul, Sub, Cast
+from .types import Dtypes, Fixed, fixed_config
 
 maxval = 9223372036854775807
 minval = -9223372036854775808
@@ -48,7 +43,7 @@ def truncate(value):
     z_on_2 = (z0_on_2, z1_on_2, None)
     shares = (z_on_0, z_on_1, z_on_2)
 
-    return ReplicatedPrivate(players, shares)
+    return ReplicatedPrivate(value.players, shares)
 
 
 def zero_share(players, shape):
@@ -86,15 +81,10 @@ def share(players, x):
         except AttributeError:
             x0 = x + alpha0
 
-    # TODO Dtypes to type lookup?
-    if x.dtype is Dtypes.FIXED10:
-        x0 = Fixed10(x0)
-        x1 = Fixed10(x1)
-        x2 = Fixed10(x2)
-    elif x.dtype is Dtypes.FIXED16:
-        x0 = Fixed16(x0)
-        x1 = Fixed16(x1)
-        x2 = Fixed16(x2)
+    if x.dtype is Dtypes.FIXED10 or x.dtype is Dtypes.FIXED16:
+        x0 = Fixed(x0, x.dtype)
+        x1 = Fixed(x1, x.dtype)
+        x2 = Fixed(x2, x.dtype)
 
     xs = ReplicatedPrivate(players, ((None, x1, x2), (x0, None, x2), (x0, x1, None)))
 
@@ -117,12 +107,12 @@ class ReplicatedPrivate():
         for share in self.shares[0]:
             if share is not None:
                 self._shape = share.shape
-                self._base_dtype = share.dtype
+                self.base_dtype = share.dtype
                 break
 
     @property
     def dtype(self):
-        return (Dtypes.REPLICATED3, self._base_dtype)
+        return (Dtypes.REPLICATED3, self.base_dtype)
 
     @property
     def shape(self):
@@ -213,14 +203,10 @@ class MulPrivatePrivate(Kernel):
         # get the next zero triple defined by seeds (s0, s1, s2) shared between the three players
         alpha0, alpha1, alpha2 = zero_share(players, x.shape)
 
-        if x._base_dtype is Dtypes.FIXED10:
-            alpha0 = Fixed10(alpha0)
-            alpha1 = Fixed10(alpha1)
-            alpha2 = Fixed10(alpha2)
-        elif x._base_dtype is Dtypes.FIXED16:
-            alpha0 = Fixed16(alpha0)
-            alpha1 = Fixed16(alpha1)
-            alpha2 = Fixed16(alpha2)
+        if x.base_dtype is Dtypes.FIXED10 or x.base_dtype is Dtypes.FIXED16:
+            alpha0 = Fixed(alpha0, x.base_dtype)
+            alpha1 = Fixed(alpha1, x.base_dtype)
+            alpha2 = Fixed(alpha2, x.base_dtype)
 
         with tf.device(player0.device_name):
             z2_on_0 = (x_on_0[2] * y_on_0[2]
@@ -245,8 +231,8 @@ class MulPrivatePrivate(Kernel):
         z2 = (z0_on_2, z1_on_2, None)
         shares = (z0, z1, z2)
 
-        if x._base_dtype is Dtypes.FIXED10 or x._base_dtype is Dtypes.Fixed16:
-            return truncate(ReplicatedPrivate(players, shares))
+        # if x.base_dtype is Dtypes.FIXED10 or x.base_dtype is Dtypes.FIXED16:
+        #     return truncate(ReplicatedPrivate(players, shares))
 
         return ReplicatedPrivate(players, shares)
 
@@ -257,25 +243,27 @@ class CastIntReplicated3(Kernel):
     def __call__(self, context, value, dtype, players=None):
         return share(players, value)
 
-# TODO parameraterized this class to determine encode width
 
-
-class CastFloat32Fixed16(Kernel):
+class CastFloat32Fixed(Kernel):
     op = Cast
 
     def __call__(self, context, value, dtype, players=None):
-        fixed = tf.cast(encode(value, Fixed16.base, Fixed16.precision_fractional), tf.int64)
+        base = fixed_config[dtype]["base"]
+        bits = fixed_config[dtype]["bits"]
 
-        return Fixed16(fixed)
+        fixed = tf.cast(encode(value, base, bits), tf.int64)
+
+        return Fixed(fixed, dtype)
 
 
-class CastFloat32Fixed10(Kernel):
+class CastFixedFloat32(Kernel):
     op = Cast
 
     def __call__(self, context, value, dtype, players=None):
-        fixed = tf.cast(encode(value, Fixed10.base, Fixed10.precision_fractional), tf.int64)
+        base = fixed_config[value.dtype]["base"]
+        bits = fixed_config[value.dtype]["bits"]
 
-        return Fixed10(fixed)
+        return decode(value.backing, base, bits)
 
 
 class CastReplicated3Int(Kernel):
@@ -283,17 +271,3 @@ class CastReplicated3Int(Kernel):
 
     def __call__(self, context, value, dtype, players=None):
         return recombine(players, value)
-
-
-class CastFixed10Float32(Kernel):
-    op = Cast
-
-    def __call__(self, context, value, dtype, players=None):
-        return decode(value.backing, Fixed10.base, Fixed10.precision_fractional)
-
-
-class CastFixed16Float32(Kernel):
-    op = Cast
-
-    def __call__(self, context, value, dtype, players=None):
-        return decode(value.backing, Fixed16.base, Fixed16.precision_fractional)

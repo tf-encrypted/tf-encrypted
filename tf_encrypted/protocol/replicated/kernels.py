@@ -3,9 +3,8 @@ import tensorflow as tf
 from .types import Dtypes
 from .replicated import (
     AddPrivatePrivate, SubPrivatePrivate,
-    MulPrivatePrivate, CastFloat32Fixed10, CastFloat32Fixed16,
-    CastIntReplicated3, CastReplicated3Int, CastFixed10Float32,
-    CastFixed16Float32
+    MulPrivatePrivate, CastFloat32Fixed,
+    CastIntReplicated3, CastReplicated3Int, CastFixedFloat32
 )
 
 kernels = {}
@@ -61,8 +60,8 @@ def register_all():
     register(MulPrivatePrivate(), (integer_replicated3, integer_replicated3))
 
     # TODO float right to replicated3
-    register(CastFloat32Fixed10(), (tf.float32, Dtypes.FIXED10))
-    register(CastFloat32Fixed16(), (tf.float32, Dtypes.FIXED16))
+    register(CastFloat32Fixed(), (tf.float32, Dtypes.FIXED10))
+    register(CastFloat32Fixed(), (tf.float32, Dtypes.FIXED16))
     register(CastIntReplicated3(), (Dtypes.FIXED10, Dtypes.REPLICATED3))
     register(CastIntReplicated3(), (Dtypes.FIXED16, Dtypes.REPLICATED3))
     register(CastIntReplicated3(), (tf.int32, Dtypes.REPLICATED3))
@@ -70,5 +69,5 @@ def register_all():
     register(CastReplicated3Int(), (fixed10_replicated3, Dtypes.FIXED10))
     register(CastReplicated3Int(), (fixed16_replicated3, Dtypes.FIXED16))
     register(CastReplicated3Int(), (integer_replicated3, tf.int32))
-    register(CastFixed10Float32(), (Dtypes.FIXED10, tf.float32))
-    register(CastFixed16Float32(), (Dtypes.FIXED16, tf.float32))
+    register(CastFixedFloat32(), (Dtypes.FIXED10, tf.float32))
+    register(CastFixedFloat32(), (Dtypes.FIXED16, tf.float32))

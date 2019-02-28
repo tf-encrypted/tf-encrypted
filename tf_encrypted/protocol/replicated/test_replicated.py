@@ -10,7 +10,7 @@ import numpy as np
 from .context import Context
 from .types import Dtypes
 from .kernels import dispatch
-from .replicated import truncate, encode, share, zero_share
+from .replicated import zero_share
 
 
 class TestReplicated(unittest.TestCase):

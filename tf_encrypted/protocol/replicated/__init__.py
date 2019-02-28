@@ -34,4 +34,5 @@ __all__ = [
     'dispatch',
     'Context',
     'register_all',
+    'Dtypes',
 ]
