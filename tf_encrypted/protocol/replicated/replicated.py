@@ -67,25 +67,107 @@ def zero_share(players, shape, backing_dtype):
     return alpha0, alpha1, alpha2
 
 
-def share(players, x):
-    alpha0, alpha1, alpha2 = zero_share(players, x.shape)
+def share(v, sender, players):
+    """ 
+    Turn value `v` into a replicated sharing among `players`.
 
-    x1 = alpha1
-    x2 = alpha2
+    Note that `sender` is assumed to currently hold `v`,
+    and may be either a third party or one of the players.
+    """
 
-    with tf.device(players[0].device_name):
-        x0 = x + alpha0
+    # TODO(Morten) assume that `v` is a BackingTensor (RingTensor?)
 
-    xs = ReplicatedPrivateTensor(players, ((None, x1, x2), (x0, None, x2), (x0, x1, None)))
+    with tf.device(sender.device_name):
 
-    return xs
+        # we need random tensors for two shares, which will (in most cases) be seeds
+        r = v.backing_dtype.sample_uniform(v.shape)
+        s = v.backing_dtype.sample_uniform(v.shape)
+
+        # we form the third share, which will not be a seed
+        t = v - r - s
+
+        # logic below optimizes the distribution of seeds versus expanded tensors,
+        # making sure that if the sender is one of the players then that player is
+        # *not* the lucky one who only gets seeds (which would otherwise mean
+        # that the expanded tensor is sent twice)
+        if sender is players[0]:
+            # this player will end up holding x1 and x2 so make sure one of those is t
+            x0, x1, x2 = random.choice([
+                (r, t, s),  # player1 is the lucky one
+                (r, s, t),  # player2 is the lucky one
+            ])
+        elif sender is players[1]:
+            # this player will end up holding x0 and x2 so make sure one of those is t
+            x0, x1, x2 = random.choice([
+                (t, r, s),  # player0 is the lucky one
+                (r, s, t),  # player2 is the lucky one
+            ])
+        elif sender is players[2]:
+            # this player will end up holding x0 and x1 so make sure one of those is t
+            x0, x1, x2 = random.choice([
+                (t, r, s),  # player0 is the lucky one
+                (r, t, s),  # player1 is the lucky one
+            ])
+        else:
+            # the sender is a third party so there are no constraints
+            x0, x1, x2 = random.choice([
+                (t, r, s),  # player0 is the lucky one
+                (r, t, s),  # player1 is the lucky one
+                (r, s, t),  # player2 is the lucky one
+            ])
+
+    shares = ((None, x1, x2),
+              (x0, None, x2),
+              (x0, x1, None))
+
+    return ReplicatedPrivateTensor(players, shares)
 
 
-def recombine(players, z):
-    with tf.device(players[0].device_name):
-        final = z.shares[2][0] + z.shares[0][1] + z.shares[1][2]
+def reconstruct(x: ReplicatedPrivateTensor, receiver):
 
-    return final
+    shares_on_0, shares_on_1, shares_on_2 = x.shares
+
+    with tf.device(receiver.device_name):
+
+        if receiver is x.players[0]:
+            # we only need to have someone send x0
+            x0, x1, x2 = random.choice([
+                (shares_on_1[0], shares_on_0[1], shares_on_0[2]),  # player2 is the lucky one
+                (shares_on_2[0], shares_on_0[1], shares_on_0[2]),  # player1 is the lucky one
+            ])
+        elif receiver is x.players[1]:
+            # we only need to have someone send x1
+            x0, x1, x2 = random.choice([
+                (shares_on_1[0], shares_on_0[1], shares_on_1[2]),  # player2 is the lucky one
+                (shares_on_1[0], shares_on_2[1], shares_on_1[2]),  # player0 is the lucky one
+            ])
+        elif receiver is x.players[2]:
+            # we only need to have someone send x2
+            x0, x1, x2 = random.choice([
+                (shares_on_2[0], shares_on_2[1], shares_on_0[2]),  # player1 is the lucky one
+                (shares_on_2[0], shares_on_2[1], shares_on_1[2]),  # player0 is the lucky one
+            ])
+        else:
+            # we don't have anything, need two players to send shares
+
+            # TODO(Morten)
+            # we currently avoid having all three players send shares for batching purposes,
+            # maybe this is sub-optmizal?
+
+            x0, x1, x2 = random.choice([
+                # player0 and player1
+                (shares_on_1[0], shares_on_0[1], shares_on_0[2]),
+                (shares_on_1[0], shares_on_0[1], shares_on_1[2]),
+                # player0 and player2
+                (shares_on_2[0], shares_on_0[1], shares_on_0[2]),
+                (shares_on_2[0], shares_on_2[1], shares_on_0[2]),
+                # player1 and player2
+                (shares_on_1[0], shares_on_2[1], shares_on_1[2]),
+                (shares_on_2[0], shares_on_2[1], shares_on_1[2]),
+            ])
+
+        v = x0 + x1 + x2
+        return v
 
 
 class ReplicatedTensor(abc.ABC):
