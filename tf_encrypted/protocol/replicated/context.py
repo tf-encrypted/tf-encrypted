@@ -1,4 +1,4 @@
-from .kernels import register_all
+from .kernel_register_all import register_all
 
 
 class Context():

@@ -3,7 +3,9 @@ import numpy as np
 
 import tensorflow as tf
 
-from tf_encrypted.protocol.replicated import dispatch, Context, Dtypes
+from .kernels import dispatch
+from .types import Dtypes
+from .context import Context
 import tf_encrypted as tfe
 
 

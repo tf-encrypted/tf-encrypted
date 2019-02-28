@@ -1,24 +1,16 @@
-import abc
 import random
 
 import tensorflow as tf
 
 from tf_encrypted.operations.secure_random import seed, seeded_random_uniform
 from .ops import Add, Mul, Sub, Cast
-from .types import Dtypes, Fixed, fixed_config
+from .types import Dtypes
+from .kernels import Kernel
 
 maxval = 9223372036854775807
 minval = -9223372036854775808
 dtype = tf.int64
 modulus = 18446744073709551616
-
-
-def encode(value, base, exp):
-    return value * (base ** exp)
-
-
-def decode(value, base, exp):
-    return value / (base ** exp)
 
 
 def truncate(value):
@@ -66,7 +58,7 @@ def zero_mask(players, shape, backing_dtype):
 
     with tf.device(players[1].device_name):
         alpha1 = r1 - r2
-    
+
     with tf.device(players[2].device_name):
         alpha2 = r2 - r0
 
@@ -74,7 +66,7 @@ def zero_mask(players, shape, backing_dtype):
 
 
 def share(v, sender, players):
-    """ 
+    """
     Turn value `v` into a replicated sharing among `players`.
 
     Note that `sender` is assumed to currently hold `v`,
@@ -186,12 +178,12 @@ class ReplicatedPrivate():
         for share in self.shares[0]:
             if share is not None:
                 self._shape = share.shape
-                self.base_dtype = share.dtype
+                self.backing_dtype = share.dtype
                 break
 
     @property
     def dtype(self):
-        return (Dtypes.REPLICATED3, self.base_dtype)
+        return (Dtypes.REPLICATED3, self.backing_dtype)
 
     @property
     def shape(self):
@@ -202,16 +194,10 @@ class ReplicatedPrivate():
         return self.shares
 
 
-# TODO benefits of a bass class??
-class Kernel:
-    def __call__(self, *args):
-        pass
-
-
 class AddPrivatePrivate(Kernel):
     op = Add
 
-    def __call__(self, x: ReplicatedPrivate, y: ReplicatedPrivate) -> ReplicatedPrivate:
+    def __call__(self, context, x: ReplicatedPrivate, y: ReplicatedPrivate) -> ReplicatedPrivate:
         assert x.players == y.players
         assert x.backing_dtype == y.backing_dtype
 
@@ -242,7 +228,7 @@ class AddPrivatePrivate(Kernel):
 class SubPrivatePrivate(Kernel):
     op = Sub
 
-    def __call__(self, x: ReplicatedPrivate, y: ReplicatedPrivate) -> ReplicatedPrivate:
+    def __call__(self, context, x: ReplicatedPrivate, y: ReplicatedPrivate) -> ReplicatedPrivate:
         assert x.players == y.players
         assert x.backing_dtype == y.backing_dtype
 
@@ -273,10 +259,10 @@ class SubPrivatePrivate(Kernel):
 class MulPrivatePrivate(Kernel):
     op = Mul
 
-    def __call__(self, x: ReplicatedPrivate, y: ReplicatedPrivate) -> ReplicatedPrivate:
+    def __call__(self, context, x: ReplicatedPrivate, y: ReplicatedPrivate) -> ReplicatedPrivate:
         assert x.players == y.players
         assert x.backing_dtype == y.backing_dtype
-        
+
         players = x.players
         x_on_0, x_on_1, x_on_2 = x.shares
         y_on_0, y_on_1, y_on_2 = y.shares
@@ -327,33 +313,13 @@ class CastIntReplicated3(Kernel):
     op = Cast
 
     def __call__(self, context, value, dtype, players=None):
-        return share(players, value)
-
-
-class CastFloat32Fixed(Kernel):
-    op = Cast
-
-    def __call__(self, context, value, dtype, players=None):
-        base = fixed_config[dtype]["base"]
-        bits = fixed_config[dtype]["bits"]
-
-        fixed = tf.cast(encode(value, base, bits), tf.int64)
-
-        return Fixed(fixed, dtype)
-
-
-class CastFixedFloat32(Kernel):
-    op = Cast
-
-    def __call__(self, context, value, dtype, players=None):
-        base = fixed_config[value.dtype]["base"]
-        bits = fixed_config[value.dtype]["bits"]
-
-        return decode(value.backing, base, bits)
+        # TODO dont send players[0], take sender arg
+        return share(value, players[0], players)
 
 
 class CastReplicated3Int(Kernel):
     op = Cast
 
     def __call__(self, context, value, dtype, players=None):
-        return reconstruct(players, value)
+        # TODO dont send players[0] by default
+        return reconstruct(value, players[0])

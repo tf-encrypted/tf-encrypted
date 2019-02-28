@@ -26,3 +26,6 @@ class Tensor(ABC):
 
     def __mul__(self, y):
         return type(self)(self.backing * y.backing, self.dtype)
+
+    def __sub__(self, y):
+        return type(self)(self.backing - y.backing, self.dtype)

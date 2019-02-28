@@ -10,18 +10,19 @@ import numpy as np
 from .context import Context
 from .types import Dtypes
 from .kernels import dispatch
-from .replicated import zero_share
+from .replicated import zero_mask
+from tf_encrypted.tensor import int64factory
 
 
 class TestReplicated(unittest.TestCase):
 
-    def test_zero_share(self):
+    def test_zero_mask(self):
         tfe.set_config(tfe.LocalConfig([
             'server0', 'server1', 'server2'
         ]))
 
         players = tfe.get_config().get_players('server0, server1, server2')
-        alpha0, alpha1, alpha2 = zero_share(players, [5, 5])
+        alpha0, alpha1, alpha2 = zero_mask(players, [5, 5], int64factory)
 
         out = alpha0 + alpha1 + alpha2
 
