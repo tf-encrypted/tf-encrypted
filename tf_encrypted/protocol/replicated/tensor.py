@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 
 
 class Tensor(ABC):
@@ -22,7 +22,7 @@ class Tensor(ABC):
     #     return self.backing.__repr__()
 
     def __add__(self, y):
-        return type(self)(self.backing + y.backing)
+        return type(self)(self.backing + y.backing, self.dtype)
 
     def __mul__(self, y):
-        return type(self)(self.backing * y.backing)
+        return type(self)(self.backing * y.backing, self.dtype)
