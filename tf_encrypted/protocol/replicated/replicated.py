@@ -6,24 +6,30 @@ import tensorflow as tf
 
 from tf_encrypted.operations.secure_random import seed, seeded_random_uniform
 from tf_encrypted.tensor.helpers import inverse
-
+from .tensor import Tensor
+from .fixed import Fixed10, Fixed16
+from .ops import *
+from .types import Dtypes
 
 maxval = 9223372036854775807
 minval = -9223372036854775808
 dtype = tf.int64
 modulus = 18446744073709551616
-base = 2
-precision_fractional = 10
 
 
-def encode(value):
-    return tf.cast(value * (base ** precision_fractional), tf.int64)
+def encode(value, base, exp):
+    return value * (base ** exp)
 
 
-def truncate(players, value):
-    player0, player1, player2 = players
+def decode(value, base, exp):
+    return value / (base ** exp)
+
+
+def truncate(value):
+    player0, player1, player2 = value.players
 
     x_on_0, x_on_1, x_on_2 = value.shares
+    precision_fractional = x_on_0[1].precision_fractional
 
     with tf.device(player0.device_name):
         s = seed()
@@ -45,7 +51,7 @@ def truncate(players, value):
     z_on_2 = (z0_on_2, z1_on_2, None)
     shares = (z_on_0, z_on_1, z_on_2)
 
-    return ReplicatedPrivateTensor(players, shares)
+    return ReplicatedPrivate(players, shares)
 
 
 def zero_mask(players, shape, backing_dtype):
@@ -124,10 +130,10 @@ def share(v, sender, players):
               (x0, None, x2),
               (x0, x1, None))
 
-    return ReplicatedPrivateTensor(players, shares)
+    return ReplicatedPrivate(players, shares)
 
 
-def reconstruct(x: ReplicatedPrivateTensor, receiver):
+def reconstruct(x: ReplicatedPrivate, receiver):
 
     shares_on_0, shares_on_1, shares_on_2 = x.shares
 
@@ -174,11 +180,11 @@ def reconstruct(x: ReplicatedPrivateTensor, receiver):
         return v
 
 
-class ReplicatedTensor(abc.ABC):
+class Replicated(abc.ABC):
     pass
 
 
-class ReplicatedPrivateTensor(ReplicatedTensor):
+class ReplicatedPrivate(Replicated):
 
     def __init__(self, players, shares):
         self.players = players
@@ -194,14 +200,44 @@ class ReplicatedPrivateTensor(ReplicatedTensor):
         return self.shares[0][1].backing_dtype
 
 
+    return ReplicatedPrivate(players, shares)
+
+
+# TODO Subclass ProtocolTensor?
+class ReplicatedPrivate():
+    def __init__(self, players, shares):
+        self.players = players
+        self.shares = shares
+
+        for share in self.shares[0]:
+            if share is not None:
+                self._shape = share.shape
+                self._base_dtype = share.dtype
+                break
+
+    @property
+    def dtype(self):
+        return (Dtypes.REPLICATED3, self._base_dtype)
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @property
+    def backing(self):
+        return self.shares
+
+
+# TODO benefits of a bass class??
 class Kernel:
     def __call__(self, *args):
         pass
 
 
 class AddPrivatePrivate(Kernel):
+    op = Add
 
-    def __call__(self, x: ReplicatedPrivateTensor, y: ReplicatedPrivateTensor) -> ReplicatedPrivateTensor:
+    def __call__(self, x: ReplicatedPrivate, y: ReplicatedPrivate) -> ReplicatedPrivate:
         assert x.players == y.players
         assert x.backing_dtype == y.backing_dtype
 
@@ -226,12 +262,13 @@ class AddPrivatePrivate(Kernel):
         z_on_2 = (z0_on_2, z1_on_2, None)
         shares = (z_on_0, z_on_1, z_on_2)
 
-        return ReplicatedPrivateTensor(players, shares)
+        return ReplicatedPrivate(players, shares)
 
 
 class SubPrivatePrivate(Kernel):
+    op = Sub
 
-    def __call__(self, x: ReplicatedPrivateTensor, y: ReplicatedPrivateTensor) -> ReplicatedPrivateTensor:
+    def __call__(self, x: ReplicatedPrivate, y: ReplicatedPrivate) -> ReplicatedPrivate:
         assert x.players == y.players
         assert x.backing_dtype == y.backing_dtype
 
@@ -256,12 +293,13 @@ class SubPrivatePrivate(Kernel):
         z_on_2 = (z0_on_2, z1_on_2, None)
         shares = (z_on_0, z_on_1, z_on_2)
 
-        return ReplicatedPrivateTensor(players, shares)
+        return ReplicatedPrivate(players, shares)
 
 
 class MulPrivatePrivate(Kernel):
+    op = Mul
 
-    def __call__(self, x: ReplicatedPrivateTensor, y: ReplicatedPrivateTensor) -> ReplicatedPrivateTensor:
+    def __call__(self, x: ReplicatedPrivate, y: ReplicatedPrivate) -> ReplicatedPrivate:
         assert x.players == y.players
         assert x.backing_dtype == y.backing_dtype
         
@@ -305,4 +343,55 @@ class MulPrivatePrivate(Kernel):
         z2 = (z0_on_2, z1_on_2, None)
         shares = (z0, z1, z2)
 
-        return ReplicatedPrivateTensor(players, shares)
+        if x._base_dtype is Dtypes.FIXED10 or x._base_dtype is Dtypes.Fixed16:
+            return truncate(ReplicatedPrivate(players, shares))
+
+        return ReplicatedPrivate(players, shares)
+
+
+class CastIntReplicated3(Kernel):
+    op = Cast
+
+    def __call__(self, context, value, dtype, players=None):
+        return share(players, value)
+
+# TODO parameraterized this class to determine encode width
+
+
+class CastFloat32Fixed16(Kernel):
+    op = Cast
+
+    def __call__(self, context, value, dtype, players=None):
+        fixed = tf.cast(encode(value, Fixed16.base, Fixed16.precision_fractional), tf.int64)
+
+        return Fixed16(fixed)
+
+
+class CastFloat32Fixed10(Kernel):
+    op = Cast
+
+    def __call__(self, context, value, dtype, players=None):
+        fixed = tf.cast(encode(value, Fixed10.base, Fixed10.precision_fractional), tf.int64)
+
+        return Fixed10(fixed)
+
+
+class CastReplicated3Int(Kernel):
+    op = Cast
+
+    def __call__(self, context, value, dtype, players=None):
+        return reconstruct(players, value)
+
+
+class CastFixed10Float32(Kernel):
+    op = Cast
+
+    def __call__(self, context, value, dtype, players=None):
+        return decode(value.backing, Fixed10.base, Fixed10.precision_fractional)
+
+
+class CastFixed16Float32(Kernel):
+    op = Cast
+
+    def __call__(self, context, value, dtype, players=None):
+        return decode(value.backing, Fixed16.base, Fixed16.precision_fractional)
