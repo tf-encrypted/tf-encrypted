@@ -175,20 +175,19 @@ class ReplicatedTensor(abc.ABC):
 
 
 class ReplicatedPrivateTensor(ReplicatedTensor):
-    def __init__(
-        self,
-        players,
-        shares,
-    ) -> None:
+
+    def __init__(self, players, shares):
         self.players = players
         self.shares = shares
+        # TODO(Morten) assert that all non-None have same shape
 
     @property
     def shape(self):
-        # cache shape?!
-        for share in self.shares[0]:
-            if share is not None:
-                return share[0].shape
+        return self.shares[0][1].shape
+
+    @property
+    def backing_dtype(self):
+        return self.shares[0][1].backing_dtype
 
 
 class Kernel:
@@ -197,23 +196,24 @@ class Kernel:
 
 
 class AddPrivatePrivate(Kernel):
-    def __call__(self, x: ReplicatedPrivateTensor, y: ReplicatedPrivateTensor) -> ReplicatedPrivateTensor:
-        players = x.players
-        assert y.players == players
-        player0, player1, player2 = players
 
+    def __call__(self, x: ReplicatedPrivateTensor, y: ReplicatedPrivateTensor) -> ReplicatedPrivateTensor:
+        assert x.players == y.players
+        assert x.backing_dtype == y.backing_dtype
+
+        players = x.players
         x_on_0, x_on_1, x_on_2 = x.shares
         y_on_0, y_on_1, y_on_2 = y.shares
 
-        with tf.device(player0.device_name):
+        with tf.device(players[0].device_name):
             z1_on_0 = x_on_0[1] + y_on_0[1]
             z2_on_0 = x_on_0[2] + y_on_0[2]
 
-        with tf.device(player1.device_name):
+        with tf.device(players[1].device_name):
             z0_on_1 = x_on_1[0] + y_on_1[0]
             z2_on_1 = x_on_1[2] + y_on_1[2]
 
-        with tf.device(player2.device_name):
+        with tf.device(players[2].device_name):
             z0_on_2 = x_on_2[0] + y_on_2[0]
             z1_on_2 = x_on_2[1] + y_on_2[1]
 
@@ -228,22 +228,22 @@ class AddPrivatePrivate(Kernel):
 class SubPrivatePrivate(Kernel):
 
     def __call__(self, x: ReplicatedPrivateTensor, y: ReplicatedPrivateTensor) -> ReplicatedPrivateTensor:
-        players = x.players
-        assert y.players == players
-        player0, player1, player2 = players
+        assert x.players == y.players
+        assert x.backing_dtype == y.backing_dtype
 
+        players = x.players
         x_on_0, x_on_1, x_on_2 = x.shares
         y_on_0, y_on_1, y_on_2 = y.shares
 
-        with tf.device(player0.device_name):
+        with tf.device(players[0].device_name):
             z1_on_0 = x_on_0[1] - y_on_0[1]
             z2_on_0 = x_on_0[2] - y_on_0[2]
 
-        with tf.device(player1.device_name):
+        with tf.device(players[1].device_name):
             z0_on_1 = x_on_1[0] - y_on_1[0]
             z2_on_1 = x_on_1[2] - y_on_1[2]
 
-        with tf.device(player2.device_name):
+        with tf.device(players[2].device_name):
             z0_on_2 = x_on_2[0] - y_on_2[0]
             z1_on_2 = x_on_2[1] - y_on_2[1]
 
@@ -258,32 +258,42 @@ class SubPrivatePrivate(Kernel):
 class MulPrivatePrivate(Kernel):
 
     def __call__(self, x: ReplicatedPrivateTensor, y: ReplicatedPrivateTensor) -> ReplicatedPrivateTensor:
+        assert x.players == y.players
+        assert x.backing_dtype == y.backing_dtype
+        
         players = x.players
-        assert y.players == players
-        player0, player1, player2 = players
-
         x_on_0, x_on_1, x_on_2 = x.shares
         y_on_0, y_on_1, y_on_2 = y.shares
 
-        # get the next zero triple defined by seeds (s0, s1, s2) shared between the three players
-        alpha0, alpha1, alpha2 = zero_share(players, x.shape)
-
-        with tf.device(player0.device_name):
+        with tf.device(players[0].device_name):
             z2_on_0 = (x_on_0[2] * y_on_0[2]
                        + x_on_0[2] * y_on_0[1]
                        + x_on_0[1] * y_on_0[2])
-            z2_on_1 = z2_on_0 + alpha0
 
-        with tf.device(player1.device_name):
+        with tf.device(players[1].device_name):
             z0_on_1 = (x_on_1[0] * y_on_1[0]
                        + x_on_1[0] * y_on_1[2]
                        + x_on_1[2] * y_on_1[0])
-            z0_on_2 = z0_on_1 + alpha1
 
-        with tf.device(player2.device_name):
+        with tf.device(players[2].device_name):
             z1_on_2 = (x_on_2[1] * y_on_2[1]
                        + x_on_2[1] * y_on_2[0]
                        + x_on_2[0] * y_on_2[1])
+
+        # get the next zero mask shared between the players
+        alpha0, alpha1, alpha2 = zero_mask(
+            players,
+            shape=z2_on_0.shape,
+            backing_dtype=z2_on_0.backing_dtype,
+        )
+
+        with tf.device(players[0].device_name):
+            z2_on_1 = z2_on_0 + alpha0
+
+        with tf.device(players[1].device_name):
+            z0_on_2 = z0_on_1 + alpha1
+
+        with tf.device(players[2].device_name):
             z1_on_0 = z1_on_2 + alpha2
 
         z0 = (None, z1_on_0, z2_on_0)
