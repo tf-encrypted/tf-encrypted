@@ -1,3 +1,4 @@
+import abc
 import random
 
 import tensorflow as tf
@@ -175,31 +176,9 @@ def reconstruct(x: ReplicatedPrivate, receiver):
         return v
 
 
-class Replicated(abc.ABC):
-    pass
-
-
-class ReplicatedPrivate(Replicated):
-
-    def __init__(self, players, shares):
-        self.players = players
-        self.shares = shares
-        # TODO(Morten) assert that all non-None have same shape
-
-    @property
-    def shape(self):
-        return self.shares[0][1].shape
-
-    @property
-    def backing_dtype(self):
-        return self.shares[0][1].backing_dtype
-
-
-    return ReplicatedPrivate(players, shares)
-
-
 # TODO Subclass ProtocolTensor?
 class ReplicatedPrivate():
+
     def __init__(self, players, shares):
         self.players = players
         self.shares = shares
