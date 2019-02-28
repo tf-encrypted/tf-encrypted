@@ -1,8 +1,12 @@
 import abc
+import random
+
+import numpy as np
 import tensorflow as tf
+
 from tf_encrypted.operations.secure_random import seed, seeded_random_uniform
 from tf_encrypted.tensor.helpers import inverse
-import numpy as np
+
 
 maxval = 9223372036854775807
 minval = -9223372036854775808
@@ -44,7 +48,7 @@ def truncate(players, value):
     return ReplicatedPrivateTensor(players, shares)
 
 
-def zero_share(players, shape, backing_dtype):
+def zero_mask(players, shape, backing_dtype):
 
     with tf.device(players[0].device_name):
         r0 = backing_dtype.sample_uniform(shape)
