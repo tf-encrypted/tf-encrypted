@@ -9,7 +9,10 @@ This example shows how TF Encrypted can be used to perform secure aggregation fo
 The above players are represented via two classes, `ModelOwner` and `DataOwner`, and linked together as follows:
 
 ```python
+# instantiate the model owner and the model it wishes to train
 model_owner = ModelOwner('model-owner')
+
+# instantiate data owners and build copy of the model on their devices linked to the model owner's
 data_owners = [
     DataOwner('data-owner-0', model_owner.build_training_model),
     DataOwner('data-owner-1', model_owner.build_training_model),
@@ -20,22 +23,33 @@ data_owners = [
 Then, the result of `compute_gradient` of each data owner is used as a private input into a secure computation, in this case between three *compute servers* as needed by the default Pond protocol.
 
 ```python
+# collect encrypted gradients from data owners
 model_grads = zip(*(
     tfe.define_private_input(data_owner.player_name, data_owner.compute_gradient)
     for data_owner in data_owners
 ))
 
-with tf.name_scope('secure_aggregation'):
-    aggregated_model_grads = [
-        tfe.add_n(grads) / len(grads)
-        for grads in model_grads
-    ]
+# compute mean of gradients (without decrypting)
+aggregated_model_grads = [
+    tfe.add_n(grads) / len(grads)
+    for grads in model_grads
+]
+
+# send the encrypted aggregated gradients to the model owner for it to decrypt and update
+iteration_op = tfe.define_output(
+    model_owner.player_name,
+    aggregated_model_grads,
+    model_owner.update_model
+)
 ```
 
-Finally, the aggregated gradients are sent to the model owner for it to update its model:
+Finally, we simply run the update procedure for a certain number of iterations:
 
 ```python
-iteration_op = tfe.define_output(model_owner.player_name, aggregated_model_grads, model_owner.update_model)
+with tfe.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    for _ in range(model_owner.ITERATIONS):
+        sess.run(iteration_op)
 ```
 
 ## Running
