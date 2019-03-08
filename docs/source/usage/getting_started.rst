@@ -1,22 +1,22 @@
 Getting Started
 ================
 
-This walkthrough assumes that you have installed `tf-encrypted` by following the `installation instructions`_.
+This walkthrough assumes that you have installed TF Encrypted by following the `installation instructions`_.
 
 .. _installation instructions: installation.html
 
-`tf-encrypted` is a `secure multiparty computation`_ library where multiple people (or "`parties`") work together to compute results in a secure fashion without any one party having access to the underlying data. This is achieved by splitting up the input data into shares that are `perfectly secure`_.
+TF Encrypted is a `secure multiparty computation`_ library where multiple people (or "`parties`") work together to compute results in a secure fashion without any one party having access to the underlying data. This is achieved by splitting up the input data into shares that are `perfectly secure`_.
 
 .. _secure multiparty computation: https://en.wikipedia.org/wiki/Secure_multi-party_computation
 .. _perfectly secure: https://en.wikipedia.org/wiki/One-time_pad
 
 --------------------------------------------
-Introduction to tf-encrypted's API
+Introduction to TF Encrypted's API
 --------------------------------------------
 
-tf-encrypted provides an API similar to TensorFlow that data scientists and researchers can use to train models and predict upon them in privacy-preserving fashion.
+TF Encrypted provides an API similar to TensorFlow that data scientists and researchers can use to train models and predict upon them in privacy-preserving fashion.
 
-One of the goals of tf-encrypted is to make experimenting with secure private machine learning accessible to anyone. To do this, we've implemented an API that is very similar to TensorFlow while abstracting away the complexity of securely managing public and private data. The `PondTensor` is the primary abstraction provided for managing public and private data.
+One of the goals of TF Encrypted is to make experimenting with secure private machine learning accessible to anyone. To do this, we've implemented an API that is very similar to TensorFlow while abstracting away the complexity of securely managing public and private data. The `PondTensor` is the primary abstraction provided for managing public and private data.
 
 The following example demonstrates constructing a public value (known to all parties) using `tfe.define_public_variable`.
 
@@ -59,7 +59,7 @@ Similar to public variables we can define private variables as demonstrated belo
 
 Unlike with public tensors, each node involved in a computation will get a different share of the encrypted (private) data. This sharing mechanism is the backbone of multiparty computation.
 
-For more indepth examples of how to use `tf-encrypted` to train and predict upon machine learning models please check out our `MNIST`_ or `Logistic Regression`_ guies.
+For more in depth examples of how to use TF Encrypted to train and predict upon machine learning models please check out our `MNIST`_ or `Logistic Regression`_ guides.
 
 If you have any questions, please don't hesitate to reach out via a `GitHub Issue`_.
 

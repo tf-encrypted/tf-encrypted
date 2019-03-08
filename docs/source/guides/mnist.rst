@@ -3,8 +3,8 @@ MNIST
 
 This tutorial is also available on `Google Collab`_, feel free to follow along there!
 
-In this tutorial, we will train our model in plaintext with Tensorflow, then
-make private predictions with TF Encrypted. we will use the `MNIST dataset`_.
+In this tutorial, we will train our model in plaintext with TensorFlow, then
+make private predictions with TF Encrypted. We will use the `MNIST dataset`_.
 
 .. _Google Collab: https://colab.research.google.com/drive/1BbOcMc8npAfQH91-2jtCWkTvpXY0aThC
 .. _MNIST dataset: http://yann.lecun.com/exdb/mnist/
@@ -323,5 +323,5 @@ and TensorFlow follow a very similar API
             sess.run(prediction_op, tag='prediction')
 
 
-And voila! you have just trained a model in plaintext then made private predictions
+And voila! You have just trained a model in plaintext then made private predictions
 without revealing anything about the input!
