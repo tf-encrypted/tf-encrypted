@@ -576,6 +576,10 @@ def crt_factory(INT_TYPE, MODULI):
             backing = [tf.reshape(xi, axes) for xi in self.backing]
             return DenseTensor(backing)
 
+        def neg(self):
+            backing = [tf.math.negative(xi) for xi in self.backing]
+            return DenseTensor(backing)
+
         def expand_dims(self, axis: Optional[int] = None):
             backing = [tf.expand_dims(xi, axis) for xi in self.backing]
             return DenseTensor(backing)

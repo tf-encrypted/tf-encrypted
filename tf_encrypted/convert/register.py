@@ -39,6 +39,7 @@ def register() -> Dict[str, Any]:
         'required_space_to_batch_paddings': required_space_to_batch_paddings,
         'flatten': flatten,
         'Slice': slice,
+        'Neg': neg,
     }
 
     return reg
@@ -270,6 +271,17 @@ def expand_dims(converter: Converter, node: Any, inputs: List[str]) -> Any:
     axis_val = array.array('i', axis_attr)[0]
 
     return converter.protocol.expand_dims(input_out, axis_val)
+
+
+def neg(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+
+    if isinstance(input, tf.NodeDef):
+        input_out = nodef_to_public_pond(converter, input)
+    else:
+        input_out = input
+
+    return converter.protocol.neg(input_out)
 
 
 def squeeze(converter: Converter, node: Any, inputs: List[str]) -> Any:

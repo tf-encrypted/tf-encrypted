@@ -290,6 +290,9 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
         def reshape(self, axes: Union[tf.Tensor, List[int]]):
             return DenseTensor(tf.reshape(self.value, axes))
 
+        def neg(self):
+            return DenseTensor(tf.negative(self.value))
+
         def reduce_sum(self, axis, keepdims=None):
             value = tf.reduce_sum(self.value, axis, keepdims)
             if EXPLICIT_MODULUS is not None:

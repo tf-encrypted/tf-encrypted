@@ -112,6 +112,10 @@ class TestConvert(unittest.TestCase):
         test_input = np.ones([1, 28])
         self._test_with_ndarray_input_fn('matmul', test_input, protocol='Pond')
 
+    def test_neg_convert(self):
+        test_input = np.ones([2, 2])
+        self._test_with_ndarray_input_fn('neg', test_input, protocol='Pond')
+
     def test_add_convert(self):
         test_input = np.ones([28, 1])
         self._test_with_ndarray_input_fn('add', test_input, protocol='Pond')
@@ -361,6 +365,25 @@ def export_matmul(filename: str, input_shape: List[int]):
     x = tf.matmul(a, b)
 
     return export(x, filename)
+
+
+def export_neg(filename: str, input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    x = tf.negative(a)
+
+    return export(x, filename)
+
+
+def run_neg(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+
+    x = tf.negative(a)
+
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: input})
+
+    return output
 
 
 def run_add(input):
