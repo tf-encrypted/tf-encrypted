@@ -5,11 +5,11 @@ import tensorflow as tf
 import tf_encrypted as tfe
 
 
-class TestReshape(unittest.TestCase):
+class TestNegative(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
 
-    def test_forward(self):
+    def test_negative(self):
         input_shape = [2, 2]
         input_neg = np.ones(input_shape)
 
@@ -18,7 +18,7 @@ class TestReshape(unittest.TestCase):
 
             neg_input = prot.define_private_variable(input_neg)
 
-            neg_out_pond = prot.neg(neg_input)
+            neg_out_pond = prot.negative(neg_input)
 
             with tfe.Session() as sess:
 

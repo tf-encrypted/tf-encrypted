@@ -290,7 +290,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
         def reshape(self, axes: Union[tf.Tensor, List[int]]):
             return DenseTensor(tf.reshape(self.value, axes))
 
-        def neg(self):
+        def negative(self):
             return DenseTensor(tf.negative(self.value))
 
         def reduce_sum(self, axis, keepdims=None):
@@ -336,11 +336,11 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
         def squeeze(self, axis: Optional[List[int]] = None):
             return DenseTensor(tf.squeeze(self.value, axis=axis))
 
-        def negative(self):
-            value = tf.negative(self.value)
-            if EXPLICIT_MODULUS is not None:
-                value %= EXPLICIT_MODULUS
-            return DenseTensor(value)
+        # def negative(self):
+        #     value = tf.negative(self.value)
+        #     if EXPLICIT_MODULUS is not None:
+        #         value %= EXPLICIT_MODULUS
+        #     return DenseTensor(value)
 
         def cast(self, factory):
             return factory.tensor(self.value)

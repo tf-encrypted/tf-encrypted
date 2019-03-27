@@ -576,7 +576,7 @@ def crt_factory(INT_TYPE, MODULI):
             backing = [tf.reshape(xi, axes) for xi in self.backing]
             return DenseTensor(backing)
 
-        def neg(self):
+        def negative(self):
             backing = [tf.math.negative(xi) for xi in self.backing]
             return DenseTensor(backing)
 
@@ -588,9 +588,9 @@ def crt_factory(INT_TYPE, MODULI):
             backing = [tf.squeeze(xi, axis=axis) for xi in self.backing]
             return DenseTensor(backing)
 
-        def negative(self):
-            # TODO[Morten] there's probably a more efficient way
-            return FACTORY.zero() - self
+        # def negative(self):
+        #     # TODO[Morten] there's probably a more efficient way
+        #     return FACTORY.zero() - self
 
         def truncate(self, amount, base=2):
             factor = base**amount

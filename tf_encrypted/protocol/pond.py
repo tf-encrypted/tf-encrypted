@@ -841,25 +841,15 @@ class Pond(Protocol):
         raise TypeError("Don't know how to reshape {}".format(type(x)))
 
     @memoize
-    def neg(self, x: "PondTensor"):
+    def negative(self, x: "PondTensor"):
         """
-        neg(x) -> PondTensor
+        negative(x) -> PondTensor
 
         Computes numerical negative value element-wise.
 
         :param PondTensor x: Input tensor.
         """
-
-        if isinstance(x, PondPublicTensor):
-            return _neg_public(self, x)
-
-        if isinstance(x, PondPrivateTensor):
-            return _neg_private(self, x)
-
-        if isinstance(x, PondMaskedTensor):
-            return _neg_masked(self, x)
-
-        raise TypeError("Don't know how to reshape {}".format(type(x)))
+        return self.dispatch("negative", x)
 
     @memoize
     def expand_dims(self, x: "PondTensor", axis=None):
@@ -1426,14 +1416,14 @@ class PondTensor(abc.ABC):
         """
         return self.prot.reshape(self, shape)
 
-    def neg(self) -> "PondTensor":
+    def negative(self) -> "PondTensor":
         """
         :See: tf.negative
 
         :rtype: PondTensor
         :returns: A new tensor with numerical negative value element-wise computed.
         """
-        return self.prot.neg(self)
+        return self.prot.negative(self)
 
     def reduce_max(self, axis: int) -> "PondTensor":
         """
@@ -3557,73 +3547,73 @@ def _reshape_masked(
         )
 
 #
-# neg helpers
+# negative helpers
 #
 
 
-def _neg_public(
+def _negative_public(
     prot: Pond, x: PondPublicTensor
 ) -> PondPublicTensor:
     assert isinstance(x, PondPublicTensor)
 
     x_on_0, x_on_1 = x.unwrapped
 
-    with tf.name_scope("neg"):
+    with tf.name_scope("negative"):
 
         with tf.device(prot.server_0.device_name):
-            x_on_0_neg = x_on_0.neg()
+            x_on_0_negative = x_on_0.negative()
 
         with tf.device(prot.server_1.device_name):
-            x_on_1_neg = x_on_1.neg()
+            x_on_1_negative = x_on_1.negative()
 
-        return PondPublicTensor(prot, x_on_0_neg, x_on_1_neg, x.is_scaled)
+        return PondPublicTensor(prot, x_on_0_negative, x_on_1_negative, x.is_scaled)
 
 
-def _neg_private(
+def _negative_private(
     prot: Pond, x: PondPrivateTensor
 ) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
     x0, x1 = x.unwrapped
 
-    with tf.name_scope("neg"):
+    with tf.name_scope("negative"):
 
         with tf.device(prot.server_0.device_name):
-            x0_neg = x0.neg()
+            x0_negative = x0.negative()
 
         with tf.device(prot.server_1.device_name):
-            x1_neg = x1.neg()
+            x1_negative = x1.negative()
 
-        return PondPrivateTensor(prot, x0_neg, x1_neg, x.is_scaled)
+        return PondPrivateTensor(prot, x0_negative, x1_negative, x.is_scaled)
 
 
-def _neg_masked(
+def _negative_masked(
     prot: Pond, x: PondMaskedTensor
 ) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
-    with tf.name_scope("neg"):
+    with tf.name_scope("negative"):
 
         with tf.device(prot.crypto_producer.device_name):
-            a_neg = a.neg()
+            a_negative = a.negative()
 
         with tf.device(prot.server_0.device_name):
-            a0_neg = a0.neg()
-            alpha_on_0_neg = alpha_on_0.neg()
+            a0_negative = a0.negative()
+            alpha_on_0_negative = alpha_on_0.negative()
 
         with tf.device(prot.server_1.device_name):
-            a1_neg = a1.neg()
-            alpha_on_1_neg = alpha_on_1.neg()
+            a1_negative = a1.negative()
+            alpha_on_1_negative = alpha_on_1.negative()
 
         return PondMaskedTensor(
             prot,
-            prot.neg(x.unmasked),
-            a_neg,
-            a0_neg,
-            a1_neg,
-            alpha_on_0_neg,
-            alpha_on_1_neg,
+            prot.negative(x.unmasked),
+            a_negative,
+            a0_negative,
+            a1_negative,
+            alpha_on_0_negative,
+            alpha_on_1_negative,
             x.is_scaled,
         )
 
