@@ -843,12 +843,11 @@ class Pond(Protocol):
     @memoize
     def neg(self, x: "PondTensor"):
         """
-        reshape(x, shape) -> PondTensor
+        neg(x) -> PondTensor
 
-        Reshape `x` into a tensor with a new `shape`.
+        Computes numerical negative value element-wise.
 
         :param PondTensor x: Input tensor.
-        :param (int,...) shape: Shape of output tensor.
         """
 
         if isinstance(x, PondPublicTensor):
@@ -1429,11 +1428,10 @@ class PondTensor(abc.ABC):
 
     def neg(self) -> "PondTensor":
         """
-        :See: tf.neg
+        :See: tf.negative
 
-        :param List[int] shape: The new shape of the tensor.
         :rtype: PondTensor
-        :returns: A new tensor with the contents of this tensor, but with the new specified shape.
+        :returns: A new tensor with numerical negative value element-wise computed.
         """
         return self.prot.neg(self)
 

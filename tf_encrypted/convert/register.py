@@ -277,7 +277,7 @@ def neg(converter: Converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
     if isinstance(input, tf.NodeDef):
-        input_out = nodef_to_public_pond(converter, input)
+        input_out = nodef_to_private_pond(converter, input)
     else:
         input_out = input
 
