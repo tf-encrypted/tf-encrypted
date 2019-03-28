@@ -12,8 +12,12 @@ class PrivateModel():
         self.output_node = output_node
 
     # TODO support multiple inputs
-    def private_predict(self, input):
-        name = "private-input/api/0:0"
+    def private_predict(self, input, input_name=None):
+        if input_name is None:
+            name = "private-input/api/0:0"
+        else:
+            name = input_name
+
         pl = tf.get_default_graph().get_tensor_by_name(name)
 
         with tfe.Session() as sess:
@@ -28,7 +32,7 @@ class PrivateModel():
             return output
 
 
-def load_graph(model_file):
+def load_graph(model_file, model_name=None):
 
     input_spec = []
     with gfile.GFile(model_file, 'rb') as f:
@@ -49,7 +53,12 @@ def load_graph(model_file):
     for i, spec in enumerate(input_spec):
         def scope(i, spec):
             def provide_input() -> tf.Tensor:
-                pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
+                if model_name is None:
+                    name = "api/{}".format(i)
+                else:
+                    name = "api/{}/{}".format(model_name, i)
+
+                pl = tf.placeholder(tf.float32, shape=spec['shape'], name=name)
                 return pl
 
             return provide_input
