@@ -577,7 +577,7 @@ def crt_factory(INT_TYPE, MODULI):
             return DenseTensor(backing)
 
         def negative(self):
-            backing = [tf.math.negative(xi) for xi in self.backing]
+            backing = [tf.negative(xi) % mi for xi, mi in zip(self.backing, MODULI)]
             return DenseTensor(backing)
 
         def expand_dims(self, axis: Optional[int] = None):
@@ -587,10 +587,6 @@ def crt_factory(INT_TYPE, MODULI):
         def squeeze(self, axis: Optional[List[int]] = None):
             backing = [tf.squeeze(xi, axis=axis) for xi in self.backing]
             return DenseTensor(backing)
-
-        # def negative(self):
-        #     # TODO[Morten] there's probably a more efficient way
-        #     return FACTORY.zero() - self
 
         def truncate(self, amount, base=2):
             factor = base**amount
