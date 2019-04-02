@@ -99,7 +99,7 @@ class Pond(Protocol):
         apply_scaling: bool = True,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
-    ) -> "PondConstant":
+    ):
         """
         define_constant(value, apply_scaling, name, factory) -> PondConstant
 
@@ -138,7 +138,7 @@ class Pond(Protocol):
         apply_scaling: bool = True,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
-    ) -> "PondPublicPlaceholder":
+    ):
         """
         define_public_placeholder(shape, apply_scaling, name, factory) -> PondPublicPlaceholder
 
@@ -174,7 +174,7 @@ class Pond(Protocol):
         apply_scaling: bool = True,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
-    ) -> "PondPrivatePlaceholder":
+    ):
         """
         define_private_placeholder(shape, apply_scaling, name, factory) -> PondPrivatePlaceholder
 
@@ -208,7 +208,7 @@ class Pond(Protocol):
         apply_scaling: bool = True,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
-    ) -> "PondPublicVariable":
+    ):
         """
         define_public_variable(initial_value, apply_scaling, name, factory) -> PondPublicVariable
 
@@ -272,7 +272,7 @@ class Pond(Protocol):
         apply_scaling: bool = True,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
-    ) -> "PondPrivateVariable":
+    ):
         """
         define_private_variable(initial_value, apply_scaling, name, factory) -> PondPrivateVariable
 
@@ -342,7 +342,7 @@ class Pond(Protocol):
         inputter_fn: TFEInputter,
         apply_scaling: bool = True,
         name: Optional[str] = None,
-    ) -> Union["PondPublicTensor", List["PondPublicTensor"]]:
+    ):
         """
         define_public_input(player, inputter_fn, apply_scaling, name) -> PondPublicTensor(s)
 
@@ -661,9 +661,7 @@ class Pond(Protocol):
         x, y = self.lift(x, y)
         return self.dispatch("add", x, y)
 
-    def lift(
-        self, x, y=None, apply_scaling: Optional[bool] = None
-    ) -> Union["PondTensor", Tuple["PondTensor", "PondTensor"]]:
+    def lift(self, x, y=None, apply_scaling: Optional[bool] = None):
         """
         lift(x, y=None, apply_scaling=None) -> PondTensor(s)
 
