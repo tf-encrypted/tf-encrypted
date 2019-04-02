@@ -143,7 +143,7 @@ prediction_client = PredictionClient()
 params = tfe.define_private_input('model-trainer', model_trainer.provide_input, masked=True)  # pylint: disable=E0632
 
 # we'll use the same parameters for each prediction so we cache them to avoid re-training each time
-params = tfe.cache(params)
+cache_updater, params = tfe.cache(params)
 
 # get prediction input from client
 x, y = tfe.define_private_input('prediction-client', prediction_client.provide_input, masked=True)  # pylint: disable=E0632
@@ -164,7 +164,7 @@ with tfe.Session() as sess:
     sess.run(tf.global_variables_initializer(), tag='init')
 
     print("Training")
-    sess.run(tfe.global_caches_updater(), tag='training')
+    sess.run(cache_updater, tag='training')
 
     for _ in range(5):
         print("Predicting")

@@ -5,7 +5,7 @@ import tensorflow as tf
 
 from .config import Config, LocalConfig, RemoteConfig, get_config
 from .player import player
-from .protocol import global_caches_updater, Pond, get_protocol
+from .protocol import Pond, get_protocol
 from .session import (Session, setTFEDebugFlag, setMonitorStatsFlag,
                       setTFETraceFlag, setLogDirectory)
 from . import convert
@@ -82,6 +82,5 @@ __all__ = [
     "layers",
     "convert",
     "operations",
-    "global_caches_updater",
     "global_variables_initializer",
 ]

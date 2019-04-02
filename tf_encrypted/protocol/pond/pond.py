@@ -4,27 +4,29 @@ import abc
 import sys
 import logging
 from math import log2, ceil
-from random import random
+import random
 from functools import reduce
 
 import numpy as np
 import tensorflow as tf
 
-from ..tensor.helpers import inverse
-from ..tensor.factory import (
+from ...utils import wrap_in_variables
+from ...tensor.helpers import inverse
+from ...tensor.factory import (
     AbstractFactory,
     AbstractTensor,
     AbstractConstant,
     AbstractVariable,
     AbstractPlaceholder,
 )
-from ..tensor.fixed import FixedpointConfig, _validate_fixedpoint_config
-from ..tensor import int100factory, fixed100
-from ..tensor import int64factory, fixed64
-from ..types import Slice, Ellipse
-from ..player import Player
-from ..config import get_config, tensorflow_supports_int64
-from .protocol import Protocol, global_cache_updaters, memoize, nodes
+from ...tensor.fixed import FixedpointConfig, _validate_fixedpoint_config
+from ...tensor import int100factory, fixed100
+from ...tensor import int64factory, fixed64
+from ...types import Slice, Ellipse
+from ...player import Player
+from ...config import get_config, tensorflow_supports_int64
+from ..protocol import Protocol, memoize, nodes
+from .triple_sources import OnlineTripleSource
 
 
 TFEData = Union[np.ndarray, tf.Tensor]
@@ -65,7 +67,7 @@ class Pond(Protocol):
         self.server_1 = server_1 or get_config().get_player("server1")
         crypto_producer = crypto_producer or get_config().get_player("server2")
         crypto_producer = crypto_producer or get_config().get_player("crypto-producer")
-        self.crypto_producer = crypto_producer
+        self.triple_source = OnlineTripleSource(crypto_producer)
 
         if tensor_factory is None:
             if tensorflow_supports_int64():
@@ -590,9 +592,7 @@ class Pond(Protocol):
             return integers
 
     @memoize
-    def _decode(
-        self, elements: AbstractTensor, is_scaled: bool
-    ) -> Union[tf.Tensor, np.ndarray]:
+    def _decode(self, elements: AbstractTensor, is_scaled: bool) -> Union[tf.Tensor, np.ndarray]:
         """ Decode tensor of ring elements into tensor of rational numbers """
 
         with tf.name_scope("decode"):
@@ -612,7 +612,7 @@ class Pond(Protocol):
             share1 = secret - share0
 
             # randomized swap to distribute load between two servers wrt who gets the seed
-            if random() < 0.5:
+            if random.random() < 0.5:
                 share0, share1 = share1, share0
 
         return share0, share1
@@ -1073,31 +1073,35 @@ class Pond(Protocol):
     def reveal(self, x):
         return self.dispatch("reveal", x)
 
-    def cache(self, x):
+    def cache(self, xs):
 
-        if isinstance(x, (list, tuple)):
+        if isinstance(xs, (list, tuple)):
             # apply recursively
-            return [self.cache(xi) for xi in x]
+            updaters, cached = zip(*[self.cache(x) for x in xs])
+            return tf.group(*updaters), cached
 
-        node_key = ("cache", x)
-        cached = nodes.get(node_key, None)
+        else:
+            # base case
 
-        if cached is not None:
-            return cached
+            node_key = ("cache", xs)
+            cached = nodes.get(node_key, None)
 
-        dispatch = {
-            PondPublicTensor: _cache_public,
-            PondPrivateTensor: _cache_private,
-            PondMaskedTensor: _cache_masked,
-        }
-        func = dispatch.get(_type(x), None)
-        if func is None:
-            raise TypeError("Don't know how to cache {}".format(type(x)))
+            if cached is not None:
+                return cached
 
-        cached = func(self, x)
-        nodes[node_key] = cached
+            dispatch = {
+                PondPublicTensor: _cache_public,
+                PondPrivateTensor: _cache_private,
+                PondMaskedTensor: _cache_masked,
+            }
+            func = dispatch.get(_type(xs), None)
+            if func is None:
+                raise TypeError("Don't know how to cache {}".format(type(xs)))
 
-        return cached
+            updater, cached = func(self, xs)
+            nodes[node_key] = cached
+
+            return updater, cached
 
     def conv2d(self, x, w, strides, padding):
 
@@ -1864,19 +1868,6 @@ def debug(x: PondTensor, summarize=None, message=""):
 #
 
 
-def _cache_wrap_helper(prot, sources):
-    variables = [
-        prot.tensor_factory.variable(
-            tf.zeros(shape=source.shape, dtype=prot.tensor_factory.native_type)
-        )
-        for source in sources
-    ]
-    updater = tf.group(
-        *[var.assign_from_same(val) for var, val in zip(variables, sources)]
-    )
-    return variables, updater
-
-
 def _cache_public(prot, x):
     assert isinstance(x, PondPublicTensor), type(x)
 
@@ -1885,16 +1876,19 @@ def _cache_public(prot, x):
     with tf.name_scope("cache"):
 
         with tf.device(prot.server_0.device_name):
-            [x_on_0_cached], updater0 = _cache_wrap_helper(prot, [x_on_0])
+            updater0, [x_on_0_cached] = wrap_in_variables(x_on_0)
 
         with tf.device(prot.server_1.device_name):
-            [x_on_1_cached], updater1 = _cache_wrap_helper(prot, [x_on_1])
+            updater1, [x_on_1_cached] = wrap_in_variables(x_on_1)
 
-        updater = tf.group(updater0, updater1)
+        combined_updater = tf.group(updater0, updater1)
 
-    global_cache_updaters.append(updater)
-    return PondCachedPublicTensor(
-        prot, x_on_0_cached, x_on_1_cached, x.is_scaled, updater
+    return combined_updater, PondCachedPublicTensor(
+        prot,
+        x_on_0_cached,
+        x_on_1_cached,
+        x.is_scaled,
+        combined_updater,
     )
 
 
@@ -1906,15 +1900,20 @@ def _cache_private(prot, x):
     with tf.name_scope("cache"):
 
         with tf.device(prot.server_0.device_name):
-            [x0_cached], updater0 = _cache_wrap_helper(prot, [x0])
+            updater0, [x0_cached] = wrap_in_variables(x0)
 
         with tf.device(prot.server_1.device_name):
-            [x1_cached], updater1 = _cache_wrap_helper(prot, [x1])
+            updater1, [x1_cached] = wrap_in_variables(x1)
 
-        updater = tf.group(updater0, updater1)
+        combined_updater = tf.group(updater0, updater1)
 
-    global_cache_updaters.append(updater)
-    return PondCachedPrivateTensor(prot, x0_cached, x1_cached, x.is_scaled, updater)
+    return combined_updater, PondCachedPrivateTensor(
+        prot,
+        x0_cached,
+        x1_cached,
+        x.is_scaled,
+        combined_updater,
+    )
 
 
 def _cache_masked(prot, x):
@@ -1925,24 +1924,18 @@ def _cache_masked(prot, x):
 
     with tf.name_scope("cache"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            [a_cached], updater_cp = _cache_wrap_helper(prot, [a])
+        updater_cp, a_cached = prot.triple_source.cache(a)
 
         with tf.device(prot.server_0.device_name):
-            [a0_cached, alpha_on_0_cached], updater0 = _cache_wrap_helper(
-                prot, [a0, alpha_on_0]
-            )
+            updater0, [a0_cached, alpha_on_0_cached] = wrap_in_variables(a0, alpha_on_0)
 
         with tf.device(prot.server_1.device_name):
-            [a1_cached, alpha_on_1_cached], updater1 = _cache_wrap_helper(
-                prot, [a1, alpha_on_1]
-            )
+            updater1, [a1_cached, alpha_on_1_cached] = wrap_in_variables(a1, alpha_on_1)
 
-        updater = tf.group(updater_cp, updater0, updater1)
-        unmasked_cached = prot.cache(unmasked)
+        unmasked_updater, unmasked_cached = prot.cache(unmasked)
+        combined_updater = tf.group(updater_cp, updater0, updater1, unmasked_updater)
 
-    global_cache_updaters.append(updater)
-    return PondCachedMaskedTensor(
+    return combined_updater, PondCachedMaskedTensor(
         prot,
         unmasked_cached,
         a_cached,
@@ -1951,7 +1944,7 @@ def _cache_masked(prot, x):
         alpha_on_0_cached,
         alpha_on_1_cached,
         x.is_scaled,
-        updater,
+        combined_updater,
     )
 
 
@@ -2551,10 +2544,7 @@ def _mul_masked_masked(prot, x, y):
 
     with tf.name_scope("mul"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            with tf.name_scope("triple"):
-                ab = a * b
-                ab0, ab1 = prot._share(ab)
+        ab0, ab1 = prot.triple_source.mul_triple(a, b)
 
         with tf.device(prot.server_0.device_name):
             with tf.name_scope("combine"):
@@ -2608,10 +2598,7 @@ def _square_masked(prot, x):
 
     with tf.name_scope("square"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            with tf.name_scope("triple"):
-                aa = a * a
-                aa0, aa1 = prot._share(aa)
+        aa0, aa1 = prot.triple_source.square_triple(a)
 
         with tf.device(prot.server_0.device_name):
             with tf.name_scope("combine"):
@@ -2732,10 +2719,7 @@ def _matmul_masked_masked(prot, x, y):
 
     with tf.name_scope("matmul"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            with tf.name_scope("triple"):
-                ab = a.matmul(b)
-                ab0, ab1 = prot._share(ab)
+        ab0, ab1 = prot.triple_source.matmul_triple(a, b)
 
         with tf.device(prot.server_0.device_name):
             with tf.name_scope("combine"):
@@ -2823,10 +2807,7 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
 
     with tf.name_scope("conv2d"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            with tf.name_scope("triple"):
-                a_conv2d_b = a.conv2d(b, strides, padding)
-                a_conv2d_b0, a_conv2d_b1 = prot._share(a_conv2d_b)
+        a_conv2d_b0, a_conv2d_b1 = prot.triple_source.conv2d_triple(a, b, strides, padding)
 
         with tf.device(prot.server_0.device_name):
             with tf.name_scope("combine"):
@@ -3053,9 +3034,7 @@ def _space_to_batch_nd_masked(prot, tensor, block_shape, paddings):
 #
 
 
-def _indexer_public(
-    prot: Pond, tensor: PondPublicTensor, slice: Union[Slice, Ellipse]
-) -> "PondPublicTensor":
+def _indexer_public(prot: Pond, tensor: PondPublicTensor, slice) -> "PondPublicTensor":
 
     with tf.name_scope("index"):
 
@@ -3068,9 +3047,7 @@ def _indexer_public(
         return PondPublicTensor(prot, v_on_0, v_on_1, tensor.is_scaled)
 
 
-def _indexer_private(
-    prot: Pond, tensor: PondPrivateTensor, slice: Union[Slice, Ellipse]
-) -> "PondPrivateTensor":
+def _indexer_private(prot: Pond, tensor: PondPrivateTensor, slice) -> "PondPrivateTensor":
 
     with tf.name_scope("index"):
 
@@ -3083,14 +3060,12 @@ def _indexer_private(
     return PondPrivateTensor(prot, s0, s1, tensor.is_scaled)
 
 
-def _indexer_masked(
-    prot: Pond, tensor: PondMaskedTensor, slice: Union[Slice, Ellipse]
-) -> "PondMaskedTensor":
+def _indexer_masked(prot: Pond, tensor: PondMaskedTensor, slice) -> "PondMaskedTensor":
 
     with tf.name_scope("index"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            a = tensor.a[slice]
+        # TODO(Morten) we could save a0 and a1 on disk as well; what's best performance wise?
+        a = prot.triple_source.indexer_mask(tensor.a, slice)
 
         with tf.device(prot.server_0.device_name):
             a0 = tensor.a0[slice]
@@ -3156,8 +3131,7 @@ def _transpose_masked(prot, x, perm=None):
 
     with tf.name_scope("transpose"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            a_t = a.transpose(perm=perm)
+        a_t = prot.triple_source.transpose_mask(perm=perm)
 
         with tf.device(prot.server_0.device_name):
             a0_t = a0.transpose(perm=perm)
@@ -3223,8 +3197,7 @@ def _strided_slice_masked(prot, x: PondMaskedTensor, args: Any, kwargs: Any):
 
     with tf.name_scope("strided_slice"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            a_slice = a.strided_slice(args, kwargs)
+        a_slice = prot.triple_source.strided_slice_mask(a, args, kwargs)
 
         with tf.device(prot.server_0.device_name):
             a0_slice = a0.strided_slice(args, kwargs)
@@ -3360,16 +3333,13 @@ def _split_private(
         ]
 
 
-def _split_masked(
-    prot: Pond, x: PondMaskedTensor, num_split: int, axis: int = 0
-) -> List[PondMaskedTensor]:
+def _split_masked(prot: Pond, x: PondMaskedTensor, num_split, axis=0) -> List[PondMaskedTensor]:
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
     with tf.name_scope("split"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            bs = a.split(num_split, axis=axis)
+        bs = prot.triple_source.split_mask(a, num_split=num_split, axis=axis)
 
         with tf.device(prot.server_0.device_name):
             bs0 = a0.split(num_split, axis=axis)
@@ -3445,8 +3415,7 @@ def _stack_masked(
 
     with tf.name_scope("stack"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            a_stacked = factory.stack(a, axis=axis)
+        a_stacked = prot.triple_source.stack_mask(a, axis=axis)
 
         with tf.device(prot.server_0.device_name):
             a0_stacked = factory.stack(a0, axis=axis)
@@ -3524,8 +3493,7 @@ def _concat_masked(
 
     with tf.name_scope("concat"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            a_concat = factory.concat(a, axis=axis)
+        a_concat = prot.triple_source.concat_mask(a, axis=axis)
 
         with tf.device(prot.server_0.device_name):
             a0_concat = factory.concat(a0, axis=axis)
@@ -3559,24 +3527,23 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
 
     with tf.name_scope("mask"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            a0 = x.backing_dtype.sample_uniform(x.shape)
-            a1 = x.backing_dtype.sample_uniform(x.shape)
-            a = a0 + a1
+        a, a0, a1 = prot.triple_source.mask(x.backing_dtype, x.shape)
 
-        with tf.device(prot.server_0.device_name):
-            alpha0 = x0 - a0
+        with tf.name_scope("online"):
 
-        with tf.device(prot.server_1.device_name):
-            alpha1 = x1 - a1
+            with tf.device(prot.server_0.device_name):
+                alpha0 = x0 - a0
 
-        with tf.device(prot.server_0.device_name):
-            alpha_on_0 = alpha0 + alpha1
+            with tf.device(prot.server_1.device_name):
+                alpha1 = x1 - a1
 
-        with tf.device(prot.server_1.device_name):
-            alpha_on_1 = alpha0 + alpha1
+            with tf.device(prot.server_0.device_name):
+                alpha_on_0 = alpha0 + alpha1
 
-        return PondMaskedTensor(prot, x, a, a0, a1, alpha_on_0, alpha_on_1, x.is_scaled)
+            with tf.device(prot.server_1.device_name):
+                alpha_on_1 = alpha0 + alpha1
+
+    return PondMaskedTensor(prot, x, a, a0, a1, alpha_on_0, alpha_on_1, x.is_scaled)
 
 
 #
@@ -3628,8 +3595,7 @@ def _reshape_masked(
 
     with tf.name_scope("reshape"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            a_reshaped = a.reshape(shape)
+        a_reshaped = prot.triple_source.reshape_mask(a, shape=shape)
 
         with tf.device(prot.server_0.device_name):
             a0_reshaped = a0.reshape(shape)
@@ -3771,8 +3737,7 @@ def _expand_dims_masked(
 
     with tf.name_scope("expand"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            a_e = a.expand_dims(axis=axis)
+        a_e = prot.triple_source.expand_dims_mask(a, axis=axis)
 
         with tf.device(prot.server_0.device_name):
             a0_e = a0.expand_dims(axis=axis)
@@ -3835,16 +3800,14 @@ def _squeeze_private(
         return PondPrivateTensor(prot, x0_squeezed, x1_squeezed, x.is_scaled)
 
 
-def _squeeze_masked(
-    prot: Pond, x: PondMaskedTensor, axis: Optional[int] = None
-) -> PondMaskedTensor:
+def _squeeze_masked(prot: Pond, x: PondMaskedTensor, axis=None) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
+
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
     with tf.name_scope("squeeze"):
 
-        with tf.device(prot.crypto_producer.device_name):
-            a_squeezed = a.squeeze(axis)
+        a_squeezed = prot.triple_source.squeeze_mask(axis=axis)
 
         with tf.device(prot.server_0.device_name):
             a0_squeezed = a0.squeeze(axis)
