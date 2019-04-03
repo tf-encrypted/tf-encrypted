@@ -841,6 +841,17 @@ class Pond(Protocol):
         raise TypeError("Don't know how to reshape {}".format(type(x)))
 
     @memoize
+    def negative(self, x: "PondTensor"):
+        """
+        negative(x) -> PondTensor
+
+        Computes numerical negative value element-wise.
+
+        :param PondTensor x: Input tensor.
+        """
+        return self.dispatch("negative", x)
+
+    @memoize
     def expand_dims(self, x: "PondTensor", axis=None):
 
         if isinstance(x, PondPublicTensor):
@@ -1404,6 +1415,15 @@ class PondTensor(abc.ABC):
         :returns: A new tensor with the contents of this tensor, but with the new specified shape.
         """
         return self.prot.reshape(self, shape)
+
+    def negative(self) -> "PondTensor":
+        """
+        :See: tf.negative
+
+        :rtype: PondTensor
+        :returns: A new tensor with numerical negative value element-wise computed.
+        """
+        return self.prot.negative(self)
 
     def reduce_max(self, axis: int) -> "PondTensor":
         """
@@ -3523,6 +3543,77 @@ def _reshape_masked(
             a1_reshaped,
             alpha_on_0_reshaped,
             alpha_on_1_reshaped,
+            x.is_scaled,
+        )
+
+#
+# negative helpers
+#
+
+
+def _negative_public(
+    prot: Pond, x: PondPublicTensor
+) -> PondPublicTensor:
+    assert isinstance(x, PondPublicTensor)
+
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope("negative"):
+
+        with tf.device(prot.server_0.device_name):
+            x_on_0_negative = x_on_0.negative()
+
+        with tf.device(prot.server_1.device_name):
+            x_on_1_negative = x_on_1.negative()
+
+        return PondPublicTensor(prot, x_on_0_negative, x_on_1_negative, x.is_scaled)
+
+
+def _negative_private(
+    prot: Pond, x: PondPrivateTensor
+) -> PondPrivateTensor:
+    assert isinstance(x, PondPrivateTensor)
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope("negative"):
+
+        with tf.device(prot.server_0.device_name):
+            x0_negative = x0.negative()
+
+        with tf.device(prot.server_1.device_name):
+            x1_negative = x1.negative()
+
+        return PondPrivateTensor(prot, x0_negative, x1_negative, x.is_scaled)
+
+
+def _negative_masked(
+    prot: Pond, x: PondMaskedTensor
+) -> PondMaskedTensor:
+    assert isinstance(x, PondMaskedTensor)
+    a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
+
+    with tf.name_scope("negative"):
+
+        with tf.device(prot.crypto_producer.device_name):
+            a_negative = a.negative()
+
+        with tf.device(prot.server_0.device_name):
+            a0_negative = a0.negative()
+            alpha_on_0_negative = alpha_on_0.negative()
+
+        with tf.device(prot.server_1.device_name):
+            a1_negative = a1.negative()
+            alpha_on_1_negative = alpha_on_1.negative()
+
+        return PondMaskedTensor(
+            prot,
+            prot.negative(x.unmasked),
+            a_negative,
+            a0_negative,
+            a1_negative,
+            alpha_on_0_negative,
+            alpha_on_1_negative,
             x.is_scaled,
         )
 
