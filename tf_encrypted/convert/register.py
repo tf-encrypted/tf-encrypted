@@ -41,6 +41,7 @@ def register() -> Dict[str, Any]:
         'Slice': slice,
         'Neg': negative,
         'Split': split,
+        'Identity': identity,
     }
 
     return reg
@@ -54,6 +55,11 @@ def placeholder(converter: Converter, node: Any, inputs: List[str]) -> Any:
 def constant(converter: Converter, node: Any, inputs: List[str]) -> Any:
     # need to able to access the underlying weights return the node
     return node
+
+
+def identity(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    # need to able to access the underlying weights return the node
+    return converter.outputs[inputs[0]]
 
 
 def matmul(converter: Converter, node: Any, inputs: List[str]) -> Any:
@@ -305,7 +311,7 @@ def split(converter: Converter, node: Any, inputs: List[str]) -> Any:
     num_split = node.attr["num_split"].i
     axis_val = axis.attr["value"].tensor.int_val[0]
 
-    return converter.protocol.split(input_out, num_split, axis_val)
+    return converter.protocol.split(input_out, num_split, axis_val)[0]
 
 
 def pad(converter: Converter, node: Any, inputs: List[str]) -> Any:
