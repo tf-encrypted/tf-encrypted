@@ -550,16 +550,18 @@ def export_squeeze(filename, input_shape):
 
 def run_split(input):
     a = tf.placeholder(tf.float32, shape=input.shape, name="input")
-    x = tf.split(a, num_or_size_splits=2, axis=1)
+    x1, x2 = tf.split(a, num_or_size_splits=2, axis=1)
+    y = tf.add(x1, x2)
     with tf.Session() as sess:
-        output, _ = sess.run(x, feed_dict={a: input})
-    return [output]
+        output = sess.run(y, feed_dict={a: input})
+    return output
 
 
 def export_split(filename, input_shape):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    x1, _ = tf.split(a, num_or_size_splits=2, axis=1)
-    return export(x1, filename)
+    x1, x2 = tf.split(a, num_or_size_splits=2, axis=1)
+    y = tf.add(x1, x2)
+    return export(y, filename)
 
 
 def run_sub(input):
