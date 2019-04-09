@@ -14,7 +14,7 @@ In particular, the library focuses on:
 
 See below for more [background material](#background--further-reading), explore the [examples](./examples/), or visit the [documentation](./docs/) to learn more about how to use the library.
 
-The project has benefitted enormously from the efforts of several contributors following its original implementation, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community. See below for further [details](#contributing).
+The project was originally started by [Morten Dahl](https://mortendahl.github.io/) but has since benefitted enormously from the efforts of several contributors, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community. See below for further [details](#contributing).
 
 # Installation
 
