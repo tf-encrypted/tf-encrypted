@@ -23,7 +23,7 @@ setuptools.setup(
     description="Layer on top of TensorFlow for doing machine learning on encrypted data.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="TF Encrypted Authors",
+    author="The TF Encrypted Authors",
     author_email="tfencrypted@gmail.com",
     classifiers=[
         "Programming Language :: Python :: 3",
