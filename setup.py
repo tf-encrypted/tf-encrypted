@@ -19,12 +19,12 @@ setuptools.setup(
         "tf": ["tensorflow>=1.12.0"]
     },
     license="Apache License 2.0",
-    url="https://github.com/mortendahl/tf-encrypted",
+    url="https://github.com/tf-encrypted/tf-encrypted",
     description="Layer on top of TensorFlow for doing machine learning on encrypted data.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="Morten Dahl",
-    author_email="mortendahlcs@gmail.com",
+    author="TF Encrypted Authors",
+    author_email="tfencrypted@gmail.com",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
