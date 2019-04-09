@@ -12,9 +12,7 @@ In particular, the library focuses on:
 - **Community**: With a primary goal of pushing the technology forward the project encourages collaboration and open source over proprietary and closed solutions.
 - **Security**: Cryptographic protocols are evaluated against strong notions of security and [known limitations](#known-limitations) are highlighted.
 
-See below for more [background material](#background--further-reading), explore the [examples](./examples/), or visit the [documentation](./docs/) to learn more about how to use the library.
-
-The project has benefitted enormously from the efforts of several contributors following its original implementation, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community. See below for further [details](#contributing).
+See below for more [background material](#background--further-reading), explore the [examples](./examples/), or visit the [documentation](./docs/) to learn more about how to use the library. You are also more than welcome to join our [Slack channel](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjA0NDE2MDAxOTA2LTRjMWUwYWM3NTQ4MTk4NDNiOWI4Y2VjNDI5MDBhZDc5Y2RmNWMyODYyNDQ4MzMyMGM0YjZhZDYwMmJmNGJhYmE) for all questions around use and development.
 
 # Installation
 
@@ -78,7 +76,7 @@ The following texts provide further in-depth presentations of the project:
 
 - [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) describes the initial motivation and implementation
 - [Private Machine Learning in TensorFlow using Secure Computation](https://arxiv.org/abs/1810.08130) further elaborates on the benefits of the approach, outlines the adaptation of a secure computation protocol, and reports on concrete performance numbers
-- [Experimenting with tf-encrypted](https://medium.com/dropoutlabs/experimenting-with-tf-encrypted-fe37977ff03c) walks through a simple example of turning an existing TensorFlow prediction model private
+- [Experimenting with TF Encrypted](https://medium.com/dropoutlabs/experimenting-with-tf-encrypted-fe37977ff03c) walks through a simple example of turning an existing TensorFlow prediction model private
 
 # Project Status
 
@@ -90,10 +88,11 @@ TF Encrypted is experimental software not currently intended for use in producti
 
 # Contributing
 
-Don't hesitate to send a pull request, open an issue, or ask for help! Check out our [contribution guide](./docs/CONTRIBUTING.md) for more information!
+Don't hesitate to send a pull request, open an issue, or ask for help! You can do so either via [GitHub](https://github.com/tf-encrypted/tf-encrypted) or our [Slack channel](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjA0NDE2MDAxOTA2LTRjMWUwYWM3NTQ4MTk4NDNiOWI4Y2VjNDI5MDBhZDc5Y2RmNWMyODYyNDQ4MzMyMGM0YjZhZDYwMmJmNGJhYmE). Check out our [contribution guide](./docs/CONTRIBUTING.md) for more information!
 
-Several individuals have already had an impact on the development of this library (in alphabetical order):
+The project was originally started by [Morten Dahl](https://mortendahl.github.io/) but has since benefitted enormously from the efforts of several contributors, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community (in alphabetical order):
 
+- [Morten Dahl](https://github.com/mortendahl) (lead, Dropout Labs)
 - [Ben DeCoste](https://github.com/bendecoste) (Dropout Labs)
 - [Yann Dupis](https://github.com/yanndupis) (Dropout Labs)
 - [Morgan Giraud](https://github.com/morgangiraud) (while at Dropout Labs)
@@ -102,11 +101,6 @@ Several individuals have already had an impact on the development of this librar
 - [Justin Patriquin](https://github.com/justin1121) (Dropout Labs)
 - [Andrew Trask](https://github.com/iamtrask) (OpenMined)
 - [Koen van der Veen](https://github.com/koenvanderveen) (OpenMined)
-
-and several companies have invested significant resources:
-
-- [Dropout Labs](https://dropoutlabs.com/) continues to sponsor a large amount of both research and engineering
-- [OpenMined](https://openmined.org) was the breeding ground for the initial idea and continues to support discussions and guidance
 
 # License
 
