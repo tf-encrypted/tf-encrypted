@@ -93,6 +93,7 @@ Don't hesitate to send a pull request, open an issue, or ask for help! Check out
 
 Several individuals have already had an impact on the development of this library (in alphabetical order):
 
+- [Morten Dahl](https://github.com/mortendahl) (lead, Dropout Labs)
 - [Ben DeCoste](https://github.com/bendecoste) (Dropout Labs)
 - [Yann Dupis](https://github.com/yanndupis) (Dropout Labs)
 - [Morgan Giraud](https://github.com/morgangiraud) (while at Dropout Labs)
