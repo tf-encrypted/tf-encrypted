@@ -40,6 +40,8 @@ def register() -> Dict[str, Any]:
         'flatten': flatten,
         'Slice': slice,
         'Neg': negative,
+        'Split': split,
+        'Identity': identity,
     }
 
     return reg
@@ -53,6 +55,11 @@ def placeholder(converter: Converter, node: Any, inputs: List[str]) -> Any:
 def constant(converter: Converter, node: Any, inputs: List[str]) -> Any:
     # need to able to access the underlying weights return the node
     return node
+
+
+def identity(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    # need to able to access the underlying weights return the node
+    return converter.outputs[inputs[0]]
 
 
 def matmul(converter: Converter, node: Any, inputs: List[str]) -> Any:
@@ -290,6 +297,21 @@ def squeeze(converter: Converter, node: Any, inputs: List[str]) -> Any:
     axis = node.attr["squeeze_dims"].list.i
 
     return converter.protocol.squeeze(input, list(axis))
+
+
+def split(converter: Converter, node: Any, inputs: List[str]) -> Any:
+    axis = converter.outputs[inputs[0]]
+    input = converter.outputs[inputs[1]]
+
+    if isinstance(input, tf.NodeDef):
+        input_out = nodef_to_private_pond(converter, input)
+    else:
+        input_out = input
+
+    num_split = node.attr["num_split"].i
+    axis_val = axis.attr["value"].tensor.int_val[0]
+
+    return converter.protocol.split(input_out, num_split, axis_val)[0]
 
 
 def pad(converter: Converter, node: Any, inputs: List[str]) -> Any:

@@ -50,7 +50,6 @@ class TestConvert(unittest.TestCase):
     @staticmethod
     def _assert_successful_conversion(prot, graph_def, actual, *input_fns, decimals=3, **kwargs):
         prot.clear_initializers()
-
         converter = Converter(tfe.get_config(), prot, 'model-provider')
         x = converter.convert(graph_def, register(), 'input-provider', list(input_fns))
 
@@ -147,6 +146,10 @@ class TestConvert(unittest.TestCase):
     def test_squeeze_convert(self):
         test_input = np.ones([1, 2, 3, 1])
         self._test_with_ndarray_input_fn('squeeze', test_input, protocol='Pond')
+
+    def test_split_convert(self):
+        test_input = np.ones([2, 4])
+        self._test_with_ndarray_input_fn('split', test_input, protocol='Pond')
 
     def test_sub_convert(self):
         test_input = np.ones([28, 1])
@@ -542,6 +545,20 @@ def run_squeeze(input):
 def export_squeeze(filename, input_shape):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
     x = tf.squeeze(a, axis=[0, 3])
+    return export(x, filename)
+
+
+def run_split(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    x = tf.split(a, num_or_size_splits=2, axis=1)
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: input})
+    return output
+
+
+def export_split(filename, input_shape):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    x = tf.split(a, num_or_size_splits=2, axis=1)
     return export(x, filename)
 
 
