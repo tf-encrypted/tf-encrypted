@@ -2,7 +2,7 @@ version: '3'
 
 services:
   server0:
-    image: mortendahl/tf-encrypted:latest
+    image: tfencrypted/tf-encrypted:latest
     ports:
       - 4440:4440
     environment:
@@ -14,7 +14,7 @@ services:
       TFE_MASTER_ADDRESS: master:4440
 
   server1:
-    image: mortendahl/tf-encrypted:latest
+    image: tfencrypted/tf-encrypted:latest
     ports:
       - 4441:4440
     environment:
@@ -26,7 +26,7 @@ services:
       TFE_MASTER_ADDRESS: master:4440
 
   producer:
-    image: mortendahl/tf-encrypted:latest
+    image: tfencrypted/tf-encrypted:latest
     ports:
       - 4442:4440
     environment:
@@ -38,7 +38,7 @@ services:
       TFE_MASTER_ADDRESS: master:4440
 
   provider:
-    image: mortendahl/tf-encrypted:latest
+    image: tfencrypted/tf-encrypted:latest
     ports:
       - 4443:4440
     environment:
@@ -50,7 +50,7 @@ services:
       TFE_MASTER_ADDRESS: master:4440
 
   master:
-    image: mortendahl/tf-encrypted:latest
+    image: tfencrypted/tf-encrypted:latest
     ports:
       - 4444:4440
       - 5000:5000
