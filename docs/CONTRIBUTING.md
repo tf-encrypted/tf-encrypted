@@ -84,4 +84,4 @@ Think you've found a bug? Let us know by opening an [issue in our tracker](https
 
 ## Security disclosures
 
-If you encounter a security issue then please responsible disclose it by reaching out to us via [tfencrypted@gmail.com](mailto:tfencrypted@gmail.com). We will work with you to mitigate the issue and responsibly disclose it to anyone using the project.
+If you encounter a security issue then please responsibly disclose it by reaching out to us via [tfencrypted@gmail.com](mailto:tfencrypted@gmail.com). We will work with you to mitigate the issue and responsibly disclose it to anyone using the project in a timely manner.
