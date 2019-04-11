@@ -49,7 +49,7 @@ import tensorflow as tf
 import tf_encrypted as tfe
 
 def provide_input():
-    # local TensorFlow operations can be run locally
+    # normal TensorFlow operations can be run locally
     # as part of defining a private input, in this
     # case on the machine of the input provider
     return tf.ones(shape=(5, 10))
