@@ -42,7 +42,7 @@ Useful tricks:
 
 Make sure to give some context and overview in the body of your pull request to make it easier for reviewers to understand your changes. Ideally explain why your particular changes were made the way they are.
 
-Importantly, use [Waffle keywords](https://help.waffle.io/dependencies/which-keywords-are-supported-with-dependencies) such as `Closes #<issue-number>` to indicate any issues or other pull requests related to your work.
+Importantly, use [keywords](https://help.github.com/en/articles/closing-issues-using-keywords) such as `Closes #<issue-number>` to indicate any issues or other pull requests related to your work.
 
 Furthermore:
 
