@@ -37,6 +37,8 @@ parser.add_argument(
     '--plaintext', action='store_true', help='Run the model in plaintext')
 parser.add_argument(
     '--epochs', type=int, default=10, help='Number of times to run a prediction')
+parser.add_argument(
+    '--data_prep_path', type=str, default='', help='Path to a saved model with data pre-processing')
 config = parser.parse_args()
 
 if config.protocol_name == 'securenn':
