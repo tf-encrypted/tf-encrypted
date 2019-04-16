@@ -63,7 +63,16 @@ test: lint pythoncheck
 	pytest -n 8 -x -m convert_maxpool
 
 
-lint: pythoncheck
+CONVERT_DIR=$(CURRENT_DIR)/tf_encrypted/convert
+BUILD_RESERVED_SCOPES=$(CONVERT_DIR)/specops.yaml
+$(BUILD_RESERVED_SCOPES): pythoncheck
+	python -m tf_encrypted.convert.gen.generate_reserved_scopes
+
+BUILD_CONVERTER_README=$(CONVERT_DIR)/gen/readme_template.md
+$(BUILD_CONVERTER_README): $(BUILD_RESERVED_SCOPES) pythoncheck
+	python -m tf_encrypted.convert.gen.generate_reserved_scopes
+
+lint: $(BUILD_CONVERTER_README) pythoncheck
 	flake8 --exclude=venv,build
 
 typecheck: pythoncheck
