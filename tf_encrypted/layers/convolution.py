@@ -27,7 +27,7 @@ class Conv2D(core.Layer):
     def __init__(self,
                  input_shape, filter_shape,
                  strides=1, padding="SAME",
-                 filter_init=lambda shp: np.random.normal(scale=0.1, size=shp),
+                 filter_init=lambda shp: np.random.normal(scale = 0.1, size = shp),
                  l2reg_lambda=0.0, channels_first=True):
         self.fshape = filter_shape
         self.strides = strides

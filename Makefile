@@ -63,7 +63,7 @@ test: lint pythoncheck
 	pytest -n 8 -x -m convert_maxpool
 
 
-CONVERT_DIR=$(CURRENT_DIR)/tf_encrypted/convert
+CONVERT_DIR=tf_encrypted/convert
 BUILD_RESERVED_SCOPES=$(CONVERT_DIR)/specops.yaml
 $(BUILD_RESERVED_SCOPES): pythoncheck
 	python -m tf_encrypted.convert.gen.generate_reserved_scopes
