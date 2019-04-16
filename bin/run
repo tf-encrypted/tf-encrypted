@@ -132,8 +132,8 @@ if config.plaintext:
 
 else:
     print('running prediction securely')
-    c = tfe.convert.convert.Converter()
-    y = c.convert(graph_def, tfe.convert.register(), 'input-provider', inputs)
+    c = tfe.convert.Converter()
+    y = c.convert(graph_def, tfe.convert.registry(), 'input-provider', inputs)
 
     pls = []
     for i in range(len(input_spec)):

@@ -76,6 +76,6 @@ def secure_model(model):
     graph_def, inputs = load_graph('/tmp/model.pb')
 
     c = tfe.convert.convert.Converter()
-    y = c.convert(remove_training_nodes(graph_def), tfe.convert.register(), 'input-provider', inputs)
+    y = c.convert(remove_training_nodes(graph_def), tfe.convert.registry(), 'input-provider', inputs)
 
     return PrivateModel(y)
