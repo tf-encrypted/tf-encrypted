@@ -2,14 +2,17 @@ import array
 import logging
 import numpy as np
 import tensorflow as tf
+import os
+import yaml
 from typing import Any, Dict, List
+from collections import OrderedDict
+
 
 from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
-from .convert import Converter
+from ..protocol.pond import PondPrivateTensor, PondMaskedTensor
 
 
-def register() -> Dict[str, Any]:
-    tf.import_graph_def
+def registry() -> Dict[str, Any]:
     reg = {
         'Placeholder': placeholder,
         'Const': constant,
@@ -38,6 +41,7 @@ def register() -> Dict[str, Any]:
         'ArgMax': argmax,
         'required_space_to_batch_paddings': required_space_to_batch_paddings,
         'flatten': flatten,
+        'conv2d': keras_conv2d,
         'Slice': slice,
         'Neg': negative,
         'Split': split,
@@ -47,22 +51,30 @@ def register() -> Dict[str, Any]:
     return reg
 
 
-def placeholder(converter: Converter, node: Any, inputs: List[str]) -> Any:
+convert_dir = os.path.dirname(os.path.abspath(__file__))
+specops_path = os.path.join(convert_dir, "specops.yaml")
+with open(specops_path, "r") as stream:
+    loaded_yaml = yaml.load(stream, Loader=yaml.SafeLoader)
+    sorted_yaml = sorted(loaded_yaml.items(), key=lambda kv: kv[0])
+    REGISTERED_SPECOPS = OrderedDict(sorted_yaml)
+
+
+def placeholder(converter, node: Any, inputs: List[str]) -> Any:
     return tf.placeholder(node.attr["dtype"].type,
                           shape=node.attr["shape"].shape)
 
 
-def constant(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def constant(converter, node: Any, inputs: List[str]) -> Any:
     # need to able to access the underlying weights return the node
     return node
 
 
-def identity(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def identity(converter, node: Any, inputs: List[str]) -> Any:
     # need to able to access the underlying weights return the node
     return converter.outputs[inputs[0]]
 
 
-def matmul(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def matmul(converter, node: Any, inputs: List[str]) -> Any:
     a = converter.outputs[inputs[0]]
     b = converter.outputs[inputs[1]]
 
@@ -95,26 +107,16 @@ def matmul(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return layer.forward(a)
 
 
-def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def conv2d(converter, node, inputs):
     input = converter.outputs[inputs[0]]
     filter = converter.outputs[inputs[1]]
 
     if isinstance(filter, tf.NodeDef):
         shape = [i.size for i in filter.attr["value"].tensor.tensor_shape.dim]
-        dtype = filter.attr["dtype"].type
-
-        if dtype == tf.float32:
-            nums = array.array('f', filter.attr["value"].tensor.tensor_content)
-        elif dtype == tf.float64:
-            nums = array.array('d', filter.attr["value"].tensor.tensor_content)
-        else:
-            raise TypeError("Unsupported dtype for weights")
-
-        inputter_fn = lambda: tf.constant(np.array(nums).reshape(shape))
-        w = converter.protocol.define_private_input(converter.model_provider, inputter_fn)
+        w = nodef_to_private_pond(converter, filter)
     else:
-        w = filter
         shape = filter.shape.as_list()
+        w = filter
 
     format = node.attr["data_format"].s.decode('ascii')
 
@@ -132,19 +134,52 @@ def conv2d(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return out
 
 
-def relu(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def keras_conv2d(converter, interiors, inputs):
+    input = converter.outputs[inputs[0]]
+
+    conv_op = interiors["Conv2D"]
+    kernel = interiors["kernel"]
+    k = nodef_to_private_pond(converter, kernel)
+    try:
+        bias = interiors["bias"]
+        b = nodef_to_private_pond(converter, bias)
+        for ax in [0, -1, -1]:
+            b = b.expand_dims(axis=ax)
+    except KeyError:
+        b = None
+
+    input_shape = input.shape.as_list()
+    shape = [i.size for i in kernel.attr["value"].tensor.tensor_shape.dim]
+    format = conv_op.attr["data_format"].s.decode('ascii')
+    strides = int(max(conv_op.attr["strides"].list.i))
+    padding = conv_op.attr["padding"].s.decode('ascii')
+
+    layer = Conv2D(
+        input_shape, shape,
+        strides=strides,
+        padding=padding,
+        channels_first=format == "NCHW"
+    )
+
+    layer.initialize(initial_weights=k, initial_bias=b)
+    out = layer.forward(input)
+
+    return out
+
+
+def relu(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
     return Relu(input.shape.as_list()).forward(input)
 
 
-def sigmoid(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def sigmoid(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
     return Sigmoid(input.shape.as_list()).forward(input)
 
 
-def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def strided_slice(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
     if isinstance(input, tf.NodeDef):
@@ -174,7 +209,7 @@ def strided_slice(converter: Converter, node: Any, inputs: List[str]) -> Any:
                                             shrink_axis_mask=shrink_axis_mask)
 
 
-def pack(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def pack(converter, node: Any, inputs: List[str]) -> Any:
     final_inputs = []
 
     for input in inputs:
@@ -187,7 +222,7 @@ def pack(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.stack(final_inputs, axis=node.attr["axis"].i)
 
 
-def bias_add(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def bias_add(converter, node: Any, inputs: List[str]) -> Any:
     a = converter.outputs[inputs[0]]
     b = converter.outputs[inputs[1]]
 
@@ -204,7 +239,7 @@ def bias_add(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.add(a_out, b_out)
 
 
-def maxpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def maxpool(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
     ksize = node.attr["ksize"].list.i
@@ -225,13 +260,13 @@ def maxpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return out
 
 
-def shape(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def shape(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
     return input.shape
 
 
-def reshape(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def reshape(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
     shape = converter.outputs[inputs[1]]
 
@@ -247,7 +282,7 @@ def reshape(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.reshape(input, list(nums))
 
 
-def transpose(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def transpose(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
     perm = converter.outputs[inputs[1]]
 
@@ -265,7 +300,7 @@ def transpose(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.transpose(input, np.array(nums).reshape(shape))
 
 
-def expand_dims(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def expand_dims(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
     if isinstance(input, tf.NodeDef):
@@ -280,7 +315,7 @@ def expand_dims(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.expand_dims(input_out, axis_val)
 
 
-def negative(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def negative(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
     if isinstance(input, tf.NodeDef):
@@ -291,7 +326,7 @@ def negative(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.negative(input_out)
 
 
-def squeeze(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def squeeze(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
     axis = node.attr["squeeze_dims"].list.i
@@ -299,7 +334,7 @@ def squeeze(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.squeeze(input, list(axis))
 
 
-def split(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def split(converter, node: Any, inputs: List[str]) -> Any:
     axis = converter.outputs[inputs[0]]
     input = converter.outputs[inputs[1]]
 
@@ -314,7 +349,7 @@ def split(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.split(input_out, num_split, axis_val)[0]
 
 
-def pad(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def pad(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
     p = (converter.outputs[inputs[1]])
 
@@ -326,7 +361,7 @@ def pad(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.pad(input, paddings_lst)
 
 
-def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def rsqrt(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
     if isinstance(input, tf.NodeDef):
@@ -355,7 +390,7 @@ def rsqrt(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return x
 
 
-def add(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def add(converter, node: Any, inputs: List[str]) -> Any:
     a = converter.outputs[inputs[0]]
     b = converter.outputs[inputs[1]]
 
@@ -372,7 +407,7 @@ def add(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.add(a_out, b_out)
 
 
-def sub(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def sub(converter, node: Any, inputs: List[str]) -> Any:
     a = converter.outputs[inputs[0]]
     b = converter.outputs[inputs[1]]
 
@@ -389,7 +424,7 @@ def sub(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.sub(a_out, b_out)
 
 
-def mul(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def mul(converter, node: Any, inputs: List[str]) -> Any:
     a = converter.outputs[inputs[0]]
     b = converter.outputs[inputs[1]]
 
@@ -406,7 +441,7 @@ def mul(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return converter.protocol.mul(a_out, b_out)
 
 
-def avgpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def avgpool(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
 
     ksize = node.attr["ksize"].list.i
@@ -427,7 +462,7 @@ def avgpool(converter: Converter, node: Any, inputs: List[str]) -> Any:
     return out
 
 
-def concat(converter: Converter, node: Any, inputs: List[str]) -> Any:
+def concat(converter, node: Any, inputs: List[str]) -> Any:
     input0 = converter.outputs[inputs[0]]
     input1 = converter.outputs[inputs[1]]
     axis = converter.outputs[inputs[2]]
@@ -453,40 +488,55 @@ def space_to_batch_nd(converter, node, inputs):
 
 def flatten(converter, node, inputs):
     input = converter.outputs[inputs[0]]
-    return converter.protocol.reshape(input, [1, -1])
+
+    shape = input.shape.as_list()
+    non_batch = 1
+    for dim in shape[1:]:
+        non_batch *= dim
+
+    return converter.protocol.reshape(input, [-1, non_batch])
 
 
-def required_space_to_batch_paddings(converter: Converter, node: Any, inputs: List[str]):
+def required_space_to_batch_paddings(converter, node, inputs: List[str]):
 
     inputs_node = [converter.outputs[inputs[i]] for i in range(len(inputs))]
     inputs_int32 = []
-    for i in range(len(inputs_node)):
-        if isinstance(inputs_node[i], tf.NodeDef):
-            inputs_int32.append(nodef_to_numpy_array(inputs_node[i]))
-        else:
+    for input in inputs_node:
+        pvt_check = isinstance(input, PondPrivateTensor)
+        msk_check = isinstance(input, PondMaskedTensor)
+        if pvt_check or msk_check:
             msg = "Revealing private input: required_space_to_batch_paddings assumes public input."
             logging.warning(msg)
-            inputs_int32.append(tf.cast(inputs_node[i].reveal().decode(), tf.int32))
+            inputs_int32.append(tf.cast(input.reveal().decode(), tf.int32))
+        elif isinstance(input, tf.NodeDef):
+            inputs_int32.append(nodef_to_numpy_array(input))
+        else:
+            msg = "Unexpected input of type {}."
+            raise TypeError(msg.format(type(input)))
 
     if len(inputs_int32) == 2:
+        input_shape, block_shape = inputs_int32
+
         def inputter_pad():
-            pads, _ = tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1])
+            pads, _ = tf.required_space_to_batch_paddings(input_shape, block_shape)
             return tf.cast(pads, tf.float64)
 
         def inputter_crop():
-            _, crops = tf.required_space_to_batch_paddings(inputs_int32[0], inputs_int32[1])
+            _, crops = tf.required_space_to_batch_paddings(input_shape, block_shape)
             return tf.cast(crops, tf.float64)
     else:
+        base_paddings, input_shape, block_shape = inputs_int32
+
         def inputter_pad():
-            pads, _ = tf.required_space_to_batch_paddings(inputs_int32[0],
-                                                          inputs_int32[1],
-                                                          base_paddings=inputs_int32[2])
+            pads, _ = tf.required_space_to_batch_paddings(input_shape,
+                                                          block_shape,
+                                                          base_paddings=base_paddings)
             return tf.cast(pads, tf.float64)
 
         def inputter_crop():
-            _, crops = tf.required_space_to_batch_paddings(inputs_int32[0],
-                                                           inputs_int32[1],
-                                                           base_paddings=inputs_int32[2])
+            _, crops = tf.required_space_to_batch_paddings(input_shape,
+                                                           block_shape,
+                                                           base_paddings=base_paddings)
             return tf.cast(crops, tf.float64)
 
     pad_private = converter.protocol.define_public_input(converter.model_provider, inputter_pad)
@@ -568,6 +618,8 @@ def nodef_to_public_pond(converter, x):
 
 def nodef_to_private_pond(converter, x):
     dtype = x.attr["dtype"].type
+    warn_msg = "Unexpected dtype {} found at node {}"
+    err_msg = "Unsupported dtype {} found at node {}"
 
     x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
@@ -577,9 +629,10 @@ def nodef_to_private_pond(converter, x):
         elif dtype == tf.float64:
             nums = x.attr["value"].tensor.float_val
         elif dtype == tf.int32:
+            logging.warn(warn_msg.format(dtype, x.name))
             nums = x.attr["value"].tensor.int_val
         else:
-            raise TypeError("Unsupported dtype")
+            raise TypeError(err_msg.format(dtype, x.name))
 
         def inputter_fn():
             return tf.constant(np.array(nums).reshape(1, 1))
@@ -590,9 +643,10 @@ def nodef_to_private_pond(converter, x):
         elif dtype == tf.float64:
             nums = array.array('d', x.attr["value"].tensor.tensor_content)
         elif dtype == tf.int32:
+            logging.warn(warn_msg.format(dtype, x.name))
             nums = array.array('i', x.attr["value"].tensor.tensor_content)
         else:
-            raise TypeError("Unsupported dtype")
+            raise TypeError(err_msg.format(dtype, x.name))
 
         def inputter_fn():
             return tf.constant(np.array(nums).reshape(x_shape))
