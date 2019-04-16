@@ -149,15 +149,12 @@ endif
 
 docker-tag: dockercheck
 	$(call DOCKER_TAG,latest,$(VERSION))
-	$(call DOCKER_TAG,latest-int64,$(VERSION)-int64)
 
 docker-push-tag: dockercheck
 	$(call DOCKER_PUSH,$(VERSION))
-	$(call DOCKER_PUSH,$(VERSION)-int64)
 
 docker-push-latest: dockercheck
 	$(call DOCKER_PUSH,latest)
-	$(call DOCKER_PUSH,latest-int64)
 
 # Rely on DOCKER_USERNAME and DOCKER_PASSWORD being set inside CI or equivalent
 # environment

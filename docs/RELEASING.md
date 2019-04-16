@@ -39,7 +39,7 @@ tf-encrypted below:
    release works as expected.
 4. Once the release candidate work as expected, create a new branch based off
    master (e.g. `release-0.1.0`), update the files above with the true release version,
-   and merge it into master. Once done, just as we did for the release
+   and merge it into the master branch on TF Encrypted's GitHub. Once done, just as we did for the release
    candidate, create a tag (e.g. `git tag release-0.1.0`) off of the merge
    commit and push it to github (e.g. `git push origin release-0.1.0`).
 5. Once the build on Circle CI has passed for our full release it should be
