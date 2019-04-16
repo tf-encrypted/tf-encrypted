@@ -1,7 +1,5 @@
 import numpy as np
 
-from typing import List
-
 from . import core
 
 from tf_encrypted.protocol.pond import PondPrivateTensor, PondMaskedTensor
@@ -27,10 +25,10 @@ class Conv2D(core.Layer):
     """
 
     def __init__(self,
-                 input_shape: List[int], filter_shape: List[int],
-                 strides: int = 1, padding: str = "SAME",
-                 filter_init=lambda shp: np.random.normal(scale = 0.1, size = shp),  # noqa: E251
-                 l2reg_lambda: float = 0.0, channels_first: bool = True) -> None:
+                 input_shape, filter_shape,
+                 strides=1, padding="SAME",
+                 filter_init=lambda shp: np.random.normal(scale=0.1, size=shp),
+                 l2reg_lambda=0.0, channels_first=True):
         self.fshape = filter_shape
         self.strides = strides
         self.padding = padding
@@ -47,7 +45,7 @@ class Conv2D(core.Layer):
 
         super(Conv2D, self).__init__(input_shape)
 
-    def get_output_shape(self) -> List[int]:
+    def get_output_shape(self):
         h_filter, w_filter, d_filters, n_filters = self.fshape
 
         if self.channels_first:
@@ -65,21 +63,21 @@ class Conv2D(core.Layer):
         return [n_x, n_filters, h_out, w_out]
 
     def initialize(self, initial_weights=None, initial_bias=None) -> None:
+
+        def is_secret(x):
+            is_pvt = isinstance(x, PondPrivateTensor)
+            is_msk = isinstance(x, PondMaskedTensor)
+            return is_pvt or is_msk
+
         if initial_weights is None:
             initial_weights = self.filter_init(self.fshape)
 
-        if isinstance(initial_weights, PondPrivateTensor):
-            self.weights = initial_weights
-        elif isinstance(initial_weights, PondMaskedTensor):
+        if is_secret(initial_weights):
             self.weights = initial_weights
         else:
             self.weights = self.prot.define_private_variable(initial_weights)
 
-        if initial_bias is None:
-            self.bias = self.prot.define_private_variable(np.zeros(self.output_shape[1:]))
-        elif isinstance(initial_bias, PondPrivateTensor):
-            self.bias = initial_bias
-        elif isinstance(initial_bias, PondMaskedTensor):
+        if initial_bias is None or is_secret(initial_bias):
             self.bias = initial_bias
         else:
             self.bias = self.prot.define_private_variable(initial_bias)
@@ -92,8 +90,8 @@ class Conv2D(core.Layer):
             x = self.prot.transpose(x, perm=[0, 3, 1, 2])
 
         out = self.prot.conv2d(x, self.weights, self.strides, self.padding)
-
-        out = out + self.bias
+        if self.bias is not None:
+            out = out + self.bias
 
         if not self.channels_first:
             out = self.prot.transpose(out, perm=[0, 2, 3, 1])
