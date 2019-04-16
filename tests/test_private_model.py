@@ -18,7 +18,7 @@ class TestPrivateModel(unittest.TestCase):
 
         with tfe.protocol.Pond():
             c = tfe.convert.convert.Converter()
-            y = c.convert(graph_def, tfe.convert.register(), 'input-provider', provide_input)
+            y = c.convert(graph_def, tfe.convert.registry(), 'input-provider', provide_input)
 
             model = PrivateModel(y)
 
