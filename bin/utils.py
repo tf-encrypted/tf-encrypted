@@ -1,43 +1,41 @@
 import tensorflow as tf
 
 
-def read_records(filename):
-    reader = tf.python_io.tf_record_iterator(filename)
-    records = []
-    for record in reader:
-        records.append(record)
-        if len(records) % 100000 == 0:
-            tf.logging.info("read: %d", len(records))
-    return records
+def data_prep_with_saved_model(
+    saved_model_dir, 
+    data_filenames, 
+    batch_size,
+    data_prep_start_node="serialized_example:0",
+    data_prep_end_node="DatasetToSingleElement:0"
+    ):
 
-
-def batch_records(records, batch_nb, batch_size):
-    data_length = len(records)
-    start, end = batch_indices(batch_nb, data_length, batch_size)
-    return records[start:end]
-
-
-def batch_indices(batch_nb, data_length, batch_size):
-  start = int(batch_nb * batch_size)
-  end = int((batch_nb + 1) * batch_size)
-
-  if end > data_length:
-    shift = end - data_length
-    start -= shift
-    end -= shift
-
-  return start, end
-
-
-def lambda_preprocess_from_saved_model(data_prep_path, 
-                                        input_node = 'serialized_example', 
-                                        output_node = 'DatasetToSingleElement'):
-
+    # SavedModel with data pre-processing steps
     with tf.Session(graph=tf.Graph()) as sess:
-        tf.saved_model.loader.load(sess, ['serve'], data_prep_path)
-        input_preprocess = sess.graph.get_operation_by_name(input_node).values()[0]
-        output_preprocess = sess.graph.get_operation_by_name(output_node).values()[0]
+        tf.saved_model.loader.load(sess, ['serve'], saved_model_dir) 
 
-        preprocess_fn = lambda record : sess.run(output_preprocess, {input_preprocess: record})
-    return preprocess_fn
+    # Extract graph definition
+    gdef = sess.graph_def
+
+    # Load TFRecord files then generate a Dataset of batch
+    dataset = tf.data.TFRecordDataset(data_filenames)
+    dataset = dataset.batch(batch_size)
+    iterator = dataset.make_one_shot_iterator()
+    dataset_b = iterator.get_next()
+
+    # Preprocess data
+    data_out, = tf.import_graph_def(
+                        gdef,
+                        input_map={data_prep_start_node: dataset_b},
+                        return_elements=[data_prep_end_node])
+
+    return data_out
+
+
+
+
+
+
+
+
+
 
