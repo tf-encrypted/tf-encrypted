@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-def data_prep_with_saved_model(
+def data_prep_from_saved_model(
     saved_model_dir, 
     data_filenames, 
     batch_size,
@@ -28,6 +28,9 @@ def data_prep_with_saved_model(
                         input_map={data_prep_start_node: dataset_b},
                         return_elements=[data_prep_end_node])
 
+    # TFE expects tensors with fully defined shape 
+    fixed_shape = [batch_size] + data_out.get_shape().as_list()[1:]
+    data_out = tf.reshape(data_out, fixed_shape)
     return data_out
 
 
