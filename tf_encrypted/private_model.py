@@ -12,7 +12,7 @@ class PrivateModel():
         self.output_node = output_node
 
     # TODO support multiple inputs
-    def private_predict(self, input, input_name=None):
+    def private_predict(self, input, input_name=None, tag="prediction"):
         if input_name is None:
             name = "private-input/api/0:0"
         else:
@@ -26,7 +26,7 @@ class PrivateModel():
             output = sess.run(
                 self.output_node.reveal(),
                 feed_dict={pl: input},
-                tag='prediction'
+                tag=tag
             )
 
             return output
