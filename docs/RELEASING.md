@@ -25,7 +25,7 @@ created by pushing a tag to GitHub! We've documented the flow for releasing
 tf-encrypted below:
 
 1. Create a release candidate branch based off master (e.g.
-   `release-0.1.0-rc0`) and update the `setup.py`, `CHANGELOG.md` and
+   `release-0.1.0-rc0`) and update the `setup.py`, `CHANGELOG.md`, `meta.yaml`, and
    `docs/source/conf.py` and attempt to merge it into master. If this
    is the first release candidate in the series for this version the
    number should begin at 0 (e.g. `0.1.0-rc0`).
@@ -38,8 +38,8 @@ tf-encrypted below:
    as expected. If at any point a bug is found repeat steps 1-3 until the
    release works as expected.
 4. Once the release candidate work as expected, create a new branch based off
-   master (e.g. `release-0.1.0`) and update the `setup.py`and `CHANGELOG.md`
-   file and merge it into master. Once done, just as we did for the release
+   master (e.g. `release-0.1.0`), update the files above with the true release version,
+   and merge it into master. Once done, just as we did for the release
    candidate, create a tag (e.g. `git tag release-0.1.0`) off of the merge
    commit and push it to github (e.g. `git push origin release-0.1.0`).
 5. Once the build on Circle CI has passed for our full release it should be

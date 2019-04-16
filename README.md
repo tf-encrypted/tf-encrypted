@@ -29,6 +29,7 @@ Alternatively, installing from source can be done using:
 ```bash
 git clone https://github.com/mortendahl/tf-encrypted.git
 cd tf-encrypted
+pip3 install -r requirements.txt
 pip3 install -e .
 ```
 
