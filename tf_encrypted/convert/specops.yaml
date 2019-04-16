@@ -1,0 +1,21 @@
+conv2d:
+  interiors:
+    - Conv2D
+    - kernel
+    - bias
+  tf-name:
+    tf.keras.layers.Conv2D
+  hyperlink:
+    https://www.tensorflow.org/api_docs/python/tf/keras/layers/Conv2D
+flatten:
+  interiors:
+  tf-name:
+    tf.keras.layers.Flatten
+  hyperlink:
+    https://www.tensorflow.org/api_docs/python/tf/keras/layers/Flatten
+required_space_to_batch_paddings:
+  interiors:
+  tf-name:
+    tf.required_space_to_batch_paddings
+  hyperlink:
+    https://www.tensorflow.org/api_docs/python/tf/required_space_to_batch_paddings
