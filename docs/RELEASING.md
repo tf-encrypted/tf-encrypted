@@ -3,7 +3,7 @@
 The release artifacts for tf-encrypted are built entirely through Circle CI
 (our continuous integration tool). It detects when a new tag is pushed to
 GitHub and then runs the build. If it passes, then the `deploy` job will run
-which will trigger the `make push` rule in our Makefile which will subseuqently
+which will trigger the `make push` rule in our Makefile which will subsequently
 build and push all release artifacts.
 
 Today, the following artifacts are produced from this repository:
@@ -25,8 +25,8 @@ created by pushing a tag to GitHub! We've documented the flow for releasing
 tf-encrypted below:
 
 1. Create a release candidate branch based off master (e.g.
-   `release-0.1.0-rc0`) and update the `setup.py`, `CHANGELOG.md`, `meta.yaml`, and
-   `docs/source/conf.py` and attempt to merge it into master. If this
+   `release-0.1.0-rc0`) and update the `setup.py`, `CHANGELOG.md`, `meta.yaml`,
+   and `docs/source/conf.py` and attempt to merge it into master. If this
    is the first release candidate in the series for this version the
    number should begin at 0 (e.g. `0.1.0-rc0`).
 2. Create a tag off of the commit that merges the release candidate branch into
@@ -38,10 +38,11 @@ tf-encrypted below:
    as expected. If at any point a bug is found repeat steps 1-3 until the
    release works as expected.
 4. Once the release candidate work as expected, create a new branch based off
-   master (e.g. `release-0.1.0`), update the files above with the true release version,
-   and merge it into the master branch on TF Encrypted's GitHub. Once done, just as we did for the release
-   candidate, create a tag (e.g. `git tag release-0.1.0`) off of the merge
-   commit and push it to github (e.g. `git push origin release-0.1.0`).
+   master (e.g. `release-0.1.0`), update the files above with the true release
+   version, and merge it into the master branch on TF Encrypted's GitHub. Once
+   you have verified that the CircleCI jobs have finished as we did for the
+   release candidate, create a tag (e.g. `git tag 0.1.0`) off of the
+   merge commit and push it to github (e.g. `git push origin 0.1.0`).
 5. Once the build on Circle CI has passed for our full release it should be
    available to the world to start using! Don't forget to tweet about it :)
 
