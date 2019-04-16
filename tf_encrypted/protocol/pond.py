@@ -490,7 +490,7 @@ class Pond(Protocol):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
 
-        def helper(x: Union["PondPrivateTensor", "PondMasterTensor"]) -> tf.Tensor:
+        def helper(x: Union["PondPrivateTensor", "PondMaskedTensor"]) -> tf.Tensor:
             if isinstance(x, PondMaskedTensor):
                 x = x.unmasked
             assert isinstance(
@@ -1397,14 +1397,14 @@ class PondTensor(abc.ABC):
         """
         return self.prot.truncate(self)
 
-    def expand_dims(self):
+    def expand_dims(self, axis=None):
         """
         :See: tf.expand_dims
 
         :return: A new PondTensor
         :rtype: PondTensor
         """
-        return self.prot.expand_dims(self)
+        return self.prot.expand_dims(self, axis=axis)
 
     def reshape(self, shape: List[int]) -> "PondTensor":
         """
@@ -1610,6 +1610,9 @@ class PondMaskedTensor(PondTensor):
     @property
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
         return (self.a, self.a0, self.a1, self.alpha_on_0, self.alpha_on_1)
+
+    def reveal(self) -> PondPublicTensor:
+        return self.prot.reveal(self.unmasked)
 
 
 #
