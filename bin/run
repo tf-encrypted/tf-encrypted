@@ -37,7 +37,7 @@ parser.add_argument(
 parser.add_argument(
     '--plaintext', action='store_true', help='Run the model in plaintext')
 parser.add_argument(
-    '--epochs', type=int, default=10, help='Number of times to run a prediction')
+    '--iterations', type=int, default=10, help='Number of times to run a prediction')
 parser.add_argument(
     '--data_prep_path', type=str, default='', help='Path to a saved model with data pre-processing')
 config = parser.parse_args()
@@ -116,7 +116,7 @@ if config.data_prep_path == '':
         )
 
 
-runs = config.epochs
+runs = config.iterations
 if config.plaintext:
     print('running prediction in plaintext')
     with tfe.Session() as sess:
@@ -134,9 +134,9 @@ if config.plaintext:
             sess.run(output, {input: input_data}, tag='prediction')
 
             if x % 10 == 0:
-                print('ran', x, 'epochs')
+                print('ran', x, 'iterations')
 
-        print('ran', x, 'epochs')
+        print('ran', x, 'iterations')
 
 
 else:
@@ -166,9 +166,9 @@ else:
                 )
 
                 if x % 10 == 0:
-                    print(x, 'epochs complete')
+                    print(x, 'iterations complete')
 
-            print(x, 'epochs complete')
+            print(x, 'iterations complete')
             print('done')
 
     else:
@@ -214,7 +214,7 @@ else:
                 )
 
                 if x % 10 == 0:
-                    print(x, 'epochs complete')
+                    print(x, 'iterations complete')
 
-            print(x, 'epochs complete')
+            print(x, 'iterations complete')
             print('done')
