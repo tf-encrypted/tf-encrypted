@@ -13,6 +13,7 @@ from tensorflow.python.platform import gfile
 import numpy as np
 import tf_encrypted as tfe
 from tf_encrypted.protocol import Pond, SecureNN
+from utils import data_prep_from_saved_model
 
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
@@ -83,29 +84,35 @@ with gfile.GFile(model_file, 'rb') as f:
         })
 
 inputs = []
-for i, spec in enumerate(input_spec):
-    def scope(i: int, spec: dict) -> Callable[[], tf.Tensor]:
-        def provide_input() -> tf.Tensor:
-            pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
-            return pl
+if config.data_prep_path:
+    def provide_input():
+            return data_prep_from_saved_model(config.data_prep_path, [config.input_file], config.batch_size)
 
-        return provide_input
-
-    inputs.append(scope(i, spec))
-
-
-if config.input_file != '':
-    # TODO: Currently this allows for only one input
-    # If we want to load models with multiple diffrent inputs
-    # We will need to save our inputs as a list of np.array
-    input_data = [np.load(config.input_file)]
-    assert len(input_data) == len(input_spec), 'the input_data length ({}) should be equal the number of inputs required by the loaded model ({})'.format(
-        len(input_data), len(input_spec))
+    inputs.append(provide_input)
 else:
-    input_data = []
-    for spec in input_spec:
-        input_data.append(
-            np.random.standard_normal(spec['shape']).tolist()
+    for i, spec in enumerate(input_spec):
+        def scope(i: int, spec: dict) -> Callable[[], tf.Tensor]:
+            def provide_input() -> tf.Tensor:
+                pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
+                return pl
+
+            return provide_input
+
+        inputs.append(scope(i, spec))
+
+if config.data_prep_path == '':
+    if config.input_file != '':
+        # TODO: Currently this allows for only one input
+        # If we want to load models with multiple diffrent inputs
+        # We will need to save our inputs as a list of np.array
+        input_data = [np.load(config.input_file)]
+        assert len(input_data) == len(input_spec), 'the input_data length ({}) should be equal the number of inputs required by the loaded model ({})'.format(
+            len(input_data), len(input_spec))
+    else:
+        input_data = []
+        for spec in input_spec:
+            input_data.append(
+                np.random.standard_normal(spec['shape']).tolist()
         )
 
 
@@ -137,49 +144,77 @@ else:
     c = tfe.convert.convert.Converter()
     y = c.convert(graph_def, tfe.convert.register(), 'input-provider', inputs)
 
-    pls = []
-    for i in range(len(input_spec)):
-        if i == 0:
-            name = "private-input/api/{}:0".format(i)
-        else:
-            name = "private-input_{}/api/{}:0".format(i, i)
-        pls.append(
-            tf.get_default_graph().get_tensor_by_name(name)
-        )
+    if config.data_prep_path:
+        with tfe.Session() as sess:
+            print("initing!!!")
+            sess.run(tf.global_variables_initializer())
+
+            print("warming up")
+            
+            output = sess.run(
+                y.reveal(),
+                tag='prediction'
+            )
+            print(output)
+
+            print('running', runs, 'predictions')
+            for x in range(0, runs):
+
+                output = sess.run(
+                    y.reveal(),
+                    tag='prediction'
+                )
+
+                if x % 10 == 0:
+                    print(x, 'epochs complete')
+
+            print(x, 'epochs complete')
+            print('done')
+
+    else:
+        pls = []
+        for i in range(len(input_spec)):
+            if i == 0:
+                name = "private-input/api/{}:0".format(i)
+            else:
+                name = "private-input_{}/api/{}:0".format(i, i)
+            pls.append(
+                tf.get_default_graph().get_tensor_by_name(name)
+            )
 
 
-    with tfe.Session() as sess:
-        print("initing!!!")
-        sess.run(tf.global_variables_initializer())
+        with tfe.Session() as sess:
+            print("initing!!!")
+            sess.run(tf.global_variables_initializer())
 
-        print("warming up")
-        feed_dict = {
-            pl: input_data[i] for i, pl in enumerate(pls)
-        }
-
-        print('feed_dict', feed_dict)
-
-        output = sess.run(
-            y.reveal(),
-            feed_dict=feed_dict,
-            tag='prediction'
-        )
-        print(output)
-
-        print('running', runs, 'predictions')
-        for x in range(0, runs):
+            print("warming up")
             feed_dict = {
                 pl: input_data[i] for i, pl in enumerate(pls)
             }
+
+            print('feed_dict', feed_dict)
 
             output = sess.run(
                 y.reveal(),
                 feed_dict=feed_dict,
                 tag='prediction'
             )
+            print(output)
 
-            if x % 10 == 0:
-                print(x, 'epochs complete')
+            print('running', runs, 'predictions')
+            for x in range(0, runs):
+                feed_dict = {
+                    pl: input_data[i] for i, pl in enumerate(pls)
+                }
 
-        print(x, 'epochs complete')
-        print('done')
+                output = sess.run(
+                    y.reveal(),
+                    feed_dict=feed_dict,
+                    tag='prediction'
+                )
+
+                if x % 10 == 0:
+                    print(x, 'epochs complete')
+
+            print(x, 'epochs complete')
+            print('done')
