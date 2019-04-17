@@ -43,9 +43,11 @@ parser.add_argument(
 parser.add_argument(
     '--data_prep_path', type=str, default='', help='Path to a saved model with data pre-processing')
 parser.add_argument(
-    '--data_prep_start_node', type=str, default='serialized_example:0', help='Select data pre-processing start node from saved model')
+    '--data_prep_start_node', type=str, default='serialized_example:0', help='Select data pre-processing start' \
+                                                                        'node from saved model')
 parser.add_argument(
-    '--data_prep_end_node', type=str, default='DatasetToSingleElement:0', help='Select data pre-processing end node from saved model')
+    '--data_prep_end_node', type=str, default='DatasetToSingleElement:0', help='Select data pre-processing' \
+                                                                                'end node from saved model')
 config = parser.parse_args()
 
 if config.protocol_name == 'securenn':
@@ -90,6 +92,9 @@ with gfile.GFile(model_file, 'rb') as f:
         })
 
 inputs = []
+
+# If data_prep_path is set then extract data-preprocessing
+# graph from the SavedModel. Finally run it on the input-provider
 if config.data_prep_path:
     data_file_names = list_files_from_dir(config.data_dir)
     def provide_input():
