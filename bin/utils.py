@@ -16,6 +16,17 @@ def data_prep_from_saved_model(
     # Extract graph definition
     gdef = sess.graph_def
 
+    # Trim graph to keep only the nodes related to data pre-processing
+    # tf.graph_util.extract_sub_graph will be removed in future tf version
+    data_prep_end_node_name = data_prep_end_node.split(":")[0]
+
+    try:
+        gdef_trimmed = tf.compat.v1.graph_util.extract_sub_graph(gdef,
+                                                                 dest_nodes=[data_prep_end_node_name])
+    except:
+        gdef_trimmed = tf.graph_util.extract_sub_graph(gdef,
+                                                       dest_nodes=[data_prep_end_node_name])
+
     # Load TFRecord files then generate a Dataset of batch
     dataset = tf.data.TFRecordDataset(data_filenames)
     dataset = dataset.batch(batch_size)
@@ -23,7 +34,7 @@ def data_prep_from_saved_model(
     dataset_b = iterator.get_next()
 
     # Preprocess data
-    data_out, = tf.import_graph_def(gdef,
+    data_out, = tf.import_graph_def(gdef_trimmed,
                                     input_map={data_prep_start_node: dataset_b},
                                     return_elements=[data_prep_end_node])
 
