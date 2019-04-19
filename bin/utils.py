@@ -1,5 +1,11 @@
 import tensorflow as tf
 
+# tf.graph_util.extract_sub_graph will be removed in future tf version
+try:
+    from tensorflow.compat.v1.graph_util import extract_sub_graph
+except ImportError:
+    from tensorflow.graph_util import extract_sub_graph
+
 
 def data_prep_from_saved_model(
     saved_model_dir,
@@ -17,15 +23,8 @@ def data_prep_from_saved_model(
     gdef = sess.graph_def
 
     # Trim graph to keep only the nodes related to data pre-processing
-    # tf.graph_util.extract_sub_graph will be removed in future tf version
     data_prep_end_node_name = data_prep_end_node.split(":")[0]
-
-    try:
-        gdef_trimmed = tf.compat.v1.graph_util.extract_sub_graph(gdef,
-                                                                 dest_nodes=[data_prep_end_node_name])
-    except:
-        gdef_trimmed = tf.graph_util.extract_sub_graph(gdef,
-                                                       dest_nodes=[data_prep_end_node_name])
+    gdef_trimmed = extract_sub_graph(gdef, dest_nodes=[data_prep_end_node_name])
 
     # Load TFRecord files then generate a Dataset of batch
     dataset = tf.data.TFRecordDataset(data_filenames)
