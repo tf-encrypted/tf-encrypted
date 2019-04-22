@@ -46,6 +46,7 @@ def registry() -> Dict[str, Any]:
         'Neg': negative,
         'Split': split,
         'Identity': identity,
+        'GatherV2': gather,
     }
 
     return reg
@@ -332,6 +333,31 @@ def squeeze(converter, node: Any, inputs: List[str]) -> Any:
     axis = node.attr["squeeze_dims"].list.i
 
     return converter.protocol.squeeze(input, list(axis))
+
+
+def gather(converter, node: Any, inputs: List[str]) -> Any:
+    input = converter.outputs[inputs[0]]
+    indices = converter.outputs[inputs[1]]
+    axis = converter.outputs[inputs[2]]
+
+    print("input", input)
+    print("indices", indices)
+    print("axis", axis)
+    print("node", node)
+
+    if isinstance(input, tf.NodeDef):
+        input_out = nodef_to_private_pond(converter, input)
+    else:
+        input_out = input
+
+    indices_out = list(nodef_to_numpy_array(indices))
+    print("indices_out", type(indices_out))
+
+    indices = node.attr["num_split"].i
+    axis_val = axis.attr["value"].tensor.int_val[0]
+    print("oh yes", axis_val)
+
+    return converter.protocol.gather(input_out, indices_out, axis_val)
 
 
 def split(converter, node: Any, inputs: List[str]) -> Any:
