@@ -8,7 +8,7 @@ build and push all release artifacts.
 
 Today, the following artifacts are produced from this repository:
 
-- a docker container which is available on docker hub as [mortendahl/tf-encrypted](https://hub.docker.com/r/mortendahl/tf-encrypted))
+- a docker container which is available on docker hub as [tfencrypted/tf-encrypted](https://hub.docker.com/r/tfencrypted/tf-encrypted))
 - a python package registered on pypi as [tf-encrypted](https://pypi.org/project/tf-encrypted)
 
 If a release candidate tag (e.g. `X.Y.Z-rc#`) is pushed then Circle CI will
@@ -48,10 +48,10 @@ tf-encrypted below:
 
 **NOTE**: You must update *and* commit to master a new version of `setup.py`
 everytime you want to tag a new version of `tf-encrypted`. Make sure you push
-the changes to `master` of [tf-encrypted on github](https://github.com/mortendahl/tf-encrypted).
+the changes to `master` of [tf-encrypted on github](https://github.com/tf-encrypted/tf-encrypted).
 
 Have a question about the process or have a suggestion on how to improve it?
-Don't hesitate to open an [issue](https://github.com/mortendahl/tf-encrypted/issues/new)
+Don't hesitate to open an [issue](https://github.com/tf-encrypted/tf-encrypted/issues/new)
 with your thoughts!
 
 ### Whats with the tags?
