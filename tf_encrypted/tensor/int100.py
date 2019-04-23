@@ -569,7 +569,7 @@ def crt_factory(INT_TYPE, MODULI):
             return DenseTensor(backing)
 
         def gather(self, indices: list, axis: int = 0):
-            backings = zip(*[tf.gather(xi, indices, axis=axis) for xi in self.backing])
+            backings = [tf.gather(xi, indices, axis=axis) for xi in self.backing]
             return [DenseTensor(backing) for backing in backings]
 
         def split(self, num_split: int, axis: int = 0):

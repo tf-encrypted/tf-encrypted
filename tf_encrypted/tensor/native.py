@@ -284,8 +284,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
             return DenseTensor(tf.strided_slice(self.value, *args, **kwargs))
 
         def gather(self, indices: list, axis: int = 0):
-            values = tf.gather(self.value, indices, axis=axis)
-            return [DenseTensor(value) for value in values]
+            return DenseTensor(tf.gather(self.value, indices, axis=axis))
 
         def split(self, num_split: int, axis: int = 0):
             values = tf.split(self.value, num_split, axis=axis)

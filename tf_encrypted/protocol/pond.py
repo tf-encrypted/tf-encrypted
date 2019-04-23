@@ -906,7 +906,7 @@ class Pond(Protocol):
         nodes[node_key] = x_sliced
 
         return x_sliced
-    
+
     @memoize
     def gather(
         self, x: "PondTensor", indices: list, axis: int = 0
@@ -3226,7 +3226,7 @@ def _strided_slice_masked(prot, x: PondMaskedTensor, args: Any, kwargs: Any):
 
 
 def _gather_public(
-    prot: Pond, x: PondPublicTensor, indices: int, axis: int = 0
+    prot: Pond, x: PondPublicTensor, indices: list, axis: int = 0
 ) -> List[PondPublicTensor]:
 
     x_on_0, x_on_1 = x.unwrapped
@@ -3234,19 +3234,16 @@ def _gather_public(
     with tf.name_scope("gather"):
 
         with tf.device(prot.server_0.device_name):
-            ys_on_0 = x_on_0.gather(indices, axis=axis)
+            y0_g = x_on_0.gather(indices, axis=axis)
 
         with tf.device(prot.server_1.device_name):
-            ys_on_1 = x_on_1.gather(indices, axis=axis)
+            y1_g = x_on_1.gather(indices, axis=axis)
 
-        return [
-            PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
-            for y_on_0, y_on_1 in zip(ys_on_0, ys_on_1)
-        ]
+        return PondPublicTensor(prot, y0_g, y1_g, x.is_scaled)
 
 
 def _gather_private(
-    prot: Pond, x: PondPrivateTensor, indices: int, axis: int = 0
+    prot: Pond, x: PondPrivateTensor, indices: list, axis: int = 0
 ) -> List[PondPrivateTensor]:
 
     x0, x1 = x.unwrapped
@@ -3254,43 +3251,43 @@ def _gather_private(
     with tf.name_scope("gather"):
 
         with tf.device(prot.server_0.device_name):
-            ys0 = x0.gather(indices, axis=axis)
+            y0_g = x0.gather(indices, axis=axis)
 
         with tf.device(prot.server_1.device_name):
-            ys1 = x1.gather(indices, axis=axis)
+            y1_g = x1.gather(indices, axis=axis)
 
-        return [
-            PondPrivateTensor(prot, y0, y1, x.is_scaled) for y0, y1 in zip(ys0, ys1)
-        ]
+        return PondPrivateTensor(prot, y0_g, y1_g, x.is_scaled)
 
 
 def _gather_masked(
-    prot: Pond, x: PondMaskedTensor, indices: int, axis: int = 0
-) -> List[PondMaskedTensor]:
-
+    prot: Pond, x: PondMaskedTensor, shape: List[int]
+) -> PondMaskedTensor:
+    assert isinstance(x, PondMaskedTensor)
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
     with tf.name_scope("gather"):
 
         with tf.device(prot.crypto_producer.device_name):
-            bs = a.gather(indices, axis=axis)
+            a_g = a.gather(shape)
 
         with tf.device(prot.server_0.device_name):
-            bs0 = a0.gather(indices, axis=axis)
-            betas_on_0 = alpha_on_0.gather(indices, axis=axis)
+            a0_g = a0.reshape(shape)
+            alpha_on_0_g = alpha_on_0.gather(shape)
 
         with tf.device(prot.server_1.device_name):
-            bs1 = a1.gather(indices, axis=axis)
-            betas_on_1 = alpha_on_1.gather(indices, axis=axis)
+            a1_g = a1.reshape(shape)
+            alpha_on_1_g = alpha_on_1.gather(shape)
 
-            ys = prot.gather(x.unmasked, indices, axis=axis)
-
-        return [
-            PondMaskedTensor(prot, y, b, b0, b1, beta_on_0, beta_on_1, x.is_scaled)
-            for y, b, b0, b1, beta_on_0, beta_on_1 in zip(
-                ys, bs, bs0, bs1, betas_on_0, betas_on_1
-            )
-        ]
+        return PondMaskedTensor(
+            prot,
+            prot.reshape(x.unmasked, shape),
+            a_g,
+            a0_g,
+            a1_g,
+            alpha_on_0_g,
+            alpha_on_1_g,
+            x.is_scaled,
+        )
 
 #
 # split helpers
