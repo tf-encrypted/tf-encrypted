@@ -1,6 +1,6 @@
 # TF Encrypted
 
-![Status](https://img.shields.io/badge/status-alpha-blue.svg)  [![License](https://img.shields.io/github/license/mortendahl/tf-encrypted.svg)](./LICENSE)  [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/mortendahl/tf-encrypted/tree/master) [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://tf-encrypted.readthedocs.io/en/latest/)
+![Status](https://img.shields.io/badge/status-alpha-blue.svg)  [![License](https://img.shields.io/github/license/tf-encrypted/tf-encrypted.svg)](./LICENSE)  [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/tf-encrypted/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/tf-encrypted/tf-encrypted/tree/master) [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://tf-encrypted.readthedocs.io/en/latest/)
 
 TF Encrypted is a Python library built on top of [TensorFlow](https://www.tensorflow.org) for researchers and practitioners to experiment with privacy-preserving machine learning. It provides an interface similar to that of TensorFlow, and aims at making the technology readily available without first becoming an expert in machine learning, cryptography, distributed systems, and high performance computing.
 
@@ -29,6 +29,7 @@ Alternatively, installing from source can be done using:
 ```bash
 git clone https://github.com/mortendahl/tf-encrypted.git
 cd tf-encrypted
+pip3 install -r requirements.txt
 pip3 install -e .
 ```
 
@@ -49,7 +50,7 @@ import tensorflow as tf
 import tf_encrypted as tfe
 
 def provide_input():
-    # local TensorFlow operations can be run locally
+    # normal TensorFlow operations can be run locally
     # as part of defining a private input, in this
     # case on the machine of the input provider
     return tf.ones(shape=(5, 10))

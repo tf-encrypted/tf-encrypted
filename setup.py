@@ -5,18 +5,18 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tf-encrypted",
-    version="0.4.0",
+    version="0.5.1",
     packages=setuptools.find_packages(),
     package_data={'tf_encrypted': [
         'operations/secure_random/*.so',
     ]},
     python_requires=">=3.5",
     install_requires=[
-        "tensorflow>=1.12.0",
+        "tensorflow>=1.12.0,<2",
         "numpy>=1.14.0"
     ],
     extra_requires={
-        "tf": ["tensorflow>=1.12.0"]
+        "tf": ["tensorflow>=1.12.0,<2"]
     },
     license="Apache License 2.0",
     url="https://github.com/tf-encrypted/tf-encrypted",

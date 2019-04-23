@@ -4,13 +4,13 @@ import inspect
 import tensorflow as tf
 
 from .config import Config, LocalConfig, RemoteConfig, get_config
-from .session import Session, setTFEDebugFlag, setMonitorStatsFlag, setTFETraceFlag
-from .protocol import global_caches_updater, Pond, get_protocol
 from .player import player
-from . import protocol
-from . import layers
+from .protocol import global_caches_updater, Pond, get_protocol
+from .session import Session, setTFEDebugFlag, setMonitorStatsFlag, setTFETraceFlag
 from . import convert
+from . import layers
 from . import operations
+from . import protocol
 
 
 _all_prot_funcs = protocol.get_all_funcs()
