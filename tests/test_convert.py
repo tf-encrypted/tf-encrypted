@@ -151,6 +151,10 @@ class TestConvert(unittest.TestCase):
         test_input = np.ones([1, 2, 3, 1])
         self._test_with_ndarray_input_fn('squeeze', test_input, protocol='Pond')
 
+    def test_gather_convert(self):
+        test_input = np.array([1, 2, 3, 4])
+        self._test_with_ndarray_input_fn('gather', test_input, protocol='Pond')
+
     def test_split_convert(self):
         test_input = np.ones([2, 4])
         self._test_with_ndarray_input_fn('split', test_input, protocol='Pond')
@@ -553,6 +557,20 @@ def run_squeeze(input):
 def export_squeeze(filename, input_shape):
     a = tf.placeholder(tf.float32, shape=input_shape, name="input")
     x = tf.squeeze(a, axis=[0, 3])
+    return export(x, filename)
+
+
+def run_gather(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    x = tf.gather(a, indices=[1, 3], axis=0)
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: input})
+    return output
+
+
+def export_gather(filename, input_shape):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    x = tf.gather(a, indices=[1, 3], axis=0)
     return export(x, filename)
 
 
