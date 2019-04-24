@@ -8,23 +8,16 @@ except ImportError:
 
 
 def data_prep_from_saved_model(
-    saved_model_dir,
+    graph_def,
     data_filenames,
     batch_size,
     data_prep_start_node="serialized_example:0",
     data_prep_end_node="DatasetToSingleElement:0"
 ):
 
-    # SavedModel with data pre-processing steps
-    with tf.Session(graph=tf.Graph()) as sess:
-        tf.saved_model.loader.load(sess, ['serve'], saved_model_dir)
-
-    # Extract graph definition
-    gdef = sess.graph_def
-
     # Trim graph to keep only the nodes related to data pre-processing
     data_prep_end_node_name = data_prep_end_node.split(":")[0]
-    gdef_trimmed = extract_sub_graph(gdef, dest_nodes=[data_prep_end_node_name])
+    gdef_trimmed = extract_sub_graph(graph_def, dest_nodes=[data_prep_end_node_name])
 
     # Load TFRecord files then generate a Dataset of batch
     dataset = tf.data.TFRecordDataset(data_filenames)

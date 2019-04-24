@@ -3,6 +3,7 @@
 import os
 import re
 import argparse
+import logging
 import tensorflow as tf
 
 from pathlib import Path
@@ -14,6 +15,10 @@ import numpy as np
 import tf_encrypted as tfe
 from tf_encrypted.protocol import Pond, SecureNN
 from utils import data_prep_from_saved_model, list_files_from_dir
+
+logging.basicConfig()
+logger = logging.getLogger('tf_encrypted')
+logger.setLevel(logging.DEBUG)
 
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
@@ -68,7 +73,7 @@ if not model_path.is_file() and config.model_url is not '':
         r'(?:/?|[/?]\S+)$', re.IGNORECASE
     )
     if re.match(regex, config.model_url) is not None:
-        print('Downloading model from URL: {}'.format(config.model_url))
+        logger.info('Downloading model from URL: {}'.format(config.model_url))
         model_file, _ = urlDownloader.urlretrieve(config.model_url)
     else:
         raise Exception('Invalid URL given: {}'.format(config.model_url))
@@ -77,7 +82,7 @@ tf.reset_default_graph()
 
 input_spec = []
 with gfile.GFile(model_file, 'rb') as f:
-    print('Loading model: {}'.format(model_file))
+    logger.info('Loading model: {}'.format(model_file))
     graph_def = tf.GraphDef()
     graph_def.ParseFromString(f.read())
 
@@ -97,8 +102,16 @@ inputs = []
 # graph from the SavedModel. Finally run it on the input-provider
 if config.data_prep_path:
     data_file_names = list_files_from_dir(config.data_dir)
+
+    # SavedModel with data pre-processing steps
+    with tf.Session(graph=tf.Graph()) as sess:
+        tf.saved_model.loader.load(sess, ['serve'], config.data_prep_path)
+    
+    # Extract graph definition
+    data_prep_gdef = sess.graph_def
+
     def provide_input():
-            return data_prep_from_saved_model(config.data_prep_path, 
+            return data_prep_from_saved_model(data_prep_gdef , 
                 data_file_names,
                 config.batch_size,
                 config.data_prep_start_node,
@@ -134,7 +147,7 @@ if config.data_prep_path == '':
 
 runs = config.iterations
 if config.plaintext:
-    print('running prediction in plaintext')
+    logger.info('running prediction in plaintext')
     with tfe.Session() as sess:
         sess.graph.as_default()
         tf.import_graph_def(graph_def, name='')
@@ -142,7 +155,7 @@ if config.plaintext:
 
         # TODO This isn't a good way to get the input/output nodes and we shouldn't
         #      hardcode the input either!
-        print('running', runs, 'predictions')
+        logger.info('running, {}, predictions'.format(runs))
         for x in range(0, runs + 1): # first run is warmup
             output = sess.graph.get_operations()[-2].values()[0]
             input = sess.graph.get_operations()[0].values()[0]
@@ -150,30 +163,30 @@ if config.plaintext:
             sess.run(output, {input: input_data}, tag='prediction')
 
             if x % 10 == 0:
-                print('ran', x, 'iterations')
+                logger.info(('ran, {}, iterations').format(x))
 
-        print('ran', x, 'iterations')
+        logger.info(('ran, {}, iterations').format(x))
 
 
 else:
-    print('running prediction securely')
+    logger.info('running prediction securely')
     c = tfe.convert.convert.Converter()
     y = c.convert(graph_def, tfe.convert.register(), 'input-provider', inputs)
 
     if config.data_prep_path:
         with tfe.Session() as sess:
-            print("initing!!!")
+            logger.info("initing!!!")
             sess.run(tf.global_variables_initializer())
 
-            print("warming up")
+            logger.info("warming up")
             
             output = sess.run(
                 y.reveal(),
                 tag='prediction'
             )
-            print(output)
+            logger.info('output: {}'.format(output))    
 
-            print('running', runs, 'predictions')
+            logger.info('running, {}, predictions'.format(runs))
             for x in range(0, runs):
 
                 output = sess.run(
@@ -182,10 +195,10 @@ else:
                 )
 
                 if x % 10 == 0:
-                    print(x, 'iterations complete')
+                    logger.info('{} iterations complete'.format(x))
 
-            print(x, 'iterations complete')
-            print('done')
+            logger.info('{} iterations complete'.format(x))
+            logger.info('done')
 
     else:
         pls = []
@@ -200,24 +213,22 @@ else:
 
 
         with tfe.Session() as sess:
-            print("initing!!!")
+            logger.info("initing!!!")
             sess.run(tf.global_variables_initializer())
 
-            print("warming up")
+            logger.info("warming up")
             feed_dict = {
                 pl: input_data[i] for i, pl in enumerate(pls)
             }
-
-            print('feed_dict', feed_dict)
 
             output = sess.run(
                 y.reveal(),
                 feed_dict=feed_dict,
                 tag='prediction'
             )
-            print(output)
+            logger.info('output: {}'.format(output))  
 
-            print('running', runs, 'predictions')
+            logger.info(('running, {}, predictions').format(runs))
             for x in range(0, runs):
                 feed_dict = {
                     pl: input_data[i] for i, pl in enumerate(pls)
@@ -230,7 +241,7 @@ else:
                 )
 
                 if x % 10 == 0:
-                    print(x, 'iterations complete')
+                    logger.info('{} iterations complete'.format(x))
 
-            print(x, 'iterations complete')
-            print('done')
+            logger.info('{} iterations complete'.format(x))
+            logger.inf('done')
