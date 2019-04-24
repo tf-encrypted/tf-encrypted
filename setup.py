@@ -9,6 +9,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     package_data={'tf_encrypted': [
         'operations/secure_random/*.so',
+        'convert/*.yaml'
     ]},
     python_requires=">=3.5",
     install_requires=[
