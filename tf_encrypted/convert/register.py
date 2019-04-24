@@ -334,6 +334,7 @@ def squeeze(converter, node: Any, inputs: List[str]) -> Any:
 
     return converter.protocol.squeeze(input, list(axis))
 
+
 def gather(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
     indices = converter.outputs[inputs[1]]
@@ -349,6 +350,7 @@ def gather(converter, node: Any, inputs: List[str]) -> Any:
     axis_val = axis.attr["value"].tensor.int_val[0]
 
     return converter.protocol.gather(input_out, indices_out, axis_val)
+
 
 def split(converter, node: Any, inputs: List[str]) -> Any:
     axis = converter.outputs[inputs[0]]
