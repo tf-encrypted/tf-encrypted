@@ -24,9 +24,9 @@ copyright = '2019, The TF Encrypted Authors'
 author = 'The TF Encrypted Authors'
 
 # The short X.Y version
-version = '0.5.1'
+version = '0.5.2'
 # The full version, including alpha/beta/rc tags
-release = '0.5.1'
+release = '0.5.2-rc0'
 
 
 # -- General configuration ---------------------------------------------------
