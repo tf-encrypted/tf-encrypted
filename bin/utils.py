@@ -1,3 +1,4 @@
+import os
 import tensorflow as tf
 
 # tf.graph_util.extract_sub_graph will be removed in future tf version
@@ -38,5 +39,5 @@ def data_prep_from_saved_model(
 
 def list_files_from_dir(directory):
     file_names_list = tf.io.gfile.listdir(directory)
-    path_files_list = [directory + f for f in file_names_list]
+    path_files_list = [os.path.join(directory, f) for f in file_names_list]
     return path_files_list

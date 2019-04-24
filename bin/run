@@ -119,15 +119,13 @@ if config.data_prep_path:
 
     inputs.append(provide_input)
 else:
-    for i, spec in enumerate(input_spec):
-        def scope(i: int, spec: dict) -> Callable[[], tf.Tensor]:
-            def provide_input() -> tf.Tensor:
-                pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
-                return pl
-
-            return provide_input
-
-        inputs.append(scope(i, spec))
+    def scope(i: int, spec: dict) -> Callable[[], tf.Tensor]:
+        def provide_input() -> tf.Tensor:
+            pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
+            return pl
+        return provide_input
+            
+    inputs = [scope(i, spec) for i, spec in enumerate(input_spec)]
 
 if config.data_prep_path == '':
     if config.input_file != '':
@@ -244,4 +242,4 @@ else:
                     logger.info('{} iterations complete'.format(x))
 
             logger.info('{} iterations complete'.format(x))
-            logger.inf('done')
+            logger.info('done')
