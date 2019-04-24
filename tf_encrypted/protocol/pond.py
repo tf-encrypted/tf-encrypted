@@ -910,7 +910,7 @@ class Pond(Protocol):
     @memoize
     def gather(
         self, x: "PondTensor", indices: list, axis: int = 0
-    ) -> List["PondTensor"]:
+    ) -> "PondTensor":
         return self.dispatch("gather", x, indices, axis=axis)
 
     @memoize
@@ -3228,24 +3228,24 @@ def _strided_slice_masked(prot, x: PondMaskedTensor, args: Any, kwargs: Any):
 
 def _gather_public(
     prot: Pond, x: PondPublicTensor, indices: list, axis: int = 0
-) -> List[PondPublicTensor]:
+) -> PondPublicTensor:
 
     x_on_0, x_on_1 = x.unwrapped
 
     with tf.name_scope("gather"):
 
         with tf.device(prot.server_0.device_name):
-            y0_g = x_on_0.gather(indices, axis=axis)
+            y_on_0_g = x_on_0.gather(indices, axis=axis)
 
         with tf.device(prot.server_1.device_name):
-            y1_g = x_on_1.gather(indices, axis=axis)
+            y_on_1_g = x_on_1.gather(indices, axis=axis)
 
-        return PondPublicTensor(prot, y0_g, y1_g, x.is_scaled)
+        return PondPublicTensor(prot, y_on_0_g, y_on_1_g, x.is_scaled)
 
 
 def _gather_private(
     prot: Pond, x: PondPrivateTensor, indices: list, axis: int = 0
-) -> List[PondPrivateTensor]:
+) -> PondPrivateTensor:
 
     x0, x1 = x.unwrapped
 
@@ -3261,7 +3261,7 @@ def _gather_private(
 
 
 def _gather_masked(
-    prot: Pond, x: PondMaskedTensor, shape: List[int]
+    prot: Pond, x: PondMaskedTensor, indices: list, axis: int = 0
 ) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
@@ -3269,19 +3269,19 @@ def _gather_masked(
     with tf.name_scope("gather"):
 
         with tf.device(prot.crypto_producer.device_name):
-            a_g = a.gather(shape)
+            a_g = a.gather(indices, axis=axis)
 
         with tf.device(prot.server_0.device_name):
-            a0_g = a0.reshape(shape)
-            alpha_on_0_g = alpha_on_0.gather(shape)
+            a0_g = a0.gather(indices, axis=axis)
+            alpha_on_0_g = alpha_on_0.gather(indices, axis=axis)
 
         with tf.device(prot.server_1.device_name):
-            a1_g = a1.reshape(shape)
-            alpha_on_1_g = alpha_on_1.gather(shape)
+            a1_g = a1.gather(indices, axis=axis)
+            alpha_on_1_g = alpha_on_1.gather(indices, axis=axis)
 
         return PondMaskedTensor(
             prot,
-            prot.reshape(x.unmasked, shape),
+            prot.gather(x.unmasked, indices, axis=axis),
             a_g,
             a0_g,
             a1_g,
