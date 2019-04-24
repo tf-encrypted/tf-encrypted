@@ -119,7 +119,7 @@ else:
 if config.data_prep_path == '':
     if config.input_file != '':
         # TODO: Currently this allows for only one input
-        # If we want to load models with multiple diffrent inputs
+        # If we want to load models with multiple different inputs
         # We will need to save our inputs as a list of np.array
         input_data = [np.load(config.input_file)]
         assert len(input_data) == len(input_spec), 'the input_data length ({}) should be equal the number of inputs required by the loaded model ({})'.format(

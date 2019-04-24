@@ -44,6 +44,6 @@ def data_prep_from_saved_model(
 
 
 def list_files_from_dir(directory):
-    file_names_list = tf.gfile.ListDirectory(directory)
+    file_names_list = tf.io.gfile.listdir(directory)
     path_files_list = [directory + f for f in file_names_list]
     return path_files_list
