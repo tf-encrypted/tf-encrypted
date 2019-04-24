@@ -155,7 +155,7 @@ else:
     print('Securing computation')
     secure_start = time.time()
     c = tfe.convert.convert.Converter(remote_config, tfe.get_protocol(), remote_config.get_player('weights-provider'))
-    y = c.convert(graph_def, tfe.convert.register(), remote_config.get_player('master'), inputs)
+    y = c.convert(graph_def, tfe.convert.registry(), remote_config.get_player('master'), inputs)
     # TODO: do not reveal on the master server
     y = y.reveal()
     secure_end = time.time()

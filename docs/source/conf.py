@@ -20,13 +20,13 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'tf-encrypted'
-copyright = '2018, The tf-encrypted Contributors'
-author = 'The tf-encrypted Contributors'
+copyright = '2019, The TF Encrypted Authors'
+author = 'The TF Encrypted Authors'
 
 # The short X.Y version
-version = '0.4.0'
+version = '0.5.2'
 # The full version, including alpha/beta/rc tags
-release = '0.4.0'
+release = '0.5.2'
 
 
 # -- General configuration ---------------------------------------------------
@@ -138,7 +138,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'tf-encrypted.tex', 'tf-encrypted Documentation',
+    (master_doc, 'tf-encrypted.tex', 'TF Encrypted Documentation',
      author, 'manual'),
 ]
 
@@ -148,7 +148,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'tf-encrypted', 'tf-encrypted Documentation',
+    (master_doc, 'tf-encrypted', 'TF Encrypted Documentation',
      [author], 1)
 ]
 
@@ -159,7 +159,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'tf-encrypted', 'tf-encrypted Documentation',
+    (master_doc, 'tf-encrypted', 'TF Encrypted Documentation',
      author, 'tf-encrypted', 'Private ML playground.',
      'Miscellaneous'),
 ]

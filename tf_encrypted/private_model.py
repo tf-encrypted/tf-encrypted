@@ -12,7 +12,7 @@ class PrivateModel():
         self.output_node = output_node
 
     # TODO support multiple inputs
-    def private_predict(self, input, input_name=None):
+    def private_predict(self, input, input_name=None, tag="prediction"):
         if input_name is None:
             name = "private-input/api/0:0"
         else:
@@ -26,7 +26,7 @@ class PrivateModel():
             output = sess.run(
                 self.output_node.reveal(),
                 feed_dict={pl: input},
-                tag='prediction'
+                tag=tag
             )
 
             return output
@@ -76,6 +76,6 @@ def secure_model(model):
     graph_def, inputs = load_graph('/tmp/model.pb')
 
     c = tfe.convert.convert.Converter()
-    y = c.convert(remove_training_nodes(graph_def), tfe.convert.register(), 'input-provider', inputs)
+    y = c.convert(remove_training_nodes(graph_def), tfe.convert.registry(), 'input-provider', inputs)
 
     return PrivateModel(y)
