@@ -26,7 +26,7 @@ author = 'The tf-encrypted Contributors'
 # The short X.Y version
 version = '0.5.2'
 # The full version, including alpha/beta/rc tags
-release = '0.5.2-rc2'
+release = '0.5.2'
 
 
 # -- General configuration ---------------------------------------------------
