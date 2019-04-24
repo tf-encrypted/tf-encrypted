@@ -203,7 +203,7 @@ docker-push: docker-push-$(PUSHTYPE)
 # executed properly.
 # ##############################################
 
-pypicheck: pipcheck pythoncheck
+pypi-credentials-check:
 ifeq (,$(PYPI_USERNAME))
 ifeq (,$(PYPI_PASSWORD))
 	$(error "Missing PYPI_USERNAME and PYPI_PASSWORD environment variables")
@@ -227,17 +227,16 @@ ifeq (,$(PYPI_PLATFORM))
 PYPI_PLATFORM=$(DEFAULT_PLATFORM)
 endif
 
-pypi-push-master: build-all pypicheck pypi-platform-check
+pypi-build: pythoncheck pipcheck pypi-platform-check pypi-version-check build-all
 	pip install --upgrade setuptools wheel twine
 	rm -rf dist
-
 ifeq ($(PYPI_PLATFORM),$(DEFAULT_PLATFORM))
 	python setup.py sdist bdist_wheel --plat-name=$(PYPI_PLATFORM)
 else
 	python setup.py bdist_wheel --plat-name=$(PYPI_PLATFORM)
 endif
 
-pypi-push-release-candidate: releasecheck pypi-version-check pypi-push-master
+pypi-push-release-candidate: releasecheck pypi-credentials-check pypi-build
 	@echo "Attempting to upload to pypi"
 	twine upload -u="$(PYPI_USERNAME)" -p="$(PYPI_PASSWORD)" dist/*
 
@@ -245,7 +244,7 @@ pypi-push-release: pypi-push-release-candidate
 
 pypi-push: pypi-push-$(PUSHTYPE)
 
-.PHONY: pypi-push-master pypi-push-release-candidate pypi-push-release pypi-push pypicheck pypi-version-check
+.PHONY: pypi-build pypi-push-release-candidate pypi-push-release pypi-push pypi-credentials-check pypi-version-check
 
 # ###############################################
 # Pushing Artifacts for a Release
