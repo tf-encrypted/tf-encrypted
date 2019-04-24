@@ -14,7 +14,7 @@ from tensorflow.python.platform import gfile
 import numpy as np
 import tf_encrypted as tfe
 from tf_encrypted.protocol import Pond, SecureNN
-from utils import data_prep_from_saved_model, list_files_from_dir
+from data_preprocessing import data_prep_from_saved_model, list_files_from_dir
 
 logging.basicConfig()
 logger = logging.getLogger('tf_encrypted')
@@ -171,34 +171,15 @@ else:
     c = tfe.convert.convert.Converter()
     y = c.convert(graph_def, tfe.convert.register(), 'input-provider', inputs)
 
-    if config.data_prep_path:
-        with tfe.Session() as sess:
-            logger.info("initing!!!")
-            sess.run(tf.global_variables_initializer())
-
-            logger.info("warming up")
-            
-            output = sess.run(
+    def reveal_output(sess, y, feed_dict):
+        output = sess.run(
                 y.reveal(),
+                feed_dict=feed_dict,
                 tag='prediction'
             )
-            logger.info('output: {}'.format(output))    
+        return output
 
-            logger.info('running, {}, predictions'.format(runs))
-            for x in range(0, runs):
-
-                output = sess.run(
-                    y.reveal(),
-                    tag='prediction'
-                )
-
-                if x % 10 == 0:
-                    logger.info('{} iterations complete'.format(x))
-
-            logger.info('{} iterations complete'.format(x))
-            logger.info('done')
-
-    else:
+    if not config.data_prep_path:
         pls = []
         for i in range(len(input_spec)):
             if i == 0:
@@ -209,37 +190,28 @@ else:
                 tf.get_default_graph().get_tensor_by_name(name)
             )
 
-
-        with tfe.Session() as sess:
-            logger.info("initing!!!")
-            sess.run(tf.global_variables_initializer())
-
-            logger.info("warming up")
-            feed_dict = {
-                pl: input_data[i] for i, pl in enumerate(pls)
-            }
-
-            output = sess.run(
-                y.reveal(),
-                feed_dict=feed_dict,
-                tag='prediction'
-            )
-            logger.info('output: {}'.format(output))  
-
-            logger.info(('running, {}, predictions').format(runs))
-            for x in range(0, runs):
-                feed_dict = {
+        feed_dict = {
                     pl: input_data[i] for i, pl in enumerate(pls)
-                }
+        }
+    else:
+        feed_dict = None
 
-                output = sess.run(
-                    y.reveal(),
-                    feed_dict=feed_dict,
-                    tag='prediction'
-                )
+    with tfe.Session() as sess:
+        logger.info("initing!!!")
+        sess.run(tf.global_variables_initializer())
 
-                if x % 10 == 0:
-                    logger.info('{} iterations complete'.format(x))
+        logger.info("warming up")
+        output = reveal_output(sess, y, feed_dict)
+        logger.info('output: {}'.format(output))    
 
-            logger.info('{} iterations complete'.format(x))
-            logger.info('done')
+        logger.info('running, {}, predictions'.format(runs))
+        for x in range(0, runs):
+
+            output = reveal_output(sess, y, feed_dict)
+
+            if x % 10 == 0:
+                logger.info('{} iterations complete'.format(x))
+
+        logger.info('{} iterations complete'.format(x))
+        logger.info('done')
+
