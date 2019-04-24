@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.2]
 
-Migration to third party organization, including on GitHub and Docker Hub.
+Migration to third party organization, including on [GitHub](https://github.com/tf-encrypted/tf-encrypted/) and [Docker Hub](https://hub.docker.com/r/tfencrypted/tf-encrypted).
 
 ## [0.5.1]
 
