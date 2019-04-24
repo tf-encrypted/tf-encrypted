@@ -133,7 +133,7 @@ endif
 # Builds a docker image for TF Encrypted that can be used to deploy and
 # test.
 # ###############################################
-DOCKER_BUILD=docker build -t mortendahl/tf-encrypted:$(1) -f Dockerfile $(2) .
+DOCKER_BUILD=docker build -t tfencrypted/tf-encrypted:$(1) -f Dockerfile $(2) .
 docker: Dockerfile dockercheck
 	$(call DOCKER_BUILD,latest,)
 
@@ -146,8 +146,8 @@ docker: Dockerfile dockercheck
 # authenticating to docker hub and pushing built docker containers up with the
 # appropriate tags.
 # ###############################################
-DOCKER_TAG=docker tag mortendahl/tf-encrypted:$(1) mortendahl/tf-encrypted:$(2)
-DOCKER_PUSH=docker push mortendahl/tf-encrypted:$(1)
+DOCKER_TAG=docker tag tfencrypted/tf-encrypted:$(1) tfencrypted/tf-encrypted:$(2)
+DOCKER_PUSH=docker push tfencrypted/tf-encrypted:$(1)
 
 docker-logincheck:
 ifeq (,$(DOCKER_USERNAME))
