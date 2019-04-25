@@ -46,7 +46,7 @@ def registry() -> Dict[str, Any]:
         'Neg': negative,
         'Split': split,
         'Identity': identity,
-        'GatherV2': gather,
+        "GatherV2": gather,
     }
 
     return reg
