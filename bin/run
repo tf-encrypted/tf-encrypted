@@ -111,11 +111,11 @@ if config.data_prep_path:
     data_prep_gdef = sess.graph_def
 
     def provide_input():
-            return data_prep_from_saved_model(data_prep_gdef , 
-                data_file_names,
-                config.batch_size,
-                config.data_prep_start_node,
-                config.data_prep_end_node)
+        return data_prep_from_saved_model(data_prep_gdef , 
+            data_file_names,
+            config.batch_size,
+            config.data_prep_start_node,
+            config.data_prep_end_node)
 
     inputs.append(provide_input)
 else:
@@ -136,11 +136,8 @@ if config.data_prep_path == '':
         assert len(input_data) == len(input_spec), 'the input_data length ({}) should be equal the number of inputs required by the loaded model ({})'.format(
             len(input_data), len(input_spec))
     else:
-        input_data = []
-        for spec in input_spec:
-            input_data.append(
-                np.random.standard_normal(spec['shape']).tolist()
-        )
+        input_data = [np.random.standard_normal(spec['shape']).tolist() 
+                        for spec in input_spec]
 
 
 runs = config.iterations
@@ -169,7 +166,7 @@ if config.plaintext:
 else:
     logger.info('running prediction securely')
     c = tfe.convert.convert.Converter()
-    y = c.convert(graph_def, tfe.convert.register(), 'input-provider', inputs)
+    y = c.convert(graph_def, tfe.convert.registry(), 'input-provider', inputs)
 
     def reveal_output(sess, y, feed_dict):
         output = sess.run(
