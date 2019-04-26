@@ -44,8 +44,8 @@ class Relu(core.Layer):
 
     def forward(self, x):
         """
-        :param ~tensorflow_encrypted.protocol.pond.PondTensor x: The input tensor
-        :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+        :param ~tf_encrypted.protocol.pond.PondTensor x: The input tensor
+        :rtype: ~tf_encrypted.protocol.pond.PondTensor
         :returns: A pond tensor with the same backing type as the input tensor.
         """
         y = self.prot.relu(x)

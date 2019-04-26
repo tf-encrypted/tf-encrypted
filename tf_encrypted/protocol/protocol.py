@@ -45,8 +45,8 @@ def set_protocol(prot: Protocol) -> None:
     """
     set_protocol(prot)
 
-    Sets the global protocol.  E.g. :class:`~tensorflow_encrypted.protocol.securenn.SecureNN`
-    or :class:`~tensorflow_encrypted.protocol.pond.Pond`.
+    Sets the global protocol.  E.g. :class:`~tf_encrypted.protocol.securenn.SecureNN`
+    or :class:`~tf_encrypted.protocol.pond.Pond`.
 
     .. code-block::python
         tfe.set_protocol(tfe.protocol.secureNN())
