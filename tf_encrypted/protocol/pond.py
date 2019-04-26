@@ -1285,7 +1285,7 @@ class PondTensor(abc.ABC):
 
     def __add__(self, other):
         """
-        See :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.add`
+        See :meth:`~tf_encrypted.protocol.pond.PondTensor.add`
         """
         return self.prot.add(self, other)
 
@@ -1359,7 +1359,7 @@ class PondTensor(abc.ABC):
     def matmul(self, other):
         """
         MatMul this tensor with `other`.  This will perform matrix multiplication,
-        rather than elementwise like :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.mul`
+        rather than elementwise like :meth:`~tf_encrypted.protocol.pond.PondTensor.mul`
 
         :param PondTensor other: to subtract
         :return: A new PondTensor
@@ -1369,7 +1369,7 @@ class PondTensor(abc.ABC):
 
     def dot(self, other):
         """
-        Alias for :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.matmul`
+        Alias for :meth:`~tf_encrypted.protocol.pond.PondTensor.matmul`
 
         :return: A new PondTensor
         :rtype: PondTensor

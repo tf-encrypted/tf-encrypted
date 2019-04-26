@@ -31,9 +31,9 @@ class Session(tf.Session):
     :param Optional[tf.Graph] graph: A :class:`tf.Graph`.  Used in the same as in tensorflow.
             This is the graph to be launched.  If nothing is specified then the default session
             graph will be used.
-    :param Optional[~tensorflow_encrypted.config.Config] config:  A
+    :param Optional[~tf_encrypted.config.Config] config:  A
             :class:`Local <tf_encrypted.config.LocalConfig/>` or
-            :class:`Remote <tensorflow_encrypted.config.RemoteConfig>` config to be used to
+            :class:`Remote <tf_encrypted.config.RemoteConfig>` config to be used to
             execute the graph.
     """
 
