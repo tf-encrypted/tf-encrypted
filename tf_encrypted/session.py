@@ -47,11 +47,12 @@ class Session(tf.Session):
         graph=None,
         config=None,
         target=None,
+        **tf_config_kwargs
     ) -> None:
         if config is None:
             config = get_config()
 
-        default_target, configProto = config.get_tf_config()
+        default_target, configProto = config.get_tf_config(**tf_config_kwargs)
         if target is None:
             target = default_target
 

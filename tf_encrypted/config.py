@@ -6,6 +6,7 @@ import math
 from pathlib import Path
 
 import tensorflow as tf
+from tensorflow.core.protobuf import rewriter_config_pb2
 
 from .player import Player
 
@@ -65,13 +66,29 @@ class Config(ABC):
         pass
 
     @abstractmethod
-    def get_tf_config(self):
+    def get_tf_config(self, log_device_placement=False, disable_optimizations=False):
         """
         get_tf_config() -> tf.ConfigProto, or str
 
         Extract the underlying :class:`tf.ConfigProto`.
         """
         pass
+
+    def build_graph_options(self, disable_optimizations):
+        if not disable_optimizations:
+            return tf.GraphOptions()
+        else:
+            return tf.GraphOptions(
+                optimizer_options=tf.OptimizerOptions(
+                    opt_level=tf.OptimizerOptions.L0,
+                    do_common_subexpression_elimination=False,
+                    do_constant_folding=False,
+                    do_function_inlining=False,
+                ),
+                rewrite_options=rewriter_config_pb2.RewriterConfig(
+                    arithmetic_optimization=rewriter_config_pb2.RewriterConfig.OFF,
+                ),
+            )
 
 
 class LocalConfig(Config):
@@ -130,13 +147,15 @@ class LocalConfig(Config):
         assert isinstance(names, list)
         return [player for player in self._players if player.name in names]
 
-    def get_tf_config(self, log_device_placement=False):
+    def get_tf_config(self, log_device_placement=False, disable_optimizations=False):
         logger.info("Players: {}".format([player.name for player in self.players]))
+
         target = ''
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
             allow_soft_placement=False,
-            device_count={"CPU": len(self._players)}
+            device_count={"CPU": len(self._players)},
+            graph_options=self.build_graph_options(disable_optimizations)
         )
         return (target, config)
 
@@ -246,21 +265,23 @@ class RemoteConfig(Config):
                         target=server.target))
         return server
 
-    def get_tf_config(self, log_device_placement=False):
+    def get_tf_config(self, log_device_placement=False, disable_optimizations=False):
         # always use the first host as master; change config to match
         target = 'grpc://{}'.format(self.hosts[0])
         cpu_cores = _get_docker_cpu_quota()
         if cpu_cores is None:
             config = tf.ConfigProto(
                 log_device_placement=log_device_placement,
-                allow_soft_placement=False
+                allow_soft_placement=False,
+                graph_options=self.build_graph_options(disable_optimizations)
             )
         else:
             config = tf.ConfigProto(
                 log_device_placement=log_device_placement,
                 allow_soft_placement=False,
                 inter_op_parallelism_threads=cpu_cores,
-                intra_op_parallelism_threads=cpu_cores
+                intra_op_parallelism_threads=cpu_cores,
+                graph_options=self.build_graph_options(disable_optimizations)
             )
         return (target, config)
 
