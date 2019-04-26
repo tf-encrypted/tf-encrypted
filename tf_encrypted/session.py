@@ -47,11 +47,12 @@ class Session(tf.Session):
         graph=None,
         config=None,
         target=None,
+        **tf_config_kwargs
     ) -> None:
         if config is None:
             config = get_config()
 
-        default_target, configProto = config.get_tf_config()
+        default_target, configProto = config.get_tf_config(**tf_config_kwargs)
         if target is None:
             target = default_target
 
@@ -86,7 +87,8 @@ class Session(tf.Session):
         fetches: Any,
         feed_dict: Dict[tf.Tensor, np.ndarray] = {},
         tag: Optional[str] = None,
-        write_trace: bool = False
+        write_trace: bool = False,
+        output_partition_graphs: bool = False,
     ):
         """
         run(fetches, feed_dict, tag, write_trace) -> Any
@@ -122,7 +124,8 @@ class Session(tf.Session):
             _run_counter[tag] += 1
 
             writer = tf.summary.FileWriter(run_tag, self.graph)
-            run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+            run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE,
+                                        output_partition_graphs=output_partition_graphs)
             run_metadata = tf.RunMetadata()
 
             fetches_out = super(Session, self).run(
@@ -131,6 +134,14 @@ class Session(tf.Session):
                 options=run_options,
                 run_metadata=run_metadata
             )
+
+            if output_partition_graphs:
+                for i, g in enumerate(run_metadata.partition_graphs):
+                    tf.io.write_graph(
+                        g,
+                        logdir=os.path.join(__TENSORBOARD_DIR__, session_tag),
+                        name='partition{}.pbtxt'.format(i),
+                    )
 
             writer.add_run_metadata(run_metadata, session_tag)
             writer.close()
