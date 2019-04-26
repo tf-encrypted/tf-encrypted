@@ -1,6 +1,7 @@
-import os
 from typing import Dict, List, Optional, Any, Union
 from collections import defaultdict
+import logging
+import os
 
 import numpy as np
 import tensorflow as tf
@@ -18,6 +19,10 @@ __TFE_DEBUG__ = bool(os.getenv('TFE_DEBUG', False))
 __TENSORBOARD_DIR__ = str(os.getenv('TFE_STATS_DIR', '/tmp/tensorboard'))
 
 _run_counter = defaultdict(int)  # type: Any
+
+logging.basicConfig()
+logger = logging.getLogger('tf_encrypted')
+logger.setLevel(logging.DEBUG)
 
 
 class Session(tf.Session):
@@ -51,13 +56,15 @@ class Session(tf.Session):
             target = default_target
 
         if isinstance(config, RemoteConfig):
-            print("Starting session on target '{}' using config {}".format(target, configProto))
+            logger.info("Starting session on target '{}' using config {}".format(
+                        target, configProto))
+
         super(Session, self).__init__(target, graph, configProto)
         # self.sess = tf.Session(target, graph, configProto)
 
         global __TFE_DEBUG__
         if __TFE_DEBUG__:
-            print('Session in debug mode')
+            logger.info("Session in debug mode")
             self = tf_debug.LocalCLIDebugWrapperSession(self)
 
     def _sanitize_fetches(self, fetches: Any) -> Union[List[Any], tf.Tensor, tf.Operation]:
@@ -147,8 +154,7 @@ def setMonitorStatsFlag(monitor_stats: bool = False) -> None:
     """
     global __TFE_STATS__
     if monitor_stats is True:
-        print("Tensorflow encrypted is monitoring statistics for each session.run() \
-              call using a tag")
+        logger.info("Monitoring statistics for every session.run() call with a tag")
 
     __TFE_STATS__ = monitor_stats
 
@@ -163,7 +169,7 @@ def setTFEDebugFlag(debug: bool = False) -> None:
     """
     global __TFE_DEBUG__
     if debug is True:
-        print("Tensorflow encrypted is running in DEBUG mode")
+        logger.info("Running in DEBUG mode")
 
     __TFE_DEBUG__ = debug
 
@@ -178,6 +184,6 @@ def setTFETraceFlag(trace: bool = False) -> None:
     """
     global __TFE_TRACE__
     if trace is True:
-        print("Tensorflow encrypted is dumping computation traces")
+        logger.info("Running in TRACE mode")
 
     __TFE_TRACE__ = trace
