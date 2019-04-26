@@ -154,7 +154,7 @@ def setMonitorStatsFlag(monitor_stats: bool = False) -> None:
     """
     global __TFE_STATS__
     if monitor_stats is True:
-        logger.info("Monitoring statistics for every session.run() call with a tag")
+        logger.info("Writing event files for every session.run() call with a tag")
 
     __TFE_STATS__ = monitor_stats
 
@@ -184,6 +184,17 @@ def setTFETraceFlag(trace: bool = False) -> None:
     """
     global __TFE_TRACE__
     if trace is True:
-        logger.info("Running in TRACE mode")
+        logger.info("Writing trace files for every session.run() call with a tag")
 
     __TFE_TRACE__ = trace
+
+
+def setLogDirectory(path):
+    """
+    Sets the directory to write TensorBoard event and trace files to.
+    """
+    global __TENSORBOARD_DIR__
+    if path:
+        logger.info("Writing event and trace files to '{}'".format(path))
+
+    __TENSORBOARD_DIR__ = path
