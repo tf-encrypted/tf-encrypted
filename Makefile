@@ -57,11 +57,10 @@ bootstrap: pythoncheck pipcheck
 #
 # Rules for running our tests and for running various different linters
 # ###############################################
-test: lint pythoncheck
+test: pythoncheck
 	pytest -n 8 -x -m "not slow and not convert_maxpool"
 	pytest -n 8 -x -m slow
 	pytest -n 8 -x -m convert_maxpool
-
 
 CONVERT_DIR=tf_encrypted/convert
 BUILD_RESERVED_SCOPES=$(CONVERT_DIR)/specops.yaml
@@ -77,7 +76,6 @@ lint: $(BUILD_CONVERTER_README) pythoncheck
 
 typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
-
 
 .PHONY: lint test typecheck
 
