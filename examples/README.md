@@ -8,6 +8,6 @@ This directory contains various examples of using TF Encrypted:
 - [house-credit-default](./house-credit-default/) private predictions with a logistic regression model
 - [logistic](./logistic/) private training of logistic regression model using stochastic gradient descent
 - [securenn](./securenn/) private predictions using several neural networks from the SecureNN paper
-- [notebooks](./notebooks/) various examples using TFE in Jupyter Notebooks.
+- [notebooks](./notebooks/) various examples using Jupyter notebooks
 
 See the individual subdirectories for details, including instructions for running each example.
