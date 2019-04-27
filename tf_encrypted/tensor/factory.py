@@ -63,7 +63,12 @@ class AbstractFactory(abc.ABC):
                        shape,
                        minval: Optional[int] = None,
                        maxval: Optional[int] = None):
-        """ Sample uniform random value of this data type. """
+        """
+        Sample uniform random value of this data type.
+        
+        The returned tensor may be represented by a seed that is not expanded
+        into a full tensor until later when operations are performed.
+        """
 
     @abc.abstractmethod
     def sample_bounded(self,
