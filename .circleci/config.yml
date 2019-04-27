@@ -76,6 +76,7 @@ jobs:
           name: run tests and build the docs
           command: |
             . venv/bin/activate
+            make lint
             make test
             make docs
       - run:
@@ -95,6 +96,7 @@ jobs:
           name: run tests and build the docs
           command: |
             . venv/bin/activate
+            make lint
             make test
             make docs
 

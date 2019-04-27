@@ -283,12 +283,21 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
         def strided_slice(self, args, kwargs):
             return DenseTensor(tf.strided_slice(self.value, *args, **kwargs))
 
+        def gather(self, indices: list, axis: int = 0):
+            return DenseTensor(tf.gather(self.value, indices, axis=axis))
+
         def split(self, num_split: int, axis: int = 0):
             values = tf.split(self.value, num_split, axis=axis)
             return [DenseTensor(value) for value in values]
 
         def reshape(self, axes: Union[tf.Tensor, List[int]]):
             return DenseTensor(tf.reshape(self.value, axes))
+
+        def negative(self):
+            value = tf.negative(self.value)
+            if EXPLICIT_MODULUS is not None:
+                value %= EXPLICIT_MODULUS
+            return DenseTensor(value)
 
         def reduce_sum(self, axis, keepdims=None):
             value = tf.reduce_sum(self.value, axis, keepdims)
@@ -332,12 +341,6 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):
 
         def squeeze(self, axis: Optional[List[int]] = None):
             return DenseTensor(tf.squeeze(self.value, axis=axis))
-
-        def negative(self):
-            value = tf.negative(self.value)
-            if EXPLICIT_MODULUS is not None:
-                value %= EXPLICIT_MODULUS
-            return DenseTensor(value)
 
         def cast(self, factory):
             return factory.tensor(self.value)

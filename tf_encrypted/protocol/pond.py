@@ -490,7 +490,7 @@ class Pond(Protocol):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
 
-        def helper(x: Union["PondPrivateTensor", "PondMasterTensor"]) -> tf.Tensor:
+        def helper(x: Union["PondPrivateTensor", "PondMaskedTensor"]) -> tf.Tensor:
             if isinstance(x, PondMaskedTensor):
                 x = x.unmasked
             assert isinstance(
@@ -841,6 +841,17 @@ class Pond(Protocol):
         raise TypeError("Don't know how to reshape {}".format(type(x)))
 
     @memoize
+    def negative(self, x: "PondTensor"):
+        """
+        negative(x) -> PondTensor
+
+        Computes numerical negative value element-wise.
+
+        :param PondTensor x: Input tensor.
+        """
+        return self.dispatch("negative", x)
+
+    @memoize
     def expand_dims(self, x: "PondTensor", axis=None):
 
         if isinstance(x, PondPublicTensor):
@@ -895,6 +906,12 @@ class Pond(Protocol):
         nodes[node_key] = x_sliced
 
         return x_sliced
+
+    @memoize
+    def gather(
+        self, x: "PondTensor", indices: list, axis: int = 0
+    ) -> "PondTensor":
+        return self.dispatch("gather", x, indices, axis=axis)
 
     @memoize
     def split(
@@ -1268,7 +1285,7 @@ class PondTensor(abc.ABC):
 
     def __add__(self, other):
         """
-        See :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.add`
+        See :meth:`~tf_encrypted.protocol.pond.PondTensor.add`
         """
         return self.prot.add(self, other)
 
@@ -1342,7 +1359,7 @@ class PondTensor(abc.ABC):
     def matmul(self, other):
         """
         MatMul this tensor with `other`.  This will perform matrix multiplication,
-        rather than elementwise like :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.mul`
+        rather than elementwise like :meth:`~tf_encrypted.protocol.pond.PondTensor.mul`
 
         :param PondTensor other: to subtract
         :return: A new PondTensor
@@ -1352,7 +1369,7 @@ class PondTensor(abc.ABC):
 
     def dot(self, other):
         """
-        Alias for :meth:`~tensorflow_encrypted.protocol.pond.PondTensor.matmul`
+        Alias for :meth:`~tf_encrypted.protocol.pond.PondTensor.matmul`
 
         :return: A new PondTensor
         :rtype: PondTensor
@@ -1386,14 +1403,14 @@ class PondTensor(abc.ABC):
         """
         return self.prot.truncate(self)
 
-    def expand_dims(self):
+    def expand_dims(self, axis=None):
         """
         :See: tf.expand_dims
 
         :return: A new PondTensor
         :rtype: PondTensor
         """
-        return self.prot.expand_dims(self)
+        return self.prot.expand_dims(self, axis=axis)
 
     def reshape(self, shape: List[int]) -> "PondTensor":
         """
@@ -1404,6 +1421,15 @@ class PondTensor(abc.ABC):
         :returns: A new tensor with the contents of this tensor, but with the new specified shape.
         """
         return self.prot.reshape(self, shape)
+
+    def negative(self) -> "PondTensor":
+        """
+        :See: tf.negative
+
+        :rtype: PondTensor
+        :returns: A new tensor with numerical negative value element-wise computed.
+        """
+        return self.prot.negative(self)
 
     def reduce_max(self, axis: int) -> "PondTensor":
         """
@@ -1590,6 +1616,9 @@ class PondMaskedTensor(PondTensor):
     @property
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
         return (self.a, self.a0, self.a1, self.alpha_on_0, self.alpha_on_1)
+
+    def reveal(self) -> PondPublicTensor:
+        return self.prot.reveal(self.unmasked)
 
 
 #
@@ -3193,6 +3222,76 @@ def _strided_slice_masked(prot, x: PondMaskedTensor, args: Any, kwargs: Any):
 
 
 #
+# gather helpers
+#
+
+
+def _gather_public(
+    prot: Pond, x: PondPublicTensor, indices: list, axis: int = 0
+) -> PondPublicTensor:
+
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope("gather"):
+
+        with tf.device(prot.server_0.device_name):
+            y_on_0_g = x_on_0.gather(indices, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            y_on_1_g = x_on_1.gather(indices, axis=axis)
+
+        return PondPublicTensor(prot, y_on_0_g, y_on_1_g, x.is_scaled)
+
+
+def _gather_private(
+    prot: Pond, x: PondPrivateTensor, indices: list, axis: int = 0
+) -> PondPrivateTensor:
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope("gather"):
+
+        with tf.device(prot.server_0.device_name):
+            y0_g = x0.gather(indices, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            y1_g = x1.gather(indices, axis=axis)
+
+        return PondPrivateTensor(prot, y0_g, y1_g, x.is_scaled)
+
+
+def _gather_masked(
+    prot: Pond, x: PondMaskedTensor, indices: list, axis: int = 0
+) -> PondMaskedTensor:
+    assert isinstance(x, PondMaskedTensor)
+    a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
+
+    with tf.name_scope("gather"):
+
+        with tf.device(prot.crypto_producer.device_name):
+            a_g = a.gather(indices, axis=axis)
+
+        with tf.device(prot.server_0.device_name):
+            a0_g = a0.gather(indices, axis=axis)
+            alpha_on_0_g = alpha_on_0.gather(indices, axis=axis)
+
+        with tf.device(prot.server_1.device_name):
+            a1_g = a1.gather(indices, axis=axis)
+            alpha_on_1_g = alpha_on_1.gather(indices, axis=axis)
+
+        return PondMaskedTensor(
+            prot,
+            prot.gather(x.unmasked, indices, axis=axis),
+            a_g,
+            a0_g,
+            a1_g,
+            alpha_on_0_g,
+            alpha_on_1_g,
+            x.is_scaled,
+        )
+
+
+#
 # split helpers
 #
 
@@ -3523,6 +3622,77 @@ def _reshape_masked(
             a1_reshaped,
             alpha_on_0_reshaped,
             alpha_on_1_reshaped,
+            x.is_scaled,
+        )
+
+#
+# negative helpers
+#
+
+
+def _negative_public(
+    prot: Pond, x: PondPublicTensor
+) -> PondPublicTensor:
+    assert isinstance(x, PondPublicTensor)
+
+    x_on_0, x_on_1 = x.unwrapped
+
+    with tf.name_scope("negative"):
+
+        with tf.device(prot.server_0.device_name):
+            x_on_0_negative = x_on_0.negative()
+
+        with tf.device(prot.server_1.device_name):
+            x_on_1_negative = x_on_1.negative()
+
+        return PondPublicTensor(prot, x_on_0_negative, x_on_1_negative, x.is_scaled)
+
+
+def _negative_private(
+    prot: Pond, x: PondPrivateTensor
+) -> PondPrivateTensor:
+    assert isinstance(x, PondPrivateTensor)
+
+    x0, x1 = x.unwrapped
+
+    with tf.name_scope("negative"):
+
+        with tf.device(prot.server_0.device_name):
+            x0_negative = x0.negative()
+
+        with tf.device(prot.server_1.device_name):
+            x1_negative = x1.negative()
+
+        return PondPrivateTensor(prot, x0_negative, x1_negative, x.is_scaled)
+
+
+def _negative_masked(
+    prot: Pond, x: PondMaskedTensor
+) -> PondMaskedTensor:
+    assert isinstance(x, PondMaskedTensor)
+    a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
+
+    with tf.name_scope("negative"):
+
+        with tf.device(prot.crypto_producer.device_name):
+            a_negative = a.negative()
+
+        with tf.device(prot.server_0.device_name):
+            a0_negative = a0.negative()
+            alpha_on_0_negative = alpha_on_0.negative()
+
+        with tf.device(prot.server_1.device_name):
+            a1_negative = a1.negative()
+            alpha_on_1_negative = alpha_on_1.negative()
+
+        return PondMaskedTensor(
+            prot,
+            prot.negative(x.unmasked),
+            a_negative,
+            a0_negative,
+            a1_negative,
+            alpha_on_0_negative,
+            alpha_on_1_negative,
             x.is_scaled,
         )
 

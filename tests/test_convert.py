@@ -1,24 +1,28 @@
 from typing import List, Tuple
 
-import unittest
 import logging
-import os
-
 import numpy as np
+import os
+import pytest
+import unittest
+
 import tensorflow as tf
-import tf_encrypted as tfe
-from tf_encrypted.convert import Converter
-from tf_encrypted.convert.register import register
 from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
-from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Flatten, Conv2D
 from tensorflow.keras import backend as K
-import pytest
+from tensorflow.keras.layers import Flatten, Conv2D
+from tensorflow.keras.models import Sequential
+
+import tf_encrypted as tfe
+from tf_encrypted.convert import Converter
+from tf_encrypted.convert.register import registry
 
 
-global_filename = ''
+_GLOBAL_FILENAME = ''
+_SEED = 826485786
+np.random.seed(_SEED)
+tf.set_random_seed(_SEED)
 
 
 class TestConvert(unittest.TestCase):
@@ -31,13 +35,13 @@ class TestConvert(unittest.TestCase):
         logging.getLogger().setLevel(logging.ERROR)
 
     def tearDown(self):
-        global global_filename
+        global _GLOBAL_FILENAME
 
         tf.reset_default_graph()
         K.clear_session()
 
-        logging.debug("Cleaning file: %s" % global_filename)
-        os.remove(global_filename)
+        logging.debug("Cleaning file: %s" % _GLOBAL_FILENAME)
+        os.remove(_GLOBAL_FILENAME)
 
         logging.getLogger().setLevel(self.previous_logging_level)
 
@@ -50,9 +54,8 @@ class TestConvert(unittest.TestCase):
     @staticmethod
     def _assert_successful_conversion(prot, graph_def, actual, *input_fns, decimals=3, **kwargs):
         prot.clear_initializers()
-
         converter = Converter(tfe.get_config(), prot, 'model-provider')
-        x = converter.convert(graph_def, register(), 'input-provider', list(input_fns))
+        x = converter.convert(graph_def, registry(), 'input-provider', list(input_fns))
 
         with tfe.Session() as sess:
             sess.run(tf.global_variables_initializer())
@@ -62,7 +65,7 @@ class TestConvert(unittest.TestCase):
             else:
                 assert isinstance(actual, (list, tuple)), "expected output to be tensor sequence"
             try:
-                output = sess.run([xi.reveal() for xi in x], tag='reveal')
+                output = sess.run([xi.reveal().decode() for xi in x], tag='reveal')
             except AttributeError:
                 # assume all xi are all public
                 output = sess.run([xi for xi in x], tag='reveal')
@@ -71,13 +74,13 @@ class TestConvert(unittest.TestCase):
 
     @staticmethod
     def _construct_conversion_test(op_name, *test_inputs, **kwargs):
-        global global_filename
-        global_filename = '{}.pb'.format(op_name)
+        global _GLOBAL_FILENAME
+        _GLOBAL_FILENAME = '{}.pb'.format(op_name)
         exporter = globals()['export_{}'.format(op_name)]
         runner = globals()['run_{}'.format(op_name)]
         protocol = kwargs.pop('protocol')
 
-        path = exporter(global_filename, test_inputs[0].shape, **kwargs)
+        path = exporter(_GLOBAL_FILENAME, test_inputs[0].shape, **kwargs)
         tf.reset_default_graph()
 
         graph_def = read_graph(path)
@@ -102,15 +105,19 @@ class TestConvert(unittest.TestCase):
             cls._assert_successful_conversion(prot, graph_def, actual, input_fn, decimals=decimals, **kwargs)
 
     def test_cnn_convert(self):
-        test_input = np.ones([1, 1, 28, 28])
+        test_input = np.ones([1, 1, 8, 8])
         self._test_with_ndarray_input_fn('cnn', test_input, protocol='Pond')
 
-        test_input = np.ones([1, 28, 28, 1])
+        test_input = np.ones([1, 8, 8, 1])
         self._test_with_ndarray_input_fn('cnn', test_input, protocol='Pond', data_format='NHWC')
 
     def test_matmul_convert(self):
         test_input = np.ones([1, 28])
         self._test_with_ndarray_input_fn('matmul', test_input, protocol='Pond')
+
+    def test_neg_convert(self):
+        test_input = np.ones([2, 2])
+        self._test_with_ndarray_input_fn('neg', test_input, protocol='Pond')
 
     def test_add_convert(self):
         test_input = np.ones([28, 1])
@@ -143,6 +150,14 @@ class TestConvert(unittest.TestCase):
     def test_squeeze_convert(self):
         test_input = np.ones([1, 2, 3, 1])
         self._test_with_ndarray_input_fn('squeeze', test_input, protocol='Pond')
+
+    def test_gather_convert(self):
+        test_input = np.array([1, 2, 3, 4])
+        self._test_with_ndarray_input_fn('gather', test_input, protocol='Pond')
+
+    def test_split_convert(self):
+        test_input = np.ones([2, 4])
+        self._test_with_ndarray_input_fn('split', test_input, protocol='Pond')
 
     def test_sub_convert(self):
         test_input = np.ones([28, 1])
@@ -201,8 +216,12 @@ class TestConvert(unittest.TestCase):
         self._test_with_ndarray_input_fn('required_space_to_batch_paddings', test_input, protocol='Pond')
 
     def test_flatten_convert(self):
-        test_input = np.random.uniform(size=(1, 5, 5, 5)).astype(np.float32)
+        test_input = np.random.uniform(size=(1, 3, 3, 2)).astype(np.float32)
         self._test_with_ndarray_input_fn('flatten', test_input, decimals=2, protocol='Pond')
+
+    def test_keras_conv2d_convert(self):
+        test_input = np.ones([1, 8, 8, 1])
+        self._test_with_ndarray_input_fn('keras_conv2d', test_input, protocol='Pond')
 
 
 def export_argmax(filename, input_shape, axis):
@@ -321,8 +340,8 @@ def run_cnn(input, data_format="NCHW"):
     if data_format == "NCHW":
         x = tf.transpose(x, (0, 2, 3, 1))
 
-    filter = tf.constant(np.ones((5, 5, 1, 16)), dtype=tf.float32, name="weights")
-    x = tf.nn.conv2d(x, filter, (1, 1, 1, 1), "SAME", name="conv2d")
+    filter = tf.constant(np.ones((3, 3, 1, 3)), dtype=tf.float32, name="weights")
+    x = tf.nn.conv2d(x, filter, (1, 1, 1, 1), "SAME", name="nn_conv2d")
 
     with tf.Session() as sess:
         output = sess.run(x, feed_dict={feed_me: input})
@@ -336,8 +355,8 @@ def run_cnn(input, data_format="NCHW"):
 def export_cnn(filename: str, input_shape: List[int], data_format="NCHW"):
     input = tf.placeholder(tf.float32, shape=input_shape, name="input")
 
-    filter = tf.constant(np.ones((5, 5, 1, 16)), dtype=tf.float32, name="weights")
-    x = tf.nn.conv2d(input, filter, (1, 1, 1, 1), "SAME", data_format=data_format, name="conv2d")
+    filter = tf.constant(np.ones((3, 3, 1, 3)), dtype=tf.float32, name="weights")
+    x = tf.nn.conv2d(input, filter, (1, 1, 1, 1), "SAME", data_format=data_format, name="nn_conv2d")
 
     return export(x, filename)
 
@@ -361,6 +380,25 @@ def export_matmul(filename: str, input_shape: List[int]):
     x = tf.matmul(a, b)
 
     return export(x, filename)
+
+
+def export_neg(filename: str, input_shape: List[int]):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+
+    x = tf.negative(a)
+
+    return export(x, filename)
+
+
+def run_neg(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+
+    x = tf.negative(a)
+
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: input})
+
+    return output
 
 
 def run_add(input):
@@ -522,6 +560,34 @@ def export_squeeze(filename, input_shape):
     return export(x, filename)
 
 
+def run_gather(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    x = tf.gather(a, indices=[1, 3], axis=0)
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: input})
+    return output
+
+
+def export_gather(filename, input_shape):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    x = tf.gather(a, indices=[1, 3], axis=0)
+    return export(x, filename)
+
+
+def run_split(input):
+    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+    x = tf.split(a, num_or_size_splits=2, axis=1)
+    with tf.Session() as sess:
+        output = sess.run(x, feed_dict={a: input})
+    return output
+
+
+def export_split(filename, input_shape):
+    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+    x = tf.split(a, num_or_size_splits=2, axis=1)
+    return export(x, filename)
+
+
 def run_sub(input):
     a = tf.placeholder(tf.float32, shape=input.shape, name="input")
     b = tf.constant(np.ones((input.shape[0], 1)), dtype=tf.float32)
@@ -600,23 +666,50 @@ def run_slice(input):
 
 def export_flatten(filename, input_shape):
     model = Sequential()
-    model.add(Conv2D(20, kernel_size=(5, 5), input_shape=input_shape[1:]))
-    model.add(Flatten())
-
+    model.add(Flatten(input_shape=input_shape[1:]))
     model.predict(np.random.uniform(size=input_shape))
 
     sess = K.get_session()
-    output = sess.graph.get_tensor_by_name('flatten/Reshape:0')
+    output = model.get_layer('flatten').output
 
     return export(output, filename, sess=sess)
 
 
 def run_flatten(input):
     model = Sequential()
-    model.add(Conv2D(20, kernel_size=(5, 5), input_shape=input.shape[1:]))
-    model.add(Flatten())
-
+    model.add(Flatten(input_shape=input.shape[1:]))
     return model.predict(input)
+
+
+def export_keras_conv2d(filename, input_shape):
+    model, _ = _keras_conv2d_core(shape=input_shape)
+
+    sess = K.get_session()
+    output = model.get_layer('conv2d').output
+    return export(output, filename, sess=sess)
+
+
+def run_keras_conv2d(input):
+    _, out = _keras_conv2d_core(input=input)
+    return out
+
+
+def _keras_conv2d_core(shape=None, input=None):
+    assert shape is None or input is None
+    if shape is None:
+        shape = input.shape
+
+    model = Sequential()
+    c2d = Conv2D(2, (3, 3),
+                 data_format="channels_last",
+                 use_bias=False,
+                 input_shape=shape[1:])
+    model.add(c2d)
+
+    if input is None:
+        input = np.random.uniform(size=shape)
+    out = model.predict(input)
+    return model, out
 
 
 def run_required_space_to_batch_paddings(input):
@@ -633,9 +726,9 @@ def run_required_space_to_batch_paddings(input):
     return output
 
 
-def export_required_space_to_batch_paddings(filename: str, input_shape: List[int]):
+def export_required_space_to_batch_paddings(filename, input_shape):
 
-    x = tf.placeholder(tf.int32, shape=input_shape, name="input")
+    x = tf.placeholder(tf.int32, shape=input_shape, name="input_shape")
     y = tf.constant(np.array([2, 3, 2]), dtype=tf.int32)
     p = tf.constant(np.array([[2, 3], [4, 3], [5, 2]]), dtype=tf.int32)
 

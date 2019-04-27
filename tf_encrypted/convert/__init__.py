@@ -1,7 +1,7 @@
 from .convert import Converter
-from .register import register
+from .register import registry
 
 __all__ = [
     'Converter',
-    'register'
+    'registry'
 ]

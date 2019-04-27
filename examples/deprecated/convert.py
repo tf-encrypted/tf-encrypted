@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util, graph_io
 from tf_encrypted.convert import convert
-from tf_encrypted.convert.register import register
+from tf_encrypted.convert.register import registry
 import numpy as np
 import tf_encrypted as tfe
 
@@ -59,7 +59,7 @@ def receive_output(tensor: tf.Tensor) -> tf.Tensor:
 with tfe.protocol.Pond(*config.get_players('server0, server1, crypto-producer')) as prot:
 
     c = convert.Converter(config, prot, config.get_player('weights-provider'))
-    x = c.convert(graph_def, register(), config.get_player('prediction-client'), provide_input)
+    x = c.convert(graph_def, registry(), config.get_player('prediction-client'), provide_input)
 
     prediction_op = prot.define_output(config.get_player('prediction-client'), x, receive_output)
 

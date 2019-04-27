@@ -3,6 +3,7 @@
 import os
 import re
 import argparse
+import logging
 import tensorflow as tf
 
 from pathlib import Path
@@ -13,6 +14,11 @@ from tensorflow.python.platform import gfile
 import numpy as np
 import tf_encrypted as tfe
 from tf_encrypted.protocol import Pond, SecureNN
+from data_preprocessing import data_prep_from_saved_model, list_files_from_dir
+
+logging.basicConfig()
+logger = logging.getLogger('tf_encrypted')
+logger.setLevel(logging.DEBUG)
 
 enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
@@ -32,11 +38,21 @@ parser.add_argument(
 parser.add_argument(
     "--model_url", type=str, default='', help="Model's public URL")
 parser.add_argument(
-    '--input_file', type=str, default="", help='load the data from a numpy file format (.npy)')
+    '--input_file', type=str, default="", help='Load the data from a numpy file format (.npy)')
+parser.add_argument(
+    '--data_dir', type=str, default="", help='Data directory with TFRecords file only')
 parser.add_argument(
     '--plaintext', action='store_true', help='Run the model in plaintext')
 parser.add_argument(
-    '--epochs', type=int, default=10, help='Number of times to run a prediction')
+    '--iterations', type=int, default=10, help='Number of times to run a prediction')
+parser.add_argument(
+    '--data_prep_path', type=str, default='', help='Path to a saved model with data pre-processing')
+parser.add_argument(
+    '--data_prep_start_node', type=str, default='serialized_example:0', help='Select data pre-processing start' \
+                                                                        'node from saved model')
+parser.add_argument(
+    '--data_prep_end_node', type=str, default='DatasetToSingleElement:0', help='Select data pre-processing' \
+                                                                                'end node from saved model')
 config = parser.parse_args()
 
 if config.protocol_name == 'securenn':
@@ -57,7 +73,7 @@ if not model_path.is_file() and config.model_url is not '':
         r'(?:/?|[/?]\S+)$', re.IGNORECASE
     )
     if re.match(regex, config.model_url) is not None:
-        print('Downloading model from URL: {}'.format(config.model_url))
+        logger.info('Downloading model from URL: {}'.format(config.model_url))
         model_file, _ = urlDownloader.urlretrieve(config.model_url)
     else:
         raise Exception('Invalid URL given: {}'.format(config.model_url))
@@ -66,7 +82,7 @@ tf.reset_default_graph()
 
 input_spec = []
 with gfile.GFile(model_file, 'rb') as f:
-    print('Loading model: {}'.format(model_file))
+    logger.info('Loading model: {}'.format(model_file))
     graph_def = tf.GraphDef()
     graph_def.ParseFromString(f.read())
 
@@ -81,35 +97,52 @@ with gfile.GFile(model_file, 'rb') as f:
         })
 
 inputs = []
-for i, spec in enumerate(input_spec):
+
+# If data_prep_path is set then extract data-preprocessing
+# graph from the SavedModel. Finally run it on the input-provider
+if config.data_prep_path:
+    data_file_names = list_files_from_dir(config.data_dir)
+
+    # SavedModel with data pre-processing steps
+    with tf.Session(graph=tf.Graph()) as sess:
+        tf.saved_model.loader.load(sess, ['serve'], config.data_prep_path)
+    
+    # Extract graph definition
+    data_prep_gdef = sess.graph_def
+
+    def provide_input():
+        return data_prep_from_saved_model(data_prep_gdef , 
+            data_file_names,
+            config.batch_size,
+            config.data_prep_start_node,
+            config.data_prep_end_node)
+
+    inputs.append(provide_input)
+else:
     def scope(i: int, spec: dict) -> Callable[[], tf.Tensor]:
         def provide_input() -> tf.Tensor:
             pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
             return pl
-
         return provide_input
+            
+    inputs = [scope(i, spec) for i, spec in enumerate(input_spec)]
 
-    inputs.append(scope(i, spec))
-
-
-if config.input_file != '':
-    # TODO: Currently this allows for only one input
-    # If we want to load models with multiple diffrent inputs
-    # We will need to save our inputs as a list of np.array
-    input_data = [np.load(config.input_file)]
-    assert len(input_data) == len(input_spec), 'the input_data length ({}) should be equal the number of inputs required by the loaded model ({})'.format(
-        len(input_data), len(input_spec))
-else:
-    input_data = []
-    for spec in input_spec:
-        input_data.append(
-            np.random.standard_normal(spec['shape']).tolist()
-        )
+if config.data_prep_path == '':
+    if config.input_file != '':
+        # TODO: Currently this allows for only one input
+        # If we want to load models with multiple different inputs
+        # We will need to save our inputs as a list of np.array
+        input_data = [np.load(config.input_file)]
+        assert len(input_data) == len(input_spec), 'the input_data length ({}) should be equal the number of inputs required by the loaded model ({})'.format(
+            len(input_data), len(input_spec))
+    else:
+        input_data = [np.random.standard_normal(spec['shape']).tolist() 
+                        for spec in input_spec]
 
 
-runs = config.epochs
+runs = config.iterations
 if config.plaintext:
-    print('running prediction in plaintext')
+    logger.info('running prediction in plaintext')
     with tfe.Session() as sess:
         sess.graph.as_default()
         tf.import_graph_def(graph_def, name='')
@@ -117,7 +150,7 @@ if config.plaintext:
 
         # TODO This isn't a good way to get the input/output nodes and we shouldn't
         #      hardcode the input either!
-        print('running', runs, 'predictions')
+        logger.info('running, {}, predictions'.format(runs))
         for x in range(0, runs + 1): # first run is warmup
             output = sess.graph.get_operations()[-2].values()[0]
             input = sess.graph.get_operations()[0].values()[0]
@@ -125,59 +158,57 @@ if config.plaintext:
             sess.run(output, {input: input_data}, tag='prediction')
 
             if x % 10 == 0:
-                print('ran', x, 'epochs')
+                logger.info(('ran, {}, iterations').format(x))
 
-        print('ran', x, 'epochs')
+        logger.info(('ran, {}, iterations').format(x))
 
 
 else:
-    print('running prediction securely')
+    logger.info('running prediction securely')
     c = tfe.convert.convert.Converter()
-    y = c.convert(graph_def, tfe.convert.register(), 'input-provider', inputs)
+    y = c.convert(graph_def, tfe.convert.registry(), 'input-provider', inputs)
 
-    pls = []
-    for i in range(len(input_spec)):
-        if i == 0:
-            name = "private-input/api/{}:0".format(i)
-        else:
-            name = "private-input_{}/api/{}:0".format(i, i)
-        pls.append(
-            tf.get_default_graph().get_tensor_by_name(name)
-        )
-
-
-    with tfe.Session() as sess:
-        print("initing!!!")
-        sess.run(tf.global_variables_initializer())
-
-        print("warming up")
-        feed_dict = {
-            pl: input_data[i] for i, pl in enumerate(pls)
-        }
-
-        print('feed_dict', feed_dict)
-
+    def reveal_output(sess, y, feed_dict):
         output = sess.run(
-            y.reveal(),
-            feed_dict=feed_dict,
-            tag='prediction'
-        )
-        print(output)
-
-        print('running', runs, 'predictions')
-        for x in range(0, runs):
-            feed_dict = {
-                pl: input_data[i] for i, pl in enumerate(pls)
-            }
-
-            output = sess.run(
                 y.reveal(),
                 feed_dict=feed_dict,
                 tag='prediction'
             )
+        return output
+
+    if not config.data_prep_path:
+        pls = []
+        for i in range(len(input_spec)):
+            if i == 0:
+                name = "private-input/api/{}:0".format(i)
+            else:
+                name = "private-input_{}/api/{}:0".format(i, i)
+            pls.append(
+                tf.get_default_graph().get_tensor_by_name(name)
+            )
+
+        feed_dict = {
+                    pl: input_data[i] for i, pl in enumerate(pls)
+        }
+    else:
+        feed_dict = None
+
+    with tfe.Session() as sess:
+        logger.info("initing!!!")
+        sess.run(tf.global_variables_initializer())
+
+        logger.info("warming up")
+        output = reveal_output(sess, y, feed_dict)
+        logger.info('output: {}'.format(output))    
+
+        logger.info('running, {}, predictions'.format(runs))
+        for x in range(0, runs):
+
+            output = reveal_output(sess, y, feed_dict)
 
             if x % 10 == 0:
-                print(x, 'epochs complete')
+                logger.info('{} iterations complete'.format(x))
 
-        print(x, 'epochs complete')
-        print('done')
+        logger.info('{} iterations complete'.format(x))
+        logger.info('done')
+

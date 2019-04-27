@@ -6,6 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2]
+
+Migration to third party organization, including on [GitHub](https://github.com/tf-encrypted/tf-encrypted/) and [Docker Hub](https://hub.docker.com/r/tfencrypted/tf-encrypted).
+
+## [0.5.1]
+
+**Added**
+
+- We now support TensorFlow 1.13.1.  We plan to support to 2.0+ in a future release.
+- Am example of performing secure aggregation for federated learning is now available in the `examples/federated-learning/` directory.
+- New scripts in `bin/` for launching TF Encrypted jobs on local machines and cloud clusters. We have primarily used these in concert with GCP & GKE.
+- The tensor seeding from 0.4.0 has been implemented for all BackingTensor types and protocols.
+- A variety of TF Ops have been added to the Converter, including an example of a "special op" (`required_space_to_batch_paddings`) that converts an entire subgraph of an imported Tensorflow graph into TFE instead of converting nodes in the original TensorFlow graph one-by-one. The converter will be generalized and documented much more in a future release.
+- New ops include division between a private numerator and public denominator, as well as a secure version of `tf.negative`.
+- The `PrivateModel` abstraction can now be tagged.
+
+**Breaking**
+
+- All examples have been updated. Most now use the higher-level Keras interface to TensorFlow before building models in TF Encrypted.
+- The various BackingTensor types have been refactored and unified under a set of factories. This affects how Configs and Protocols are instantiated.  Please see the examples for more.
+
+**Changed**
+
+- The `tf_encrypted.layers.Conv2D` layer now automatically includes a bias add. The bias is initialized as a zero tensor if none is provided. This will be handled more elegantly in a future release.
+
 ## [0.4.0]
 
 **Added**

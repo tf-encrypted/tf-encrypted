@@ -169,7 +169,7 @@ class SecureNN(Pond):
         return self.dispatch('bits', x, container=_thismodule, factory=factory)
 
     @memoize
-    def negative(self, x: PondTensor) -> PondTensor:
+    def is_negative(self, x: PondTensor) -> PondTensor:
         """
         Returns :math:`x < 0`.
 
@@ -180,7 +180,7 @@ class SecureNN(Pond):
 
         :param PondTensor x: The tensor to check.
         """
-        with tf.name_scope('negative'):
+        with tf.name_scope('is_negative'):
             # NOTE MSB is 1 iff xi < 0
             return self.msb(x)
 
@@ -219,7 +219,7 @@ class SecureNN(Pond):
         :param PondTensor y: The tensor to check against.
         """
         with tf.name_scope('less'):
-            return self.negative(x - y)
+            return self.is_negative(x - y)
 
     @memoize
     def less_equal(self, x: PondTensor, y: PondTensor) -> PondTensor:
@@ -255,7 +255,7 @@ class SecureNN(Pond):
         :param PondTensor y: The tensor to check against.
         """
         with tf.name_scope('greater'):
-            return self.negative(y - x)
+            return self.is_negative(y - x)
 
     @memoize
     def greater_equal(self, x: PondTensor, y: PondTensor) -> PondTensor:

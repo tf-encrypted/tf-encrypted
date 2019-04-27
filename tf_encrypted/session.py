@@ -1,6 +1,7 @@
-import os
 from typing import Dict, List, Optional, Any, Union
 from collections import defaultdict
+import logging
+import os
 
 import numpy as np
 import tensorflow as tf
@@ -19,6 +20,10 @@ __TENSORBOARD_DIR__ = str(os.getenv('TFE_STATS_DIR', '/tmp/tensorboard'))
 
 _run_counter = defaultdict(int)  # type: Any
 
+logging.basicConfig()
+logger = logging.getLogger('tf_encrypted')
+logger.setLevel(logging.DEBUG)
+
 
 class Session(tf.Session):
     """
@@ -31,9 +36,9 @@ class Session(tf.Session):
     :param Optional[tf.Graph] graph: A :class:`tf.Graph`.  Used in the same as in tensorflow.
             This is the graph to be launched.  If nothing is specified then the default session
             graph will be used.
-    :param Optional[~tensorflow_encrypted.config.Config] config:  A
+    :param Optional[~tf_encrypted.config.Config] config:  A
             :class:`Local <tf_encrypted.config.LocalConfig/>` or
-            :class:`Remote <tensorflow_encrypted.config.RemoteConfig>` config to be used to
+            :class:`Remote <tf_encrypted.config.RemoteConfig>` config to be used to
             execute the graph.
     """
 
@@ -42,22 +47,25 @@ class Session(tf.Session):
         graph=None,
         config=None,
         target=None,
+        **tf_config_kwargs
     ) -> None:
         if config is None:
             config = get_config()
 
-        default_target, configProto = config.get_tf_config()
+        default_target, configProto = config.get_tf_config(**tf_config_kwargs)
         if target is None:
             target = default_target
 
         if isinstance(config, RemoteConfig):
-            print("Starting session on target '{}' using config {}".format(target, configProto))
+            logger.info("Starting session on target '{}' using config {}".format(
+                        target, configProto))
+
         super(Session, self).__init__(target, graph, configProto)
         # self.sess = tf.Session(target, graph, configProto)
 
         global __TFE_DEBUG__
         if __TFE_DEBUG__:
-            print('Session in debug mode')
+            logger.info("Session in debug mode")
             self = tf_debug.LocalCLIDebugWrapperSession(self)
 
     def _sanitize_fetches(self, fetches: Any) -> Union[List[Any], tf.Tensor, tf.Operation]:
@@ -79,7 +87,8 @@ class Session(tf.Session):
         fetches: Any,
         feed_dict: Dict[tf.Tensor, np.ndarray] = {},
         tag: Optional[str] = None,
-        write_trace: bool = False
+        write_trace: bool = False,
+        output_partition_graphs: bool = False,
     ):
         """
         run(fetches, feed_dict, tag, write_trace) -> Any
@@ -115,7 +124,8 @@ class Session(tf.Session):
             _run_counter[tag] += 1
 
             writer = tf.summary.FileWriter(run_tag, self.graph)
-            run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+            run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE,
+                                        output_partition_graphs=output_partition_graphs)
             run_metadata = tf.RunMetadata()
 
             fetches_out = super(Session, self).run(
@@ -124,6 +134,14 @@ class Session(tf.Session):
                 options=run_options,
                 run_metadata=run_metadata
             )
+
+            if output_partition_graphs:
+                for i, g in enumerate(run_metadata.partition_graphs):
+                    tf.io.write_graph(
+                        g,
+                        logdir=os.path.join(__TENSORBOARD_DIR__, session_tag),
+                        name='partition{}.pbtxt'.format(i),
+                    )
 
             writer.add_run_metadata(run_metadata, session_tag)
             writer.close()
@@ -147,8 +165,7 @@ def setMonitorStatsFlag(monitor_stats: bool = False) -> None:
     """
     global __TFE_STATS__
     if monitor_stats is True:
-        print("Tensorflow encrypted is monitoring statistics for each session.run() \
-              call using a tag")
+        logger.info("Writing event files for every session.run() call with a tag")
 
     __TFE_STATS__ = monitor_stats
 
@@ -163,7 +180,7 @@ def setTFEDebugFlag(debug: bool = False) -> None:
     """
     global __TFE_DEBUG__
     if debug is True:
-        print("Tensorflow encrypted is running in DEBUG mode")
+        logger.info("Running in DEBUG mode")
 
     __TFE_DEBUG__ = debug
 
@@ -178,6 +195,17 @@ def setTFETraceFlag(trace: bool = False) -> None:
     """
     global __TFE_TRACE__
     if trace is True:
-        print("Tensorflow encrypted is dumping computation traces")
+        logger.info("Writing trace files for every session.run() call with a tag")
 
     __TFE_TRACE__ = trace
+
+
+def setLogDirectory(path):
+    """
+    Sets the directory to write TensorBoard event and trace files to.
+    """
+    global __TENSORBOARD_DIR__
+    if path:
+        logger.info("Writing event and trace files to '{}'".format(path))
+
+    __TENSORBOARD_DIR__ = path
