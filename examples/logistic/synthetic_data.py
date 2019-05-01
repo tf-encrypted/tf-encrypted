@@ -97,15 +97,20 @@ if __name__ == "__main__":
                                                            y_train,
                                                            alice_size)
 
+    y_train = np.expand_dims(y_train, 1)
+    y_test = np.expand_dims(y_test, 1)
+    y_alice = np.expand_dims(y_alice, 1)
+    y_bob = np.expand_dims(y_bob, 1)
+
     cols = ["x", "y", "label"]
     train = pd.DataFrame(np.concatenate((x_train, y_train), axis=-1),
-                         columns=cols).to_csv(outpath)
+                         columns=cols).to_csv(outpath + "train")
     test = pd.DataFrame(np.concatenate((x_test, y_test), axis=-1),
-                        columns=cols).to_csv(outpath)
+                        columns=cols).to_csv(outpath + "test")
     alice = pd.DataFrame(np.concatenate((x_alice, y_alice), axis=-1),
-                         columns=cols).to_csv(outpath)
+                         columns=cols).to_csv(outpath + "alice")
     bob = pd.DataFrame(np.concatenate((x_bob, y_bob), axis=-1),
-                       columns=cols).to_csv(outpath)
+                       columns=cols).to_csv(outpath + "bob")
 
     if visualize:
         plt.scatter(x=x_bob[:, 0], y=x_bob[:, 1], c=y_bob)
