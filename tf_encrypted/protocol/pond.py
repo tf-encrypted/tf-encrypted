@@ -475,6 +475,9 @@ class Pond(Protocol):
                 inputs = [reconstruct_input(x) for x in arguments]
                 outputs = computation_fn(*inputs)
 
+                if isinstance(outputs, tf.Operation):
+                    return outputs
+
                 if isinstance(outputs, tf.Tensor):
                     return share_output(outputs)
 
@@ -488,20 +491,14 @@ class Pond(Protocol):
 
     def define_private_input(
         self,
-        player: Union[str, Player],
-        inputter_fn: TFEInputter,
+        player,
+        inputter_fn,
         apply_scaling: bool = True,
         name: Optional[str] = None,
         masked: bool = False,
         factory: Optional[AbstractFactory] = None,
-    ) -> Union[
-        "PondPrivateTensor",
-        "PondMaskedTensor",
-        List[Union["PondPrivateTensor", "PondMaskedTensor"]],
-    ]:
+    ):
         """
-        define_private_input(player, inputter_fn, apply_scaling, name, masked, factory) -> PondPrivateTensor(s)
-
         Define a private input.
 
         This represents a `private` input owned by the specified player into the graph.
@@ -513,101 +510,40 @@ class Pond(Protocol):
         :param AbstractFactory factory: Which backing type to use for this input (e.g. `int100` or `int64`).
         """  # noqa:E501
 
-        factory = factory or self.tensor_factory
-
-        if isinstance(player, str):
-            player = get_config().get_player(player)
-        assert isinstance(player, Player)
-
-        def helper(v: tf.Tensor) -> Union["PondPrivateTensor", "PondMaskedTensor"]:
-            assert (
-                v.shape.is_fully_defined()
-            ), "Shape of input '{}' on '{}' is not fully defined".format(
-                name if name else "", player.name
-            )
-
-            w = factory.tensor(self._encode(v, apply_scaling,
-                                            tf_int_type=factory.native_type))
-            x = self._share_and_wrap(w, apply_scaling)
-
-            if not masked:
-                return x
-            else:
-                with tf.name_scope("local_mask"):
-                    a0 = factory.sample_uniform(v.shape)
-                    a1 = factory.sample_uniform(v.shape)
-                    a = a0 + a1
-                    alpha = w - a
-                return PondMaskedTensor(self, x, a, a0, a1, alpha, alpha, apply_scaling)
-
-        with tf.name_scope("private-input{}".format("-" + name if name else "")):
-
-            with tf.device(player.device_name):
-
-                inputs = inputter_fn()
-
-                if isinstance(inputs, tf.Tensor):
-                    # single input -> single output
-                    v = inputs
-                    output = helper(v)
-
-                elif isinstance(inputs, (list, tuple)):
-                    # multiple inputs -> multiple outputs
-                    output = [helper(v) for v in inputs]
-
-                else:
-                    raise TypeError(
-                        "Don't know how to handle inputs of type {}".format(
-                            type(inputs)
-                        )
-                    )
-
-        return output
+        return self.define_local_computation(
+            player=player,
+            computation_fn=inputter_fn,
+            arguments=[],
+            apply_scaling=apply_scaling,
+            name="private-input{}".format("-" + name if name else ""),
+            masked=masked,
+            factory=factory,
+        )
 
     def define_output(
         self,
-        player: Union[str, Player],
-        xs: Union["PondPrivateTensor", List["PondPrivateTensor"]],
-        outputter_fn: Callable[..., Any],
-        name: Optional[str] = None,
-    ) -> tf.Operation:
+        player,
+        arguments,
+        outputter_fn,
+        name=None,
+    ):
         """
-        define_output(player, xs, outputter_fn, name) -> tensorflow.Operation
-
         Define an output for this graph.
 
-        :param Union[str,Player] player: Which player/device this output will be sent to.
+        :param player: Which player this output will be sent to.
         """
 
-        if isinstance(player, str):
-            player = get_config().get_player(player)
-        assert isinstance(player, Player)
+        def result_wrapper(*args):
+            op = outputter_fn(*args)
+            # wrap in tf.group to prevent sending back any tensors (which might hence be leaked)
+            return tf.group(op)
 
-        def helper(x: Union["PondPrivateTensor", "PondMaskedTensor"]) -> tf.Tensor:
-            if isinstance(x, PondMaskedTensor):
-                x = x.unmasked
-            assert isinstance(
-                x, PondPrivateTensor
-            ), "Don't know how to handle inputs of type {}".format(type(x))
-            x0, x1 = x.unwrapped
-            w = self._reconstruct(x0, x1)
-            v = self._decode(w, x.is_scaled)
-            return v
-
-        with tf.name_scope("output{}".format("-" + name if name else "")):
-
-            with tf.device(player.device_name):
-
-                if isinstance(xs, (list, tuple)):
-                    op = outputter_fn(*[helper(x) for x in xs])
-
-                else:
-                    op = outputter_fn(helper(xs))
-
-                # wrap in tf.group to prevent sending back any tensors (which might hence be leaked)
-                op = tf.group(op)
-
-        return op
+        return self.define_local_computation(
+            player=player,
+            computation_fn=result_wrapper,
+            arguments=arguments,
+            name="output{}".format("-" + name if name else ""),
+        )
 
     @property
     def initializer(self) -> tf.Operation:
@@ -685,9 +621,7 @@ class Pond(Protocol):
         s0, s1 = self._share(secret)
         return PondPrivateTensor(self, s0, s1, is_scaled)
 
-    def _reconstruct(
-        self, share0: AbstractTensor, share1: AbstractTensor
-    ) -> AbstractTensor:
+    def _reconstruct(self, share0, share1):
         with tf.name_scope("reconstruct"):
             return share0 + share1
 
