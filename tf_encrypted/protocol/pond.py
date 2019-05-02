@@ -393,6 +393,99 @@ class Pond(Protocol):
                         )
                     )
 
+    def define_local_computation(
+        self,
+        player,
+        computation_fn,
+        arguments=[],
+        apply_scaling=True,
+        name=None,
+        masked=False,
+        factory=None,
+    ):
+        """
+        Define a local computation that happens on plaintext tensors.
+
+        :param player: Who performs the computation and gets to see the values in plaintext.
+        :param apply_scaling: Whether or not to scale the outputs.
+        :param name: Optional name to give to this node in the graph.
+        :param masked: Whether or not to produce masked outputs.
+        :param factory: Backing tensor type to use for outputs.
+        """  # noqa:E501
+
+        factory = factory or self.tensor_factory
+
+        if isinstance(player, str):
+            player = get_config().get_player(player)
+        assert isinstance(player, Player)
+
+        def share_output(v: tf.Tensor):
+            assert v.shape.is_fully_defined(), \
+                "Shape of return value '{}' on '{}' not fully defined".format(
+                name if name else "", player.name)
+
+            w = factory.tensor(self._encode(v, apply_scaling,
+                                            tf_int_type=factory.native_type))
+            x = self._share_and_wrap(w, apply_scaling)
+
+            if not masked:
+                return x
+            else:
+                with tf.name_scope("local_mask"):
+                    a0 = factory.sample_uniform(v.shape)
+                    a1 = factory.sample_uniform(v.shape)
+                    a = a0 + a1
+                    alpha = w - a
+                return PondMaskedTensor(self, x, a, a0, a1, alpha, alpha, apply_scaling)
+
+        def reconstruct_input(x):
+
+            if isinstance(x, tf.Tensor):
+                return x
+
+            if isinstance(x, PondPublicTensor):
+                w, _ = x.unwrapped
+                v = self._decode(w, x.is_scaled)
+                return v
+
+            if isinstance(x, PondPrivateTensor):
+                x0, x1 = x.unwrapped
+                w = self._reconstruct(x0, x1)
+                v = self._decode(w, x.is_scaled)
+                return v
+
+            if isinstance(x, PondMaskedTensor):
+                x0, x1 = x.unmasked.unwrapped
+                w = self._reconstruct(x0, x1)
+                v = self._decode(w, x.is_scaled)
+                return v
+
+            raise TypeError(
+                "Don't know how to process input argument of type {}".format(
+                    type(x)
+                ))
+
+        with tf.name_scope(name if name else "local-computation"):
+
+            with tf.device(player.device_name):
+
+                if not isinstance(arguments, (list, tuple)):
+                    arguments = [arguments]
+
+                inputs = [reconstruct_input(x) for x in arguments]
+                outputs = computation_fn(*inputs)
+
+                if isinstance(outputs, tf.Tensor):
+                    return share_output(outputs)
+
+                if isinstance(outputs, (list, tuple)):
+                    return [share_output(output) for output in outputs]
+
+                raise TypeError(
+                    "Don't know how to handle results of type {}".format(
+                        type(outputs)
+                    ))
+
     def define_private_input(
         self,
         player: Union[str, Player],
