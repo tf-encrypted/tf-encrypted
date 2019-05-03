@@ -736,14 +736,15 @@ def _keras_dense_core(shape=None, input=None):
 
     model = Sequential()
     d = Dense(2,
-            use_bias=True,
-            input_shape=shape[1:])
+              use_bias=True,
+              input_shape=shape[1:])
     model.add(d)
 
     if input is None:
         input = np.random.uniform(size=shape)
     out = model.predict(input)
     return model, out
+
 
 def run_required_space_to_batch_paddings(input):
 

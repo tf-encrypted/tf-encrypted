@@ -184,12 +184,13 @@ def keras_dense(converter, interiors, inputs):
     shape = [i.size for i in kernel.attr["value"].tensor.tensor_shape.dim]
 
     layer = Dense(input_shape,
-                out_features=shape[1])
+                  out_features=shape[1])
 
     layer.initialize(initial_weights=k, initial_bias=b)
     out = layer.forward(input)
 
     return out
+
 
 def relu(converter, node: Any, inputs: List[str]) -> Any:
     input = converter.outputs[inputs[0]]
