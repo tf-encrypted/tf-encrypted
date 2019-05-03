@@ -182,7 +182,7 @@ docker-login: dockercheck docker-logincheck
 # For all builds on the master branch, build the container
 docker-push-master: docker
 
-# For all builds onthe master branch, with an rc tag
+# For all builds on the master branch, with an rc tag
 docker-push-release-candidate: releasecheck docker-push-master docker-login docker-tag docker-push-tag
 
 # For all builds on the master branch with a release tag
@@ -194,19 +194,8 @@ docker-push: docker-push-$(PUSHTYPE)
 .PHONY: docker-push docker-push-release docker-push-release-candidate docker-push-master
 
 # ###############################################
-# Targets for publishing to pypi
-#
-# These targets required a PYPI_USERNAME, PYPI_PASSWORD
-# and PYPI_PLATFORM, environment variables to be set to be
-# executed properly.
+# Targets for building pip packages for pypi
 # ##############################################
-
-pypi-credentials-check:
-ifeq (,$(PYPI_USERNAME))
-ifeq (,$(PYPI_PASSWORD))
-	$(error "Missing PYPI_USERNAME and PYPI_PASSWORD environment variables")
-endif
-endif
 
 pypi-version-check:
 ifeq (,$(shell grep -e $(VERSION) setup.py))
@@ -234,6 +223,24 @@ else
 	python setup.py bdist_wheel --plat-name=$(PYPI_PLATFORM)
 endif
 
+.PHONY: pypi-build pypi-platform-check pypi-version-check
+
+# ###############################################
+# Targets for publishing to pypi
+#
+# These targets requires a PYPI_USERNAME, PYPI_PASSWORD, and PYPI_PLATFORM
+# environment variables to be set to be executed properly.
+# ##############################################
+
+pypi-credentials-check:
+ifeq (,$(PYPI_USERNAME))
+ifeq (,$(PYPI_PASSWORD))
+	$(error "Missing PYPI_USERNAME and PYPI_PASSWORD environment variables")
+endif
+endif
+
+pypi-push-master: pypi-credentials-check pypi-build
+
 pypi-push-release-candidate: releasecheck pypi-credentials-check pypi-build
 	@echo "Attempting to upload to pypi"
 	twine upload -u="$(PYPI_USERNAME)" -p="$(PYPI_PASSWORD)" dist/*
@@ -242,7 +249,7 @@ pypi-push-release: pypi-push-release-candidate
 
 pypi-push: pypi-push-$(PUSHTYPE)
 
-.PHONY: pypi-build pypi-push-release-candidate pypi-push-release pypi-push pypi-credentials-check pypi-version-check
+.PHONY: pypi-push pypi-push-release pypi-push-release-candidate pypi-push-master pypi-credentials-check
 
 # ###############################################
 # Pushing Artifacts for a Release
@@ -250,6 +257,7 @@ pypi-push: pypi-push-$(PUSHTYPE)
 # The following are meta-rules for building and pushing various different
 # release artifacts to their intended destinations.
 # ###############################################
+
 push:
 	@echo "Attempting to build and push $(VERSION) with push type $(PUSHTYPE) - $(EXACT_TAG)"
 	make docker-push
