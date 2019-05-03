@@ -19,3 +19,11 @@ required_space_to_batch_paddings:
     tf.required_space_to_batch_paddings
   hyperlink:
     https://www.tensorflow.org/api_docs/python/tf/required_space_to_batch_paddings
+dense:
+  interiors:
+    - kernel
+    - bias
+  tf-name:
+    tf.keras.layers.Dense
+  hyperlink:
+    https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense
