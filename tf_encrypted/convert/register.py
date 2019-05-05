@@ -47,6 +47,7 @@ def registry() -> Dict[str, Any]:
         'Split': split,
         'Identity': identity,
         "GatherV2": gather,
+        "dense": keras_dense,
     }
 
     return reg
@@ -161,6 +162,29 @@ def keras_conv2d(converter, interiors, inputs):
         padding=padding,
         channels_first=format == "NCHW"
     )
+
+    layer.initialize(initial_weights=k, initial_bias=b)
+    out = layer.forward(input)
+
+    return out
+
+
+def keras_dense(converter, interiors, inputs):
+    input = converter.outputs[inputs[0]]
+
+    kernel = interiors["kernel"]
+    k = nodef_to_private_pond(converter, kernel)
+    try:
+        bias = interiors["bias"]
+        b = nodef_to_private_pond(converter, bias)
+    except KeyError:
+        b = None
+
+    input_shape = input.shape.as_list()
+    shape = [i.size for i in kernel.attr["value"].tensor.tensor_shape.dim]
+
+    layer = Dense(input_shape,
+                  out_features=shape[1])
 
     layer.initialize(initial_weights=k, initial_bias=b)
     out = layer.forward(input)
