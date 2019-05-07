@@ -6,11 +6,25 @@ import tensorflow as tf
 from ...utils import wrap_in_variables
 
 
-class BaseTripleSource(abc.ABC):
-    """
+class TripleSource(abc.ABC):
 
-    Note that this triple source adds graph nodes expressing how triples should
-    be transformed to match. These are the `_mask` operations.
+    @abc.abstractmethod
+    def cache(self, a):
+        pass
+
+    @abc.abstractmethod
+    def initialize(self, sess, tag=None):
+        pass
+
+    @abc.abstractmethod
+    def generate_triples(self, sess, fetches, tag=None):
+        pass
+
+
+class BaseTripleSource(TripleSource):
+    """
+    Partial triple source adding graph nodes for constructing and keeping track
+    of triples and their use. Subclasses must implement `_build_queues`.
     """
 
     def __init__(self, player0, player1, producer):
@@ -155,39 +169,38 @@ class BaseTripleSource(abc.ABC):
 
     @abc.abstractmethod
     def _build_queues(self, c0, c1):
-        pass
-
-    @abc.abstractmethod
-    def cache(self, a):
-        pass
-
-    @abc.abstractmethod
-    def initialize(self, sess, tag=None):
-        pass
-
-    @abc.abstractmethod
-    def generate_triples(self, sess, fetches, tag=None):
-        pass
+        """
+        Method used to inject buffers between mask generating and use
+        (ie online vs offline). `c0` and `c1` represent the generated
+        masks and the method is expected to return a similar pair of
+        of tensors.
+        """
 
 
 class OnlineTripleSource(BaseTripleSource):
+    """
+    This triple source will generate triples as part of the online phase
+    using a dedicated third-party `producer`.
+
+    There is no need to call `generate_triples` nor `initialize`.
+    """
 
     def __init__(self, producer):
         super().__init__(None, None, producer)
 
-    def _build_queues(self, c0, c1):
-        return c0, c1
+    def initialize(self, sess, tag=None):
+        pass
+
+    def generate_triples(self, sess, fetches, tag=None):
+        pass
 
     def cache(self, a):
         with tf.device(self.producer.device_name):
             updater, [a_cached] = wrap_in_variables(a)
         return updater, a_cached
 
-    def initialize(self, sess, tag=None):
-        pass
-
-    def generate_triples(self, sess, fetches, tag=None):
-        pass
+    def _build_queues(self, c0, c1):
+        return c0, c1
 
 
 """

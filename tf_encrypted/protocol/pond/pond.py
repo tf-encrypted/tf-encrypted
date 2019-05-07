@@ -1074,6 +1074,16 @@ class Pond(Protocol):
         return self.dispatch("reveal", x)
 
     def cache(self, xs):
+        """
+        Wraps all input tensors, including private and masked, in variables so
+        that computation and masking of these can be reused between different
+        runs.
+
+        For private predictions this may be used to avoid re-masking model
+        weights between each run, thereby saving on communication.
+        For private training this may be used to avoid re-masked the traning
+        data between each iteration, again saving on communication.
+        """
 
         if isinstance(xs, (list, tuple)):
             # apply recursively
