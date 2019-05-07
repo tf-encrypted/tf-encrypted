@@ -1,3 +1,4 @@
+"""Tensors representing non-native data types (like fixed-point precision)."""
 from __future__ import absolute_import
 
 import tensorflow as tf
