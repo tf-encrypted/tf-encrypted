@@ -1,3 +1,4 @@
+"""The TF Encrypted Player abstraction."""
 from __future__ import absolute_import
 
 from .player import Player
