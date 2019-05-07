@@ -7,6 +7,7 @@ from data import gen_training_input, gen_test_input
 
 tf.set_random_seed(1)
 
+
 def main():
   # Parameters
   learning_rate = 0.01
@@ -48,12 +49,10 @@ def main():
   # Testing model
   pred_test = tfe.sigmoid(tfe.matmul(xp_test, w) + b)
 
-
   def print_accuracy(pred_test_tf, y_test_tf: tf.Tensor) -> tf.Operation:
     correct_prediction = tf.equal(tf.round(pred_test_tf), y_test_tf)
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     return tf.print("Accuracy", accuracy)
-
 
   print_acc_op = tfe.define_output(
       'input-provider', [pred_test, yp_test], print_accuracy)
@@ -80,6 +79,7 @@ def main():
     print("Optimization Finished!")
 
     sess.run(print_acc_op)
+
 
 if __name__ == '__main__':
   main()

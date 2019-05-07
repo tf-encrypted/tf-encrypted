@@ -18,9 +18,9 @@ x_test, y_test = tfe.define_private_input(data_owner.player_name, data_owner.pro
 reveal_weights_op = tfe.define_output(model_owner.player_name, model.weights, model_owner.receive_weights)
 
 with tfe.Session() as sess:
-    sess.run([tfe.global_variables_initializer(), data_owner.initializer], tag='init')
+  sess.run([tfe.global_variables_initializer(), data_owner.initializer], tag='init')
 
-    model.fit(sess, x_train, y_train, num_batches)
-    model.evaluate(sess, x_test, y_test, data_owner)
+  model.fit(sess, x_train, y_train, num_batches)
+  model.evaluate(sess, x_test, y_test, data_owner)
 
-    sess.run(reveal_weights_op, tag='reveal')
+  sess.run(reveal_weights_op, tag='reveal')

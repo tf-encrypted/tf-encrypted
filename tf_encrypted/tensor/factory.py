@@ -23,6 +23,8 @@ class AbstractTensor(abc.ABC):
     pass
 
 # pylint: disable=abstract-method
+
+
 class AbstractConstant(AbstractTensor):
   pass
 
@@ -34,6 +36,7 @@ class AbstractPlaceholder(AbstractTensor):
 class AbstractVariable(AbstractTensor):
   pass
 # pylint: enable=abstract-method
+
 
 class AbstractFactory(abc.ABC):
   """An abstraction to use when building tensor factories."""

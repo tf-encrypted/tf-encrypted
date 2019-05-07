@@ -1,7 +1,8 @@
 """TF Encrypted extension of tf.Session."""
 import os
-from typing import List, Any, Union
+from typing import List, Union
 from collections import defaultdict
+import logging
 
 import tensorflow as tf
 from tensorflow.python.client import timeline
@@ -18,6 +19,10 @@ __tfe_debug__ = bool(os.getenv('TFE_DEBUG', ""))
 __tensorboard_dir__ = str(os.getenv('TFE_EVENTS_DIR', '/tmp/tensorboard'))
 
 _run_counter = defaultdict(int)  # type: Any
+
+logging.basicConfig()
+logger = logging.getLogger('tf_encrypted')
+logger.setLevel(logging.DEBUG)
 
 
 class Session(tf.Session):
@@ -36,27 +41,23 @@ class Session(tf.Session):
     :class:`Remote <tf_encrypted.config.RemoteConfig>` config to be supplied
     when executing the graph.
   """
-  def __init__(self, graph=None, config=None, target=None):
+
+  def __init__(self, graph=None, config=None, target=None, **tf_config_kwargs):
     if config is None:
       config = get_config()
 
-    default_target, config_proto = config.get_tf_config()
+    default_target, config_proto = config.get_tf_config(**tf_config_kwargs)
     if target is None:
       target = default_target
 
     if isinstance(config, RemoteConfig):
       print("Starting session on target '{}' using config {}".format(
           target, config_proto))
-    # print(self._closed)
     super(Session, self).__init__(target, graph, config_proto)
-    print("closed", self._closed)
-    # self.sess = tf.Session(target, graph, config_proto)
 
     global __tfe_debug__
-    print("tfedebug", __tfe_debug__)
 
     if __tfe_debug__:
-    # if False:
       print('Session in debug mode')
       self = tf_debug.LocalCLIDebugWrapperSession(self)  # pylint: disable=self-cls-assignment
 
@@ -76,7 +77,14 @@ class Session(tf.Session):
       return fetches.to_native()
     raise TypeError("Don't know how to fetch {}".format(type(fetches)))
 
-  def run(self, fetches, feed_dict=None, tag=None, write_trace=False):
+  def run(
+      self,
+      fetches,
+      feed_dict=None,
+      tag=None,
+      write_trace=False,
+      output_partition_graphs=False
+  ):
     # pylint: disable=arguments-differ
     """
     run(fetches, feed_dict, tag, write_trace) -> Any
@@ -114,7 +122,11 @@ class Session(tf.Session):
       _run_counter[tag] += 1
 
       writer = tf.summary.FileWriter(run_tag, self.graph)
-      run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+      run_options = tf.RunOptions(
+          trace_level=tf.RunOptions.FULL_TRACE,
+          output_partition_graphs=output_partition_graphs
+      )
+
       run_metadata = tf.RunMetadata()
 
       fetches_out = super(Session, self).run(
@@ -123,6 +135,14 @@ class Session(tf.Session):
           options=run_options,
           run_metadata=run_metadata
       )
+
+      if output_partition_graphs:
+        for i, g in enumerate(run_metadata.partition_graphs):
+          tf.io.write_graph(
+              g,
+              logdir=os.path.join(__TENSORBOARD_DIR__, session_tag),
+              name='partition{}.pbtxt'.format(i),
+          )
 
       writer.add_run_metadata(run_metadata, session_tag)
       writer.close()
@@ -179,6 +199,21 @@ def set_tfe_trace_flag(trace: bool = False) -> None:
   """
   global __tfe_trace__
   if trace is True:
-    print("Tensorflow encrypted is dumping computation traces")
+    logger.info("Tensorflow encrypted is dumping computation traces")
 
   __tfe_trace__ = trace
+
+
+def set_log_directory(path):
+  """
+  set_log_directory(path)
+
+  Sets the directory to write TensorBoard event and trace files to.
+
+  :param str path: The TensorBoard logdir.
+  """
+  global __tensorboard_dir__
+  if path:
+    logger.info("Writing event and trace files to '%s'", path)
+
+  __tensorboard_dir__ = path

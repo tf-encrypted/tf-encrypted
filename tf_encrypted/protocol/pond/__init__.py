@@ -1,3 +1,4 @@
+"""The Pond protocol."""
 from __future__ import absolute_import
 
 from .pond import Pond

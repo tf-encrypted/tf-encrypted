@@ -6,6 +6,7 @@ from data import gen_training_input, gen_test_input
 
 tf.set_random_seed(1)
 
+
 def main():
   # Parameters
   learning_rate = 0.01
@@ -26,7 +27,6 @@ def main():
   pred = tf.sigmoid(out)
   cost = -tf.reduce_mean(y * tf.log(pred) + (1 - y) * tf.log(1 - pred))
 
-
   # Backprop
   # optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost)
   # equivalent to:
@@ -40,7 +40,6 @@ def main():
       tf.assign(w, w - dw * learning_rate),
       tf.assign(b, b - db * learning_rate)
   ]
-
 
   # Testing model
   pred_test = tf.sigmoid(tf.matmul(x_test, W) + b)
@@ -65,6 +64,7 @@ def main():
     print("Optimization Finished!")
 
     sess.run(print_op)
+
 
 if __name__ == '__main__':
   main()

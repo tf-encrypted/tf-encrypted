@@ -185,7 +185,6 @@ def native_factory(native_type, explicit_modulus=None):
       bitsize = bitsize = math.ceil(math.log2(explicit_modulus))
       return factory.tensor(binarize(self.value % explicit_modulus, bitsize))
 
-
     def __repr__(self) -> str:
       return '{}(shape={})'.format(type(self), self.shape)
 
@@ -284,6 +283,9 @@ def native_factory(native_type, explicit_modulus=None):
 
     def strided_slice(self, args, kwargs):
       return DenseTensor(tf.strided_slice(self.value, *args, **kwargs))
+
+    def gather(self, indices: list, axis: int = 0):
+      return DenseTensor(tf.gather(self.value, indices, axis=axis))
 
     def split(self, num_split: int, axis: int = 0):
       values = tf.split(self.value, num_split, axis=axis)

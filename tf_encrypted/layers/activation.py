@@ -13,6 +13,7 @@ class Sigmoid(Layer):
 
   :See: tf.nn.Sigmoid
   """
+
   def get_output_shape(self) -> List[int]:
     return self.input_shape
 
@@ -36,6 +37,7 @@ class Relu(Layer):
 
   :See: tf.nn.relu
   """
+
   def get_output_shape(self) -> List[int]:
     return self.input_shape
 
@@ -44,8 +46,8 @@ class Relu(Layer):
 
   def forward(self, x):
     """
-    :param ~tensorflow_encrypted.protocol.pond.PondTensor x: The input tensor
-    :rtype: ~tensorflow_encrypted.protocol.pond.PondTensor
+    :param ~tf_encrypted.protocol.pond.PondTensor x: The input tensor
+    :rtype: ~tf_encrypted.protocol.pond.PondTensor
     :returns: A pond tensor with the same backing type as the input tensor.
     """
     y = self.prot.relu(x)
@@ -68,6 +70,7 @@ class Tanh(Layer):
 
   :See: tf.nn.tanh
   """
+
   def get_output_shape(self) -> List[int]:
     return self.input_shape
 

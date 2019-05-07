@@ -17,6 +17,7 @@ class Dense(Layer):
   :param int in_features: number of input features
   :param int out_features: number of output neurons for the layer
   """
+
   def __init__(self,
                input_shape,
                out_features,

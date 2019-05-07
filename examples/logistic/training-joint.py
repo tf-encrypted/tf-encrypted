@@ -30,13 +30,13 @@ model = LogisticRegression(num_features)
 reveal_weights_op = tfe.define_output(model_owner.player_name, model.weights, model_owner.receive_weights)
 
 with tfe.Session() as sess:
-    sess.run([tfe.global_variables_initializer(), data_owner_0.initializer, data_owner_1.initializer], tag='init')
+  sess.run([tfe.global_variables_initializer(), data_owner_0.initializer, data_owner_1.initializer], tag='init')
 
-    model.fit(sess, x_train, y_train, num_batches)
-    # TODO(Morten)
-    # each evaluation results in nodes for a forward pass being added to the graph;
-    # maybe there's some way to avoid this, even if it means only if the shapes match
-    model.evaluate(sess, x_test_0, y_test_0, data_owner_0)
-    model.evaluate(sess, x_test_1, y_test_1, data_owner_1)
+  model.fit(sess, x_train, y_train, num_batches)
+  # TODO(Morten)
+  # each evaluation results in nodes for a forward pass being added to the graph;
+  # maybe there's some way to avoid this, even if it means only if the shapes match
+  model.evaluate(sess, x_test_0, y_test_0, data_owner_0)
+  model.evaluate(sess, x_test_1, y_test_1, data_owner_1)
 
-    sess.run(reveal_weights_op, tag='reveal')
+  sess.run(reveal_weights_op, tag='reveal')

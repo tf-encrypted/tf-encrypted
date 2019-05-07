@@ -10,6 +10,7 @@ import tf_encrypted as tfe
 
 class PrivateModel:
   """An implementation of private models."""
+
   def __init__(self, output_node):
     self.output_node = output_node
 

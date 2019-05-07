@@ -12,6 +12,7 @@ class Reshape(Layer):
 
   :See: tf.keras.layers.Reshape
   """
+
   def __init__(self, input_shape, output_shape=None) -> None:
     if output_shape is None:
       self.output_shape = [-1]

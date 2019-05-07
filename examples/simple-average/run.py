@@ -31,19 +31,15 @@ if __name__ == '__main__':
       tfe.define_private_input('inputter-4', provide_input),
   ]
 
-
   # sum all inputs and divide by count
   result = tfe.add_n(inputs) / len(inputs)
-
 
   def receive_output(average: tf.Tensor) -> tf.Operation:
     # simply print average
     return tf.print("Average:", average)
 
-
   # send result to receiver
   result_op = tfe.define_output('result-receiver', result, receive_output)
-
 
   # run a few times
   with tfe.Session() as sess:
