@@ -1,32 +1,25 @@
 #!/usr/bin/env python
+"""CLI for running TFE jobs."""
 
 import os
-import re
 import argparse
-import logging
-import tensorflow as tf
-
 from pathlib import Path
-from urllib import request as urlDownloader
-from typing import Callable
-from tensorflow.python.platform import gfile
+from urllib.parse import urlparse
+from urllib.request import urlretrieve
 
 import numpy as np
+import tensorflow as tf
+from tensorflow.python.platform import gfile
 import tf_encrypted as tfe
 from tf_encrypted.protocol import Pond, SecureNN
-from data_preprocessing import data_prep_from_saved_model, list_files_from_dir
 
-logging.basicConfig()
-logger = logging.getLogger('tf_encrypted')
-logger.setLevel(logging.DEBUG)
-
-enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
+enable_events_monitor = os.environ.get('TFE_MONITOR_EVENTS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
 enable_debug = os.environ.get('TFE_DEBUG') is not None
 
-tfe.setMonitorStatsFlag(enable_stats_monitor)
-tfe.setTFETraceFlag(enable_traces)
-tfe.setTFEDebugFlag(enable_debug)
+tfe.set_tfe_events_flag(enable_events_monitor)
+tfe.set_tfe_trace_flag(enable_traces)
+tfe.set_tfe_debug_flag(enable_debug)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -38,177 +31,160 @@ parser.add_argument(
 parser.add_argument(
     "--model_url", type=str, default='', help="Model's public URL")
 parser.add_argument(
-    '--input_file', type=str, default="", help='Load the data from a numpy file format (.npy)')
-parser.add_argument(
-    '--data_dir', type=str, default="", help='Data directory with TFRecords file only')
+    '--input_file', type=str, default="",
+    help='load the data from a numpy file format (.npy)')
 parser.add_argument(
     '--plaintext', action='store_true', help='Run the model in plaintext')
 parser.add_argument(
-    '--iterations', type=int, default=10, help='Number of times to run a prediction')
-parser.add_argument(
-    '--data_prep_path', type=str, default='', help='Path to a saved model with data pre-processing')
-parser.add_argument(
-    '--data_prep_start_node', type=str, default='serialized_example:0', help='Select data pre-processing start' \
-                                                                        'node from saved model')
-parser.add_argument(
-    '--data_prep_end_node', type=str, default='DatasetToSingleElement:0', help='Select data pre-processing' \
-                                                                                'end node from saved model')
+    '--epochs', type=int, default=10,
+    help='Number of times to run a prediction')
 config = parser.parse_args()
 
 if config.protocol_name == 'securenn':
-    tfe.set_protocol(SecureNN())
+  tfe.set_protocol(SecureNN())
 else:
-    tfe.set_protocol(Pond())
+  tfe.set_protocol(Pond())
 
 model_file = config.model_name
 model_path = Path(model_file)
 
-if not model_path.is_file() and config.model_url is not '':
-    regex = re.compile(
-        r'^(?:http|ftp)s?://'  # http:// or https://
-        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
-        r'localhost|'  # localhost...
-        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
-        r'(?::\d+)?'  # optional port
-        r'(?:/?|[/?]\S+)$', re.IGNORECASE
-    )
-    if re.match(regex, config.model_url) is not None:
-        logger.info('Downloading model from URL: {}'.format(config.model_url))
-        model_file, _ = urlDownloader.urlretrieve(config.model_url)
-    else:
-        raise Exception('Invalid URL given: {}'.format(config.model_url))
+
+if not model_path.is_file() and config.model_url:
+  def is_valid_url(url, qualifying=None):
+    qualifying = ('scheme', 'netloc') if qualifying is None else qualifying
+    token = urlparse(url)
+    return all([getattr(token, qualifying_attr)
+                for qualifying_attr in qualifying])
+
+  if is_valid_url(config.model_url):
+    print('Downloading model from URL: {}'.format(config.model_url))
+    model_file, _ = urlretrieve(config.model_url)
+  else:
+    raise Exception('Invalid URL given: {}'.format(config.model_url))
 
 tf.reset_default_graph()
 
 input_spec = []
 with gfile.GFile(model_file, 'rb') as f:
-    logger.info('Loading model: {}'.format(model_file))
-    graph_def = tf.GraphDef()
-    graph_def.ParseFromString(f.read())
+  print('Loading model: {}'.format(model_file))
+  graph_def = tf.GraphDef()
+  graph_def.ParseFromString(f.read())
 
-    for node in graph_def.node:
-        if node.op != "Placeholder":
-            continue
+  for node in graph_def.node:
+    if node.op != "Placeholder":
+      continue
 
-        input_spec.append({
-            'name': node.name,
-            'dtype': node.attr['dtype'].type,
-            'shape': [config.batch_size] + [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
-        })
+    not_batch = [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
+    input_shape = [config.batch_size] + not_batch
+
+    input_spec.append({
+        'name': node.name,
+        'dtype': node.attr['dtype'].type,
+        'shape': input_shape
+    })
 
 inputs = []
+for i, spec in enumerate(input_spec):
+  def scope(provider_index, spec_in: dict):
+    def provide_input() -> tf.Tensor:
+      pl = tf.placeholder(
+          tf.float32,
+          shape=spec_in['shape'],
+          name="api/{}".format(provider_index))
+      return pl
 
-# If data_prep_path is set then extract data-preprocessing
-# graph from the SavedModel. Finally run it on the input-provider
-if config.data_prep_path:
-    data_file_names = list_files_from_dir(config.data_dir)
+    return provide_input
 
-    # SavedModel with data pre-processing steps
-    with tf.Session(graph=tf.Graph()) as sess:
-        tf.saved_model.loader.load(sess, ['serve'], config.data_prep_path)
-    
-    # Extract graph definition
-    data_prep_gdef = sess.graph_def
+  inputs.append(scope(i, spec))
 
-    def provide_input():
-        return data_prep_from_saved_model(data_prep_gdef , 
-            data_file_names,
-            config.batch_size,
-            config.data_prep_start_node,
-            config.data_prep_end_node)
 
-    inputs.append(provide_input)
+if config.input_file:
+  # TODO: Currently this allows for only one input
+  # If we want to load models with multiple diffrent inputs
+  # We will need to save our inputs as a list of np.array
+  input_data = [np.load(config.input_file)]
+  err_msg = ("the input_data length ({}) should be equal to"
+             "the number of inputs required by"
+             "the loaded model ({})".format(len(input_data), len(input_spec)))
+  assert len(input_data) == len(input_spec), err_msg
 else:
-    def scope(i: int, spec: dict) -> Callable[[], tf.Tensor]:
-        def provide_input() -> tf.Tensor:
-            pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
-            return pl
-        return provide_input
-            
-    inputs = [scope(i, spec) for i, spec in enumerate(input_spec)]
-
-if config.data_prep_path == '':
-    if config.input_file != '':
-        # TODO: Currently this allows for only one input
-        # If we want to load models with multiple different inputs
-        # We will need to save our inputs as a list of np.array
-        input_data = [np.load(config.input_file)]
-        assert len(input_data) == len(input_spec), 'the input_data length ({}) should be equal the number of inputs required by the loaded model ({})'.format(
-            len(input_data), len(input_spec))
-    else:
-        input_data = [np.random.standard_normal(spec['shape']).tolist() 
-                        for spec in input_spec]
+  input_data = []
+  for spec in input_spec:
+    input_data.append(
+        np.random.standard_normal(spec['shape']).tolist()
+    )
 
 
-runs = config.iterations
+runs = config.epochs
 if config.plaintext:
-    logger.info('running prediction in plaintext')
-    with tfe.Session() as sess:
-        sess.graph.as_default()
-        tf.import_graph_def(graph_def, name='')
-        sess.run(tf.global_variables_initializer())
+  print('running prediction in plaintext')
+  with tfe.Session() as sess:
+    sess.graph.as_default()
+    tf.import_graph_def(graph_def, name='')
+    sess.run(tf.global_variables_initializer())
 
-        # TODO This isn't a good way to get the input/output nodes and we shouldn't
-        #      hardcode the input either!
-        logger.info('running, {}, predictions'.format(runs))
-        for x in range(0, runs + 1): # first run is warmup
-            output = sess.graph.get_operations()[-2].values()[0]
-            input = sess.graph.get_operations()[0].values()[0]
+    # TODO This isn't a good way to get the input/output nodes
+    #      and we shouldn't hardcode the input either!
+    print('running', runs, 'predictions')
+    for x in range(0, runs + 1):  # first run is warmup
+      output = sess.graph.get_operations()[-2].values()[0]
+      x_input = sess.graph.get_operations()[0].values()[0]  # noqa: W0622
 
-            sess.run(output, {input: input_data}, tag='prediction')
+      sess.run(output, {x_input: input_data}, tag='prediction')
 
-            if x % 10 == 0:
-                logger.info(('ran, {}, iterations').format(x))
+      if x % 10 == 0:
+        print('ran', x, 'epochs')
 
-        logger.info(('ran, {}, iterations').format(x))
+    print('ran', x, 'epochs')
 
 
 else:
-    logger.info('running prediction securely')
-    c = tfe.convert.convert.Converter()
-    y = c.convert(graph_def, tfe.convert.registry(), 'input-provider', inputs)
+  print('running prediction securely')
+  c = tfe.convert.Converter()
+  y = c.convert(graph_def, tfe.convert.registry(), 'input-provider', inputs)
 
-    def reveal_output(sess, y, feed_dict):
-        output = sess.run(
-                y.reveal(),
-                feed_dict=feed_dict,
-                tag='prediction'
-            )
-        return output
-
-    if not config.data_prep_path:
-        pls = []
-        for i in range(len(input_spec)):
-            if i == 0:
-                name = "private-input/api/{}:0".format(i)
-            else:
-                name = "private-input_{}/api/{}:0".format(i, i)
-            pls.append(
-                tf.get_default_graph().get_tensor_by_name(name)
-            )
-
-        feed_dict = {
-                    pl: input_data[i] for i, pl in enumerate(pls)
-        }
+  pls = []
+  for i in range(len(input_spec)):
+    if i == 0:
+      name = "private-input/api/{}:0".format(i)
     else:
-        feed_dict = None
+      name = "private-input_{index}/api/{index}:0".format(index=i)
+    pls.append(
+        tf.get_default_graph().get_tensor_by_name(name)
+    )
 
-    with tfe.Session() as sess:
-        logger.info("initing!!!")
-        sess.run(tf.global_variables_initializer())
+  with tfe.Session() as sess:
+    print("initing!!!")
+    sess.run(tf.global_variables_initializer())
 
-        logger.info("warming up")
-        output = reveal_output(sess, y, feed_dict)
-        logger.info('output: {}'.format(output))    
+    print("warming up")
+    feed_dict = {
+        pl: input_data[i] for i, pl in enumerate(pls)
+    }
 
-        logger.info('running, {}, predictions'.format(runs))
-        for x in range(0, runs):
+    print('feed_dict', feed_dict)
 
-            output = reveal_output(sess, y, feed_dict)
+    output = sess.run(
+        y.reveal(),
+        feed_dict=feed_dict,
+        tag='prediction'
+    )
+    print(output)
 
-            if x % 10 == 0:
-                logger.info('{} iterations complete'.format(x))
+    print('running', runs, 'predictions')
+    for x in range(0, runs):
+      feed_dict = {
+          pl: input_data[i] for i, pl in enumerate(pls)
+      }
 
-        logger.info('{} iterations complete'.format(x))
-        logger.info('done')
+      output = sess.run(
+          y.reveal(),
+          feed_dict=feed_dict,
+          tag='prediction'
+      )
 
+      if x % 10 == 0:
+        print(x, 'runs complete')
+
+    print(x, 'runs complete')
+    print('done')
