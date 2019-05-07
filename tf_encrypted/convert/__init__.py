@@ -1,3 +1,4 @@
+"""The TFE Converter."""
 from .convert import Converter
 from .register import registry
 
