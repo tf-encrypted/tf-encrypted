@@ -1,7 +1,8 @@
+"""Installing with setuptools."""
 import setuptools
 
 with open("README.md", "r") as fh:
-    long_description = fh.read()
+  long_description = fh.read()
 
 setuptools.setup(
     name="tf-encrypted",
@@ -15,12 +16,13 @@ setuptools.setup(
         "tensorflow>=1.12.0,<2",
         "numpy>=1.14.0"
     ],
-    extra_requires={
+    extras_require={
         "tf": ["tensorflow>=1.12.0,<2"]
     },
     license="Apache License 2.0",
     url="https://github.com/mortendahl/tf-encrypted",
-    description="Layer on top of TensorFlow for doing machine learning on encrypted data.",
+    description=("Layer on top of TensorFlow for doing",
+                 "machine learning on encrypted data."),
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Morten Dahl",
