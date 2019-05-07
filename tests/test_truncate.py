@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring
 import unittest
 
 import numpy as np
@@ -8,49 +9,51 @@ from tf_encrypted.tensor import int100factory, fixed100, fixed100_ni
 
 
 class TestTruncate(unittest.TestCase):
-    def setUp(self):
-        tf.reset_default_graph()
+  def setUp(self):
+    tf.reset_default_graph()
 
-    def test_interactive_truncate(self):
+  def test_interactive_truncate(self):
 
-        prot = tfe.protocol.Pond(
-            tensor_factory=int100factory,
-            fixedpoint_config=fixed100,
-        )
+    prot = tfe.protocol.Pond(
+        tensor_factory=int100factory,
+        fixedpoint_config=fixed100,
+    )
 
-        # TODO[Morten] remove this condition
-        if prot.tensor_factory not in [tfe.tensor.int64factory]:
+    # TODO[Morten] remove this condition
+    if prot.tensor_factory not in [tfe.tensor.int64factory]:
 
-            expected = np.array([12345.6789])
+      expected = np.array([12345.6789])
 
-            w = prot.define_private_variable(expected * prot.fixedpoint_config.scaling_factor)  # double precision
-            v = prot.truncate(w)  # single precision
+      w = prot.define_private_variable(
+          expected * prot.fixedpoint_config.scaling_factor)  # double precision
+      v = prot.truncate(w)  # single precision
 
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                actual = sess.run(v.reveal())
+      with tfe.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        actual = sess.run(v.reveal())
 
-            np.testing.assert_allclose(actual, expected)
+      np.testing.assert_allclose(actual, expected)
 
-    def test_noninteractive_truncate(self):
+  def test_noninteractive_truncate(self):
 
-        prot = tfe.protocol.Pond(
-            tensor_factory=int100factory,
-            fixedpoint_config=fixed100_ni,
-        )
+    prot = tfe.protocol.Pond(
+        tensor_factory=int100factory,
+        fixedpoint_config=fixed100_ni,
+    )
 
-        with tfe.Session() as sess:
+    with tfe.Session() as sess:
 
-            expected = np.array([12345.6789])
+      expected = np.array([12345.6789])
 
-            w = prot.define_private_variable(expected * prot.fixedpoint_config.scaling_factor)  # double precision
-            v = prot.truncate(w)  # single precision
+      w = prot.define_private_variable(
+          expected * prot.fixedpoint_config.scaling_factor)  # double precision
+      v = prot.truncate(w)  # single precision
 
-            sess.run(tf.global_variables_initializer())
-            actual = sess.run(v.reveal())
+      sess.run(tf.global_variables_initializer())
+      actual = sess.run(v.reveal())
 
-            np.testing.assert_allclose(actual, expected)
+      np.testing.assert_allclose(actual, expected)
 
 
 if __name__ == '__main__':
-    unittest.main()
+  unittest.main()
