@@ -17,6 +17,7 @@ class Batchnorm(Layer):
   :param np.ndarray offset: ...
   :param float variance_epsilon: ...
   """
+
   def __init__(self, input_shape: List[int],
                mean: np.ndarray, variance: np.ndarray, scale: np.ndarray,
                offset: np.ndarray, variance_epsilon: float = 1e-8) -> None:

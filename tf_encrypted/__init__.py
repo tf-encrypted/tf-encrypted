@@ -6,8 +6,8 @@ import tensorflow as tf
 
 from .config import Config, LocalConfig, RemoteConfig, get_config
 from .player import player
-from .protocol import global_caches_updater, Pond, get_protocol
-from .session import Session, set_tfe_debug_flag, set_tfe_events_flag, set_tfe_trace_flag
+from .protocol import Pond, get_protocol
+from .session import Session, set_tfe_debug_flag, set_tfe_events_flag, set_tfe_trace_flag, set_log_directory
 from . import convert
 from . import layers
 from . import operations
@@ -69,6 +69,7 @@ __all__ = [
     "set_tfe_events_flag",
     "set_tfe_trace_flag",
     "set_tfe_debug_flag",
+    "set_log_directory",
     "get_config",
     "set_config",
     "get_protocol",
@@ -79,6 +80,5 @@ __all__ = [
     "layers",
     "convert",
     "operations",
-    "global_caches_updater",
     "global_variables_initializer",
 ]

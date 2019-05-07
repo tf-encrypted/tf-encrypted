@@ -9,8 +9,8 @@ import yaml
 import numpy as np
 import tensorflow as tf
 
-from tf_encrypted.layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
-from tf_encrypted.protocol.pond import PondPrivateTensor, PondMaskedTensor
+from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
+from ..protocol.pond import PondPrivateTensor, PondMaskedTensor
 
 
 def registry():
@@ -48,6 +48,8 @@ def registry():
       'Neg': _negative,
       'Split': _split,
       'Identity': _identity,
+      "GatherV2": _gather,
+      "dense": _keras_dense,
   }
 
   return reg
@@ -166,6 +168,29 @@ def _keras_conv2d(converter, interiors, inputs):
       padding=padding,
       channels_first=fmt == "NCHW"
   )
+
+  layer.initialize(initial_weights=k, initial_bias=b)
+  out = layer.forward(x_in)
+
+  return out
+
+
+def _keras_dense(converter, interiors, inputs):
+  x_in = converter.outputs[inputs[0]]
+
+  kernel = interiors["kernel"]
+  k = nodef_to_private_pond(converter, kernel)
+  try:
+    bias = interiors["bias"]
+    b = nodef_to_private_pond(converter, bias)
+  except KeyError:
+    b = None
+
+  input_shape = x_in.shape.as_list()
+  shape = [i.size for i in kernel.attr["value"].tensor.tensor_shape.dim]
+
+  layer = Dense(input_shape,
+                out_features=shape[1])
 
   layer.initialize(initial_weights=k, initial_bias=b)
   out = layer.forward(x_in)
@@ -331,6 +356,23 @@ def _negative(converter, node: Any, inputs: List[str]) -> Any:
     input_out = x_in
 
   return converter.protocol.negative(input_out)
+
+
+def _gather(converter, node: Any, inputs: List[str]) -> Any:
+  x_in = converter.outputs[inputs[0]]
+  indices = converter.outputs[inputs[1]]
+  axis = converter.outputs[inputs[2]]
+
+  if isinstance(x_in, tf.NodeDef):
+    input_out = nodef_to_private_pond(converter, x_in)
+  else:
+    input_out = x_in
+
+  indices_out = list(nodef_to_numpy_array(indices))
+
+  axis_val = axis.attr["value"].tensor.int_val[0]
+
+  return converter.protocol.gather(input_out, indices_out, axis_val)
 
 
 def _squeeze(converter, node: Any, inputs: List[str]) -> Any:

@@ -1,3 +1,5 @@
+"""Various sources for providing generalized Beaver triples for the Pond
+protocol."""
 import abc
 import random
 
@@ -7,206 +9,206 @@ from ...utils import wrap_in_variables
 
 
 class TripleSource(abc.ABC):
+  """Base class for triples sources."""
 
-    @abc.abstractmethod
-    def cache(self, a):
-        pass
+  @abc.abstractmethod
+  def cache(self, a):
+    pass
 
-    @abc.abstractmethod
-    def initialize(self, sess, tag=None):
-        pass
+  @abc.abstractmethod
+  def initialize(self, sess, tag=None):
+    pass
 
-    @abc.abstractmethod
-    def generate_triples(self, sess, fetches, tag=None):
-        pass
+  @abc.abstractmethod
+  def generate_triples(self, sess, fetches, tag=None):
+    pass
 
 
 class BaseTripleSource(TripleSource):
+  """
+  Partial triple source adding graph nodes for constructing and keeping track
+  of triples and their use. Subclasses must implement `_build_queues`.
+  """
+
+  def __init__(self, player0, player1, producer):
+    self.player0 = player0
+    self.player1 = player1
+    self.producer = producer
+
+  def mask(self, backing_dtype, shape):
+
+    with tf.name_scope("triple-generation"):
+      with tf.device(self.producer.device_name):
+        a0 = backing_dtype.sample_uniform(shape)
+        a1 = backing_dtype.sample_uniform(shape)
+        a = a0 + a1
+
+    d0, d1 = self._build_queues(a0, a1)
+    return a, d0, d1
+
+  def mul_triple(self, a, b):
+
+    with tf.name_scope("triple-generation"):
+      with tf.device(self.producer.device_name):
+        ab = a * b
+        ab0, ab1 = self._share(ab)
+
+    return self._build_queues(ab0, ab1)
+
+  def square_triple(self, a):
+
+    with tf.name_scope("triple-generation"):
+      with tf.device(self.producer.device_name):
+        aa = a * a
+        aa0, aa1 = self._share(aa)
+
+    return self._build_queues(aa0, aa1)
+
+  def matmul_triple(self, a, b):
+
+    with tf.name_scope("triple-generation"):
+      with tf.device(self.producer.device_name):
+        ab = a.matmul(b)
+        ab0, ab1 = self._share(ab)
+
+    return self._build_queues(ab0, ab1)
+
+  def conv2d_triple(self, a, b, strides, padding):
+
+    with tf.device(self.producer.device_name):
+      with tf.name_scope("triple"):
+        ab = a.conv2d(b, strides, padding)
+        ab0, ab1 = self._share(ab)
+
+    return self._build_queues(ab0, ab1)
+
+  def indexer_mask(self, a, slc):
+
+    with tf.name_scope("mask-transformation"):
+      with tf.device(self.producer.device_name):
+        a_sliced = a[slc]
+
+    return a_sliced
+
+  def transpose_mask(self, a, perm):
+
+    with tf.name_scope("mask-transformation"):
+      with tf.device(self.producer.device_name):
+        a_t = a.transpose(perm=perm)
+
+    return a_t
+
+  def strided_slice_mask(self, a, args, kwargs):
+
+    with tf.name_scope("mask-transformation"):
+      with tf.device(self.producer.device_name):
+        a_slice = a.strided_slice(args, kwargs)
+
+    return a_slice
+
+  def split_mask(self, a, num_split, axis):
+
+    with tf.name_scope("mask-transformation"):
+      with tf.device(self.producer.device_name):
+        bs = a.split(num_split=num_split, axis=axis)
+
+    return bs
+
+  def stack_mask(self, bs, axis):
+
+    factory = bs[0].factory
+
+    with tf.name_scope("mask-transformation"):
+      with tf.device(self.producer.device_name):
+        b_stacked = factory.stack(bs, axis=axis)
+
+    return b_stacked
+
+  def concat_mask(self, bs, axis):
+
+    factory = bs[0].factory
+
+    with tf.name_scope("mask-transformation"):
+      with tf.device(self.producer.device_name):
+        b_stacked = factory.concat(bs, axis=axis)
+
+    return b_stacked
+
+  def reshape_mask(self, a, shape):
+
+    with tf.name_scope("mask-transformation"):
+      with tf.device(self.producer.device_name):
+        a_reshaped = a.reshape(shape)
+
+    return a_reshaped
+
+  def expand_dims_mask(self, a, axis):
+
+    with tf.name_scope("mask-transformation"):
+      with tf.device(self.producer.device_name):
+        a_e = a.expand_dims(axis=axis)
+
+    return a_e
+
+  def squeeze_mask(self, a, axis):
+
+    with tf.name_scope("mask-transformation"):
+      with tf.device(self.producer.device_name):
+        a_squeezed = a.squeeze(axis=axis)
+
+    return a_squeezed
+
+  def _share(self, secret):
+    with tf.name_scope("share"):
+      share0 = secret.factory.sample_uniform(secret.shape)
+      share1 = secret - share0
+      # randomized swap to distribute who gets the seed
+      if random.random() < 0.5:
+        share0, share1 = share1, share0
+    return share0, share1
+
+  @abc.abstractmethod
+  def _build_queues(self, c0, c1):
     """
-    Partial triple source adding graph nodes for constructing and keeping track
-    of triples and their use. Subclasses must implement `_build_queues`.
+    Method used to inject buffers between mask generating and use
+    (ie online vs offline). `c0` and `c1` represent the generated
+    masks and the method is expected to return a similar pair of
+    of tensors.
     """
-
-    def __init__(self, player0, player1, producer):
-        self.player0 = player0
-        self.player1 = player1
-        self.producer = producer
-
-    def mask(self, backing_dtype, shape):
-
-        with tf.name_scope("triple-generation"):
-            with tf.device(self.producer.device_name):
-                a0 = backing_dtype.sample_uniform(shape)
-                a1 = backing_dtype.sample_uniform(shape)
-                a = a0 + a1
-
-        d0, d1 = self._build_queues(a0, a1)
-        return a, d0, d1
-
-    def mul_triple(self, a, b):
-
-        with tf.name_scope("triple-generation"):
-            with tf.device(self.producer.device_name):
-                ab = a * b
-                ab0, ab1 = self._share(ab)
-
-        return self._build_queues(ab0, ab1)
-
-    def square_triple(self, a):
-
-        with tf.name_scope("triple-generation"):
-            with tf.device(self.producer.device_name):
-                aa = a * a
-                aa0, aa1 = self._share(aa)
-
-        return self._build_queues(aa0, aa1)
-
-    def matmul_triple(self, a, b):
-
-        with tf.name_scope("triple-generation"):
-            with tf.device(self.producer.device_name):
-                ab = a.matmul(b)
-                ab0, ab1 = self._share(ab)
-
-        return self._build_queues(ab0, ab1)
-
-    def conv2d_triple(self, a, b, strides, padding):
-
-        with tf.device(self.producer.device_name):
-            with tf.name_scope("triple"):
-                ab = a.conv2d(b, strides, padding)
-                ab0, ab1 = self._share(ab)
-
-        return self._build_queues(ab0, ab1)
-
-    def indexer_mask(self, a, slice):
-
-        with tf.name_scope("mask-transformation"):
-            with tf.device(self.producer.device_name):
-                a_sliced = a[slice]
-
-        return a_sliced
-
-    def transpose_mask(self, a, perm):
-
-        with tf.name_scope("mask-transformation"):
-            with tf.device(self.producer.device_name):
-                a_t = a.transpose(perm=perm)
-
-        return a_t
-
-    def strided_slice_mask(self, a, args, kwargs):
-
-        with tf.name_scope("mask-transformation"):
-            with tf.device(self.producer.device_name):
-                a_slice = a.strided_slice(args, kwargs)
-
-        return a_slice
-
-    def split_mask(self, a, num_split, axis):
-
-        with tf.name_scope("mask-transformation"):
-            with tf.device(self.producer.device_name):
-                bs = a.split(num_split=num_split, axis=axis)
-
-        return bs
-
-    def stack_mask(self, bs, axis):
-
-        factory = bs[0].factory
-
-        with tf.name_scope("mask-transformation"):
-            with tf.device(self.producer.device_name):
-                b_stacked = factory.stack(bs, axis=axis)
-
-        return b_stacked
-
-    def concat_mask(self, bs, axis):
-
-        factory = bs[0].factory
-
-        with tf.name_scope("mask-transformation"):
-            with tf.device(self.producer.device_name):
-                b_stacked = factory.concat(bs, axis=axis)
-
-        return b_stacked
-
-    def reshape_mask(self, a, shape):
-
-        with tf.name_scope("mask-transformation"):
-            with tf.device(self.producer.device_name):
-                a_reshaped = a.reshape(shape)
-
-        return a_reshaped
-
-    def expand_dims_mask(self, a, axis):
-
-        with tf.name_scope("mask-transformation"):
-            with tf.device(self.producer.device_name):
-                a_e = a.expand_dims(axis=axis)
-
-        return a_e
-
-    def squeeze_mask(self, a, axis):
-
-        with tf.name_scope("mask-transformation"):
-            with tf.device(self.producer.device_name):
-                a_squeezed = a.squeeze(axis=axis)
-
-        return a_squeezed
-
-    def _share(self, secret):
-
-        with tf.name_scope("share"):
-            share0 = secret.factory.sample_uniform(secret.shape)
-            share1 = secret - share0
-
-            # randomized swap to distribute who gets the seed
-            if random.random() < 0.5:
-                share0, share1 = share1, share0
-
-        return share0, share1
-
-    @abc.abstractmethod
-    def _build_queues(self, c0, c1):
-        """
-        Method used to inject buffers between mask generating and use
-        (ie online vs offline). `c0` and `c1` represent the generated
-        masks and the method is expected to return a similar pair of
-        of tensors.
-        """
 
 
 class OnlineTripleSource(BaseTripleSource):
-    """
-    This triple source will generate triples as part of the online phase
-    using a dedicated third-party `producer`.
+  """
+  This triple source will generate triples as part of the online phase
+  using a dedicated third-party `producer`.
 
-    There is no need to call `generate_triples` nor `initialize`.
-    """
+  There is no need to call `generate_triples` nor `initialize`.
+  """
 
-    def __init__(self, producer):
-        super().__init__(None, None, producer)
+  def __init__(self, producer):
+    super().__init__(None, None, producer)
 
-    def initialize(self, sess, tag=None):
-        pass
+  def initialize(self, sess, tag=None):
+    pass
 
-    def generate_triples(self, sess, fetches, tag=None):
-        pass
+  def generate_triples(self, sess, fetches, tag=None):
+    pass
 
-    def cache(self, a):
-        with tf.device(self.producer.device_name):
-            updater, [a_cached] = wrap_in_variables(a)
-        return updater, a_cached
+  def cache(self, a):
+    with tf.device(self.producer.device_name):
+      updater, [a_cached] = wrap_in_variables(a)
+    return updater, a_cached
 
-    def _build_queues(self, c0, c1):
-        return c0, c1
+  def _build_queues(self, c0, c1):
+    return c0, c1
 
 
+# pylint: disable=pointless-string-statement
 """
 class QueuedTripleSource(BaseTripleSource):
 
-    # TODO(Morten) manually unwrap and re-wrap of queued values, should be hidden away
+    # TODO(Morten) manually unwrap and re-wrap of queued values, should be
+    #              hidden away
 
     def __init__(self, player0, player1, producer, capacity=10):
         super().__init__(player0, player1, producer)
@@ -310,7 +312,8 @@ class DatasetTripleSource(BaseTripleSource):
         self.directory = directory
         self.support_online_running = support_online_running
         if support_online_running:
-            self.dequeue_from_file = tf.placeholder_with_default(True, shape=[])
+            self.dequeue_from_file = tf.placeholder_with_default(True,
+                                                                 shape=[])
 
     def _build_queues(self, c0, c1):
 
@@ -326,7 +329,8 @@ class DatasetTripleSource(BaseTripleSource):
 
         def dataset_from_queue(queue, dtype, shape):
             dummy = tf.data.Dataset.from_tensors(0).repeat(None)
-            iterator = dummy.map(lambda _: queue.dequeue()).make_initializable_iterator()
+            iterator = (dummy.map(lambda _: queue.dequeue())
+                             .make_initializable_iterator())
             return iterator.get_next(), iterator.initializer
             # gen = lambda: queue.dequeue()
             # dataset = tf.data.Dataset.from_generator(gen, [dtype], [shape])

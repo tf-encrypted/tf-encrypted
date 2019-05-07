@@ -218,14 +218,15 @@ if __name__ == '__main__':
 
   # helpers
 
-
   def conv(x, w, s):
     return tfe.conv2d(x, w, s, 'VALID')
 
+  # we'll use the same parameters for each prediction so we cache them to
+  # avoid re-training each time
+  cache_updater, params = tfe.cache(params)
 
   def pool(x):
     return tfe.avgpool2d(x, (2, 2), (2, 2), 'VALID')
-
 
   # compute prediction
   wconv1, bconv1, wfc1, bfc1, wfc2, bfc2 = params
@@ -239,13 +240,12 @@ if __name__ == '__main__':
   prediction_op = tfe.define_output(
       'prediction-client', [logits, y], prediction_client.receive_output)
 
-
   with tfe.Session() as sess:
     print("Init")
     sess.run(tf.global_variables_initializer(), tag='init')
 
     print("Training")
-    sess.run(tfe.global_caches_updater(), tag='training')
+    sess.run(cache_updater, tag='training')
 
     for _ in range(5):
       print("Predicting")

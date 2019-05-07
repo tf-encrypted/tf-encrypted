@@ -159,6 +159,7 @@ class DataOwner:
 
     return grads
 
+
 if __name__ == "__main__":
   model_owner = ModelOwner('model-owner')
   data_owners = [

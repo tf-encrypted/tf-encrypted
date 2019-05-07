@@ -12,7 +12,7 @@ from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 from tensorflow.keras import backend as K
-from tensorflow.keras.layers import Flatten, Conv2D
+from tensorflow.keras.layers import Flatten, Conv2D, Dense
 from tensorflow.keras.models import Sequential
 
 import tf_encrypted as tfe
@@ -232,6 +232,15 @@ class TestConvert(unittest.TestCase):
     test_input = np.ones([1, 8, 8, 1])
     self._test_with_ndarray_input_fn(
         'keras_conv2d', test_input, protocol='Pond')
+
+  def test_keras_dense_convert(self):
+    test_input = np.ones([2, 10])
+    self._test_with_ndarray_input_fn(
+        'keras_dense',
+        test_input,
+        decimals=2,
+        protocol='Pond',
+      )
 
 
 def export_argmax(filename, input_shape, axis):
@@ -571,6 +580,20 @@ def export_squeeze(filename, input_shape):
   return export(x, filename)
 
 
+def run_gather(input):
+  a = tf.placeholder(tf.float32, shape=input.shape, name="input")
+  x = tf.gather(a, indices=[1, 3], axis=0)
+  with tf.Session() as sess:
+    output = sess.run(x, feed_dict={a: input})
+  return output
+
+
+def export_gather(filename, input_shape):
+  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  x = tf.gather(a, indices=[1, 3], axis=0)
+  return export(x, filename)
+
+
 def run_split(input):
   a = tf.placeholder(tf.float32, shape=input.shape, name="input")
   x = tf.split(a, num_or_size_splits=2, axis=1)
@@ -711,6 +734,36 @@ def _keras_conv2d_core(shape=None, input=None):
   return model, out
 
 
+def export_keras_dense(filename, input_shape):
+    model, _ = _keras_dense_core(shape=input_shape)
+
+    sess = K.get_session()
+    output = model.get_layer('dense').output
+    return export(output, filename, sess=sess)
+
+
+def run_keras_dense(input):
+    _, out = _keras_dense_core(input=input)
+    return out
+
+
+def _keras_dense_core(shape=None, input=None):
+    assert shape is None or input is None
+    if shape is None:
+        shape = input.shape
+
+    model = Sequential()
+    d = Dense(2,
+              use_bias=True,
+              input_shape=shape[1:])
+    model.add(d)
+
+    if input is None:
+        input = np.random.uniform(size=shape)
+    out = model.predict(input)
+    return model, out
+
+
 def run_required_space_to_batch_paddings(input):
 
   x = tf.placeholder(tf.int32, shape=input.shape, name="input_shape")
@@ -744,9 +797,11 @@ def export(x: tf.Tensor, filename: str, sess=None):
 
   pred_node_names = ["output"]
   tf.identity(x, name=pred_node_names[0])
-  graph = graph_util.convert_variables_to_constants(sess,
-                                                    sess.graph.as_graph_def(),
-                                                    pred_node_names)
+  graph = graph_util.convert_variables_to_constants(
+      sess,
+      sess.graph.as_graph_def(),
+      pred_node_names
+    )
 
   graph = graph_util.remove_training_nodes(graph)
 

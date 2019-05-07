@@ -14,6 +14,7 @@ class Layer(ABC):
   """
   Base class for all layers.
   """
+
   def __init__(self, input_shape: List[int]) -> None:
     self.input_shape = input_shape
     self.output_shape = self.get_output_shape()

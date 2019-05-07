@@ -16,6 +16,7 @@ class Pooling2D(Layer):
 
   Do not instantiate.
   """
+
   def __init__(self,
                input_shape: List[int],
                pool_size: IntTuple,
@@ -86,6 +87,7 @@ class AveragePooling2D(Pooling2D):  # pylint: disable=abstract-method
 
   :See: tf.nn.avg_pool
   """
+
   def pool(self, x, pool_size, strides, padding):
     return self.prot.avgpool2d(x, pool_size, strides, padding)
 
@@ -97,5 +99,6 @@ class MaxPooling2D(Pooling2D):  # pylint: disable=abstract-method
   :See: tf.nn.max_pool
   """
   # TODO -- throw an error duing init if the protocol is not secureNN
+
   def pool(self, x, pool_size, strides, padding):
     return self.prot.maxpool2d(x, pool_size, strides, padding)

@@ -10,7 +10,6 @@ from ..tensor.factory import AbstractTensor
 
 
 __protocol__ = None
-global_cache_updaters = list()
 nodes = dict()
 
 
@@ -66,17 +65,6 @@ def get_protocol() -> Optional[Protocol]:
   Returns the current global protocol.
   """
   return __protocol__
-
-
-def global_caches_updater() -> tf.Operation:
-  """
-  global_caches_updater() -> tensorflow.Operation
-
-  Groups all ops that have been instantiated with a memoize decoratored
-  function into a single tf.Operation.
-  """
-  with tf.name_scope("cache_update"):
-    return tf.group(*global_cache_updaters)
 
 
 def memoize(func: Callable) -> Callable:

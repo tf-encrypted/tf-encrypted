@@ -23,6 +23,7 @@ class Conv2D(Layer):
               Conv2D((4, 4, 1, 20), strides=2, filter_init=lambda shp:
                       np.random.normal(scale=0.01, size=shp))
   """
+
   def __init__(self,
                input_shape, filter_shape,
                strides=1, padding="SAME",
