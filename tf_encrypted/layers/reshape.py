@@ -1,41 +1,51 @@
-import numpy as np
+# pylint: disable=arguments-differ
+"""Reshape Layer object."""
 from typing import List
+import numpy as np
 
-from . import core
+from .core import Layer
 
 
-class Reshape(core.Layer):
-    def __init__(self, input_shape: List[int], output_shape: List[int] = [-1]) -> None:
-        self.output_shape = output_shape
+class Reshape(Layer):
+  """
+  Reshape Layer
 
-        super(Reshape, self).__init__(input_shape)
+  :See: tf.keras.layers.Reshape
+  """
+  def __init__(self, input_shape, output_shape=None) -> None:
+    if output_shape is None:
+      self.output_shape = [-1]
+    self.output_shape = output_shape
 
-    def get_output_shape(self) -> List[int]:
-        if -1 in self.output_shape:
-            total_input_dims = np.prod(self.input_shape)
+    super(Reshape, self).__init__(input_shape)
 
-            dim = 1
-            for i in self.output_shape:
-                if i != -1:
-                    dim *= i
-            missing_dim = int(total_input_dims / dim)
+  def get_output_shape(self) -> List[int]:
+    """Returns the layer's output shape"""
+    if -1 not in self.output_shape:
+      return self.output_shape
 
-            output_shape = self.output_shape
-            for key, i in enumerate(output_shape):
-                if i == -1:
-                    output_shape[key] = missing_dim
+    total_input_dims = np.prod(self.input_shape)
 
-            return output_shape
-        else:
-            return self.output_shape
+    dim = 1
+    for i in self.output_shape:
+      if i != -1:
+        dim *= i
+    missing_dim = int(total_input_dims / dim)
 
-    def initialize(self, *args, **kwargs) -> None:
-        pass
+    output_shape = self.output_shape
+    for ix, dim in enumerate(output_shape):
+      if dim == -1:
+        output_shape[ix] = missing_dim
 
-    def forward(self, x):
-        y = self.prot.reshape(x, self.output_shape)
-        self.layer_output = y
-        return y
+    return output_shape
 
-    def backward(self, *args, **kwargs):
-        raise NotImplementedError
+  def initialize(self, *args, **kwargs) -> None:
+    pass
+
+  def forward(self, x):
+    y = self.prot.reshape(x, self.output_shape)
+    self.layer_output = y
+    return y
+
+  def backward(self, *args, **kwargs):
+    raise NotImplementedError()

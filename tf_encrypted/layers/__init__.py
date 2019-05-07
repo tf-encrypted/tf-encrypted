@@ -1,3 +1,4 @@
+"""Higher-level layer abstractions built on TF Encrypted."""
 from __future__ import absolute_import
 
 from .pooling import MaxPooling2D
