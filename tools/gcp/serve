@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
+"""Serve a TFE Player."""
 
 import os
 import sys
 import subprocess
 
-INSTANCE_NAMES = [name.strip() for arg in sys.argv[1:] for name in os.path.expandvars(arg).split(' ') if name]
+INSTANCE_NAMES = [name.strip() for arg in sys.argv[1:]
+                  for name in os.path.expandvars(arg).split(' ') if name]
 
 CMD_KILL = "gcloud compute ssh {name} --command='killall screen'"
 for name in INSTANCE_NAMES:
-    subprocess.call(CMD_KILL.format(name=name), shell=True)
+  subprocess.call(CMD_KILL.format(name=name), shell=True)
 
-CMD_SERVE = "gcloud compute ssh {name} --command='screen -dmS tfe python3 -m tf_encrypted.player {name}'"
+CMD_SERVE = """gcloud compute ssh {name} --command='screen -dmS tfe python3
+ -m tf_encrypted.player {name}'""".rstrip()
 for name in INSTANCE_NAMES:
-    subprocess.call(CMD_SERVE.format(name=name), shell=True)
+  subprocess.call(CMD_SERVE.format(name=name), shell=True)
