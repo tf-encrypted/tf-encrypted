@@ -1,26 +1,33 @@
 """Various sources for providing generalized Beaver triples for the Pond
 protocol."""
 import abc
+import logging
 import random
 
 import tensorflow as tf
 
-from ...utils import wrap_in_variables
+from ...config import get_config
+from ...utils import wrap_in_variables, reachable_nodes, unwrap_fetches
+
+
+logging.basicConfig()
+logger = logging.getLogger('tf_encrypted')
+logger.setLevel(logging.DEBUG)
 
 
 class TripleSource(abc.ABC):
   """Base class for triples sources."""
 
   @abc.abstractmethod
-  def cache(self, a):
+  def cache(self, a, cache_updater):
     pass
 
   @abc.abstractmethod
-  def initialize(self, sess, tag=None):
+  def initializer(self):
     pass
 
   @abc.abstractmethod
-  def generate_triples(self, sess, fetches, tag=None):
+  def generate_triples(self, fetches):
     pass
 
 
@@ -31,9 +38,10 @@ class BaseTripleSource(TripleSource):
   """
 
   def __init__(self, player0, player1, producer):
-    self.player0 = player0
-    self.player1 = player1
-    self.producer = producer
+    config = get_config()
+    self.player0 = config.get_player(player0) if player0 else None
+    self.player1 = config.get_player(player1) if player1 else None
+    self.producer = config.get_player(producer) if producer else None
 
   def mask(self, backing_dtype, shape):
 
@@ -188,76 +196,93 @@ class OnlineTripleSource(BaseTripleSource):
   def __init__(self, producer):
     super().__init__(None, None, producer)
 
-  def initialize(self, sess, tag=None):
-    pass
-
-  def generate_triples(self, sess, fetches, tag=None):
-    pass
-
-  def cache(self, a):
+  def cache(self, a, cache_updater):
     with tf.device(self.producer.device_name):
       updater, [a_cached] = wrap_in_variables(a)
     return updater, a_cached
+
+  def initializer(self):
+    return tf.no_op()
+
+  def generate_triples(self, fetches):
+    return []
 
   def _build_queues(self, c0, c1):
     return c0, c1
 
 
-# pylint: disable=pointless-string-statement
-"""
-class QueuedTripleSource(BaseTripleSource):
+class QueuedOnlineTripleSource(BaseTripleSource):
+  """
+  Similar to `OnlineTripleSource` but with in-memory buffering backed by
+  `tf.FIFOQueue`s.
+  """
 
-    # TODO(Morten) manually unwrap and re-wrap of queued values, should be
-    #              hidden away
+  def __init__(self, player0, player1, producer, capacity=10):
+    super().__init__(player0, player1, producer)
+    self.capacity = capacity
+    self.queues = list()
+    self.triggers = dict()
 
-    def __init__(self, player0, player1, producer, capacity=10):
-        super().__init__(player0, player1, producer)
-        self.capacity = capacity
-        self.enqueuers = list()
-        self.sizes = list()
+  def cache(self, a, cache_updater):
+    with tf.device(self.producer.device_name):
+      offline_updater, [a_cached] = wrap_in_variables(a)
+    self.triggers[cache_updater] = offline_updater
+    return tf.no_op(), a_cached
 
-    def _build_triple_store(self, mask):
+  def initializer(self):
+    return tf.no_op()
 
-        raw_mask = mask.value
-        factory = mask.factory
-        dtype = mask.factory.native_type
-        shape = mask.shape
+  def generate_triples(self, fetches):
+    if isinstance(fetches, (list, tuple)) and len(fetches) > 1:
+      logger.warning("Generating triples for a run involving more than "
+                     "one fetch may introduce non-determinism that can "
+                     "break the correspondence between the two phases "
+                     "of the computation.")
 
-        with tf.name_scope("triple-store"):
+    unwrapped_fetches = unwrap_fetches(fetches)
+    reachable_operations = [node
+                            for node in reachable_nodes(unwrapped_fetches)
+                            if isinstance(node, tf.Operation)]
+    reachable_triggers = [self.triggers[op]
+                          for op in reachable_operations
+                          if op in self.triggers]
+    return reachable_triggers
 
-            q = tf.queue.FIFOQueue(
-                capacity=self.capacity,
-                dtypes=[dtype],
-                shapes=[shape],
-            )
-            e = q.enqueue(raw_mask)
-            d = factory.tensor(q.dequeue())
+  def _build_triple_store(self, mask, player_id):
+    """
+    Adds a tf.FIFOQueue to store mask locally on player.
+    """
 
-        return e, d
+    # TODO(Morten) taking `value` doesn't work for int100
+    raw_mask = mask.value
+    factory = mask.factory
+    dtype = mask.factory.native_type
+    shape = mask.shape
 
-    def _build_queues(self, c0, c1):
+    with tf.name_scope("triple-store-{}".format(player_id)):
 
-        with tf.device(self.player0.device_name):
-            e0, d0 = self._build_triple_store(c0)
+      q = tf.queue.FIFOQueue(
+          capacity=self.capacity,
+          dtypes=[dtype],
+          shapes=[shape],
+      )
+      e = q.enqueue(raw_mask)
+      d = q.dequeue()
+      d_wrapped = factory.tensor(d)
 
-        with tf.device(self.player1.device_name):
-            e1, d1 = self._build_triple_store(c1)
+    self.queues += [q]
+    self.triggers[d.op] = e
+    return d_wrapped
 
-        self.enqueuers += [e0, e1]
-        return d0, d1
+  def _build_queues(self, c0, c1):
 
-    def cache(self, a):
-        with tf.device(self.producer.device_name):
-            updater, [a_cached] = wrap_in_variables(a)
-        return updater, a_cached
+    with tf.device(self.player0.device_name):
+      d0 = self._build_triple_store(c0, "0")
 
-    def initialize(self, sess, tag=None):
-        pass
+    with tf.device(self.player1.device_name):
+      d1 = self._build_triple_store(c1, "1")
 
-    def generate_triples(self, sess, fetches, tag=None):
-        # TODO(Morten) filter which enqueuers to run given fetches
-        sess.run(self.enqueuers, tag=tag)
-"""
+    return d0, d1
 
 
 """
@@ -287,7 +312,7 @@ class PlaceholderTripleSource(BaseTripleSource):
 
         self.placeholders += [r0, r1]
         return d0, d1
-"""
+"""  #pylint: disable=pointless-string-statement
 
 
 """
@@ -402,4 +427,4 @@ class DatasetTripleSource(BaseTripleSource):
                     serialized = tf.io.serialize_tensor(dequeue)
                     triple = sess.run(serialized, tag=tag)
                     writer.write(triple)
-"""
+"""  #pylint: disable=pointless-string-statement

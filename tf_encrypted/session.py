@@ -1,6 +1,5 @@
 """TF Encrypted extension of tf.Session."""
 import os
-from typing import List, Union
 from collections import defaultdict
 import logging
 
@@ -9,8 +8,7 @@ from tensorflow.python.client import timeline
 from tensorflow.python import debug as tf_debug
 
 from .config import RemoteConfig, get_config
-from .protocol.pond import PondPublicTensor
-from .tensor.factory import AbstractTensor
+from .utils import unwrap_fetches
 
 
 # pylint: disable=invalid-name
@@ -20,7 +18,7 @@ __TFE_DEBUG__ = bool(os.getenv('TFE_DEBUG', ""))
 __TENSORBOARD_DIR__ = str(os.getenv('TFE_EVENTS_DIR', '/tmp/tensorboard'))
 # pylint: enable=invalid-name
 
-_run_counter = defaultdict(int)  # type: Any
+_run_counter = defaultdict(int)
 
 logging.basicConfig()
 logger = logging.getLogger('tf_encrypted')
@@ -63,22 +61,6 @@ class Session(tf.Session):
       print('Session in debug mode')
       self = tf_debug.LocalCLIDebugWrapperSession(self)  # pylint: disable=self-cls-assignment
 
-  def _sanitize_fetches(self, fetches) -> Union[List, tf.Tensor, tf.Operation]:
-    """
-    Sanitize `fetches` supplied to tfe.Session.run into
-    tf.Session.run-compatible `fetches`.
-    """
-
-    if isinstance(fetches, (list, tuple)):
-      return [self._sanitize_fetches(fetch) for fetch in fetches]
-    if isinstance(fetches, (tf.Tensor, tf.Operation)):
-      return fetches
-    if isinstance(fetches, PondPublicTensor):
-      return fetches.decode()
-    if isinstance(fetches, AbstractTensor):
-      return fetches.to_native()
-    raise TypeError("Don't know how to fetch {}".format(type(fetches)))
-
   def run(
       self,
       fetches,
@@ -111,7 +93,7 @@ class Session(tf.Session):
       in Tensorboard.
     """
 
-    sanitized_fetches = self._sanitize_fetches(fetches)
+    sanitized_fetches = unwrap_fetches(fetches)
 
     if not __TFE_EVENTS__ or tag is None:
       fetches_out = super(Session, self).run(

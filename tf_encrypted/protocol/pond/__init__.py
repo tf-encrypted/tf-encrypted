@@ -5,6 +5,7 @@ from .pond import Pond
 from .pond import PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
 from .pond import TFEVariable, TFETensor, TFEInputter
 from .pond import _type
+from .triple_sources import OnlineTripleSource, QueuedOnlineTripleSource
 
 __all__ = [
     "Pond",
@@ -17,4 +18,6 @@ __all__ = [
     "TFETensor",
     "TFEInputter",
     "_type",
+    "OnlineTripleSource",
+    "QueuedOnlineTripleSource",
 ]
