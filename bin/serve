@@ -1,24 +1,14 @@
 #!/usr/bin/env python
+"""Spin up a TFE cluster for handling serving requests."""
 
 import sys
 import os
-import json
-import uuid
 import time
-import re
-import argparse
-import time
-import calendar
-from pathlib import Path
-from urllib import request as urlDownloader
-from threading import Thread
-from typing import Dict, Any, Tuple, Callable, List
+from typing import Callable, List
 
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 import numpy as np
-from flask import Flask, request, jsonify  # type: ignore
-from flask_cors import CORS  # type: ignore
 
 import tf_encrypted as tfe
 from tf_encrypted.protocol import Pond, SecureNN
@@ -33,60 +23,70 @@ number_of_reqs = os.environ.get('TFE_NUMBER_REQUESTS')
 port = int(os.environ.get('TFE_API_PORT', "8080"))
 batch_size = int(os.environ.get('TFE_BATCH_SIZE', 1))
 protocol_name = str(os.environ.get('TFE_PROTOCOL_NAME', 'securenn'))
-enable_stats_monitor = os.environ.get('TFE_MONITOR_STATS') is not None
+enable_events_monitor = os.environ.get('TFE_MONITOR_EVENTS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
 enable_debug = os.environ.get('TFE_DEBUG') is not None
 
 env_truncation = os.environ.get('TFE_TRUNCATION_TYPE') or ""
 interactive_truncation = True
 if str.upper(env_truncation) == 'NON_INTERACTIVE':
-    interactive_truncation = False
+  interactive_truncation = False
 
 
 def fixed_config():
-    if tensorflow_supports_int64():
-        if interactive_truncation:
-            print('using fixed64 interactive truncation')
-            return fixed.fixed64
-        else:
-            print('using fixed64 non interactive truncation')
-            return fixed.fixed64_ni
-
+  """Determines the fixed-point configuraiton to use."""
+  if tensorflow_supports_int64():
     if interactive_truncation:
-        print('using fixed100 interactive truncation')
-        return fixed.fixed100
-    else:
-        print('using fixed100 non interactive truncation')
-        return fixed.fixed100_ni
+      print('using fixed64 interactive truncation')
+      return fixed.fixed64
+    print('using fixed64 non interactive truncation')
+    return fixed.fixed64_ni
+  if interactive_truncation:
+    print('using fixed100 interactive truncation')
+    return fixed.fixed100
+  print('using fixed100 non interactive truncation')
+  return fixed.fixed100_ni
 
 
 if node_name is None:
-    print("The node_name of this node must be provided via the 'TFE_NODE_NAME' environment variable")
-    sys.exit(1)
+  err = ("The node_name of this node must be provided via"
+         "the 'TFE_NODE_NAME' environment variable")
+  print(err)
+  sys.exit(1)
 
 if server0_address is None:
-    print("The address for server 0 must be provided via the 'TFE_SERVER0_ADDRESS' environment variable")
-    sys.exit(1)
+  err = ("The address for server 0 must be provided via"
+         "the 'TFE_SERVER0_ADDRESS' environment variable")
+  print(err)
+  sys.exit(1)
 
 if server1_address is None:
-    print("The address for server 1 must be provided via the 'TFE_SERVER1_ADDRESS' environment variable")
-    sys.exit(1)
+  err = ("The address for server 1 must be provided via"
+         "the 'TFE_SERVER1_ADDRESS' environment variable")
+  print(err)
+  sys.exit(1)
 
 if producer_address is None:
-    print("The address for the producer must be provided via the 'TFE_CRYPTO_PRODUCER_ADRESS' environment variable")
-    sys.exit(1)
+  err = ("The address for the producer must be provided via"
+         "the 'TFE_CRYPTO_PRODUCER_ADRESS' environment variable")
+  print(err)
+  sys.exit(1)
 
 if provider_address is None:
-    print("The address for the weights provider must be provided via the 'TFE_WEIGHTS_PROVIDER_ADDRESS' environment variable")
-    sys.exit(1)
+  err = ("The address for the weights provider must be provided via"
+         "the 'TFE_WEIGHTS_PROVIDER_ADDRESS' environment variable")
+  print(err)
+  sys.exit(1)
 
 if master_address is None:
-    print("The address for master must be provided via the 'TFE_MASTER_ADDRESS' environment variable")
-    sys.exit(1)
+  err = ("The address for master must be provided via"
+         "the 'TFE_MASTER_ADDRESS' environment variable")
+  print(err)
+  sys.exit(1)
 
-tfe.setMonitorStatsFlag(enable_stats_monitor)
-tfe.setTFETraceFlag(enable_traces)
-tfe.setTFEDebugFlag(enable_debug)
+tfe.set_tfe_events_flag(enable_events_monitor)
+tfe.set_tfe_trace_flag(enable_traces)
+tfe.set_tfe_debug_flag(enable_debug)
 
 remote_config = tfe.RemoteConfig(
     {
@@ -95,90 +95,102 @@ remote_config = tfe.RemoteConfig(
         'server1': server1_address,
         'crypto-producer': producer_address,
         'weights-provider': provider_address
-    },
-    master='master'
+    }
 )
 
 tfe.set_config(remote_config)
 
 if protocol_name == 'securenn':
-    tfe.set_protocol(SecureNN())
+  tfe.set_protocol(SecureNN())
 else:
-    tfe.set_protocol(Pond())
+  tfe.set_protocol(Pond())
 
 print('Using protocol: {}'.format(protocol_name))
 server = remote_config.server(node_name)
 if node_name != 'master':
-    server.join()
+  server.join()
 else:
 
-    _global_memory = {}
+  _global_memory = {}
 
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    input_spec = []
-    model_file = 'model.pb'
-    with gfile.GFile(model_file, 'rb') as f:
-        print('Loading model: {}'.format(model_file))
-        graph_def = tf.GraphDef()
-        graph_def.ParseFromString(f.read())
+  input_spec = []
+  model_file = 'model.pb'
+  with gfile.GFile(model_file, 'rb') as f:
+    print('Loading model: {}'.format(model_file))
+    graph_def = tf.GraphDef()
+    graph_def.ParseFromString(f.read())
 
-        for node in graph_def.node:
-            if node.op != "Placeholder":
-                continue
+    for node in graph_def.node:
+      if node.op != "Placeholder":
+        continue
 
-            input_spec.append({
-                'name': node.name,
-                'dtype': node.attr['dtype'].type,
-                'shape': [batch_size] + [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
-            })
+      not_batch = [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
+      input_shape = [batch_size] + not_batch
 
-    sess = tfe.Session()
+      input_spec.append({
+          'name': node.name,
+          'dtype': node.attr['dtype'].type,
+          'shape': input_shape
+      })
 
-    pls = []
-    inputs = []
-    for i, spec in enumerate(input_spec):
-        def scope(i: int) -> Callable[[], tf.Tensor]:
-            def provide_input() -> tf.Tensor:
-                pl = tf.placeholder(tf.float32, shape=spec['shape'], name="api/{}".format(i))
-                pls.append(pl)
-                return pl
+  sess = tfe.Session()
 
-            return provide_input
+  pls = []
+  inputs = []
+  for i, spec in enumerate(input_spec):
+    def scope(provider_index, spec_in: dict) -> Callable[[], tf.Tensor]:
+      def provide_input() -> tf.Tensor:
+        pl = tf.placeholder(
+            tf.float32,
+            shape=spec_in['shape'],
+            name="api/{}".format(provider_index))
+        pls.append(pl)
+        return pl
 
-        inputs.append(scope(i))
+      return provide_input
 
-    def predict(input_data: List[np.ndarray]) -> None:
-        feed_dict = {pl: input_data[i] for i, pl in enumerate(pls)}
-        output_data = sess.run(y, feed_dict=feed_dict, tag='prediction')
+    inputs.append(scope(i, spec))
 
-    print('Securing computation')
-    secure_start = time.time()
-    c = tfe.convert.convert.Converter(remote_config, tfe.get_protocol(), remote_config.get_player('weights-provider'))
-    y = c.convert(graph_def, tfe.convert.registry(), remote_config.get_player('master'), inputs)
-    # TODO: do not reveal on the master server
-    y = y.reveal()
-    secure_end = time.time()
-    print("Graph secured in {}".format(secure_end - secure_start))
+  def predict(input_data: List[np.ndarray]) -> None:
+    feed_dict = {pl: input_data[i] for i, pl in enumerate(pls)}
+    output_data = sess.run(y, feed_dict=feed_dict, tag='prediction')
+    return output_data
 
-    print('Initializing variables')
-    init_start = time.time()
-    sess.run(tfe.global_variables_initializer(), tag='init')
-    init_end = time.time()
-    print("Graph initialized in {}".format(init_end - init_start))
+  print('Securing computation')
+  secure_start = time.time()
+  c = tfe.convert.convert.Converter(
+      remote_config,
+      tfe.get_protocol(),
+      remote_config.get_player('weights-provider'))
+  y = c.convert(graph_def, tfe.convert.registry(),
+                remote_config.get_player('master'), inputs)
+  # TODO: do not reveal on the master server
+  y = y.reveal()
+  secure_end = time.time()
+  print("Graph secured in {}".format(secure_end - secure_start))
 
-    print("Warming up the graph")
-    warmup_data = [np.random.standard_normal(spec['shape']).tolist() for spec in input_spec]
-    warmup_start = time.time()
-    predict(warmup_data)
-    warmup_end = time.time()
-    print("Graph warmed up in {}".format(warmup_end - warmup_start))
-    print('Serving model')
+  print('Initializing variables')
+  init_start = time.time()
+  sess.run(tfe.global_variables_initializer(), tag='init')
+  init_end = time.time()
+  print("Graph initialized in {}".format(init_end - init_start))
 
-    print('running the graph')
+  print("Warming up the graph")
+  warmup_data = [np.random.standard_normal(
+      spec['shape']).tolist() for spec in input_spec]
+  warmup_start = time.time()
+  predict(warmup_data)
+  warmup_end = time.time()
+  print("Graph warmed up in {}".format(warmup_end - warmup_start))
+  print('Serving model')
 
-    run_data = [np.random.standard_normal(spec['shape']).tolist() for spec in input_spec]
-    runs = []
-    for x in range(0, int(number_of_reqs)):
-        predict(run_data)
-        print('finished epoch {} of {}'.format(x + 1, number_of_reqs))
+  print('running the graph')
+
+  run_data = [np.random.standard_normal(
+      spec['shape']).tolist() for spec in input_spec]
+  runs = []
+  for x in range(0, int(number_of_reqs)):
+    predict(run_data)
+    print('finished epoch {} of {}'.format(x + 1, number_of_reqs))

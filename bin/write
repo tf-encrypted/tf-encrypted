@@ -1,17 +1,17 @@
 #!/usr/bin/env python
+"""Write the results of a TFE serving job to a GCS bucket."""
 
-import json
 import os
 import calendar
 import time
 
 from google.cloud import storage
-from google.auth import compute_engine
 
 NAME = os.environ.get('TFE_BENCHMARK_NAME', calendar.timegm(time.gmtime()))
 
 
-storage_client = storage.Client.from_service_account_json('service_account.json')
+storage_client = storage.Client.from_service_account_json(
+    'service_account.json')
 bucket = storage_client.get_bucket('tfe-benchmark-results')
 
 results_blob_name = '{}/results.npy'.format(NAME)

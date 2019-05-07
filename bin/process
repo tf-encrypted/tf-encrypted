@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Parses simple prediction time benchmarks from a TFE trace directory"""
 
 import glob
 import json
@@ -16,37 +17,45 @@ trace_path = trace_dir + "/*.ctr"
 
 
 def parse_tracefile(filename):
+  """Parses a trace file for event timestamps relevant to predictions.
 
-    with open(filename, 'r') as f:
-        raw = json.load(f)
+  Args:
+    filename: `str`, file with trace events.
 
-    if 'traceEvents' not in raw:
-        return None
+  Returns:
+    `float` of difference between earliest and latest timestamps.
+  """
 
-    traceEvents = raw['traceEvents']
+  with open(filename, 'r') as f:
+    raw = json.load(f)
 
-    timestamps = (
-        (
-            event['ts'],
-            event['ts'] + event['dur']
-        )
-        for event in traceEvents
-        if 'ts' in event and 'dur' in event
-    )
-    timestamps = sorted(timestamps, key=lambda x: x[1])
+  if 'trace_events' not in raw:
+    return None
 
-    min_ts = timestamps[0]
-    max_ts = timestamps[-1]
-    return max_ts[1] - min_ts[0]
+  trace_events = raw['trace_events']
+
+  timestamps = (
+      (
+          event['ts'],
+          event['ts'] + event['dur']
+      )
+      for event in trace_events
+      if 'ts' in event and 'dur' in event
+  )
+  timestamps = sorted(timestamps, key=lambda x: x[1])
+
+  min_ts = timestamps[0]
+  max_ts = timestamps[-1]
+  return max_ts[1] - min_ts[0]
 
 
 durations = []
 
-for filename in glob.glob(trace_path):
-    # Exclude init0.ctr and prediction0.ctr as they don't reflect the real prediction time.
-    if ("init0.ctr" not in filename) & ("prediction0.ctr" not in filename):
-        duration = parse_tracefile(filename)
-        durations.append(duration)
+for file in glob.glob(trace_path):
+  # Exclude init0.ctr and prediction0.ctr as they don't reflect the real prediction time.
+  if ("init0.ctr" not in file) & ("prediction0.ctr" not in file):
+    duration = parse_tracefile(file)
+    durations.append(duration)
 
 summary = """Summary statistics
 
@@ -70,4 +79,4 @@ np.save('results.npy', durations)
 print(summary)
 
 with open("summary.txt", "w") as summary_file:
-    summary_file.write(summary)
+  summary_file.write(summary)
