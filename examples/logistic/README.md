@@ -2,7 +2,7 @@
 
 The examples are as follows:
 
-- [`prediction-single.py`](./prediction-single.py) shows how a single client can run a private prediction
-- [`prediction-joint.py`](./prediction-joint.py) shows how several clients can combine features for a prediction
-- [`training-single.py`](./training-single.py) shows how a model can be privately trained on data from a single owner
-- [`training-joint.py`](./training-joint.py) shows how several data owners can jointly train on their combined data
+- [`prediction_single.py`](./prediction_single.py) shows how a single client can run a private prediction
+- [`prediction_joint.py`](./prediction_joint.py) shows how several clients can combine features for a prediction
+- [`training_single.py`](./training_single.py) shows how a model can be privately trained on data from a single owner
+- [`training_joint.py`](./training_joint.py) shows how several data owners can jointly train on their combined data
