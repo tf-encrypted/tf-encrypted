@@ -1,11 +1,17 @@
+"""Provide classes to perform private training
+
+and private prediction with logistic regression
+"""
 import tensorflow as tf
+# pylint:  disable=redefined-outer-name
 import tf_encrypted as tfe
 
 
 class LogisticRegression:
-
+  """Contains methods to build and train logistic regression."""
   def __init__(self, num_features):
-    self.w = tfe.define_private_variable(tf.random_uniform([num_features, 1], -0.01, 0.01))
+    self.w = tfe.define_private_variable(
+        tf.random_uniform([num_features, 1], -0.01, 0.01))
     self.w_masked = tfe.mask(self.w)
     self.b = tfe.define_private_variable(tf.zeros([1]))
     self.b_masked = tfe.mask(self.b)
@@ -50,24 +56,34 @@ class LogisticRegression:
       sess.run(fit_batch_op, tag='fit-batch')
 
   def evaluate(self, sess, x, y, data_owner):
-
+    """Return the accuracy"""
     def print_accuracy(y_hat, y) -> tf.Operation:
       with tf.name_scope("print-accuracy"):
         correct_prediction = tf.equal(tf.round(y_hat), y)
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        print_op = tf.print("Accuracy on {}:".format(data_owner.player_name), accuracy)
+        print_op = tf.print("Accuracy on {}:".format(data_owner.player_name),
+                            accuracy)
         return print_op
 
     with tf.name_scope("evaluate"):
       y_hat = self.forward(x)
-      print_accuracy_op = tfe.define_output(data_owner.player_name, [y_hat, y], print_accuracy)
+      print_accuracy_op = tfe.define_output(data_owner.player_name,
+                                            [y_hat, y],
+                                            print_accuracy)
 
     sess.run(print_accuracy_op, tag='evaluate')
 
 
 class DataOwner:
-
-  def __init__(self, player_name, num_features, training_set_size, test_set_size, batch_size):
+  """Contains code meant to be executed by a data owner Player."""
+  def __init__(
+      self,
+      player_name,
+      num_features,
+      training_set_size,
+      test_set_size,
+      batch_size
+  ):
     self.player_name = player_name
     self.num_features = num_features
     self.training_set_size = training_set_size
@@ -81,7 +97,10 @@ class DataOwner:
     return tf.group(self.train_initializer, self.test_initializer)
 
   def provide_training_data(self):
+    """Preprocess training dataset
 
+    Return single batch of training dataset
+    """
     def norm(x, y):
       return tf.cast(x, tf.float32), tf.expand_dims(y, 0)
 
@@ -108,7 +127,10 @@ class DataOwner:
     return x, y
 
   def provide_testing_data(self):
+    """Preprocess testing dataset
 
+    Return single batch of testing dataset
+    """
     def norm(x, y):
       return tf.cast(x, tf.float32), tf.expand_dims(y, 0)
 
@@ -134,7 +156,7 @@ class DataOwner:
 
 
 class ModelOwner:
-
+  """Contains code meant to be executed by a model owner Player."""
   def __init__(self, player_name):
     self.player_name = player_name
 
@@ -143,7 +165,7 @@ class ModelOwner:
 
 
 class PredictionClient:
-
+  """Contains methods meant to be executed by a prediction client."""
   def __init__(self, player_name, num_features):
     self.player_name = player_name
     self.num_features = num_features
