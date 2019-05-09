@@ -179,10 +179,10 @@ def _keras_dense(converter, interiors, inputs):
   x_in = converter.outputs[inputs[0]]
 
   kernel = interiors["kernel"]
-  k = nodef_to_private_pond(converter, kernel)
+  k = _nodef_to_private_pond(converter, kernel)
   try:
     bias = interiors["bias"]
-    b = nodef_to_private_pond(converter, bias)
+    b = _nodef_to_private_pond(converter, bias)
   except KeyError:
     b = None
 
@@ -364,11 +364,11 @@ def _gather(converter, node: Any, inputs: List[str]) -> Any:
   axis = converter.outputs[inputs[2]]
 
   if isinstance(x_in, tf.NodeDef):
-    input_out = nodef_to_private_pond(converter, x_in)
+    input_out = _nodef_to_private_pond(converter, x_in)
   else:
     input_out = x_in
 
-  indices_out = list(nodef_to_numpy_array(indices))
+  indices_out = list(_nodef_to_numpy_array(indices))
 
   axis_val = axis.attr["value"].tensor.int_val[0]
 

@@ -41,7 +41,7 @@ TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 TF_INT_TYPES = [tf.int8, tf.int16, tf.int32, tf.int64]
 
 _initializers = list()
-_thismodule = sys.modules[__name__]
+_THISMODULE = sys.modules[__name__]
 
 
 class Pond(Protocol):
@@ -300,7 +300,7 @@ class Pond(Protocol):
     Define a private variable.
 
     This will take the passed value and construct shares that will be split up
-    between those involved in the computationself.
+    between those involved in the computation.
 
     For example, in a two party architecture, this will split the value into
     two sets of shares and transfer them between each party in a secure manner.
@@ -1245,7 +1245,7 @@ class Pond(Protocol):
     func_name = "_{}_{}".format(base_name, suffix)
 
     if container is None:
-      container = _thismodule
+      container = _THISMODULE
 
     func = getattr(container, func_name, None)
     if func is not None:

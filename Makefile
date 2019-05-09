@@ -72,7 +72,8 @@ $(BUILD_CONVERTER_README): $(BUILD_RESERVED_SCOPES) pythoncheck
 	python -m tf_encrypted.convert.gen.generate_reserved_scopes
 
 lint: $(BUILD_CONVERTER_README) pythoncheck
-	pylint -j 0 tf_encrypted examples bin tools operations
+	pylint tf_encrypted examples operations
+	pylint bin/run bin/process bin/pull_model bin/serve bin/write
 
 typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted

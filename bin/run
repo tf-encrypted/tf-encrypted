@@ -117,14 +117,14 @@ if config.data_prep_path:
         config.batch_size,
         config.data_prep_start_node,
         config.data_prep_end_node,
-      )
+    )
 
   inputs.append(provide_input)
 else:
   for i, spec in enumerate(input_spec):
 
     def scope(provider_index, spec_in: dict):
-      def provide_input() -> tf.Tensor:
+      def provide_input() -> tf.Tensor:  # pylint: disable=redefined-outer-name
         pl = tf.placeholder(
             tf.float32,
             shape=spec_in['shape'],
@@ -159,24 +159,24 @@ if config.plaintext:
 
     # TODO This isn't a good way to get the input/output nodes and we
     #      shouldn't hardcode the input either!
-    logger.info('running, {}, predictions', runs)
+    logger.info('running %s predictions', runs)
     for x in range(0, runs + 1): # first run is warmup
       output = sess.graph.get_operations()[-2].values()[0]
       x_input = sess.graph.get_operations()[0].values()[0]
       sess.run(output, {x_input: input_data}, tag='prediction')
       if x % 10 == 0:
-        logger.info('ran {} iterations', x)
+        logger.info('ran %s iterations', x)
 
-    logger.info('ran {} iterations', x)
+    logger.info('ran %s iterations', x)
 
 else:
   logger.info('running prediction securely')
   c = tfe.convert.convert.Converter()
   y = c.convert(graph_def, tfe.convert.registry(), 'input-provider', inputs)
 
-  def reveal_output(sess, y, feed_dict):
-    run_op = y.reveal()
-    return sess.run(run_op, feed_dict=feed_dict, tag='prediction')
+  def reveal_output(session, out, feed):
+    run_op = out.reveal()
+    return session.run(run_op, feed_dict=feed, tag='prediction')
 
   if not config.data_prep_path:
     pls = []
@@ -184,7 +184,7 @@ else:
       if i == 0:
         name = "private-input/api/{}:0".format(i)
       else:
-        name = "private-input_{}/api/{}:0".format(i, i)
+        name = "private-input_{i}/api/{i}:0".format(i=i)
       pls.append(tf.get_default_graph().get_tensor_by_name(name))
 
     feed_dict = {pl: input_data[i] for i, pl in enumerate(pls)}
@@ -196,13 +196,13 @@ else:
     sess.run(tf.global_variables_initializer())
     logger.info("warming up")
     output = reveal_output(sess, y, feed_dict)
-    logger.info('output: {}', output)
+    logger.info('output: %s', output)
 
-    logger.info('running {} predictions', runs)
+    logger.info('running %s predictions', runs)
     for x in range(0, runs):
       output = reveal_output(sess, y, feed_dict)
       if x % 10 == 0:
-        logger.info('{} iterations complete so far', x)
+        logger.info('%s iterations complete so far', x)
 
-    logger.info('{} iterations complete', x)
+    logger.info('%s iterations complete', x)
     logger.info('done')

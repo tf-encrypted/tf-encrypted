@@ -9,7 +9,7 @@ import tensorflow as tf
 from ..tensor.factory import AbstractTensor
 
 
-__protocol__ = None
+__PROTOCOL__ = None  # pylint: disable=invalid-name
 nodes = dict()
 
 
@@ -54,8 +54,8 @@ def set_protocol(prot: Protocol) -> None:
 
   :param Protocol prot: An instance of a tfe protocol.
   """
-  global __protocol__
-  __protocol__ = prot
+  global __PROTOCOL__  # pylint: disable=invalid-name
+  __PROTOCOL__ = prot
 
 
 def get_protocol() -> Optional[Protocol]:
@@ -64,7 +64,7 @@ def get_protocol() -> Optional[Protocol]:
 
   Returns the current global protocol.
   """
-  return __protocol__
+  return __PROTOCOL__
 
 
 def memoize(func: Callable) -> Callable:
