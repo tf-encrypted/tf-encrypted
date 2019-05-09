@@ -17,7 +17,7 @@ from .shared import binarize, conv2d, im2col
 from ..operations import secure_random
 
 
-def native_factory(native_type, explicit_modulus=None):
+def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=invalid-name
   """Constructs the native tensor Factory."""
 
   class Factory(AbstractFactory):
@@ -60,25 +60,25 @@ def native_factory(native_type, explicit_modulus=None):
 
     @property
     def min(self):
-      if explicit_modulus is not None:
+      if EXPLICIT_MODULUS is not None:
         return 0
-      return native_type.min
+      return NATIVE_TYPE.min
 
     @property
     def max(self):
-      if explicit_modulus is not None:
-        return explicit_modulus
-      return native_type.max
+      if EXPLICIT_MODULUS is not None:
+        return EXPLICIT_MODULUS
+      return NATIVE_TYPE.max
 
     @property
     def modulus(self) -> int:
-      if explicit_modulus is not None:
-        return explicit_modulus
-      return native_type.max - native_type.min + 1
+      if EXPLICIT_MODULUS is not None:
+        return EXPLICIT_MODULUS
+      return NATIVE_TYPE.max - NATIVE_TYPE.min + 1
 
     @property
     def native_type(self):
-      return native_type
+      return NATIVE_TYPE
 
     def sample_uniform(self,
                        shape,
@@ -89,7 +89,7 @@ def native_factory(native_type, explicit_modulus=None):
       maxval = maxval or self.max
 
       if secure_random.supports_seeded_randomness():
-        seed = secure_random.get_seed()
+        seed = secure_random.secure_seed()
         return UniformTensor(shape=shape,
                              seed=seed,
                              minval=minval,
@@ -103,7 +103,7 @@ def native_factory(native_type, explicit_modulus=None):
           shape=shape,
           minval=minval,
           maxval=maxval,
-          dtype=master_factory.native_type
+          dtype=NATIVE_TYPE
       )
       return DenseTensor(value)
 
@@ -112,7 +112,7 @@ def native_factory(native_type, explicit_modulus=None):
       assert maxval <= self.max
 
       if secure_random.supports_seeded_randomness():
-        seed = secure_random.get_seed()
+        seed = secure_random.secure_seed()
         return UniformTensor(shape=shape,
                              seed=seed,
                              minval=0,
@@ -126,7 +126,7 @@ def native_factory(native_type, explicit_modulus=None):
           shape=shape,
           minval=0,
           maxval=maxval,
-          dtype=master_factory.native_type
+          dtype=NATIVE_TYPE
       )
       return DenseTensor(value)
 
@@ -143,7 +143,7 @@ def native_factory(native_type, explicit_modulus=None):
       value = tf.concat([x.value for x in xs], axis=axis)
       return DenseTensor(value)
 
-  master_factory = Factory()
+  FACTORY = Factory()  # pylint: disable=invalid-name
 
   def _lift(x, y) -> Tuple['Tensor', 'Tensor']:
 
@@ -179,18 +179,18 @@ def native_factory(native_type, explicit_modulus=None):
       return self.value
 
     def bits(self, factory=None) -> AbstractTensor:
-      factory = factory or master_factory
-      if explicit_modulus is None:
+      factory = factory or FACTORY
+      if EXPLICIT_MODULUS is None:
         return factory.tensor(binarize(self.value))
-      bitsize = bitsize = math.ceil(math.log2(explicit_modulus))
-      return factory.tensor(binarize(self.value % explicit_modulus, bitsize))
+      bitsize = bitsize = math.ceil(math.log2(EXPLICIT_MODULUS))
+      return factory.tensor(binarize(self.value % EXPLICIT_MODULUS, bitsize))
 
     def __repr__(self) -> str:
       return '{}(shape={})'.format(type(self), self.shape)
 
     @property
     def factory(self):
-      return master_factory
+      return FACTORY
 
     def __add__(self, other):
       x, y = _lift(self, other)
@@ -228,29 +228,29 @@ def native_factory(native_type, explicit_modulus=None):
     def add(self, other):
       x, y = _lift(self, other)
       value = x.value + y.value
-      if explicit_modulus is not None:
-        value %= explicit_modulus
+      if EXPLICIT_MODULUS is not None:
+        value %= EXPLICIT_MODULUS
       return DenseTensor(value)
 
     def sub(self, other):
       x, y = _lift(self, other)
       value = x.value - y.value
-      if explicit_modulus is not None:
-        value %= explicit_modulus
+      if EXPLICIT_MODULUS is not None:
+        value %= EXPLICIT_MODULUS
       return DenseTensor(value)
 
     def mul(self, other):
       x, y = _lift(self, other)
       value = x.value * y.value
-      if explicit_modulus is not None:
-        value %= explicit_modulus
+      if EXPLICIT_MODULUS is not None:
+        value %= EXPLICIT_MODULUS
       return DenseTensor(value)
 
     def matmul(self, other):
       x, y = _lift(self, other)
       value = tf.matmul(x.value, y.value)
-      if explicit_modulus is not None:
-        value %= explicit_modulus
+      if EXPLICIT_MODULUS is not None:
+        value %= EXPLICIT_MODULUS
       return DenseTensor(value)
 
     def im2col(self, h_filter, w_filter, padding, stride):
@@ -258,7 +258,7 @@ def native_factory(native_type, explicit_modulus=None):
       return DenseTensor(i2c)
 
     def conv2d(self, other, stride: int, padding: str = 'SAME'):
-      if explicit_modulus is not None:
+      if EXPLICIT_MODULUS is not None:
         # TODO(Morten) any good reason this wasn't implemented for PrimeTensor?
         raise NotImplementedError()
       x, y = _lift(self, other)
@@ -274,8 +274,8 @@ def native_factory(native_type, explicit_modulus=None):
 
     def mod(self, k: int):
       value = self.value % k
-      if explicit_modulus is not None:
-        value %= explicit_modulus
+      if EXPLICIT_MODULUS is not None:
+        value %= EXPLICIT_MODULUS
       return DenseTensor(value)
 
     def transpose(self, perm):
@@ -296,14 +296,14 @@ def native_factory(native_type, explicit_modulus=None):
 
     def negative(self):
       value = tf.negative(self.value)
-      if explicit_modulus is not None:
-        value %= explicit_modulus
+      if EXPLICIT_MODULUS is not None:
+        value %= EXPLICIT_MODULUS
       return DenseTensor(value)
 
     def reduce_sum(self, axis, keepdims=None):
       value = tf.reduce_sum(self.value, axis, keepdims)
-      if explicit_modulus is not None:
-        value %= explicit_modulus
+      if EXPLICIT_MODULUS is not None:
+        value %= EXPLICIT_MODULUS
       return DenseTensor(value)
 
     def cumsum(self, axis, exclusive, reverse):
@@ -311,18 +311,18 @@ def native_factory(native_type, explicit_modulus=None):
                         axis=axis,
                         exclusive=exclusive,
                         reverse=reverse)
-      if explicit_modulus is not None:
-        value %= explicit_modulus
+      if EXPLICIT_MODULUS is not None:
+        value %= EXPLICIT_MODULUS
       return DenseTensor(value)
 
     def equal_zero(self, factory=None):
-      factory = factory or master_factory
+      factory = factory or FACTORY
       return factory.tensor(tf.cast(tf.equal(self.value, 0),
                                     dtype=factory.native_type))
 
     def equal(self, other, factory=None):
       x, y = _lift(self, other)
-      factory = factory or master_factory
+      factory = factory or FACTORY
       return factory.tensor(tf.cast(tf.equal(x.value, y.value),
                                     dtype=factory.native_type))
 
@@ -380,10 +380,10 @@ def native_factory(native_type, explicit_modulus=None):
       with tf.name_scope('expand-seed'):
         return secure_random.seeded_random_uniform(
             shape=self._shape,
-            dtype=master_factory.native_type,
+            dtype=NATIVE_TYPE,
             minval=self._minval,
             maxval=self._maxval,
-            seed_int=self._seed,
+            seed=self._seed,
         )
 
   class Constant(DenseTensor, AbstractConstant):
@@ -400,7 +400,7 @@ def native_factory(native_type, explicit_modulus=None):
     """Native Placeholder class."""
 
     def __init__(self, shape: List[int]) -> None:
-      self.placeholder = tf.placeholder(master_factory.native_type, shape=shape)
+      self.placeholder = tf.placeholder(NATIVE_TYPE, shape=shape)
       super(Placeholder, self).__init__(self.placeholder)
 
     def __repr__(self) -> str:
@@ -417,7 +417,7 @@ def native_factory(native_type, explicit_modulus=None):
 
     def __init__(self, initial_value: Union[tf.Tensor, np.ndarray]) -> None:
       self.variable = tf.Variable(
-          initial_value, dtype=master_factory.native_type, trainable=False)
+          initial_value, dtype=NATIVE_TYPE, trainable=False)
       self.initializer = self.variable.initializer
       super(Variable, self).__init__(self.variable.read_value())
 
@@ -426,10 +426,10 @@ def native_factory(native_type, explicit_modulus=None):
 
     def assign_from_native(self, value: np.ndarray) -> tf.Operation:
       assert isinstance(value, np.ndarray), type(value)
-      return self.assign_from_same(master_factory.tensor(value))
+      return self.assign_from_same(FACTORY.tensor(value))
 
     def assign_from_same(self, value: Tensor) -> tf.Operation:
       assert isinstance(value, Tensor), type(value)
       return tf.assign(self.variable, value.value).op
 
-  return master_factory
+  return FACTORY

@@ -15,9 +15,6 @@ shared_object = so_name.format(dn=dirname, tfv=tf.__version__)
 
 try:
   secure_random_module = tf.load_op_library(shared_object)
-  from secure_random_module import (secure_seeded_random_uniform,
-                                    secure_random_uniform,
-                                    secure_seed)
 except NotFoundError:
   logging.warning(
       ("Falling back to insecure randomness since the required custom op "
@@ -38,7 +35,7 @@ def seeded_random_uniform(shape,
                           minval=0,
                           maxval=None,
                           dtype=tf.int32,
-                          seed_int=None,
+                          seed=None,
                           name=None):
   """
   Returns cryptographically strong random numbers with a seed
@@ -63,17 +60,19 @@ def seeded_random_uniform(shape,
   if maxval is None:
     raise ValueError("Must specify maxval for integer dtype %r" % dtype)
 
-  if seed_int is None:
+  if seed is None:
     raise ValueError("Seed must be passed")
 
   minval = ops.convert_to_tensor(minval, dtype=dtype, name="min")
   maxval = ops.convert_to_tensor(maxval, dtype=dtype, name="max")
 
-  return secure_seeded_random_uniform(shape,
-                                      seed_int,
-                                      minval,
-                                      maxval,
-                                      name=name)
+  return secure_random_module.secure_seeded_random_uniform(
+      shape,
+      seed,
+      minval,
+      maxval,
+      name=name,
+  )
 
 
 def random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, name=None):
@@ -104,8 +103,13 @@ def random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, name=None):
   minval = ops.convert_to_tensor(minval, dtype=dtype, name="min")
   maxval = ops.convert_to_tensor(maxval, dtype=dtype, name="max")
 
-  return secure_random_uniform(shape, minval, maxval, name=name)
+  return secure_random_module.secure_random_uniform(
+      shape,
+      minval,
+      maxval,
+      name=name,
+  )
 
 
-def get_seed():
-  return secure_seed()
+def secure_seed():
+  return secure_random_module.secure_seed()

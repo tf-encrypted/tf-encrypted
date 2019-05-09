@@ -14,12 +14,12 @@ from ...tensor.shared import binarize
 from ...operations import secure_random
 
 
-def odd_factory(native_type):
+def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
   """
-  Produces a Factory for OddTensors with underlying tf.dtype native_type.
+  Produces a Factory for OddTensors with underlying tf.dtype NATIVE_TYPE.
   """
 
-  assert native_type in (tf.int32, tf.int64)
+  assert NATIVE_TYPE in (tf.int32, tf.int64)
 
   class Factory:
     """
@@ -39,11 +39,11 @@ def odd_factory(native_type):
       """
 
       if isinstance(value, tf.Tensor):
-        if value.dtype is not native_type:
-          value = tf.cast(value, dtype=native_type)
+        if value.dtype is not NATIVE_TYPE:
+          value = tf.cast(value, dtype=NATIVE_TYPE)
         # no assumptions are made about the tensor here and hence we need to
         # apply our mapping for invalid values
-        value = _map_minusone_to_zero(value, native_type)
+        value = _map_minusone_to_zero(value, NATIVE_TYPE)
         return OddDenseTensor(value)
 
       raise TypeError("Don't know how to handle {}".format(type(value)))
@@ -60,18 +60,18 @@ def odd_factory(native_type):
     @property
     def modulus(self):
 
-      if native_type is tf.int32:
+      if NATIVE_TYPE is tf.int32:
         return 2**32 - 1
 
-      if native_type is tf.int64:
+      if NATIVE_TYPE is tf.int64:
         return 2**64 - 1
 
       raise NotImplementedError(("Incorrect native type ",
-                                 "{}.".format(native_type)))
+                                 "{}.".format(NATIVE_TYPE)))
 
     @property
     def native_type(self):
-      return native_type
+      return NATIVE_TYPE
 
     def sample_uniform(self,
                        shape,
@@ -82,7 +82,7 @@ def odd_factory(native_type):
       assert maxval is None
 
       if secure_random.supports_seeded_randomness():
-        seed = secure_random.seed()
+        seed = secure_random.secure_seed()
         return OddUniformTensor(shape=shape, seed=seed)
 
       if secure_random.supports_secure_randomness():
@@ -127,10 +127,10 @@ def odd_factory(native_type):
       pass
 
     def __repr__(self) -> str:
-      return '{}(shape={}, native_type={})'.format(
+      return '{}(shape={}, NATIVE_TYPE={})'.format(
           type(self),
           self.shape,
-          native_type,
+          NATIVE_TYPE,
       )
 
     def __getitem__(self, slc):
@@ -277,9 +277,9 @@ def odd_factory(native_type):
     # to get uniform distribution over [min, max] without -1 we sample
     # [min+1, max] and shift negative values down by one
     unshifted_value = sampler(shape=shape,
-                              dtype=native_type,
-                              minval=native_type.min + 1,
-                              maxval=native_type.max)
+                              dtype=NATIVE_TYPE,
+                              minval=NATIVE_TYPE.min + 1,
+                              maxval=NATIVE_TYPE.max)
     value = tf.where(unshifted_value < 0,
                      unshifted_value + tf.ones(shape=unshifted_value.shape,
                                                dtype=unshifted_value.dtype),

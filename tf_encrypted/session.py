@@ -13,10 +13,12 @@ from .protocol.pond import PondPublicTensor
 from .tensor.factory import AbstractTensor
 
 
-__tfe_events__ = bool(os.getenv('TFE_EVENTS', ""))
-__tfe_trace__ = bool(os.getenv('TFE_TRACE', ""))
-__tfe_debug__ = bool(os.getenv('TFE_DEBUG', ""))
-__tensorboard_dir__ = str(os.getenv('TFE_EVENTS_DIR', '/tmp/tensorboard'))
+# pylint: disable=invalid-name
+__TFE_EVENTS__ = bool(os.getenv('TFE_EVENTS', ""))
+__TFE_TRACE__ = bool(os.getenv('TFE_TRACE', ""))
+__TFE_DEBUG__ = bool(os.getenv('TFE_DEBUG', ""))
+__TENSORBOARD_DIR__ = str(os.getenv('TFE_EVENTS_DIR', '/tmp/tensorboard'))
+# pylint: enable=invalid-name
 
 _run_counter = defaultdict(int)  # type: Any
 
@@ -55,9 +57,9 @@ class Session(tf.Session):
           target, config_proto))
     super(Session, self).__init__(target, graph, config_proto)
 
-    global __tfe_debug__
+    global __TFE_DEBUG__  # pylint: disable=invalid-name
 
-    if __tfe_debug__:
+    if __TFE_DEBUG__:
       print('Session in debug mode')
       self = tf_debug.LocalCLIDebugWrapperSession(self)  # pylint: disable=self-cls-assignment
 
@@ -111,14 +113,14 @@ class Session(tf.Session):
 
     sanitized_fetches = self._sanitize_fetches(fetches)
 
-    if not __tfe_events__ or tag is None:
+    if not __TFE_EVENTS__ or tag is None:
       fetches_out = super(Session, self).run(
           sanitized_fetches,
           feed_dict=feed_dict
       )
     else:
       session_tag = "{}{}".format(tag, _run_counter[tag])
-      run_tag = os.path.join(__tensorboard_dir__, session_tag)
+      run_tag = os.path.join(__TENSORBOARD_DIR__, session_tag)
       _run_counter[tag] += 1
 
       writer = tf.summary.FileWriter(run_tag, self.graph)
@@ -147,10 +149,10 @@ class Session(tf.Session):
       writer.add_run_metadata(run_metadata, session_tag)
       writer.close()
 
-      if __tfe_trace__ or write_trace:
+      if __TFE_TRACE__ or write_trace:
         tracer = timeline.Timeline(run_metadata.step_stats)
         chrome_trace = tracer.generate_chrome_trace_format()
-        trace_fname = '{}/{}.ctr'.format(__tensorboard_dir__, session_tag)
+        trace_fname = '{}/{}.ctr'.format(__TENSORBOARD_DIR__, session_tag)
         with open(trace_fname, 'w') as f:
           f.write(chrome_trace)
 
@@ -166,12 +168,12 @@ def set_tfe_events_flag(monitor_events: bool = False) -> None:
 
   :param bool monitor_events: Enable or disable stats, disabled by default.
   """
-  global __tfe_events__
+  global __TFE_EVENTS__  # pylint: disable=invalid-name
   if monitor_events is True:
     print(("Tensorflow encrypted is monitoring statistics for each",
            "session.run() call using a tag"))
 
-  __tfe_events__ = monitor_events
+  __TFE_EVENTS__ = monitor_events
 
 
 def set_tfe_debug_flag(debug: bool = False) -> None:
@@ -182,11 +184,11 @@ def set_tfe_debug_flag(debug: bool = False) -> None:
 
   :param bool debug: Enable or disable debugging, disabled by default.
   """
-  global __tfe_debug__
+  global __TFE_DEBUG__  # pylint: disable=invalid-name
   if debug is True:
     print("Tensorflow encrypted is running in DEBUG mode")
 
-  __tfe_debug__ = debug
+  __TFE_DEBUG__ = debug
 
 
 def set_tfe_trace_flag(trace: bool = False) -> None:
@@ -197,11 +199,11 @@ def set_tfe_trace_flag(trace: bool = False) -> None:
 
   :param bool trace: Enable or disable tracing, disabled by default.
   """
-  global __tfe_trace__
+  global __TFE_TRACE__  # pylint: disable=invalid-name
   if trace is True:
     logger.info("Tensorflow encrypted is dumping computation traces")
 
-  __tfe_trace__ = trace
+  __TFE_TRACE__ = trace
 
 
 def set_log_directory(path):
@@ -212,8 +214,8 @@ def set_log_directory(path):
 
   :param str path: The TensorBoard logdir.
   """
-  global __tensorboard_dir__
+  global __TENSORBOARD_DIR__  # pylint: disable=invalid-name
   if path:
     logger.info("Writing event and trace files to '%s'", path)
 
-  __tensorboard_dir__ = path
+  __TENSORBOARD_DIR__ = path

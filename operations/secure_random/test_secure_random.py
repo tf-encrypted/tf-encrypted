@@ -13,6 +13,7 @@ import tf_encrypted as tfe
 dirname = os.path.dirname(tfe.__file__)
 so_name = '{dn}/operations/secure_random/secure_random_module_tf_{tfv}.so'
 shared_object = so_name.format(dn=dirname, tfv=tf.__version__)
+notfound_msg = "secure_random_module not found"
 
 try:
   secure_random_module = tf.load_op_library(shared_object)
@@ -21,7 +22,6 @@ try:
   seed = secure_random_module.secure_seed
 except NotFoundError:
   secure_random_module = None
-  notfound_msg = "secure_random_module not found"
 
 
 @unittest.skipIf(secure_random_module is None, notfound_msg)

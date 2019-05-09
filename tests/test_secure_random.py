@@ -108,7 +108,7 @@ class TestSeed(unittest.TestCase):
 
   def test_seed_generation(self):
     with tf.Session():
-      s = secure_random.seed()
+      s = secure_random.secure_seed()
 
       minval = -2000
       maxval = 0
