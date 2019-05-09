@@ -3253,7 +3253,7 @@ def _transpose_masked(prot, x, perm=None):
 
   with tf.name_scope("transpose"):
 
-    a_t = prot.triple_source.transpose_mask(perm=perm)
+    a_t = prot.triple_source.transpose_mask(a, perm=perm)
 
     with tf.device(prot.server_0.device_name):
       a0_t = a0.transpose(perm=perm)
