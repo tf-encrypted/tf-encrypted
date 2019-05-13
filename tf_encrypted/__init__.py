@@ -12,6 +12,7 @@ from . import convert
 from . import layers
 from . import operations
 from . import protocol
+from . import keras
 
 
 _all_prot_funcs = protocol.get_all_funcs()
@@ -81,4 +82,5 @@ __all__ = [
     "convert",
     "operations",
     "global_variables_initializer",
+    "keras",
 ]
