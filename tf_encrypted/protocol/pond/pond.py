@@ -65,18 +65,25 @@ class Pond(Protocol):
 
   def __init__(
       self,
-      server_0: Optional[Player] = None,
-      server_1: Optional[Player] = None,
-      crypto_producer: Optional[Player] = None,
+      server_0=None,
+      server_1=None,
+      crypto_producer=None,
       tensor_factory: Optional[AbstractFactory] = None,
       fixedpoint_config: Optional[FixedpointConfig] = None,
+      triple_source=None,
   ) -> None:
     config = get_config()
-    self.server_0 = server_0 or config.get_player("server0")
-    self.server_1 = server_1 or config.get_player("server1")
-    crypto_producer = crypto_producer or config.get_player("server2")
-    crypto_producer = crypto_producer or config.get_player("crypto-producer")
-    self.triple_source = OnlineTripleSource(crypto_producer)
+    self.server_0 = config.get_player(server_0 if server_0 else "server0")
+    self.server_1 = config.get_player(server_1 if server_1 else "server1")
+
+    if triple_source is None:
+      crypto_producer = config.get_player(crypto_producer if crypto_producer
+                                          else "server2")
+      crypto_producer = config.get_player(crypto_producer if crypto_producer
+                                          else "crypto-producer")
+      self.triple_source = OnlineTripleSource(crypto_producer)
+    else:
+      self.triple_source = triple_source
 
     if tensor_factory is None:
       if tensorflow_supports_int64():
@@ -1608,6 +1615,9 @@ class PondPublicTensor(PondTensor):
   def decode(self) -> Union[np.ndarray, tf.Tensor]:
     return self.prot._decode(self.value_on_0, self.is_scaled)  # pylint: disable=protected-access
 
+  def to_native(self):
+    return self.decode()
+
 
 class PondPrivateTensor(PondTensor):
   """
@@ -2011,15 +2021,19 @@ def _cache_masked(prot, x):
 
   with tf.name_scope("cache"):
 
-    updater_cp, a_cached = prot.triple_source.cache(a)
-
     with tf.device(prot.server_0.device_name):
-      updater0, [a0_cached, alpha_on_0_cached] = wrap_in_variables(a0,
-                                                                   alpha_on_0)
+      updater0, [a0_cached, alpha_on_0_cached] = \
+          wrap_in_variables(a0, alpha_on_0)
 
     with tf.device(prot.server_1.device_name):
-      updater1, [a1_cached, alpha_on_1_cached] = wrap_in_variables(a1,
-                                                                   alpha_on_1)
+      updater1, [a1_cached, alpha_on_1_cached] = \
+          wrap_in_variables(a1, alpha_on_1)
+
+    unmasked_updater, unmasked_cached = prot.cache(unmasked)
+    online_updater = tf.group(updater0, updater1, unmasked_updater)
+
+    offline_updater, a_cached = prot.triple_source.cache(a, online_updater)
+    combined_updater = tf.group(online_updater, offline_updater)
 
     unmasked_updater, unmasked_cached = prot.cache(unmasked)
     combined_updater = tf.group(
@@ -3239,7 +3253,7 @@ def _transpose_masked(prot, x, perm=None):
 
   with tf.name_scope("transpose"):
 
-    a_t = prot.triple_source.transpose_mask(perm=perm)
+    a_t = prot.triple_source.transpose_mask(a, perm=perm)
 
     with tf.device(prot.server_0.device_name):
       a0_t = a0.transpose(perm=perm)

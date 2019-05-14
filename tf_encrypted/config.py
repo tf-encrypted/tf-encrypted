@@ -61,8 +61,13 @@ class Config(ABC):
     """Returns the config's list of :class:`Player` objects."""
 
   @abstractmethod
-  def get_player(self, name):
-    """Retrieve a specific :class:`Player` object by name."""
+  def get_player(self, name_or_player):
+    """
+    Retrieve a specific :class:`Player` object by name.
+
+    For convenience it is also possible to pass in an existing Player object,
+    which will simply be returned as-is if the player is known already.
+    """
 
   @abstractmethod
   def get_tf_config(
@@ -139,11 +144,18 @@ class LocalConfig(Config):
   def players(self):
     return self._players
 
-  def get_player(self, name):
-    player = next(
-        (player for player in self._players if player.name == name), None)
+  def get_player(self, name_or_player):
+    if isinstance(name_or_player, Player):
+      # we're passed a player
+      assert name_or_player in self._players
+      return name_or_player
+
+    # we're passed a name
+    player = next((player
+                   for player in self._players
+                   if player.name == name_or_player), None)
     if player is None and self._auto_add_unknown_players:
-      player = self.add_player(name)
+      player = self.add_player(name_or_player)
     return player
 
   def get_players(self, names):
@@ -240,8 +252,14 @@ class RemoteConfig(Config):
   def players(self):
     return list(self._players.values())
 
-  def get_player(self, name):
-    return self._players.get(name)
+  def get_player(self, name_or_player):
+    if isinstance(name_or_player, Player):
+      # we're passed a player
+      assert name_or_player in self.players.values()
+      return name_or_player
+
+    # we're passed a name
+    return self._players.get(name_or_player)
 
   def get_players(self, names):
     if isinstance(names, str):
