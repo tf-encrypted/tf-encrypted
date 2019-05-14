@@ -7,6 +7,7 @@ import tf_encrypted as tfe
 
 
 class TestDense(unittest.TestCase):
+
   def setUp(self):
     tf.reset_default_graph()
 
