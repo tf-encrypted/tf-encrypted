@@ -84,11 +84,13 @@ class Dense(Layer):
     return [input_shape[0] + self.units]
 
   def build(self, input_shape) -> None:
-
-    self.kernel = self.prot.define_private_variable(self.kernel_initializer)
+    units_in = input_shape[1]
+    kernel = self.kernel_initializer([units_in, self.units])
+    self.kernel = self.prot.define_private_variable(kernel)
 
     if self.use_bias:
-      self.bias = self.prot.define_private_variable(self.bias_initializer)
+      bias = self.bias_initializer([self.units])
+      self.bias = self.prot.define_private_variable(bias)
     else:
       self.bias = None
 

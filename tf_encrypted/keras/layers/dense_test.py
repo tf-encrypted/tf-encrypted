@@ -26,12 +26,12 @@ class TestDense(unittest.TestCase):
 
       kernel_shape = [5, 4]
       kernel_values = np.random.normal(size=kernel_shape)
-      kernel_init = tf.keras.initializers.Constant(value=kernel_values)
+      initializer = tf.keras.initializers.Constant(value=kernel_values)
 
       x_in = prot.define_private_variable(x)
 
       fc = tfe.keras.layers.Dense(
-          4, kernel_initializer=kernel_init, **layer_kwargs,
+          4, kernel_initializer=initializer, **layer_kwargs,
       )
 
       out = fc(x_in)
@@ -45,13 +45,13 @@ class TestDense(unittest.TestCase):
     tf.reset_default_graph()
 
     with tf.Session() as sess:
-      x = tf.Variable(x_in, dtype=tf.float32)
+      x_in = tf.Variable(x, dtype=tf.float32)
 
       fc_tf = tf.keras.layers.Dense(
-          4, kernel_initializer=kernel_init, **layer_kwargs,
+          4, kernel_initializer=initializer, **layer_kwargs,
       )
 
-      out = fc_tf(x)
+      out = fc_tf(x_in)
 
       sess.run(tf.global_variables_initializer())
       out_tensorflow = sess.run(out)
