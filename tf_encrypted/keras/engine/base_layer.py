@@ -30,8 +30,7 @@ class Layer(ABC):
     input tensors (which should be passed in as the first argument).
   """
 
-  def __init__(self, trainable=True, **kwargs) -> None:
-
+  def __init__(self, trainable=True, **kwargs):
     self.trainable = trainable
     self.built = False
 
@@ -85,9 +84,7 @@ class Layer(ABC):
     return outputs
 
   def _maybe_build(self, inputs):
-
     input_shapes = inputs.shape
-
     self.build(input_shapes)
 
   # TODO[jason]: @abstractmethod

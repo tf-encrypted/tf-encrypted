@@ -65,8 +65,9 @@ class Dense(Layer):
     self.units = int(units)
     self.activation = activation
     self.use_bias = use_bias
-    self.kernel_initializer = kernel_initializer
-    self.bias_initializer = bias_initializer
+
+    self.kernel_initializer = initializers.get(kernel_initializer)
+    self.bias_initializer = initializers.get(bias_initializer)
 
     if kernel_regularizer:
       raise NotImplementedError
@@ -87,7 +88,7 @@ class Dense(Layer):
     self.kernel = self.prot.define_private_variable(self.kernel_initializer)
 
     if self.use_bias:
-      self.bias = self.prot.define_private_variable(bias_initializer)
+      self.bias = self.prot.define_private_variable(self.bias_initializer)
     else:
       self.bias = None
 
