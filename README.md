@@ -95,7 +95,7 @@ TF Encrypted is experimental software not currently intended for use in producti
 
 # Contributing
 
-Don't hesitate to send a pull request, open an issue, or ask for help! You can do so either via [GitHub](https://github.com/tf-encrypted/tf-encrypted) or our [Slack channel](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjA0NDE2MDAxOTA2LTRjMWUwYWM3NTQ4MTk4NDNiOWI4Y2VjNDI5MDBhZDc5Y2RmNWMyODYyNDQ4MzMyMGM0YjZhZDYwMmJmNGJhYmE). Check out our [contribution guide](./docs/CONTRIBUTING.md) for more information!
+Don't hesitate to send a pull request, open an issue, or ask for help! You can do so either via [GitHub](https://github.com/tf-encrypted/tf-encrypted) or by [joining](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLTFkYTRjYWQ0ZWVlZjVmZTVhODNiYTA2ZTdlNWRkMWE4MTI3ZGFjMWUwZDhhYTk1NjJkZTRiZjBhMzMyMjNlZmQ) our [Slack channel](https://tf-encrypted.slack.com). Check out our [contribution guide](./docs/CONTRIBUTING.md) for more information!
 
 The project was originally started by [Morten Dahl](https://mortendahl.github.io/) but has since benefitted enormously from the efforts of several contributors, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community (in alphabetical order):
 
