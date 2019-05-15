@@ -43,11 +43,10 @@ class Layer(ABC):
     self.built = True
 
   @abstractmethod
-  def call(self, inputs, **kwargs) -> Optional[TFEVariable]:
+  def call(self, inputs) -> Optional[TFEVariable]:
     """This is where the layer's logic lives.
     Arguments:
         inputs: Input tensor, or list/tuple of input tensors.
-        **kwargs: Additional keyword arguments.
     Returns:
         A tensor or list/tuple of tensors.
     """

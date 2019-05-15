@@ -24,19 +24,14 @@ def get(identifier):
   """get the activation function"""
   if identifier is None:
     return linear
-  if isinstance(identifier, str):
-    if identifier == 'relu':
-      return relu
-    elif identifier == 'sigmoid':
-      return sigmoid
-    elif identifier == 'tanh':
-      return tanh
-    elif identifier == 'linear':
-      return linear
-    else:
-      raise ValueError('Could not interpret '
-                       'activation function identifier:',
-                       identifier)
+  elif identifier == 'relu':
+    return relu
+  elif identifier == 'sigmoid':
+    return sigmoid
+  elif identifier == 'tanh':
+    return tanh
+  elif identifier == 'linear':
+    return linear
   elif callable(identifier):
     return identifier
   else:
