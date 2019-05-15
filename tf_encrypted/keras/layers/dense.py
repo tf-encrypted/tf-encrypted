@@ -46,7 +46,7 @@ class Dense(Layer):
       nD tensor with shape: `(batch_size, ..., input_dim)`.
       The most common situation would be
       a 2D input with shape `(batch_size, input_dim)`.
-      
+
   Output shape:
       nD tensor with shape: `(batch_size, ..., units)`.
       For instance, for a 2D input with shape `(batch_size, input_dim)`,
