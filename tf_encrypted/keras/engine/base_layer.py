@@ -24,7 +24,20 @@ class Layer(ABC):
     input tensors (which should be passed in as the first argument).
   """
 
-  def __init__(self, trainable=True):
+  def __init__(self, trainable=True, **kwargs):
+
+    allowed_kwargs = {
+        'input_shape',
+        'batch_input_shape',
+        'batch_size',
+        'weights',
+        'activity_regularizer',
+    }
+    # Validate optional keyword arguments.
+    for kwarg in kwargs:
+      if kwarg not in allowed_kwargs:
+        raise TypeError('Keyword argument not understood:', kwarg)
+
     self.trainable = trainable
     self.built = False
 

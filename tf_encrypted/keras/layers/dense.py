@@ -41,10 +41,12 @@ class Dense(Layer):
       kernel_constraint: Constraint function applied to
           the `kernel` weights matrix.
       bias_constraint: Constraint function applied to the bias vector.
+
   Input shape:
       nD tensor with shape: `(batch_size, ..., input_dim)`.
       The most common situation would be
       a 2D input with shape `(batch_size, input_dim)`.
+      
   Output shape:
       nD tensor with shape: `(batch_size, ..., units)`.
       For instance, for a 2D input with shape `(batch_size, input_dim)`,
@@ -61,9 +63,10 @@ class Dense(Layer):
                bias_regularizer=None,
                activity_regularizer=None,
                kernel_constraint=None,
-               bias_constraint=None):
+               bias_constraint=None,
+               **kwargs):
 
-    super(Dense, self).__init__()
+    super(Dense, self).__init__(**kwargs)
 
     self.units = int(units)
     self.activation = activations.get(activation)
