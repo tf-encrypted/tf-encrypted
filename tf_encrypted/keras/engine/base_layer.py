@@ -21,10 +21,7 @@ class Layer(ABC):
   We recommend that descendants of `Layer` implement the following methods:
   * `__init__()`: Save configuration in member variables
   * `build()`: Called once from `__call__`, when we know the shapes of inputs
-    and `dtype`. Should have the calls to `add_weight()`, and then
-    call the super's `build()` (which sets `self.built = True`, which is
-    nice in case the user wants to call `build()` manually before the
-    first `__call__`).
+    and `dtype`.
   * `call()`: Called in `__call__` after making sure `build()` has been called
     once. Should actually perform the logic of applying the layer to the
     input tensors (which should be passed in as the first argument).
@@ -37,7 +34,7 @@ class Layer(ABC):
   @abstractmethod
   def build(self, input_shape) -> None:
     """Creates the variables of the layer (optional, for subclass implementers).
-    This is a method that implementers of subclasses of `Layer` or `Model`
+    This is a method that implementers of subclasses of `Layer`
     can override if they need a state-creation step in-between
     layer instantiation and layer call.
     This is typically used to create the weights of `Layer` subclasses.
@@ -59,9 +56,6 @@ class Layer(ABC):
     """
     return inputs
 
-  def add_weight(self, *args, **kargs):
-    pass
-
   @abstractmethod
   def compute_output_shape(self, input_shape) -> List[int]:
     """Returns the layer's output shape"""
@@ -76,20 +70,14 @@ class Layer(ABC):
       Output tensor(s).
     """
     if not self.built:
-      self._maybe_build(inputs)
+      input_shapes = inputs.shape
+      self.build(input_shapes)
+
       self.built = True
 
     outputs = self.call(inputs, *args, **kargs)
 
     return outputs
-
-  def _maybe_build(self, inputs):
-    input_shapes = inputs.shape
-    self.build(input_shapes)
-
-  # TODO[jason]: @abstractmethod
-  def backward(self, *args, **kwargs) -> Optional[TFEVariable]:
-    """Backward pass for training."""
 
   @property
   def prot(self) -> Optional[Protocol]:

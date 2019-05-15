@@ -17,9 +17,12 @@ class TestDense(unittest.TestCase):
   def test_dense_nobias(self):
     self._core_dense(use_bias=False)
 
+  def test_dense_relu(self):
+    self._core_dense(activation="relu")
+
   def _core_dense(self, **layer_kwargs):
 
-    with tfe.protocol.Pond() as prot:
+    with tfe.protocol.SecureNN() as prot:
 
       input_shape = [4, 5]
       x = np.random.normal(size=input_shape)

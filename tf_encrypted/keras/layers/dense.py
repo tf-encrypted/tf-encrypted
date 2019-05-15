@@ -6,11 +6,15 @@ import tensorflow as tf
 from tensorflow.python.keras import initializers
 
 from tf_encrypted.keras.engine.base_layer import Layer
+from tf_encrypted.keras import activations
 from tf_encrypted.protocol.pond import PondPublicTensor, PondPrivateTensor
+
 
 InitialTensor = Optional[Union[np.ndarray,
                                tf.Tensor, PondPublicTensor, PondPrivateTensor]]
 
+
+argument_msg = "`{}` argument is not implemented for layer {}"
 
 class Dense(Layer):
   """Just your regular densely-connected NN layer.
@@ -63,29 +67,35 @@ class Dense(Layer):
     super(Dense, self).__init__()
 
     self.units = int(units)
-    self.activation = activation
+    self.activation = activations.get(activation)
     self.use_bias = use_bias
 
     self.kernel_initializer = initializers.get(kernel_initializer)
     self.bias_initializer = initializers.get(bias_initializer)
 
     if kernel_regularizer:
-      raise NotImplementedError
+      raise NotImplementedError(argument_msg.format("kernel_regularizer",
+                                                    "Dense"))
     if bias_regularizer:
-      raise NotImplementedError
+      raise NotImplementedError(argument_msg.format("bias_regularizer",
+                                                    "Dense"))
     if activity_regularizer:
-      raise NotImplementedError
+      raise NotImplementedError(argument_msg.format("activity_regularizer",
+                                                    "Dense"))
     if kernel_constraint:
-      raise NotImplementedError
+      raise NotImplementedError(argument_msg.format("kernel_constraint",
+                                                    "Dense"))
     if bias_constraint:
-      raise NotImplementedError
+      raise NotImplementedError(argument_msg.format(" bias_constraint",
+                                                    "Dense"))
 
   def compute_output_shape(self, input_shape):
     return [input_shape[0] + self.units]
 
   def build(self, input_shape) -> None:
-    units_in = input_shape[1]
-    kernel = self.kernel_initializer([units_in, self.units])
+    units_in = int(input_shape[1])
+    kernel = self.kernel_initializer([units_in,
+                                      self.units])
     self.kernel = self.prot.define_private_variable(kernel)
 
     if self.use_bias:
