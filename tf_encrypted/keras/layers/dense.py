@@ -61,8 +61,7 @@ class Dense(Layer):
                bias_regularizer=None,
                activity_regularizer=None,
                kernel_constraint=None,
-               bias_constraint=None,
-               **kwargs):
+               bias_constraint=None):
 
     super(Dense, self).__init__()
 
