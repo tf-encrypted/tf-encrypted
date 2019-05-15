@@ -24,7 +24,7 @@ class Layer(ABC):
     input tensors (which should be passed in as the first argument).
   """
 
-  def __init__(self, trainable=True, **kwargs):
+  def __init__(self, trainable=True):
     self.trainable = trainable
     self.built = False
 
