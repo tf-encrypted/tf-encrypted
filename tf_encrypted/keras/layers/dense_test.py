@@ -11,24 +11,30 @@ class TestDense(unittest.TestCase):
   def setUp(self):
     tf.reset_default_graph()
 
-  def test_dense(self) -> None:
+  def test_dense_bias(self):
+    self._core_dense(use_bias=True)
+
+  def test_dense_nobias(self):
+    self._core_dense(use_bias=False)
+
+  def _core_dense(self, **layer_kwargs):
 
     with tfe.protocol.Pond() as prot:
 
       input_shape = [4, 5]
-      x_in = np.random.normal(size=input_shape)
+      x = np.random.normal(size=input_shape)
 
-      filter_shape = [5, 4]
-      filter_values = np.random.normal(size=filter_shape)
+      kernel_shape = [5, 4]
+      kernel_values = np.random.normal(size=kernel_shape)
+      kernel_init = tf.keras.initializers.Constant(value=kernel_values)
 
-      input_input = prot.define_private_variable(x_in)
+      x_in = prot.define_private_variable(x)
 
-      fc = tfe.keras.layers.Dense(4,
-                                  use_bias=False,
-                                  kernel_initializer=filter_values,
-                                  input_shape=input_shape)
+      fc = tfe.keras.layers.Dense(
+          4, kernel_initializer=kernel_init, **layer_kwargs,
+      )
 
-      out = fc(input_input)
+      out = fc(x_in)
 
       with tfe.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -40,11 +46,10 @@ class TestDense(unittest.TestCase):
 
     with tf.Session() as sess:
       x = tf.Variable(x_in, dtype=tf.float32)
-      filter = tf.keras.initializers.Constant(value=filter_values)
 
-      fc_tf = tf.keras.layers.Dense(4,
-                                    use_bias=False,
-                                    kernel_initializer=filter)
+      fc_tf = tf.keras.layers.Dense(
+          4, kernel_initializer=kernel_init, **layer_kwargs,
+      )
 
       out = fc_tf(x)
 
