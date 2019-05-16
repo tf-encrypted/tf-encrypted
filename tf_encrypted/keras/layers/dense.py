@@ -1,6 +1,5 @@
 # pylint: disable=arguments-differ
 """Dense (i.e. fully connected) Layer implementation."""
-import numpy as np
 from tensorflow.python.keras import initializers
 
 from tf_encrypted.keras.engine import Layer
@@ -104,7 +103,7 @@ class Dense(Layer):
     #  if the input to the layer has a rank greater than 2,
     #  then it is flattened prior to the initial dot product with kernel.
     if len(input_shape) > 2:
-      flat_shape = [input_shape[0]] + [np.prod(input_shape[1:])]
+      flat_shape = [input_shape[0], -1]
       inputs = inputs.reshape(flat_shape)
 
     if self.use_bias:
