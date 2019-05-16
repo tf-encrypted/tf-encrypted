@@ -88,7 +88,7 @@ class Dense(Layer):
 
     if rank > 2:
       raise NotImplementedError(
-          "For dense layer, tf-encrypted currently support only input with "
+          "For dense layer, TF Encrypted currently support only input with "
           "a rank equal to 2 instead of {}.".format(len(input_shape)))
 
     units_in = int(input_shape[1])
