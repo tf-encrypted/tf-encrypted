@@ -1,10 +1,7 @@
 """Includes base classes used by all layer types."""
 
-from typing import List, Optional
 from abc import ABC, abstractmethod
-
-from tf_encrypted.protocol.pond import TFEVariable
-from tf_encrypted.protocol.protocol import get_protocol, Protocol
+from tf_encrypted import get_protocol
 
 
 class Layer(ABC):
@@ -41,7 +38,6 @@ class Layer(ABC):
     self.trainable = trainable
     self.built = False
 
-  @abstractmethod
   def build(self, input_shape) -> None:
     """Creates the variables of the layer (optional, for subclass implementers).
     This is a method that implementers of subclasses of `Layer`
@@ -56,7 +52,7 @@ class Layer(ABC):
     self.built = True
 
   @abstractmethod
-  def call(self, inputs) -> Optional[TFEVariable]:
+  def call(self, inputs):
     """This is where the layer's logic lives.
     Arguments:
         inputs: Input tensor, or list/tuple of input tensors.
@@ -66,7 +62,7 @@ class Layer(ABC):
     return inputs
 
   @abstractmethod
-  def compute_output_shape(self, input_shape) -> List[int]:
+  def compute_output_shape(self, input_shape):
     """Returns the layer's output shape"""
 
   def __call__(self, inputs, *args, **kargs):
@@ -89,5 +85,5 @@ class Layer(ABC):
     return outputs
 
   @property
-  def prot(self) -> Optional[Protocol]:
+  def prot(self):
     return get_protocol()

@@ -1,21 +1,18 @@
 """Provide activation functions"""
-from tf_encrypted.protocol.protocol import get_protocol
+from tf_encrypted import get_protocol
 
-
-def prot():
-  return get_protocol()
 
 def relu(x):
   """Computes relu of x element-wise"""
-  return prot().relu(x)
+  return get_protocol().relu(x)
 
 def sigmoid(x):
   """Computes sigmoid of x element-wise"""
-  return prot().sigmoid(x)
+  return get_protocol().sigmoid(x)
 
 def tanh(x):
   """Computes tanh of x element-wise"""
-  return prot().tanh(x)
+  return get_protocol().tanh(x)
 
 def linear(x):
   return x

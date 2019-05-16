@@ -1,20 +1,12 @@
 # pylint: disable=arguments-differ
 """Dense (i.e. fully connected) Layer implementation."""
-from typing import Union, Optional
-import numpy as np
-import tensorflow as tf
 from tensorflow.python.keras import initializers
 
-from tf_encrypted.keras.engine.base_layer import Layer
+from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
-from tf_encrypted.protocol.pond import PondPublicTensor, PondPrivateTensor
 
 
-InitialTensor = Optional[Union[np.ndarray,
-                               tf.Tensor, PondPublicTensor, PondPrivateTensor]]
-
-
-argument_msg = "`{}` argument is not implemented for layer {}"
+arg_not_impl_msg = "`{}` argument is not implemented for layer {}"
 
 class Dense(Layer):
   """Just your regular densely-connected NN layer.
@@ -43,14 +35,10 @@ class Dense(Layer):
       bias_constraint: Constraint function applied to the bias vector.
 
   Input shape:
-      nD tensor with shape: `(batch_size, ..., input_dim)`.
-      The most common situation would be
-      a 2D input with shape `(batch_size, input_dim)`.
+      2D tensor with shape: `(batch_size, input_dim)`.
 
   Output shape:
-      nD tensor with shape: `(batch_size, ..., units)`.
-      For instance, for a 2D input with shape `(batch_size, input_dim)`,
-      the output would have shape `(batch_size, units)`.
+      2D tensor with shape: `(batch_size, units)`.
   """
 
   def __init__(self,
@@ -76,25 +64,25 @@ class Dense(Layer):
     self.bias_initializer = initializers.get(bias_initializer)
 
     if kernel_regularizer:
-      raise NotImplementedError(argument_msg.format("kernel_regularizer",
-                                                    "Dense"))
+      raise NotImplementedError(arg_not_impl_msg.format("kernel_regularizer",
+                                                        "Dense"))
     if bias_regularizer:
-      raise NotImplementedError(argument_msg.format("bias_regularizer",
-                                                    "Dense"))
+      raise NotImplementedError(arg_not_impl_msg.format("bias_regularizer",
+                                                        "Dense"))
     if activity_regularizer:
-      raise NotImplementedError(argument_msg.format("activity_regularizer",
-                                                    "Dense"))
+      raise NotImplementedError(arg_not_impl_msg.format("activity_regularizer",
+                                                        "Dense"))
     if kernel_constraint:
-      raise NotImplementedError(argument_msg.format("kernel_constraint",
-                                                    "Dense"))
+      raise NotImplementedError(arg_not_impl_msg.format("kernel_constraint",
+                                                        "Dense"))
     if bias_constraint:
-      raise NotImplementedError(argument_msg.format(" bias_constraint",
-                                                    "Dense"))
+      raise NotImplementedError(arg_not_impl_msg.format(" bias_constraint",
+                                                        "Dense"))
 
   def compute_output_shape(self, input_shape):
-    return [input_shape[0] + self.units]
+    return [input_shape[0], self.units]
 
-  def build(self, input_shape) -> None:
+  def build(self, input_shape):
     units_in = int(input_shape[1])
     kernel = self.kernel_initializer([units_in,
                                       self.units])
