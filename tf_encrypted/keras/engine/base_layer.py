@@ -38,6 +38,7 @@ class Layer(ABC):
     self.trainable = trainable
     self.built = False
 
+  @abstractmethod
   def build(self, input_shape) -> None:
     """Creates the variables of the layer (optional, for subclass implementers).
     This is a method that implementers of subclasses of `Layer`
