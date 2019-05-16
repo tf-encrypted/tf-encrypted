@@ -1,6 +1,6 @@
 """Includes base classes used by all layer types."""
-
 from abc import ABC, abstractmethod
+
 from tf_encrypted import get_protocol
 
 
@@ -39,7 +39,7 @@ class Layer(ABC):
     self.built = False
 
   @abstractmethod
-  def build(self, input_shape) -> None:
+  def build(self, input_shape):
     """Creates the variables of the layer (optional, for subclass implementers).
     This is a method that implementers of subclasses of `Layer`
     can override if they need a state-creation step in-between
