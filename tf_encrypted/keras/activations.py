@@ -29,6 +29,6 @@ def get(identifier):
                    "tanh": tanh,
                    "linear": linear}
     return activations[identifier]
-    
+
   raise ValueError('Could not interpret '
                    'activation function identifier:', identifier)
