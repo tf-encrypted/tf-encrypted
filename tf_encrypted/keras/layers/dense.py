@@ -87,9 +87,9 @@ class Dense(Layer):
     rank = len(input_shape)
 
     if rank > 2:
-      raise Exception(
-          "the input to the layer should have a rank equal to 2 "
-          "instead of {}".format(len(input_shape)))
+      raise NotImplementedError(
+          "For dense layer, tf-encrypted currently support only input with "
+          "a rank equal to 2 instead of {}.".format(len(input_shape)))
 
     units_in = int(input_shape[1])
     kernel = self.kernel_initializer([units_in,
