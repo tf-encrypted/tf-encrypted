@@ -21,16 +21,14 @@ def get(identifier):
   """get the activation function"""
   if identifier is None:
     return linear
-  if identifier == 'relu':
-    return relu
-  if identifier == 'sigmoid':
-    return sigmoid
-  if identifier == 'tanh':
-    return tanh
-  if identifier == 'linear':
-    return linear
   if callable(identifier):
     return identifier
-
+  if isinstance(identifier, str):
+    activations = {"relu": relu,
+                   "sigmoid": sigmoid,
+                   "tanh": tanh,
+                   "linear": linear}
+    return activations[identifier]
+    
   raise ValueError('Could not interpret '
                    'activation function identifier:', identifier)

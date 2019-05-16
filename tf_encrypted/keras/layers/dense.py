@@ -83,6 +83,14 @@ class Dense(Layer):
     return [input_shape[0], self.units]
 
   def build(self, input_shape):
+
+    rank = len(input_shape)
+
+    if rank > 2:
+      raise Exception(
+          "the input to the layer should have a rank equal to 2 "
+          "instead of {}".format(len(input_shape)))
+
     units_in = int(input_shape[1])
     kernel = self.kernel_initializer([units_in,
                                       self.units])
@@ -97,14 +105,6 @@ class Dense(Layer):
     self.built = True
 
   def call(self, inputs):
-
-    input_shape = inputs.shape.as_list()
-
-    #  if the input to the layer has a rank greater than 2,
-    #  then it is flattened prior to the initial dot product with kernel.
-    if len(input_shape) > 2:
-      flat_shape = [input_shape[0], -1]
-      inputs = inputs.reshape(flat_shape)
 
     if self.use_bias:
       outputs = inputs.matmul(self.kernel) + self.bias
