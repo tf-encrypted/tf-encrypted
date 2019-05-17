@@ -64,20 +64,25 @@ class Dense(Layer):
     self.bias_initializer = initializers.get(bias_initializer)
 
     if kernel_regularizer:
-      raise NotImplementedError(arg_not_impl_msg.format("kernel_regularizer",
-                                                        "Dense"))
+      raise NotImplementedError(
+          arg_not_impl_msg.format("kernel_regularizer", "Dense"),
+      )
     if bias_regularizer:
-      raise NotImplementedError(arg_not_impl_msg.format("bias_regularizer",
-                                                        "Dense"))
+      raise NotImplementedError(
+          arg_not_impl_msg.format("bias_regularizer", "Dense"),
+      )
     if activity_regularizer:
-      raise NotImplementedError(arg_not_impl_msg.format("activity_regularizer",
-                                                        "Dense"))
+      raise NotImplementedError(
+          arg_not_impl_msg.format("activity_regularizer", "Dense"),
+      )
     if kernel_constraint:
-      raise NotImplementedError(arg_not_impl_msg.format("kernel_constraint",
-                                                        "Dense"))
+      raise NotImplementedError(
+          arg_not_impl_msg.format("kernel_constraint", "Dense"),
+      )
     if bias_constraint:
-      raise NotImplementedError(arg_not_impl_msg.format(" bias_constraint",
-                                                        "Dense"))
+      raise NotImplementedError(
+          arg_not_impl_msg.format(" bias_constraint", "Dense"),
+      )
 
   def compute_output_shape(self, input_shape):
     return [input_shape[0], self.units]

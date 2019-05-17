@@ -1,5 +1,7 @@
 # pylint: disable=arguments-differ
 """Convolutional Layer implementation."""
+import logging
+
 import numpy as np
 from tensorflow.python.keras import initializers
 
@@ -7,6 +9,7 @@ from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
 
 arg_not_impl_msg = "`{}` argument is not implemented for layer {}"
+logger = logging.getLogger('tf_encrypted')
 
 class Conv2D(Layer):
   """2D convolution layer (e.g. spatial convolution over images).
@@ -101,29 +104,39 @@ class Conv2D(Layer):
     self.strides = strides
     self.padding = padding.upper()
     self.data_format = data_format
+    if activation is not None:
+      logger.info("Performing an activation before a pooling layer can result "
+                  "in unnecesary performance loss. Check model definition in "
+                  "case of missed optimization.")
     self.activation = activations.get(activation)
     self.use_bias = use_bias
     self.kernel_initializer = initializers.get(kernel_initializer)
     self.bias_initializer = initializers.get(bias_initializer)
 
     if dilation_rate:
-      raise NotImplementedError(argument_msg.format("dilation_rate",
-                                                    "Conv2d"))
+      raise NotImplementedError(
+          arg_not_impl_msg.format("dilation_rate", "Conv2d"),
+      )
     if kernel_regularizer:
-      raise NotImplementedError(argument_msg.format("kernel_regularizer",
-                                                    "Conv2d"))
+      raise NotImplementedError(
+          arg_not_impl_msg.format("kernel_regularizer", "Conv2d"),
+      )
     if bias_regularizer:
-      raise NotImplementedError(argument_msg.format("bias_regularizer",
-                                                    "Conv2d"))
+      raise NotImplementedError(
+          arg_not_impl_msg.format("bias_regularizer", "Conv2d"),
+      )
     if activity_regularizer:
-      raise NotImplementedError(argument_msg.format("activity_regularizer",
-                                                    "Conv2d"))
+      raise NotImplementedError(
+          arg_not_impl_msg.format("activity_regularizer", "Conv2d"),
+      )
     if kernel_constraint:
-      raise NotImplementedError(argument_msg.format("kernel_constraint",
-                                                    "Conv2d"))
+      raise NotImplementedError(
+          arg_not_impl_msg.format("kernel_constraint", "Conv2d"),
+      )
     if bias_constraint:
-      raise NotImplementedError(argument_msg.format("bias_constraint",
-                                                    "Conv2d"))
+      raise NotImplementedError(
+          arg_not_impl_msg.format("bias_constraint", "Conv2d"),
+      )
 
 
   def build(self, input_shape):
