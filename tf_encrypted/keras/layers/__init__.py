@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 
 from .dense import Dense
-from .activation_layer import Activation
+from .activation import Activation
 from .convolutional import Conv2D
 
 
