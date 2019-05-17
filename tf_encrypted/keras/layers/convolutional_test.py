@@ -3,7 +3,11 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
+
 import tf_encrypted as tfe
+from tf_encrypted.keras.testing_utils import agreement_test
+
+np.random.seed(42)
 
 
 class TestConv2d(unittest.TestCase):
@@ -18,57 +22,24 @@ class TestConv2d(unittest.TestCase):
     self._core_conv2d(use_bias=False)
 
   def _core_conv2d(self, **layer_kwargs):
+    filters_in = 3
+    input_shape = [2, filters_in, 6, 6]  # channels first
+    filters = 5
+    kernel_size = (2, 2)
+    kernel = np.random.normal(kernel_size + (filters_in, filters))
+    initializer = tf.keras.initializers.Constant(kernel)
 
-    with tfe.protocol.SecureNN() as prot:
+    base_kwargs = {
+        "filters": filters,
+        "kernel_size": kernel_size,
+        "strides": 2,
+        "kernel_initializer": initializer,
+    }
 
-      batch_size, channels_in, filters = 32, 3, 64
-      img_height, img_width = 28, 28
-      input_shape = (batch_size, channels_in, img_height, img_width)
-      x = np.random.normal(size=input_shape).astype(np.float32)
-
-      # kernel
-      strides = 2
-      kernel_size = (2, 2)
-      kernel_shape = kernel_size + (channels_in, filters)
-      kernel_values = np.random.normal(size=kernel_shape)
-
-      initializer = tf.keras.initializers.Constant(value=kernel_values)
-
-      x_in = prot.define_private_variable(x)
-
-      conv = tfe.keras.layers.Conv2D(
-          filters,
-          kernel_size,
-          strides,
-          kernel_initializer=initializer, **layer_kwargs,
-      )
-
-      out = conv(x_in)
-
-      with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-
-        out_pond = sess.run(out.reveal())
-
-    #reset graph
-    tf.reset_default_graph()
-
-    with tf.Session() as sess:
-      x_in = tf.Variable(x, dtype=tf.float32)
-
-      conv_tf = tf.keras.layers.Conv2D(
-          filters,
-          kernel_size,
-          strides,
-          kernel_initializer=initializer, **layer_kwargs,
-      )
-
-      out = conv_tf(x_in)
-
-      sess.run(tf.global_variables_initializer())
-      out_tensorflow = sess.run(out)
-
-    np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=2)
+    kwargs = {**base_kwargs, **layer_kwargs}
+    agreement_test(tfe.keras.layers.Conv2D,
+                   kwargs=kwargs,
+                   input_shape=input_shape)
 
 
 if __name__ == '__main__':
