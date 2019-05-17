@@ -609,10 +609,6 @@ def _private_compare(prot,
   # TODO[Morten] no need to check this (should be free)
   assert x_bits.backing_dtype == prot.prime_factory
   assert r.backing_dtype.native_type == prot.tensor_factory.native_type
-  print(r.backing_dtype)
-  print(prot.tensor_factory)
-  print(r.backing_dtype.native_type)
-  print(prot.tensor_factory.native_type)
 
   out_shape = r.shape
   out_dtype = r.backing_dtype
