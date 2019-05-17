@@ -2,9 +2,11 @@
 from __future__ import absolute_import
 
 from .dense import Dense
+from .convolutional import Conv2D
 
 
 
 __all__ = [
-    'Dense'
+    'Dense',
+    'Conv2D'
 ]
