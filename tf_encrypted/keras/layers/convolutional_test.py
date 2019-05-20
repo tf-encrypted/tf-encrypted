@@ -25,8 +25,10 @@ class TestConv2d(unittest.TestCase):
     filters_in = 3
     input_shape = [2, filters_in, 6, 6]  # channels first
     filters = 5
-    kernel_size = (2, 2)
-    kernel = np.random.normal(kernel_size + (filters_in, filters))
+    kernel_size = 2
+    padding = 'valid'
+    kernel = np.random.normal((kernel_size, kernel_size) +
+                              (filters_in, filters))
     initializer = tf.keras.initializers.Constant(kernel)
 
     base_kwargs = {
@@ -34,6 +36,7 @@ class TestConv2d(unittest.TestCase):
         "kernel_size": kernel_size,
         "strides": 2,
         "kernel_initializer": initializer,
+        "padding": padding,
     }
 
     kwargs = {**base_kwargs, **layer_kwargs}
