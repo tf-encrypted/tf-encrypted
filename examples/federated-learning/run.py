@@ -130,8 +130,9 @@ class DataOwner:
 
   BATCH_SIZE = 30
 
-  def __init__(self, player_name, build_update_step):
+  def __init__(self, player_name, local_data_file, build_update_step):
     self.player_name = player_name
+    self.local_data_file = local_data_file
     self._build_update_step = build_update_step
 
   def _build_data_pipeline(self):
@@ -140,7 +141,7 @@ class DataOwner:
       image = tf.cast(image, tf.float32) / 255.0
       return image, label
 
-    dataset = tf.data.TFRecordDataset(["./data/train.tfrecord"])
+    dataset = tf.data.TFRecordDataset([self.local_data_file])
     dataset = dataset.map(decode)
     dataset = dataset.map(normalize)
     dataset = dataset.repeat()
@@ -161,11 +162,15 @@ class DataOwner:
 
 
 if __name__ == "__main__":
-  model_owner = ModelOwner('model-owner')
+
+  model_owner = ModelOwner("model-owner")
   data_owners = [
-      DataOwner('data-owner-0', model_owner.build_update_step),
-      DataOwner('data-owner-1', model_owner.build_update_step),
-      DataOwner('data-owner-2', model_owner.build_update_step),
+      DataOwner("data-owner-0", "./data/train.tfrecord",
+                model_owner.build_update_step),
+      DataOwner("data-owner-1", "./data/train.tfrecord",
+                model_owner.build_update_step),
+      DataOwner("data-owner-2", "./data/train.tfrecord",
+                model_owner.build_update_step),
   ]
 
   model_grads = zip(*(
