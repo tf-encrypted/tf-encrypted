@@ -207,5 +207,4 @@ class Conv2D(Layer):
       w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))
 
     return [n_x, n_filters, h_out, w_out]
-
   
