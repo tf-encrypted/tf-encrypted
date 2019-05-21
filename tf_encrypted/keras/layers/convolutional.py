@@ -1,9 +1,9 @@
-# pylint: disable=arguments-differ
 """Convolutional Layer implementation."""
 import logging
 
 import numpy as np
 from tensorflow.python.keras import initializers
+from tensorflow.python.keras.utils import conv_utils
 
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
@@ -99,11 +99,17 @@ class Conv2D(Layer):
 
     super(Conv2D, self).__init__(**kwargs)
 
+    self.rank = 2
     self.filters = filters
-    self.kernel_size = kernel_size
-    self.strides = strides
-    self.padding = padding.upper()
-    self.data_format = data_format
+    self.kernel_size = conv_utils.normalize_tuple(
+        kernel_size, self.rank, 'kernel_size')
+    if self.kernel_size[0] != self.kernel_size[1]:
+      raise NotImplementedError("TF Encrypted currently only supports same "
+                                "stride along the height and the width."
+                                "You gave: {}".format(self.kernel_size))
+    self.strides = conv_utils.normalize_tuple(strides, self.rank, 'strides')
+    self.padding = conv_utils.normalize_padding(padding).upper()
+    self.data_format = conv_utils.normalize_data_format(data_format)
     if activation is not None:
       logger.info("Performing an activation before a pooling layer can result "
                   "in unnecesary performance loss. Check model definition in "
@@ -167,7 +173,10 @@ class Conv2D(Layer):
     if self.data_format != 'channels_first':
       inputs = self.prot.transpose(inputs, perm=[0, 3, 1, 2])
 
-    outputs = self.prot.conv2d(inputs, self.kernel, self.strides, self.padding)
+    outputs = self.prot.conv2d(inputs,
+                               self.kernel,
+                               self.strides[0],
+                               self.padding)
 
     if self.use_bias:
       outputs = outputs + self.bias
@@ -189,10 +198,11 @@ class Conv2D(Layer):
       n_x, h_x, w_x, _ = input_shape.as_list()
 
     if self.padding == "SAME":
-      h_out = int(np.ceil(float(h_x) / float(self.strides)))
-      w_out = int(np.ceil(float(w_x) / float(self.strides)))
+      h_out = int(np.ceil(float(h_x) / float(self.strides[0])))
+      w_out = int(np.ceil(float(w_x) / float(self.strides[0])))
     if self.padding == "VALID":
-      h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides)))
-      w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides)))
+      h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides[0])))
+      w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))
 
     return [n_x, n_filters, h_out, w_out]
+  
