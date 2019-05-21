@@ -22,7 +22,8 @@ session_target = sys.argv[2] if len(sys.argv) > 2 else None
 
 
 class ModelOwner():
-  """Contains code meant to be executed by some `ModelOwner` Player.
+  """
+  Contains code meant to be executed by the model owner.
 
   Args:
     player_name: `str`, name of the `tfe.player.Player`
@@ -33,18 +34,18 @@ class ModelOwner():
   ITERATIONS = 60000 // BATCH_SIZE
   EPOCHS = 1
 
-  def __init__(self, player_name):
+  def __init__(self, player_name, local_data_file):
     self.player_name = player_name
+    self.local_data_file = local_data_file
 
-  @staticmethod
-  def build_data_pipeline():
+  def _build_data_pipeline(self):
     """Build a reproducible tf.data iterator."""
 
     def normalize(image, label):
       image = tf.cast(image, tf.float32) / 255.0
       return image, label
 
-    dataset = tf.data.TFRecordDataset(["./data/train.tfrecord"])
+    dataset = tf.data.TFRecordDataset([self.local_data_file])
     dataset = dataset.map(decode)
     dataset = dataset.map(normalize)
     dataset = dataset.repeat()
@@ -96,7 +97,7 @@ class ModelOwner():
 
   def provide_input(self):
     with tf.name_scope('loading'):
-      training_data = self.build_data_pipeline()
+      training_data = self._build_data_pipeline()
 
     with tf.name_scope('training'):
       parameters = self._build_training_graph(training_data)
@@ -105,7 +106,8 @@ class ModelOwner():
 
 
 class PredictionClient():
-  """Contains methods meant to be executed by a prediction client.
+  """
+  Contains code meant to be executed by a prediction client.
 
   Args:
     player_name: `str`, name of the `tfe.player.Player`
@@ -116,9 +118,25 @@ class PredictionClient():
 
   BATCH_SIZE = 20
 
-  def __init__(self, player_name):
+  def __init__(self, player_name, local_data_file):
     self.player_name = player_name
-    self._build_data_pipeline = ModelOwner.build_data_pipeline
+    self.local_data_file = local_data_file
+
+  def _build_data_pipeline(self):
+    """Build a reproducible tf.data iterator."""
+
+    def normalize(image, label):
+      image = tf.cast(image, tf.float32) / 255.0
+      return image, label
+
+    dataset = tf.data.TFRecordDataset([self.local_data_file])
+    dataset = dataset.map(decode)
+    dataset = dataset.map(normalize)
+    dataset = dataset.repeat()
+    dataset = dataset.batch(self.BATCH_SIZE)
+
+    iterator = dataset.make_one_shot_iterator()
+    return iterator
 
   def provide_input(self) -> tf.Tensor:
     """Prepare input data for prediction."""
@@ -142,12 +160,18 @@ class PredictionClient():
 
 
 if __name__ == "__main__":
-  model_owner = ModelOwner('model-owner')
-  prediction_client = PredictionClient('prediction-client')
+
+  model_owner = ModelOwner(
+      player_name="model-owner",
+      local_data_file="./data/train.tfrecord")
+
+  prediction_client = PredictionClient(
+      player_name="prediction-client",
+      local_data_file="./data/test.tfrecord")
 
   # get model parameters as private tensors from model owner
-  params = tfe.define_private_input(
-      model_owner.player_name, model_owner.provide_input, masked=True)  # pylint: disable=E0632
+  params = tfe.define_private_input(model_owner.player_name,
+                                    model_owner.provide_input, masked=True)  # pylint: disable=E0632
 
   # we'll use the same parameters for each prediction so we cache them to
   # avoid re-training each time
@@ -164,8 +188,9 @@ if __name__ == "__main__":
   logits = tfe.matmul(layer1, w1) + b1
 
   # send prediction output back to client
-  prediction_op = tfe.define_output(
-      prediction_client.player_name, logits, prediction_client.receive_output)
+  prediction_op = tfe.define_output(prediction_client.player_name,
+                                    logits,
+                                    prediction_client.receive_output)
 
   with tfe.Session(target=session_target) as sess:
 
