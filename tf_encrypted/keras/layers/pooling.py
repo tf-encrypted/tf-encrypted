@@ -1,9 +1,7 @@
-# pylint: disable=arguments-differ
 """Pooling Layer implementation."""
 from tensorflow.python.keras.utils import conv_utils
 
 from tf_encrypted.keras.engine import Layer
-from . import layers_utils
 
 
 
@@ -11,7 +9,7 @@ class Pooling2D(Layer):
   """Pooling layer for arbitrary pooling functions, for 2D inputs (e.g. images).
   This class only exists for code reuse. It will never be an exposed API.
   Arguments:
-    pool_function: The pooling function to apply, e.g. `prot.max_pool2d`.
+    _pool_function: The pooling function to apply, e.g. `prot.max_pool2d`.
     pool_size: An integer or tuple/list of 2 integers: (pool_height, pool_width)
       specifying the size of the pooling window.
       Can be a single integer to specify the same value for
@@ -29,7 +27,7 @@ class Pooling2D(Layer):
       inputs with shape `(batch, channels, height, width)`.
   """
 
-  def __init__(self, pool_function, pool_size, strides,
+  def __init__(self, _pool_function, pool_size, strides,
                padding='valid', data_format=None,
                **kwargs):
     super(Pooling2D, self).__init__(**kwargs)
@@ -38,24 +36,24 @@ class Pooling2D(Layer):
       data_format = 'channels_last'
     if strides is None:
       strides = pool_size
-    self.pool_function = pool_function
+    self._pool_function = _pool_function
     self.pool_size = conv_utils.normalize_tuple(pool_size, 2, 'pool_size')
     self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
     self.padding = conv_utils.normalize_padding(padding).upper()
-    self.data_format = layers_utils.normalize_data_format(data_format)
+    self.data_format = conv_utils.normalize_data_format(data_format)
 
   def build(self, input_shape):
-    pass
+    self.built = True
 
   def call(self, inputs):
 
     if self.data_format != 'channels_first':
       inputs = self.prot.transpose(inputs, perm=[0, 3, 1, 2])
 
-    outputs = self.pool_function(inputs,
-                                 self.pool_size,
-                                 self.strides,
-                                 self.padding)
+    outputs = self._pool_function(inputs,
+                                  self.pool_size,
+                                  self.strides,
+                                  self.padding)
 
     if self.data_format != 'channels_first':
       outputs = self.prot.transpose(outputs, perm=[0, 2, 3, 1])

@@ -18,8 +18,14 @@ class TestPooling2d(unittest.TestCase):
   def test_maxpooling2d_valid(self):
     self._core_maxpooling2d(padding='valid')
 
+  def test_maxpooling2d_same(self):
+    self._core_maxpooling2d(padding='same')
+
   def test_avgpooling2d_valid(self):
     self._core_avgpooling2d(padding='valid')
+
+  def test_avgpooling2d_same(self):
+    self._core_avgpooling2d(padding='same')
 
   def _core_maxpooling2d(self, **layer_kwargs):
     channel_in = 2
