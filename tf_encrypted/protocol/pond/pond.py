@@ -29,6 +29,7 @@ from ...tensor import int100factory, fixed100
 from ...tensor import int64factory, fixed64
 from ...player import Player
 from ...config import get_config, tensorflow_supports_int64
+from ...queue.fifo import AbstractFIFOQueue
 from ..protocol import Protocol, memoize, nodes
 from .triple_sources import OnlineTripleSource
 
@@ -366,6 +367,17 @@ class Pond(Protocol):
     x = PondPrivateVariable(self, x0, x1, apply_scaling)
     _initializers.append(x.initializer)
     return x
+
+  def fifo_queue(self, capacity, shape, shared_name):
+    return AdditiveFIFOQueue(
+        protocol=self,
+        server_0=self.server_0,
+        server_1=self.server_1,
+        capacity=capacity,
+        dtype=self.tensor_factory,
+        shape=shape,
+        shared_name=shared_name,
+    )
 
   def define_public_input(
       self,
@@ -1324,6 +1336,96 @@ class Pond(Protocol):
         x = prepend_zeros(x, pad_before, axis)
 
     return x
+
+
+#
+# Queue classes
+#
+
+
+class AdditiveFIFOQueue(AbstractFIFOQueue):
+  """
+  FIFOQueue for holding two-additive shared tensors.
+  """
+
+  def __init__(
+      self,
+      protocol,
+      server_0,
+      server_1,
+      capacity,
+      dtype,
+      shape,
+      shared_name,
+  ):
+
+    self.protocol = protocol
+    self.server_0 = server_0
+    self.server_1 = server_1
+    self.capacity = capacity
+    self.dtype = dtype
+    self.shape = shape
+    self.is_scaled = True  # TODO(Morten) should get this from the dtype
+
+    # TODO(Morten) this is not taking eg int100 into account
+    native_dtype = dtype.native_type
+    native_shape = shape
+
+    with tf.device(self.server_0.device_name):
+      self.queue0 = tf.queue.FIFOQueue(
+          capacity=capacity,
+          dtypes=[native_dtype],
+          shapes=[native_shape],
+          shared_name="{}-0".format(shared_name) if shared_name else None,
+      )
+
+    with tf.device(self.server_1.device_name):
+      self.queue1 = tf.queue.FIFOQueue(
+          capacity=capacity,
+          dtypes=[native_dtype],
+          shapes=[native_shape],
+          shared_name="{}-1".format(shared_name) if shared_name else None,
+      )
+
+  def size(self):
+    return self.queue0.size()
+
+  def enqueue(self, tensor):
+    # assert isinstance(tensor, PondPrivateTensor)
+    assert tensor.backing_dtype == self.dtype
+    assert tensor.shape == self.shape
+    assert tensor.is_scaled == self.is_scaled
+
+    tensor0, tensor1 = tensor.unwrapped
+    # TODO(Morten) this it not taking eg int100 into account
+    raw_tensor0 = tensor0.value
+    raw_tensor1 = tensor1.value
+
+    with tf.device(self.server_0.device_name):
+      enqueue_op0 = self.queue0.enqueue(raw_tensor0)
+
+    with tf.device(self.server_1.device_name):
+      enqueue_op1 = self.queue1.enqueue(raw_tensor1)
+
+    enqueue_op = tf.group(enqueue_op0, enqueue_op1)
+    return enqueue_op
+
+  def dequeue(self):
+
+    with tf.device(self.server_0.device_name):
+      raw_tensor0 = self.queue0.dequeue()
+      tensor_0 = self.dtype.tensor(raw_tensor0)
+
+    with tf.device(self.server_1.device_name):
+      raw_tensor1 = self.queue1.dequeue()
+      tensor_1 = self.dtype.tensor(raw_tensor1)
+
+    return PondPrivateTensor(
+        self.protocol,
+        tensor_0,
+        tensor_1,
+        self.is_scaled,
+    )
 
 
 #
