@@ -2016,7 +2016,6 @@ def _cache_private(prot, x):
 def _cache_masked(prot, x):
   assert isinstance(x, PondMaskedTensor), type(x)
 
-  unmasked = x.unmasked
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
   with tf.name_scope("cache"):
@@ -2029,16 +2028,11 @@ def _cache_masked(prot, x):
       updater1, [a1_cached, alpha_on_1_cached] = \
           wrap_in_variables(a1, alpha_on_1)
 
-    unmasked_updater, unmasked_cached = prot.cache(unmasked)
+    unmasked_updater, unmasked_cached = prot.cache(x.unmasked)
     online_updater = tf.group(updater0, updater1, unmasked_updater)
 
     offline_updater, a_cached = prot.triple_source.cache(a, online_updater)
     combined_updater = tf.group(online_updater, offline_updater)
-
-    unmasked_updater, unmasked_cached = prot.cache(unmasked)
-    combined_updater = tf.group(
-        updater_cp, updater0, updater1, unmasked_updater,
-    )
 
   return combined_updater, PondCachedMaskedTensor(
       prot,
