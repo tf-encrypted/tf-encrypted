@@ -16,27 +16,35 @@ class TestConv2d(unittest.TestCase):
     tf.reset_default_graph()
 
   def test_conv2d_bias(self):
-    self._core_conv2d(use_bias=True)
+    self._core_conv2d(kernel_size=2, use_bias=True)
 
   def test_conv2d_nobias(self):
-    self._core_conv2d(use_bias=False)
+    self._core_conv2d(kernel_size=2, use_bias=False)
+
+  def test_conv2d_same_padding(self):
+    self._core_conv2d(kernel_size=2, padding='same')
+
+  def test_conv2d_kernelsize_tuple(self):
+    self._core_conv2d(kernel_size=(2, 2))
 
   def _core_conv2d(self, **layer_kwargs):
     filters_in = 3
-    input_shape = [2, filters_in, 6, 6]  # channels first
+    input_shape = [2, 6, 6, filters_in]  # channels last
     filters = 5
-    kernel_size = 2
-    padding = 'valid'
-    kernel = np.random.normal((kernel_size, kernel_size) +
+
+    if isinstance(layer_kwargs['kernel_size'], int):
+      kernel_size_in = (layer_kwargs['kernel_size'],) * 2
+    else:
+      kernel_size_in = layer_kwargs['kernel_size']
+
+    kernel = np.random.normal(kernel_size_in +
                               (filters_in, filters))
     initializer = tf.keras.initializers.Constant(kernel)
 
     base_kwargs = {
         "filters": filters,
-        "kernel_size": kernel_size,
         "strides": 2,
         "kernel_initializer": initializer,
-        "padding": padding,
     }
 
     kwargs = {**base_kwargs, **layer_kwargs}

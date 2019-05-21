@@ -1,4 +1,3 @@
-# pylint: disable=arguments-differ
 """Convolutional Layer implementation."""
 import logging
 
@@ -8,7 +7,6 @@ from tensorflow.python.keras.utils import conv_utils
 
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
-from . import layers_utils
 
 arg_not_impl_msg = "`{}` argument is not implemented for layer {}"
 logger = logging.getLogger('tf_encrypted')
@@ -111,7 +109,7 @@ class Conv2D(Layer):
                                 "You gave: {}".format(self.kernel_size))
     self.strides = conv_utils.normalize_tuple(strides, self.rank, 'strides')
     self.padding = conv_utils.normalize_padding(padding).upper()
-    self.data_format = layers_utils.normalize_data_format(data_format)
+    self.data_format = conv_utils.normalize_data_format(data_format)
     if activation is not None:
       logger.info("Performing an activation before a pooling layer can result "
                   "in unnecesary performance loss. Check model definition in "
