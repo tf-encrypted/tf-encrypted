@@ -8,6 +8,7 @@ from tensorflow.python.keras.utils import conv_utils
 
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
+from . import layers_utils
 
 arg_not_impl_msg = "`{}` argument is not implemented for layer {}"
 logger = logging.getLogger('tf_encrypted')
@@ -110,7 +111,7 @@ class Conv2D(Layer):
                                 "You gave: {}".format(self.kernel_size))
     self.strides = conv_utils.normalize_tuple(strides, self.rank, 'strides')
     self.padding = conv_utils.normalize_padding(padding).upper()
-    self.data_format = normalize_data_format(data_format)
+    self.data_format = layers_utils.normalize_data_format(data_format)
     if activation is not None:
       logger.info("Performing an activation before a pooling layer can result "
                   "in unnecesary performance loss. Check model definition in "
@@ -207,14 +208,4 @@ class Conv2D(Layer):
 
     return [n_x, n_filters, h_out, w_out]
 
-
-def normalize_data_format(value):
-  if value is None:
-    value = 'channels_last'
-  data_format = value.lower()
-  if data_format not in {'channels_first', 'channels_last'}:
-    raise ValueError('The `data_format` argument must be one of '
-                     '"channels_first", "channels_last". Received: ' +
-                     str(value))
-  return data_format
   
