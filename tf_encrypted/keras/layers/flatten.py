@@ -49,7 +49,7 @@ class Flatten(Layer):
 
   def compute_output_shape(self, input_shape):
     if not input_shape:
-      output_shape = [1]
+      raise ValueError("input_shape shouldn't be empty or None")
     output_shape = [input_shape[0]]
     if all(input_shape[1:]):
       output_shape += [np.prod(input_shape[1:])]
