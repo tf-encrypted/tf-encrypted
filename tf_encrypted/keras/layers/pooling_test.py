@@ -51,11 +51,9 @@ class TestPooling2d(unittest.TestCase):
     channel_in = 2
     input_shape = [2, 8, 8, channel_in]  # channels last
     pool_size_in = 2
-    strides_in = 2
 
     base_kwargs = {
         "pool_size": pool_size_in,
-        "strides": strides_in,
     }
 
     kwargs = {**base_kwargs, **layer_kwargs}
