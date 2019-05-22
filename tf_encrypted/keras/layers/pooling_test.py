@@ -16,26 +16,30 @@ class TestPooling2d(unittest.TestCase):
     tf.reset_default_graph()
 
   def test_maxpooling2d_valid(self):
-    self._core_maxpooling2d(padding='valid')
+    self._core_maxpooling2d(strides=2, padding='valid')
 
   def test_maxpooling2d_same(self):
-    self._core_maxpooling2d(padding='same')
+    self._core_maxpooling2d(strides=2, padding='same')
+
+  def test_maxpooling2d_strides_one(self):
+    self._core_maxpooling2d(strides=1, padding='valid')
 
   def test_avgpooling2d_valid(self):
-    self._core_avgpooling2d(padding='valid')
+    self._core_avgpooling2d(strides=2, padding='valid')
 
   def test_avgpooling2d_same(self):
-    self._core_avgpooling2d(padding='same')
+    self._core_avgpooling2d(strides=2, padding='same')
+
+  def test_avgpooling2d_strides_one(self):
+    self._core_avgpooling2d(strides=1, padding='valid')
 
   def _core_maxpooling2d(self, **layer_kwargs):
     channel_in = 2
     input_shape = [2, 8, 8, channel_in]  # channels last
     pool_size_in = 2
-    strides_in = 2
 
     base_kwargs = {
         "pool_size": pool_size_in,
-        "strides": strides_in,
     }
 
     kwargs = {**base_kwargs, **layer_kwargs}
