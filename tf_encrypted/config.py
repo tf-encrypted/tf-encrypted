@@ -255,7 +255,7 @@ class RemoteConfig(Config):
   def get_player(self, name_or_player):
     if isinstance(name_or_player, Player):
       # we're passed a player
-      assert name_or_player in self.players.values()
+      assert name_or_player in self._players.values()
       return name_or_player
 
     # we're passed a name
