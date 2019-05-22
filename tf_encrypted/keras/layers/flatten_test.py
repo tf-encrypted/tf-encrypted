@@ -21,6 +21,10 @@ class TestFlatten(unittest.TestCase):
   def test_flatten_rank_one(self):
     self._core_flatten(input_shape=[4])
 
+  def test_flatten_channels_first(self):
+    self._core_flatten(input_shape=[4, 5, 2, 2],
+                       data_format='channels_first')
+
   def _core_flatten(self, **layer_kwargs):
     input_shape = layer_kwargs['input_shape']
 
