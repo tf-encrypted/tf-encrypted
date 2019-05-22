@@ -30,8 +30,7 @@ class TestFlatten(unittest.TestCase):
 
     agreement_test(tfe.keras.layers.Flatten,
                    kwargs=layer_kwargs,
-                   input_shape=input_shape,
-                   rtol=1e-2)
+                   input_shape=input_shape)
 
 
 if __name__ == '__main__':
