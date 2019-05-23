@@ -17,7 +17,6 @@ tmp/
 **/*.pb
 data/
 *.egg-info
-*.so
 *.gz
 .cache
 **/.ipynb_checkpoints/
