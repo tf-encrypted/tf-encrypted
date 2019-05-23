@@ -327,6 +327,10 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
                                     dtype=factory.native_type))
 
     def truncate(self, amount, base=2):
+      # don't bother truncating for floats :D
+      if self.value.dtype == tf.float32:
+        return self
+
       if base == 2:
         return self.right_shift(amount)
       factor = base**amount

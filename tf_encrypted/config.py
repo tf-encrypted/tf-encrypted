@@ -131,7 +131,7 @@ class LocalConfig(Config):
 
   def add_player(self, name):
     index = len(self._players)
-    dv_str = '/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'
+    dv_str = '/job:{job_name}/replica:0/task:0/device:GPU:{cpu_id}'
     player = Player(
         name=name,
         index=index,
@@ -205,7 +205,7 @@ class RemoteConfig(Config):
         (name, Player(
             name=name,
             index=index,
-            device_name='/job:{job_name}/replica:0/task:{task_id}/cpu:0'.format(
+            device_name='/job:{job_name}/replica:0/task:{task_id}/GPU:0'.format(
                 job_name=job_name,
                 task_id=index
             ),

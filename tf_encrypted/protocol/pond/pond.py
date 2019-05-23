@@ -39,7 +39,7 @@ TFEVariable = Union["PondPublicVariable", "PondPrivateVariable", tf.Variable]
 TFEPublicTensor = NewType("TFEPublicTensor", "PondPublicTensor")
 TFETensor = Union[TFEPublicTensor, "PondPrivateTensor", "PondMaskedTensor"]
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
-TF_INT_TYPES = [tf.int8, tf.int16, tf.int32, tf.int64]
+TF_INT_TYPES = [tf.int8, tf.int16, tf.int32, tf.int64, tf.float32]
 
 _initializers = list()
 _THISMODULE = sys.modules[__name__]
