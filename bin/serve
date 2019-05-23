@@ -5,6 +5,7 @@ import sys
 import os
 import time
 from typing import Callable, List
+from collections import OrderedDict
 
 import tensorflow as tf
 from tensorflow.python.platform import gfile
@@ -89,13 +90,13 @@ tfe.set_tfe_trace_flag(enable_traces)
 tfe.set_tfe_debug_flag(enable_debug)
 
 remote_config = tfe.RemoteConfig(
-    {
-        'master': master_address,
-        'server0': server0_address,
-        'server1': server1_address,
-        'crypto-producer': producer_address,
-        'weights-provider': provider_address
-    }
+    OrderedDict([
+        ('master', master_address),
+        ('server0', server0_address),
+        ('server1', server1_address),
+        ('crypto-producer', producer_address),
+        ('weights-provider', provider_address)
+    ])
 )
 
 tfe.set_config(remote_config)

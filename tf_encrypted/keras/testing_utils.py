@@ -6,7 +6,7 @@ import tf_encrypted as tfe
 
 
 def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,
-                   input_data=None, rtol=1e-3, **tfe_kwargs):
+                   input_data=None, rtol=1e-2, **tfe_kwargs):
   """Check agreement between a tf.keras layer and a tfe.keras layer.
   Arguments:
     tfe_layer_cls: Layer class object (from tfe.keras).

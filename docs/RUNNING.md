@@ -84,10 +84,10 @@ python3 examples/simple-average/run.py config.json
 
 ## Inspection and Tracing
 
-When using `tfe.Session` and specifying a tag, e.g. `sess.run(fetch, tag='average')`, summary files for TensorBoard may be written by setting `TFE_STATS=1` in the environment, say:
+When using `tfe.Session` and specifying a tag, e.g. `sess.run(fetch, tag='average')`, summary files for TensorBoard may be written by setting `TFE_EVENTS=1` in the environment, say:
 
 ```sh
-TFE_STATS=1 python3 ./examples/simple-average/run.py
+TFE_EVENTS=1 python3 ./examples/simple-average/run.py
 ```
 
 Tracing files may additionally be written by also setting `TFE_TRACE=1`.
