@@ -29,10 +29,10 @@ def parse_tracefile(filename):
   with open(filename, 'r') as f:
     raw = json.load(f)
 
-  if 'trace_events' not in raw:
-    return None
-
-  trace_events = raw['trace_events']
+  try:
+      trace_events = raw['traceEvents']
+  except KeyError:
+      trace_events = raw['trace_events']
 
   timestamps = (
       (
