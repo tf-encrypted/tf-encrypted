@@ -5,6 +5,7 @@ import sys
 import os
 import time
 from typing import Callable, List
+from collections import OrderedDict
 
 import tensorflow as tf
 from tensorflow.python.platform import gfile
@@ -12,7 +13,6 @@ import numpy as np
 
 import tf_encrypted as tfe
 from tf_encrypted.protocol import Pond, SecureNN
-from collections import OrderedDict
 
 node_name = os.environ.get('TFE_NODE_NAME')
 server0_address = os.environ.get('TFE_SERVER0_ADDRESS')

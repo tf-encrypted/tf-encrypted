@@ -30,9 +30,9 @@ def parse_tracefile(filename):
     raw = json.load(f)
 
   try:
-      trace_events = raw['traceEvents']
+    trace_events = raw['traceEvents']
   except KeyError:
-      trace_events = raw['trace_events']
+    trace_events = raw['trace_events']
 
   timestamps = (
       (
