@@ -219,13 +219,17 @@ class Pond(Protocol):
     # pylint: enable=line-too-long
 
     factory = factory or self.tensor_factory
-    pl = factory.placeholder(shape)
+
     suffix = "-" + name if name else ""
-
     with tf.name_scope("private-placeholder{}".format(suffix)):
-      x0, x1 = self._share(pl)
 
-    return PondPrivatePlaceholder(self, pl, x0, x1, apply_scaling)
+      with tf.device(self.server_0.device_name):
+        x0 = factory.placeholder(shape)
+
+      with tf.device(self.server_1.device_name):
+        x1 = factory.placeholder(shape)
+
+    return PondPrivatePlaceholder(self, x0, x1, apply_scaling)
 
   def define_public_variable(
       self,
@@ -1391,7 +1395,7 @@ class AdditiveFIFOQueue(AbstractFIFOQueue):
     return self.queue0.size()
 
   def enqueue(self, tensor):
-    # assert isinstance(tensor, PondPrivateTensor)
+    assert isinstance(tensor, PondPrivateTensor), type(tensor)
     assert tensor.backing_dtype == self.dtype
     assert tensor.shape == self.shape
     assert tensor.is_scaled == self.is_scaled
@@ -1887,28 +1891,56 @@ class PondPrivatePlaceholder(PondPrivateTensor):
   order to allow treating it as a placeholder itself.
   """
 
-  def __init__(self, prot, placeholder, tensor0, tensor1, is_scaled):
-    assert isinstance(placeholder, AbstractPlaceholder), type(placeholder)
-    assert isinstance(tensor0, AbstractTensor), type(tensor0)
-    assert isinstance(tensor1, AbstractTensor), type(tensor1)
-    assert tensor0.shape == tensor1.shape
+  def __init__(self, prot, placeholder0, placeholder1, is_scaled):
+    assert isinstance(placeholder0, AbstractPlaceholder), type(placeholder0)
+    assert isinstance(placeholder1, AbstractPlaceholder), type(placeholder1)
+    assert placeholder0.shape == placeholder1.shape
 
-    super(PondPrivatePlaceholder, self).__init__(
-        prot, tensor0, tensor1, is_scaled
-    )
-    self.placeholders = placeholder.backing
-    self.tensor0 = tensor0
-    self.tensor1 = tensor1
+    super().__init__(prot, placeholder0, placeholder1, is_scaled)
+    self.placeholder0 = placeholder0
+    self.placeholder1 = placeholder1
 
   def __repr__(self) -> str:
     return "PondPrivatePlaceholder(shape={})".format(self.shape)
 
   def feed(self, value):
+    """
+    Feed `value` to placeholder
+    """
     assert isinstance(value, np.ndarray), type(value)
 
     enc = self.prot._encode(value, self.is_scaled)  # pylint: disable=protected-access
-    v = self.prot.tensor_factory.tensor(enc)
-    return {p: v for p, v in zip(self.placeholders, v.backing)}
+    assert isinstance(enc, np.ndarray)
+
+    # x0, x1 = self.prot._share(enc)
+    # assert isinstance(x0, np.ndarray), type(x0)
+    # assert isinstance(x1, np.ndarray), type(x1)
+
+    # TODO(Morten)
+    #
+    # This is a huge hack and it would be better to use `_share` as above.
+    # However, _share currently expects its inputs to be TFE tensors backed
+    # by tf.Tensors in order to have extra information attached, and not sure
+    # we should change this until we've least considered what will happen with
+    # TF2 and eager mode.
+    #
+    # So, to ensure that feeding can be done locally *outside* the TF graph,
+    # in the mean time we manually share values here, avoiding a call to
+    # `factory.tensor` as that's where tensors are converted to tf.Tensors.
+    shape = self.shape
+    minval = self.backing_dtype.min
+    maxval = self.backing_dtype.max
+    # TODO(Morten) not using secure randomness here; reconsider after TF2
+    x0 = np.array([random.randrange(minval, maxval)
+                   for _ in range(np.product(shape))]) \
+           .reshape(shape)
+    x1 = enc - x0
+    assert isinstance(x0, np.ndarray)
+    assert isinstance(x1, np.ndarray)
+
+    feed0 = self.placeholder0.feed(x0)
+    feed1 = self.placeholder1.feed(x1)
+    return {**feed0, **feed1}
 
 
 class PondPublicVariable(PondPublicTensor):
