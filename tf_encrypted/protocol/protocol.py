@@ -23,6 +23,7 @@ class Protocol(ABC):
   """
 
   def __enter__(self) -> "Protocol":
+    self.last_protocol = get_protocol()
     set_protocol(self)
     return self
 
@@ -33,7 +34,7 @@ class Protocol(ABC):
       exception_value: Optional[Exception],
       traceback: Optional[TracebackType],
   ) -> Optional[bool]:
-    set_protocol(None)
+    set_protocol(self.last_protocol)
 
   @property
   @abstractmethod
