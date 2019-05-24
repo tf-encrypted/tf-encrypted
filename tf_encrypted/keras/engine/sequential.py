@@ -13,7 +13,6 @@ class Sequential(Layer):
     super(Sequential, self).__init__(name=name)
 
     self._layers = []
-    print("seq__init__", tfe.protocol.protocol.__PROTOCOL__)
 
     # Add to the model any layers passed to the constructor.
     if layers:
@@ -32,7 +31,6 @@ class Sequential(Layer):
             multiple output tensors, or is already connected
             somewhere else (forbidden in `Sequential` models).
     """
-    print("seq_add", tfe.protocol.protocol.__PROTOCOL__)
     if not isinstance(layer, Layer):
       raise TypeError('The added layer must be '
                       'an instance of class Layer. '

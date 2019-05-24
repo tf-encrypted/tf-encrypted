@@ -1,10 +1,13 @@
 """Includes base classes used by all layer types."""
 from abc import ABC
+import logging
 
 from tensorflow.python.keras.utils import generic_utils
 from tensorflow.python.keras.engine import base_layer_utils
 
 from tf_encrypted import get_protocol
+
+logger = logging.getLogger('tf_encrypted')
 
 
 class Layer(ABC):
@@ -38,6 +41,11 @@ class Layer(ABC):
       if kwarg not in allowed_kwargs:
         raise TypeError('Keyword argument not understood:', kwarg)
 
+    if 'input_shape' in kwargs:
+      logger.warning("Currently input_shape argument semantics include the "
+                     "batch dimension. Please construct you model "
+                     "accordingly.")
+      self._batch_input_shape = kwargs['input_shape']
     if 'batch_input_shape' in kwargs:
       self._batch_input_shape = kwargs['batch_input_shape']
 
