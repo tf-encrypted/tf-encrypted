@@ -1,5 +1,8 @@
 """Includes base classes used by all layer types."""
-from abc import ABC, abstractmethod
+from abc import ABC
+
+from tensorflow.python.keras.utils import generic_utils
+from tensorflow.python.keras.engine import base_layer_utils
 
 from tf_encrypted import get_protocol
 
@@ -21,7 +24,7 @@ class Layer(ABC):
     input tensors (which should be passed in as the first argument).
   """
 
-  def __init__(self, trainable=True, **kwargs):
+  def __init__(self, trainable=True, name=None, **kwargs):
 
     allowed_kwargs = {
         'input_shape',
@@ -35,11 +38,14 @@ class Layer(ABC):
       if kwarg not in allowed_kwargs:
         raise TypeError('Keyword argument not understood:', kwarg)
 
+    if 'batch_input_shape' in kwargs:
+      self._batch_input_shape = kwargs['batch_input_shape']
+
     self.trainable = trainable
+    self._init_set_name(name)
     self.built = False
 
-  @abstractmethod
-  def build(self, input_shape):
+  def build(self, input_shape):  # pylint: disable=unused-argument
     """Creates the variables of the layer (optional, for subclass implementers).
     This is a method that implementers of subclasses of `Layer`
     can override if they need a state-creation step in-between
@@ -52,7 +58,6 @@ class Layer(ABC):
     """
     self.built = True
 
-  @abstractmethod
   def call(self, inputs):
     """This is where the layer's logic lives.
     Arguments:
@@ -62,7 +67,6 @@ class Layer(ABC):
     """
     return inputs
 
-  @abstractmethod
   def compute_output_shape(self, input_shape):
     """Returns the layer's output shape"""
 
@@ -88,3 +92,15 @@ class Layer(ABC):
   @property
   def prot(self):
     return get_protocol()
+
+  @property
+  def name(self):
+    return self._name
+
+  def _init_set_name(self, name, zero_based=True):
+    if not name:
+      self._name = base_layer_utils.unique_layer_name(
+          generic_utils.to_snake_case(self.__class__.__name__),
+          zero_based=zero_based)
+    else:
+      self._name = name
