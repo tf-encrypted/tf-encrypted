@@ -13,6 +13,7 @@ from . import layers
 from . import operations
 from . import protocol
 from . import keras
+from . import serving
 from . import queue
 
 
@@ -85,4 +86,5 @@ __all__ = [
     "global_variables_initializer",
     "keras",
     "queue",
+    "serving",
 ]
