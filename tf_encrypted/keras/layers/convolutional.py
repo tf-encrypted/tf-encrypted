@@ -112,7 +112,7 @@ class Conv2D(Layer):
     self.data_format = conv_utils.normalize_data_format(data_format)
     if activation is not None:
       logger.info("Performing an activation before a pooling layer can result "
-                  "in unnecesary performance loss. Check model definition in "
+                  "in unnecessary performance loss. Check model definition in "
                   "case of missed optimization.")
     self.activation = activations.get(activation)
     self.use_bias = use_bias

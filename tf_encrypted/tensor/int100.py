@@ -282,6 +282,14 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
       return Placeholder(shape)
 
     @property
+    def min(self):
+      return 0
+
+    @property
+    def max(self):
+      return MODULUS
+
+    @property
     def modulus(self) -> int:
       return MODULUS
 
