@@ -49,11 +49,13 @@ class Session(tf.Session):
     default_target, config_proto = config.get_tf_config(**tf_config_kwargs)
     if target is None:
       target = default_target
+    self.target = target
+    self.config_proto = config_proto
 
     if isinstance(config, RemoteConfig):
-      print("Starting session on target '{}' using config {}".format(
-          target, config_proto))
-    super(Session, self).__init__(target, graph, config_proto)
+      logger.info("Starting session on target '%s' using config %s",
+                  self.target, self.config_proto)
+    super(Session, self).__init__(self.target, graph, self.config_proto)
 
     global __TFE_DEBUG__  # pylint: disable=invalid-name
 
@@ -152,8 +154,7 @@ def set_tfe_events_flag(monitor_events: bool = False) -> None:
   """
   global __TFE_EVENTS__  # pylint: disable=invalid-name
   if monitor_events is True:
-    print(("Tensorflow encrypted is monitoring statistics for each",
-           "session.run() call using a tag"))
+    logger.info("Writing event files for each run with a tag")
 
   __TFE_EVENTS__ = monitor_events
 
@@ -168,7 +169,7 @@ def set_tfe_debug_flag(debug: bool = False) -> None:
   """
   global __TFE_DEBUG__  # pylint: disable=invalid-name
   if debug is True:
-    print("Tensorflow encrypted is running in DEBUG mode")
+    logger.info("Running in debug mode")
 
   __TFE_DEBUG__ = debug
 
@@ -183,7 +184,7 @@ def set_tfe_trace_flag(trace: bool = False) -> None:
   """
   global __TFE_TRACE__  # pylint: disable=invalid-name
   if trace is True:
-    logger.info("Tensorflow encrypted is dumping computation traces")
+    logger.info("Writing trace files")
 
   __TFE_TRACE__ = trace
 
