@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
+from tf_encrypted.keras.engine.sequential import Sequential
 
 
 def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,
@@ -46,52 +47,34 @@ def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,
   np.testing.assert_allclose(actual, expected, rtol=rtol)
 
 
-# TODO[jason]: write this when tfe's Sequential exists.
-#
-# def layer_test(layer_cls, kwargs=None, input_shape=None,
-#                input_data=None, expected_output=None):
-#   """Test routine for a layer with a single input and single output.
-#   Arguments:
-#     layer_cls: Layer class object.
-#     kwargs: Optional dictionary of keyword arguments for instantiating the
-#       layer.
-#     input_shape: Input shape tuple.
-#     input_dtype: Data type of the input data.
-#     input_data: Numpy array of input data.
-#     expected_output: Shape tuple for the expected shape of the output.
-#     expected_output_dtype: Data type expected for the output.
-#   Returns:
-#     The output data (Numpy array) returned by the layer, for additional
-#     checks to be done by the calling code.
-#   Raises:
-#     ValueError: if `input_data is None and input_shape is None`.
-#   """
-#   input_shape, input_data = _sanitize_testing_args(input_shape, input_data)
-#
-#   # instantiation
-#   kwargs = kwargs or {}
-#   layer = layer_cls(**kwargs)
-#
-#   # # test get_weights , set_weights at layer level
-#   # weights = layer.get_weights()
-#   # layer.set_weights(weights)
-#
-#   # test and instantiation from weights
-#   if 'weights' in tf_inspect.getfullargspec(layer_cls.__init__):
-#     kwargs['weights'] = weights
-#     layer = layer_cls(**kwargs)
-#
-#   # # test in functional API
-#   # x = keras.layers.Input(shape=input_shape[1:], dtype=input_dtype)
-#   # y = layer(x)
-#   # if keras.backend.dtype(y) != expected_output_dtype:
-#   #   raise AssertionError('When testing layer %s, for input %s, found output '
-#   #                        'dtype=%s but expected to find %s.\nFull kwargs: %s' %
-#   #                        (layer_cls.__name__,
-#   #                         x,
-#   #                         keras.backend.dtype(y),
-#   #                         expected_output_dtype,
-#   #                         kwargs))
+def layer_test(layer_cls, kwargs=None, batch_input_shape=None,
+               input_data=None):
+  """Test routine for a layer with a single input and single output.
+  Arguments:
+    layer_cls: Layer class object.
+    kwargs: Optional dictionary of keyword arguments for instantiating the
+      layer.
+    input_shape: Input shape tuple.
+    input_dtype: Data type of the input data.
+    input_data: Numpy array of input data.
+  Returns:
+    The output data (Numpy array) returned by the layer, for additional
+    checks to be done by the calling code.
+  Raises:
+    ValueError: if `input_data is None and input_shape is None`.
+  """
+  input_shape, input_data = _sanitize_testing_args(
+      batch_input_shape, input_data)
+
+  # instantiation
+  kwargs = kwargs or {}
+  with tfe.protocol.SecureNN():
+    layer = layer_cls(batch_input_shape=input_shape, **kwargs)
+    model = Sequential()
+    model.add(layer)
+
+    x = tfe.define_private_variable(input_data)
+    model(x)
 
 
 def _sanitize_testing_args(input_shape, input_data):
