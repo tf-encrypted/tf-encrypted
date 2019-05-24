@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.keras.testing_utils import agreement_test
+from tf_encrypted.keras.testing_utils import agreement_test, layer_test
 
 np.random.seed(42)
 
@@ -51,6 +51,9 @@ class TestConv2d(unittest.TestCase):
     agreement_test(tfe.keras.layers.Conv2D,
                    kwargs=kwargs,
                    input_shape=input_shape)
+    layer_test(tfe.keras.layers.Conv2D,
+               kwargs=kwargs,
+               batch_input_shape=input_shape)
 
 
 if __name__ == '__main__':

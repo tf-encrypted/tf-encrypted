@@ -4,7 +4,7 @@ import unittest
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.keras.testing_utils import agreement_test
+from tf_encrypted.keras.testing_utils import agreement_test, layer_test
 
 class TestActivation(unittest.TestCase):
 
@@ -18,6 +18,9 @@ class TestActivation(unittest.TestCase):
     agreement_test(tfe.keras.layers.Activation,
                    kwargs=layer_kwargs,
                    input_shape=[1, 5])
+    layer_test(tfe.keras.layers.Activation,
+               kwargs=layer_kwargs,
+               batch_input_shape=[1, 5])
 
 
 if __name__ == '__main__':
