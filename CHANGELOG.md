@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Added**
 
-- First steps for the new `tfe.keras` module closely matches that of TensorFlow.
+- First steps for the new `tfe.keras` module closely matching that of TensorFlow.
 - More examples around private prediction and private training.
 - Various notebooks, from getting started to in-depth debugging.
 - Decoupled triple generation for Pond and SecureNN, allowing triples to be generated up front or simultaneously with other computations.
