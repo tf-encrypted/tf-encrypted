@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3]
+
+**Added**
+
+- First steps for the new `tfe.keras` module closely matches that of TensorFlow.
+- More examples around private prediction and private training.
+- Various notebooks, from getting started to in-depth debugging.
+- Decoupled triple generation for Pond and SecureNN, allowing triples to be generated up front or simultaneously with other computations.
+
+**Changed**
+
+- All code is now following the style guide of TensorFlow.
+
 ## [0.5.2]
 
 Migration to third party organization, including on [GitHub](https://github.com/tf-encrypted/tf-encrypted/) and [Docker Hub](https://hub.docker.com/r/tfencrypted/tf-encrypted).
