@@ -20,12 +20,13 @@ class Batchnorm(Layer):
 
   def __init__(self, input_shape: List[int],
                mean: np.ndarray, variance: np.ndarray, scale: np.ndarray,
-               offset: np.ndarray, variance_epsilon: float = 1e-8) -> None:
+               offset: np.ndarray, variance_epsilon: float = 1e-8, channels_first : bool = True) -> None:
     self.mean = mean
     self.variance = variance
     self.scale = scale
     self.offset = offset
     self.variance_epsilon = variance_epsilon
+    self.channels_first = channels_first
     self.denom = None
 
     super(Batchnorm, self).__init__(input_shape)
@@ -44,11 +45,21 @@ class Batchnorm(Layer):
 
     # Batchnorm after Conv2D layer
     elif len(self.input_shape) == 4:
-      _, c, _, _ = self.input_shape
-      self.mean = self.mean.reshape(1, c, 1, 1)
-      self.variance = self.variance.reshape(1, c, 1, 1)
-      self.scale = self.scale.reshape(1, c, 1, 1)
-      self.offset = self.offset.reshape(1, c, 1, 1)
+      if self.channels_first:
+        #NCHW format
+        _, c, _, _ = self.input_shape
+        self.mean = self.mean.reshape(1, c, 1, 1)
+        self.variance = self.variance.reshape(1, c, 1, 1)
+        self.scale = self.scale.reshape(1, c, 1, 1)
+        self.offset = self.offset.reshape(1, c, 1, 1)
+      else:
+        #NHWC format
+        _, _, _, c = self.input_shape
+        self.mean = self.mean.reshape(1, 1, 1, c)
+        self.variance = self.variance.reshape(1, 1, 1, c)
+        self.scale = self.scale.reshape(1, 1, 1, c)
+        self.offset = self.offset.reshape(1, 1, 1, c)
+
 
     denomtemp = 1.0 / np.sqrt(self.variance + self.variance_epsilon)
 
