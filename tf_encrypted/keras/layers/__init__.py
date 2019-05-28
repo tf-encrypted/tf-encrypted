@@ -7,6 +7,7 @@ from tf_encrypted.keras.layers.convolutional import Conv2D
 from tf_encrypted.keras.layers.dense import Dense
 from tf_encrypted.keras.layers.flatten import Flatten
 from tf_encrypted.keras.layers.pooling import AveragePooling2D, MaxPooling2D
+from tf_encrypted.keras.layers.relu import ReLU
 
 
 
@@ -18,4 +19,5 @@ __all__ = [
     'Flatten',
     'AveragePooling2D',
     'MaxPooling2D',
+    'ReLU',
 ]
