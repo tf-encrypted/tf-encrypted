@@ -6,6 +6,7 @@ from types import TracebackType
 
 import tensorflow as tf
 
+import tf_encrypted as tfe
 from ..tensor.factory import AbstractTensor
 
 
@@ -24,7 +25,7 @@ class Protocol(ABC):
 
   def __enter__(self) -> "Protocol":
     self.last_protocol = get_protocol()
-    set_protocol(self)
+    tfe.set_protocol(self)
     return self
 
   def __exit__(
@@ -34,7 +35,7 @@ class Protocol(ABC):
       exception_value: Optional[Exception],
       traceback: Optional[TracebackType],
   ) -> Optional[bool]:
-    set_protocol(self.last_protocol)
+    tfe.set_protocol(self.last_protocol)
 
   @property
   @abstractmethod
