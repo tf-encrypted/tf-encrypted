@@ -8,7 +8,7 @@ from tensorflow.python.framework import dtypes
 from tensorflow.python.framework.errors import NotFoundError
 import tf_encrypted as tfe
 
-
+logger = logging.getLogger('tf_encrypted')
 dirname = os.path.dirname(tfe.__file__)
 so_name = '{dn}/operations/secure_random/secure_random_module_tf_{tfv}.so'
 shared_object = so_name.format(dn=dirname, tfv=tf.__version__)
@@ -16,7 +16,7 @@ shared_object = so_name.format(dn=dirname, tfv=tf.__version__)
 try:
   secure_random_module = tf.load_op_library(shared_object)
 except NotFoundError:
-  logging.warning(
+  logger.warning(
       ("Falling back to insecure randomness since the required custom op "
        "could not be found for the installed version of TensorFlow (%s). "
        "Fix this by compiling custom ops."), tf.__version__)

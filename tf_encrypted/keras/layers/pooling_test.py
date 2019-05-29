@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.keras.testing_utils import agreement_test
+from tf_encrypted.keras.testing_utils import agreement_test, layer_test
 
 np.random.seed(42)
 
@@ -46,6 +46,10 @@ class TestPooling2d(unittest.TestCase):
     agreement_test(tfe.keras.layers.MaxPooling2D,
                    kwargs=kwargs,
                    input_shape=input_shape)
+    layer_test(tfe.keras.layers.MaxPooling2D,
+               kwargs=kwargs,
+               batch_input_shape=input_shape)
+
 
   def _core_avgpooling2d(self, **layer_kwargs):
     channel_in = 2
@@ -60,6 +64,9 @@ class TestPooling2d(unittest.TestCase):
     agreement_test(tfe.keras.layers.AveragePooling2D,
                    kwargs=kwargs,
                    input_shape=input_shape)
+    layer_test(tfe.keras.layers.AveragePooling2D,
+               kwargs=kwargs,
+               batch_input_shape=input_shape)
 
 
 if __name__ == '__main__':

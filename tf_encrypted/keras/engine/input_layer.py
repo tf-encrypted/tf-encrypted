@@ -84,16 +84,9 @@ def Input(  # pylint: disable=invalid-name
     **kwargs):
   """`Input()` is used to instantiate a Keras tensor.
   A Keras tensor is a tensor object from the underlying backend
-  (Theano or TensorFlow), which we augment with certain
-  attributes that allow us to build a Keras model
-  just by knowing the inputs and outputs of the model.
-  For instance, if a, b and c are Keras tensors,
-  it becomes possible to do:
-  `model = Model(input=[a, b], output=c)`
-  The added Keras attribute is:
-      `_keras_history`: Last layer applied to the tensor.
-          the entire layer graph is retrievable from that layer,
-          recursively.
+  (TF Encrypted), which we augment with certain
+  attributes that allow us to build a Keras model.
+
   Arguments:
       shape: A shape tuple (integers), not including the batch size.
           For instance, `shape=(32,)` indicates that the expected input
@@ -109,8 +102,10 @@ def Input(  # pylint: disable=invalid-name
       tensor: Optional existing tensor to wrap into the `Input` layer.
           If set, the layer will not create a placeholder tensor.
       **kwargs: deprecated arguments support.
+
   Returns:
     A `tensor`.
+
   Example:
   ```python
   # this is a logistic regression in Keras
@@ -126,6 +121,7 @@ def Input(  # pylint: disable=invalid-name
   x = Input(shape=(32,))
   y = tf.square(x)
   ```
+
   Raises:
     ValueError: in case of invalid arguments.
   """
