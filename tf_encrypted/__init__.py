@@ -5,6 +5,7 @@ import inspect
 import tensorflow as tf
 
 from .config import Config, LocalConfig, RemoteConfig, get_config
+from .daemon import daemon
 from .player import player
 from .protocol import Pond, get_protocol
 from .session import Session, set_tfe_debug_flag, set_tfe_events_flag, set_tfe_trace_flag, set_log_directory

@@ -1,0 +1,114 @@
+#!/usr/bin/env python
+
+import argparse
+import logging
+
+import rpyc
+
+import tf_encrypted as tfe
+
+
+class Command:
+
+  def __call__(self, args):
+    daemon = tfe.daemon.connect_to_daemon(args.host, args.port)
+    self.call(daemon, args)
+
+
+class List(Command):
+
+  @property
+  def name(self):
+    return 'list'
+
+  @property
+  def help_message(self):
+    return "list players on host"
+
+  def fill_parser(self, parser):
+    parser.add_argument('--host', action='store', help='Host of daemon')
+    parser.add_argument('--port', '-p', default=7050, action='store', help='Port on host')
+
+  def call(self, daemon, args):
+    print(daemon.list_players())
+
+
+class Start(Command):
+
+  @property
+  def name(self):
+    return 'start'
+
+  @property
+  def help_message(self):
+    return "Launch TensorFlow server on host"
+
+  def fill_parser(self, parser):
+    parser.add_argument('--host', action='store', help='TODO')
+    parser.add_argument('--port', '-p', default=7050, action='store', help='TODO')
+    parser.add_argument('--name', action='store', help='TODO')
+
+  def call(self, daemon, args):
+    daemon.start_player(args.name)
+
+
+class Stop(Command):
+
+  @property
+  def name(self):
+    return 'stop'
+
+  @property
+  def help_message(self):
+    return ""
+
+  def fill_parser(self, parser):
+    parser.add_argument('--host', action='store', help='TODO')
+    parser.add_argument('--port', '-p', default=7050, action='store', help='TODO')
+    parser.add_argument('--name', action='store', help='TODO')
+
+  def call(self, daemon, args):
+    daemon.stop_player(args.name)
+
+
+class SearchDestroy(Command):
+
+  @property
+  def name(self):
+    return 'search-destroy'
+
+  @property
+  def help_message(self):
+    return ""
+
+  def fill_parser(self, parser):
+    parser.add_argument('--host', action='store', help='TODO')
+    parser.add_argument('--port', '-p', default=7050, action='store', help='TODO')
+
+  def call(self, daemon, args):
+    daemon.search_destroy()
+
+
+all_commands = [
+    List(),
+    Start(),
+    Stop(),
+    SearchDestroy(),
+]
+
+
+if __name__ == "__main__":
+
+  commands_table = {}
+
+  parser = argparse.ArgumentParser()
+  subparsers = parser.add_subparsers(dest='commands', help='commands')
+  for command in all_commands:
+    subparser = subparsers.add_parser(command.name, help=command.help_message)
+    command.fill_parser(subparser)
+    commands_table[command.name] = command
+
+  config = parser.parse_args()
+
+  command = commands_table[config.commands]
+  command(config)
