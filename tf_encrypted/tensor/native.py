@@ -198,7 +198,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
 
     def __radd__(self, other):
       x, y = _lift(self, other)
-      return x.add(y)
+      return y.add(x)
 
     def __sub__(self, other):
       x, y = _lift(self, other)
@@ -206,7 +206,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
 
     def __rsub__(self, other):
       x, y = _lift(self, other)
-      return x.sub(y)
+      return y.sub(x)
 
     def __mul__(self, other):
       x, y = _lift(self, other)

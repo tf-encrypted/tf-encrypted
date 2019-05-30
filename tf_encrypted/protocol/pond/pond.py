@@ -1495,7 +1495,7 @@ class PondTensor(abc.ABC):
     return self.prot.add(self, other)
 
   def __radd__(self, other):
-    return other.prot.add(self, other)
+    return other.prot.add(other, self)
 
   def reduce_sum(self, axis=None, keepdims=None):
     """
@@ -1528,7 +1528,7 @@ class PondTensor(abc.ABC):
     return self.prot.sub(self, other)
 
   def __rsub__(self, other):
-    return self.prot.sub(self, other)
+    return self.prot.sub(other, self)
 
   def mul(self, other):
     """
