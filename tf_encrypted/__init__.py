@@ -46,6 +46,7 @@ def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
       globals()[name] = func
 
   # record new protocol
+  prot.clear_initializers()
   protocol.set_protocol(prot)
 
 
