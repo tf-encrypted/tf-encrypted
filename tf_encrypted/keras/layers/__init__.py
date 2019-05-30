@@ -8,7 +8,7 @@ from tf_encrypted.keras.layers.dense import Dense
 from tf_encrypted.keras.layers.flatten import Flatten
 from tf_encrypted.keras.layers.pooling import AveragePooling2D, MaxPooling2D
 from tf_encrypted.keras.layers.relu import ReLU
-
+from tf_encrypted.keras.layers.core import Reshape
 
 
 __all__ = [
@@ -20,4 +20,5 @@ __all__ = [
     'AveragePooling2D',
     'MaxPooling2D',
     'ReLU',
+    'Reshape',
 ]
