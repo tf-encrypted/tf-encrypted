@@ -206,3 +206,6 @@ class BatchNormalization(Layer):
     else:
       out = self.gamma * (inputs - self.moving_mean) * self.denom + self.beta
     return out
+
+  def compute_output_shape(self, input_shape):
+    return input_shape
