@@ -1,15 +1,15 @@
 Convert
 ===========
-A Converter for constructing TFE Sessions from TensorFlow Graphs.
+A Converter for constructing TF Encrypted Sessions from TensorFlow Graphs.
 
 ## Contents
 1. [Reserved scopes](#reserved-scopes)
 2. [General workflow](#general-workflow)
 2. [Adding a conversion](#adding-an-op)
- - [Adding the conversion function](#adding-the-conversion-function)
- - [Adding the conversion test](#adding-the-conversion-test)
+   - [Adding the conversion function](#adding-the-conversion-function)
+   - [Adding the conversion test](#adding-the-conversion-test)
 3. [Adding a special op](#adding-a-special-op)
- - [Registering intermediate nodes](#registering-intermediate-nodes)
+   - [Registering the special op](#registering-the-special-op)
 
 ## Reserved scopes
 The following name scopes are reserved for use by the TF Encrypted Converter.  If you don't see the one you want, please file a feature request or submit a PR [implementing a conversion for it](#adding-a-special-op).
