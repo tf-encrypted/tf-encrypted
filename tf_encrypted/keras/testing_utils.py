@@ -7,7 +7,7 @@ from tf_encrypted.keras.engine.sequential import Sequential
 
 
 def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,
-                   input_data=None, rtol=1e-2, **tfe_kwargs):
+                   input_data=None, rtol=1e-2, atol=1e-8, **tfe_kwargs):
   """Check agreement between a tf.keras layer and a tfe.keras layer.
   Arguments:
     tfe_layer_cls: Layer class object (from tfe.keras).
@@ -44,7 +44,7 @@ def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,
     sess.run(tf.global_variables_initializer())
     expected = sess.run(y)
 
-  np.testing.assert_allclose(actual, expected, rtol=rtol)
+  np.testing.assert_allclose(actual, expected, rtol=rtol, atol=atol)
 
 
 def layer_test(layer_cls, kwargs=None, batch_input_shape=None,
