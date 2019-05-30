@@ -5,7 +5,8 @@ from tensorflow.python.keras import initializers
 
 from tf_encrypted.keras.engine import Layer
 
-"""Batch normalization layer (Ioffe and Szegedy, 2014).
+class BatchNormalization(Layer):
+  """Batch normalization layer (Ioffe and Szegedy, 2014).
   Normalize the activations of the previous layer at each batch,
   i.e. applies a transformation that maintains the mean activation
   close to 0 and the activation standard deviation close to 1.
@@ -78,8 +79,7 @@ from tf_encrypted.keras.engine import Layer
   References:
       - [Batch Normalization: Accelerating Deep Network Training by Reducing
         Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
-"""
-class BatchNormalization(Layer):
+  """
   def __init__(self,
                axis=3,
                momentum=0.99,
