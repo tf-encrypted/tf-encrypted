@@ -73,7 +73,6 @@ class Reshape(Layer):
     return output_shape
 
   def compute_output_shape(self, input_shape):
-    input_shape = tensor_shape.TensorShape(input_shape).as_list()
     if None in input_shape[1:]:
       output_shape = [input_shape[0]]
       # input shape (partially) unknown? replace -1's with None's
@@ -86,8 +85,3 @@ class Reshape(Layer):
 
   def call(self, inputs):
     return inputs.reshape((int(inputs.shape[0]),) + self.target_shape)
-
-  def get_config(self):
-    config = {'target_shape': self.target_shape}
-    base_config = super(Reshape, self).get_config()
-    return dict(list(base_config.items()) + list(config.items()))
