@@ -83,7 +83,7 @@ class Converter():
       if node.name not in specop_outputs:
 
         output = strip_tensor_info(node.name)
-        inputs = [strip_tensor_info(x) for x in node.input]
+        inputs = [x for x in node.input]
         if node.op == "Placeholder":
           try:
             _, item = inputs_iterable.__next__()
@@ -95,6 +95,18 @@ class Converter():
           continue
 
         self.outputs[output] = register[node.op](self, node, inputs)
+
+        out = register[node.op](self, node, inputs)
+
+        # if the operation returns a list with several ouputs,
+        # identify the outputs node name
+        if isinstance(out, list):
+          output_name = find_output_names(pb_trimmed, node.name)
+          for i, _ in enumerate(out):
+            self.outputs[output_name[i]] = out[i]
+        else:
+          self.outputs[output] = out
+
       else:
         # Register high level special operations
         for s in specop_dict:
@@ -293,3 +305,33 @@ def strip_tensor_info(node_name: str) -> str:
 
 class InvalidArgumentError(Exception):
   pass
+
+
+def find_output_names(pb_trimmed, node_name):
+  """
+  List ouput names for a specific node.
+
+  Add to the output name list if the input name starts with the
+  node name (namespace) of the ops we are registering but
+  not included in the name of the node we are inspecting.
+
+  For example, for the op `split`, based on the node below, the
+  output names are `split` and `split:1`
+
+  node {
+    name: "output/input"
+    op: "Pack"
+    input: "split"
+    input: "split:1"
+    }
+  """
+  output_node = []
+  for n in pb_trimmed:
+    if not n.startswith(node_name):
+      gdf = pb_trimmed[n]
+      inputs = [x for x in gdf.input if x.startswith(node_name)]
+
+    if inputs:
+      output_node += inputs
+
+  return output_node
