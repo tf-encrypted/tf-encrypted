@@ -172,7 +172,7 @@ class BatchNormalization(Layer):
     elif len(input_shape) == 4:
       param_shape = [1, 1, 1, 1]
 
-    param_shape[self.axis] = c
+    param_shape[self.axis] = int(c)
 
     if self.scale:
       gamma = self.gamma_initializer(param_shape)
