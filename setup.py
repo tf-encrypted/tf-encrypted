@@ -14,9 +14,9 @@ setuptools.setup(
     ]},
     python_requires=">=3.5",
     install_requires=[
-        "tensorflow>=1.12.0,<2",
-        "numpy>=1.14.0",
-        "pyyaml>=5.1"
+        "tensorflow >=1.12.0, <1.14, <2",
+        "numpy >=1.14.0",
+        "pyyaml >=5.1"
     ],
     extras_require={
         "tf": ["tensorflow>=1.12.0,<2"]
