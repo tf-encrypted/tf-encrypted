@@ -23,8 +23,7 @@ setuptools.setup(
     },
     license="Apache License 2.0",
     url="https://github.com/tf-encrypted/tf-encrypted",
-    description=("Layer on top of TensorFlow for doing"
-                 "machine learning on encrypted data."),
+    description="A Framework for Machine Learning on Encrypted Data.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="The TF Encrypted Authors",
