@@ -30,12 +30,18 @@ class TestBatchNormalization(unittest.TestCase):
   def test_batchnorm_no_center(self):
     self._core_batchnorm([1, 1, 1, 3], center=False)
 
-  def test_batchnorm_non_default_init(self):
+  def test_batchnorm_non_default_mean_init(self):
     input_shape = [1, 1, 3]
     const = np.random.normal(input_shape)
     initializer = tf.keras.initializers.Constant(const)
 
     self._core_batchnorm([1] + input_shape, moving_mean_initializer=initializer)
+
+  def test_batchnorm_non_default_variance_init(self):
+    input_shape = [1, 1, 3]
+    const = np.random.normal(input_shape)
+    initializer = tf.keras.initializers.Constant(const)
+
     self._core_batchnorm([1] + input_shape,
                          moving_variance_initializer=initializer)
 
