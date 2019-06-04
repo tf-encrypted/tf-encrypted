@@ -39,7 +39,7 @@ class TestBatchNormalization(unittest.TestCase):
 
   def test_batchnorm_non_default_variance_init(self):
     input_shape = [1, 1, 3]
-    const = np.random.normal(input_shape)
+    const = np.random.uniform(input_shape)
     initializer = tf.keras.initializers.Constant(const)
 
     self._core_batchnorm([1] + input_shape,
