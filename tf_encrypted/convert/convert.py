@@ -94,8 +94,6 @@ class Converter():
           self.outputs[output] = x
           continue
 
-        self.outputs[output] = register[node.op](self, node, inputs)
-
         out = register[node.op](self, node, inputs)
 
         # if the operation returns a list with several ouputs,
