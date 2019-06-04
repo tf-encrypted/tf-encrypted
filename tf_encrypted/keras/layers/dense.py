@@ -29,7 +29,7 @@ class Dense(Layer):
           the `kernel` weights matrix.
       bias_regularizer: Regularizer function applied to the bias vector.
       activity_regularizer: Regularizer function applied to
-          the output of the layer (its "activation")..
+          the output of the layer (its "activation").
       kernel_constraint: Constraint function applied to
           the `kernel` weights matrix.
       bias_constraint: Constraint function applied to the bias vector.
