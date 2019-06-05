@@ -3,9 +3,9 @@ from abc import ABC
 import logging
 
 from tensorflow.python.keras.utils import generic_utils
-from tensorflow.python.keras.engine import base_layer_utils
 
 from tf_encrypted import get_protocol
+from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
 
 logger = logging.getLogger('tf_encrypted')
 
@@ -107,7 +107,7 @@ class Layer(ABC):
 
   def _init_set_name(self, name, zero_based=True):
     if not name:
-      self._name = base_layer_utils.unique_layer_name(
+      self._name = unique_object_name(
           generic_utils.to_snake_case(self.__class__.__name__),
           zero_based=zero_based)
     else:
