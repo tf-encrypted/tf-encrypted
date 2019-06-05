@@ -1,8 +1,8 @@
 # TF Encrypted
 
-TF Encrypted is a Python library built on top of [TensorFlow](https://www.tensorflow.org) for researchers and practitioners to experiment with privacy-preserving machine learning. It provides an interface similar to that of TensorFlow, and aims at making the technology readily available without first becoming an expert in machine learning, cryptography, distributed systems, and high performance computing.
+TF Encrypted is a framework for encrypted machine learning in TensorFlow. It looks and feels like TensorFlow, taking advantage of the ease-of-use of the Keras API while enabling training and prediction over encrypted data. Under the hood, TF Encrypted integrates state-of-the-art cryptography like [secure multi-party computation](https://en.wikipedia.org/wiki/Secure_multi-party_computation), and [homomorphic encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption). TF Encrypted aims to make privacy-preserving machine learning readily available, without requiring expertise in cryptography, distributed systems, or high performance computing.
 
-In particular, the library focuses on:
+TF Encrypted focuses on:
 
 - **Usability**: The API and its underlying design philosophy make it easy to get started, use, and integrate privacy-preserving technology into pre-existing machine learning processes.
 - **Extensibility**: The architecture supports and encourages experimentation and benchmarking of new cryptographic protocols and machine learning algorithms.
@@ -32,12 +32,6 @@ pip3 install -e .
 ```
 
 This latter is useful on platforms for which the pip package has not yet been compiled but is also needed for [development](./docs/CONTRIBUTING.md). Note that this will get you a working basic installation, yet a few more steps are required to match the performance and security of the version shipped in the pip package, see the [installation instructions](./docs/INSTALL.md).
-
-## Custom build of TensorFlow For 1.12.0
-
-TF Encrypted officially supports TensorFlow 1.13.1 but if you have a need to run on 1.12.0 and want to take advantage of the int64 tensor speed improvements you'll have to make use of a custom build.
-
-Such builds are available for [macOS](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl) and [Linux](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl) as a temporary solution until the next official release of TensorFlow is out (version 1.13), but no guarantees are made about them and they should be treated as pre-alpha. See more in the [installation instructions](./docs/INSTALL.md#custom-tensorflow).
 
 # Usage
 
@@ -94,11 +88,17 @@ TF Encrypted is experimental software not currently intended for use in producti
 
 - Elements of TensorFlow's networking subsystem does not appear to be sufficiently hardened against malicious users. Proxies or other means of access filtering may be sufficient to mitigate this.
 
+## Support
+
+Please open an [issue](https://github.com/tf-encrypted/tf-encrypted/issues) or feel free to reach out directly on [Slack](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLTFkYTRjYWQ0ZWVlZjVmZTVhODNiYTA2ZTdlNWRkMWE4MTI3ZGFjMWUwZDhhYTk1NjJkZTRiZjBhMzMyMjNlZmQ).
+
 # Contributing
 
-Don't hesitate to send a pull request, open an issue, or ask for help! You can do so either via [GitHub](https://github.com/tf-encrypted/tf-encrypted) or by [joining](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLTFkYTRjYWQ0ZWVlZjVmZTVhODNiYTA2ZTdlNWRkMWE4MTI3ZGFjMWUwZDhhYTk1NjJkZTRiZjBhMzMyMjNlZmQ) our [Slack channel](https://tf-encrypted.slack.com). Check out our [contribution guide](./docs/CONTRIBUTING.md) for more information!
+Check out our [contribution guide](./docs/CONTRIBUTING.md) for more information!
 
-The project was originally started by [Morten Dahl](https://mortendahl.github.io/) but has since benefitted enormously from the efforts of several contributors, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community (in alphabetical order):
+Don't hesitate to send a pull request, open an issue, or ask for help! You can do so either via [GitHub](https://github.com/tf-encrypted/tf-encrypted) or by [joining](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLTFkYTRjYWQ0ZWVlZjVmZTVhODNiYTA2ZTdlNWRkMWE4MTI3ZGFjMWUwZDhhYTk1NjJkZTRiZjBhMzMyMjNlZmQ) our [Slack channel](https://tf-encrypted.slack.com).
+
+The project was originally started by [Morten Dahl](https://mortendahl.github.io/) but has since benefitted enormously from the efforts of several contributors, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community:
 
 - [Morten Dahl](https://github.com/mortendahl) (lead, Dropout Labs)
 - [Ben DeCoste](https://github.com/bendecoste) (Dropout Labs)
@@ -109,6 +109,7 @@ The project was originally started by [Morten Dahl](https://mortendahl.github.io
 - [Justin Patriquin](https://github.com/justin1121) (Dropout Labs)
 - [Andrew Trask](https://github.com/iamtrask) (OpenMined)
 - [Koen van der Veen](https://github.com/koenvanderveen) (OpenMined)
+- [Gavin Uhma](https://github.com/gavinuhma) (Dropout Labs)
 
 # License
 
