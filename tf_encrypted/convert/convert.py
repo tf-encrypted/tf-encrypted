@@ -56,7 +56,7 @@ class Converter():
 
     if inputter_fn is None:
       inputs = []
-    elif isinstance(inputter_fn, list):
+    elif isinstance(inputter_fn, (list, tuple)):
       inputs = inputter_fn
     else:
       inputs = [inputter_fn]
@@ -324,7 +324,11 @@ def find_output_names(pb_trimmed, node_name):
     }
   """
   output_node = []
-  for n in pb_trimmed:
+  node_name_list = list(pb_trimmed.keys())
+  n_i = node_name_list.index(node_name)
+
+  # Forward lookahead from the node we want register
+  for n in node_name_list[n_i + 1:]:
     if not n.startswith(node_name):
       gdf = pb_trimmed[n]
       inputs = [x for x in gdf.input if x.startswith(node_name)]
