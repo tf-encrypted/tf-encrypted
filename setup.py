@@ -10,16 +10,16 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     package_data={'tf_encrypted': [
         'operations/secure_random/*.so',
-        'convert/*.yaml'
+        'convert/*.yaml',
     ]},
     python_requires=">=3.5",
     install_requires=[
-        "tensorflow >=1.12.0, <1.14, <2",
+        "tensorflow >=1.12.0, <2",
         "numpy >=1.14.0",
-        "pyyaml >=5.1"
+        "pyyaml >=5.1",
     ],
     extras_require={
-        "tf": ["tensorflow>=1.12.0,<2"]
+        "tf": ["tensorflow>=1.12.0,<2"],
     },
     license="Apache License 2.0",
     url="https://github.com/tf-encrypted/tf-encrypted",
@@ -34,6 +34,6 @@ setuptools.setup(
         "Development Status :: 2 - Pre-Alpha",
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
-        "Topic :: Security :: Cryptography"
+        "Topic :: Security :: Cryptography",
     ]
 )
