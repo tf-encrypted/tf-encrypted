@@ -94,17 +94,13 @@ remote_config = tfe.RemoteConfig(
         ('master', master_address),
         ('server0', server0_address),
         ('server1', server1_address),
-        ('crypto-producer', producer_address),
-        ('weights-provider', provider_address)
+        ('server2', producer_address),
     ])
 )
 
 tfe.set_config(remote_config)
 
-if protocol_name == 'securenn':
-  tfe.set_protocol(SecureNN())
-else:
-  tfe.set_protocol(Pond())
+tfe.set_protocol(Pond())
 
 print('Using protocol: {}'.format(protocol_name))
 server = remote_config.server(node_name)

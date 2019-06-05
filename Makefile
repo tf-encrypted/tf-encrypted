@@ -305,6 +305,11 @@ $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECUR
 	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
 		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium
 
+hi:
+	g++ -std=c++11 -shared operations/gmp_variant/variant_gmp_op.cc -o tf_encrypted/operations/gmp_variant/variant_gmp_op.so \
+		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -lgmp -lgmpxx
+
+
 build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
 
 build-all:
@@ -312,7 +317,7 @@ build-all:
 	$(MAKE) $(SECURE_OUT_PRE)1.13.1.so
 
 
-.PHONY: build build-all
+.PHONY: build build-all hi
 
 clean:
 	$(MAKE) -C $(LIBSODIUM_DIR) uninstall
