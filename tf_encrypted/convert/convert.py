@@ -96,9 +96,9 @@ class Converter():
 
         out = register[node.op](self, node, inputs)
 
-        # if the operation returns a list with several ouputs,
+        # if the operation returns a list or tuple with several ouputs,
         # identify the outputs node name
-        if isinstance(out, list):
+        if isinstance(out, (list, tuple)):
           output_name = find_output_names(pb_trimmed, node.name)
           for i, _ in enumerate(out):
             self.outputs[output_name[i]] = out[i]
