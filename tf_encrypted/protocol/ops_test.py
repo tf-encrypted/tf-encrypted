@@ -1,10 +1,11 @@
 # pylint: disable=missing-docstring
 import unittest
+import pytest
 
 import numpy as np
 import tensorflow as tf
+
 import tf_encrypted as tfe
-import pytest
 
 
 class TestBatchToSpaceND(unittest.TestCase):

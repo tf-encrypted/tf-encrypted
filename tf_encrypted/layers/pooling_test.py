@@ -1,6 +1,6 @@
 # pylint: disable=missing-docstring
-import pytest
 import unittest
+import pytest
 
 import numpy as np
 import tensorflow as tf

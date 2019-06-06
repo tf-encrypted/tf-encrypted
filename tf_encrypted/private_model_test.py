@@ -50,13 +50,13 @@ class TestSecureModel(unittest.TestCase):
           d
       ])
 
-      input = np.ones((1, 10))
-      output = model.predict(input)
+      x = np.ones((1, 10))
+      y = model.predict(x)
 
       s_model = secure_model(model)
-      s_output = s_model.private_predict(input)
+      s_y = s_model.private_predict(x)
 
-      np.testing.assert_array_almost_equal(s_output, output, 4)
+      np.testing.assert_array_almost_equal(s_y, y, 4)
 
 
 if __name__ == '__main__':
