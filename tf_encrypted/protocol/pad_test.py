@@ -5,7 +5,8 @@ import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 
-from .test_convert import run_pad
+# TODO this is a bit weird
+from ..convert.convert_test import run_pad
 
 
 class TestPad(unittest.TestCase):
