@@ -91,8 +91,8 @@ class TestShare(unittest.TestCase):
     with tfe.protocol.Pond() as prot:
 
       with tfe.Session() as sess:
-        shares = prot._share(dtype.tensor(expected))
-        actual = sess.run(prot._reconstruct(*shares).to_native())
+        shares = prot._share(dtype.tensor(expected))  # pylint: disable=protected-access
+        actual = sess.run(prot._reconstruct(*shares).to_native())  # pylint: disable=protected-access
 
     np.testing.assert_array_equal(actual, expected)
 
