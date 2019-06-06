@@ -5,7 +5,9 @@ import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 from tf_encrypted.private_model import PrivateModel
-from .test_convert import read_graph, export_matmul
+
+# TODO this is a bit weird
+from .convert.convert_test import read_graph, export_matmul
 
 
 class TestPrivateModel(unittest.TestCase):
