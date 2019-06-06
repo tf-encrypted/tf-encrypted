@@ -1,10 +1,12 @@
 # pylint: disable=missing-docstring
+import pytest
 import unittest
+
 import numpy as np
 import tensorflow as tf
-import tf_encrypted as tfe
 
-from tf_encrypted.layers import AveragePooling2D
+import tf_encrypted as tfe
+from tf_encrypted.layers import AveragePooling2D, MaxPooling2D
 
 
 class TestAveragePooling2D(unittest.TestCase):
@@ -87,6 +89,37 @@ class TestAveragePooling2D(unittest.TestCase):
 
   def test_masked_forward(self):
     self._generic_tiled_forward('masked', False)
+
+
+@pytest.mark.slow
+class TestMaxPooling2D(unittest.TestCase):
+  def setUp(self):
+    tf.reset_default_graph()
+
+  def tearDown(self):
+    tf.reset_default_graph()
+
+  def test_maxpool2d(self):
+    with tfe.protocol.SecureNN() as prot:
+
+      x_in = np.array([[[[1, 2, 3, 4],
+                         [3, 2, 4, 1],
+                         [1, 2, 3, 4],
+                         [3, 2, 4, 1]]]])
+
+      expected = np.array([[[[3, 4],
+                             [3, 4]]]], dtype=np.float64)
+
+      x = prot.define_private_variable(x_in)
+      pool = MaxPooling2D([0, 1, 4, 4], pool_size=2, padding="VALID")
+      result = pool.forward(x)
+
+      with tfe.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        answer = sess.run(result.reveal())
+
+    assert np.array_equal(answer, expected)
+
 
 
 if __name__ == '__main__':
