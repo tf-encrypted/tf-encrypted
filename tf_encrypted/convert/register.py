@@ -395,7 +395,7 @@ def _split(converter, node: Any, inputs: List[str]) -> Any:
   num_split = node.attr["num_split"].i
   axis_val = axis.attr["value"].tensor.int_val[0]
 
-  return converter.protocol.split(input_out, num_split, axis_val)[0]
+  return converter.protocol.split(input_out, num_split, axis_val)
 
 
 def _pad(converter, node: Any, inputs: List[str]) -> Any:

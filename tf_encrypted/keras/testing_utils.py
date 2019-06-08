@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.keras.engine.sequential import Sequential
+from tf_encrypted.keras.models import Sequential
 
 
 def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,

@@ -160,7 +160,7 @@ class TestConvert(unittest.TestCase):
     self._test_with_ndarray_input_fn('squeeze', test_input, protocol='Pond')
 
   def test_split_convert(self):
-    test_input = np.ones([2, 4])
+    test_input = np.random.random([1, 10, 10, 3])
     self._test_with_ndarray_input_fn('split', test_input, protocol='Pond')
 
   def test_sub_convert(self):
@@ -596,7 +596,7 @@ def export_gather(filename, input_shape):
 
 def run_split(input):
   a = tf.placeholder(tf.float32, shape=input.shape, name="input")
-  x = tf.split(a, num_or_size_splits=2, axis=1)
+  x = tf.split(a, num_or_size_splits=3, axis=-1)
   with tf.Session() as sess:
     output = sess.run(x, feed_dict={a: input})
   return output
@@ -604,7 +604,7 @@ def run_split(input):
 
 def export_split(filename, input_shape):
   a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-  x = tf.split(a, num_or_size_splits=2, axis=1)
+  x = tf.split(a, num_or_size_splits=3, axis=-1)
   return export(x, filename)
 
 
