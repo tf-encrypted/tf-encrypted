@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.5]
+
+**Added**
+
+- More `tfe.keras` functionality, including BatchNormalization.
+- `channels_last` support for `tfe.layers.Batchnorm`
+- `tfe.convert` now supports conversions for Ops with multiple output tensors.
+
+**Changed**
+
+- All test files have been moved into the tf_encrypted namespace next to their corresponding functionality in line with the TensorFlow style guide.
+
+**Fixed**
+
+- A bug in `tfe.convert` where tf.split was only returning the first element of the output tensor array.
+- An ImportError for users of TF 1.14+.
+- A bug where `__radd__` and `__rsub__` were actually computing `__add__` and `__sub__`.
+- An overzealous AssertionError in the tfe.serving.QueueServer.
+
 ## [0.5.4]
 
 **Added**
