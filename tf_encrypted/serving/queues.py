@@ -20,6 +20,8 @@ class QueueServer:
       output_queue_capacity=1,
       output_queue_name="output",
   ):
+    self.input_shape = input_shape
+    self.output_shape = output_shape
 
     # input
     self.input_queue = tfe.queue.FIFOQueue(
@@ -108,7 +110,7 @@ class QueueClient:
     Send `x` to servers for processing.
     """
     assert isinstance(x, np.ndarray)
-    assert x.shape == self.input_shape
+    assert list(x.shape) == list(self.input_shape)
 
     # simply run the input op with
     sess.run(
