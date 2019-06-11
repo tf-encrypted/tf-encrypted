@@ -5,7 +5,6 @@ import logging
 
 import tensorflow as tf
 from tensorflow.python.client import timeline
-from tensorflow.python import debug as tf_debug
 
 from .config import RemoteConfig, get_config
 from .utils import unwrap_fetches
@@ -14,7 +13,6 @@ from .utils import unwrap_fetches
 # pylint: disable=invalid-name
 __TFE_EVENTS__ = bool(os.getenv('TFE_EVENTS', ""))
 __TFE_TRACE__ = bool(os.getenv('TFE_TRACE', ""))
-__TFE_DEBUG__ = bool(os.getenv('TFE_DEBUG', ""))
 __TENSORBOARD_DIR__ = str(os.getenv('TFE_EVENTS_DIR', '/tmp/tensorboard'))
 # pylint: enable=invalid-name
 
@@ -56,12 +54,6 @@ class Session(tf.Session):
       logger.info("Starting session on target '%s' using config %s",
                   self.target, self.config_proto)
     super(Session, self).__init__(self.target, graph, self.config_proto)
-
-    global __TFE_DEBUG__  # pylint: disable=invalid-name
-
-    if __TFE_DEBUG__:
-      print('Session in debug mode')
-      self = tf_debug.LocalCLIDebugWrapperSession(self)  # pylint: disable=self-cls-assignment
 
   def run(
       self,
@@ -157,21 +149,6 @@ def set_tfe_events_flag(monitor_events: bool = False) -> None:
     logger.info("Writing event files for each run with a tag")
 
   __TFE_EVENTS__ = monitor_events
-
-
-def set_tfe_debug_flag(debug: bool = False) -> None:
-  """
-  set_tfe_debug_flag(debug)
-
-  Set flag to enable or disable debugging mode for TF Encrypted.
-
-  :param bool debug: Enable or disable debugging, disabled by default.
-  """
-  global __TFE_DEBUG__  # pylint: disable=invalid-name
-  if debug is True:
-    logger.info("Running in debug mode")
-
-  __TFE_DEBUG__ = debug
 
 
 def set_tfe_trace_flag(trace: bool = False) -> None:
