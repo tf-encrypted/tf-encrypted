@@ -18,3 +18,13 @@ data/
 *.gz
 .cache
 **/.ipynb_checkpoints/
+
+bazel-bin
+bazel-genfiles
+bazel-operations
+bazel-out
+bazel-testlogs
+
+operations/ntl/deps
+
+.bazelrc
