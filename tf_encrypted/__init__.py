@@ -4,10 +4,17 @@ from typing import Optional, Any
 import inspect
 import tensorflow as tf
 
-from .config import Config, LocalConfig, RemoteConfig, get_config
+from .config import Config
+from .config import LocalConfig
+from .config import RemoteConfig
+from .config import get_config
 from .player import player
-from .protocol import Pond, get_protocol
-from .session import Session, set_tfe_debug_flag, set_tfe_events_flag, set_tfe_trace_flag, set_log_directory
+from .protocol import get_protocol
+from .protocol import Pond
+from .session import Session
+from .session import set_tfe_events_flag
+from .session import set_tfe_trace_flag
+from .session import set_log_directory
 from . import convert
 from . import layers
 from . import operations
@@ -71,7 +78,6 @@ __all__ = [
     "RemoteConfig",
     "set_tfe_events_flag",
     "set_tfe_trace_flag",
-    "set_tfe_debug_flag",
     "set_log_directory",
     "get_config",
     "set_config",

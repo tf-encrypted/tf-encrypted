@@ -64,7 +64,6 @@ services:
       TFE_MASTER_ADDRESS: 0.0.0.0:4440
       TFE_API_PORT: 8080
       TFE_MONITOR_STATS: null
-      TFE_DEBUG: null
     depends_on:
       - server0
       - server1

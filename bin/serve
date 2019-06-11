@@ -26,7 +26,6 @@ batch_size = int(os.environ.get('TFE_BATCH_SIZE', 1))
 protocol_name = str(os.environ.get('TFE_PROTOCOL_NAME', 'securenn'))
 enable_events_monitor = os.environ.get('TFE_MONITOR_EVENTS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
-enable_debug = os.environ.get('TFE_DEBUG') is not None
 
 env_truncation = os.environ.get('TFE_TRUNCATION_TYPE') or ""
 interactive_truncation = True
@@ -87,7 +86,6 @@ if master_address is None:
 
 tfe.set_tfe_events_flag(enable_events_monitor)
 tfe.set_tfe_trace_flag(enable_traces)
-tfe.set_tfe_debug_flag(enable_debug)
 
 remote_config = tfe.RemoteConfig(
     OrderedDict([
