@@ -52,6 +52,7 @@ class Layer(ABC):
     self.trainable = trainable
     self._init_set_name(name)
     self.built = False
+    self.weights = []
 
   def build(self, input_shape):  # pylint: disable=unused-argument
     """Creates the variables of the layer (optional, for subclass implementers).
@@ -96,6 +97,12 @@ class Layer(ABC):
     outputs = self.call(inputs, *args, **kargs)
 
     return outputs
+  
+  def add_weight(self, variable):
+
+    self.weights.append(variable)
+
+    return variable
 
   @property
   def prot(self):

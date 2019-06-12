@@ -1,6 +1,7 @@
 """Sequential model API."""
 from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import InputLayer, Input
+import tf_encrypted
 
 
 class Sequential(Layer):
@@ -90,6 +91,9 @@ class Sequential(Layer):
       # `outputs` will be the inputs to the next layer.
       inputs = outputs
 
+      # Add layer weights to the  model weights list
+      self.weights += layer.weights
+
     return outputs
 
   @property
@@ -101,3 +105,42 @@ class Sequential(Layer):
     if layers and isinstance(layers[0], InputLayer):
       return layers[1:]
     return layers[:]
+
+  def from_config(self, keras_config):
+
+    self._rebuild_tfe_model(keras_config)
+
+  def set_weights(self, weights_array):
+
+    for i, w in enumerate(self.weights):
+      print(w)
+      new_w = self.prot.define_private_variable(weights_array[i])
+      self.prot.assign(w, new_w)
+
+  def _rebuild_tfe_model(self, keras_config):
+    """
+    Rebuild the plaintext Keras model as a TF Encrypted Keras model
+    using the keras configuration and the current TF Encrypted protocol
+    and configuration.
+    """
+    for keras_layer in keras_config['layers']:
+      tfe_layer = _instantiate_tfe_layer(keras_layer)
+      self._layers.append(tfe_layer)
+
+def _instantiate_tfe_layer(keras_layer):
+
+# Identify tf.keras layer type, and grab the corresponding tfe.keras layer
+  keras_layer_type = keras_layer['class_name']
+  try:
+    tfe_layer_cls = getattr(tf_encrypted.keras.layers, keras_layer_type)
+  except AttributeError:
+    # TODO: rethink how we warn the user about this, maybe codegen a list of
+    #       supported layers in a doc somewhere
+    raise RuntimeError(
+      "TF Encrypted does not yet support the " "{lcls} layer.".format(lcls=keras_layer_type)
+    )
+
+  keras_layer_config = keras_layer['config']
+  keras_layer_config.pop('dtype')
+
+  return tfe_layer_cls(**keras_layer_config)
