@@ -646,7 +646,6 @@ def export_concat(filename, input_shape):
   return export(x, filename)
 
 
-
 def run_sub(data):
   a = tf.placeholder(tf.float32, shape=data.shape, name="input")
   b = tf.constant(np.ones((data.shape[0], 1)), dtype=tf.float32)
