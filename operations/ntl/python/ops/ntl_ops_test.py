@@ -11,10 +11,10 @@ except ImportError:
 
 class NTLMatrixTest(test.TestCase):
   """NTLMatrix test"""
-  def core(self, input, output_type):
+  def core(self, inp, output_type):
     with self.test_session():
-      var1 = create_ntl_matrix(input, 555666)
-      var2 = create_ntl_matrix(input, 555666)
+      var1 = create_ntl_matrix(inp, 555666)
+      var2 = create_ntl_matrix(inp, 555666)
 
       res = matmul_ntl(var1, var2)
 
