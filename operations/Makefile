@@ -1,6 +1,12 @@
-all: ntl-op
+UNAME=$(shell uname -s)
+ifeq ($(UNAME),Linux)
+	EXT=so
+endif
+ifeq ($(UNAME_S),Darwin)
+	EXT=dylib
+endif
 
-EXT=dylib
+all: ntl-op
 
 ntl/deps/lib/libgmp.$(EXT):
 	wget https://gmplib.org/download/gmp/gmp-6.1.2.tar.xz

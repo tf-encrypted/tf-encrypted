@@ -58,9 +58,9 @@ bootstrap: pythoncheck pipcheck
 # Rules for running our tests and for running various different linters
 # ###############################################
 test: pythoncheck
-	pytest -n 8 -x -m "not slow and not convert_maxpool"
-	pytest -n 8 -x -m slow
-	pytest -n 8 -x -m convert_maxpool
+	pytest -n 8 -x -m "not slow and not convert_maxpool" --ignore=operations/ntl
+	pytest -n 8 -x -m slow --ignore=operations/ntl
+	pytest -n 8 -x -m convert_maxpool --ignore=operations/ntl
 
 CONVERT_DIR=tf_encrypted/convert
 BUILD_RESERVED_SCOPES=$(CONVERT_DIR)/specops.yaml

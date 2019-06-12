@@ -1,4 +1,6 @@
 """Ntl Ops Tests"""
+import numpy as np
+
 from tensorflow.python.platform import test
 try:
   from ntl.python.ops.ntl_ops import create_ntl_matrix, ntl_to_string, matmul_ntl
@@ -18,7 +20,7 @@ class NTLMatrixTest(test.TestCase):
 
       s = ntl_to_string(res)
 
-      print(s.eval())
+      np.testing.assert_array_equal([[b"50", b"50"], [b"50", b"50"]], s.eval())
 
 
 if __name__ == '__main__':
