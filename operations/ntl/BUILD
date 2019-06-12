@@ -3,6 +3,7 @@ package(default_visibility = ["//visibility:public"])
 cc_binary(
     name = 'python/ops/_ntl_ops.so',
     srcs = ["cc/kernels/ntl_matrix_ops.cc",
+            "cc/ops/ntl_matrix_ops.cc",
             "cc/kernels/ntl_matrix.cc",
             "cc/kernels/ntl_matrix.h"] +
             glob(["deps/include/NTL/*.h"]),

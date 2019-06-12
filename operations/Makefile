@@ -2,7 +2,7 @@ UNAME=$(shell uname -s)
 ifeq ($(UNAME),Linux)
 	EXT=so
 endif
-ifeq ($(UNAME_S),Darwin)
+ifeq ($(UNAME),Darwin)
 	EXT=dylib
 endif
 

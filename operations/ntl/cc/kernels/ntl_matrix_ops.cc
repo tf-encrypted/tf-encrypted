@@ -15,22 +15,73 @@
 
 using namespace tensorflow;
 
-class InitModulusOp : public OpKernel {
-public:
-  explicit InitModulusOp(OpKernelConstruction* context) : OpKernel(context) {}
+namespace functor {
+template <typename T>
+struct CreateNTLMatrixOpFunctor {
+  void operator()(const Tensor* in, Tensor* out) {
+    auto rows = in->dim_size(0), cols = in->dim_size(1);
+    NTLMatrix m(rows, cols);
 
-  void Compute(OpKernelContext* ctx) override {
-    const Tensor& value = ctx->input(0);
+    auto mat = in->matrix<T>();
 
-    OP_REQUIRES(
-        ctx, TensorShapeUtils::IsScalar(value.shape()),
-        errors::InvalidArgument(
-            "value expected to be a 2d matrix ",
-            "but got shape: ", value.shape().DebugString()));
+    for(int i = 0; i < rows; i++) {
+        for(int j = 0; j < cols; j++) {
+            m.m[i][j] = NTL::conv<NTL::ZZ_p>(mat(i, j));
+        }
+    }
 
+    out->scalar<Variant>()() = std::move(m);
   }
 };
 
+template<>
+struct CreateNTLMatrixOpFunctor<string> {
+  void operator()(const Tensor* in, Tensor* out) {
+    auto rows = in->dim_size(0), cols = in->dim_size(1);
+    NTLMatrix m(rows, cols);
+
+    auto mat = in->matrix<string>();
+
+    for(int i = 0; i < rows; i++) {
+        for(int j = 0; j < cols; j++) {
+            m.m[i][j] = NTL::conv<NTL::ZZ_p>(mat(i, j).c_str());
+        }
+    }
+
+    out->scalar<Variant>()() = std::move(m);
+  }
+};
+
+template<typename T>
+struct NTLToNativeOpFunctor {
+  void operator()(const NTLMatrix* in, Tensor* out) {
+    auto rows = in->m.NumRows(), cols = in->m.NumCols();
+
+    for(int i = 0; i < rows; i++) {
+       for(int j = 0; j < cols; j++) {
+         out->matrix<T>()(i, j) = (T)NTL::conv<long>(in->m[i][j]);
+       }
+     }
+  }
+};
+
+template<>
+struct NTLToNativeOpFunctor<string> {
+  void operator()(const NTLMatrix* in, Tensor* out) {
+    auto rows = in->m.NumRows(), cols = in->m.NumCols();
+
+    for(int i = 0; i < rows; i++) {
+       for(int j = 0; j < cols; j++) {
+         std::stringstream buffer;
+         buffer << in->m[i][j];
+         out->matrix<string>()(i, j) = buffer.str();
+       }
+     }
+  }
+};
+}
+
+template <typename T>
 class CreateNTLMatrixOp : public OpKernel {
 public:
   explicit CreateNTLMatrixOp(OpKernelConstruction* context) : OpKernel(context) {}
@@ -57,18 +108,7 @@ public:
     Tensor* result;
     OP_REQUIRES_OK(ctx, ctx->allocate_output(0, TensorShape{}, &result));
 
-    auto rows = value.dim_size(0), cols = value.dim_size(1);
-    NTLMatrix m(rows, cols);
-
-    auto mat = value.matrix<string>();
-
-    for(int i = 0; i < rows; i++) {
-        for(int j = 0; j < cols; j++) {
-            m.m[i][j] = NTL::conv<NTL::ZZ_p>(mat(i, j).c_str());
-        }
-    }
-
-    result->scalar<Variant>()() = std::move(m);
+    functor::CreateNTLMatrixOpFunctor<T>()(&value, result);
   }
 };
 
@@ -110,9 +150,10 @@ public:
   }
 };
 
-class NTLToStringOp : public OpKernel {
+template <typename T>
+class NTLToNativeOp : public OpKernel {
 public:
-    explicit NTLToStringOp(OpKernelConstruction* context) : OpKernel(context) {}
+    explicit NTLToNativeOp(OpKernelConstruction* context) : OpKernel(context) {}
 
     void Compute(OpKernelContext* ctx) override {
       const NTLMatrix * w = nullptr;
@@ -123,47 +164,26 @@ public:
       Tensor* result;
       OP_REQUIRES_OK(ctx, ctx->allocate_output(0, TensorShape{rows, cols}, &result));
 
-      for(int i = 0; i < rows; i++) {
-        for(int j = 0; j < cols; j++) {
-          std::stringstream buffer;
-          buffer << w->m[i][j];
-          result->matrix<string>()(i, j) = buffer.str();
-        }
-      }
+      functor::NTLToNativeOpFunctor<T>()(w, result);
     }
 };
 
 REGISTER_UNARY_VARIANT_DECODE_FUNCTION(NTLMatrix, NTLMatrix::kTypeName);
 
-// Input just a string for now, we make this more robust in the future
-REGISTER_OP("CreateNTLMatrix")
-    .Input("value: string")
-    .Input("modulus: int64")
-    .Output("ntl: variant")
-    .SetIsStateful();
+// Register the CPU kernels.
+#define REGISTER_CPU(T)                                          \
+  REGISTER_KERNEL_BUILDER(                                       \
+      Name("CreateNTLMatrix").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
+      CreateNTLMatrixOp<T>); \
+  REGISTER_KERNEL_BUILDER( \
+    Name("NTLToNative").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
+    NTLToNativeOp<T>);
 
-REGISTER_KERNEL_BUILDER(
-  Name("CreateNTLMatrix")
-  .Device(DEVICE_CPU),
-  CreateNTLMatrixOp);
-
-REGISTER_OP("MatMulNTL")
-    .Input("val1: variant")
-    .Input("val2: variant")
-    .Output("res: variant")
-    .SetIsStateful();
+REGISTER_CPU(string);
+REGISTER_CPU(int32);
+REGISTER_CPU(int64)
 
 REGISTER_KERNEL_BUILDER(
   Name("MatMulNTL")
   .Device(DEVICE_CPU),
   MatMulNTLOp);
-
-REGISTER_OP("NTLToString")
-    .Input("ntl: variant")
-    .Output("str: string")
-    .SetIsStateful();
-
-REGISTER_KERNEL_BUILDER(
-  Name("NTLToString")
-  .Device(DEVICE_CPU),
-  NTLToStringOp);
