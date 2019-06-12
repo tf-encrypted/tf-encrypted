@@ -1,3 +1,4 @@
+"""NTL Ops"""
 from tensorflow.python.framework import load_library
 from tensorflow.python.platform import resource_loader
 

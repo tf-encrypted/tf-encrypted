@@ -1,6 +1,4 @@
-import numpy as np
-import tensorflow as tf
-
+"""Ntl Ops Tests"""
 from tensorflow.python.platform import test
 try:
   from ntl.python.ops.ntl_ops import create_ntl_matrix, ntl_to_string, matmul_ntl
@@ -9,17 +7,18 @@ except ImportError:
 
 
 class NTLMatrixTest(test.TestCase):
+  """NTLMatrix test"""
 
-  def testZeroOut(self):
+  def test_ntl_matrix(self):
     with self.test_session():
-        var1 = create_ntl_matrix([["5", "5"], ["5", "5"]], 555666)
-        var2 = create_ntl_matrix([["5", "5"], ["5", "5"]], 555666)
+      var1 = create_ntl_matrix([["5", "5"], ["5", "5"]], 555666)
+      var2 = create_ntl_matrix([["5", "5"], ["5", "5"]], 555666)
 
-        res = matmul_ntl(var1, var2)
+      res = matmul_ntl(var1, var2)
 
-        s = ntl_to_string(res)
+      s = ntl_to_string(res)
 
-        print(s.eval())
+      print(s.eval())
 
 
 if __name__ == '__main__':
