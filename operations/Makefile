@@ -28,6 +28,8 @@ ntl/deps/lib/libntl.$(EXT):
 
 ntl-op: ntl/deps/lib/libgmp.$(EXT) ntl/deps/lib/libntl.$(EXT)
 	bazel build ntl:python/ops/_ntl_ops.so
+	cp ./bazel-bin/ntl/python/ops/_ntl_ops.so ../tf_encrypted/operations/ntl/
+	chmod u+w ../tf_encrypted/operations/ntl/_ntl_ops.so
 
 .PHONY: ntl-op
 

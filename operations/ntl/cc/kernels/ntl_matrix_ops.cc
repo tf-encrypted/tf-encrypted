@@ -138,6 +138,10 @@ public:
     const NTLMatrix * m2 = nullptr;
     OP_REQUIRES_OK(ctx, GetNTLMatrix(ctx, 1, &m2));
 
+    const Tensor& mod = ctx->input(2);
+
+    NTL::ZZ_p::init(NTL::ZZ(mod.scalar<int64>()()));
+
     Tensor* result;
     OP_REQUIRES_OK(ctx, ctx->allocate_output(0, TensorShape{}, &result));
 

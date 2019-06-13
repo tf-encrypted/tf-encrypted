@@ -12,6 +12,7 @@ REGISTER_OP("CreateNTLMatrix")
 REGISTER_OP("MatMulNTL")
     .Input("val1: variant")
     .Input("val2: variant")
+    .Input("modulus: int64")
     .Output("res: variant")
     .SetIsStateful();
 
