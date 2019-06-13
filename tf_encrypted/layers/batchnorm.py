@@ -73,9 +73,9 @@ class Batchnorm(Layer):
   def forward(self, x):
     if self.scale is None and self.offset is None:
       out = (x - self.mean) * self.denom
-    elif self.scale is None:
-      out = self.scale * (x - self.mean) * self.denom
     elif self.offset is None:
+      out = self.scale * (x - self.mean) * self.denom
+    elif self.scale is None:
       out = (x - self.mean) * self.denom + self.offset
     else:
       out = self.scale * (x - self.mean) * self.denom + self.offset
