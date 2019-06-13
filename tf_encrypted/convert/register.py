@@ -517,12 +517,11 @@ def _avgpool(converter, node: Any, inputs: List[str]) -> Any:
 
 
 def _concat(converter, node: Any, inputs: List[str]) -> Any:
-  input0 = converter.outputs[inputs[0]]
-  input1 = converter.outputs[inputs[1]]
-  axis = converter.outputs[inputs[2]]
+  input_list = [converter.outputs[inputs[i]] for i in range(len(inputs) - 1)]
+  axis = converter.outputs[inputs[-1]]
   axis_int = axis.attr["value"].tensor.int_val[0]
 
-  return converter.protocol.concat([input0, input1], axis_int)
+  return converter.protocol.concat(input_list, axis_int)
 
 
 def _batch_to_space_nd(converter, node, inputs):
