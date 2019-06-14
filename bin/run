@@ -21,11 +21,9 @@ logger.setLevel(logging.DEBUG)
 
 enable_events_monitor = os.environ.get('TFE_MONITOR_EVENTS') is not None
 enable_traces = os.environ.get('TFE_TRACE') is not None
-enable_debug = os.environ.get('TFE_DEBUG') is not None
 
 tfe.set_tfe_events_flag(enable_events_monitor)
 tfe.set_tfe_trace_flag(enable_traces)
-tfe.set_tfe_debug_flag(enable_debug)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--protocol_name", type=str, default='securenn',
@@ -171,8 +169,8 @@ if config.plaintext:
 
 else:
   logger.info('running prediction securely')
-  c = tfe.convert.convert.Converter()
-  y = c.convert(graph_def, tfe.convert.registry(), 'input-provider', inputs)
+  c = tfe.convert.convert.Converter(tfe.convert.registry())
+  y = c.convert(graph_def, 'input-provider', inputs)
 
   def reveal_output(session, out, feed):
     run_op = out.reveal()
