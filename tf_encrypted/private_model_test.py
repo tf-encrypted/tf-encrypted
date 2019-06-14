@@ -22,9 +22,8 @@ class TestPrivateModel(unittest.TestCase):
     graph_def = read_graph("matmul.pb")
 
     with tfe.protocol.Pond():
-      c = tfe.convert.convert.Converter()
-      y = c.convert(graph_def, tfe.convert.registry(),
-                    'input-provider', provide_input)
+      c = tfe.convert.convert.Converter(tfe.convert.registry())
+      y = c.convert(graph_def, 'input-provider', provide_input)
 
       model = PrivateModel(y)
 
