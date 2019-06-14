@@ -2,10 +2,11 @@
 their corresponding TF GraphDefs.
 
 See README.md for details on usage and extension."""
-import re
-from typing import Dict, List, Any, Union, Optional
 from collections import OrderedDict
+import re
+from typing import List, Any, Union, Optional
 
+import tf_encrypted as tfe
 from tf_encrypted.config import Config, get_config
 from tf_encrypted.convert.register import REGISTERED_SPECOPS
 from tf_encrypted.player import Player
@@ -13,39 +14,45 @@ from tf_encrypted.protocol import Protocol, get_protocol
 from tf_encrypted.protocol.pond import TFEInputter
 
 
-class Converter():
+class Converter:
   """The TFE Converter.
 
   Args:
+    registry: An OrderedDict mapping from scope names to TFE conversion
+        functions. Idiomatic behavior is to use tf.convert.registry(), however
+        custom layers and operations can be added to create new conversion
+        registries.
     config: `Config` to use when constructing the TFE graph.
-            Defaults to the current global TFE config.
+        Defaults to the current global TFE config.
     protocol: `Protocol` to use when constructing the TFE graph.
-            Defaults to the current global TFE protocol.
-
-  Returns:
-
+        Defaults to the current global TFE protocol.
+    model_provider: The Player who will act as the model provider, or a string
+        identifier for the Player.
   """
 
   def __init__(
       self,
+      registry,
       config: Optional[Config] = None,
       protocol: Optional[Protocol] = None,
-      player: Optional[Union[str, Player]] = None
+      model_provider: Optional[Union[str, Player]] = None,
   ) -> None:
     self.config = config if config is not None else get_config()
-    self.protocol = protocol if protocol is not None else get_protocol()
-    if player is None:
+    if protocol is not None:
+      tfe.set_protocol(protocol)
+    self.protocol = get_protocol()
+    if model_provider is None:
       self.model_provider = self.config.get_player('model-provider')
-    elif isinstance(player, str):
-      self.model_provider = self.config.get_player(player)
+    elif isinstance(model_provider, str):
+      self.model_provider = self.config.get_player(model_provider)
     else:
-      self.model_provider = player
+      self.model_provider = model_provider
+    self.registry = registry
     self.outputs = {}
 
   def convert(
       self,
       graph_def: Any,
-      register: Dict[str, Any],
       input_player: Union[str, Player],
       inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]] = None
   ) -> Any:
