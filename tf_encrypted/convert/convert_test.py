@@ -61,9 +61,13 @@ class TestConvert(unittest.TestCase):
       **kwargs  # pylint: disable=unused-argument
   ):
     prot.clear_initializers()
-    converter = Converter(tfe.get_config(), prot, 'model-provider')
-    x = converter.convert(graph_def, registry(),
-                          'input-provider', list(input_fns))
+    converter = Converter(
+        registry(),
+        config=tfe.get_config(),
+        protocol=prot,
+        model_provider='model-provider',
+    )
+    x = converter.convert(graph_def, 'input-provider', list(input_fns))
 
     with tfe.Session() as sess:
       sess.run(tf.global_variables_initializer())
@@ -122,13 +126,19 @@ class TestConvert(unittest.TestCase):
       cls._assert_successful_conversion(
           prot, graph_def, actual, input_fn, decimals=decimals, **kwargs)
 
-  def test_cnn_convert(self):
+  def test_keras_multilayer(self):
+    test_input = np.ones([1, 8, 8, 1])
+    self._test_with_ndarray_input_fn(
+        'keras_multilayer', test_input, protocol='SecureNN',
+    )
+
+  def test_conv2d_convert(self):
     test_input = np.ones([1, 1, 8, 8])
-    self._test_with_ndarray_input_fn('cnn', test_input, protocol='Pond')
+    self._test_with_ndarray_input_fn('conv2d', test_input, protocol='Pond')
 
     test_input = np.ones([1, 8, 8, 1])
     self._test_with_ndarray_input_fn(
-        'cnn', test_input, protocol='Pond', data_format='NHWC')
+        'conv2d', test_input, protocol='Pond', data_format='NHWC')
 
   def test_matmul_convert(self):
     test_input = np.ones([1, 28])
@@ -372,7 +382,7 @@ def export_batchnorm(filename: str, input_shape: List[int]):
   return export(x, filename)
 
 
-def run_cnn(data, data_format="NCHW"):
+def run_conv2d(data, data_format="NCHW"):
   feed_me = tf.placeholder(tf.float32, shape=data.shape, name="input")
 
   x = feed_me
@@ -393,7 +403,7 @@ def run_cnn(data, data_format="NCHW"):
   return output
 
 
-def export_cnn(filename: str, input_shape: List[int], data_format="NCHW"):
+def export_conv2d(filename: str, input_shape: List[int], data_format="NCHW"):
   pl = tf.placeholder(tf.float32, shape=input_shape, name="input")
 
   filtered = tf.constant(np.ones((3, 3, 1, 3)),
@@ -739,6 +749,50 @@ def run_flatten(data):
   model = Sequential()
   model.add(Flatten(input_shape=data.shape[1:]))
   return model.predict(data)
+
+
+def keras_multilayer_builder(input_shape,
+                             filters=2,
+                             kernel_size=3,
+                             pool_size=2,
+                             units=2):
+  x = tf.keras.Input(shape=input_shape[1:])
+  y = tf.keras.layers.Conv2D(filters, kernel_size)(x)
+  y = tf.keras.layers.ReLU()(y)
+  y = tf.keras.layers.MaxPooling2D(pool_size)(y)
+  y = tf.keras.layers.Flatten()(y)
+  y = tf.keras.layers.Dense(units)(y)
+
+  return tf.keras.Model(x, y)
+
+
+def export_keras_multilayer(filename, input_shape):
+  model, _ = _keras_model_core(keras_multilayer_builder, shape=input_shape)
+
+  sess = K.get_session()
+  output = model.output
+  return export(output, filename, sess=sess)
+
+
+def run_keras_multilayer(data):
+  _, out = _keras_model_core(keras_multilayer_builder, data=data)
+  return out
+
+
+def _keras_model_core(model_builder,
+                      shape=None,
+                      data=None,
+                      **model_builder_kwargs):
+  assert shape is None or data is None
+  if shape is None:
+    shape = data.shape
+
+  model = model_builder(shape, **model_builder_kwargs)
+
+  if data is None:
+    data = np.random.uniform(size=shape)
+  out = model.predict(data)
+  return model, out
 
 
 def export_keras_conv2d(filename, input_shape):
