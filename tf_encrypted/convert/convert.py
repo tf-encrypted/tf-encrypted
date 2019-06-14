@@ -81,51 +81,60 @@ class Converter():
     # high level operation then register.
     for node in node_list:
       if node.name not in specop_outputs:
-
-        output = strip_tensor_info(node.name)
-        inputs = [x for x in node.input]
-        if node.op == "Placeholder":
-          try:
-            _, item = inputs_iterable.__next__()
-          except StopIteration:
-            raise InvalidArgumentError("Not enough placeholders supplied")
-
-          x = self.protocol.define_private_input(input_player, item)
-          self.outputs[output] = x
-          continue
-
-        out = register[node.op](self, node, inputs)
-
-        # if the operation returns a list or tuple with several ouputs,
-        # identify the outputs node name
-        if isinstance(out, (list, tuple)):
-          output_name = find_output_names(pb_trimmed, node.name)
-          for i, _ in enumerate(out):
-            self.outputs[output_name[i]] = out[i]
-        else:
-          self.outputs[output] = out
+        self._register_op(node, inputs_iterable, input_player, pb_trimmed)
 
       else:
         # Register high level special operations
         for s in specop_dict:
-          input_list = specop_dict[s]['inputs']
-          output_list = specop_dict[s]['outputs']
-
-          # Handle edge cases if the ops return multiple outputs
-          op_handler = register[specop_dict[s]['op']]
-
-          nodes = specop_dict[s]['interiors']
-          if not nodes:
-            nodes = node
-          outs = op_handler(self, nodes, input_list)
-          if isinstance(outs, (list, tuple)):
-            for i, x in enumerate(outs):
-              self.outputs[output_list[i]] = x
-          else:
-            self.outputs[output_list[0]] = outs
+          # If this node is the output of the current specop, register it
+          if match_numbered_scope(s, node.name, return_group=False):
+            self._register_specop(node, specop_dict[s])
 
     return self.outputs[graph_def.node[-1].name]
 
+  def _register_op(self, node, inputs_iterable, input_player, pb_trimmed):
+    """Register single ops."""
+    output = strip_tensor_info(node.name)
+    inputs = [x for x in node.input]
+    if node.op == "Placeholder":
+      try:
+        _, item = inputs_iterable.__next__()
+      except StopIteration:
+        raise InvalidArgumentError("Not enough placeholders supplied")
+
+      x = self.protocol.define_private_input(input_player, item)
+      self.outputs[output] = x
+      return
+
+    out = self.registry[node.op](self, node, inputs)
+
+    # if the operation returns a list or tuple with several ouputs,
+    # identify the outputs node name
+    if isinstance(out, (list, tuple)):
+      output_name = find_output_names(pb_trimmed, node.name)
+      for i, _ in enumerate(out):
+        self.outputs[output_name[i]] = out[i]
+    else:
+      self.outputs[output] = out
+
+
+  def _register_specop(self, node, specop_scope_dict):
+    """Handle special op registration."""
+    input_list = specop_scope_dict['inputs']
+    output_list = specop_scope_dict['outputs']
+
+    # Handle edge cases if the ops return multiple outputs
+    op_handler = self.registry[specop_scope_dict['op']]
+
+    nodes = specop_scope_dict['interiors']
+    if not nodes:
+      nodes = node
+    outs = op_handler(self, nodes, input_list)
+    if isinstance(outs, (list, tuple)):
+      for i, x in enumerate(outs):
+        self.outputs[output_list[i]] = x
+    else:
+      self.outputs[output_list[0]] = outs
 
 def select_relevant_ops(all_specop_inputs, all_specop_outputs, graph_def):
   """
@@ -265,6 +274,8 @@ def match_numbered_scope(specop, search_string, return_group=True):
   if match is not None:
     if not return_group:
       return match
+    if match.group(2) is not None:
+      return match.group(2)
     return match.group(1)
   return match
 
