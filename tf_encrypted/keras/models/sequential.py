@@ -1,4 +1,5 @@
 """Sequential model API."""
+import tensorflow as tf
 from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import InputLayer, Input
 import tf_encrypted
@@ -92,7 +93,7 @@ class Sequential(Layer):
       inputs = outputs
 
       # Add layer weights to the  model weights list
-      self.weights += layer.weights
+      #self.weights += layer.weights
 
     return outputs
 
@@ -110,12 +111,16 @@ class Sequential(Layer):
 
     self._rebuild_tfe_model(keras_config)
 
-  def set_weights(self, weights_array):
+  def set_weights(self, weights_array, sess):
+    print(self._layers)
+    m_weights = []
+    for l in self._layers:
+      m_weights += l.weights
 
-    for i, w in enumerate(self.weights):
-      print(w)
+    for i, w in enumerate(m_weights):
       new_w = self.prot.define_private_variable(weights_array[i])
-      self.prot.assign(w, new_w)
+      sess.run(tf.global_variables_initializer())
+      sess.run(self.prot.assign(w, new_w))
 
   def _rebuild_tfe_model(self, keras_config):
     """
