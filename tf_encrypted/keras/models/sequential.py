@@ -92,9 +92,6 @@ class Sequential(Layer):
       # `outputs` will be the inputs to the next layer.
       inputs = outputs
 
-      # Add layer weights to the  model weights list
-      #self.weights += layer.weights
-
     return outputs
 
   @property
@@ -107,45 +104,65 @@ class Sequential(Layer):
       return layers[1:]
     return layers[:]
 
-  def from_config(self, keras_config):
+  def set_weights(self, keras_weights, sess):
+    """ Sets the weights of the model.
+    Arguments:
+      weights: A list of Numpy arrays with shapes and types
+          matching the output of model.get_weights()
+      sess: tfe session"""
 
-    self._rebuild_tfe_model(keras_config)
+    # List model weights
+    model_weights = []
+    for l in self.layers:
+      model_weights += l.weights
 
-  def set_weights(self, weights_array, sess):
-    print(self._layers)
-    m_weights = []
-    for l in self._layers:
-      m_weights += l.weights
+    # Define keras weights as private variables
+    keras_weights_p = [tf_encrypted.define_private_variable(w)
+                       for w in keras_weights]
 
-    for i, w in enumerate(m_weights):
-      new_w = self.prot.define_private_variable(weights_array[i])
-      sess.run(tf.global_variables_initializer())
-      sess.run(self.prot.assign(w, new_w))
+    # Assign new keras weights to existing weights defined by
+    # default when tfe layer instantiated
+    sess.run(tf.global_variables_initializer())
+    for i, w in enumerate(model_weights):
+      sess.run(tf_encrypted.assign(w, keras_weights_p[i]))
 
-  def _rebuild_tfe_model(self, keras_config):
-    """
-    Rebuild the plaintext Keras model as a TF Encrypted Keras model
-    using the keras configuration and the current TF Encrypted protocol
-    and configuration.
-    """
-    for keras_layer in keras_config['layers']:
-      tfe_layer = _instantiate_tfe_layer(keras_layer)
-      self._layers.append(tfe_layer)
+  @staticmethod
+  def from_config(keras_config):
 
-def _instantiate_tfe_layer(keras_layer):
+    tfe_model = _rebuild_tfe_model(keras_config)
 
-# Identify tf.keras layer type, and grab the corresponding tfe.keras layer
-  keras_layer_type = keras_layer['class_name']
+    return tfe_model
+
+def _rebuild_tfe_model(keras_config):
+  """
+  Rebuild the plaintext Keras model as a TF Encrypted Keras model
+  using the keras configuration and the current TF Encrypted protocol
+  and configuration."""
+
+  tfe_model = tf_encrypted.keras.Sequential([])
+
+  for k_l_c in keras_config['layers']:
+    tfe_layer = _instantiate_tfe_layer(k_l_c)
+    tfe_model.add(tfe_layer)
+
+  return tfe_model
+
+def _instantiate_tfe_layer(keras_layer_config):
+  """instantiate tfe layer based on layer keras config"""
+
+  # Identify tf.keras layer type, and grab the corresponding tfe.keras layer
+  keras_layer_type = keras_layer_config['class_name']
   try:
     tfe_layer_cls = getattr(tf_encrypted.keras.layers, keras_layer_type)
   except AttributeError:
     # TODO: rethink how we warn the user about this, maybe codegen a list of
     #       supported layers in a doc somewhere
     raise RuntimeError(
-      "TF Encrypted does not yet support the " "{lcls} layer.".format(lcls=keras_layer_type)
+        "TF Encrypted does not yet support the " "{lcls} "
+        "layer.".format(lcls=keras_layer_type)
     )
 
-  keras_layer_config = keras_layer['config']
-  keras_layer_config.pop('dtype')
+  # get layer config to instiate the tfe layer with the right parameters
+  config = keras_layer_config['config']
 
-  return tfe_layer_cls(**keras_layer_config)
+  return tfe_layer_cls(**config)

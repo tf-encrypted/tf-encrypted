@@ -35,6 +35,7 @@ class Layer(ABC):
         'batch_size',
         'weights',
         'activity_regularizer',
+        'dtype'
     }
     # Validate optional keyword arguments.
     for kwarg in kwargs:
@@ -97,7 +98,7 @@ class Layer(ABC):
     outputs = self.call(inputs, *args, **kargs)
 
     return outputs
-  
+
   def add_weight(self, variable):
 
     self.weights.append(variable)
