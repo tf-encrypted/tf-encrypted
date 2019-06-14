@@ -16,7 +16,7 @@ class NTLMatrixTest(test.TestCase):
       var1 = create_ntl_matrix(inp, 555666)
       var2 = create_ntl_matrix(inp, 555666)
 
-      res = matmul_ntl(var1, var2)
+      res = matmul_ntl(var1, var2, 555666)
 
       s = ntl_to_native(res, output_type)
 
