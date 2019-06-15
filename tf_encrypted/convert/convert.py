@@ -119,8 +119,11 @@ class Converter:
     # identify the outputs node name
     if isinstance(out, (list, tuple)):
       output_name = find_output_names(pb_trimmed, node.name)
-      for i, _ in enumerate(out):
-        self.outputs[output_name[i]] = out[i]
+      if not output_name:
+        self.outputs[output] = out
+      else:
+        for i, _ in enumerate(out):
+          self.outputs[output_name[i]] = out[i]
     else:
       self.outputs[output] = out
 
@@ -353,5 +356,6 @@ def find_output_names(pb_trimmed, node_name):
 
     if inputs:
       output_node += inputs
+  print("output node", output_node)
 
   return output_node

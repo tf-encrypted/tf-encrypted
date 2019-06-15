@@ -32,7 +32,11 @@ class PrivateModel:
     with tfe.Session() as sess:
       sess.run(tf.global_variables_initializer())
 
-      op = self.output_node.reveal()
+      if isinstance(self.output_node, list):
+        op = [n.reveal() for n in self.output_node]
+      else:
+        op = self.output_node.reveal()
+        
       output = sess.run(op, feed_dict={pl: x}, tag=tag)
 
       return output
