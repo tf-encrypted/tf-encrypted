@@ -36,7 +36,7 @@ class PrivateModel:
         op = [n.reveal() for n in self.output_node]
       else:
         op = self.output_node.reveal()
-        
+
       output = sess.run(op, feed_dict={pl: x}, tag=tag)
 
       return output
