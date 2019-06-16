@@ -3545,18 +3545,24 @@ def _gather_masked(
 
 
 def _split_public(
-    prot: Pond, x: PondPublicTensor, num_split: int, axis: int = 0
+    prot: Pond, x: PondPublicTensor, num_split: Union[int, list], axis: int = 0
 ) -> List[PondPublicTensor]:
 
   x_on_0, x_on_1 = x.unwrapped
 
   with tf.name_scope("split"):
-
     with tf.device(prot.server_0.device_name):
-      ys_on_0 = x_on_0.split(num_split, axis=axis)
+      if isinstance(num_split, int):
+        ys_on_0 = x_on_0.split(num_split, axis=axis)
+      else:
+        ys_on_0 = x_on_0.splitV(num_split, axis=axis)
 
     with tf.device(prot.server_1.device_name):
-      ys_on_1 = x_on_1.split(num_split, axis=axis)
+      if isinstance(num_split, int):
+        ys_on_1 = x_on_1.split(num_split, axis=axis)
+      else:
+        ys_on_1 = x_on_1.splitV(num_split, axis=axis)
+
 
     return [
         PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
@@ -3565,7 +3571,7 @@ def _split_public(
 
 
 def _split_private(
-    prot: Pond, x: PondPrivateTensor, num_split: int, axis: int = 0
+    prot: Pond, x: PondPrivateTensor, num_split: Union[int, list], axis: int = 0
 ) -> List[PondPrivateTensor]:
 
   x0, x1 = x.unwrapped
@@ -3573,10 +3579,16 @@ def _split_private(
   with tf.name_scope("split"):
 
     with tf.device(prot.server_0.device_name):
-      ys0 = x0.split(num_split, axis=axis)
+      if isinstance(num_split, int):
+        ys0 = x0.split(num_split, axis=axis)
+      else:
+        ys0 = x0.splitV(num_split, axis=axis)
 
     with tf.device(prot.server_1.device_name):
-      ys1 = x1.split(num_split, axis=axis)
+      if isinstance(num_split, int):
+        ys1 = x1.split(num_split, axis=axis)
+      else:
+        ys1 = x1.splitV(num_split, axis=axis)
 
     return [PondPrivateTensor(prot, y0, y1, x.is_scaled)
             for y0, y1 in zip(ys0, ys1)]
@@ -3584,7 +3596,7 @@ def _split_private(
 
 def _split_masked(prot: Pond,
                   x: PondMaskedTensor,
-                  num_split,
+                  num_split: Union[int, list],
                   axis=0) -> List[PondMaskedTensor]:
 
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
@@ -3594,12 +3606,20 @@ def _split_masked(prot: Pond,
     bs = prot.triple_source.split_mask(a, num_split=num_split, axis=axis)
 
     with tf.device(prot.server_0.device_name):
-      bs0 = a0.split(num_split, axis=axis)
-      betas_on_0 = alpha_on_0.split(num_split, axis=axis)
+      if isinstance(num_split, int):
+        bs0 = a0.split(num_split, axis=axis)
+        betas_on_0 = alpha_on_0.split(num_split, axis=axis)
+      else:
+        bs0 = a0.splitV(num_split, axis=axis)
+        betas_on_0 = alpha_on_0.splitV(num_split, axis=axis)
 
     with tf.device(prot.server_1.device_name):
-      bs1 = a1.split(num_split, axis=axis)
-      betas_on_1 = alpha_on_1.split(num_split, axis=axis)
+      if isinstance(num_split, int):
+        bs1 = a1.split(num_split, axis=axis)
+        betas_on_1 = alpha_on_1.split(num_split, axis=axis)
+      else:
+        bs1 = a1.splitV(num_split, axis=axis)
+        betas_on_1 = alpha_on_1.splitV(num_split, axis=axis)
 
       ys = prot.split(x.unmasked, num_split, axis=axis)
 

@@ -47,6 +47,7 @@ def registry():
       'Slice': _slice,
       'Neg': _negative,
       'Split': _split,
+      'SplitV': _splitV,
       'Identity': _identity,
       "GatherV2": _gather,
       "dense": _keras_dense,
@@ -396,6 +397,23 @@ def _split(converter, node: Any, inputs: List[str]) -> Any:
   axis_val = axis.attr["value"].tensor.int_val[0]
 
   return converter.protocol.split(input_out, num_split, axis_val)
+
+def _splitV(converter, node: Any, inputs: List[str]) -> Any:
+  x_in = converter.outputs[inputs[0]]
+  size_splits = converter.outputs[inputs[1]]
+  axis = converter.outputs[inputs[2]]
+
+  if isinstance(x_in, tf.NodeDef):
+    input_out = _nodef_to_private_pond(converter, x_in)
+  else:
+    input_out = x_in
+
+  size_splits = size_splits.attr["value"].tensor
+  size_splits = list(array.array('I', size_splits.tensor_content))
+  axis_val = axis.attr["value"].tensor.int_val[0]
+
+  return converter.protocol.split(input_out, size_splits, axis_val)
+
 
 
 def _pad(converter, node: Any, inputs: List[str]) -> Any:
