@@ -3552,17 +3552,11 @@ def _split_public(
 
   with tf.name_scope("split"):
     with tf.device(prot.server_0.device_name):
-      if isinstance(num_split, int):
-        ys_on_0 = x_on_0.split(num_split, axis=axis)
-      else:
-        ys_on_0 = x_on_0.splitV(num_split, axis=axis)
+      ys_on_0 = x_on_0.split(num_split, axis=axis)
+
 
     with tf.device(prot.server_1.device_name):
-      if isinstance(num_split, int):
-        ys_on_1 = x_on_1.split(num_split, axis=axis)
-      else:
-        ys_on_1 = x_on_1.splitV(num_split, axis=axis)
-
+      ys_on_1 = x_on_1.split(num_split, axis=axis)
 
     return [
         PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
@@ -3579,16 +3573,10 @@ def _split_private(
   with tf.name_scope("split"):
 
     with tf.device(prot.server_0.device_name):
-      if isinstance(num_split, int):
-        ys0 = x0.split(num_split, axis=axis)
-      else:
-        ys0 = x0.splitV(num_split, axis=axis)
+      ys0 = x0.split(num_split, axis=axis)
 
     with tf.device(prot.server_1.device_name):
-      if isinstance(num_split, int):
-        ys1 = x1.split(num_split, axis=axis)
-      else:
-        ys1 = x1.splitV(num_split, axis=axis)
+      ys1 = x1.split(num_split, axis=axis)
 
     return [PondPrivateTensor(prot, y0, y1, x.is_scaled)
             for y0, y1 in zip(ys0, ys1)]
@@ -3606,20 +3594,12 @@ def _split_masked(prot: Pond,
     bs = prot.triple_source.split_mask(a, num_split=num_split, axis=axis)
 
     with tf.device(prot.server_0.device_name):
-      if isinstance(num_split, int):
-        bs0 = a0.split(num_split, axis=axis)
-        betas_on_0 = alpha_on_0.split(num_split, axis=axis)
-      else:
-        bs0 = a0.splitV(num_split, axis=axis)
-        betas_on_0 = alpha_on_0.splitV(num_split, axis=axis)
+      bs0 = a0.split(num_split, axis=axis)
+      betas_on_0 = alpha_on_0.split(num_split, axis=axis)
 
     with tf.device(prot.server_1.device_name):
-      if isinstance(num_split, int):
-        bs1 = a1.split(num_split, axis=axis)
-        betas_on_1 = alpha_on_1.split(num_split, axis=axis)
-      else:
-        bs1 = a1.splitV(num_split, axis=axis)
-        betas_on_1 = alpha_on_1.splitV(num_split, axis=axis)
+      bs1 = a1.split(num_split, axis=axis)
+      betas_on_1 = alpha_on_1.split(num_split, axis=axis)
 
       ys = prot.split(x.unmasked, num_split, axis=axis)
 
