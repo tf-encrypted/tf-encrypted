@@ -187,9 +187,9 @@ class TestConvert(unittest.TestCase):
     test_input = np.random.random([1, 10, 10, 3])
     self._test_with_ndarray_input_fn('split', test_input, protocol='Pond')
 
-  def test_splitV_convert(self):
+  def test_split_v_convert(self):
     test_input = np.random.random([1, 10, 10, 3])
-    self._test_with_ndarray_input_fn('splitV', test_input, protocol='Pond')
+    self._test_with_ndarray_input_fn('split_v', test_input, protocol='Pond')
 
   def test_concat_convert(self):
     test_input = np.ones([1, 10, 10, 3])
@@ -646,7 +646,7 @@ def export_split(filename, input_shape):
   return export(x, filename)
 
 
-def run_splitV(data):
+def run_split_v(data):
   a = tf.placeholder(tf.float32, shape=data.shape, name="input")
   x = tf.split(a, num_or_size_splits=[1, 1, 1], axis=-1)
   with tf.Session() as sess:
@@ -654,7 +654,7 @@ def run_splitV(data):
   return output
 
 
-def export_splitV(filename, input_shape):
+def export_split_v(filename, input_shape):
   a = tf.placeholder(tf.float32, shape=input_shape, name="input")
   x = tf.split(a, num_or_size_splits=[1, 1, 1], axis=-1)
   return export(x, filename)

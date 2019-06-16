@@ -47,7 +47,7 @@ def registry():
       'Slice': _slice,
       'Neg': _negative,
       'Split': _split,
-      'SplitV': _splitV,
+      'SplitV': _split_v,
       'Identity': _identity,
       "GatherV2": _gather,
       "dense": _keras_dense,
@@ -398,7 +398,7 @@ def _split(converter, node: Any, inputs: List[str]) -> Any:
 
   return converter.protocol.split(input_out, num_split, axis_val)
 
-def _splitV(converter, node: Any, inputs: List[str]) -> Any:
+def _split_v(converter, node: Any, inputs: List[str]) -> Any:
   x_in = converter.outputs[inputs[0]]
   size_splits = converter.outputs[inputs[1]]
   axis = converter.outputs[inputs[2]]
