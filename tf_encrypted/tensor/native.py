@@ -287,12 +287,8 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
     def gather(self, indices: list, axis: int = 0):
       return DenseTensor(tf.gather(self.value, indices, axis=axis))
 
-    def split(self, num_split: int, axis: int = 0):
+    def split(self, num_split: Union[int, list], axis: int = 0):
       values = tf.split(self.value, num_split, axis=axis)
-      return [DenseTensor(value) for value in values]
-
-    def splitV(self, size_splits: list, axis: int = 0):
-      values = tf.split(self.value, size_splits, axis=axis)
       return [DenseTensor(value) for value in values]
 
     def reshape(self, axes: Union[tf.Tensor, List[int]]):
