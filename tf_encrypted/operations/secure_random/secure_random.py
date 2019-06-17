@@ -9,19 +9,41 @@ from tensorflow.python.framework.errors import NotFoundError
 import tf_encrypted as tfe
 
 logger = logging.getLogger('tf_encrypted')
-dirname = os.path.dirname(tfe.__file__)
-so_name = '{dn}/operations/secure_random/secure_random_module_tf_{tfv}.so'
-shared_object = so_name.format(dn=dirname, tfv=tf.__version__)
 
-try:
-  secure_random_module = tf.load_op_library(shared_object)
-except NotFoundError:
-  logger.warning(
-      ("Falling back to insecure randomness since the required custom op "
-       "could not be found for the installed version of TensorFlow (%s). "
-       "Fix this by compiling custom ops."), tf.__version__)
-  secure_random_module = None
+def _try_load_secure_random_module():
+  """
+  Attempt to load and return secure random module; returns None if failed.
+  """
+  so_file = '{dn}/operations/secure_random/secure_random_module_tf_{tfv}.so'.format(  # pylint: disable=line-too-long
+      dn=os.path.dirname(tfe.__file__),
+      tfv=tf.__version__,
+  )
 
+  if not os.path.exists(so_file):
+    logger.warning(
+        ("Falling back to insecure randomness since the required custom op "
+         "could not be found for the installed version of TensorFlow. Fix this "
+         "by compiling custom ops. Missing file was '%s'"), so_file)
+    return None
+
+  try:
+    return tf.load_op_library(so_file)
+
+  except NotFoundError as ex:
+    logger.warning(
+        ("Falling back to insecure randomness since the required custom op "
+         "could not be found for the installed version of TensorFlow. Fix this "
+         "by compiling custom ops. "
+         "Missing file was '%s', error was \"%s\"."), so_file, ex)
+
+  except Exception as ex:  # pylint: disable=broad-except
+    logger.error(
+        ("Falling back to insecure randomness since an error occurred loading "
+         "the required custom op: \"%s\"."), ex)
+
+  return None
+
+secure_random_module = _try_load_secure_random_module()
 
 def supports_secure_randomness():
   return secure_random_module is not None
