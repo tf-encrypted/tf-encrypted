@@ -125,12 +125,15 @@ class Sequential(Layer):
       fd = keras_weights_pl[i].feed(keras_weights[i])
       sess.run(tfe.assign(w, keras_weights_pl[i]), feed_dict=fd)
 
-  @staticmethod
-  def from_config(keras_config):
+  def from_config(self, keras_config):
 
     tfe_model = _rebuild_tfe_model(keras_config)
 
     return tfe_model
+
+def model_from_config(keras_config):
+
+  return _rebuild_tfe_model(keras_config)
 
 def _rebuild_tfe_model(keras_config):
   """

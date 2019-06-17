@@ -40,7 +40,7 @@ class TestSequential(unittest.TestCase):
     expected = model.predict(input_data)
 
     with tfe.protocol.SecureNN():
-      tfe_model = tfe.keras.Sequential.from_config(k_config)
+      tfe_model = tfe.keras.models.model_from_config(k_config)
       x = tfe.define_private_variable(input_data)
 
     with tfe.Session() as sess:
