@@ -1,6 +1,6 @@
 """CLI for data preparation and processing."""
 import argparse
-from utils import data_prep, read_one_column, save_input
+from utils import data_prep, read_one_row, save_input
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--save_row', type=int, default='0',
@@ -19,5 +19,5 @@ output_file = config.output_file
 save_row = config.save_row
 
 train_x_df, _ = data_prep(input_file)
-out = read_one_column(save_row, train_x_df)
+out = read_one_row(save_row, train_x_df)
 save_input(output_file, out)
