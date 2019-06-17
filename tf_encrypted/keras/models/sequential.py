@@ -1,8 +1,9 @@
 """Sequential model API."""
 import tensorflow as tf
+
+import tf_encrypted as tfe
 from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import InputLayer, Input
-import tf_encrypted
 
 
 class Sequential(Layer):
@@ -117,14 +118,14 @@ class Sequential(Layer):
       model_weights += l.weights
 
     # Define keras weights as private variables
-    keras_weights_p = [tf_encrypted.define_private_variable(w)
+    keras_weights_p = [tfe.define_private_variable(w)
                        for w in keras_weights]
 
     # Assign new keras weights to existing weights defined by
     # default when tfe layer instantiated
     sess.run(tf.global_variables_initializer())
     for i, w in enumerate(model_weights):
-      sess.run(tf_encrypted.assign(w, keras_weights_p[i]))
+      sess.run(tfe.assign(w, keras_weights_p[i]))
 
   @staticmethod
   def from_config(keras_config):
@@ -139,7 +140,7 @@ def _rebuild_tfe_model(keras_config):
   using the keras configuration and the current TF Encrypted protocol
   and configuration."""
 
-  tfe_model = tf_encrypted.keras.Sequential([])
+  tfe_model = tfe.keras.Sequential([])
 
   for k_l_c in keras_config['layers']:
     tfe_layer = _instantiate_tfe_layer(k_l_c)
@@ -153,7 +154,7 @@ def _instantiate_tfe_layer(keras_layer_config):
   # Identify tf.keras layer type, and grab the corresponding tfe.keras layer
   keras_layer_type = keras_layer_config['class_name']
   try:
-    tfe_layer_cls = getattr(tf_encrypted.keras.layers, keras_layer_type)
+    tfe_layer_cls = getattr(tfe.keras.layers, keras_layer_type)
   except AttributeError:
     # TODO: rethink how we warn the user about this, maybe codegen a list of
     #       supported layers in a doc somewhere
