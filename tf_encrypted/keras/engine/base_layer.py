@@ -101,9 +101,10 @@ class Layer(ABC):
 
   def add_weight(self, variable):
 
-    self.weights.append(variable)
+    private_variable = self.prot.define_private_variable(variable)
+    self.weights.append(private_variable)
 
-    return variable
+    return private_variable
 
   @property
   def prot(self):
