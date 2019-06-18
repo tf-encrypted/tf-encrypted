@@ -26,18 +26,10 @@ class TestSequential(unittest.TestCase):
       x = tfe.define_private_variable(input_data)
       model(x)
 
-  def test_keras_to_tfe(self):
-    shape = (1, 3)
-    input_data = np.random.normal(size=shape)
-
-    model = tf.keras.models.Sequential()
-    model.add(tf.keras.layers.Dense(2, batch_input_shape=shape))
-    model.add(tf.keras.layers.Dense(3))
-
-    k_weights = model.get_weights()
-    k_config = model.get_config()
-
-    expected = model.predict(input_data)
+  def test_model_from_config(self):
+    input_shape = (1, 3)
+    input_data = np.random.normal(size=input_shape)
+    expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
 
     with tfe.protocol.SecureNN():
       tfe_model = tfe.keras.models.model_from_config(k_config)
@@ -49,7 +41,81 @@ class TestSequential(unittest.TestCase):
       y = tfe_model(x)
       actual = sess.run(y.reveal())
 
+      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
+
+  def test_from_config(self):
+    input_shape = (1, 3)
+    input_data = np.random.normal(size=input_shape)
+    expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
+
+    with tfe.protocol.SecureNN():
+      tfe_model = tfe.keras.models.Sequential([])
+      tfe_model = tfe_model.from_config(k_config)
+      x = tfe.define_private_variable(input_data)
+
+    with tfe.Session() as sess:
+      sess.run(tf.global_variables_initializer())
+      tfe_model.set_weights(k_weights, sess)
+      y = tfe_model(x)
+      actual = sess.run(y.reveal())
+
       np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-8)
+
+  def test_from_config_2(self):
+    input_shape = (1, 3)
+    input_data = np.random.normal(size=input_shape)
+    expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
+
+    with tfe.protocol.SecureNN():
+      tfe_model = tfe.keras.models.Sequential([])
+      tfe_model = tfe_model.from_config(k_config)
+      x = tfe.define_private_variable(input_data)
+
+    with tfe.Session() as sess:
+      sess.run(tf.global_variables_initializer())
+      tfe_model.set_weights(k_weights, sess)
+      y = tfe_model(x)
+      actual = sess.run(y.reveal())
+
+      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-8)
+
+
+  def test_clone_model(self):
+    input_shape = (1, 3)
+    input_data = np.random.normal(size=input_shape)
+
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.Dense(2, batch_input_shape=input_shape))
+    model.add(tf.keras.layers.Dense(3))
+    expected = model.predict(input_data)
+
+    with tfe.protocol.SecureNN():
+      tfe_model = tfe.keras.models.clone_model(model)
+      x = tfe.define_private_variable(input_data)
+
+    tfe_sess = tfe_model._tfe_session
+
+    with tfe_sess:
+      # won't work if we re-initialize all the weights
+      # with tfe_sess.run(tf.global_variables_initializer())
+      tfe_sess.run(x.initializer)
+      y = tfe_model(x)
+      actual = tfe_sess.run(y.reveal())
+
+      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-8)
+
+
+def _model_predict_keras(input_data, input_shape):
+  with tf.Session():
+    model = tf.keras.models.Sequential()
+    model.add(tf.keras.layers.Dense(2, batch_input_shape=input_shape))
+    model.add(tf.keras.layers.Dense(3))
+
+    weights = model.get_weights()
+    config = model.get_config()
+    out = model.predict(input_data)
+
+  return out, weights, config
 
 
 if __name__ == '__main__':

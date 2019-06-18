@@ -1,4 +1,6 @@
 """Sequential model API."""
+import tensorflow as tf
+
 import tf_encrypted as tfe
 from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import InputLayer, Input
@@ -134,6 +136,21 @@ class Sequential(Layer):
 def model_from_config(keras_config):
 
   return _rebuild_tfe_model(keras_config)
+
+def clone_model(model):
+  """Clone any Sequential instance into TFE model"""
+
+  config = model.get_config()
+  weights = model.get_weights()
+
+  tfe_model = model_from_config(config)
+
+  sess = tfe.Session()
+  tfe_model.set_weights(weights, sess)
+
+  tfe_model._tfe_session = sess
+
+  return tfe_model
 
 def _rebuild_tfe_model(keras_config):
   """
