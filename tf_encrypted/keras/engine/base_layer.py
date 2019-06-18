@@ -4,6 +4,7 @@ import logging
 
 from tensorflow.python.keras.utils import generic_utils
 
+import tf_encrypted as tfe
 from tf_encrypted import get_protocol
 from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
 
@@ -105,6 +106,23 @@ class Layer(ABC):
     self.weights.append(private_variable)
 
     return private_variable
+
+  def set_weights(self, keras_weights, sess):
+    """ Sets the weights of the layer.
+    Arguments:
+      weights: A list of Numpy arrays with shapes and types
+          matching the output of layer.get_weights()
+      sess: tfe session"""
+
+    # Define keras weights as private variable
+    keras_weights_pl = [tfe.define_private_placeholder(w.shape)
+                        for w in keras_weights]
+
+    # Assign new keras weights to existing weights defined by
+    # default when tfe layer was instantiated
+    for i, w in enumerate(self.weights):
+      fd = keras_weights_pl[i].feed(keras_weights[i])
+      sess.run(tfe.assign(w, keras_weights_pl[i]), feed_dict=fd)
 
   @property
   def prot(self):
