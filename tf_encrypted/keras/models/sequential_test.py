@@ -85,7 +85,7 @@ class TestSequential(unittest.TestCase):
       y = tfe_model(x)
       actual = tfe_sess.run(y.reveal())
 
-      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-8)
+      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-3)
 
 
 def _model_predict_keras(input_data, input_shape):
