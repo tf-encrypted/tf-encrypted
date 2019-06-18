@@ -594,7 +594,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
       backing = [tf.gather(xi, indices, axis=axis) for xi in self.backing]
       return DenseTensor(backing)
 
-    def split(self, num_split: int, axis: int = 0):
+    def split(self, num_split: Union[int, list], axis: int = 0):
       backings = zip(*[tf.split(xi, num_split, axis=axis)
                        for xi in self.backing])
       return [DenseTensor(backing) for backing in backings]
