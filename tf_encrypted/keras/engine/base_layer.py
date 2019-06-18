@@ -107,7 +107,7 @@ class Layer(ABC):
 
     return private_variable
 
-  def set_weights(self, keras_weights, sess):
+  def set_weights(self, weights, sess):
     """ Sets the weights of the layer.
     Arguments:
       weights: A list of Numpy arrays with shapes and types
@@ -115,14 +115,14 @@ class Layer(ABC):
       sess: tfe session"""
 
     # Define keras weights as private variable
-    keras_weights_pl = [tfe.define_private_placeholder(w.shape)
-                        for w in keras_weights]
+    tfe_weights_pl = [tfe.define_private_placeholder(w.shape)
+                      for w in weights]
 
     # Assign new keras weights to existing weights defined by
     # default when tfe layer was instantiated
     for i, w in enumerate(self.weights):
-      fd = keras_weights_pl[i].feed(keras_weights[i])
-      sess.run(tfe.assign(w, keras_weights_pl[i]), feed_dict=fd)
+      fd = tfe_weights_pl[i].feed(weights[i])
+      sess.run(tfe.assign(w, tfe_weights_pl[i]), feed_dict=fd)
 
   @property
   def prot(self):

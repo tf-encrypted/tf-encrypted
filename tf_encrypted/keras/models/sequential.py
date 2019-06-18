@@ -103,7 +103,7 @@ class Sequential(Layer):
       return layers[1:]
     return layers[:]
 
-  def set_weights(self, keras_weights, sess):
+  def set_weights(self, weights, sess):
     """ Sets the weights of the model.
     Arguments:
       weights: A list of Numpy arrays with shapes and types
@@ -113,7 +113,7 @@ class Sequential(Layer):
     # Updated weights for each layer
     for layer in self.layers:
       num_param = len(layer.weights)
-      layer_weights = keras_weights[:num_param]
+      layer_weights = weights[:num_param]
       # Define keras weights as private placeholder
       tfe_weights_pl = [tfe.define_private_placeholder(w.shape)
                         for w in layer_weights]
@@ -123,7 +123,7 @@ class Sequential(Layer):
         fd = tfe_weights_pl[i].feed(layer_weights[i])
         sess.run(tfe.assign(w, tfe_weights_pl[i]), feed_dict=fd)
 
-      keras_weights = keras_weights[num_param:]
+      weights = weights[num_param:]
 
   def from_config(self, keras_config):
 
