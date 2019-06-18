@@ -105,7 +105,7 @@ class Sequential(Layer):
       return layers[1:]
     return layers[:]
 
-  def set_weights(self, weights, sess):
+  def set_weights(self, weights, sess=None):
     """ Sets the weights of the model.
     Arguments:
       weights: A list of Numpy arrays with shapes and types
@@ -121,6 +121,8 @@ class Sequential(Layer):
                         for w in layer_weights]
       # Assign new keras weights to existing weights defined by
       # default when tfe layer was instantiated
+      if not sess:
+        sess = tf.get_default_session()
       for i, w in enumerate(layer.weights):
         fd = tfe_weights_pl[i].feed(layer_weights[i])
         sess.run(tfe.assign(w, tfe_weights_pl[i]), feed_dict=fd)
@@ -148,7 +150,7 @@ def clone_model(model):
   sess = tfe.Session()
   tfe_model.set_weights(weights, sess)
 
-  tfe_model._tfe_session = sess
+  tfe_model._tfe_session = sess # pylint: disable=protected-access
 
   return tfe_model
 

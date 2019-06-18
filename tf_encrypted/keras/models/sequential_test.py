@@ -29,7 +29,8 @@ class TestSequential(unittest.TestCase):
   def test_model_from_config(self):
     input_shape = (1, 3)
     input_data = np.random.normal(size=input_shape)
-    expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
+    expected, k_weights, k_config = _model_predict_keras(input_data,
+                                                         input_shape)
 
     with tfe.protocol.SecureNN():
       tfe_model = tfe.keras.models.model_from_config(k_config)
@@ -37,7 +38,7 @@ class TestSequential(unittest.TestCase):
 
     with tfe.Session() as sess:
       sess.run(tf.global_variables_initializer())
-      tfe_model.set_weights(k_weights, sess)
+      tfe_model.set_weights(k_weights)
       y = tfe_model(x)
       actual = sess.run(y.reveal())
 
@@ -46,7 +47,8 @@ class TestSequential(unittest.TestCase):
   def test_from_config(self):
     input_shape = (1, 3)
     input_data = np.random.normal(size=input_shape)
-    expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
+    expected, k_weights, k_config = _model_predict_keras(input_data,
+                                                         input_shape)
 
     with tfe.protocol.SecureNN():
       tfe_model = tfe.keras.models.Sequential([])
@@ -55,30 +57,11 @@ class TestSequential(unittest.TestCase):
 
     with tfe.Session() as sess:
       sess.run(tf.global_variables_initializer())
-      tfe_model.set_weights(k_weights, sess)
+      tfe_model.set_weights(k_weights)
       y = tfe_model(x)
       actual = sess.run(y.reveal())
 
       np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-8)
-
-  def test_from_config_2(self):
-    input_shape = (1, 3)
-    input_data = np.random.normal(size=input_shape)
-    expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
-
-    with tfe.protocol.SecureNN():
-      tfe_model = tfe.keras.models.Sequential([])
-      tfe_model = tfe_model.from_config(k_config)
-      x = tfe.define_private_variable(input_data)
-
-    with tfe.Session() as sess:
-      sess.run(tf.global_variables_initializer())
-      tfe_model.set_weights(k_weights, sess)
-      y = tfe_model(x)
-      actual = sess.run(y.reveal())
-
-      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-8)
-
 
   def test_clone_model(self):
     input_shape = (1, 3)
@@ -93,7 +76,7 @@ class TestSequential(unittest.TestCase):
       tfe_model = tfe.keras.models.clone_model(model)
       x = tfe.define_private_variable(input_data)
 
-    tfe_sess = tfe_model._tfe_session
+    tfe_sess = tfe_model._tfe_session # pylint: disable=protected-access
 
     with tfe_sess:
       # won't work if we re-initialize all the weights
