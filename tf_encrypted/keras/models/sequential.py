@@ -110,20 +110,20 @@ class Sequential(Layer):
           matching the output of model.get_weights()
       sess: tfe session"""
 
-    # List model weights
-    model_weights = []
-    for l in self.layers:
-      model_weights += l.weights
+    # Updated weights for each layer
+    for layer in self.layers:
+      num_param = len(layer.weights)
+      layer_weights = keras_weights[:num_param]
+      # Define keras weights as private placeholder
+      tfe_weights_pl = [tfe.define_private_placeholder(w.shape)
+                        for w in layer_weights]
+      # Assign new keras weights to existing weights defined by
+      # default when tfe layer was instantiated
+      for i, w in enumerate(layer.weights):
+        fd = tfe_weights_pl[i].feed(layer_weights[i])
+        sess.run(tfe.assign(w, tfe_weights_pl[i]), feed_dict=fd)
 
-    # Define keras weights as private variable
-    keras_weights_pl = [tfe.define_private_placeholder(w.shape)
-                        for w in keras_weights]
-
-    # Assign new keras weights to existing weights defined by
-    # default when tfe layer was instantiated
-    for i, w in enumerate(model_weights):
-      fd = keras_weights_pl[i].feed(keras_weights[i])
-      sess.run(tfe.assign(w, keras_weights_pl[i]), feed_dict=fd)
+      keras_weights = keras_weights[num_param:]
 
   def from_config(self, keras_config):
 
