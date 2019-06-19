@@ -119,6 +119,8 @@ class Converter:
     # identify the outputs node name
     if isinstance(out, (list, tuple)):
       output_name = find_output_names(pb_trimmed, node.name)
+      # If output_name is empty, it means this node
+      # is the last one in the graph
       if not output_name:
         self.outputs[output] = out
       else:
@@ -356,6 +358,5 @@ def find_output_names(pb_trimmed, node_name):
 
     if inputs:
       output_node += inputs
-  print("output node", output_node)
 
   return output_node
