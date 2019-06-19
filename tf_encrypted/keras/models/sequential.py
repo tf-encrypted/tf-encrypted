@@ -122,7 +122,7 @@ class Sequential(Layer):
       # Assign new keras weights to existing weights defined by
       # default when tfe layer was instantiated
       if not sess:
-        sess = tf.get_default_session()
+        sess = tf.keras.backend.get_session()
       for i, w in enumerate(layer.weights):
         fd = tfe_weights_pl[i].feed(layer_weights[i])
         sess.run(tfe.assign(w, tfe_weights_pl[i]), feed_dict=fd)
