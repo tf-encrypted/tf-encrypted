@@ -130,12 +130,12 @@ class ModelTrainer():
 
       # model construction
       x = tf.reshape(x, [-1, self.IN_DIM, self.IN_DIM, 1])
-      layer1 = pooling(tf.nn.relu(conv2d(x, Wconv1, self.STRIDE) + bconv1))
+      layer1 = pooling(tf.nn.relu(conv2d(x, wconv1, self.STRIDE) + bconv1))
       layer2 = pooling(tf.nn.relu(
-          conv2d(layer1, Wconv2, self.STRIDE) + bconv2))
+          conv2d(layer1, wconv2, self.STRIDE) + bconv2))
       layer2 = tf.reshape(layer2, [-1, self.HIDDEN_FC1])
-      layer3 = tf.nn.relu(tf.matmul(layer2, Wfc1) + bfc1)
-      logits = tf.matmul(layer3, Wfc2) + bfc2
+      layer3 = tf.nn.relu(tf.matmul(layer2, wfc1) + bfc1)
+      logits = tf.matmul(layer3, wfc2) + bfc2
 
       loss = tf.reduce_mean(
           tf.losses.sparse_softmax_cross_entropy(logits=logits, labels=y))
@@ -228,41 +228,41 @@ if __name__ == '__main__':
   # compute prediction
   wconv1, bconv1, wconv2, bconv2, wfc1, bfc1, wfc2, bfc2 = params
 
-  conv1_tfe = tfe.layers.Conv2D(input_shape=[-1, 28, 28, 1],
-                                filter_shape=[5, 5, 1, 16],
-                                strides=1,
-                                padding='VALID',
-                                channels_first=False)
+  wconv1_init = tf.keras.initializers.Constant(wconv1)
+  conv1_tfe = tfe.keras.layers.Conv2D(filters=16, kernel_size=(5,5), 
+  kernel_initializer=wconv1_init,
+  bias_initializer=bconv1)
 
-  conv1_tfe.initialize(initial_weights=wconv1)
+  wconv2_init = tf.keras.initializers.Constant(wconv2)
+  conv2_tfe = tfe.keras.layers.Conv2D(filters=16, kernel_size=(5,5), 
+  kernel_initializer=wconv2_init,
+  bias_initializer=bconv2)
 
-  conv2_tfe = tfe.layers.Conv2D(input_shape=[-1, 12, 12, 16],
-                                filter_shape=[5, 5, 16, 16],
-                                strides=1,
-                                padding='VALID',
-                                channels_first=False)
+  avg_pool1 = tfe.keras.layers.AveragePooling2D(pool_size=(2, 2), strides=(2,2))
+  avg_pool2 = tfe.keras.layers.AveragePooling2D(pool_size=(2, 2), strides=(2,2))
 
-  conv2_tfe.initialize(initial_weights=wconv2)
+  fc1 = tfe.keras.layers.Dense(ModelTrainer.HIDDEN_FC1, activation='relu', 
+  kernel_initializer=wfc1, bias_initializer=bfc1)
 
-  avg_pool1 = tfe.layers.AveragePooling2D(input_shape=[-1, 24, 24, 16],
-                                          pool_size=(2, 2),
-                                          strides=(2, 2),
-                                          padding='VALID',
-                                          channels_first=False)
+  fc2 = tfe.keras.layers.Dense(ModelTrainer.HIDDEN_FC2, activation='relu', 
+  kernel_initializer=wfc2, bias_initializer=bfc2)
 
-  avg_pool1 = tfe.layers.AveragePooling2D(input_shape=[-1, 8, 8, 16],
-                                          pool_size=(2, 2),
-                                          strides=(2, 2),
-                                          padding='VALID',
-                                          channels_first=False)
+  output = tfe.keras.layers.Dense(ModelTrainer.OUT_N, activation=None)
 
-  x = tfe.reshape(x, [-1, 28, 28, 1])
-  layer1 = avg_pool1.forward(tfe.relu(conv1_tfe.forward(x) + bconv1))
-  layer2 = avg_pool1.forward(tfe.relu(conv2_tfe.forward(layer1) + bconv2))
 
-  layer2 = tfe.reshape(layer2, [-1, ModelTrainer.HIDDEN_FC1])
-  layer3 = tfe.relu(tfe.matmul(layer2, wfc1) + bfc1)
-  logits = tfe.matmul(layer3, wfc2) + bfc2
+  model = tfe.keras.Sequential([
+    conv1_tfe,
+    tfe.keras.layers.Activation('relu'),
+    avg_pool1,
+    conv2_tfe,
+    tfe.keras.layers.Activation('relu'),
+    avg_pool2,
+    fc1,
+    fc2,
+    output
+  ])
+
+  logits = model(x)
 
   # send prediction output back to client
   prediction_op = tfe.define_output(

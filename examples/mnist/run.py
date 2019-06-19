@@ -137,6 +137,7 @@ class PredictionClient():
 
     iterator = dataset.make_one_shot_iterator()
     return iterator
+  
 
   def provide_input(self) -> tf.Tensor:
     """Prepare input data for prediction."""
@@ -149,7 +150,6 @@ class PredictionClient():
     with tf.name_scope('pre-processing'):
       prediction_input = tf.reshape(
           prediction_input, shape=(self.BATCH_SIZE, 28 * 28))
-
     return prediction_input
 
   def receive_output(self, logits: tf.Tensor) -> tf.Operation:
@@ -177,15 +177,24 @@ if __name__ == "__main__":
   # avoid re-training each time
   cache_updater, params = tfe.cache(params)
 
+  w0, b0, w1, b1 = params
+  initializer_w0 = tf.keras.initializers.Constant(w0)
+  initializer_b0 = tf.keras.initializers.Constant(b0)
+  initializer_w1 = tf.keras.initializers.Constant(w1)
+  initializer_b1 = tf.keras.initializers.Constant(b1)
+  model = tfe.keras.Sequential([
+    tfe.keras.layers.Dense(512, batch_input_shape=(PredictionClient.BATCH_SIZE, 784), kernel_initializer=initializer_w0, 
+    bias_initializer=initializer_b0),
+    tfe.keras.layers.BatchNormalization(axis=1),
+    tfe.keras.layers.Activation('sigmoid'),
+    tfe.keras.layers.Dense(10, activation=None, kernel_initializer=initializer_w1, bias_initializer=initializer_b1)
+  ])
+
   # get prediction input from client
   x = tfe.define_private_input(prediction_client.player_name,
                                prediction_client.provide_input, masked=True)  # pylint: disable=E0632
-
-  # compute prediction
-  w0, b0, w1, b1 = params
-  layer0 = tfe.matmul(x, w0) + b0
-  layer1 = tfe.sigmoid(layer0 * 0.1)  # input normalized to avoid large values
-  logits = tfe.matmul(layer1, w1) + b1
+  
+  logits = model(x)
 
   # send prediction output back to client
   prediction_op = tfe.define_output(prediction_client.player_name,

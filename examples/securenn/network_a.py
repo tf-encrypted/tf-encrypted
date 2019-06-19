@@ -190,12 +190,25 @@ if __name__ == '__main__':
   x, y = tfe.define_private_input(
       'prediction-client', prediction_client.provide_input, masked=True)  # pylint: disable=E0632
 
-  # compute prediction
   w0, b0, w1, b1, w2, b2 = params
-  layer0 = x
-  layer1 = tfe.relu((tfe.matmul(layer0, w0) + b0))
-  layer2 = tfe.relu((tfe.matmul(layer1, w1) + b1))
-  logits = tfe.matmul(layer2, w2) + b2
+  initializer_w0 = tf.keras.initializers.Constant(w0)
+  initializer_b0 = tf.keras.initializers.Constant(b0)
+  initializer_w1 = tf.keras.initializers.Constant(w1)
+  initializer_b1 = tf.keras.initializers.Constant(b1)
+  initializer_w2 = tf.keras.initializers.Constant(w0)
+  initializer_b2 = tf.keras.initializers.Constant(b0)
+
+  model = tfe.keras.Sequential([
+    tfe.keras.layers.Dense(128, batch_input_shape=(PredictionClient.BATCH_SIZE, 28*28), kernel_initializer=initializer_w0, 
+    bias_initializer=initializer_b0),
+    tfe.keras.layers.Activation('sigmoid'),
+    tfe.keras.layers.Dense(128, batch_input_shape=(PredictionClient.BATCH_SIZE, 128), kernel_initializer=initializer_w1, 
+    bias_initializer=initializer_b1),
+    tfe.keras.layers.Activation('sigmoid'),
+    tfe.keras.layers.Dense(10,activation=None, kernel_initializer=initializer_w2, bias_initializer=initializer_b2)
+  ])
+
+  logits = model(x)
 
   # send prediction output back to client
   prediction_op = tfe.define_output(

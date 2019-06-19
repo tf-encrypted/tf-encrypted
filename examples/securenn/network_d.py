@@ -125,10 +125,10 @@ class ModelTrainer():
 
       # model construction
       x = tf.reshape(x, [-1, self.IN_DIM, self.IN_DIM, 1])
-      layer1 = pooling(tf.nn.relu(conv2d(x, Wconv1, self.STRIDE) + bconv1))
+      layer1 = pooling(tf.nn.relu(conv2d(x, wconv1, self.STRIDE) + bconv1))
       layer1 = tf.reshape(layer1, [-1, self.HIDDEN_FC1])
-      layer2 = tf.nn.relu(tf.matmul(layer1, Wfc1) + bfc1)
-      logits = tf.matmul(layer2, Wfc2) + bfc2
+      layer2 = tf.nn.relu(tf.matmul(layer1, wfc1) + bfc1)
+      logits = tf.matmul(layer2, wfc2) + bfc2
 
       loss = tf.reduce_mean(
           tf.losses.sparse_softmax_cross_entropy(logits=logits, labels=y))
@@ -209,32 +209,48 @@ if __name__ == '__main__':
   params = tfe.define_private_input(
       'model-trainer', model_trainer.provide_input, masked=True)  # pylint: disable=E0632
 
-  # we'll use the same parameters for each prediction so we cache them to avoid re-training each time
-  params = tfe.cache(params)
+#   # we'll use the same parameters for each prediction so we cache them to avoid re-training each time
+#   params = tfe.cache(params)
 
   # get prediction input from client
   x, y = tfe.define_private_input(
       'prediction-client', prediction_client.provide_input, masked=True)  # pylint: disable=E0632
 
-  # helpers
-
-  def conv(x, w, s):
-    return tfe.conv2d(x, w, s, 'VALID')
-
   # we'll use the same parameters for each prediction so we cache them to
   # avoid re-training each time
   cache_updater, params = tfe.cache(params)
 
-  def pool(x):
-    return tfe.avgpool2d(x, (2, 2), (2, 2), 'VALID')
-
   # compute prediction
   wconv1, bconv1, wfc1, bfc1, wfc2, bfc2 = params
   bconv1 = tfe.reshape(bconv1, [-1, 1, 1])
-  layer1 = pool(tfe.relu(conv(x, wconv1, ModelTrainer.STRIDE) + bconv1))
-  layer1 = tfe.reshape(layer1, [-1, ModelTrainer.HIDDEN_FC1])
-  layer2 = tfe.matmul(layer1, wfc1) + bfc1
-  logits = tfe.matmul(layer2, wfc2) + bfc2
+
+  wconv1_init = tf.keras.initializers.Constant(wconv1)
+  bconv1_init = tf.keras.initializers.Constant(bconv1)
+  wfc1_init = tf.keras.initializers.Constant(wfc1)
+  bfc1_init = tf.keras.initializers.Constant(bfc1)
+  wfc2_init = tf.keras.initializers.Constant(wfc2)
+  bfc2_init = tf.keras.initializers.Constant(bfc2)
+
+  conv1_tfe = tfe.keras.layers.Conv2D(filters=5,
+                                      kernel_size=(5,5),
+                                      strides=(2, 2))
+  
+  avg_pool1 = tfe.keras.layers.AveragePooling2D(strides=(2,2))
+
+  model = tfe.keras.Sequential([
+    conv1_tfe,
+    tfe.keras.layers.Activation('relu'),
+    avg_pool1,
+    tfe.keras.layers.Reshape((-1, ModelTrainer.HIDDEN_FC1)),
+    tfe.keras.layers.Dense(ModelTrainer.HIDDEN_FC2,
+                          kernel_initializer=wfc1_init,
+                          bias_initializer=bfc1_init),
+    tfe.keras.layers.Dense(10,
+                          kernel_initializer=wfc2_init,
+                          bias_initializer=bfc2_init)
+  ])
+
+  logits = model(x)
 
   # send prediction output back to client
   prediction_op = tfe.define_output(
