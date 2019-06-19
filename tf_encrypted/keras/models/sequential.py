@@ -1,5 +1,5 @@
 """Sequential model API."""
-from keras import backend as K
+from tensorflow.keras import backend as K
 
 import tf_encrypted as tfe
 from tf_encrypted.keras.engine.base_layer import Layer

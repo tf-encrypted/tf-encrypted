@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-from keras import backend as K
+from tensorflow.keras import backend as K
 
 import tf_encrypted as tfe
 from tf_encrypted.keras import Sequential
