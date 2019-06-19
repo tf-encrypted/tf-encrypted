@@ -1,5 +1,5 @@
 """Sequential model API."""
-import tensorflow as tf
+from keras import backend as K
 
 import tf_encrypted as tfe
 from tf_encrypted.keras.engine.base_layer import Layer
@@ -122,7 +122,7 @@ class Sequential(Layer):
       # Assign new keras weights to existing weights defined by
       # default when tfe layer was instantiated
       if not sess:
-        sess = tf.keras.backend.get_session()
+        sess = K.get_session()
       for i, w in enumerate(layer.weights):
         fd = tfe_weights_pl[i].feed(layer_weights[i])
         sess.run(tfe.assign(w, tfe_weights_pl[i]), feed_dict=fd)
@@ -151,6 +151,7 @@ def clone_model(model):
   tfe_model.set_weights(weights, sess)
 
   tfe_model._tfe_session = sess # pylint: disable=protected-access
+  K.set_session(sess)
 
   return tfe_model
 

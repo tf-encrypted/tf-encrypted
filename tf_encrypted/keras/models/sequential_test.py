@@ -3,6 +3,7 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
+from keras import backend as K
 
 import tf_encrypted as tfe
 from tf_encrypted.keras import Sequential
@@ -76,14 +77,12 @@ class TestSequential(unittest.TestCase):
       tfe_model = tfe.keras.models.clone_model(model)
       x = tfe.define_private_variable(input_data)
 
-    tfe_sess = tfe_model._tfe_session # pylint: disable=protected-access
-
-    with tfe_sess:
+    with K.get_session() as sess:
       # won't work if we re-initialize all the weights
-      # with tfe_sess.run(tf.global_variables_initializer())
-      tfe_sess.run(x.initializer)
+      # with sess.run(tf.global_variables_initializer())
+      sess.run(x.initializer)
       y = tfe_model(x)
-      actual = tfe_sess.run(y.reveal())
+      actual = sess.run(y.reveal())
 
       np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
 
