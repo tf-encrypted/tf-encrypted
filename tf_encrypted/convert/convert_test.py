@@ -638,9 +638,7 @@ def run_split(data):
 
 def export_split(filename, input_shape):
   a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-  # re-name the op as output, so the list of Tensors in the output
-  # doens't get Packed by tf.identity in the export function
-  x = tf.split(a, num_or_size_splits=3, axis=-1, name="output")
+  x = tf.split(a, num_or_size_splits=3, axis=-1)
   return export(x, filename)
 
 
@@ -889,16 +887,11 @@ def export(x: tf.Tensor, filename: str, sess=None):
     should_close = True
     sess = tf.Session()
 
-  last_node_name = sess.graph.as_graph_def().node[-1].name
-
-  # if the op returns a list of tensors, we want avoid
-  # adding a tf.identiy op so the the list of tensors doesn't
-  # get packed.
-  if last_node_name != "output":
-    pred_node_names = ["output"]
-    tf.identity(x, name=pred_node_names[0])
+  pred_node_names = ["output"]
+  if isinstance(x, (list, tuple)):
+    x = tf.identity(x[0], name=pred_node_names[0])
   else:
-    pred_node_names = [last_node_name]
+    tf.identity(x, name=pred_node_names[0])
 
   graph = graph_util.convert_variables_to_constants(
       sess,
