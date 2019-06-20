@@ -129,18 +129,43 @@ class Sequential(Layer):
 
       weights = weights[num_param:]
 
-  def from_config(self, keras_config):
+  def from_config(self, config):
+    """Instantiates a TFE Keras model from its config.
 
-    tfe_model = _rebuild_tfe_model(keras_config)
+    Arguments:
+        config: Configuration dictionary.
+            matching the output of model.get_weights()
+        sess: tfe session
+
+    Returns:
+        A TFE Keras model instance
+    """
+    tfe_model = _rebuild_tfe_model(config)
 
     return tfe_model
 
-def model_from_config(keras_config):
+def model_from_config(config):
+  """Instantiates a TFE Keras model from its config.
 
-  return _rebuild_tfe_model(keras_config)
+  Arguments:
+      config: Configuration dictionary.
+          matching the output of model.get_weights()
+      sess: tfe session
+
+  Returns:
+      A TFE Keras model instance
+  """
+  return _rebuild_tfe_model(config)
 
 def clone_model(model):
-  """Clone any Sequential instance into TFE model"""
+  """Clone any Sequential instance into TFE model
+
+  Arguments: Instance of Model
+
+  Returns:
+      A TFE Keras model instance reproducing the behavior of the
+      original model using newly instantiated weights
+  """
 
   config = model.get_config()
   weights = model.get_weights()
@@ -150,14 +175,15 @@ def clone_model(model):
   sess = tfe.Session()
   tfe_model.set_weights(weights, sess)
 
-  tfe_model._tfe_session = sess # pylint: disable=protected-access
+  # Set as keras global session so the cloned
+  # model can be run with K.get_session():
   K.set_session(sess)
 
   return tfe_model
 
 def _rebuild_tfe_model(keras_config):
   """
-  Rebuild the plaintext Keras model as a TF Encrypted Keras model
+  Rebuild the plaintext Keras model as a TFE Keras model
   using the keras configuration and the current TF Encrypted protocol
   and configuration."""
 
