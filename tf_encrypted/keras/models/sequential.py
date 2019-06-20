@@ -116,20 +116,15 @@ class Sequential(Layer):
     for layer in self.layers:
       num_param = len(layer.weights)
       layer_weights = weights[:num_param]
-      # Define keras weights as private placeholder
-      tfe_weights_pl = [tfe.define_private_placeholder(w.shape)
-                        for w in layer_weights]
-      # Assign new keras weights to existing weights defined by
-      # default when tfe layer was instantiated
+
       if not sess:
         sess = K.get_session()
-      for i, w in enumerate(layer.weights):
-        fd = tfe_weights_pl[i].feed(layer_weights[i])
-        sess.run(tfe.assign(w, tfe_weights_pl[i]), feed_dict=fd)
+      layer.set_weights(layer_weights, sess)
 
       weights = weights[num_param:]
 
-  def from_config(self, config):
+  @classmethod
+  def from_config(cls, config):
     """Instantiates a TFE Keras model from its config.
 
     Arguments:
@@ -140,7 +135,7 @@ class Sequential(Layer):
     Returns:
         A TFE Keras model instance
     """
-    tfe_model = _rebuild_tfe_model(config)
+    tfe_model = model_from_config(config)
 
     return tfe_model
 
@@ -155,7 +150,14 @@ def model_from_config(config):
   Returns:
       A TFE Keras model instance
   """
-  return _rebuild_tfe_model(config)
+
+  tfe_model = tfe.keras.Sequential([])
+
+  for k_l_c in config['layers']:
+    tfe_layer = _instantiate_tfe_layer(k_l_c)
+    tfe_model.add(tfe_layer)
+
+  return tfe_model
 
 def clone_model(model):
   """Clone any Sequential instance into TFE model
@@ -181,22 +183,15 @@ def clone_model(model):
 
   return tfe_model
 
-def _rebuild_tfe_model(keras_config):
-  """
-  Rebuild the plaintext Keras model as a TFE Keras model
-  using the keras configuration and the current TF Encrypted protocol
-  and configuration."""
-
-  tfe_model = tfe.keras.Sequential([])
-
-  for k_l_c in keras_config['layers']:
-    tfe_layer = _instantiate_tfe_layer(k_l_c)
-    tfe_model.add(tfe_layer)
-
-  return tfe_model
-
 def _instantiate_tfe_layer(keras_layer_config):
-  """instantiate tfe layer based on layer keras config"""
+  """instantiate TFE layer based on layer keras config
+
+  Arguments: Keras layer config
+
+  Returns:
+    A TFE Keras layer instance reproducing the behavior of the
+      original Keras layer
+  """
 
   # Identify tf.keras layer type, and grab the corresponding tfe.keras layer
   keras_layer_type = keras_layer_config['class_name']

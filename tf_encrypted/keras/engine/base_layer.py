@@ -2,7 +2,7 @@
 from abc import ABC
 import logging
 
-import tensorflow as tf
+from tensorflow.keras import backend as K
 from tensorflow.python.keras.utils import generic_utils
 
 import tf_encrypted as tfe
@@ -121,7 +121,8 @@ class Layer(ABC):
 
     # Assign new keras weights to existing weights defined by
     # default when tfe layer was instantiated
-    sess = tf.get_default_session()
+    if not sess:
+      sess = K.get_session()
     for i, w in enumerate(self.weights):
       fd = tfe_weights_pl[i].feed(weights[i])
       sess.run(tfe.assign(w, tfe_weights_pl[i]), feed_dict=fd)
