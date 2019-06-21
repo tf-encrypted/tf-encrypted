@@ -26,7 +26,7 @@ author = 'The TF Encrypted Authors'
 # The short X.Y version
 version = '0.5.6'
 # The full version, including alpha/beta/rc tags
-release = '0.5.6-rc1'
+release = '0.5.6'
 
 
 # -- General configuration ---------------------------------------------------
