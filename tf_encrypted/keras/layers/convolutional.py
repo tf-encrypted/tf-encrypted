@@ -157,12 +157,12 @@ class Conv2D(Layer):
     self.kernel_shape = self.kernel_size + (input_dim, self.filters)
 
     kernel = self.kernel_initializer(self.kernel_shape)
-    self.kernel = self.prot.define_private_variable(kernel)
+    self.kernel = self.add_weight(kernel)
 
     if self.use_bias:
       bias_shape = self.compute_output_shape(input_shape)[1:]
       bias = self.bias_initializer(bias_shape)
-      self.bias = self.prot.define_private_variable(bias)
+      self.bias = self.add_weight(bias)
     else:
       self.bias = None
 
