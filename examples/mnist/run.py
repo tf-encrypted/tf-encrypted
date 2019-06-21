@@ -137,7 +137,6 @@ class PredictionClient():
 
     iterator = dataset.make_one_shot_iterator()
     return iterator
-  
 
   def provide_input(self) -> tf.Tensor:
     """Prepare input data for prediction."""
@@ -185,7 +184,6 @@ if __name__ == "__main__":
   model = tfe.keras.Sequential([
     tfe.keras.layers.Dense(512, batch_input_shape=(PredictionClient.BATCH_SIZE, 784), kernel_initializer=initializer_w0, 
     bias_initializer=initializer_b0),
-    tfe.keras.layers.BatchNormalization(axis=1),
     tfe.keras.layers.Activation('sigmoid'),
     tfe.keras.layers.Dense(10, activation=None, kernel_initializer=initializer_w1, bias_initializer=initializer_b1)
   ])
