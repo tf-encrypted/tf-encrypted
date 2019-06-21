@@ -119,8 +119,13 @@ class Converter:
     # identify the outputs node name
     if isinstance(out, (list, tuple)):
       output_name = find_output_names(pb_trimmed, node.name)
-      for i, _ in enumerate(out):
-        self.outputs[output_name[i]] = out[i]
+      # If output_name is empty, it means this node
+      # is the last one in the graph
+      if not output_name:
+        self.outputs[output] = out
+      else:
+        for i, _ in enumerate(out):
+          self.outputs[output_name[i]] = out[i]
     else:
       self.outputs[output] = out
 
