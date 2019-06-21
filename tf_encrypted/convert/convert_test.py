@@ -888,11 +888,7 @@ def export(x: tf.Tensor, filename: str, sess=None):
     sess = tf.Session()
 
   pred_node_names = ["output"]
-  if isinstance(x, (list, tuple)):
-    x = tf.identity(x[0], name=pred_node_names[0])
-  else:
-    tf.identity(x, name=pred_node_names[0])
-
+  tf.identity(x, name=pred_node_names[0])
   graph = graph_util.convert_variables_to_constants(
       sess,
       sess.graph.as_graph_def(),
