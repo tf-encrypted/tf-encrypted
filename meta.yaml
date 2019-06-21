@@ -1,6 +1,6 @@
 package:
   name: tf-encrypted
-  version: "0.5.6"
+  version: "0.5.6-rc1"
 
 source:
   git_url: https://github.com/tf-encrypted/tf-encrypted.git
