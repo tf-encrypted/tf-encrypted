@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - `model_from_config`
    - `clone_model`
 - Example with conversion of `tf.keras` model into `tfe.keras`.
-- Better exception handling when `.so` files required for secure randomness custom op are missing.
+- Improved handling for cases where the secure random operation is not available
 - Added methods to the converter to inspect TF and Keras graphs
 - `tfe.convert` now supports more than 2 inputs to `tfe.concat`
 
