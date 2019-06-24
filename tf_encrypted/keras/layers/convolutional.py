@@ -8,7 +8,8 @@ from tensorflow.python.keras.utils import conv_utils
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
 
-arg_not_impl_msg = "`{}` argument is not implemented for layer {}"
+from tf_encrypted.keras.layers.layers_utils import not_implemented_arg_err
+
 logger = logging.getLogger('tf_encrypted')
 
 class Conv2D(Layer):
@@ -85,7 +86,7 @@ class Conv2D(Layer):
                strides=(1, 1),
                padding='valid',
                data_format=None,
-               dilation_rate=None,
+               dilation_rate=(1, 1),
                activation=None,
                use_bias=True,
                kernel_initializer='glorot_uniform',
@@ -119,31 +120,15 @@ class Conv2D(Layer):
     self.kernel_initializer = initializers.get(kernel_initializer)
     self.bias_initializer = initializers.get(bias_initializer)
 
-    if dilation_rate:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("dilation_rate", "Conv2d"),
-      )
-    if kernel_regularizer:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("kernel_regularizer", "Conv2d"),
-      )
-    if bias_regularizer:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("bias_regularizer", "Conv2d"),
-      )
-    if activity_regularizer:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("activity_regularizer", "Conv2d"),
-      )
-    if kernel_constraint:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("kernel_constraint", "Conv2d"),
-      )
-    if bias_constraint:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("bias_constraint", "Conv2d"),
-      )
-
+    # Not implemented arguments
+    not_implemented_arg_err(dilation_rate, "dilation_rate", "Conv2D")
+    not_implemented_arg_err(kernel_regularizer, "kernel_regularizer", "Conv2D")
+    not_implemented_arg_err(bias_regularizer, "bias_regularizer", "Conv2D")
+    not_implemented_arg_err(activity_regularizer,
+                            "activity_regularizer",
+                            "Conv2D")
+    not_implemented_arg_err(kernel_constraint, "kernel_constraint", "Conv2D")
+    not_implemented_arg_err(bias_constraint, "bias_constraint", "Conv2D")
 
   def build(self, input_shape):
     if self.data_format == 'channels_first':
@@ -205,4 +190,3 @@ class Conv2D(Layer):
       w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))
 
     return [n_x, n_filters, h_out, w_out]
-  
