@@ -260,7 +260,9 @@ class TestConvert(unittest.TestCase):
 
   def test_keras_batchnorm_convert(self):
     test_input = np.ones([1, 28, 28, 1])
-    self._test_with_ndarray_input_fn('keras_batchnorm', test_input, protocol='Pond')
+    self._test_with_ndarray_input_fn('keras_batchnorm',
+                                     test_input,
+                                     protocol='Pond')
 
 
 def export_argmax(filename, input_shape, axis):
