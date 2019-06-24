@@ -258,6 +258,10 @@ class TestConvert(unittest.TestCase):
         protocol='Pond',
     )
 
+  def test_keras_batchnorm_convert(self):
+    test_input = np.ones([1, 28, 28, 1])
+    self._test_with_ndarray_input_fn('keras_batchnorm', test_input, protocol='Pond')
+
 
 def export_argmax(filename, input_shape, axis):
   pl = tf.placeholder(tf.float32, shape=input_shape)
@@ -366,6 +370,7 @@ def export_batchnorm(filename: str, input_shape: List[int]):
   x = tf.nn.batch_normalization(pl, mean, variance, offset, scale, 0.00001)
 
   return export(x, filename)
+
 
 
 def run_cnn(data, data_format="NCHW"):
@@ -777,6 +782,33 @@ def _keras_dense_core(shape=None, data=None):
             use_bias=True,
             input_shape=shape[1:])
   model.add(d)
+
+  if data is None:
+    data = np.random.uniform(size=shape)
+  out = model.predict(data)
+  return model, out
+
+def export_keras_batchnorm(filename, input_shape):
+  model, _ = _keras_batchnorm_core(shape=input_shape)
+
+  sess = K.get_session()
+  output = model.get_layer('batch_normalization_v1').output
+  return export(output, filename, sess=sess)
+
+
+def run_keras_batchnorm(data):
+  _, out = _keras_batchnorm_core(data=data)
+  return out
+
+
+def _keras_batchnorm_core(shape=None, data=None):
+  assert shape is None or data is None
+  if shape is None:
+    shape = data.shape
+
+  model = Sequential()
+  bn = tf.keras.layers.BatchNormalization(input_shape=shape[1:])
+  model.add(bn)
 
   if data is None:
     data = np.random.uniform(size=shape)
