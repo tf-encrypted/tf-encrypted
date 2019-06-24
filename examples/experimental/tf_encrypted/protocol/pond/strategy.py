@@ -7,6 +7,9 @@ class Pond(tf.distribute.Strategy):
     super.__init__(extended)
     # TODO
 
+  def reveal(self, *args):
+    for x in args:
+      self.reduce(reduce_op=tf.distribute.ReduceOp.SUM, value=x, axis=None)
 
 class PondExtended(tf.distribute.StrategyExtended):
   def __init__(self, container_strategy, triples_source, *players, **kwargs):

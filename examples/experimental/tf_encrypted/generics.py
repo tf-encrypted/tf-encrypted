@@ -5,7 +5,8 @@ The tf_encrypted namespace should contain all of these functions.
 They can be generated automatically and generically from the TF module,
 however I've included a few specific functions here for clarity.
 """
-from tf_encrypted.protocol import dispatch
+# from tf_encrypted.protocol import dispatch
+from .protocol import dispatch
 
 ####################
 ##  Illustrative  ##
@@ -67,7 +68,7 @@ def build_tfe_op(op):
   def generic_tfe_command(*args, **kwargs):
     context = tf.get_replica_context()
 
-    protocol_func = dispatch(context, op_str, *args, **kwargs)
+    protocol_func = dispatch(context, op, *args, **kwargs)
 
     if protocol_func is not None:
       return protocol_func(*args, **kwargs)
