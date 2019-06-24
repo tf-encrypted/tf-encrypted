@@ -230,6 +230,7 @@ def get_interiors(specop_scope, subscope_map):
     for node_name in subscope_ops_map:
       if match_numbered_leaf(op, node_name) is not None:
         interiors[op] = subscope_ops_map[node_name]
+        break
   return interiors
 
 
@@ -244,8 +245,12 @@ def find_leaves(scope, subscope_map):
     for inp in node.input:
       if match_numbered_scope(scope, inp) is None:
         input_leaves.append(inp)
+
+      if re.search(':\d+$', inp) is not None:
+        inp = inp.split(":")[0]
       if inp in output_leaves:
         output_leaves.remove(inp)
+
   seen = set()
   adder = seen.add
   input_leaves = [x for x in input_leaves if not (x in seen or adder(x))]
