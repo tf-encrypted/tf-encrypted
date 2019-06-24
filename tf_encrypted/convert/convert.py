@@ -246,7 +246,7 @@ def find_leaves(scope, subscope_map):
       if match_numbered_scope(scope, inp) is None:
         input_leaves.append(inp)
 
-      if re.search(':\d+$', inp) is not None:
+      if re.search(r':\d+$', inp) is not None:
         inp = inp.split(":")[0]
       if inp in output_leaves:
         output_leaves.remove(inp)
