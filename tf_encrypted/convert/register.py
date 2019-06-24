@@ -9,7 +9,7 @@ import yaml
 import numpy as np
 import tensorflow as tf
 
-from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
+from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D, Batchnorm
 from ..protocol.pond import PondPrivateTensor, PondMaskedTensor
 
 
@@ -50,6 +50,7 @@ def registry():
       'Identity': _identity,
       "GatherV2": _gather,
       "dense": _keras_dense,
+      "batch_normalization_v1": _keras_batchnorm,
   }
 
   return reg
@@ -193,6 +194,33 @@ def _keras_dense(converter, interiors, inputs):
                 out_features=shape[1])
 
   layer.initialize(initial_weights=k, initial_bias=b)
+  out = layer.forward(x_in)
+
+  return out
+
+
+def _keras_batchnorm(converter, interiors, inputs):
+  x_in = converter.outputs[inputs[0]]
+
+  bn_op = interiors["FusedBatchNorm"]
+  fmt = bn_op.attr["data_format"].s.decode('ascii')
+
+  gamma = _nodef_to_numpy_array(interiors["gamma"])
+  beta = _nodef_to_numpy_array(interiors["beta"])
+  moving_mean = _nodef_to_numpy_array(interiors["moving_mean"])
+  moving_variance = _nodef_to_numpy_array(interiors["moving_variance"])
+
+  input_shape = x_in.shape.as_list()
+
+  layer = Batchnorm(input_shape=input_shape,
+                    scale=gamma,
+                    offset=beta,
+                    mean=moving_mean,
+                    variance=moving_variance,
+                    channels_first=fmt == "NCHW"
+                    )
+
+  layer.initialize()
   out = layer.forward(x_in)
 
   return out

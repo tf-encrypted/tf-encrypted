@@ -27,3 +27,14 @@ dense:
     tf.keras.layers.Dense
   hyperlink:
     https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense
+batch_normalization_v1:
+  interiors:
+  - FusedBatchNorm
+  - gamma
+  - beta
+  - moving_mean
+  - moving_variance
+  tf-name:
+    tf.keras.layers.BatchNormalization
+  hyperlink:
+    https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization
