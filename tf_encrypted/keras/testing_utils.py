@@ -26,13 +26,6 @@ def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,
   tf_layer_cls = getattr(tf.keras.layers, tfe_layer_cls.__name__)
   tfe_kwargs = {**kwargs, **tfe_kwargs}
 
-  # If the layer as a `fused` argument (e.g. BatchNormalization),
-  # the TF layer should be executed with fused=False. The main reason is
-  # that TF supports channel first only when fused=False
-  if 'fused' in list(kwargs):
-    if kwargs['fused'] is None:
-      kwargs['fused'] = False
-
   with tfe.protocol.SecureNN():
     tfe_layer = tfe_layer_cls(**tfe_kwargs)
     x = tfe.define_private_variable(input_data)
@@ -75,10 +68,6 @@ def layer_test(layer_cls, kwargs=None, batch_input_shape=None,
 
   # instantiation
   kwargs = kwargs or {}
-
-  if 'fused' in list(kwargs):
-    if not kwargs['fused']:
-      kwargs['fused'] = None
 
   with tfe.protocol.SecureNN():
     layer = layer_cls(batch_input_shape=input_shape, **kwargs)

@@ -47,7 +47,7 @@ class TestBatchNormalization(unittest.TestCase):
 
   def _core_batchnorm(self, input_shape, **layer_kwargs):
     base_kwargs = {
-        'fused': None
+        'fused': False
     }
 
     kwargs = {**base_kwargs, **layer_kwargs}

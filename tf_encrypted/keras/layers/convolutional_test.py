@@ -16,10 +16,7 @@ class TestConv2d(unittest.TestCase):
     tf.reset_default_graph()
 
   def test_conv2d_bias(self):
-    self._core_conv2d(kernel_size=2,
-                      use_bias=True,
-                      dilation_rate=(1, 1),
-                      kernel_regularizer=None)
+    self._core_conv2d(kernel_size=2, use_bias=True)
 
   def test_conv2d_nobias(self):
     self._core_conv2d(kernel_size=2, use_bias=False)

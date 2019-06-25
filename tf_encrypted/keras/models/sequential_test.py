@@ -97,11 +97,11 @@ class TestSequential(unittest.TestCase):
     with tf.Session():
       model = tf.keras.models.Sequential()
 
-      model.add(tf.keras.layers.Conv2D(10,
+      model.add(tf.keras.layers.Conv2D(2,
                                        (3, 3),
                                        batch_input_shape=input_shape))
       model.add(tf.keras.layers.AveragePooling2D((2, 2)))
-      model.add(tf.keras.layers.Conv2D(32, (3, 3)))
+      model.add(tf.keras.layers.Conv2D(2, (3, 3)))
       model.add(tf.keras.layers.AveragePooling2D((2, 2)))
       model.add(tf.keras.layers.Flatten())
       model.add(tf.keras.layers.Dense(num_classes, name="logit"))

@@ -11,7 +11,6 @@ class LayerArgNotImplementedError(NotImplementedError):
       arg: TFE layer argument
       arg_name: TFE layer argument name (string)
       tf_layer_name: Tensorflow keras layer name (string)
-
   """
   def __init__(self, arg_name, tf_layer_name, tf_default_arg):
     super(LayerArgNotImplementedError, self).__init__()

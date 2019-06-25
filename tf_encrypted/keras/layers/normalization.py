@@ -98,8 +98,8 @@ class BatchNormalization(Layer):
                renorm=False,
                renorm_clipping=None,
                renorm_momentum=0.99,
-               fused=None,
-               trainable=True,
+               fused=None, # pylint: disable=unused-argument
+               trainable=False,
                virtual_batch_size=None,
                adjustment=None,
                name=None,
@@ -130,12 +130,6 @@ class BatchNormalization(Layer):
                        "BatchNormalization")
     default_args_check(renorm_clipping,
                        "renorm_clipping",
-                       "BatchNormalization")
-    default_args_check(fused,
-                       "fused",
-                       "BatchNormalization")
-    default_args_check(trainable,
-                       "trainable",
                        "BatchNormalization")
     default_args_check(virtual_batch_size,
                        "virtual_batch_size",
