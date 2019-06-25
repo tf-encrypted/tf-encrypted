@@ -36,4 +36,4 @@ def not_implemented_arg_err(arg, arg_name, tf_layer_name):
   layer_sign = inspect.signature(tf_layer_cls.__init__).parameters
   tf_default_arg = layer_sign[arg_name].default
   if arg != tf_default_arg:
-    raise NotImplementedError(arg_name, tf_layer_name, tf_default_arg)
+    raise LayerArgNotImplementedError(arg_name, tf_layer_name, tf_default_arg)
