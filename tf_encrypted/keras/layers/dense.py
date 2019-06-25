@@ -4,9 +4,7 @@ from tensorflow.python.keras import initializers
 
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
-
-
-arg_not_impl_msg = "`{}` argument is not implemented for layer {}"
+from tf_encrypted.keras.layers.layers_utils import default_args_check
 
 class Dense(Layer):
   """Just your regular densely-connected NN layer.
@@ -63,26 +61,14 @@ class Dense(Layer):
     self.kernel_initializer = initializers.get(kernel_initializer)
     self.bias_initializer = initializers.get(bias_initializer)
 
-    if kernel_regularizer:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("kernel_regularizer", "Dense"),
-      )
-    if bias_regularizer:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("bias_regularizer", "Dense"),
-      )
-    if activity_regularizer:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("activity_regularizer", "Dense"),
-      )
-    if kernel_constraint:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("kernel_constraint", "Dense"),
-      )
-    if bias_constraint:
-      raise NotImplementedError(
-          arg_not_impl_msg.format(" bias_constraint", "Dense"),
-      )
+    # Not implemented arguments
+    default_args_check(kernel_regularizer, "kernel_regularizer", "Dense")
+    default_args_check(bias_regularizer, "bias_regularizer", "Dense")
+    default_args_check(activity_regularizer,
+                       "activity_regularizer",
+                       "Dense")
+    default_args_check(kernel_constraint, "kernel_constraint", "Dense")
+    default_args_check(bias_constraint, "bias_constraint", "Dense")
 
   def compute_output_shape(self, input_shape):
     return [input_shape[0], self.units]

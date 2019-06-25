@@ -1,8 +1,8 @@
 """Activation Layer implementation."""
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.activations import relu
+from tf_encrypted.keras.layers.layers_utils import default_args_check
 
-arg_not_impl_msg = "`{}` argument is not implemented for layer {}"
 
 class ReLU(Layer):
   """Rectified Linear Unit activation function.
@@ -26,20 +26,10 @@ class ReLU(Layer):
   def __init__(self, max_value=None, negative_slope=0, threshold=0, **kwargs):
     super(ReLU, self).__init__(**kwargs)
 
-    if max_value:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("max_value", "relu"),
-      )
-
-    if negative_slope != 0:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("negative_slope", "relu"),
-      )
-
-    if threshold != 0:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("threshold", "relu"),
-      )
+    # Not implemented arguments
+    default_args_check(max_value, "max_value", "ReLU")
+    default_args_check(negative_slope, "negative_slope", "ReLU")
+    default_args_check(threshold, "threshold", "ReLU")
 
   def build(self, input_shape):
     self.built = True

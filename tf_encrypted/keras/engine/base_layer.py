@@ -115,17 +115,15 @@ class Layer(ABC):
           matching the output of layer.get_weights()
       sess: tfe session"""
 
-    # Define keras weights as private variable
-    tfe_weights_pl = [tfe.define_private_placeholder(w.shape)
-                      for w in weights]
-
     # Assign new keras weights to existing weights defined by
     # default when tfe layer was instantiated
     if not sess:
       sess = K.get_session()
     for i, w in enumerate(self.weights):
-      fd = tfe_weights_pl[i].feed(weights[i])
-      sess.run(tfe.assign(w, tfe_weights_pl[i]), feed_dict=fd)
+      shape = w.shape.as_list()
+      tfe_weights_pl = tfe.define_private_placeholder(shape)
+      fd = tfe_weights_pl.feed(weights[i].reshape(shape))
+      sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
 
   @property
   def prot(self):
