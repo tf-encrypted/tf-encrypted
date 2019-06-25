@@ -7,9 +7,14 @@ Also performs plaintext training.
 import sys
 
 import tensorflow as tf
+from tensorflow import contrib
+
+import tensorflow.keras as keras
+
 import tf_encrypted as tfe
 
 from convert import decode
+
 
 if len(sys.argv) > 1:
   # config file was specified
@@ -29,10 +34,12 @@ class ModelOwner():
     player_name: `str`, name of the `tfe.player.Player`
                  representing the model owner.
   """
+  
+  BATCH_SIZE = 128
+  NUM_CLASSES = 10
+  EPOCHS = 2
 
-  BATCH_SIZE = 30
-  ITERATIONS = 60000 // BATCH_SIZE
-  EPOCHS = 1
+  IMG_ROWS, IMG_COLS = 28, 28
 
   def __init__(self, player_name, local_data_file):
     self.player_name = player_name
@@ -57,43 +64,33 @@ class ModelOwner():
   def _build_training_graph(self, training_data):
     """Build a graph for plaintext model training."""
 
-    # model parameters and initial values
-    w0 = tf.Variable(tf.random_normal([28 * 28, 512]))
-    b0 = tf.Variable(tf.zeros([512]))
-    w1 = tf.Variable(tf.random_normal([512, 10]))
-    b1 = tf.Variable(tf.zeros([10]))
+    model = keras.Sequential()
+    model.add(keras.layers.Flatten())
+    model.add(keras.layers.Dense(512, input_shape=[28, 28, 1]))
+    model.add(keras.layers.Activation('relu'))
+    model.add(keras.layers.Dense(self.NUM_CLASSES, activation='softmax'))
+
+    def loss(model, x, y):
+      y_ = model(x)
+      return tf.losses.sparse_softmax_cross_entropy(labels=y, logits=y_)
+
+    def grad(model, inputs, targets):
+      with tf.GradientTape() as tape:
+        loss_value = loss(model, inputs, targets)
+      return loss_value, tape.gradient(loss_value, model.trainable_variables)
 
     # optimizer and data pipeline
     optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
+    global_step = tf.Variable(0)
+    for epoch in range(self.EPOCHS):
+      # Training loop - using batches of 32
+      for x, y in training_data.get_next():
+        # Optimize the model
+        loss_value, grads = grad(model, x, y)
+        optimizer.apply_gradients(zip(grads, model.trainable_variables),
+                                  global_step)
 
-    # training loop
-    def loop_body(i):
-
-      # get next batch
-      x, y = training_data.get_next()
-
-      # model construction
-      layer0 = tf.matmul(x, w0) + b0
-      layer1 = tf.nn.sigmoid(layer0)
-      layer2 = tf.matmul(layer1, w1) + b1
-
-      predictions = layer2
-      loss = tf.reduce_mean(
-          tf.losses.sparse_softmax_cross_entropy(logits=predictions, labels=y))
-      with tf.control_dependencies([optimizer.minimize(loss)]):
-        return i + 1
-
-    loop = tf.while_loop(lambda i: i < self.ITERATIONS
-                         * self.EPOCHS, loop_body, (0,))
-
-    # return model parameters after training
-    with tf.control_dependencies([loop]):
-      print_op = tf.print("Training complete")
-    with tf.control_dependencies([print_op]):
-      return [w0.read_value(),
-              b0.read_value(),
-              w1.read_value(),
-              b1.read_value()]
+    return model.trainable_weights
 
   def provide_input(self):
     with tf.name_scope('loading'):
@@ -169,24 +166,21 @@ if __name__ == "__main__":
       local_data_file="./data/test.tfrecord")
 
   # get model parameters as private tensors from model owner
-  params = tfe.define_private_input(model_owner.player_name,
-                                    model_owner.provide_input, masked=True)  # pylint: disable=E0632
+  params = tfe.define_private_variable(model_owner.player_name,
+                                    model_owner.provide_input)  # pylint: disable=E0632
 
   # we'll use the same parameters for each prediction so we cache them to
   # avoid re-training each time
   cache_updater, params = tfe.cache(params)
 
   w0, b0, w1, b1 = params
-  initializer_w0 = tf.keras.initializers.Constant(w0)
-  initializer_b0 = tf.keras.initializers.Constant(b0)
-  initializer_w1 = tf.keras.initializers.Constant(w1)
-  initializer_b1 = tf.keras.initializers.Constant(b1)
   model = tfe.keras.Sequential([
-    tfe.keras.layers.Dense(512, batch_input_shape=(PredictionClient.BATCH_SIZE, 784), kernel_initializer=initializer_w0, 
-    bias_initializer=initializer_b0),
-    tfe.keras.layers.Activation('sigmoid'),
-    tfe.keras.layers.Dense(10, activation=None, kernel_initializer=initializer_w1, bias_initializer=initializer_b1)
+    tfe.keras.layers.Dense(512, batch_input_shape=(PredictionClient.BATCH_SIZE, 784)),
+    tfe.keras.layers.Activation('relu'),
+    tfe.keras.layers.Dense(10, activation=softmax)
   ])
+
+  model.set_weights([w0,w1])
 
   # get prediction input from client
   x = tfe.define_private_input(prediction_client.player_name,
