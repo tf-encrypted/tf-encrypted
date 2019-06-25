@@ -115,6 +115,8 @@ class Sequential(Layer):
     # Updated weights for each layer
     for layer in self.layers:
       num_param = len(layer.weights)
+      if num_param == 0:
+        continue
       layer_weights = weights[:num_param]
 
       if not sess:

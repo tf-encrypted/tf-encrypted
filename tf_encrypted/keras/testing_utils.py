@@ -68,6 +68,7 @@ def layer_test(layer_cls, kwargs=None, batch_input_shape=None,
 
   # instantiation
   kwargs = kwargs or {}
+
   with tfe.protocol.SecureNN():
     layer = layer_cls(batch_input_shape=input_shape, **kwargs)
     model = Sequential()
