@@ -2,12 +2,15 @@
 from abc import ABC
 import logging
 
+import numpy as np
 from tensorflow.keras import backend as K
 from tensorflow.python.keras.utils import generic_utils
 
 import tf_encrypted as tfe
 from tf_encrypted import get_protocol
 from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
+
+from tf_encrypted.protocol.pond import PondPrivateTensor
 
 logger = logging.getLogger('tf_encrypted')
 
@@ -112,18 +115,27 @@ class Layer(ABC):
     """ Sets the weights of the layer.
     Arguments:
       weights: A list of Numpy arrays with shapes and types
-          matching the output of layer.get_weights()
+          matching the output of layer.get_weights() or a list
+          of private variables
       sess: tfe session"""
+
+    weights_types = (np.ndarray, PondPrivateTensor)
+    assert isinstance(weights[0], weights_types), type(initial_value)
 
     # Assign new keras weights to existing weights defined by
     # default when tfe layer was instantiated
     if not sess:
       sess = K.get_session()
-    for i, w in enumerate(self.weights):
-      shape = w.shape.as_list()
-      tfe_weights_pl = tfe.define_private_placeholder(shape)
-      fd = tfe_weights_pl.feed(weights[i].reshape(shape))
-      sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
+
+    if isinstance(weights[0], np.ndarray):
+      for i, w in enumerate(self.weights):
+        shape = w.shape.as_list()
+        tfe_weights_pl = tfe.define_private_placeholder(shape)
+        fd = tfe_weights_pl.feed(weights[i].reshape(shape))
+        sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
+    elif isinstance(weights[0], PondPrivateTensor):
+      for i, w in enumerate(self.weights):
+        sess.run(tfe.assign(w, weights[i]))
 
   @property
   def prot(self):
