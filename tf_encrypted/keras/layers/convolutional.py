@@ -7,7 +7,6 @@ from tensorflow.python.keras.utils import conv_utils
 
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
-
 from tf_encrypted.keras.layers.layers_utils import not_implemented_arg_err
 
 logger = logging.getLogger('tf_encrypted')
@@ -145,7 +144,9 @@ class Conv2D(Layer):
     self.kernel = self.add_weight(kernel)
 
     if self.use_bias:
-      bias_shape = self.compute_output_shape(input_shape)[1:]
+      # Expand bias shape, will be broadcasted when
+      # added to the output
+      bias_shape = [self.filters, 1, 1]
       bias = self.bias_initializer(bias_shape)
       self.bias = self.add_weight(bias)
     else:
