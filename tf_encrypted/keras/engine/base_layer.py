@@ -115,12 +115,12 @@ class Layer(ABC):
     """ Sets the weights of the layer.
     Arguments:
       weights: A list of Numpy arrays with shapes and types
-          matching the output of layer.get_weights() or a list 
+          matching the output of layer.get_weights() or a list
           of private variables
       sess: tfe session"""
 
-    weights_val_types = (np.ndarray, PondPrivateTensor)
-    assert isinstance(weights[0], weights_val_types), type(initial_value)
+    weights_types = (np.ndarray, PondPrivateTensor)
+    assert isinstance(weights[0], weights_types), type(initial_value)
 
     # Assign new keras weights to existing weights defined by
     # default when tfe layer was instantiated
