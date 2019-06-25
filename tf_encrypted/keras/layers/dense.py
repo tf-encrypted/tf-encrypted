@@ -4,7 +4,7 @@ from tensorflow.python.keras import initializers
 
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
-from tf_encrypted.keras.layers.layers_utils import not_implemented_arg_err
+from tf_encrypted.keras.layers.layers_utils import default_args_check
 
 class Dense(Layer):
   """Just your regular densely-connected NN layer.
@@ -62,13 +62,13 @@ class Dense(Layer):
     self.bias_initializer = initializers.get(bias_initializer)
 
     # Not implemented arguments
-    not_implemented_arg_err(kernel_regularizer, "kernel_regularizer", "Dense")
-    not_implemented_arg_err(bias_regularizer, "bias_regularizer", "Dense")
-    not_implemented_arg_err(activity_regularizer,
-                            "activity_regularizer",
-                            "Dense")
-    not_implemented_arg_err(kernel_constraint, "kernel_constraint", "Dense")
-    not_implemented_arg_err(bias_constraint, "bias_constraint", "Dense")
+    default_args_check(kernel_regularizer, "kernel_regularizer", "Dense")
+    default_args_check(bias_regularizer, "bias_regularizer", "Dense")
+    default_args_check(activity_regularizer,
+                       "activity_regularizer",
+                       "Dense")
+    default_args_check(kernel_constraint, "kernel_constraint", "Dense")
+    default_args_check(bias_constraint, "bias_constraint", "Dense")
 
   def compute_output_shape(self, input_shape):
     return [input_shape[0], self.units]

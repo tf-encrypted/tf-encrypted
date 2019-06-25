@@ -10,6 +10,7 @@ from tf_encrypted.keras import Sequential
 from tf_encrypted.keras.layers import Dense
 
 np.random.seed(42)
+tf.random.set_random_seed(42)
 
 
 class TestSequential(unittest.TestCase):

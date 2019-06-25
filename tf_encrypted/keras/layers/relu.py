@@ -1,7 +1,7 @@
 """Activation Layer implementation."""
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.activations import relu
-from tf_encrypted.keras.layers.layers_utils import not_implemented_arg_err
+from tf_encrypted.keras.layers.layers_utils import default_args_check
 
 
 class ReLU(Layer):
@@ -27,9 +27,9 @@ class ReLU(Layer):
     super(ReLU, self).__init__(**kwargs)
 
     # Not implemented arguments
-    not_implemented_arg_err(max_value, "max_value", "ReLU")
-    not_implemented_arg_err(negative_slope, "negative_slope", "ReLU")
-    not_implemented_arg_err(threshold, "threshold", "ReLU")
+    default_args_check(max_value, "max_value", "ReLU")
+    default_args_check(negative_slope, "negative_slope", "ReLU")
+    default_args_check(threshold, "threshold", "ReLU")
 
   def build(self, input_shape):
     self.built = True

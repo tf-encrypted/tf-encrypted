@@ -7,7 +7,7 @@ from tensorflow.python.keras.utils import conv_utils
 
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
-from tf_encrypted.keras.layers.layers_utils import not_implemented_arg_err
+from tf_encrypted.keras.layers.layers_utils import default_args_check
 
 logger = logging.getLogger('tf_encrypted')
 
@@ -120,14 +120,14 @@ class Conv2D(Layer):
     self.bias_initializer = initializers.get(bias_initializer)
 
     # Not implemented arguments
-    not_implemented_arg_err(dilation_rate, "dilation_rate", "Conv2D")
-    not_implemented_arg_err(kernel_regularizer, "kernel_regularizer", "Conv2D")
-    not_implemented_arg_err(bias_regularizer, "bias_regularizer", "Conv2D")
-    not_implemented_arg_err(activity_regularizer,
-                            "activity_regularizer",
-                            "Conv2D")
-    not_implemented_arg_err(kernel_constraint, "kernel_constraint", "Conv2D")
-    not_implemented_arg_err(bias_constraint, "bias_constraint", "Conv2D")
+    default_args_check(dilation_rate, "dilation_rate", "Conv2D")
+    default_args_check(kernel_regularizer, "kernel_regularizer", "Conv2D")
+    default_args_check(bias_regularizer, "bias_regularizer", "Conv2D")
+    default_args_check(activity_regularizer,
+                       "activity_regularizer",
+                       "Conv2D")
+    default_args_check(kernel_constraint, "kernel_constraint", "Conv2D")
+    default_args_check(bias_constraint, "bias_constraint", "Conv2D")
 
   def build(self, input_shape):
     if self.data_format == 'channels_first':
@@ -144,8 +144,8 @@ class Conv2D(Layer):
     self.kernel = self.add_weight(kernel)
 
     if self.use_bias:
-      # Expand bias shape, will be broadcasted when
-      # added to the output
+      # Expand bias shape dimensions. Bias needs to have
+      # a rank of 3 to be added to the output
       bias_shape = [self.filters, 1, 1]
       bias = self.bias_initializer(bias_shape)
       self.bias = self.add_weight(bias)

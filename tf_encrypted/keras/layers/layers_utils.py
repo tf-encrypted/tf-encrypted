@@ -6,6 +6,12 @@ import tensorflow as tf
 
 class LayerArgNotImplementedError(NotImplementedError):
   """Raise error when layer argument is not yet supported in TFE
+
+    Args:
+      arg: TFE layer argument
+      arg_name: TFE layer argument name (string)
+      tf_layer_name: Tensorflow keras layer name (string)
+
   """
   def __init__(self, arg_name, tf_layer_name, tf_default_arg):
     super(LayerArgNotImplementedError, self).__init__()
@@ -21,8 +27,8 @@ class LayerArgNotImplementedError(NotImplementedError):
                                    self.tf_default_arg)
 
 
-def not_implemented_arg_err(arg, arg_name, tf_layer_name):
-  """Raise error when layer argument is not yet supported in TFE
+def default_args_check(arg, arg_name, tf_layer_name):
+  """Check if the layer is using the dfault argument
 
     Args:
       arg: TFE layer argument

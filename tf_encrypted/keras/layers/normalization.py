@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.python.keras import initializers
 
 from tf_encrypted.keras.engine import Layer
-from tf_encrypted.keras.layers.layers_utils import not_implemented_arg_err
+from tf_encrypted.keras.layers.layers_utils import default_args_check
 
 class BatchNormalization(Layer):
   """Batch normalization layer (Ioffe and Szegedy, 2014).
@@ -113,36 +113,36 @@ class BatchNormalization(Layer):
     self.moving_variance_initializer = initializers.get(
         moving_variance_initializer)
 
-    not_implemented_arg_err(beta_regularizer,
-                            "beta_regularizer",
-                            "BatchNormalization")
-    not_implemented_arg_err(gamma_regularizer,
-                            "gamma_regularizer",
-                            "BatchNormalization")
-    not_implemented_arg_err(beta_constraint,
-                            "beta_constraint",
-                            "BatchNormalization")
-    not_implemented_arg_err(gamma_constraint,
-                            "gamma_constraint",
-                            "BatchNormalization")
-    not_implemented_arg_err(renorm,
-                            "renorm",
-                            "BatchNormalization")
-    not_implemented_arg_err(renorm_clipping,
-                            "renorm_clipping",
-                            "BatchNormalization")
-    not_implemented_arg_err(fused,
-                            "fused",
-                            "BatchNormalization")
-    not_implemented_arg_err(trainable,
-                            "trainable",
-                            "BatchNormalization")
-    not_implemented_arg_err(virtual_batch_size,
-                            "virtual_batch_size",
-                            "BatchNormalization")
-    not_implemented_arg_err(adjustment,
-                            "adjustment",
-                            "BatchNormalization")
+    default_args_check(beta_regularizer,
+                       "beta_regularizer",
+                       "BatchNormalization")
+    default_args_check(gamma_regularizer,
+                       "gamma_regularizer",
+                       "BatchNormalization")
+    default_args_check(beta_constraint,
+                       "beta_constraint",
+                       "BatchNormalization")
+    default_args_check(gamma_constraint,
+                       "gamma_constraint",
+                       "BatchNormalization")
+    default_args_check(renorm,
+                       "renorm",
+                       "BatchNormalization")
+    default_args_check(renorm_clipping,
+                       "renorm_clipping",
+                       "BatchNormalization")
+    default_args_check(fused,
+                       "fused",
+                       "BatchNormalization")
+    default_args_check(trainable,
+                       "trainable",
+                       "BatchNormalization")
+    default_args_check(virtual_batch_size,
+                       "virtual_batch_size",
+                       "BatchNormalization")
+    default_args_check(adjustment,
+                       "adjustment",
+                       "BatchNormalization")
 
     # Axis -3 is equivalent to 1, and axis -1 is equivalent to 3, because the
     # input rank is required to be 4 (which is checked later).
