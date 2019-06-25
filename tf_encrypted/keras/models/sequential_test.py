@@ -86,6 +86,26 @@ class TestSequential(unittest.TestCase):
 
       np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
 
+  def test_weights_as_private_var(self):
+    input_shape = (1, 3)
+    input_data = np.random.normal(size=input_shape)
+    expected, k_weights, k_config = _model_predict_keras(input_data,
+                                                         input_shape)
+
+    with tfe.protocol.SecureNN():
+      tfe_model = tfe.keras.models.model_from_config(k_config)
+      weights_private_var = [tfe.define_private_variable(w) for w in k_weights]
+      print(type(weights_private_var[0]))
+      x = tfe.define_private_variable(input_data)
+
+    with tfe.Session() as sess:
+      sess.run(tf.global_variables_initializer())
+      tfe_model.set_weights(weights_private_var)
+      y = tfe_model(x)
+      actual = sess.run(y.reveal())
+
+      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
+
 
 def _model_predict_keras(input_data, input_shape):
   with tf.Session():
