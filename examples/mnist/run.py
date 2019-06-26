@@ -8,7 +8,6 @@ import sys
 
 import tensorflow as tf
 import tensorflow.keras as keras
-
 import tf_encrypted as tfe
 
 from convert import decode
@@ -36,8 +35,6 @@ class ModelOwner():
   NUM_CLASSES = 10
   EPOCHS = 1
   ITERATIONS = 60000 // BATCH_SIZE
-
-  IMG_ROWS, IMG_COLS = 28, 28
 
   def __init__(self, player_name, local_data_file):
     self.player_name = player_name
@@ -181,7 +178,6 @@ if __name__ == "__main__":
   cache_updater, params = tfe.cache(params)
 
   with tfe.protocol.SecureNN():
-    # get prediction input from client
     batch_size = PredictionClient.BATCH_SIZE
     flat_dim = ModelOwner.IMG_ROWS * ModelOwner.IMG_COLS
     batch_input_shape = [batch_size, flat_dim]
@@ -192,6 +188,7 @@ if __name__ == "__main__":
     model.add(tfe.keras.layers.Dense(10, activation=None))
     model.set_weights(params)
 
+    # get prediction input from client
     x = tfe.define_private_input(prediction_client.player_name,
                                  prediction_client.provide_input)
     logits = model(x)
