@@ -25,17 +25,16 @@ session_target = sys.argv[2] if len(sys.argv) > 2 else None
 
 
 class ModelOwner():
-  """
-  Contains code meant to be executed by the model owner.
+  """Contains code meant to be executed by the model owner.
 
   Args:
     player_name: `str`, name of the `tfe.player.Player`
                  representing the model owner.
+    local_data_file: filepath to MNIST data.
   """
-  
   BATCH_SIZE = 128
   NUM_CLASSES = 10
-  EPOCHS = 2
+  EPOCHS = 1
   ITERATIONS = 60000 // BATCH_SIZE
 
   IMG_ROWS, IMG_COLS = 28, 28
@@ -46,6 +45,7 @@ class ModelOwner():
 
   def _build_data_pipeline(self):
     """Build a reproducible tf.data iterator."""
+    flat_dim = self.IMG_ROWS * self.IMG_COLS
 
     def normalize(image, label):
       image = tf.cast(image, tf.float32) / 255.0
@@ -54,6 +54,7 @@ class ModelOwner():
     dataset = tf.data.TFRecordDataset([self.local_data_file])
     dataset = dataset.map(decode)
     dataset = dataset.map(normalize)
+    dataset = dataset.map(lambda x, y: (tf.reshape(x, shape=[flat_dim]), y))
     dataset = dataset.repeat()
     dataset = dataset.batch(self.BATCH_SIZE)
 
@@ -64,33 +65,38 @@ class ModelOwner():
     """Build a graph for plaintext model training."""
 
     model = keras.Sequential()
-    model.add(keras.layers.Flatten())
-    model.add(keras.layers.Dense(512, input_shape=[28, 28, 1]))
+    model.add(keras.layers.Dense(512, input_shape=[784,]))
     model.add(keras.layers.Activation('relu'))
     model.add(keras.layers.Dense(self.NUM_CLASSES, activation=None))
-    
+
     # optimizer and data pipeline
     optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
+
     def loss(model, inputs, targets):
-      targets_ = model(inputs)
-      return tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=targets, logits=targets_))
+      logits = model(inputs)
+      per_element_loss = tf.losses.sparse_softmax_cross_entropy(
+          labels=targets, logits=logits)
+      return tf.reduce_mean(per_element_loss)
 
     def grad(model, inputs, targets):
       loss_value = loss(model, inputs, targets)
       return loss_value, tf.gradients(loss_value, model.trainable_variables)
 
-    global_step = tf.Variable(0)
     def loop_body(i):
       x, y = training_data.get_next()
-      loss_value, grads = grad(model, x, y)
-      update_op = optimizer.apply_gradients(zip(grads, model.trainable_variables), global_step)
+      _, grads = grad(model, x, y)
+      update_op = optimizer.apply_gradients(
+          zip(grads, model.trainable_variables))
       with tf.control_dependencies([update_op]):
-          return global_step
-    
-    tf.while_loop(lambda i: i < self.ITERATIONS
-                         * self.EPOCHS, loop_body, (0,))
-    
-    return model.trainable_variables
+        return i + 1
+
+    loop = tf.while_loop(lambda i: i < self.ITERATIONS * self.EPOCHS,
+                         loop_body, loop_vars=(0,))
+
+    with tf.control_dependencies([loop]):
+      print_op = tf.print("Training complete")
+    with tf.control_dependencies([print_op]):
+      return [tf.identity(x) for x in model.trainable_variables]
 
   def provide_input(self):
     with tf.name_scope('loading'):
@@ -98,7 +104,7 @@ class ModelOwner():
 
     with tf.name_scope('training'):
       parameters = self._build_training_graph(training_data)
-      
+
     return parameters
 
 
@@ -164,24 +170,30 @@ if __name__ == "__main__":
   prediction_client = PredictionClient(
       player_name="prediction-client",
       local_data_file="./data/test.tfrecord")
-  
+
   # get model parameters as private tensors from model owner
-  params = tfe.define_private_input(model_owner.player_name, model_owner.provide_input) # pylint: disable=E0632
-  
+  params = tfe.define_private_input(model_owner.player_name,
+                                    model_owner.provide_input,
+                                    masked=True)
+
   # we'll use the same parameters for each prediction so we cache them to
   # avoid re-training each time
   cache_updater, params = tfe.cache(params)
 
   with tfe.protocol.SecureNN():
+    # get prediction input from client
+    batch_size = PredictionClient.BATCH_SIZE
+    flat_dim = ModelOwner.IMG_ROWS * ModelOwner.IMG_COLS
+    batch_input_shape = [batch_size, flat_dim]
+
     model = tfe.keras.Sequential()
-    model.add(tfe.keras.layers.Dense(512, input_shape=[PredictionClient.BATCH_SIZE,28*28]))
+    model.add(tfe.keras.layers.Dense(512, batch_input_shape=batch_input_shape))
     model.add(tfe.keras.layers.Activation('relu'))
     model.add(tfe.keras.layers.Dense(10, activation=None))
     model.set_weights(params)
-    # get prediction input from client
+
     x = tfe.define_private_input(prediction_client.player_name,
-                                prediction_client.provide_input)  # pylint: disable=E0632
-    
+                                 prediction_client.provide_input)
     logits = model(x)
 
   # send prediction output back to client
@@ -189,13 +201,14 @@ if __name__ == "__main__":
                                     logits,
                                     prediction_client.receive_output)
 
-  with tfe.Session(target=session_target) as sess:
+  sess = tfe.Session(target=session_target)
+  sess.run(tf.global_variables_initializer(), tag='init')
 
-    sess.run(tf.global_variables_initializer(), tag='init')
+  print("Training")
+  sess.run(cache_updater, tag='training')
 
-    print("Training")
-    sess.run(cache_updater, tag='training')
-    
-    for _ in range(5):
-      print("Predicting")
-      sess.run(prediction_op, tag='prediction')
+  for _ in range(5):
+    print("Predicting")
+    sess.run(prediction_op, tag='prediction')
+
+  sess.close()
