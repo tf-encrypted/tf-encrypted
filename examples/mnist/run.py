@@ -8,7 +8,6 @@ import sys
 
 import tensorflow as tf
 from tensorflow import contrib
-
 import tensorflow.keras as keras
 
 import tf_encrypted as tfe
@@ -38,6 +37,7 @@ class ModelOwner():
   BATCH_SIZE = 128
   NUM_CLASSES = 10
   EPOCHS = 2
+  ITERATIONS = 60000 // BATCH_SIZE
 
   IMG_ROWS, IMG_COLS = 28, 28
 
@@ -68,8 +68,10 @@ class ModelOwner():
     model.add(keras.layers.Flatten())
     model.add(keras.layers.Dense(512, input_shape=[28, 28, 1]))
     model.add(keras.layers.Activation('relu'))
-    model.add(keras.layers.Dense(self.NUM_CLASSES, activation='softmax'))
-
+    model.add(keras.layers.Dense(self.NUM_CLASSES, activation=None))
+    
+    # optimizer and data pipeline
+    optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
     def loss(model, x, y):
       y_ = model(x)
       return tf.losses.sparse_softmax_cross_entropy(labels=y, logits=y_)
@@ -79,18 +81,18 @@ class ModelOwner():
         loss_value = loss(model, inputs, targets)
       return loss_value, tape.gradient(loss_value, model.trainable_variables)
 
-    # optimizer and data pipeline
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
     global_step = tf.Variable(0)
-    for epoch in range(self.EPOCHS):
-      # Training loop - using batches of 32
-      for x, y in training_data.get_next():
-        # Optimize the model
-        loss_value, grads = grad(model, x, y)
-        optimizer.apply_gradients(zip(grads, model.trainable_variables),
-                                  global_step)
-
-    return model.trainable_weights
+    def loop_body(i):
+      x, y = training_data.get_next()
+      loss_value, grads = grad(model, x, y)
+      update_op = optimizer.apply_gradients(zip(grads, model.trainable_variables), global_step)
+      with tf.control_dependencies([update_op]):
+          return global_step
+    
+    tf.while_loop(lambda i: i < self.ITERATIONS
+                         * self.EPOCHS, loop_body, (0,))
+    
+    return model.get_weights()
 
   def provide_input(self):
     with tf.name_scope('loading'):
@@ -98,7 +100,7 @@ class ModelOwner():
 
     with tf.name_scope('training'):
       parameters = self._build_training_graph(training_data)
-
+      
     return parameters
 
 
@@ -166,25 +168,20 @@ if __name__ == "__main__":
       local_data_file="./data/test.tfrecord")
 
   # get model parameters as private tensors from model owner
-  params = tfe.define_private_variable(model_owner.player_name,
-                                    model_owner.provide_input)  # pylint: disable=E0632
-
-  # we'll use the same parameters for each prediction so we cache them to
-  # avoid re-training each time
+  params = [tfe.define_private_variable(x) for x in model_owner.provide_input()]  # pylint: disable=E0632
+  
   cache_updater, params = tfe.cache(params)
 
-  w0, b0, w1, b1 = params
-  model = tfe.keras.Sequential([
-    tfe.keras.layers.Dense(512, batch_input_shape=(PredictionClient.BATCH_SIZE, 784)),
-    tfe.keras.layers.Activation('relu'),
-    tfe.keras.layers.Dense(10, activation=softmax)
-  ])
+  model = tfe.keras.Sequential()
+  model.add(tfe.keras.layers.Dense(512, input_shape=[PredictionClient.BATCH_SIZE,28*28]))
+  model.add(tfe.keras.layers.Activation('relu'))
+  model.add(tfe.keras.layers.Dense(10, activation=None))
 
-  model.set_weights([w0,w1])
+  model.set_weights(params)
 
   # get prediction input from client
   x = tfe.define_private_input(prediction_client.player_name,
-                               prediction_client.provide_input, masked=True)  # pylint: disable=E0632
+                               prediction_client.provide_input)  # pylint: disable=E0632
   
   logits = model(x)
 
