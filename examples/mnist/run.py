@@ -210,7 +210,7 @@ if __name__ == "__main__":
   print("Training")
   sess.run(cache_updater, tag='training')
 
-  print("Set pre-trained weights")
+  print("Set trained weights")
   model.set_weights(params, sess)
 
   for _ in range(5):
