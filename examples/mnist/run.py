@@ -7,7 +7,6 @@ Also performs plaintext training.
 import sys
 
 import tensorflow as tf
-from tensorflow import contrib
 import tensorflow.keras as keras
 
 import tf_encrypted as tfe
@@ -72,14 +71,13 @@ class ModelOwner():
     
     # optimizer and data pipeline
     optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
-    def loss(model, x, y):
-      y_ = model(x)
-      return tf.losses.sparse_softmax_cross_entropy(labels=y, logits=y_)
+    def loss(model, inputs, targets):
+      targets_ = model(inputs)
+      return tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=targets, logits=targets_))
 
     def grad(model, inputs, targets):
-      with tf.GradientTape() as tape:
-        loss_value = loss(model, inputs, targets)
-      return loss_value, tape.gradient(loss_value, model.trainable_variables)
+      loss_value = loss(model, inputs, targets)
+      return loss_value, tf.gradients(loss_value, model.trainable_variables)
 
     global_step = tf.Variable(0)
     def loop_body(i):
@@ -92,7 +90,7 @@ class ModelOwner():
     tf.while_loop(lambda i: i < self.ITERATIONS
                          * self.EPOCHS, loop_body, (0,))
     
-    return model.get_weights()
+    return model.trainable_variables
 
   def provide_input(self):
     with tf.name_scope('loading'):
@@ -166,24 +164,25 @@ if __name__ == "__main__":
   prediction_client = PredictionClient(
       player_name="prediction-client",
       local_data_file="./data/test.tfrecord")
-
-  # get model parameters as private tensors from model owner
-  params = [tfe.define_private_variable(x) for x in model_owner.provide_input()]  # pylint: disable=E0632
   
+  # get model parameters as private tensors from model owner
+  params = tfe.define_private_input(model_owner.player_name, model_owner.provide_input) # pylint: disable=E0632
+  
+  # we'll use the same parameters for each prediction so we cache them to
+  # avoid re-training each time
   cache_updater, params = tfe.cache(params)
 
-  model = tfe.keras.Sequential()
-  model.add(tfe.keras.layers.Dense(512, input_shape=[PredictionClient.BATCH_SIZE,28*28]))
-  model.add(tfe.keras.layers.Activation('relu'))
-  model.add(tfe.keras.layers.Dense(10, activation=None))
-
-  model.set_weights(params)
-
-  # get prediction input from client
-  x = tfe.define_private_input(prediction_client.player_name,
-                               prediction_client.provide_input)  # pylint: disable=E0632
-  
-  logits = model(x)
+  with tfe.protocol.SecureNN():
+    model = tfe.keras.Sequential()
+    model.add(tfe.keras.layers.Dense(512, input_shape=[PredictionClient.BATCH_SIZE,28*28]))
+    model.add(tfe.keras.layers.Activation('relu'))
+    model.add(tfe.keras.layers.Dense(10, activation=None))
+    model.set_weights(params)
+    # get prediction input from client
+    x = tfe.define_private_input(prediction_client.player_name,
+                                prediction_client.provide_input)  # pylint: disable=E0632
+    
+    logits = model(x)
 
   # send prediction output back to client
   prediction_op = tfe.define_output(prediction_client.player_name,
@@ -196,7 +195,7 @@ if __name__ == "__main__":
 
     print("Training")
     sess.run(cache_updater, tag='training')
-
+    
     for _ in range(5):
       print("Predicting")
       sess.run(prediction_op, tag='prediction')
