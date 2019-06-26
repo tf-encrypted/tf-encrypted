@@ -9,7 +9,8 @@ import yaml
 import numpy as np
 import tensorflow as tf
 
-from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D, Batchnorm
+from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
+from ..keras.layers import BatchNormalization
 from ..protocol.pond import PondPrivateTensor, PondMaskedTensor
 
 
@@ -206,24 +207,27 @@ def _keras_batchnorm(converter, interiors, inputs):
   fmt = bn_op.attr["data_format"].s.decode('ascii')
 
   gamma = _nodef_to_numpy_array(interiors["gamma"])
+  gamma_init = tf.keras.initializers.Constant(gamma)
+
   beta = _nodef_to_numpy_array(interiors["beta"])
+  beta_init = tf.keras.initializers.Constant(beta)
+
   moving_mean = _nodef_to_numpy_array(interiors["moving_mean"])
+  moving_mean_init = tf.keras.initializers.Constant(moving_mean)
+
   moving_variance = _nodef_to_numpy_array(interiors["moving_variance"])
+  moving_variance_init = tf.keras.initializers.Constant(moving_variance)
 
   input_shape = x_in.shape.as_list()
 
-  layer = Batchnorm(input_shape=input_shape,
-                    scale=gamma,
-                    offset=beta,
-                    mean=moving_mean,
-                    variance=moving_variance,
-                    channels_first=fmt == "NCHW"
-                    )
+  layer = BatchNormalization(input_shape=input_shape,
+                             axis=(3 if fmt == "NHWC" else 1),
+                             gamma_initializer=gamma_init,
+                             beta_initializer=beta_init,
+                             moving_mean_initializer=moving_mean_init,
+                             moving_variance_initializer=moving_variance_init)
 
-  layer.initialize()
-  out = layer.forward(x_in)
-
-  return out
+  return layer(x_in)
 
 
 def _relu(converter, node: Any, inputs: List[str]) -> Any:
