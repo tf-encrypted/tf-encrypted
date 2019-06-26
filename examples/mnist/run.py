@@ -8,7 +8,6 @@ import sys
 
 import tensorflow as tf
 import tensorflow.keras as keras
-
 import tf_encrypted as tfe
 
 from convert import decode
@@ -37,8 +36,6 @@ class ModelOwner():
   NUM_CLASSES = 10
   EPOCHS = 2
   ITERATIONS = 60000 // BATCH_SIZE
-
-  IMG_ROWS, IMG_COLS = 28, 28
 
   def __init__(self, player_name, local_data_file):
     self.player_name = player_name
@@ -167,7 +164,6 @@ if __name__ == "__main__":
   
   # get model parameters as private tensors from model owner
   params = tfe.define_private_input(model_owner.player_name, model_owner.provide_input) # pylint: disable=E0632
-  
 
   with tfe.protocol.SecureNN():
     model = tfe.keras.Sequential()
