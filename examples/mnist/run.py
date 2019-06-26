@@ -178,8 +178,7 @@ if __name__ == "__main__":
 
   # get model parameters as private tensors from model owner
   params = tfe.define_private_input(model_owner.player_name,
-                                    model_owner.provide_input,
-                                    masked=True)
+                                    model_owner.provide_input)
 
   # we'll use the same parameters for each prediction so we cache them to
   # avoid re-training each time
@@ -194,7 +193,6 @@ if __name__ == "__main__":
     model.add(tfe.keras.layers.Dense(512, batch_input_shape=batch_input_shape))
     model.add(tfe.keras.layers.Activation('relu'))
     model.add(tfe.keras.layers.Dense(10, activation=None))
-    model.set_weights(params)
 
     # get prediction input from client
     x = tfe.define_private_input(prediction_client.player_name,
@@ -211,6 +209,9 @@ if __name__ == "__main__":
 
   print("Training")
   sess.run(cache_updater, tag='training')
+
+  print("Set pre-trained weights")
+  model.set_weights(params, sess)
 
   for _ in range(5):
     print("Predicting")
