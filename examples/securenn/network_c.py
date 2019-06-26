@@ -131,12 +131,12 @@ class ModelTrainer():
 
       # model construction
       x = tf.reshape(x, [-1, self.IN_DIM, self.IN_DIM, 1])
-      layer1 = pooling(tf.nn.relu(conv2d(x, wconv1, self.STRIDE) + bconv1))
+      layer1 = pooling(tf.nn.relu(conv2d(x, Wconv1, self.STRIDE) + bconv1))
       layer2 = pooling(tf.nn.relu(
-          conv2d(layer1, wconv2, self.STRIDE) + bconv2))
+          conv2d(layer1, Wconv2, self.STRIDE) + bconv2))
       layer2 = tf.reshape(layer2, [-1, self.HIDDEN_FC1])
-      layer3 = tf.nn.relu(tf.matmul(layer2, wfc1) + bfc1)
-      logits = tf.matmul(layer3, wfc2) + bfc2
+      layer3 = tf.nn.relu(tf.matmul(layer2, Wfc1) + bfc1)
+      logits = tf.matmul(layer3, Wfc2) + bfc2
 
       loss = tf.reduce_mean(
           tf.losses.sparse_softmax_cross_entropy(logits=logits, labels=y))
@@ -228,47 +228,40 @@ if __name__ == '__main__':
   # compute prediction
   wconv1, bconv1, wconv2, bconv2, wfc1, bfc1, wfc2, bfc2 = params
 
-  wconv1_init = tf.keras.initializers.Constant(wconv1)
-  bconv1_init = tf.keras.initializers.Constant(bconv1)
+  conv1_tfe = tfe.layers.Conv2D(input_shape=[-1, 28, 28, 1],
+                                filter_shape=[5, 5, 1, 20],
+                                strides=1,
+                                padding='VALID',
+                                channels_first=False)
 
-  conv1_tfe = tfe.keras.layers.Conv2D(filters=20,
-                                      kernel_initializer=wconv1_init,
-                                      bias_initializer=bconv1_init)
-  
-  wconv2_init = tf.keras.initializers.Constant(wconv2)
-  bconv2_init = tf.keras.initializers.Constant(bconv2)
+  conv1_tfe.initialize(initial_weights=wconv1)
 
-  conv2_tfe = tfe.keras.layers.Conv2D(filters=50,
-                                      kernel_initializer=wconv2_init,
-                                      bias_initializer=bconv2_init)
-  
-  avg_pool1 = tfe.keras.layers.AveragePooling2D(strides=(2,2))
+  conv2_tfe = tfe.layers.Conv2D(input_shape=[-1, 12, 12, 20],
+                                filter_shape=[5, 5, 20, 50],
+                                strides=1,
+                                padding='VALID',
+                                channels_first=False)
 
-  avg_pool2 = tfe.keras.layers.AveragePooling2D(strides=(2,2))
+  conv2_tfe.initialize(initial_weights=wconv2)
 
-  wfc1_init = tf.keras.initializers.Constant(wfc1)
-  bfc1_init = tf.keras.initializers.Constant(bfc1)
+  avg_pool1 = tfe.layers.AveragePooling2D(input_shape=[-1, 24, 24, 20],
+                                          pool_size=(2, 2),
+                                          strides=(2, 2),
+                                          padding='VALID',
+                                          channels_first=False)
 
-  wfc2_init = tf.keras.initializers.Constant(wfc2)
-  bfc2_init = tf.keras.initializers.Constant(bfc2)
+  avg_pool2 = tfe.layers.AveragePooling2D(input_shape=[-1, 8, 8, 50],
+                                          pool_size=(2, 2),
+                                          strides=(2, 2),
+                                          padding='VALID',
+                                          channels_first=False)
 
-  model = tfe.keras.Sequential([
-    conv1_tfe,
-    tfe.keras.layers.Activation('relu'),
-    avg_pool1,
-    conv2_tfe,
-    tfe.keras.layers.Activation('relu'),
-    avg_pool2,
-    tfe.keras.layers.Reshape((-1, ModelTrainer.HIDDEN_FC1)),
-    tfe.keras.layers.Dense(ModelTrainer.HIDDEN_FC2,activation='relu',
-                          kernel_initializer=wfc1_init,
-                          bias_initializer=bfc1_init),
-    tfe.keras.layers.Dense(10,activation=None,
-                          kernel_initializer=wfc2_init,
-                          bias_initializer=bfc2_init)
-  ])
-
-  logits = model(x)
+  x = tfe.reshape(x, [-1, 28, 28, 1])
+  layer1 = avg_pool1.forward(tfe.relu(conv1_tfe.forward(x) + bconv1))
+  layer2 = avg_pool2.forward(tfe.relu(conv2_tfe.forward(layer1) + bconv2))
+  layer2 = tfe.reshape(layer2, [-1, ModelTrainer.HIDDEN_FC1])
+  layer3 = tfe.relu(tfe.matmul(layer2, wfc1) + bfc1)
+  logits = tfe.matmul(layer3, wfc2) + bfc2
 
   # send prediction output back to client
   prediction_op = tfe.define_output(
