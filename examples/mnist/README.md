@@ -74,7 +74,7 @@ with tfe.Session() as sess:
 Make sure to have the training and test data sets downloaded before running the example:
 
 ```sh
-python3 examples/federated-learning/download.py
+python3 examples/mnist/download.py
 ```
 
 which will place the converted files in the `./data` subdirectory.
@@ -82,13 +82,13 @@ which will place the converted files in the `./data` subdirectory.
 To then run locally use:
 
 ```sh
-python3 examples/federated-learning/run.py
+python3 examples/mnist/run.py
 ```
 
 or remotely using:
 
 ```sh
-python3 examples/federated-learning/run.py config.json
+python3 examples/mnist/run.py config.json
 ```
 
 See more details in the [documentation](/docs/RUNNING.md).

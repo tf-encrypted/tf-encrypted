@@ -637,7 +637,8 @@ class Pond(Protocol):
       else:
         raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
-      assert type(rationals) == type(integers)  # pylint: disable=unidiomatic-typecheck
+      assert type(rationals) == type(integers), (type(rationals), # pylint: disable=unidiomatic-typecheck
+                                                 type(integers))
       return integers
 
   @memoize
