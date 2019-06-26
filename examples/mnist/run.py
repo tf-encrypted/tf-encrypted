@@ -34,7 +34,12 @@ class ModelOwner():
   BATCH_SIZE = 128
   NUM_CLASSES = 10
   EPOCHS = 1
+
   ITERATIONS = 60000 // BATCH_SIZE
+
+  IMG_ROWS = 28
+  IMG_COLS = 28
+  FLATTENED_DIM = IMG_ROWS * IMG_COLS
 
   def __init__(self, player_name, local_data_file):
     self.player_name = player_name
@@ -42,16 +47,19 @@ class ModelOwner():
 
   def _build_data_pipeline(self):
     """Build a reproducible tf.data iterator."""
-    flat_dim = self.IMG_ROWS * self.IMG_COLS
 
     def normalize(image, label):
       image = tf.cast(image, tf.float32) / 255.0
       return image, label
 
+    def flatten(image, label):
+      image = tf.reshape(image, shape=[self.FLATTENED_DIM])
+      return image, label
+
     dataset = tf.data.TFRecordDataset([self.local_data_file])
     dataset = dataset.map(decode)
     dataset = dataset.map(normalize)
-    dataset = dataset.map(lambda x, y: (tf.reshape(x, shape=[flat_dim]), y))
+    dataset = dataset.map(flatten)
     dataset = dataset.repeat()
     dataset = dataset.batch(self.BATCH_SIZE)
 
@@ -62,7 +70,7 @@ class ModelOwner():
     """Build a graph for plaintext model training."""
 
     model = keras.Sequential()
-    model.add(keras.layers.Dense(512, input_shape=[784,]))
+    model.add(keras.layers.Dense(512, input_shape=[self.FLATTENED_DIM,]))
     model.add(keras.layers.Activation('relu'))
     model.add(keras.layers.Dense(self.NUM_CLASSES, activation=None))
 
@@ -148,7 +156,7 @@ class PredictionClient():
 
     with tf.name_scope('pre-processing'):
       prediction_input = tf.reshape(
-          prediction_input, shape=(self.BATCH_SIZE, 28 * 28))
+          prediction_input, shape=(self.BATCH_SIZE, ModelOwner.FLATTENED_DIM))
     return prediction_input
 
   def receive_output(self, logits: tf.Tensor) -> tf.Operation:
