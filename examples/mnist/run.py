@@ -167,17 +167,13 @@ if __name__ == "__main__":
   
   # get model parameters as private tensors from model owner
   params = tfe.define_private_input(model_owner.player_name, model_owner.provide_input) # pylint: disable=E0632
-  
-  # we'll use the same parameters for each prediction so we cache them to
-  # avoid re-training each time
-  cache_updater, params = tfe.cache(params)
 
   with tfe.protocol.SecureNN():
     model = tfe.keras.Sequential()
     model.add(tfe.keras.layers.Dense(512, input_shape=[PredictionClient.BATCH_SIZE,28*28]))
     model.add(tfe.keras.layers.Activation('relu'))
     model.add(tfe.keras.layers.Dense(10, activation=None))
-    model.set_weights(params)
+
     # get prediction input from client
     x = tfe.define_private_input(prediction_client.player_name,
                                 prediction_client.provide_input)  # pylint: disable=E0632
@@ -192,9 +188,6 @@ if __name__ == "__main__":
   with tfe.Session(target=session_target) as sess:
 
     sess.run(tf.global_variables_initializer(), tag='init')
-
-    print("Training")
-    sess.run(cache_updater, tag='training')
     
     for _ in range(5):
       print("Predicting")
