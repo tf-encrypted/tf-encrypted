@@ -60,7 +60,7 @@ Instances of these are then linked together in a secure computation performing a
     model.add(tfe.keras.layers.Dense(512, batch_input_shape=batch_input_shape))
     model.add(tfe.keras.layers.Activation('relu'))
     model.add(tfe.keras.layers.Dense(10))
-    model.set_weights(params, sess)
+    model.set_weights(params)
 
     # get prediction input from client
     x = tfe.define_private_input(prediction_client.player_name,
