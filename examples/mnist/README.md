@@ -35,19 +35,12 @@ class PredictionClient:
 
     def provide_input(self) -> tf.Tensor:
         """Prepare input data for prediction."""
-        with tf.name_scope('loading'):
         prediction_input, expected_result = self._build_data_pipeline().get_next()
-        print_op = tf.print("Expect", expected_result, summarize=self.BATCH_SIZE)
-        with tf.control_dependencies([print_op]):
-            prediction_input = tf.identity(prediction_input)
-
-        with tf.name_scope('pre-processing'):
         prediction_input = tf.reshape(
             prediction_input, shape=(self.BATCH_SIZE, ModelOwner.FLATTENED_DIM))
         return prediction_input
 
     def receive_output(self, logits: tf.Tensor) -> tf.Operation:
-        with tf.name_scope('post-processing'):
         prediction = tf.argmax(logits, axis=1)
         op = tf.print("Result", prediction, summarize=self.BATCH_SIZE)
         return op
@@ -56,23 +49,18 @@ class PredictionClient:
 Instances of these are then linked together in a secure computation performing a prediction, treating both the weights and the prediction input as private values.
 
 ```python
-  model_owner = ModelOwner(
-      player_name="model-owner",
-      local_data_file="./data/train.tfrecord")
-
-  prediction_client = PredictionClient(
-      player_name="prediction-client",
-      local_data_file="./data/test.tfrecord")
+  model_owner = ModelOwner(player_name="model-owner")
+  prediction_client = PredictionClient(player_name="prediction-client")
 
   with tfe.protocol.SecureNN():
     batch_size = PredictionClient.BATCH_SIZE
     flat_dim = ModelOwner.IMG_ROWS * ModelOwner.IMG_COLS
-    batch_input_shape = [batch_size, flat_dim]
 
     model = tfe.keras.Sequential()
     model.add(tfe.keras.layers.Dense(512, batch_input_shape=batch_input_shape))
     model.add(tfe.keras.layers.Activation('relu'))
-    model.add(tfe.keras.layers.Dense(10, activation=None))
+    model.add(tfe.keras.layers.Dense(10))
+    model.set_weights(params, sess)
 
     # get prediction input from client
     x = tfe.define_private_input(prediction_client.player_name,
