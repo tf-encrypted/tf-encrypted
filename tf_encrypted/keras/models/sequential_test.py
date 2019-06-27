@@ -35,13 +35,13 @@ class TestSequential(unittest.TestCase):
                                                          input_shape)
 
     with tfe.protocol.SecureNN():
-      tfe_model = tfe.keras.models.model_from_config(k_config)
       x = tfe.define_private_variable(input_data)
 
-    with tfe.Session() as sess:
-      sess.run(tf.global_variables_initializer())
+      tfe_model = tfe.keras.models.model_from_config(k_config)
       tfe_model.set_weights(k_weights)
       y = tfe_model(x)
+
+    with K.get_session() as sess:
       actual = sess.run(y.reveal())
 
       np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
@@ -53,14 +53,14 @@ class TestSequential(unittest.TestCase):
                                                          input_shape)
 
     with tfe.protocol.SecureNN():
-      tfe_model = tfe.keras.models.Sequential([])
-      tfe_model = tfe_model.from_config(k_config)
       x = tfe.define_private_variable(input_data)
 
-    with tfe.Session() as sess:
-      sess.run(tf.global_variables_initializer())
+      tfe_model = tfe.keras.models.Sequential([])
+      tfe_model = tfe_model.from_config(k_config)
       tfe_model.set_weights(k_weights)
       y = tfe_model(x)
+
+    with K.get_session() as sess:
       actual = sess.run(y.reveal())
 
       np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
@@ -94,14 +94,14 @@ class TestSequential(unittest.TestCase):
                                                          input_shape)
 
     with tfe.protocol.SecureNN():
+      x = tfe.define_private_variable(input_data)
+    
       tfe_model = tfe.keras.models.model_from_config(k_config)
       weights_private_var = [tfe.define_private_variable(w) for w in k_weights]
-      x = tfe.define_private_variable(input_data)
-
-    with tfe.Session() as sess:
-      sess.run(tf.global_variables_initializer())
       tfe_model.set_weights(weights_private_var)
       y = tfe_model(x)
+
+    with K.get_session() as sess:
       actual = sess.run(y.reveal())
 
       np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
@@ -130,13 +130,13 @@ class TestSequential(unittest.TestCase):
       k_config = model.get_config()
 
     with tfe.protocol.SecureNN():
-      tfe_model = tfe.keras.models.model_from_config(k_config)
       x = tfe.define_private_variable(input_data)
 
-    with tfe.Session() as sess:
-      sess.run(tf.global_variables_initializer())
+      tfe_model = tfe.keras.models.model_from_config(k_config)
       tfe_model.set_weights(k_weights)
       y = tfe_model(x)
+
+    with K.get_session() as sess:
       actual = sess.run(y.reveal())
 
       np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-2)
