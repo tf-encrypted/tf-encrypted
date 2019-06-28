@@ -97,6 +97,8 @@ class Dense(Layer):
 
   def call(self, inputs):
 
+    self._layer_input = inputs
+
     if self.use_bias:
       outputs = inputs.matmul(self.kernel) + self.bias
     else:
@@ -106,3 +108,17 @@ class Dense(Layer):
       return self.activation(outputs)
 
     return outputs
+
+  def backward(self, d_y):
+    x = self._layer_input
+    kernel = self.weights[0]
+    grad_weights = []
+    d_x = d_y.matmul(kernel.transpose())
+    d_weights = x.transpose().matmul(d_y)
+    grad_weights.append(d_weights)
+
+    if self.use_bias:
+      d_bias = d_y.reduce_sum(axis=0)
+      grad_weights.append(d_bias)
+
+    return grad_weights, d_x
