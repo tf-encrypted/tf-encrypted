@@ -18,12 +18,20 @@ class Activation(Layer):
   def __init__(self, activation, **kwargs):
     super(Activation, self).__init__(**kwargs)
     self.activation = activations.get(activation)
+    self.activation_deriv = activations.get_deriv(activation)
 
   def build(self, input_shape):
     pass
 
   def call(self, inputs):
-    return self.activation(inputs)
+    y = self.activation(inputs)
+    self._layer_output = y
+    return y
 
   def compute_output_shape(self, input_shape):
     return input_shape
+
+  def backward(self, d_y):
+    grad_weights = []
+    d_x = d_y * self.activation_deriv(self._layer_output)
+    return grad_weights, d_x

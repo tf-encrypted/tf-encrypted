@@ -10,6 +10,10 @@ def sigmoid(x):
   """Computes sigmoid of x element-wise"""
   return get_protocol().sigmoid(x)
 
+def sigmoid_deriv(y):
+  """Computes derive sigmoid of y"""
+  return y * (get_protocol().negative(y) + 1)
+
 def tanh(x):
   """Computes tanh of x element-wise"""
   return get_protocol().tanh(x)
@@ -28,6 +32,18 @@ def get(identifier):
                    "sigmoid": sigmoid,
                    "tanh": tanh,
                    "linear": linear}
+    return activations[identifier]
+
+def get_deriv(identifier):
+  """get the activation derivative function"""
+  if identifier is None:
+    return linear
+  if callable(identifier):
+    return identifier
+  if isinstance(identifier, str):
+    activations = {"sigmoid": sigmoid_deriv}
+    if identifier not in activations.keys():
+      return
     return activations[identifier]
 
   raise ValueError('Could not interpret '

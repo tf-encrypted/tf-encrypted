@@ -96,13 +96,13 @@ class TestDense(unittest.TestCase):
       k, b = tf_layer.trainable_weights
 
       # backward
-      d_x, d_w, d_b = tf.gradients(xs=[x, k, b], ys=loss)
+      d_x, d_k, d_b = tf.gradients(xs=[x, k, b], ys=loss)
 
       sess.run(tf.global_variables_initializer())
-      tf_loss, tf_d_x, tf_d_w, tf_d_b = sess.run([loss, d_x, d_w, d_b])
+      tf_loss, tf_d_x, tf_d_k, tf_d_b = sess.run([loss, d_x, d_k, d_b])
 
       np.testing.assert_array_almost_equal(tfe_loss, tf_loss, decimal=2)
-      np.testing.assert_array_almost_equal(tfe_d_k, tf_d_w, decimal=2)
+      np.testing.assert_array_almost_equal(tfe_d_k, tf_d_k, decimal=2)
       np.testing.assert_array_almost_equal(tfe_d_b, tf_d_b, decimal=2)
       np.testing.assert_array_almost_equal(tfe_d_x, tf_d_x, decimal=2)
 
