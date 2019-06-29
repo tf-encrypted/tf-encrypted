@@ -43,7 +43,7 @@ def get_deriv(identifier):
   if isinstance(identifier, str):
     activations = {"sigmoid": sigmoid_deriv}
     if identifier not in activations.keys():
-      return
+      return None
     return activations[identifier]
 
   raise ValueError('Could not interpret '
