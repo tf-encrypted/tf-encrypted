@@ -110,6 +110,7 @@ class Dense(Layer):
     return outputs
 
   def backward(self, d_y):
+    """dense backward"""
     x = self._layer_input
     kernel = self.weights[0]
     grad_weights = []
