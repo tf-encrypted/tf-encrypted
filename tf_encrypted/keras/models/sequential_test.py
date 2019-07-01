@@ -55,8 +55,7 @@ class TestSequential(unittest.TestCase):
     with tfe.protocol.SecureNN():
       x = tfe.define_private_variable(input_data)
 
-      tfe_model = tfe.keras.models.Sequential([])
-      tfe_model = tfe_model.from_config(k_config)
+      tfe_model = Sequential.from_config(k_config)
       tfe_model.set_weights(k_weights)
       y = tfe_model(x)
 
