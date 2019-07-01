@@ -1,5 +1,4 @@
 """Sequential model API."""
-import tensorflow as tf
 from tensorflow.keras import backend as K
 
 import tf_encrypted as tfe
@@ -118,8 +117,6 @@ class Sequential(Layer):
       # Set as keras global session so the
       # model can be run with K.get_session():
       K.set_session(sess)
-      # Initialize model weights before setting weights
-      sess.run(tf.global_variables_initializer())
 
     # Updated weights for each layer
     for layer in self.layers:

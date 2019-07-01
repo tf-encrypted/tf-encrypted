@@ -35,7 +35,9 @@ class TestSequential(unittest.TestCase):
                                                          input_shape)
 
     with tfe.protocol.SecureNN():
-      x = tfe.define_private_variable(input_data)
+      x = tfe.define_private_input(
+          "inputter",
+          lambda: tf.convert_to_tensor(input_data))
 
       tfe_model = tfe.keras.models.model_from_config(k_config)
       tfe_model.set_weights(k_weights)
@@ -53,7 +55,9 @@ class TestSequential(unittest.TestCase):
                                                          input_shape)
 
     with tfe.protocol.SecureNN():
-      x = tfe.define_private_variable(input_data)
+      x = tfe.define_private_input(
+          "inputter",
+          lambda: tf.convert_to_tensor(input_data))
 
       tfe_model = Sequential.from_config(k_config)
       tfe_model.set_weights(k_weights)
@@ -129,7 +133,9 @@ class TestSequential(unittest.TestCase):
       k_config = model.get_config()
 
     with tfe.protocol.SecureNN():
-      x = tfe.define_private_variable(input_data)
+      x = tfe.define_private_input(
+          "inputter",
+          lambda: tf.convert_to_tensor(input_data))
 
       tfe_model = tfe.keras.models.model_from_config(k_config)
       tfe_model.set_weights(k_weights)
