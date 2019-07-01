@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 
 from .pond import Pond
-from .pond import PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor
+from .pond import PondTensor, PondPublicTensor, PondPrivateTensor, PondMaskedTensor, PondPrivateVariable
 from .pond import TFEVariable, TFETensor, TFEInputter
 from .pond import _type
 from .pond import AdditiveFIFOQueue
@@ -14,6 +14,7 @@ __all__ = [
     "PondTensor",
     "PondPublicTensor",
     "PondPrivateTensor",
+    "PondPrivateVariable",
     "PondMaskedTensor",
     "TFEVariable",
     "TFETensor",

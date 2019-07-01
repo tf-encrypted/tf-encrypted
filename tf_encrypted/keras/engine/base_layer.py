@@ -9,6 +9,7 @@ from tensorflow.python.keras.utils import generic_utils
 import tf_encrypted as tfe
 from tf_encrypted import get_protocol
 from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
+from tf_encrypted.keras import backend as KE
 
 from tf_encrypted.protocol.pond import PondPrivateTensor, PondMaskedTensor
 
@@ -135,6 +136,8 @@ class Layer(ABC):
         sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
     elif isinstance(weights[0], PondPrivateTensor):
       for i, w in enumerate(self.weights):
+        if not sess.run(KE.is_variable_initialized(weights[i])):
+          sess.run(weights[i].initializer)
         sess.run(tfe.assign(w, weights[i]))
 
   @property
