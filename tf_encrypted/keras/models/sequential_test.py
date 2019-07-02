@@ -82,13 +82,13 @@ class TestSequential(unittest.TestCase):
     expected = model.predict(input_data)
 
     with tfe.protocol.SecureNN():
+      x = tfe.define_private_input(
+          "inputter",
+          lambda: tf.convert_to_tensor(input_data))
+
       tfe_model = tfe.keras.models.clone_model(model)
-      x = tfe.define_private_variable(input_data)
 
     with KE.get_session() as sess:
-      # won't work if we re-initialize all the weights
-      # with sess.run(tf.global_variables_initializer())
-      sess.run(x.initializer)
       y = tfe_model(x)
       actual = sess.run(y.reveal())
 
