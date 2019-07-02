@@ -1,17 +1,7 @@
 """TFE Keras backend"""
-import tensorflow as tf
 from tensorflow.keras import backend as K
 
 import tf_encrypted as tfe
-from tf_encrypted.protocol.pond import PondPrivateVariable
-
-
-# TODO Should be moved outside backend, maybe in pond.py?
-def is_variable_initialized(x):
-  """Test if TFE private variable has been initialized"""
-  assert isinstance(x, PondPrivateVariable), type(x)
-  is_initialized = tf.is_variable_initialized(x.share0.variable)
-  return is_initialized
 
 
 def get_session():

@@ -109,15 +109,17 @@ class TestSequential(unittest.TestCase):
 
       tfe_model = tfe.keras.models.model_from_config(k_config)
       weights_private_var = [tfe.define_private_variable(w) for w in k_weights]
-      tfe_model.set_weights(weights_private_var)
-      y = tfe_model(x)
 
-    with KE.get_session() as sess:
-      actual = sess.run(y.reveal())
+      with tfe.Session() as sess:
+        for w in weights_private_var:
+          sess.run(w.initializer)
 
-      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
+        tfe_model.set_weights(weights_private_var, sess)
+        y = tfe_model(x)
 
-    KE.clear_session()
+        actual = sess.run(y.reveal())
+
+        np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
 
 
   def test_conv_model(self):
