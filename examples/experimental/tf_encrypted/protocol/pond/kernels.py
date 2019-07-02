@@ -1,3 +1,4 @@
+"""Pond kernel functions."""
 M = 107
 
 
