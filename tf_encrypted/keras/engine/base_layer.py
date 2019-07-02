@@ -3,10 +3,10 @@ from abc import ABC
 import logging
 
 import numpy as np
-from tensorflow.keras import backend as K
 from tensorflow.python.keras.utils import generic_utils
 
 import tf_encrypted as tfe
+from tf_encrypted.keras import backend as KE
 from tf_encrypted import get_protocol
 from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
 
@@ -125,7 +125,7 @@ class Layer(ABC):
     # Assign new keras weights to existing weights defined by
     # default when tfe layer was instantiated
     if not sess:
-      sess = K.get_session()
+      sess = KE.get_session()
 
     if isinstance(weights[0], np.ndarray):
       for i, w in enumerate(self.weights):

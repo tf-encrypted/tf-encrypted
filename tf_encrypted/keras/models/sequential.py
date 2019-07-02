@@ -117,7 +117,6 @@ class Sequential(Layer):
       # Set as keras global session so the
       # model can be run with K.get_session():
       sess = KE.get_session()
-      KE.set_session(sess)
 
     # Updated weights for each layer
     for layer in self.layers:
