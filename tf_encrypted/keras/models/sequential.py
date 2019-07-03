@@ -108,11 +108,23 @@ class Sequential(Layer):
   def backward(self, d_y):
     for layer in reversed(self.layers):
       grad_weights, d_y = layer.backward(d_y)
-      self._loss.apply_gradients(layer.weights, grad_weights)
+      self._optimizer.apply_gradients(layer.weights, grad_weights)
 
   def compile(self, optimizer, loss=None):
     self._optimizer = optimizer
     self._loss = loss
+
+  def fit_batch(self, x, y):
+    y_hat = self.call(x)
+    dy = self._loss.grad(y, y_hat)
+    self.backward(dy)
+    loss = self._loss(y, y_hat)
+    sess = K.get_session()
+    print("loss", sess.run(loss.reveal()))
+
+  def fit(self, x, y, num_batches=1):
+    for _ in range(num_batches):
+      self.fit_batch(x, y)
 
   def set_weights(self, weights, sess=None):
     """ Sets the weights of the model.

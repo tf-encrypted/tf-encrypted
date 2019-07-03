@@ -39,7 +39,7 @@ class BinaryCrossentropy(Loss):
     super(BinaryCrossentropy, self).__init__(
         binary_crossentropy)
 
-  def derive(self, y_true, y_pred):
+  def grad(self, y_true, y_pred):
     return y_pred - y_true
 
 def binary_crossentropy(y_true, y_pred):
