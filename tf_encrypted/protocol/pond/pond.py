@@ -1148,7 +1148,7 @@ class Pond(Protocol):
 
     return z
 
-  def log(self, x:"PondTensor"):
+  def log(self, x: "PondTensor"):
     """
     A Chebyshev polynomial approximation of the hyperbolic tangent function.
     """
