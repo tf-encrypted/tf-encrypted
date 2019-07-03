@@ -1148,6 +1148,38 @@ class Pond(Protocol):
 
     return z
 
+  def log(self, x:"PondTensor"):
+    """
+    A Chebyshev polynomial approximation of the hyperbolic tangent function.
+    """
+    assert isinstance(x, PondTensor), type(x)
+
+    w0 = -22.94040467156399
+    w1 = 37.8682755375957
+    w2 = -21.746614497952823
+    w3 = 8.756723671678008
+    w4 = -2.162959550785301
+    w5 = 0.239046388460226
+
+    with tf.name_scope("log"):
+
+      x1 = x
+      x2 = x.square()
+      x3 = x2 * x1
+      x4 = x3 * x1
+      x5 = x2 * x3
+
+      y1 = x1 * w1
+      y2 = x2 * w2
+      y3 = x3 * w3
+      y4 = x4 * w4
+      y5 = x5 * w5
+
+      z = y5 + y4 + y3 + y2 + y1 + w0
+
+    return z
+
+
   @memoize
   def reveal(self, x):
     return self.dispatch("reveal", x)
