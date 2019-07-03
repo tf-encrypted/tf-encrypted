@@ -1,7 +1,7 @@
 """TFE Keras loss function"""
 from tf_encrypted import get_protocol
 
-class Loss(object):
+class Loss():
   """Loss base class."""
   def __init__(self,
                fn,

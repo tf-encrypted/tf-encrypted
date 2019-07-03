@@ -1,3 +1,4 @@
+# pylint: disable=inconsistent-return-statements
 """Provide activation functions"""
 from tf_encrypted import get_protocol
 
