@@ -105,6 +105,15 @@ class Sequential(Layer):
       return layers[1:]
     return layers[:]
 
+  def backward(self, d_y):
+    for layer in reversed(self.layers):
+      grad_weights, d_y = layer.backward(d_y)
+      self._loss.apply_gradients(layer.weights, grad_weights)
+
+  def compile(self, optimizer, loss=None):
+    self._optimizer = optimizer
+    self._loss = loss
+
   def set_weights(self, weights, sess=None):
     """ Sets the weights of the model.
     Arguments:
