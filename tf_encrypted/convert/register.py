@@ -760,13 +760,23 @@ def _nodef_to_numpy_array(x):
   dtype = x.attr["dtype"].type
   x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
+  content = x.attr["value"].tensor.tensor_content
+
   if dtype == tf.float32:
-    nums = array.array('f', x.attr["value"].tensor.tensor_content)
+    type_code = 'f'
+    if not content:
+      content = x.attr["value"].tensor.float_val
   elif dtype == tf.float64:
-    nums = array.array('d', x.attr["value"].tensor.tensor_content)
+    type_code = 'd'
+    if not content:
+      content = x.attr["value"].tensor.double_val
   elif dtype == tf.int32:
-    nums = array.array('i', x.attr["value"].tensor.tensor_content)
+    type_code = 'i'
+    if not content:
+      content = x.attr["value"].tensor.int_val
   else:
     raise TypeError("Unsupported dtype")
+
+  nums = array.array(type_code, content)
 
   return np.array(nums).reshape(x_shape)
