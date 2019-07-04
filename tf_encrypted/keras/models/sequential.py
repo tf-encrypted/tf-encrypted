@@ -112,10 +112,6 @@ class Sequential(Layer):
       sess: tfe session"""
 
     if not sess:
-      #sess = tfe.Session()
-      sess = KE.get_session()
-      # Set as keras global session so the
-      # model can be run with K.get_session():
       sess = KE.get_session()
 
     # Updated weights for each layer

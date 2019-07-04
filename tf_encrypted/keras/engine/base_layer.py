@@ -6,10 +6,9 @@ import numpy as np
 from tensorflow.python.keras.utils import generic_utils
 
 import tf_encrypted as tfe
-from tf_encrypted.keras import backend as KE
 from tf_encrypted import get_protocol
+from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
-
 from tf_encrypted.protocol.pond import PondPrivateTensor, PondMaskedTensor
 
 logger = logging.getLogger('tf_encrypted')

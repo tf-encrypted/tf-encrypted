@@ -1,9 +1,11 @@
-"""TFE Keras backend"""
+"""TFE Keras backend. Most of the code was
+borrowed from the tf.keras codebase.
+"""
 import threading
 
 from tensorflow.python.framework import ops
-from tensorflow.python.ops import array_ops
 from tensorflow.python.keras.backend import get_graph, name_scope
+from tensorflow.python.ops import array_ops
 
 import tf_encrypted as tfe
 
@@ -20,7 +22,8 @@ def get_session(op_input_list=()):
     session = default_session
     # If the default session is not a TFE Session, create one
     if not isinstance(session, tfe.Session()):
-      session = tfe.Session()
+      _SESSION.session = tfe.Session()
+      session = _SESSION.session
   else:
     if ops.inside_function():
       raise RuntimeError('Cannot get session inside Tensorflow graph function.')
