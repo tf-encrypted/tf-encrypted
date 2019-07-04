@@ -488,7 +488,7 @@ class Pond(Protocol):
 
     def reconstruct_input(x):
 
-      if isinstance(x, tf.Tensor):
+      if not isinstance(x, (AbstractTensor, PondTensor)):
         return x
 
       if isinstance(x, PondPublicTensor):
@@ -520,7 +520,8 @@ class Pond(Protocol):
           if not isinstance(arguments, (list, tuple)):
             arguments = [arguments]
 
-          inputs = [reconstruct_input(x) for x in arguments]
+          inputs = tf.contrib.framework.nest.map_structure(
+              reconstruct_input, arguments)
 
         outputs = computation_fn(*inputs)
 
@@ -1982,7 +1983,7 @@ class PondPrivateVariable(PondPrivateTensor):
     assert variable0.shape == variable1.shape
 
     super(PondPrivateVariable, self).__init__(
-        prot, variable0, variable1, is_scaled
+        prot, variable0, variable1, is_scaled,
     )
     self.variable0 = variable0
     self.variable1 = variable1
