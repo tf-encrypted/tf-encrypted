@@ -10,6 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
+from ..keras.layers import BatchNormalization
 from ..protocol.pond import PondPrivateTensor, PondMaskedTensor
 
 
@@ -51,6 +52,7 @@ def registry():
       'Identity': _identity,
       "GatherV2": _gather,
       "dense": _keras_dense,
+      "batch_normalization_v1": _keras_batchnorm,
   }
 
   return reg
@@ -197,6 +199,36 @@ def _keras_dense(converter, interiors, inputs):
   out = layer.forward(x_in)
 
   return out
+
+
+def _keras_batchnorm(converter, interiors, inputs):
+  x_in = converter.outputs[inputs[0]]
+
+  bn_op = interiors["FusedBatchNorm"]
+  fmt = bn_op.attr["data_format"].s.decode('ascii')
+
+  gamma = _nodef_to_numpy_array(interiors["gamma"])
+  gamma_init = tf.keras.initializers.Constant(gamma)
+
+  beta = _nodef_to_numpy_array(interiors["beta"])
+  beta_init = tf.keras.initializers.Constant(beta)
+
+  moving_mean = _nodef_to_numpy_array(interiors["moving_mean"])
+  moving_mean_init = tf.keras.initializers.Constant(moving_mean)
+
+  moving_variance = _nodef_to_numpy_array(interiors["moving_variance"])
+  moving_variance_init = tf.keras.initializers.Constant(moving_variance)
+
+  input_shape = x_in.shape.as_list()
+
+  layer = BatchNormalization(input_shape=input_shape,
+                             axis=(3 if fmt == "NHWC" else 1),
+                             gamma_initializer=gamma_init,
+                             beta_initializer=beta_init,
+                             moving_mean_initializer=moving_mean_init,
+                             moving_variance_initializer=moving_variance_init)
+
+  return layer(x_in)
 
 
 def _relu(converter, node: Any, inputs: List[str]) -> Any:
@@ -740,13 +772,23 @@ def _nodef_to_numpy_array(x):
   dtype = x.attr["dtype"].type
   x_shape = [i.size for i in x.attr["value"].tensor.tensor_shape.dim]
 
+  content = x.attr["value"].tensor.tensor_content
+
   if dtype == tf.float32:
-    nums = array.array('f', x.attr["value"].tensor.tensor_content)
+    type_code = 'f'
+    if not content:
+      content = x.attr["value"].tensor.float_val
   elif dtype == tf.float64:
-    nums = array.array('d', x.attr["value"].tensor.tensor_content)
+    type_code = 'd'
+    if not content:
+      content = x.attr["value"].tensor.double_val
   elif dtype == tf.int32:
-    nums = array.array('i', x.attr["value"].tensor.tensor_content)
+    type_code = 'i'
+    if not content:
+      content = x.attr["value"].tensor.int_val
   else:
     raise TypeError("Unsupported dtype")
+
+  nums = array.array(type_code, content)
 
   return np.array(nums).reshape(x_shape)
