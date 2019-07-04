@@ -29,7 +29,6 @@ class TestConvert(unittest.TestCase):
 
   def setUp(self):
     tf.reset_default_graph()
-    # K.clear_session()
 
     self.previous_logging_level = logging.getLogger().level
     logging.getLogger().setLevel(logging.ERROR)
