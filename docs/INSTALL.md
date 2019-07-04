@@ -15,7 +15,7 @@ However, for development or on certain platforms this is not sufficient. In thes
 All you need to get started is to have Python 3.5 or 3.6 installed along with [pip](https://pypi.org/project/pip/). The first step is then to clone the source code available on [GitHub](https://github.com/tf-encrypted/tf-encrypted):
 
 ```
-./ $ git clone https://github.com/mortendahl/tf-encrypted.git
+./ $ git clone https://github.com/tf-encrypted/tf-encrypted.git
 ./ $ cd tf-encrypted
 ```
 

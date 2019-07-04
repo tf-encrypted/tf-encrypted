@@ -4,6 +4,7 @@ import tensorflow as tf
 from tensorflow.python.keras import initializers
 
 from tf_encrypted.keras.engine import Layer
+from tf_encrypted.keras.layers.layers_utils import default_args_check
 
 class BatchNormalization(Layer):
   """Batch normalization layer (Ioffe and Szegedy, 2014).
@@ -97,7 +98,7 @@ class BatchNormalization(Layer):
                renorm=False,
                renorm_clipping=None,
                renorm_momentum=0.99,
-               fused=None,
+               fused=None, # pylint: disable=unused-argument
                trainable=False,
                virtual_batch_size=None,
                adjustment=None,
@@ -112,46 +113,30 @@ class BatchNormalization(Layer):
     self.moving_variance_initializer = initializers.get(
         moving_variance_initializer)
 
-    if beta_regularizer:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("beta_regularizer", "BatchNormalization"),
-      )
-    if gamma_regularizer:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("gamma_regularizer", "BatchNormalization"),
-      )
-    if beta_constraint:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("beta_constraint", "BatchNormalization"),
-      )
-    if gamma_constraint:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("gamma_constraint", "BatchNormalization"),
-      )
-    if renorm:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("renorm", "BatchNormalization"),
-      )
-    if renorm_clipping:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("renorm_clipping", "BatchNormalization"),
-      )
-    if fused:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("fused", "BatchNormalization"),
-      )
-    if trainable:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("trainable", "BatchNormalization"),
-      )
-    if virtual_batch_size:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("virtual_batch_size", "BatchNormalization"),
-      )
-    if adjustment:
-      raise NotImplementedError(
-          arg_not_impl_msg.format("adjustment", "BatchNormalization"),
-      )
+    default_args_check(beta_regularizer,
+                       "beta_regularizer",
+                       "BatchNormalization")
+    default_args_check(gamma_regularizer,
+                       "gamma_regularizer",
+                       "BatchNormalization")
+    default_args_check(beta_constraint,
+                       "beta_constraint",
+                       "BatchNormalization")
+    default_args_check(gamma_constraint,
+                       "gamma_constraint",
+                       "BatchNormalization")
+    default_args_check(renorm,
+                       "renorm",
+                       "BatchNormalization")
+    default_args_check(renorm_clipping,
+                       "renorm_clipping",
+                       "BatchNormalization")
+    default_args_check(virtual_batch_size,
+                       "virtual_batch_size",
+                       "BatchNormalization")
+    default_args_check(adjustment,
+                       "adjustment",
+                       "BatchNormalization")
 
     # Axis -3 is equivalent to 1, and axis -1 is equivalent to 3, because the
     # input rank is required to be 4 (which is checked later).

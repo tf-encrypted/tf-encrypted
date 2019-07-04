@@ -2,10 +2,11 @@
 their corresponding TF GraphDefs.
 
 See README.md for details on usage and extension."""
-import re
-from typing import Dict, List, Any, Union, Optional
 from collections import OrderedDict
+import re
+from typing import List, Any, Union, Optional
 
+import tf_encrypted as tfe
 from tf_encrypted.config import Config, get_config
 from tf_encrypted.convert.register import REGISTERED_SPECOPS
 from tf_encrypted.player import Player
@@ -13,39 +14,45 @@ from tf_encrypted.protocol import Protocol, get_protocol
 from tf_encrypted.protocol.pond import TFEInputter
 
 
-class Converter():
+class Converter:
   """The TFE Converter.
 
   Args:
+    registry: An OrderedDict mapping from scope names to TFE conversion
+        functions. Idiomatic behavior is to use tf.convert.registry(), however
+        custom layers and operations can be added to create new conversion
+        registries.
     config: `Config` to use when constructing the TFE graph.
-            Defaults to the current global TFE config.
+        Defaults to the current global TFE config.
     protocol: `Protocol` to use when constructing the TFE graph.
-            Defaults to the current global TFE protocol.
-
-  Returns:
-
+        Defaults to the current global TFE protocol.
+    model_provider: The Player who will act as the model provider, or a string
+        identifier for the Player.
   """
 
   def __init__(
       self,
+      registry,
       config: Optional[Config] = None,
       protocol: Optional[Protocol] = None,
-      player: Optional[Union[str, Player]] = None
+      model_provider: Optional[Union[str, Player]] = None,
   ) -> None:
     self.config = config if config is not None else get_config()
-    self.protocol = protocol if protocol is not None else get_protocol()
-    if player is None:
+    if protocol is not None:
+      tfe.set_protocol(protocol)
+    self.protocol = get_protocol()
+    if model_provider is None:
       self.model_provider = self.config.get_player('model-provider')
-    elif isinstance(player, str):
-      self.model_provider = self.config.get_player(player)
+    elif isinstance(model_provider, str):
+      self.model_provider = self.config.get_player(model_provider)
     else:
-      self.model_provider = player
+      self.model_provider = model_provider
+    self.registry = registry
     self.outputs = {}
 
   def convert(
       self,
       graph_def: Any,
-      register: Dict[str, Any],
       input_player: Union[str, Player],
       inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]] = None
   ) -> Any:
@@ -81,51 +88,65 @@ class Converter():
     # high level operation then register.
     for node in node_list:
       if node.name not in specop_outputs:
-
-        output = strip_tensor_info(node.name)
-        inputs = [x for x in node.input]
-        if node.op == "Placeholder":
-          try:
-            _, item = inputs_iterable.__next__()
-          except StopIteration:
-            raise InvalidArgumentError("Not enough placeholders supplied")
-
-          x = self.protocol.define_private_input(input_player, item)
-          self.outputs[output] = x
-          continue
-
-        out = register[node.op](self, node, inputs)
-
-        # if the operation returns a list or tuple with several ouputs,
-        # identify the outputs node name
-        if isinstance(out, (list, tuple)):
-          output_name = find_output_names(pb_trimmed, node.name)
-          for i, _ in enumerate(out):
-            self.outputs[output_name[i]] = out[i]
-        else:
-          self.outputs[output] = out
+        self._register_op(node, inputs_iterable, input_player, pb_trimmed)
 
       else:
         # Register high level special operations
         for s in specop_dict:
-          input_list = specop_dict[s]['inputs']
-          output_list = specop_dict[s]['outputs']
-
-          # Handle edge cases if the ops return multiple outputs
-          op_handler = register[specop_dict[s]['op']]
-
-          nodes = specop_dict[s]['interiors']
-          if not nodes:
-            nodes = node
-          outs = op_handler(self, nodes, input_list)
-          if isinstance(outs, (list, tuple)):
-            for i, x in enumerate(outs):
-              self.outputs[output_list[i]] = x
-          else:
-            self.outputs[output_list[0]] = outs
+          # If this node is the output of the current specop, register it
+          if match_numbered_scope(s, node.name, return_group=False):
+            self._register_specop(node, specop_dict[s])
 
     return self.outputs[graph_def.node[-1].name]
 
+  def _register_op(self, node, inputs_iterable, input_player, pb_trimmed):
+    """Register single ops."""
+    output = strip_tensor_info(node.name)
+    inputs = [x for x in node.input]
+    if node.op == "Placeholder":
+      try:
+        _, item = inputs_iterable.__next__()
+      except StopIteration:
+        raise InvalidArgumentError("Not enough placeholders supplied")
+
+      x = self.protocol.define_private_input(input_player, item)
+      self.outputs[output] = x
+      return
+
+    out = self.registry[node.op](self, node, inputs)
+
+    # if the operation returns a list or tuple with several ouputs,
+    # identify the outputs node name
+    if isinstance(out, (list, tuple)):
+      output_name = find_output_names(pb_trimmed, node.name)
+      # If output_name is empty, it means this node
+      # is the last one in the graph
+      if not output_name:
+        self.outputs[output] = out
+      else:
+        for i, _ in enumerate(out):
+          self.outputs[output_name[i]] = out[i]
+    else:
+      self.outputs[output] = out
+
+
+  def _register_specop(self, node, specop_scope_dict):
+    """Handle special op registration."""
+    input_list = specop_scope_dict['inputs']
+    output_list = specop_scope_dict['outputs']
+
+    # Handle edge cases if the ops return multiple outputs
+    op_handler = self.registry[specop_scope_dict['op']]
+
+    nodes = specop_scope_dict['interiors']
+    if not nodes:
+      nodes = node
+    outs = op_handler(self, nodes, input_list)
+    if isinstance(outs, (list, tuple)):
+      for i, x in enumerate(outs):
+        self.outputs[output_list[i]] = x
+    else:
+      self.outputs[output_list[0]] = outs
 
 def select_relevant_ops(all_specop_inputs, all_specop_outputs, graph_def):
   """
@@ -270,6 +291,8 @@ def match_numbered_scope(specop, search_string, return_group=True):
   if match is not None:
     if not return_group:
       return match
+    if match.group(2) is not None:
+      return match.group(2)
     return match.group(1)
   return match
 

@@ -34,14 +34,14 @@ class ModelOwner:
 class PredictionClient:
 
     def provide_input(self) -> tf.Tensor:
-        prediction_input = self._build_data_pipeline().get_next()
-        # pre-processing
-        prediction_input = tf.reshape(prediction_input, shape=(self.BATCH_SIZE, 28 * 28))
+        """Prepare input data for prediction."""
+        prediction_input, expected_result = self._build_data_pipeline().get_next()
+        prediction_input = tf.reshape(
+            prediction_input, shape=(self.BATCH_SIZE, ModelOwner.FLATTENED_DIM))
         return prediction_input
 
-    def receive_output(self, likelihoods: tf.Tensor) -> tf.Operation:
-        # post-processing
-        prediction = tf.argmax(likelihoods, axis=1)
+    def receive_output(self, logits: tf.Tensor) -> tf.Operation:
+        prediction = tf.argmax(logits, axis=1)
         op = tf.print("Result", prediction, summarize=self.BATCH_SIZE)
         return op
 ```
@@ -49,17 +49,28 @@ class PredictionClient:
 Instances of these are then linked together in a secure computation performing a prediction, treating both the weights and the prediction input as private values.
 
 ```python
-model_owner = ModelOwner('model-owner')
-prediction_client = PredictionClient('prediction-client')
+  model_owner = ModelOwner(player_name="model-owner")
+  prediction_client = PredictionClient(player_name="prediction-client")
 
-w0, b0, w1, b1 = tfe.define_private_input(model_owner.player_name, model_owner.provide_input)
-x = tfe.define_private_input(prediction_client.player_name, prediction_client.provide_input)
+  with tfe.protocol.SecureNN():
+    batch_size = PredictionClient.BATCH_SIZE
+    flat_dim = ModelOwner.IMG_ROWS * ModelOwner.IMG_COLS
 
-layer0 = tfe.matmul(x, w0) + b0
-layer1 = tfe.sigmoid(layer0)
-logits = tfe.matmul(layer1, w1) + b1
+    model = tfe.keras.Sequential()
+    model.add(tfe.keras.layers.Dense(512, batch_input_shape=batch_input_shape))
+    model.add(tfe.keras.layers.Activation('relu'))
+    model.add(tfe.keras.layers.Dense(10))
+    model.set_weights(params)
 
-prediction_op = tfe.define_output(prediction_client.player_name, logits, prediction_client.receive_output)
+    # get prediction input from client
+    x = tfe.define_private_input(prediction_client.player_name,
+                                 prediction_client.provide_input)
+    logits = model(x)
+
+  # send prediction output back to client
+  prediction_op = tfe.define_output(prediction_client.player_name,
+                                    logits,
+                                    prediction_client.receive_output)
 ```
 
 Finally, the computation is executed using a `tfe.Session` following the typical TensorFlow pattern
@@ -74,7 +85,7 @@ with tfe.Session() as sess:
 Make sure to have the training and test data sets downloaded before running the example:
 
 ```sh
-python3 examples/federated-learning/download.py
+python3 examples/mnist/download.py
 ```
 
 which will place the converted files in the `./data` subdirectory.
@@ -82,13 +93,13 @@ which will place the converted files in the `./data` subdirectory.
 To then run locally use:
 
 ```sh
-python3 examples/federated-learning/run.py
+python3 examples/mnist/run.py
 ```
 
 or remotely using:
 
 ```sh
-python3 examples/federated-learning/run.py config.json
+python3 examples/mnist/run.py config.json
 ```
 
 See more details in the [documentation](/docs/RUNNING.md).

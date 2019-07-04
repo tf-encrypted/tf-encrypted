@@ -1,11 +1,16 @@
 """An abstraction for private models."""
-import tensorflow as tf
+import os
+import tempfile
 
+import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.python.framework import graph_util
 from tensorflow.python.platform import gfile
 from tensorflow.python.framework.graph_util_impl import remove_training_nodes
+
 import tf_encrypted as tfe
+
+_TMPDIR = tempfile.gettempdir()
 
 
 class PrivateModel:
@@ -27,7 +32,11 @@ class PrivateModel:
     with tfe.Session() as sess:
       sess.run(tf.global_variables_initializer())
 
-      op = self.output_node.reveal()
+      if isinstance(self.output_node, list):
+        op = [n.reveal() for n in self.output_node]
+      else:
+        op = self.output_node.reveal()
+
       output = sess.run(op, feed_dict={pl: x}, tag=tag)
 
       return output
@@ -70,17 +79,17 @@ def load_graph(model_file, model_name=None):
   return graph_def, inputs
 
 
-def secure_model(model):
+def secure_model(model, **converter_kwargs):
   """Secure a plaintext model from the current session."""
   session = K.get_session()
   min_graph = graph_util.convert_variables_to_constants(
       session, session.graph_def, [node.op.name for node in model.outputs])
-  tf.train.write_graph(min_graph, '/tmp', 'model.pb', as_text=False)
+  graph_fname = 'model.pb'
+  tf.train.write_graph(min_graph, _TMPDIR, graph_fname, as_text=False)
 
-  graph_def, inputs = load_graph('/tmp/model.pb')
+  graph_def, inputs = load_graph(os.path.join(_TMPDIR, graph_fname))
 
-  c = tfe.convert.convert.Converter()
-  y = c.convert(remove_training_nodes(graph_def),
-                tfe.convert.registry(), 'input-provider', inputs)
+  c = tfe.convert.convert.Converter(tfe.convert.registry(), **converter_kwargs)
+  y = c.convert(remove_training_nodes(graph_def), 'input-provider', inputs)
 
   return PrivateModel(y)

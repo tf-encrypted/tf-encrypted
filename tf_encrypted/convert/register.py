@@ -48,6 +48,7 @@ def registry():
       'Slice': _slice,
       'Neg': _negative,
       'Split': _split,
+      'SplitV': _split,
       'Identity': _identity,
       "GatherV2": _gather,
       "dense": _keras_dense,
@@ -416,18 +417,30 @@ def _squeeze(converter, node: Any, inputs: List[str]) -> Any:
 
 
 def _split(converter, node: Any, inputs: List[str]) -> Any:
-  axis = converter.outputs[inputs[0]]
-  x_in = converter.outputs[inputs[1]]
+  if node.op == "SplitV":
+    #node.op is SplitV when num_or_size_splits is a list
+    x_in = converter.outputs[inputs[0]]
+    size_splits = converter.outputs[inputs[1]]
+    axis = converter.outputs[inputs[2]]
+
+    size_splits = size_splits.attr["value"].tensor
+    num_or_size_splits = list(array.array('I', size_splits.tensor_content))
+
+  else:
+    #node.op is Split when num_or_size_splits is an integer
+    axis = converter.outputs[inputs[0]]
+    x_in = converter.outputs[inputs[1]]
+
+    num_or_size_splits = node.attr["num_split"].i
 
   if isinstance(x_in, tf.NodeDef):
     input_out = _nodef_to_private_pond(converter, x_in)
   else:
     input_out = x_in
 
-  num_split = node.attr["num_split"].i
   axis_val = axis.attr["value"].tensor.int_val[0]
 
-  return converter.protocol.split(input_out, num_split, axis_val)
+  return converter.protocol.split(input_out, num_or_size_splits, axis_val)
 
 
 def _pad(converter, node: Any, inputs: List[str]) -> Any:
@@ -549,12 +562,11 @@ def _avgpool(converter, node: Any, inputs: List[str]) -> Any:
 
 
 def _concat(converter, node: Any, inputs: List[str]) -> Any:
-  input0 = converter.outputs[inputs[0]]
-  input1 = converter.outputs[inputs[1]]
-  axis = converter.outputs[inputs[2]]
+  input_list = [converter.outputs[inputs[i]] for i in range(len(inputs) - 1)]
+  axis = converter.outputs[inputs[-1]]
   axis_int = axis.attr["value"].tensor.int_val[0]
 
-  return converter.protocol.concat([input0, input1], axis_int)
+  return converter.protocol.concat(input_list, axis_int)
 
 
 def _batch_to_space_nd(converter, node, inputs):

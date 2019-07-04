@@ -637,7 +637,8 @@ class Pond(Protocol):
       else:
         raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
-      assert type(rationals) == type(integers)  # pylint: disable=unidiomatic-typecheck
+      assert type(rationals) == type(integers), (type(rationals), # pylint: disable=unidiomatic-typecheck
+                                                 type(integers))
       return integers
 
   @memoize
@@ -3545,15 +3546,15 @@ def _gather_masked(
 
 
 def _split_public(
-    prot: Pond, x: PondPublicTensor, num_split: int, axis: int = 0
+    prot: Pond, x: PondPublicTensor, num_split: Union[int, list], axis: int = 0
 ) -> List[PondPublicTensor]:
 
   x_on_0, x_on_1 = x.unwrapped
 
   with tf.name_scope("split"):
-
     with tf.device(prot.server_0.device_name):
       ys_on_0 = x_on_0.split(num_split, axis=axis)
+
 
     with tf.device(prot.server_1.device_name):
       ys_on_1 = x_on_1.split(num_split, axis=axis)
@@ -3565,7 +3566,7 @@ def _split_public(
 
 
 def _split_private(
-    prot: Pond, x: PondPrivateTensor, num_split: int, axis: int = 0
+    prot: Pond, x: PondPrivateTensor, num_split: Union[int, list], axis: int = 0
 ) -> List[PondPrivateTensor]:
 
   x0, x1 = x.unwrapped
@@ -3584,7 +3585,7 @@ def _split_private(
 
 def _split_masked(prot: Pond,
                   x: PondMaskedTensor,
-                  num_split,
+                  num_split: Union[int, list],
                   axis=0) -> List[PondMaskedTensor]:
 
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped

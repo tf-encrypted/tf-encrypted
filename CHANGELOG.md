@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.6]
+
+**Added**
+
+- More `tfe.keras` functionality to convert `tf.keras` model into `tfe.keras`:
+   - `set_weights`
+   - `from_config`
+   - `model_from_config`
+   - `clone_model`
+- Example with conversion of `tf.keras` model into `tfe.keras`.
+- Improved handling for cases where the secure random operation is not available
+- Added methods to the converter to inspect TF and Keras graphs
+- `tfe.convert` now supports more than 2 inputs to `tfe.concat`
+
+**Fixed**
+
+- A bug in `tfe.keras.layers.Batchnorm` where the `offset` and `scale` conditions where inverted
+- A bug in `tfe.convert` where ops with multiple outputs where not handled properly
+- A bug in `tfe.convert` where it couldnt't convert a model correctly when there was more than 
+one special ops in the graph
+
 ## [0.5.5]
 
 **Added**

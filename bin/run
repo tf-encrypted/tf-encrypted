@@ -169,8 +169,8 @@ if config.plaintext:
 
 else:
   logger.info('running prediction securely')
-  c = tfe.convert.convert.Converter()
-  y = c.convert(graph_def, tfe.convert.registry(), 'input-provider', inputs)
+  c = tfe.convert.convert.Converter(tfe.convert.registry())
+  y = c.convert(graph_def, 'input-provider', inputs)
 
   def reveal_output(session, out, feed):
     run_op = out.reveal()

@@ -2,10 +2,15 @@
 from abc import ABC
 import logging
 
+import numpy as np
+from tensorflow.keras import backend as K
 from tensorflow.python.keras.utils import generic_utils
 
+import tf_encrypted as tfe
 from tf_encrypted import get_protocol
 from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
+
+from tf_encrypted.protocol.pond import PondPrivateTensor, PondMaskedTensor
 
 logger = logging.getLogger('tf_encrypted')
 
@@ -35,6 +40,7 @@ class Layer(ABC):
         'batch_size',
         'weights',
         'activity_regularizer',
+        'dtype'
     }
     # Validate optional keyword arguments.
     for kwarg in kwargs:
@@ -52,6 +58,7 @@ class Layer(ABC):
     self.trainable = trainable
     self._init_set_name(name)
     self.built = False
+    self.weights = []
 
   def build(self, input_shape):  # pylint: disable=unused-argument
     """Creates the variables of the layer (optional, for subclass implementers).
@@ -96,6 +103,39 @@ class Layer(ABC):
     outputs = self.call(inputs, *args, **kargs)
 
     return outputs
+
+  def add_weight(self, variable):
+
+    private_variable = self.prot.define_private_variable(variable)
+    self.weights.append(private_variable)
+
+    return private_variable
+
+  def set_weights(self, weights, sess=None):
+    """ Sets the weights of the layer.
+    Arguments:
+      weights: A list of Numpy arrays with shapes and types
+          matching the output of layer.get_weights() or a list
+          of private variables
+      sess: tfe session"""
+
+    weights_types = (np.ndarray, PondPrivateTensor, PondMaskedTensor)
+    assert isinstance(weights[0], weights_types), type(weights[0])
+
+    # Assign new keras weights to existing weights defined by
+    # default when tfe layer was instantiated
+    if not sess:
+      sess = K.get_session()
+
+    if isinstance(weights[0], np.ndarray):
+      for i, w in enumerate(self.weights):
+        shape = w.shape.as_list()
+        tfe_weights_pl = tfe.define_private_placeholder(shape)
+        fd = tfe_weights_pl.feed(weights[i].reshape(shape))
+        sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
+    elif isinstance(weights[0], PondPrivateTensor):
+      for i, w in enumerate(self.weights):
+        sess.run(tfe.assign(w, weights[i]))
 
   @property
   def prot(self):
