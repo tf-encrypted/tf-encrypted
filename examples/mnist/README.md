@@ -21,6 +21,7 @@ The code is structured around a `ModelOwner` and `PredictionClient` class.
 ```python
 class ModelOwner:
 
+    @tfe.local_computation
     def provide_input(self) -> tf.Tensor:
         # training
         training_data = self._build_data_pipeline()
@@ -33,6 +34,7 @@ class ModelOwner:
 ```python
 class PredictionClient:
 
+    @tfe.local_computation
     def provide_input(self) -> tf.Tensor:
         """Prepare input data for prediction."""
         prediction_input, expected_result = self._build_data_pipeline().get_next()
@@ -40,6 +42,7 @@ class PredictionClient:
             prediction_input, shape=(self.BATCH_SIZE, ModelOwner.FLATTENED_DIM))
         return prediction_input
 
+    @tfe.local_computation
     def receive_output(self, logits: tf.Tensor) -> tf.Operation:
         prediction = tf.argmax(logits, axis=1)
         op = tf.print("Result", prediction, summarize=self.BATCH_SIZE)
@@ -52,25 +55,22 @@ Instances of these are then linked together in a secure computation performing a
   model_owner = ModelOwner(player_name="model-owner")
   prediction_client = PredictionClient(player_name="prediction-client")
 
-  with tfe.protocol.SecureNN():
-    batch_size = PredictionClient.BATCH_SIZE
-    flat_dim = ModelOwner.IMG_ROWS * ModelOwner.IMG_COLS
+  # get model weights from model owner
+  params = model_owner.provide_weights()
+  # get prediction input from client
+  x = prediction_client.provide_input()
 
+  with tfe.protocol.SecureNN():
     model = tfe.keras.Sequential()
-    model.add(tfe.keras.layers.Dense(512, batch_input_shape=batch_input_shape))
+    model.add(tfe.keras.layers.Dense(512, batch_input_shape=x.shape))
     model.add(tfe.keras.layers.Activation('relu'))
     model.add(tfe.keras.layers.Dense(10))
     model.set_weights(params)
 
-    # get prediction input from client
-    x = tfe.define_private_input(prediction_client.player_name,
-                                 prediction_client.provide_input)
     logits = model(x)
 
   # send prediction output back to client
-  prediction_op = tfe.define_output(prediction_client.player_name,
-                                    logits,
-                                    prediction_client.receive_output)
+  prediction_op = prediction_client.receive_output(logits)
 ```
 
 Finally, the computation is executed using a `tfe.Session` following the typical TensorFlow pattern
