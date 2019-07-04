@@ -90,7 +90,14 @@ SPHINXBUILD   = sphinx-build
 SOURCEDIR     = docs/source
 BUILDDIR      = build
 
-docs:
+SPHINX_BUILD_GOOGLE_DOCSTRINGS = sphinx-apidoc
+SPHINX_NAPOLEAN_BUILD_DIR = docs/source/gen
+SPHINX_PROJECT_DIR = tf_encrypted
+
+google-docstrings:
+	@$(SPHINX_BUILD_GOOGLE_DOCSTRINGS) -fMeET "$(SPHINX_PROJECT_DIR)" -o "$(SPHINX_NAPOLEAN_BUILD_DIR)"
+
+docs: google-docstrings
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 .PHONY: docs
