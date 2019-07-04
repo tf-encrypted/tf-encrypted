@@ -17,17 +17,10 @@ data_owner = DataOwner('data-owner',
                        test_set_size,
                        batch_size)
 
-x_train, y_train = tfe.define_private_input(
-    data_owner.player_name,
-    data_owner.provide_training_data)
-x_test, y_test = tfe.define_private_input(
-    data_owner.player_name,
-    data_owner.provide_testing_data)
+x_train, y_train = data_owner.provide_training_data()
+x_test, y_test = data_owner.provide_testing_data()
 
-reveal_weights_op = tfe.define_output(
-    model_owner.player_name,
-    model.weights,
-    model_owner.receive_weights)
+reveal_weights_op = model_owner.receive_weights(model.weights)
 
 with tfe.Session() as sess:
   sess.run([tfe.global_variables_initializer(),

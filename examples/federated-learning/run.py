@@ -92,6 +92,7 @@ class ModelOwner:
     iterator = dataset.make_one_shot_iterator()
     return iterator.get_next()
 
+  @tfe.local_computation
   def update_model(self, *grads):
     """Perform a single update step.
 
@@ -108,14 +109,16 @@ class ModelOwner:
           param.assign(param - grad * self.LEARNING_RATE)
           for param, grad in zip(params, grads)
       ])
-      # return update_op
 
     with tf.name_scope('validate'):
       x, y = self._build_data_pipeline()
       y_hat, loss = self._build_validation_step(x, y)
 
       with tf.control_dependencies([update_op]):
-        return tf.print('expect', loss, y, y_hat, summarize=50)
+        print_loss = tf.print("loss", loss)
+        print_expected = tf.print("expect", y, summarize=50)
+        print_result = tf.print("result", y_hat, summarize=50)
+        return print_loss, print_expected, print_result
 
 
 class DataOwner:
@@ -150,6 +153,7 @@ class DataOwner:
     iterator = dataset.make_one_shot_iterator()
     return iterator.get_next()
 
+  @tfe.local_computation
   def compute_gradient(self):
     """Compute gradient given current model parameters and local data."""
     with tf.name_scope('data_loading'):
@@ -174,8 +178,7 @@ if __name__ == "__main__":
   ]
 
   model_grads = zip(*(
-      tfe.define_private_input(data_owner.player_name,
-                               data_owner.compute_gradient)
+      data_owner.compute_gradient()
       for data_owner in data_owners
   ))
 
@@ -185,8 +188,7 @@ if __name__ == "__main__":
         for grads in model_grads
     ]
 
-  iteration_op = tfe.define_output(
-      model_owner.player_name, aggregated_model_grads, model_owner.update_model)
+  iteration_op = model_owner.update_model(*aggregated_model_grads)
 
   with tfe.Session(target=session_target) as sess:
     sess.run(tf.global_variables_initializer(), tag='init')
