@@ -16,6 +16,7 @@ The following name scopes are reserved for use by the TF Encrypted Converter.  I
 
 Reserved Scope | TF Counterpart
 ---------------|---------------
+`batch_normalization_v1`|[tf.keras.layers.BatchNormalization](https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization)
 `conv2d`|[tf.keras.layers.Conv2D](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Conv2D)
 `dense`|[tf.keras.layers.Dense](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense)
 `flatten`|[tf.keras.layers.Flatten](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Flatten)
