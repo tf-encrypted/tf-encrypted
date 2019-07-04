@@ -6,11 +6,11 @@ helper."""
 from __future__ import absolute_import
 from typing import Tuple, List, Union, Optional, Any, NewType, Callable
 import abc
-import sys
+from functools import reduce, wraps
 import logging
 from math import log2, ceil
 import random
-from functools import reduce
+import sys
 
 import numpy as np
 import tensorflow as tf
