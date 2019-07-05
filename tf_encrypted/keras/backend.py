@@ -22,7 +22,7 @@ def get_session(op_input_list=()):
     # If the default session is a TFE Session return this session
     if isinstance(default_session, tfe.Session()):
       return default_session
-    else:
+    if not isinstance(default_session, tfe.Session()):
       raise TypeError(
           'The default session should be a tfe.Session(). '
           'You are probably trying to run this graph with '
@@ -35,7 +35,8 @@ def get_session(op_input_list=()):
     if (getattr(_SESSION, 'session', None) is None or
         _SESSION.session.graph is not _current_graph(op_input_list)):
       _SESSION.session = tfe.Session()
-      return _SESSION.session
+      session = _SESSION.session
+    return session
 
 
 def _current_graph(op_input_list):
