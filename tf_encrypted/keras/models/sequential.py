@@ -4,6 +4,7 @@ from tensorflow.keras import backend as K
 import tf_encrypted as tfe
 from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import InputLayer, Input
+from tf_encrypted.keras import optimizers
 
 
 class Sequential(Layer):
@@ -111,7 +112,7 @@ class Sequential(Layer):
       self._optimizer.apply_gradients(layer.weights, grad_weights)
 
   def compile(self, optimizer, loss=None):
-    self._optimizer = optimizer
+    self._optimizer = optimizers.get(optimizer)
     self._loss = loss
 
   def fit_batch(self, x, y):
