@@ -35,8 +35,8 @@ def get_session(op_input_list=()):
     if (getattr(_SESSION, 'session', None) is None or
         _SESSION.session.graph is not _current_graph(op_input_list)):
       _SESSION.session = tfe.Session()
-      session = _SESSION.session
-    return session
+    session = _SESSION.session
+  return session
 
 
 def _current_graph(op_input_list):
