@@ -4,8 +4,6 @@ borrowed from the tf.keras codebase.
 import threading
 
 from tensorflow.python.framework import ops
-from tensorflow.python.keras.backend import get_graph, name_scope
-from tensorflow.python.ops import array_ops
 
 import tf_encrypted as tfe
 
@@ -17,13 +15,18 @@ _SESSION = threading.local()
 def get_session(op_input_list=()):
   """Returns the session object for the current thread."""
   global _SESSION
+  if getattr(_SESSION, 'session', None) is not None:
+    return _SESSION.session
   default_session = ops.get_default_session()
   if default_session is not None:
-    session = default_session
-    # If the default session is not a TFE Session, create one
-    if not isinstance(session, tfe.Session()):
-      _SESSION.session = tfe.Session()
-      session = _SESSION.session
+    # If the default session is a TFE Session return this session
+    if isinstance(default_session, tfe.Session()):
+      return default_session
+    else:
+      raise TypeError(
+          'The default session should be a tfe.Session(). '
+          'You are probably trying to run this graph with '
+          'tf.Session() instead of tfe.Session()')
   else:
     if ops.inside_function():
       raise RuntimeError('Cannot get session inside Tensorflow graph function.')
@@ -31,10 +34,8 @@ def get_session(op_input_list=()):
       # graph, create and cache a new session.
     if (getattr(_SESSION, 'session', None) is None or
         _SESSION.session.graph is not _current_graph(op_input_list)):
-
       _SESSION.session = tfe.Session()
-    session = _SESSION.session
-  return session
+      return _SESSION.session
 
 
 def _current_graph(op_input_list):
@@ -55,8 +56,3 @@ def clear_session():
   """Destroys the current TFE graph and creates a new one"""
   _SESSION.session = None
   ops.reset_default_graph()
-  graph = get_graph()
-  with graph.as_default():
-    with name_scope(''):
-      array_ops.placeholder_with_default(
-          False, shape=(), name='keras_placeholder')
