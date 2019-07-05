@@ -19,3 +19,6 @@ def get(identifier):
   if isinstance(identifier, str):
     optimizers = {'sgd': SGD()}
     return optimizers[identifier]
+
+  raise ValueError('Could not interpret '
+                   'optimizer function identifier:', identifier)
