@@ -1,5 +1,6 @@
 """Sequential model API."""
 from tensorflow.keras import backend as K
+from tensorflow.keras import utils
 
 import tf_encrypted as tfe
 from tf_encrypted.keras.engine.base_layer import Layer
@@ -116,16 +117,22 @@ class Sequential(Layer):
     self._loss = loss
 
   def fit_batch(self, x, y):
-    y_hat = self.call(x)
-    dy = self._loss.grad(y, y_hat)
+    y_pred = self.call(x)
+    dy = self._loss.grad(y, y_pred)
     self.backward(dy)
-    loss = self._loss(y, y_hat)
+    loss = self._loss(y, y_pred)
     sess = K.get_session()
-    print("loss", sess.run(loss.reveal()))
+    self._current_loss = sess.run(loss.reveal())
 
-  def fit(self, x, y, num_batches=1):
-    for _ in range(num_batches):
-      self.fit_batch(x, y)
+  def fit(self, x, y, epochs=1, steps_per_epoch=1):
+    for e in range(epochs):
+      print('Epoch {}/{}'.format(e + 1, epochs))
+      batch_size = x.shape.as_list()[0]
+      progbar = utils.Progbar(batch_size * steps_per_epoch)
+      for _ in range(steps_per_epoch):
+        self.fit_batch(x, y)
+        progbar.add(batch_size, values=[("loss", self._current_loss)])
+
 
   def set_weights(self, weights, sess=None):
     """ Sets the weights of the model.
