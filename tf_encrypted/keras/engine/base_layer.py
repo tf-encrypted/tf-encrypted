@@ -135,7 +135,8 @@ class Layer(ABC):
         sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
     elif isinstance(weights[0], PondPrivateTensor):
       for i, w in enumerate(self.weights):
-        sess.run(tfe.assign(w, weights[i]))
+        shape = w.shape.as_list()
+        sess.run(tfe.assign(w, weights[i].reshape(shape)))
 
   @property
   def prot(self):
