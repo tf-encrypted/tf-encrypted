@@ -1,11 +1,12 @@
 """Sequential model API."""
-from tensorflow.keras import backend as K
 from tensorflow.keras import utils
 
 import tf_encrypted as tfe
+from tf_encrypted.keras import backend as KE
+from tf_encrypted.keras import optimizers
 from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import InputLayer, Input
-from tf_encrypted.keras import optimizers
+
 
 
 class Sequential(Layer):
@@ -25,15 +26,17 @@ class Sequential(Layer):
 
   def add(self, layer):
     """Adds a layer instance on top of the layer stack.
+
     Arguments:
-        layer: layer instance.
+      layer: layer instance.
+
     Raises:
-        TypeError: If `layer` is not a layer instance.
-        ValueError: In case the `layer` argument does not
-            know its input shape.
-        ValueError: In case the `layer` argument has
-            multiple output tensors, or is already connected
-            somewhere else (forbidden in `Sequential` models).
+      TypeError: If `layer` is not a layer instance.
+      ValueError: In case the `layer` argument does not
+        know its input shape.
+      ValueError: In case the `layer` argument has
+        multiple output tensors, or is already connected
+        somewhere else (forbidden in `Sequential` models).
     """
     if not isinstance(layer, Layer):
       raise TypeError('The added layer must be '
@@ -121,7 +124,7 @@ class Sequential(Layer):
     dy = self._loss.grad(y, y_pred)
     self.backward(dy)
     loss = self._loss(y, y_pred)
-    sess = K.get_session()
+    sess = KE.get_session()
     self._current_loss = sess.run(loss.reveal())
 
   def fit(self, x, y, epochs=1, steps_per_epoch=1):
@@ -135,11 +138,16 @@ class Sequential(Layer):
 
 
   def set_weights(self, weights, sess=None):
-    """ Sets the weights of the model.
+    """Sets the weights of the model.
+
     Arguments:
       weights: A list of Numpy arrays with shapes and types
-          matching the output of model.get_weights()
-      sess: tfe session"""
+        matching the output of model.get_weights()
+      sess: tfe.Session instance.
+    """
+
+    if not sess:
+      sess = KE.get_session()
 
     # Updated weights for each layer
     for layer in self.layers:
@@ -148,8 +156,6 @@ class Sequential(Layer):
         continue
       layer_weights = weights[:num_param]
 
-      if not sess:
-        sess = K.get_session()
       layer.set_weights(layer_weights, sess)
 
       weights = weights[num_param:]
@@ -159,12 +165,11 @@ class Sequential(Layer):
     """Instantiates a TFE Keras model from its config.
 
     Arguments:
-        config: Configuration dictionary.
-            matching the output of model.get_weights()
-        sess: tfe session
+      config: Configuration dictionary matching the output of
+        model.get_weights().
 
     Returns:
-        A TFE Keras model instance
+        A TFE Keras Sequential instance.
     """
     tfe_model = model_from_config(config)
 
@@ -174,12 +179,11 @@ def model_from_config(config):
   """Instantiates a TFE Keras model from its config.
 
   Arguments:
-      config: Configuration dictionary.
-          matching the output of model.get_weights()
-      sess: tfe session
+    config: Configuration dictionary matching the output of
+        model.get_weights().
 
   Returns:
-      A TFE Keras model instance
+    A TFE Keras Sequential instance.
   """
 
   tfe_model = tfe.keras.Sequential([])
@@ -191,37 +195,33 @@ def model_from_config(config):
   return tfe_model
 
 def clone_model(model):
-  """Clone any Sequential instance into TFE model
+  """Clone any tf.keras.Model into a tfe.keras.Sequenial model.
 
-  Arguments: Instance of Model
+  Arguments:
+    model: tf.keras.Sequential or tf.keras.Model instance.
 
   Returns:
-      A TFE Keras model instance reproducing the behavior of the
-      original model using newly instantiated weights
+    A TFE Keras model instance reproducing the behavior of the
+    original model using newly instantiated weights.
   """
 
   config = model.get_config()
   weights = model.get_weights()
 
   tfe_model = model_from_config(config)
-
-  sess = tfe.Session()
-  tfe_model.set_weights(weights, sess)
-
-  # Set as keras global session so the cloned
-  # model can be run with K.get_session():
-  K.set_session(sess)
+  tfe_model.set_weights(weights)
 
   return tfe_model
 
 def _instantiate_tfe_layer(keras_layer_config):
-  """instantiate TFE layer based on layer keras config
+  """instantiate TFE layer based on Keras layer config.
 
-  Arguments: Keras layer config
+  Arguments:
+    keras_layer_config: result of layer.get_config().
 
   Returns:
     A TFE Keras layer instance reproducing the behavior of the
-      original Keras layer
+    original Keras layer.
   """
 
   # Identify tf.keras layer type, and grab the corresponding tfe.keras layer
