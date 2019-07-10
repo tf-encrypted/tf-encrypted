@@ -520,25 +520,9 @@ class Pond(Protocol):
                            "function, or as an argument to the "
                            "tfe.local_computation decorator.")
 
-        def result_guard(*args, **kwargs):
-          output = compute_func(*args, **kwargs)
-
-          # wrap in tf.group to prevent sending back any tensors (which might
-          # hence be leaked)
-          is_op = tf.contrib.framework.nest.flatten(
-              tf.contrib.framework.nest.map_structure(
-                  lambda x: isinstance(x, tf.Operation),
-                  output,
-              )
-          )
-          if all(is_op):
-            return tf.group(output)
-
-          return output
-
         return self.define_local_computation(
             actual_player_name,
-            result_guard,
+            compute_func,
             arguments=compute_func_args,
             **kwargs,
         )
