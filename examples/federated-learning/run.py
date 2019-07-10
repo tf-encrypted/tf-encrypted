@@ -118,7 +118,7 @@ class ModelOwner:
         print_loss = tf.print("loss", loss)
         print_expected = tf.print("expect", y, summarize=50)
         print_result = tf.print("result", y_hat, summarize=50)
-        return print_loss, print_expected, print_result
+        return tf.group(print_loss, print_expected, print_result)
 
 
 class DataOwner:

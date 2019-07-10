@@ -1,7 +1,6 @@
 """Provide classes to perform private training and private prediction with
 logistic regression"""
 import tensorflow as tf
-# pylint: disable=redefined-outer-name
 import tf_encrypted as tfe
 
 

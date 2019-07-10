@@ -14,12 +14,12 @@ if len(sys.argv) >= 2:
   tfe.set_config(config)
   tfe.set_protocol(tfe.protocol.Pond())
 
-@tfe.local_computation
+@tfe.local_computation(name_scope='provide_input')
 def provide_input() -> tf.Tensor:
   # pick random tensor to be averaged
   return tf.random_normal(shape=(10,))
 
-@tfe.local_computation('result-receiver')
+@tfe.local_computation('result-receiver', name_scope='receive_output')
 def receive_output(average: tf.Tensor) -> tf.Operation:
   # simply print average
   return tf.print("Average:", average)
@@ -27,8 +27,13 @@ def receive_output(average: tf.Tensor) -> tf.Operation:
 
 if __name__ == '__main__':
   # get input from inputters as private values
-  inputs = [provide_input(player_name="inputter-{}".format(i))  # pylint: disable=unexpected-keyword-arg
-            for i in range(5)]
+  inputs = [
+      provide_input(player_name='inputter-0'),  # pylint: disable=unexpected-keyword-arg
+      provide_input(player_name='inputter-1'),  # pylint: disable=unexpected-keyword-arg
+      provide_input(player_name='inputter-2'),  # pylint: disable=unexpected-keyword-arg
+      provide_input(player_name='inputter-3'),  # pylint: disable=unexpected-keyword-arg
+      provide_input(player_name='inputter-4'),  # pylint: disable=unexpected-keyword-arg
+  ]
 
   # sum all inputs and divide by count
   result = tfe.add_n(inputs) / len(inputs)
