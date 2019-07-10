@@ -442,7 +442,8 @@ class Pond(Protocol):
   def local_computation(
       self,
       player_name=None,
-      **kwargs):
+      **kwargs
+  ):
     """Annotate a function `compute_func` for local computation.
 
     This decorator can be used to pin a function's code to a specific player's
@@ -558,7 +559,7 @@ class Pond(Protocol):
       computation_fn,
       arguments=None,
       apply_scaling=True,
-      name=None,
+      name_scope=None,
       masked=False,
       factory=None,
   ):
@@ -568,7 +569,7 @@ class Pond(Protocol):
     :param player: Who performs the computation and gets to see the values in
         plaintext.
     :param apply_scaling: Whether or not to scale the outputs.
-    :param name: Optional name to give to this node in the graph.
+    :param name_scope: Optional name to give to this node in the graph.
     :param masked: Whether or not to produce masked outputs.
     :param factory: Backing tensor type to use for outputs.
     """  # noqa:E501
@@ -582,7 +583,7 @@ class Pond(Protocol):
     def share_output(v: tf.Tensor):
       assert v.shape.is_fully_defined(), ("Shape of return value '{}' on '{}' "
                                           "not fully defined").format(
-                                              name if name else "",
+                                              name_scope if name_scope else "",
                                               player.name,
                                           )
 
@@ -624,7 +625,7 @@ class Pond(Protocol):
       raise TypeError(("Don't know how to process input argument "
                        "of type {}").format(type(x)))
 
-    with tf.name_scope(name if name else "local-computation"):
+    with tf.name_scope(name_scope if name_scope else "local-computation"):
 
       with tf.device(player.device_name):
         if arguments is None:
@@ -655,7 +656,7 @@ class Pond(Protocol):
       player,
       inputter_fn,
       apply_scaling: bool = True,
-      name: Optional[str] = None,
+      name_scope: Optional[str] = None,
       masked: bool = False,
       factory: Optional[AbstractFactory] = None,
   ):
@@ -667,19 +668,17 @@ class Pond(Protocol):
 
     :param Union[str,Player] player: Which player owns this input.
     :param bool apply_scaling: Whether or not to scale the value.
-    :param str name: What name to give to this node in the graph.
+    :param str name_scope: What name to give to this node in the graph.
     :param bool masked: Whether or not to mask the input.
     :param AbstractFactory factory: Which backing type to use for this input
         (e.g. `int100` or `int64`).
     """
-    suffix = "-" + name if name else ""
-
     return self.define_local_computation(
         player=player,
         computation_fn=inputter_fn,
         arguments=[],
         apply_scaling=apply_scaling,
-        name="private-input{}".format(suffix),
+        name_scope=name_scope if name_scope else "private-input",
         masked=masked,
         factory=factory,
     )
@@ -689,7 +688,7 @@ class Pond(Protocol):
       player,
       arguments,
       outputter_fn,
-      name=None,
+      name_scope=None,
   ):
     """
     Define an output for this graph.
@@ -699,15 +698,15 @@ class Pond(Protocol):
 
     def result_wrapper(*args):
       op = outputter_fn(*args)
-      # wrap in tf.group to prevent sending back any tensors (which might hence
-      # be leaked)
+      # wrap in tf.group to prevent sending back any tensors
+      # (which might hence be leaked)
       return tf.group(op)
 
     return self.define_local_computation(
         player=player,
         computation_fn=result_wrapper,
         arguments=arguments,
-        name="output{}".format("-" + name if name else ""),
+        name_scope=name_scope if name_scope else "output",
     )
 
   @property
