@@ -194,7 +194,6 @@ if __name__ == '__main__':
   # we'll use the same parameters for each prediction so we cache them to
   # avoid re-training each time
   cache_updater, params = tfe.cache(params)
-  print(params)
   # get prediction input from client
   x, y = tfe.define_private_input(
       'prediction-client', prediction_client.provide_input)  # pylint: disable=E0632
