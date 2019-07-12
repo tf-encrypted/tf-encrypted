@@ -20,9 +20,9 @@ def get_session(op_input_list=()):
   default_session = ops.get_default_session()
   if default_session is not None:
     # If the default session is a TFE Session return this session
-    if isinstance(default_session, tfe.Session()):
+    if isinstance(default_session, tfe.Session):
       return default_session
-    if not isinstance(default_session, tfe.Session()):
+    if not isinstance(default_session, tfe.Session):
       raise TypeError(
           'The default session should be a tfe.Session(). '
           'You are probably trying to run this graph with '
