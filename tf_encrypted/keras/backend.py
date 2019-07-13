@@ -22,11 +22,6 @@ def get_session(op_input_list=()):
     # If the default session is a TFE Session return this session
     if isinstance(default_session, tfe.Session):
       return default_session
-    if not isinstance(default_session, tfe.Session):
-      raise TypeError(
-          'The default session should be a tfe.Session(). '
-          'You are probably trying to run this graph with '
-          'tf.Session() instead of tfe.Session()')
   else:
     if ops.inside_function():
       raise RuntimeError('Cannot get session inside Tensorflow graph function.')

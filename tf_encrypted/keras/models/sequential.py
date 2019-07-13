@@ -1,4 +1,6 @@
 """Sequential model API."""
+import logging
+
 from tensorflow.keras import utils
 
 import tf_encrypted as tfe
@@ -8,6 +10,8 @@ from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import InputLayer, Input
 
 
+logging.basicConfig()
+logger = logging.getLogger('tf_encrypted')
 
 class Sequential(Layer):
   """Model defined by a stack of layers in sequence.
@@ -124,12 +128,13 @@ class Sequential(Layer):
     dy = self._loss.grad(y, y_pred)
     self.backward(dy)
     loss = self._loss(y, y_pred)
+
     sess = KE.get_session()
     self._current_loss = sess.run(loss.reveal())
 
   def fit(self, x, y, epochs=1, steps_per_epoch=1):
     for e in range(epochs):
-      print('Epoch {}/{}'.format(e + 1, epochs))
+      logger.info('Epoch %i/%i', e + 1, epochs)
       batch_size = x.shape.as_list()[0]
       progbar = utils.Progbar(batch_size * steps_per_epoch)
       for _ in range(steps_per_epoch):

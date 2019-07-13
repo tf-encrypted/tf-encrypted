@@ -13,7 +13,7 @@ __all__ = [
     'backend',
     'engine',
     'layers',
+    'losses',
     'models',
     'Sequential',
-    'losses'
 ]

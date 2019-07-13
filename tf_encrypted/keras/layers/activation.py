@@ -32,6 +32,7 @@ class Activation(Layer):
     return input_shape
 
   def backward(self, d_y):
+    y = self._layer_output
     grad_weights = []
-    d_x = d_y * self.activation_deriv(self._layer_output)
+    d_x = d_y * self.activation_deriv(y)
     return grad_weights, d_x

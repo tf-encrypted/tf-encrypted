@@ -1,5 +1,5 @@
 """TFE Keras optimizers"""
-from tensorflow.keras import backend as K
+from tf_encrypted.keras import backend as KE
 
 import tf_encrypted as tfe
 
@@ -8,7 +8,7 @@ class SGD():
     self.lr = lr
 
   def apply_gradients(self, var, grad):
-    sess = K.get_session()
+    sess = KE.get_session()
     for i, w in enumerate(var):
       sess.run(tfe.assign(w, w - grad[i] * self.lr))
 
