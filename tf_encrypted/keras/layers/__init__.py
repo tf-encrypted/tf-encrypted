@@ -10,6 +10,7 @@ from tf_encrypted.keras.layers.pooling import AveragePooling2D, MaxPooling2D
 from tf_encrypted.keras.layers.relu import ReLU
 from tf_encrypted.keras.layers.normalization import BatchNormalization
 from tf_encrypted.keras.layers.core import Reshape
+from tf_encrypted.keras.layers.depthwise_conv import DepthwiseConv2D
 
 
 __all__ = [
@@ -23,4 +24,5 @@ __all__ = [
     'ReLU',
     'BatchNormalization',
     'Reshape',
+    'DepthwiseConv2D',
 ]
