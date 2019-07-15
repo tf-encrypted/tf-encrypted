@@ -155,7 +155,7 @@ class PredictionClient():
     Args:
             player_name: `str`, name of the `tfe.player.Player`
             build_update_step: `Callable`, the function used to construct
-                                                                                     a local federated learning update.
+                               a local federated learning update.
     """
 
     BATCH_SIZE = 20
