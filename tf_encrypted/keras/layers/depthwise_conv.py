@@ -80,7 +80,7 @@ class DepthwiseConv2D(Layer):
                  kernel_size,
                  strides=(1, 1),
                  padding='valid',
-                 depth_multiplier=1,#TODO: add support to this
+                 depth_multiplier=1,
                  data_format=None,
                  activation=None,
                  use_bias=True,
@@ -104,6 +104,7 @@ class DepthwiseConv2D(Layer):
                                       "You gave: {}".format(self.kernel_size))
         self.strides = conv_utils.normalize_tuple(strides, self.rank, 'strides')
         self.padding = conv_utils.normalize_padding(padding).upper()
+        self.depth_multiplier = depth_multiplier
         self.data_format = conv_utils.normalize_data_format(data_format)
         if activation is not None:
             logger.info("Performing an activation before a pooling layer can result "
@@ -132,12 +133,17 @@ class DepthwiseConv2D(Layer):
             raise ValueError('The channel dimension of the inputs '
                              'should be defined. Found `None`.')
         input_dim = int(input_shape[channel_axis])
-        self.kernel_shape = self.kernel_size + (input_dim, 1)
+        self.kernel_shape = self.kernel_size + (input_dim, self.depth_multiplier)
 
         kernel = self.depthwise_initializer(self.kernel_shape)
         mask = tf.constant(self.get_mask(input_dim).tolist(),
                            dtype=tf.float32,
-                           shape=(self.kernel_size[0], self.kernel_size[1], input_dim, input_dim))
+                           shape=(self.kernel_size[0], self.kernel_size[1], input_dim*self.depth_multiplier, input_dim))
+
+        if self.depth_multiplier > 1:
+            #re-arange kernel
+            kernel = tf.transpose(kernel, [0,1,3,2])
+            kernel = tf.reshape(kernel, shape=self.kernel_size + (input_dim*self.depth_multiplier, 1))
 
         kernel = tf.multiply(kernel, mask)
         self.kernel = self.add_weight(kernel)
@@ -145,7 +151,7 @@ class DepthwiseConv2D(Layer):
         if self.use_bias:
             # Expand bias shape dimensions. Bias needs to have
             # a rank of 3 to be added to the output
-            bias_shape = [input_dim, 1, 1]
+            bias_shape = [input_dim*self.depth_multiplier, 1, 1]
             bias = self.bias_initializer(bias_shape)
             self.bias = self.add_weight(bias)
         else:
@@ -192,8 +198,9 @@ class DepthwiseConv2D(Layer):
         return [n_x, n_filters, h_out, w_out]
 
     def get_mask(self, in_channels):
-        mask = np.zeros((self.kernel_size[0], self.kernel_size[1], in_channels, in_channels))
-        for _ in range(in_channels):
-            mask[:, :, _, _] = 1.
-        return mask
+        mask = np.zeros((self.kernel_size[0], self.kernel_size[1], in_channels, in_channels*self.depth_multiplier))
+        for d in range(self.depth_multiplier):
+            for i in range(in_channels):
+                mask[:, :, i, i+(d*in_channels)] = 1.
+        return np.transpose(mask, [0,1,3,2])
 

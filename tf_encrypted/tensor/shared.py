@@ -81,8 +81,13 @@ def conv2d(x: AbstractTensor,
 
   with tf.name_scope('conv2d'):
 
-    h_filter, w_filter, _, n_filters = map(int, y.shape)
-    n_x, _, h_x, w_x = map(int, x.shape)
+    h_filter, w_filter, in_filters, out_filters = map(int, y.shape)
+    n_x, c_x, h_x, w_x = map(int, x.shape)
+
+    if c_x != in_filters:
+      # in depthwise conv the filter's in and out dimensions are reversed
+      out_filters = in_filters
+
     if padding == 'SAME':
       h_out = int(math.ceil(float(h_x) / float(stride)))
       w_out = int(math.ceil(float(w_x) / float(stride)))
@@ -93,10 +98,10 @@ def conv2d(x: AbstractTensor,
       raise ValueError("Don't know padding method '{}'".format(padding))
 
     x_col = x.im2col(h_filter, w_filter, padding, stride)
-    w_col = y.transpose([3, 2, 0, 1]).reshape([int(n_filters), -1])
+    w_col = y.transpose([3, 2, 0, 1]).reshape([int(out_filters), -1])
     out = w_col.matmul(x_col)
 
-    out = out.reshape([n_filters, h_out, w_out, n_x])
+    out = out.reshape([out_filters, h_out, w_out, n_x])
     out = out.transpose([3, 0, 1, 2])
 
     return out

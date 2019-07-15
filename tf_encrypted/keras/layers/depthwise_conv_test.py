@@ -27,6 +27,9 @@ class TestDepthwiseConv2d(unittest.TestCase):
     def test_depthwise_conv2d_kernelsize_tuple(self):
         self._core_depthwise_conv2d(kernel_size=(2, 2))
 
+    def test_depthwise_conv2d_depth_multiplier(self):
+        self._core_depthwise_conv2d(kernel_size=2, depth_multiplier=2)
+
     def _core_depthwise_conv2d(self, **layer_kwargs):
         filters_in = 3
         input_shape = [2, 6, 6, filters_in]  # channels last
@@ -36,8 +39,13 @@ class TestDepthwiseConv2d(unittest.TestCase):
         else:
             kernel_size_in = layer_kwargs['kernel_size']
 
+        if 'depth_multiplier' in layer_kwargs:
+            filters_out = layer_kwargs['depth_multiplier']
+        else:
+            filters_out = 1
         kernel = np.random.normal(kernel_size_in +
-                                  (filters_in, filters_in))
+                                  (filters_in, filters_out))
+
         initializer = tf.keras.initializers.Constant(kernel)
 
         base_kwargs = {
