@@ -1,4 +1,4 @@
-<img src="https://tinyurl.com/tfelogo" width="75%" />
+<img src="https://tinyurl.com/tfelogo" width="65%" />
 
 TF Encrypted is a framework for encrypted machine learning in TensorFlow. It looks and feels like TensorFlow, taking advantage of the ease-of-use of the Keras API while enabling training and prediction over encrypted data via secure multi-party computation and homomorphic encryption. TF Encrypted aims to make privacy-preserving machine learning readily available, without requiring expertise in cryptography, distributed systems, or high performance computing.
 
