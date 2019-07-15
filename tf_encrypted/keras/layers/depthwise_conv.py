@@ -1,9 +1,8 @@
 """Depthwise Convolution Layer implementation."""
 import logging
 
-import tensorflow as tf
-
 import numpy as np
+import tensorflow as tf
 from tensorflow.python.keras import initializers
 from tensorflow.python.keras.utils import conv_utils
 
@@ -157,7 +156,7 @@ class DepthwiseConv2D(Layer):
       # re-arange kernel
       kernel = tf.transpose(kernel, [0, 1, 3, 2])
       kernel = tf.reshape(kernel, shape=self.kernel_size +
-                                        (input_dim * self.depth_multiplier, 1))
+                          (input_dim * self.depth_multiplier, 1))
 
     kernel = tf.multiply(kernel, mask)
     self.kernel = self.add_weight(kernel)
@@ -214,9 +213,7 @@ class DepthwiseConv2D(Layer):
   def get_mask(self, in_channels):
     mask = np.zeros((self.kernel_size[0],
                      self.kernel_size[1],
-                     in_channels,
-                     in_channels * self.depth_multiplier))
-
+                     in_channels, in_channels * self.depth_multiplier))
     for d in range(self.depth_multiplier):
       for i in range(in_channels):
         mask[:, :, i, i + (d * in_channels)] = 1.
