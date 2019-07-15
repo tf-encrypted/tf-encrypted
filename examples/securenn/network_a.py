@@ -47,7 +47,7 @@ class ModelTrainer():
   OUT_N = 10
 
   def cond(self,
-           i: tf.Tensor,
+           i: int,
            max_iter: tf.Tensor,
            nb_epochs: tf.Tensor,
            avg_loss: tf.Tensor):
@@ -72,13 +72,10 @@ class ModelTrainer():
     j = self.IN_N
     k = self.HIDDEN_N
     m = self.OUT_N
-    r_in = math.sqrt(12 / (j + k))
-    r_hid = math.sqrt(12 / (2 * k))
-    r_out = math.sqrt(12 / (k + m))
 
     # model parameters and initial values
     model = keras.Sequential()
-    model.add(keras.layers.Dense(k,input_shape=[j,]))
+    model.add(keras.layers.Dense(k, input_shape=[j,]))
     model.add(keras.layers.Activation('relu'))
     model.add(keras.layers.Dense(k))
     model.add(keras.layers.Activation('relu'))
