@@ -90,19 +90,6 @@ Check out our [contribution guide](./docs/CONTRIBUTING.md) for more information!
 
 Don't hesitate to send a pull request, open an issue, or ask for help! You can do so either via [GitHub](https://github.com/tf-encrypted/tf-encrypted) or by [joining](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLTFkYTRjYWQ0ZWVlZjVmZTVhODNiYTA2ZTdlNWRkMWE4MTI3ZGFjMWUwZDhhYTk1NjJkZTRiZjBhMzMyMjNlZmQ) our [Slack channel](https://tf-encrypted.slack.com).
 
-The project was originally started by [Morten Dahl](https://mortendahl.github.io/) but has since benefitted enormously from the efforts of several contributors, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community:
-
-- [Morten Dahl](https://github.com/mortendahl) (lead, Dropout Labs)
-- [Ben DeCoste](https://github.com/bendecoste) (Dropout Labs)
-- [Yann Dupis](https://github.com/yanndupis) (Dropout Labs)
-- [Morgan Giraud](https://github.com/morgangiraud) (while at Dropout Labs)
-- [Ian Livingstone](https://github.com/ianlivingstone) (Dropout Labs)
-- [Jason Mancuso](https://github.com/jvmancuso) (Dropout Labs)
-- [Justin Patriquin](https://github.com/justin1121) (Dropout Labs)
-- [Andrew Trask](https://github.com/iamtrask) (OpenMined)
-- [Koen van der Veen](https://github.com/koenvanderveen) (OpenMined)
-- [Gavin Uhma](https://github.com/gavinuhma) (Dropout Labs)
-
 # License
 
 Licensed under Apache License, Version 2.0 (see [LICENSE](./LICENSE) or http://www.apache.org/licenses/LICENSE-2.0). Copyright as specified in [NOTICE](./NOTICE).
