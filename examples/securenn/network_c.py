@@ -53,115 +53,116 @@ class ModelTrainer():
     HIDDEN_FC2 = 500
     OUT_N = 10
 
-    def cond(self,
-             i: tf.Tensor,
-             max_iter: tf.Tensor,
-             nb_epochs: tf.Tensor,
-             avg_loss: tf.Tensor):
-        """Check if training termination condition has been met."""
-        is_end_epoch = tf.equal(i % max_iter, 0)
-        to_continue = tf.cast(i < max_iter * nb_epochs, tf.bool)
-
-        def true_fn() -> tf.Tensor:
-            to_continue = tf.print("avg_loss: ", avg_loss)
-            return to_continue
-
-        def false_fn() -> tf.Tensor:
-            return to_continue
-
-        return tf.cond(is_end_epoch, true_fn, false_fn)
-
-    def build_training_graph(self, training_data) -> List[tf.Tensor]:
-        """Build a graph for plaintext model training.
-
-        Returns a list of the trained model's parameters.
-        """
-        # model parameters and initial values
-        model = keras.Sequential()
-        model.add(keras.layers.Conv2D(self.HIDDEN_C1,
-                                      (self.KERNEL, self.KERNEL),
-                                      batch_input_shape=(self.BATCH_SIZE,
-                                                         self.IN_DIM, self.IN_DIM,
-                                                         self.IN_CHANNELS)))
-        model.add(keras.layers.Activation('relu'))
-        model.add(keras.layers.AveragePooling2D())
-        model.add(keras.layers.Conv2D(
-            self.HIDDEN_C2, (self.KERNEL, self.KERNEL)))
-        model.add(keras.layers.Activation('relu'))
-        model.add(keras.layers.AveragePooling2D())
-        model.add(keras.layers.Flatten())
-        model.add(keras.layers.Dense(self.HIDDEN_FC2))
-        model.add(keras.layers.Activation('relu'))
-        model.add(keras.layers.Dense(self.OUT_N))
-
-        # optimizer and data pipeline
-        optimizer = tf.train.AdamOptimizer(learning_rate=self.LEARNING_RATE)
-
-        def loss(model, inputs, targets):
-            logits = model(inputs)
-            per_element_loss = tf.losses.sparse_softmax_cross_entropy(
-                labels=targets, logits=logits)
-            return tf.reduce_mean(per_element_loss)
-
-        def grad(model, inputs, targets):
-            loss_value = loss(model, inputs, targets)
-            return loss_value, tf.gradients(loss_value, model.trainable_variables)
-
-        # training loop
-        # training loop
-        def loop_body(i: tf.Tensor,
-                      max_iter: tf.Tensor,
-                      nb_epochs: tf.Tensor,
-                      avg_loss: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-            """Main model training loop."""
-            # get next batch
-            x, y = training_data.get_next()
-            x = tf.reshape(x, [-1, 28, 28, 1])
-            loss, grads = grad(model, x, y)
-            update_op = optimizer.apply_gradients(
-                zip(grads, model.trainable_variables))
-
+       def cond(self,
+                 i: tf.Tensor,
+                 max_iter: tf.Tensor,
+                 nb_epochs: tf.Tensor,
+                 avg_loss: tf.Tensor):
+            """Check if training termination condition has been met."""
             is_end_epoch = tf.equal(i % max_iter, 0)
+            to_continue = tf.cast(i < max_iter * nb_epochs, tf.bool)
 
             def true_fn() -> tf.Tensor:
-                return loss
+                to_continue = tf.print("avg_loss: ", avg_loss)
+                return to_continue
 
             def false_fn() -> tf.Tensor:
-                prev_loss = tf.cast(i - 1, tf.float32) * avg_loss
-                return (prev_loss + loss) / tf.cast(i, tf.float32)
+                return to_continue
 
-            with tf.control_dependencies([update_op]):
-                terminal_cond = tf.cond(is_end_epoch, true_fn, false_fn)
-                return i + 1, max_iter, nb_epochs, terminal_cond
+            return tf.cond(is_end_epoch, true_fn, false_fn)
 
-        loop, _, _, _ = tf.while_loop(
-            self.cond, loop_body, [0, self.ITERATIONS, self.EPOCHS, 0.])
+        def build_training_graph(self, training_data) -> List[tf.Tensor]:
+            """Build a graph for plaintext model training.
 
-        # return model parameters after training
-        loop = tf.print("Training complete", loop)
+            Returns a list of the trained model's parameters.
+            """
+            # model parameters and initial values
+            model = keras.Sequential()
+            model.add(keras.layers.Conv2D(self.HIDDEN_C1,
+                                          (self.KERNEL, self.KERNEL),
+                                          batch_input_shape=(self.BATCH_SIZE,
+                                                             self.IN_DIM, self.IN_DIM,
+                                                             self.IN_CHANNELS)))
+            model.add(keras.layers.Activation('relu'))
+            model.add(keras.layers.AveragePooling2D())
+            model.add(keras.layers.Conv2D(
+                self.HIDDEN_C2, (self.KERNEL, self.KERNEL)))
+            model.add(keras.layers.Activation('relu'))
+            model.add(keras.layers.AveragePooling2D())
+            model.add(keras.layers.Flatten())
+            model.add(keras.layers.Dense(self.HIDDEN_FC2))
+            model.add(keras.layers.Activation('relu'))
+            model.add(keras.layers.Dense(self.OUT_N))
 
-        with tf.control_dependencies([loop]):
-            return [tf.identity(x) for x in model.trainable_variables]
+            # optimizer and data pipeline
+            optimizer = tf.train.AdamOptimizer(
+                learning_rate=self.LEARNING_RATE)
 
-    def provide_input(self) -> List[tf.Tensor]:
-        with tf.name_scope('loading'):
-            training_data = get_data_from_tfrecord(
-                "./data/train.tfrecord", self.BATCH_SIZE)
+            def loss(model, inputs, targets):
+                logits = model(inputs)
+                per_element_loss = tf.losses.sparse_softmax_cross_entropy(
+                    labels=targets, logits=logits)
+                return tf.reduce_mean(per_element_loss)
 
-        with tf.name_scope('training'):
-            parameters = self.build_training_graph(training_data)
+            def grad(model, inputs, targets):
+                loss_value = loss(model, inputs, targets)
+                return loss_value, tf.gradients(loss_value, model.trainable_variables)
 
-        return parameters
+            # training loop
+            # training loop
+            def loop_body(i: tf.Tensor,
+                          max_iter: tf.Tensor,
+                          nb_epochs: tf.Tensor,
+                          avg_loss: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
+                """Main model training loop."""
+                # get next batch
+                x, y = training_data.get_next()
+                x = tf.reshape(x, [-1, 28, 28, 1])
+                loss, grads = grad(model, x, y)
+                update_op = optimizer.apply_gradients(
+                    zip(grads, model.trainable_variables))
+
+                is_end_epoch = tf.equal(i % max_iter, 0)
+
+                def true_fn() -> tf.Tensor:
+                    return loss
+
+                def false_fn() -> tf.Tensor:
+                    prev_loss = tf.cast(i - 1, tf.float32) * avg_loss
+                    return (prev_loss + loss) / tf.cast(i, tf.float32)
+
+                with tf.control_dependencies([update_op]):
+                    terminal_cond = tf.cond(is_end_epoch, true_fn, false_fn)
+                    return i + 1, max_iter, nb_epochs, terminal_cond
+
+            loop, _, _, _ = tf.while_loop(
+                self.cond, loop_body, [0, self.ITERATIONS, self.EPOCHS, 0.])
+
+            # return model parameters after training
+            loop = tf.print("Training complete", loop)
+
+            with tf.control_dependencies([loop]):
+                return [tf.identity(x) for x in model.trainable_variables]
+
+        def provide_input(self) -> List[tf.Tensor]:
+            with tf.name_scope('loading'):
+                training_data = get_data_from_tfrecord(
+                    "./data/train.tfrecord", self.BATCH_SIZE)
+
+            with tf.name_scope('training'):
+                parameters = self.build_training_graph(training_data)
+
+            return parameters
 
 
 class PredictionClient():
     """Contains methods meant to be executed by a prediction client.
 
     Args:
-      player_name: `str`, name of the `tfe.player.Player`
-                   representing the data owner
-      build_update_step: `Callable`, the function used to construct
-                         a local federated learning update.
+            player_name: `str`, name of the `tfe.player.Player`
+                                                             representing the data owner
+            build_update_step: `Callable`, the function used to construct
+                                                                                     a local federated learning update.
     """
 
     BATCH_SIZE = 20

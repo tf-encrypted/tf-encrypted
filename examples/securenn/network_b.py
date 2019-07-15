@@ -16,11 +16,11 @@ from examples.mnist.convert import get_data_from_tfrecord
 # tfe.set_tfe_events_flag(True)
 
 if len(sys.argv) >= 2:
-  # config file was specified
+        # config file was specified
     config_file = sys.argv[1]
     config = tfe.config.load(config_file)
 else:
-  # default to using local config
+        # default to using local config
     config = tfe.LocalConfig([
         'server0',
         'server1',
@@ -153,10 +153,8 @@ class PredictionClient():
     """Contains methods meant to be executed by a prediction client.
 
     Args:
-      player_name: `str`, name of the `tfe.player.Player`
-                   representing the data owner
-      build_update_step: `Callable`, the function used to construct
-                         a local federated learning update.
+            player_name: `str`, name of the `tfe.player.Player` representing the data owner
+            build_update_step: `Callable`, the function used to construct a local federated learning update.
     """
 
     BATCH_SIZE = 20

@@ -153,9 +153,9 @@ class PredictionClient():
     """Contains methods meant to be executed by a prediction client.
 
     Args:
-      player_name: `str`, name of the `tfe.player.Player`
-      build_update_step: `Callable`, the function used to construct
-                         a local federated learning update.
+            player_name: `str`, name of the `tfe.player.Player`
+            build_update_step: `Callable`, the function used to construct
+                                                                                     a local federated learning update.
     """
 
     BATCH_SIZE = 20
