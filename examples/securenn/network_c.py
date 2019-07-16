@@ -13,8 +13,6 @@ import tf_encrypted as tfe
 
 from examples.mnist.convert import get_data_from_tfrecord
 
-# tfe.set_tfe_events_flag(True)
-
 if len(sys.argv) >= 2:
   # config file was specified
   config_file = sys.argv[1]
@@ -85,8 +83,8 @@ class ModelTrainer():
                                                      self.IN_CHANNELS)))
     model.add(keras.layers.Activation('relu'))
     model.add(keras.layers.AveragePooling2D())
-    model.add(keras.layers.Conv2D(
-        self.HIDDEN_C2, (self.KERNEL, self.KERNEL)))
+    model.add(keras.layers.Conv2D(self.HIDDEN_C2,
+                                  (self.KERNEL, self.KERNEL)))
     model.add(keras.layers.Activation('relu'))
     model.add(keras.layers.AveragePooling2D())
     model.add(keras.layers.Flatten())
@@ -108,7 +106,6 @@ class ModelTrainer():
       loss_value = loss(model, inputs, targets)
       return loss_value, tf.gradients(loss_value, model.trainable_variables)
 
-    # training loop
     # training loop
     def loop_body(i: tf.Tensor,
                   max_iter: tf.Tensor,
@@ -159,10 +156,10 @@ class PredictionClient():
   """Contains methods meant to be executed by a prediction client.
 
   Args:
-          player_name: `str`, name of the `tfe.player.Player`
-                      representing the data owner
-          build_update_step: `Callable`, the function used to construct
-                              a local federated learning update.
+    player_name: `str`, name of the `tfe.player.Player`
+                  representing the data owner
+    build_update_step: `Callable`, the function used to construct
+                        a local federated learning update.
   """
 
   BATCH_SIZE = 20

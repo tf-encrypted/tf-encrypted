@@ -5,6 +5,7 @@ Reproduces Network A from SecureNN, Wagh et al.
 """
 from __future__ import absolute_import
 import sys
+from typing import List
 
 import tensorflow as tf
 import tensorflow.keras as keras

@@ -8,6 +8,7 @@ import sys
 from typing import List, Tuple
 
 import tensorflow as tf
+import tensorflow.keras as keras
 import tf_encrypted as tfe
 
 from examples.mnist.convert import get_data_from_tfrecord
@@ -82,8 +83,8 @@ class ModelTrainer():
                                                      self.IN_CHANNELS)))
     model.add(keras.layers.Activation('relu'))
     model.add(keras.layers.AveragePooling2D())
-    model.add(keras.layers.Conv2D(
-        self.HIDDEN_CHANNELS, (self.KERNEL, self.KERNEL)))
+    model.add(keras.layers.Conv2D(self.HIDDEN_CHANNELS,
+                                  (self.KERNEL, self.KERNEL)))
     model.add(keras.layers.Activation('relu'))
     model.add(keras.layers.AveragePooling2D())
     model.add(keras.layers.Flatten())
@@ -159,7 +160,7 @@ class PredictionClient():
                   representing the data owner
     build_update_step: `Callable`, the function used to
                         construct a local federated learning update.
-      """
+  """
 
   BATCH_SIZE = 20
   HIDDEN_FC1 = 256
@@ -246,5 +247,5 @@ if __name__ == '__main__':
   for _ in range(5):
     print("Predicting")
     sess.run(prediction_op, tag='prediction')
-  sess.close()
+
   sess.close()
