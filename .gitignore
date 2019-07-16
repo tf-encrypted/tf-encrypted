@@ -18,3 +18,4 @@ data/
 *.gz
 .cache
 **/.ipynb_checkpoints/
+docs/source/gen

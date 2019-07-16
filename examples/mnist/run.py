@@ -103,7 +103,8 @@ class ModelOwner():
     with tf.control_dependencies([print_op]):
       return [tf.identity(x) for x in model.trainable_variables]
 
-  def provide_input(self):
+  @tfe.local_computation
+  def provide_weights(self):
     with tf.name_scope('loading'):
       training_data = self._build_data_pipeline()
 
@@ -146,6 +147,7 @@ class PredictionClient():
     iterator = dataset.make_one_shot_iterator()
     return iterator
 
+  @tfe.local_computation
   def provide_input(self) -> tf.Tensor:
     """Prepare input data for prediction."""
     with tf.name_scope('loading'):
@@ -159,6 +161,7 @@ class PredictionClient():
           prediction_input, shape=(self.BATCH_SIZE, ModelOwner.FLATTENED_DIM))
     return prediction_input
 
+  @tfe.local_computation
   def receive_output(self, logits: tf.Tensor) -> tf.Operation:
     with tf.name_scope('post-processing'):
       prediction = tf.argmax(logits, axis=1)
@@ -177,44 +180,35 @@ if __name__ == "__main__":
       local_data_file="./data/test.tfrecord")
 
   # get model parameters as private tensors from model owner
-  params = tfe.define_private_input(model_owner.player_name,
-                                    model_owner.provide_input)
+  params = model_owner.provide_weights()
 
   # we'll use the same parameters for each prediction so we cache them to
   # avoid re-training each time
   cache_updater, params = tfe.cache(params)
 
   with tfe.protocol.SecureNN():
-    batch_size = PredictionClient.BATCH_SIZE
-    flat_dim = ModelOwner.IMG_ROWS * ModelOwner.IMG_COLS
-    batch_input_shape = [batch_size, flat_dim]
+    # get prediction input from client
+    x = prediction_client.provide_input()
 
     model = tfe.keras.Sequential()
-    model.add(tfe.keras.layers.Dense(512, batch_input_shape=batch_input_shape))
+    model.add(tfe.keras.layers.Dense(512, batch_input_shape=x.shape))
     model.add(tfe.keras.layers.Activation('relu'))
     model.add(tfe.keras.layers.Dense(10, activation=None))
 
-    # get prediction input from client
-    x = tfe.define_private_input(prediction_client.player_name,
-                                 prediction_client.provide_input)
     logits = model(x)
 
   # send prediction output back to client
-  prediction_op = tfe.define_output(prediction_client.player_name,
-                                    logits,
-                                    prediction_client.receive_output)
+  prediction_op = prediction_client.receive_output(logits)
 
-  sess = tfe.Session(target=session_target)
-  sess.run(tf.global_variables_initializer(), tag='init')
+  with tfe.Session(target=session_target) as sess:
+    sess.run(tf.global_variables_initializer(), tag='init')
 
-  print("Training")
-  sess.run(cache_updater, tag='training')
+    print("Training")
+    sess.run(cache_updater, tag='training')
 
-  print("Set trained weights")
-  model.set_weights(params, sess)
+    print("Set trained weights")
+    model.set_weights(params, sess)
 
-  for _ in range(5):
-    print("Predicting")
-    sess.run(prediction_op, tag='prediction')
-
-  sess.close()
+    for _ in range(5):
+      print("Predicting")
+      sess.run(prediction_op, tag='prediction')

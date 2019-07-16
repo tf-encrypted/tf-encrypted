@@ -8,7 +8,7 @@ TF Encrypted focuses on:
 - **Extensibility**: The architecture supports and encourages experimentation and benchmarking of new cryptographic protocols and machine learning algorithms.
 - **Performance**: Optimizing for tensor-based applications and relying on TensorFlow's backend means runtime performance comparable to that of specialized stand-alone frameworks.
 - **Community**: With a primary goal of pushing the technology forward the project encourages collaboration and open source over proprietary and closed solutions.
-- **Security**: Cryptographic protocols are evaluated against strong notions of security and [known limitations](#known-limitations) are highlighted.
+- **Security**: Cryptographic protocols are evaluated against strong notions of security and known limitations are highlighted.
 
 See below for more [background material](#background--further-reading), explore the [examples](./examples/), or visit the [documentation](./docs/) to learn more about how to use the library. You are also more than welcome to join our [Slack channel](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLTFkYTRjYWQ0ZWVlZjVmZTVhODNiYTA2ZTdlNWRkMWE4MTI3ZGFjMWUwZDhhYTk1NjJkZTRiZjBhMzMyMjNlZmQ) for all questions around use and development.
 
@@ -41,6 +41,7 @@ The following is an example of simple matmul on encrypted data using TF Encrypte
 import tensorflow as tf
 import tf_encrypted as tfe
 
+@tfe.local_computation('input-provider')
 def provide_input():
     # normal TensorFlow operations can be run locally
     # as part of defining a private input, in this
@@ -49,7 +50,7 @@ def provide_input():
 
 # define inputs
 w = tfe.define_private_variable(tf.ones(shape=(10,10)))
-x = tfe.define_private_input('input-provider', provide_input)
+x = provide_input()
 
 # define computation
 y = tfe.matmul(x, w)
