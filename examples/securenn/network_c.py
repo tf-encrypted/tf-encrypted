@@ -77,15 +77,12 @@ class ModelTrainer():
     """
     # model parameters and initial values
     model = keras.Sequential()
-    model.add(keras.layers.Conv2D(
-        self.HIDDEN_C1,
-        (self.KERNEL,
-         self.KERNEL),
-        batch_input_shape=(
-            self.BATCH_SIZE,
-            self.IN_DIM,
-            self.IN_DIM,
-            self.IN_CHANNELS)))
+    model.add(keras.layers.Conv2D(self.HIDDEN_C1,
+                                  (self.KERNEL, self.KERNEL),
+                                  batch_input_shape=(self.BATCH_SIZE,
+                                                     self.IN_DIM,
+                                                     self.IN_DIM,
+                                                     self.IN_CHANNELS)))
     model.add(keras.layers.Activation('relu'))
     model.add(keras.layers.AveragePooling2D())
     model.add(keras.layers.Conv2D(
@@ -120,7 +117,7 @@ class ModelTrainer():
       """Main model training loop."""
       # get next batch
       x, y = training_data.get_next()
-      x = tf.reshape(x, [-1, 28, 28, 1])
+      x = tf.reshape(x, [-1, self.IN_DIM, self.IN_DIM, 1])
       loss, grads = grad(model, x, y)
       update_op = optimizer.apply_gradients(
           zip(grads, model.trainable_variables))
@@ -178,7 +175,8 @@ class PredictionClient():
 
     with tf.name_scope('pre-processing'):
       prediction_input = tf.reshape(
-          prediction_input, shape=(self.BATCH_SIZE, 28, 28, 1))
+          prediction_input, shape=(self.BATCH_SIZE, ModelTrainer.IN_DIM,
+                                   ModelTrainer.IN_DIM, 1))
       expected_result = tf.reshape(
           expected_result, shape=(self.BATCH_SIZE,))
 

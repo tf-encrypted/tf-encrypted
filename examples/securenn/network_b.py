@@ -8,7 +8,6 @@ import sys
 from typing import List, Tuple
 
 import tensorflow as tf
-import tensorflow.keras as keras
 import tf_encrypted as tfe
 
 from examples.mnist.convert import get_data_from_tfrecord
@@ -16,11 +15,11 @@ from examples.mnist.convert import get_data_from_tfrecord
 # tfe.set_tfe_events_flag(True)
 
 if len(sys.argv) >= 2:
-                                # config file was specified
+  # config file was specified
   config_file = sys.argv[1]
   config = tfe.config.load(config_file)
 else:
-                                # default to using local config
+  # default to using local config
   config = tfe.LocalConfig([
       'server0',
       'server1',
@@ -114,7 +113,7 @@ class ModelTrainer():
       """Main model training loop."""
       # get next batch
       x, y = training_data.get_next()
-      x = tf.reshape(x, [-1, 28, 28, 1])
+      x = tf.reshape(x, [-1, self.IN_DIM, self.IN_DIM, 1])
       loss, grads = grad(model, x, y)
       update_op = optimizer.apply_gradients(
           zip(grads, model.trainable_variables))
@@ -173,7 +172,8 @@ class PredictionClient():
 
     with tf.name_scope('pre-processing'):
       prediction_input = tf.reshape(
-          prediction_input, shape=(self.BATCH_SIZE, 28, 28, 1))
+          prediction_input, shape=(self.BATCH_SIZE, ModelTrainer.IN_DIM,
+                                   ModelTrainer.IN_DIM, 1))
       expected_result = tf.reshape(
           expected_result, shape=(self.BATCH_SIZE,))
 
