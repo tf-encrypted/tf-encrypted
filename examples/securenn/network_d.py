@@ -168,7 +168,8 @@ class PredictionClient():
 
     with tf.name_scope('pre-processing'):
       prediction_input = tf.reshape(
-          prediction_input, shape=(self.BATCH_SIZE, 28, 28, 1))
+          prediction_input, shape=(self.BATCH_SIZE, ModelTrainer.IN_DIM,
+                                   ModelTrainer.IN_DIM, 1))
       expected_result = tf.reshape(
           expected_result, shape=(self.BATCH_SIZE,))
 
