@@ -57,6 +57,22 @@ class TestSecureModel(unittest.TestCase):
 
       np.testing.assert_array_almost_equal(s_y, y, 4)
 
+  def test_secure_model_batch(self):
+    with tfe.protocol.Pond():
+      tf.random.set_random_seed(42)
+
+      d = tf.keras.layers.Dense(1, input_shape=(10,), use_bias=False)
+      model = tf.keras.Sequential([
+        d
+      ])
+
+      x = np.ones((2, 10))
+      y = model.predict(x)
+
+      s_model = secure_model(model, batch_size=2)
+      s_y = s_model.private_predict(x)
+
+      np.testing.assert_array_almost_equal(s_y, y, 4)
 
 if __name__ == '__main__':
   unittest.main()

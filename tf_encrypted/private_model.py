@@ -42,7 +42,7 @@ class PrivateModel:
       return output
 
 
-def load_graph(model_file, model_name=None):
+def load_graph(model_file, model_name=None, batch_size=1):
   """Load a plaintext model from protobuf."""
 
   input_spec = []
@@ -57,7 +57,7 @@ def load_graph(model_file, model_name=None):
       input_spec.append({
           'name': node.name,
           'dtype': node.attr['dtype'].type,
-          'shape': [1] + [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
+          'shape': [batch_size] + [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
       })
 
   inputs = []
@@ -79,7 +79,7 @@ def load_graph(model_file, model_name=None):
   return graph_def, inputs
 
 
-def secure_model(model, **converter_kwargs):
+def secure_model(model, **kwargs):
   """Secure a plaintext model from the current session."""
   session = K.get_session()
   min_graph = graph_util.convert_variables_to_constants(
@@ -87,9 +87,14 @@ def secure_model(model, **converter_kwargs):
   graph_fname = 'model.pb'
   tf.train.write_graph(min_graph, _TMPDIR, graph_fname, as_text=False)
 
-  graph_def, inputs = load_graph(os.path.join(_TMPDIR, graph_fname))
+  if 'batch_size' in kwargs:
+    batch_size = kwargs.pop('batch_size')
+  else:
+    batch_size = 1
 
-  c = tfe.convert.convert.Converter(tfe.convert.registry(), **converter_kwargs)
+  graph_def, inputs = load_graph(os.path.join(_TMPDIR, graph_fname), batch_size=batch_size)
+
+  c = tfe.convert.convert.Converter(tfe.convert.registry(), **kwargs)
   y = c.convert(remove_training_nodes(graph_def), 'input-provider', inputs)
 
   return PrivateModel(y)
