@@ -337,7 +337,7 @@ class DepthwiseConv2D(Layer):
       # re-arange kernel
       kernel = tf.transpose(kernel, [0, 1, 3, 2])
       kernel = tf.reshape(kernel, shape=self.kernel_size +
-                                        (input_dim * self.depth_multiplier, 1))
+                          (input_dim * self.depth_multiplier, 1))
 
     kernel = tf.multiply(kernel, mask)
     self.kernel = self.add_weight(kernel)
