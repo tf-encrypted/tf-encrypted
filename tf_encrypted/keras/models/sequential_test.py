@@ -46,7 +46,7 @@ class TestSequential(unittest.TestCase):
     with KE.get_session() as sess:
       actual = sess.run(y.reveal())
 
-      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
+      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-3)
 
     KE.clear_session()
 
@@ -68,7 +68,7 @@ class TestSequential(unittest.TestCase):
     with KE.get_session() as sess:
       actual = sess.run(y.reveal())
 
-      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
+      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-3)
 
     KE.clear_session()
 
@@ -92,7 +92,7 @@ class TestSequential(unittest.TestCase):
       y = tfe_model(x)
       actual = sess.run(y.reveal())
 
-      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
+      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-3)
 
     KE.clear_session()
 
@@ -119,7 +119,7 @@ class TestSequential(unittest.TestCase):
 
         actual = sess.run(y.reveal())
 
-        np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-4)
+        np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-3)
 
 
   def test_conv_model(self):
