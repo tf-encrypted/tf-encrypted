@@ -3,7 +3,7 @@
 import os
 import tensorflow as tf
 from tensorflow.keras.datasets import mnist
-from convert import encode
+from conv_convert import encode
 
 
 def save_training_data(images, labels, filename):

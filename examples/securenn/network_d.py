@@ -4,11 +4,11 @@
 Reproduces Network D from SecureNN, Wagh et al.
 """
 from __future__ import absolute_import
-import math
 import sys
 from typing import List, Tuple
 
 import tensorflow as tf
+import tensorflow.keras as keras
 import tf_encrypted as tfe
 
 from examples.mnist.convert import get_data_from_tfrecord
@@ -32,32 +32,7 @@ tfe.set_config(config)
 tfe.set_protocol(tfe.protocol.SecureNN(
     *tfe.get_config().get_players(['server0', 'server1', 'crypto-producer'])))
 
-
-def weight_variable(shape, gain):
-  """weight_variable generates a weight variable of a given shape."""
-  if len(shape) == 2:
-    fan_in, fan_out = shape
-  elif len(shape) == 4:
-    h, w, c_in, c_out = shape
-    fan_in = h * w * c_in
-    fan_out = h * w * c_out
-  r = gain * math.sqrt(6 / (fan_in + fan_out))
-  initial = tf.random_uniform(shape, minval=-r, maxval=r)
-  return tf.Variable(initial)
-
-
-def bias_variable(shape):
-  """bias_variable generates a bias variable of a given shape."""
-  initial = tf.constant(0., shape=shape)
-  return tf.Variable(initial)
-
-
-def conv2d(x, w, s):
-  return tf.nn.conv2d(x, w, strides=[1, s, s, 1], padding='VALID')
-
-
-def pooling(x):
-  return tf.nn.avg_pool(x, [1, 2, 2, 1], [1, 2, 2, 1], padding='VALID')
+session_target = sys.argv[2] if len(sys.argv) > 2 else None
 
 
 class ModelTrainer():
@@ -100,38 +75,46 @@ class ModelTrainer():
     Returns a list of the trained model's parameters.
     """
     # model parameters and initial values
-    wconv1 = weight_variable([self.KERNEL,
-                              self.KERNEL,
-                              self.IN_CHANNELS,
-                              self.HIDDEN_CHANNELS], 1.)
-    bconv1 = bias_variable([1, 1, self.HIDDEN_CHANNELS])
-    wfc1 = weight_variable([self.HIDDEN_FC1, self.HIDDEN_FC2], 1.)
-    bfc1 = bias_variable([self.HIDDEN_FC2])
-    wfc2 = weight_variable([self.HIDDEN_FC2, self.OUT_N], 1.)
-    bfc2 = bias_variable([self.OUT_N])
-    params = [wconv1, bconv1, wfc1, bfc1, wfc2, bfc2]
+    model = keras.Sequential()
+    model.add(keras.layers.Conv2D(self.HIDDEN_CHANNELS,
+                                  (self.KERNEL, self.KERNEL),
+                                  batch_input_shape=(self.BATCH_SIZE,
+                                                     self.IN_DIM,
+                                                     self.IN_DIM,
+                                                     self.IN_CHANNELS)))
+    model.add(keras.layers.Activation('relu'))
+    model.add(keras.layers.AveragePooling2D())
+    model.add(keras.layers.Flatten())
+    model.add(keras.layers.Dense(self.HIDDEN_FC2))
+    model.add(keras.layers.Activation('relu'))
+    model.add(keras.layers.Dense(self.OUT_N))
 
     # optimizer and data pipeline
     optimizer = tf.train.AdamOptimizer(learning_rate=self.LEARNING_RATE)
 
+    def loss(model, inputs, targets):
+      logits = model(inputs)
+      per_element_loss = tf.losses.sparse_softmax_cross_entropy(
+          labels=targets, logits=logits)
+      return tf.reduce_mean(per_element_loss)
+
+    def grad(model, inputs, targets):
+      loss_value = loss(model, inputs, targets)
+      return loss_value, tf.gradients(loss_value, model.trainable_variables)
+
     # training loop
-    def loop_body(i: tf.Tensor,
+    # training loop
+    def loop_body(i: int,
                   max_iter: tf.Tensor,
                   nb_epochs: tf.Tensor,
                   avg_loss: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
       """Main model training loop."""
       # get next batch
       x, y = training_data.get_next()
-
-      # model construction
       x = tf.reshape(x, [-1, self.IN_DIM, self.IN_DIM, 1])
-      layer1 = pooling(tf.nn.relu(conv2d(x, Wconv1, self.STRIDE) + bconv1))
-      layer1 = tf.reshape(layer1, [-1, self.HIDDEN_FC1])
-      layer2 = tf.nn.relu(tf.matmul(layer1, Wfc1) + bfc1)
-      logits = tf.matmul(layer2, Wfc2) + bfc2
-
-      loss = tf.reduce_mean(
-          tf.losses.sparse_softmax_cross_entropy(logits=logits, labels=y))
+      loss, grads = grad(model, x, y)
+      update_op = optimizer.apply_gradients(
+          zip(grads, model.trainable_variables))
 
       is_end_epoch = tf.equal(i % max_iter, 0)
 
@@ -142,7 +125,7 @@ class ModelTrainer():
         prev_loss = tf.cast(i - 1, tf.float32) * avg_loss
         return (prev_loss + loss) / tf.cast(i, tf.float32)
 
-      with tf.control_dependencies([optimizer.minimize(loss)]):
+      with tf.control_dependencies([update_op]):
         terminal_cond = tf.cond(is_end_epoch, true_fn, false_fn)
         return i + 1, max_iter, nb_epochs, terminal_cond
 
@@ -151,8 +134,9 @@ class ModelTrainer():
 
     # return model parameters after training
     loop = tf.print("Training complete", loop)
+
     with tf.control_dependencies([loop]):
-      return [param.read_value() for param in params]
+      return [tf.identity(x) for x in model.trainable_variables]
 
   def provide_input(self) -> List[tf.Tensor]:
     with tf.name_scope('loading'):
@@ -169,10 +153,9 @@ class PredictionClient():
   """Contains methods meant to be executed by a prediction client.
 
   Args:
-    player_name: `str`, name of the `tfe.player.Player`
-                 representing the data owner
-    build_update_step: `Callable`, the function used to construct
-                       a local federated learning update.
+          player_name: `str`, name of the `tfe.player.Player`
+          build_update_step: `Callable`, the function used to construct
+                             a local federated learning update.
   """
 
   BATCH_SIZE = 20
@@ -185,8 +168,10 @@ class PredictionClient():
 
     with tf.name_scope('pre-processing'):
       prediction_input = tf.reshape(
-          prediction_input, shape=(self.BATCH_SIZE, 1, 28, 28))
-      expected_result = tf.reshape(expected_result, shape=(self.BATCH_SIZE,))
+          prediction_input, shape=(self.BATCH_SIZE, ModelTrainer.IN_DIM,
+                                   ModelTrainer.IN_DIM, 1))
+      expected_result = tf.reshape(
+          expected_result, shape=(self.BATCH_SIZE,))
 
     return [prediction_input, expected_result]
 
@@ -207,46 +192,47 @@ if __name__ == '__main__':
 
   # get model parameters as private tensors from model owner
   params = tfe.define_private_input(
-      'model-trainer', model_trainer.provide_input, masked=True)  # pylint: disable=E0632
+      'model-trainer', model_trainer.provide_input)  # pylint: disable=E0632
 
-  # we'll use the same parameters for each prediction so we cache them to avoid re-training each time
-  params = tfe.cache(params)
+  # we'll use the same parameters for each prediction so we cache
+  # them to avoid re-training each time
+  cache_updater, params = tfe.cache(params)
 
   # get prediction input from client
   x, y = tfe.define_private_input(
-      'prediction-client', prediction_client.provide_input, masked=True)  # pylint: disable=E0632
+      'prediction-client', prediction_client.provide_input)  # pylint: disable=E0632
 
-  # helpers
-
-  def conv(x, w, s):
-    return tfe.conv2d(x, w, s, 'VALID')
-
-  # we'll use the same parameters for each prediction so we cache them to
-  # avoid re-training each time
-  cache_updater, params = tfe.cache(params)
-
-  def pool(x):
-    return tfe.avgpool2d(x, (2, 2), (2, 2), 'VALID')
-
-  # compute prediction
-  wconv1, bconv1, wfc1, bfc1, wfc2, bfc2 = params
-  bconv1 = tfe.reshape(bconv1, [-1, 1, 1])
-  layer1 = pool(tfe.relu(conv(x, wconv1, ModelTrainer.STRIDE) + bconv1))
-  layer1 = tfe.reshape(layer1, [-1, ModelTrainer.HIDDEN_FC1])
-  layer2 = tfe.matmul(layer1, wfc1) + bfc1
-  logits = tfe.matmul(layer2, wfc2) + bfc2
+  with tfe.protocol.SecureNN():
+    model = tfe.keras.Sequential()
+    model.add(tfe.keras.layers.Conv2D(
+        ModelTrainer.HIDDEN_CHANNELS,
+        (ModelTrainer.KERNEL, ModelTrainer.KERNEL),
+        batch_input_shape=(ModelTrainer.BATCH_SIZE, ModelTrainer.IN_DIM,
+                           ModelTrainer.IN_DIM,
+                           ModelTrainer.IN_CHANNELS)))
+    model.add(tfe.keras.layers.Activation('relu'))
+    model.add(tfe.keras.layers.AveragePooling2D())
+    model.add(tfe.keras.layers.Flatten())
+    model.add(tfe.keras.layers.Dense(ModelTrainer.HIDDEN_FC2))
+    model.add(tfe.keras.layers.Activation('relu'))
+    model.add(tfe.keras.layers.Dense(ModelTrainer.OUT_N))
+    logits = model(x)
 
   # send prediction output back to client
   prediction_op = tfe.define_output(
       'prediction-client', [logits, y], prediction_client.receive_output)
 
-  with tfe.Session() as sess:
-    print("Init")
-    sess.run(tf.global_variables_initializer(), tag='init')
+  sess = tfe.Session(target=session_target)
+  sess.run(tf.global_variables_initializer(), tag='init')
 
-    print("Training")
-    sess.run(cache_updater, tag='training')
+  print("Training")
+  sess.run(cache_updater, tag='training')
 
-    for _ in range(5):
-      print("Predicting")
-      sess.run(prediction_op, tag='prediction')
+  print("Set trained weights")
+  model.set_weights(params, sess)
+
+  for _ in range(5):
+    print("Predicting")
+    sess.run(prediction_op, tag='prediction')
+
+  sess.close()
