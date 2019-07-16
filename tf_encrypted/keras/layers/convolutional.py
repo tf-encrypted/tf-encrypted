@@ -279,7 +279,7 @@ class DepthwiseConv2D(Layer):
 
     self.rank = 2
     self.kernel_size = conv_utils.normalize_tuple(
-      kernel_size, self.rank, 'kernel_size')
+        kernel_size, self.rank, 'kernel_size')
     if self.kernel_size[0] != self.kernel_size[1]:
       raise NotImplementedError("TF Encrypted currently only supports same "
                                 "stride along the height and the width."
