@@ -1,22 +1,14 @@
-[<img src="https://raw.githubusercontent.com/tf-encrypted/assets/master/logo-with-text.png" alt="TF Encrypted" width="75%"/>](https://tf-encrypted.io/)
+<img src="https://tinyurl.com/tfelogo" width="65%" />
 
-[TF Encrypted](https://tf-encrypted.io/) is a framework for encrypted machine learning in TensorFlow. It looks and feels like TensorFlow, taking advantage of the ease-of-use of the Keras API while enabling training and prediction over encrypted data. Under the hood, TF Encrypted integrates state-of-the-art cryptography like [secure multi-party computation](https://en.wikipedia.org/wiki/Secure_multi-party_computation), and [homomorphic encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption). TF Encrypted aims to make privacy-preserving machine learning readily available, without requiring expertise in cryptography, distributed systems, or high performance computing.
-
-TF Encrypted focuses on:
-
-- **Usability**: The API and its underlying design philosophy make it easy to get started, use, and integrate privacy-preserving technology into pre-existing machine learning processes.
-- **Extensibility**: The architecture supports and encourages experimentation and benchmarking of new cryptographic protocols and machine learning algorithms.
-- **Performance**: Optimizing for tensor-based applications and relying on TensorFlow's backend means runtime performance comparable to that of specialized stand-alone frameworks.
-- **Community**: With a primary goal of pushing the technology forward the project encourages collaboration and open source over proprietary and closed solutions.
-- **Security**: Cryptographic protocols are evaluated against strong notions of security and known limitations are highlighted.
+TF Encrypted is a framework for encrypted machine learning in TensorFlow. It looks and feels like TensorFlow, taking advantage of the ease-of-use of the Keras API while enabling training and prediction over encrypted data via secure multi-party computation and homomorphic encryption. TF Encrypted aims to make privacy-preserving machine learning readily available, without requiring expertise in cryptography, distributed systems, or high performance computing.
 
 See below for more [background material](#background--further-reading), explore the [examples](./examples/), or visit the [documentation](./docs/) to learn more about how to use the library. You are also more than welcome to join our [Slack channel](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLTFkYTRjYWQ0ZWVlZjVmZTVhODNiYTA2ZTdlNWRkMWE4MTI3ZGFjMWUwZDhhYTk1NjJkZTRiZjBhMzMyMjNlZmQ) for all questions around use and development.
 
-![Status](https://img.shields.io/badge/status-alpha-blue.svg)  [![License](https://img.shields.io/github/license/tf-encrypted/tf-encrypted.svg)](./LICENSE)  [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/tf-encrypted/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/tf-encrypted/tf-encrypted/tree/master) [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://tf-encrypted.readthedocs.io/en/latest/)
+[![Website](https://img.shields.io/website/https/tf-encrypted.io.svg)](https://tf-encrypted.io) [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://tf-encrypted.readthedocs.io/en/latest/) [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/tf-encrypted/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/tf-encrypted/tf-encrypted/tree/master)
 
 # Installation
 
-TF Encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.5+ and TensorFlow 1.12.0+ which can be installed using:
+TF Encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.5+ and TensorFlow 1.12.0+:
 
 ```bash
 pip3 install tf-encrypted
@@ -27,7 +19,6 @@ Alternatively, installing from source can be done using:
 ```bash
 git clone https://github.com/tf-encrypted/tf-encrypted.git
 cd tf-encrypted
-pip3 install -r requirements.txt
 pip3 install -e .
 ```
 
@@ -81,6 +72,22 @@ The following texts provide further in-depth presentations of the project:
 - [Private Machine Learning in TensorFlow using Secure Computation](https://arxiv.org/abs/1810.08130) further elaborates on the benefits of the approach, outlines the adaptation of a secure computation protocol, and reports on concrete performance numbers
 - [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) describes the initial motivation and implementation
 
+# Contributing
+
+Check out our [contribution guide](./docs/CONTRIBUTING.md) for more information, and don't hesitate to send a pull request, open an issue, or ask for help! You can do so either via [GitHub](https://github.com/tf-encrypted/tf-encrypted) or by [joining](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLTFkYTRjYWQ0ZWVlZjVmZTVhODNiYTA2ZTdlNWRkMWE4MTI3ZGFjMWUwZDhhYTk1NjJkZTRiZjBhMzMyMjNlZmQ) our [Slack channel](https://tf-encrypted.slack.com).
+
+[![](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/images/0)](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/links/0)[![](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/images/1)](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/links/1)[![](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/images/2)](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/links/2)[![](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/images/3)](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/links/3)[![](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/images/4)](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/links/4)[![](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/images/5)](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/links/5)[![](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/images/6)](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/links/6)[![](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/images/7)](https://sourcerer.io/fame/mortendahl/tf-encrypted/tf-encrypted/links/7)
+
+## Organizational contributions
+
+We are very grateful for the significant contributions made by the following organizations!
+
+<table>
+    <tr>
+        <td><a href="https://dropoutlabs.com/"><img src="https://raw.githubusercontent.com/dropoutlabs/files/master/dropout-labs-logo-white-2500.png" alt="Dropout Labs" width="150"/></a></td>
+    </tr>
+</table>
+
 # Project Status
 
 TF Encrypted is experimental software not currently intended for use in production environments. The focus is on building the underlying primitives and techniques, with some practical security issues postponed for a later stage. However, care is taken to ensure that none of these represent fundamental issues that cannot be fixed as needed.
@@ -92,25 +99,6 @@ TF Encrypted is experimental software not currently intended for use in producti
 ## Support
 
 Please open an [issue](https://github.com/tf-encrypted/tf-encrypted/issues) or feel free to reach out directly on [Slack](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLTFkYTRjYWQ0ZWVlZjVmZTVhODNiYTA2ZTdlNWRkMWE4MTI3ZGFjMWUwZDhhYTk1NjJkZTRiZjBhMzMyMjNlZmQ).
-
-# Contributing
-
-Check out our [contribution guide](./docs/CONTRIBUTING.md) for more information!
-
-Don't hesitate to send a pull request, open an issue, or ask for help! You can do so either via [GitHub](https://github.com/tf-encrypted/tf-encrypted) or by [joining](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLTFkYTRjYWQ0ZWVlZjVmZTVhODNiYTA2ZTdlNWRkMWE4MTI3ZGFjMWUwZDhhYTk1NjJkZTRiZjBhMzMyMjNlZmQ) our [Slack channel](https://tf-encrypted.slack.com).
-
-The project was originally started by [Morten Dahl](https://mortendahl.github.io/) but has since benefitted enormously from the efforts of several contributors, most notably [Dropout Labs](https://dropoutlabs.com/) and members of the [OpenMined](https://www.openmined.org/) community:
-
-- [Morten Dahl](https://github.com/mortendahl) (lead, Dropout Labs)
-- [Ben DeCoste](https://github.com/bendecoste) (Dropout Labs)
-- [Yann Dupis](https://github.com/yanndupis) (Dropout Labs)
-- [Morgan Giraud](https://github.com/morgangiraud) (while at Dropout Labs)
-- [Ian Livingstone](https://github.com/ianlivingstone) (Dropout Labs)
-- [Jason Mancuso](https://github.com/jvmancuso) (Dropout Labs)
-- [Justin Patriquin](https://github.com/justin1121) (Dropout Labs)
-- [Andrew Trask](https://github.com/iamtrask) (OpenMined)
-- [Koen van der Veen](https://github.com/koenvanderveen) (OpenMined)
-- [Gavin Uhma](https://github.com/gavinuhma) (Dropout Labs)
 
 # License
 
