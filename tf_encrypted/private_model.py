@@ -57,7 +57,8 @@ def load_graph(model_file, model_name=None, batch_size=1):
       input_spec.append({
           'name': node.name,
           'dtype': node.attr['dtype'].type,
-          'shape': [batch_size] + [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
+          'shape': [batch_size] +
+                   [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
       })
 
   inputs = []
@@ -92,7 +93,8 @@ def secure_model(model, **kwargs):
   else:
     batch_size = 1
 
-  graph_def, inputs = load_graph(os.path.join(_TMPDIR, graph_fname), batch_size=batch_size)
+  graph_def, inputs = load_graph(os.path.join(_TMPDIR, graph_fname),
+                                 batch_size=batch_size)
 
   c = tfe.convert.convert.Converter(tfe.convert.registry(), **kwargs)
   y = c.convert(remove_training_nodes(graph_def), 'input-provider', inputs)
