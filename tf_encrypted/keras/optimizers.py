@@ -3,7 +3,8 @@ from tf_encrypted.keras import backend as KE
 
 import tf_encrypted as tfe
 
-class SGD():
+
+class SGD:
   def __init__(self, lr=0.01):
     self.lr = lr
 
@@ -13,12 +14,17 @@ class SGD():
       sess.run(tfe.assign(w, w - grad[i] * self.lr))
 
 
-def get(identifier):
-  if isinstance(identifier, SGD):
-    return identifier
-  if isinstance(identifier, str):
-    optimizers = {'sgd': SGD()}
-    return optimizers[identifier]
+_known_optimizers = {
+    'sgd': SGD
+}
 
-  raise ValueError('Could not interpret '
-                   'optimizer function identifier:', identifier)
+
+def get(identifier):
+  if isinstance(identifier, type):
+    return identifier()
+  if isinstance(identifier, str):
+    global _known_optimizers
+    optimizer = _known_optimizers.get(identifier, None)
+    if optimizer is not None:
+      return optimizer()
+  return identifier

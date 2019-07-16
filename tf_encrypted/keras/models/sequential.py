@@ -119,9 +119,11 @@ class Sequential(Layer):
       grad_weights, d_y = layer.backward(d_y)
       self._optimizer.apply_gradients(layer.weights, grad_weights)
 
-  def compile(self, optimizer, loss=None):
+  def compile(self, optimizer, loss):
     self._optimizer = optimizers.get(optimizer)
     self._loss = loss
+    assert self._optimizer is not None, "An optimizer must be specified."
+    assert self._loss is not None, "A loss must be specified."
 
   def fit_batch(self, x, y):
     y_pred = self.call(x)
