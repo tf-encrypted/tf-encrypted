@@ -1,7 +1,6 @@
 """Provide classes to perform private training and private prediction with
 logistic regression"""
 import tensorflow as tf
-# pylint:  disable=redefined-outer-name
 import tf_encrypted as tfe
 
 
@@ -94,6 +93,7 @@ class DataOwner:
   def initializer(self):
     return tf.group(self.train_initializer, self.test_initializer)
 
+  @tfe.local_computation
   def provide_training_data(self):
     """Preprocess training dataset
 
@@ -124,6 +124,7 @@ class DataOwner:
 
     return x, y
 
+  @tfe.local_computation
   def provide_testing_data(self):
     """Preprocess testing dataset
 
@@ -158,6 +159,7 @@ class ModelOwner:
   def __init__(self, player_name):
     self.player_name = player_name
 
+  @tfe.local_computation
   def receive_weights(self, *weights):
     return tf.print("Weights on {}:".format(self.player_name), weights)
 
@@ -168,6 +170,7 @@ class PredictionClient:
     self.player_name = player_name
     self.num_features = num_features
 
+  @tfe.local_computation
   def provide_input(self):
     return tf.random.uniform(
         minval=-.5,
@@ -175,5 +178,6 @@ class PredictionClient:
         dtype=tf.float32,
         shape=[1, self.num_features])
 
+  @tfe.local_computation
   def receive_output(self, result):
     return tf.print("Result on {}:".format(self.player_name), result)

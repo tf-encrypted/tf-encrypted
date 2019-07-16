@@ -5,7 +5,6 @@ import sys
 import tensorflow as tf
 import tf_encrypted as tfe
 
-
 # use configuration from file if specified
 # otherwise, fall back to default LocalConfig
 if len(sys.argv) >= 2:
@@ -15,31 +14,32 @@ if len(sys.argv) >= 2:
   tfe.set_config(config)
   tfe.set_protocol(tfe.protocol.Pond())
 
-
+@tfe.local_computation(name_scope='provide_input')
 def provide_input() -> tf.Tensor:
   # pick random tensor to be averaged
   return tf.random_normal(shape=(10,))
+
+@tfe.local_computation('result-receiver', name_scope='receive_output')
+def receive_output(average: tf.Tensor) -> tf.Operation:
+  # simply print average
+  return tf.print("Average:", average)
 
 
 if __name__ == '__main__':
   # get input from inputters as private values
   inputs = [
-      tfe.define_private_input('inputter-0', provide_input),
-      tfe.define_private_input('inputter-1', provide_input),
-      tfe.define_private_input('inputter-2', provide_input),
-      tfe.define_private_input('inputter-3', provide_input),
-      tfe.define_private_input('inputter-4', provide_input),
+      provide_input(player_name='inputter-0'),  # pylint: disable=unexpected-keyword-arg
+      provide_input(player_name='inputter-1'),  # pylint: disable=unexpected-keyword-arg
+      provide_input(player_name='inputter-2'),  # pylint: disable=unexpected-keyword-arg
+      provide_input(player_name='inputter-3'),  # pylint: disable=unexpected-keyword-arg
+      provide_input(player_name='inputter-4'),  # pylint: disable=unexpected-keyword-arg
   ]
 
   # sum all inputs and divide by count
   result = tfe.add_n(inputs) / len(inputs)
 
-  def receive_output(average: tf.Tensor) -> tf.Operation:
-    # simply print average
-    return tf.print("Average:", average)
-
   # send result to receiver
-  result_op = tfe.define_output('result-receiver', result, receive_output)
+  result_op = receive_output(result)
 
   # run a few times
   with tfe.Session() as sess:

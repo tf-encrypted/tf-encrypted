@@ -6,11 +6,11 @@ helper."""
 from __future__ import absolute_import
 from typing import Tuple, List, Union, Optional, Any, NewType, Callable
 import abc
-import sys
+from functools import reduce, wraps
 import logging
 from math import log2, ceil
 import random
-from functools import reduce
+import sys
 
 import numpy as np
 import tensorflow as tf
@@ -439,13 +439,111 @@ class Pond(Protocol):
         raise TypeError(("Don't know how to handle inputs "
                          "of type {}").format(type(inputs)))
 
+  def local_computation(
+      self,
+      player_name=None,
+      **kwargs
+  ):
+    """Annotate a function `compute_func` for local computation.
+
+    This decorator can be used to pin a function's code to a specific player's
+    device for remote execution.  This is useful when defining player-specific
+    handlers for e.g. providing model weights, or input and output tensors.
+
+    The decorator can handle global functions, normal object methods, or
+    classmethods. If wrapping a method, it's presumed that the method's object
+    has an attribute named `player_name`, or that the user will provide the
+    `player_name` later on as a kwarg to the `compute_func`.
+
+    Example:
+      ```
+      @tfe.local_computation('input-provider')
+      def provide_input():
+        return tf.random.normal((3, 3))
+
+      @tfe.local_computation
+      def receive_output(logits):
+        return tf.print(tf.argmax(logits, axis=-1))
+
+      x = provide_input()
+      y = model(x)
+      receive_op = receive_output(y, player_name='output-receiver')
+      with tfe.Session():
+        sess.run(receive_op)
+      ```
+
+    Arguments:
+      player_name: Name of the player who should execute the function.
+      kwargs: Keyword arguments to use when encoding or encrypting
+        inputs/outputs to compute_func: see tfe.define_local_computation for
+        details.
+
+    Returns:
+      The compute_func, but decorated for remote execution.
+    """
+    if callable(player_name):
+      # The user has called us as a standard decorator:
+      #
+      # @tfe.local_computation
+      # def provide_input():
+      #   return tf.zeros((2, 2))
+      actual_compute_func = player_name
+      player_name = None
+    else:
+      # The user has called us as a function, maybe with non-default args:
+      #
+      # @tfe.local_computation('input-provider')
+      # def provide_input():
+      #   return tf.zeros((2, 2))
+      actual_compute_func = None
+
+    def decorator(compute_func):
+
+      @wraps(compute_func)
+      def compute_func_wrapper(*compute_func_args, **compute_func_kwargs):
+
+        # Assumer user has passed player_name to decorator. If not, try to recover.
+        actual_player_name = player_name
+        if actual_player_name is None:
+          # Maybe user has passed player_name to compute_func as a kwarg
+          actual_player_name = compute_func_kwargs.get("player_name", None)
+        if actual_player_name is None:
+          # Assume compute_func is a method and its instance has some attribute
+          # 'player_name'
+          if compute_func_args:
+            parent_instance = compute_func_args[0]
+            actual_player_name = getattr(parent_instance, 'player_name', None)
+        if actual_player_name is None:
+          # Fallback to error
+          raise ValueError("'player_name' not provided. Please provide "
+                           "'player_name' as a keyword argument to this "
+                           "function, or as an argument to the "
+                           "tfe.local_computation decorator.")
+
+        return self.define_local_computation(
+            actual_player_name,
+            compute_func,
+            arguments=compute_func_args,
+            **kwargs,
+        )
+
+      return compute_func_wrapper
+
+    if actual_compute_func is None:
+      # User has not yet passed a compute_func, so we'll expect them to
+      # pass it outside of this function's scope (e.g. as a decorator).
+      return decorator
+
+    # User has already passed a compute_func, so return the decorated version.
+    return decorator(actual_compute_func)
+
   def define_local_computation(
       self,
       player,
       computation_fn,
       arguments=None,
       apply_scaling=True,
-      name=None,
+      name_scope=None,
       masked=False,
       factory=None,
   ):
@@ -455,7 +553,7 @@ class Pond(Protocol):
     :param player: Who performs the computation and gets to see the values in
         plaintext.
     :param apply_scaling: Whether or not to scale the outputs.
-    :param name: Optional name to give to this node in the graph.
+    :param name_scope: Optional name to give to this node in the graph.
     :param masked: Whether or not to produce masked outputs.
     :param factory: Backing tensor type to use for outputs.
     """  # noqa:E501
@@ -469,7 +567,7 @@ class Pond(Protocol):
     def share_output(v: tf.Tensor):
       assert v.shape.is_fully_defined(), ("Shape of return value '{}' on '{}' "
                                           "not fully defined").format(
-                                              name if name else "",
+                                              name_scope if name_scope else "",
                                               player.name,
                                           )
 
@@ -488,7 +586,7 @@ class Pond(Protocol):
 
     def reconstruct_input(x):
 
-      if isinstance(x, tf.Tensor):
+      if not isinstance(x, (AbstractTensor, PondTensor)):
         return x
 
       if isinstance(x, PondPublicTensor):
@@ -511,7 +609,7 @@ class Pond(Protocol):
       raise TypeError(("Don't know how to process input argument "
                        "of type {}").format(type(x)))
 
-    with tf.name_scope(name if name else "local-computation"):
+    with tf.name_scope(name_scope if name_scope else "local-computation"):
 
       with tf.device(player.device_name):
         if arguments is None:
@@ -520,7 +618,8 @@ class Pond(Protocol):
           if not isinstance(arguments, (list, tuple)):
             arguments = [arguments]
 
-          inputs = [reconstruct_input(x) for x in arguments]
+          inputs = tf.contrib.framework.nest.map_structure(
+              reconstruct_input, arguments)
 
         outputs = computation_fn(*inputs)
 
@@ -541,7 +640,7 @@ class Pond(Protocol):
       player,
       inputter_fn,
       apply_scaling: bool = True,
-      name: Optional[str] = None,
+      name_scope: Optional[str] = None,
       masked: bool = False,
       factory: Optional[AbstractFactory] = None,
   ):
@@ -553,19 +652,17 @@ class Pond(Protocol):
 
     :param Union[str,Player] player: Which player owns this input.
     :param bool apply_scaling: Whether or not to scale the value.
-    :param str name: What name to give to this node in the graph.
+    :param str name_scope: What name to give to this node in the graph.
     :param bool masked: Whether or not to mask the input.
     :param AbstractFactory factory: Which backing type to use for this input
         (e.g. `int100` or `int64`).
     """
-    suffix = "-" + name if name else ""
-
     return self.define_local_computation(
         player=player,
         computation_fn=inputter_fn,
         arguments=[],
         apply_scaling=apply_scaling,
-        name="private-input{}".format(suffix),
+        name_scope=name_scope if name_scope else "private-input",
         masked=masked,
         factory=factory,
     )
@@ -575,7 +672,7 @@ class Pond(Protocol):
       player,
       arguments,
       outputter_fn,
-      name=None,
+      name_scope=None,
   ):
     """
     Define an output for this graph.
@@ -585,15 +682,15 @@ class Pond(Protocol):
 
     def result_wrapper(*args):
       op = outputter_fn(*args)
-      # wrap in tf.group to prevent sending back any tensors (which might hence
-      # be leaked)
+      # wrap in tf.group to prevent sending back any tensors
+      # (which might hence be leaked)
       return tf.group(op)
 
     return self.define_local_computation(
         player=player,
         computation_fn=result_wrapper,
         arguments=arguments,
-        name="output{}".format("-" + name if name else ""),
+        name_scope=name_scope if name_scope else "output",
     )
 
   @property
@@ -2014,7 +2111,7 @@ class PondPrivateVariable(PondPrivateTensor):
     assert variable0.shape == variable1.shape
 
     super(PondPrivateVariable, self).__init__(
-        prot, variable0, variable1, is_scaled
+        prot, variable0, variable1, is_scaled,
     )
     self.variable0 = variable0
     self.variable1 = variable1
