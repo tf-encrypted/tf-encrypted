@@ -10,9 +10,6 @@ from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import InputLayer, Input
 
 
-logging.basicConfig()
-logger = logging.getLogger('tf_encrypted')
-
 class Sequential(Layer):
   """Model defined by a stack of layers in sequence.
 
@@ -136,7 +133,7 @@ class Sequential(Layer):
 
   def fit(self, x, y, epochs=1, steps_per_epoch=1):
     for e in range(epochs):
-      logger.info('Epoch %i/%i', e + 1, epochs)
+      print('Epoch {}/{}'.format(e + 1, epochs))
       batch_size = x.shape.as_list()[0]
       progbar = utils.Progbar(batch_size * steps_per_epoch)
       for _ in range(steps_per_epoch):

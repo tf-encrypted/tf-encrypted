@@ -1,7 +1,8 @@
 """Provide classes to perform private training and private prediction with
 logistic regression"""
+
 import tensorflow as tf
-# pylint:  disable=redefined-outer-name
+import tf_encrypted as tfe
 
 
 class DataOwner:
@@ -26,6 +27,7 @@ class DataOwner:
   def initializer(self):
     return tf.group(self.train_initializer, self.test_initializer)
 
+  @tfe.local_computation
   def provide_training_data(self):
     """Preprocess training dataset
 
@@ -56,6 +58,7 @@ class DataOwner:
 
     return x, y
 
+  @tfe.local_computation
   def provide_testing_data(self):
     """Preprocess testing dataset
 
@@ -83,12 +86,3 @@ class DataOwner:
     y = tf.reshape(y, [self.test_set_size, 1])
 
     return x, y
-
-
-class ModelOwner:
-  """Contains code meant to be executed by a model owner Player."""
-  def __init__(self, player_name):
-    self.player_name = player_name
-
-  def receive_weights(self, *weights):
-    return tf.print("Weights on {}:".format(self.player_name), weights)
