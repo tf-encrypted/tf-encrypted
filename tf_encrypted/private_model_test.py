@@ -63,7 +63,7 @@ class TestSecureModel(unittest.TestCase):
 
       d = tf.keras.layers.Dense(1, input_shape=(10,), use_bias=False)
       model = tf.keras.Sequential([
-        d
+          d
       ])
 
       x = np.ones((2, 10))
