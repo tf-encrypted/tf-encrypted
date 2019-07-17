@@ -11,7 +11,7 @@ from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 from tensorflow.keras import backend as K
-from tensorflow.keras.layers import Flatten, Conv2D, Dense
+from tensorflow.keras.layers import Flatten, Conv2D, Dense, DepthwiseConv2D
 from tensorflow.keras.models import Sequential
 
 import tf_encrypted as tfe
@@ -265,6 +265,11 @@ class TestConvert(unittest.TestCase):
     test_input = np.ones([1, 8, 8, 1])
     self._test_with_ndarray_input_fn(
         'keras_conv2d', test_input, protocol='Pond')
+
+  def test_keras_depthwise_conv2d_convert(self):
+    test_input = np.ones([1, 8, 8, 1])
+    self._test_with_ndarray_input_fn(
+      'keras_depthwise_conv2d', test_input, protocol='Pond')
 
   def test_keras_dense_convert(self):
     test_input = np.ones([2, 10])
@@ -838,6 +843,37 @@ def _keras_conv2d_core(shape=None, data=None):
 
   model = Sequential()
   c2d = Conv2D(2, (3, 3),
+               data_format="channels_last",
+               use_bias=False,
+               input_shape=shape[1:])
+  model.add(c2d)
+
+  if data is None:
+    data = np.random.uniform(size=shape)
+  out = model.predict(data)
+  return model, out
+
+
+def export_keras_depthwise_conv2d(filename, input_shape):
+  model, _ = _keras_depthwise_conv2d_core(shape=input_shape)
+
+  sess = K.get_session()
+  output = model.get_layer('depthwise_conv2d').output
+  return export(output, filename, sess=sess)
+
+
+def run_keras_depthwise_conv2d(data):
+  _, out = _keras_depthwise_conv2d_core(data=data)
+  return out
+
+
+def _keras_depthwise_conv2d_core(shape=None, data=None):
+  assert shape is None or data is None
+  if shape is None:
+    shape = data.shape
+
+  model = Sequential()
+  c2d = DepthwiseConv2D((3, 3),
                data_format="channels_last",
                use_bias=False,
                input_shape=shape[1:])

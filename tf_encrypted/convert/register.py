@@ -10,7 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
-from ..keras.layers import BatchNormalization
+from ..keras.layers import BatchNormalization, DepthwiseConv2D
 from ..protocol.pond import PondPrivateTensor, PondMaskedTensor
 
 
@@ -53,6 +53,7 @@ def registry():
       "GatherV2": _gather,
       "dense": _keras_dense,
       "batch_normalization_v1": _keras_batchnorm,
+      "depthwise_conv2d": _keras_depthwise_conv2d,
   }
 
   return reg
@@ -176,6 +177,43 @@ def _keras_conv2d(converter, interiors, inputs):
   out = layer.forward(x_in)
 
   return out
+
+def _keras_depthwise_conv2d(converter, interiors, inputs):
+  x_in = converter.outputs[inputs[0]]
+
+  conv_op = interiors["depthwise"]
+
+  kernel = interiors["depthwise_kernel"]
+  k = _nodef_to_numpy_array(kernel)
+  kernel_init = tf.keras.initializers.Constant(k)
+
+  try:
+    bias = interiors["bias"]
+    b = _nodef_to_numpy_array(bias)
+    bias_init = tf.keras.initializers.Constant(b)
+    use_bias = True
+  except KeyError:
+    use_bias = False
+    bias_init = 'zeros'
+
+  shape = [i.size for i in kernel.attr["value"].tensor.tensor_shape.dim]
+
+  fmt = conv_op.attr["data_format"].s.decode('ascii')
+  fmt = "channels_last" if fmt == "NHWC" else "channels_first"
+
+  strides = int(max(conv_op.attr["strides"].list.i))
+  padding = conv_op.attr["padding"].s.decode('ascii')
+
+  layer = DepthwiseConv2D(kernel_size=(shape[0], shape[1]),
+                          strides=strides,
+                          padding=padding,
+                          depth_multiplier=1,
+                          data_format=fmt,
+                          use_bias=use_bias,
+                          depthwise_initializer=kernel_init,
+                          bias_initializer=bias_init)
+
+  return layer(x_in)
 
 
 def _keras_dense(converter, interiors, inputs):
