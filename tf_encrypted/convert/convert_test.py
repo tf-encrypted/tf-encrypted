@@ -269,7 +269,7 @@ class TestConvert(unittest.TestCase):
   def test_keras_depthwise_conv2d_convert(self):
     test_input = np.ones([1, 8, 8, 1])
     self._test_with_ndarray_input_fn(
-      'keras_depthwise_conv2d', test_input, protocol='Pond')
+        'keras_depthwise_conv2d', test_input, protocol='Pond')
 
   def test_keras_dense_convert(self):
     test_input = np.ones([2, 10])
@@ -874,9 +874,9 @@ def _keras_depthwise_conv2d_core(shape=None, data=None):
 
   model = Sequential()
   c2d = DepthwiseConv2D((3, 3),
-               data_format="channels_last",
-               use_bias=False,
-               input_shape=shape[1:])
+                        data_format="channels_last",
+                        use_bias=False,
+                        input_shape=shape[1:])
   model.add(c2d)
 
   if data is None:
