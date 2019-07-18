@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.7]
+
+**Added**
+
+- `tfe.local_computation` decorator, which is now the preferred way for providing inputs/outputs to a secure computation in TFE. All of the examples have been updated with example usage.
+- `tfe.keras.layers.DepthwiseConv2D` -- converter support for the layer will land in the next release.
+- More ops supported by the converter, including `SplitV` and `tf.keras.layers.BatchNormalization`
+- `set_weights` for tfe.keras models and layers now accepts private variables as well as numpy arrays.
+- `secure_model` now supports batch predictions.
+
+**Changed**
+
+- Examples now use the tfe.keras API for building models instead of lower level tfe Ops.
+- Documentation is now generated from Google-style docstrings. As a result, we are only building docs for the tfe.keras API. Docstrings for other modules will be converted to Google-style and published progressively.
+
+**Fixed**
+- `tfe.keras` layers will now check to see if defaults have been changed from their originals in tf.keras, and surface errors whenever modified kwargs aren't supported. Some layers were failing to instantiate because these checks were too specific.
+
 ## [0.5.6]
 
 **Added**
@@ -24,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A bug in `tfe.keras.layers.Batchnorm` where the `offset` and `scale` conditions where inverted
 - A bug in `tfe.convert` where ops with multiple outputs where not handled properly
-- A bug in `tfe.convert` where it couldnt't convert a model correctly when there was more than 
+- A bug in `tfe.convert` where it couldnt't convert a model correctly when there was more than
 one special ops in the graph
 
 ## [0.5.5]
