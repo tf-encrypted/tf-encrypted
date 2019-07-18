@@ -11,7 +11,7 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import tf_encrypted as tfe
 
-from examples.mnist.convert import get_data_from_tfrecord
+from conv_convert import get_data_from_tfrecord
 
 if len(sys.argv) >= 2:
   # config file was specified

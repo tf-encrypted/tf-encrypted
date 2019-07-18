@@ -4,6 +4,8 @@
 # - https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/how_tos/reading_data/convert_to_records.py
 # - https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/how_tos/reading_data/fully_connected_reader.py
 #
+from functools import partial
+
 import tensorflow as tf
 
 
@@ -13,10 +15,11 @@ def encode_image(value):
   return tf.train.Feature(bytes_list=bytes_list)
 
 
-def decode_image(value):
+def decode_image(value, flattened):
   """Decode the image from a tf.train.Feature in a TFRecord."""
   image = tf.decode_raw(value, tf.uint8)
-  image = tf.reshape(image, (1, 28, 28))
+  if not flattened:
+    image = tf.reshape(image, (1, 28, 28))
   return image
 
 
@@ -37,13 +40,13 @@ def encode(image, label):
   return tf.train.Example(features=features)
 
 
-def decode(serialized_example):
+def decode(serialized_example, flattened):
   """Decode an instance from a tf.train.Example in a TFRecord."""
   features = tf.parse_single_example(serialized_example, features={
       'image': tf.FixedLenFeature([], tf.string),
       'label': tf.FixedLenFeature([], tf.int64)
   })
-  image = decode_image(features['image'])
+  image = decode_image(features['image'], flattened)
   label = decode_label(features['label'])
   return image, label
 
@@ -55,10 +58,11 @@ def normalize(image, label):
   return image, label
 
 
-def get_data_from_tfrecord(filename, batch_size: int):
+def get_data_from_tfrecord(filename, batch_size: int, flattened=False):
   """Construct a TFRecordDataset iterator."""
+  decoder = partial(decode, flattened=flattened)
   return tf.data.TFRecordDataset([filename]) \
-                .map(decode) \
+                .map(decoder) \
                 .map(normalize) \
                 .repeat() \
                 .batch(batch_size) \
