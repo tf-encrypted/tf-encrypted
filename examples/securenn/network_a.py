@@ -11,7 +11,7 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import tf_encrypted as tfe
 
-from examples.mnist.convert import get_data_from_tfrecord
+from conv_convert import get_data_from_tfrecord
 
 # tfe.set_tfe_events_flag(True)
 
@@ -127,7 +127,7 @@ class ModelTrainer():
   def provide_input(self) -> List[tf.Tensor]:
     with tf.name_scope('loading'):
       training_data = get_data_from_tfrecord(
-          "./data/train.tfrecord", self.BATCH_SIZE)
+          "./data/train.tfrecord", self.BATCH_SIZE, flattened=True)
 
     with tf.name_scope('training'):
       parameters = self.build_training_graph(training_data)
@@ -151,7 +151,7 @@ class PredictionClient():
     """Prepare input data for prediction."""
     with tf.name_scope('loading'):
       prediction_input, expected_result = get_data_from_tfrecord(
-          "./data/test.tfrecord", self.BATCH_SIZE).get_next()
+          "./data/test.tfrecord", self.BATCH_SIZE, flattened=True).get_next()
 
     with tf.name_scope('pre-processing'):
       prediction_input = tf.reshape(
