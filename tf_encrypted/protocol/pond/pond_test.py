@@ -10,6 +10,21 @@ from tf_encrypted.tensor import int64factory, int100factory, native_factory
 from tf_encrypted.tensor import fixed100, fixed100_ni
 
 
+class TestPond(unittest.TestCase):
+
+  def test_encode(self):
+
+    with tf.Graph().as_default():
+      prot = tfe.protocol.Pond()
+
+      expected = np.array([1234567.9875])
+      x = prot.define_constant(expected)
+
+      with tfe.Session() as sess:
+        actual = sess.run(x)
+        np.testing.assert_array_almost_equal(actual, expected, decimal=3)
+
+
 class TestTruncate(unittest.TestCase):
   def setUp(self):
     tf.reset_default_graph()
