@@ -286,7 +286,7 @@ def match_numbered_scope(specop, search_string, return_group=True):
 
   Example: 'conv2d' will match '...conv2d_345/...' and return 'conv2d_345'.
   """
-  expr = '({0})/|({0}_[0-9]+)/'.format(specop)
+  expr = '(^{0})/|(^{0}_[0-9]+)/'.format(specop)
   match = re.search(expr, search_string)
   if match is not None:
     if not return_group:
@@ -303,7 +303,7 @@ def match_numbered_leaf(leaf_to_match, search_string):
 
   Example: 'Conv2D' will match '.../Conv2D_5' and return 'Conv2D_5'
   """
-  expr = '/({0})|/({0}_[0-9]+)'.format(leaf_to_match)
+  expr = '/({0}$)|/({0}_[0-9]+$)'.format(leaf_to_match)
   match = re.search(expr, search_string)
   if match is not None:
     return match.group(1)
