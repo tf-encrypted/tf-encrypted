@@ -327,5 +327,7 @@ clean:
 	rm -f $(LIBSODIUM_VER_TAG).tar.gz
 	find ./tf_encrypted/operations -name '*.so' -delete
 
+clean-pycache:
+	find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
 
-.PHONY: clean
+.PHONY: clean clean-pycache
