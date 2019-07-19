@@ -64,7 +64,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
     def crt_recombine_explicit(x, bound):
 
       big_b = MODULUS % bound
-      b = [(MODULUS // mi) % bound for mi in MODULI]
+      b = [np.array([(MODULUS // mi) % bound], dtype=np.int64) for mi in MODULI]
 
       with tf.name_scope('crt_recombine_explicit'):
 

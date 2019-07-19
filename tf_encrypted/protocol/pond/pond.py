@@ -722,7 +722,7 @@ class Pond(Protocol):
       # and then we round to integers
 
       if isinstance(scaled, np.ndarray):
-        integers = scaled.astype(int).astype(object)
+        integers = scaled.astype(np.int64)
 
       elif isinstance(scaled, tf.Tensor):
         tf_int_type = tf_int_type or (scaled.dtype
