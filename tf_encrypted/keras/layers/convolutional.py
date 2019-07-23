@@ -194,7 +194,7 @@ class Conv2D(Layer):
     return [n_x, n_filters, h_out, w_out]
 
 
-class DepthwiseConv2D(Layer):
+class DepthwiseConv2D(Conv2D):
   """Depthwise separable 2D convolution.
 
   Depthwise Separable convolutions consists in performing
@@ -275,7 +275,18 @@ class DepthwiseConv2D(Layer):
                bias_constraint=None,
                **kwargs):
 
-    super(DepthwiseConv2D, self).__init__(**kwargs)
+    super(DepthwiseConv2D, self).__init__(
+        filters=None,
+        kernel_size=kernel_size,
+        strides=strides,
+        padding=padding,
+        data_format=data_format,
+        activation=activation,
+        use_bias=use_bias,
+        bias_regularizer=bias_regularizer,
+        activity_regularizer=activity_regularizer,
+        bias_constraint=bias_constraint,
+        **kwargs)
 
     self.rank = 2
     self.kernel_size = conv_utils.normalize_tuple(
