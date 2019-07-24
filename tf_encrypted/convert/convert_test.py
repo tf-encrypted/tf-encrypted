@@ -85,6 +85,41 @@ class TestConvert(unittest.TestCase):
         np.testing.assert_array_almost_equal(o_i, a_i, decimal=decimals)
 
   @staticmethod
+  def _assert_unsuccessful_conversion(
+      prot,
+      graph_def,
+      actual,
+      *input_fns,
+      decimals=3,
+      **kwargs  # pylint: disable=unused-argument
+  ):
+    prot.clear_initializers()
+    converter = Converter(
+        registry(),
+        config=tfe.get_config(),
+        protocol=prot,
+        model_provider='model-provider',
+    )
+
+    x = converter.convert(graph_def, 'input-provider', list(input_fns))
+
+    with tfe.Session() as sess:
+      sess.run(tf.global_variables_initializer())
+      if not isinstance(x, (list, tuple)):
+        x = [x]
+        actual = [actual]
+      else:
+        assert isinstance(actual, (list, tuple)
+                          ), "expected output to be tensor sequence"
+      try:
+        output = sess.run([xi.reveal().decode() for xi in x], tag='reveal')
+      except AttributeError:
+        # assume all xi are all public
+        output = sess.run([xi for xi in x], tag='reveal')
+      for o_i, a_i in zip(output, actual):
+        np.testing.assert_array_almost_equal(o_i, a_i, decimal=decimals)
+
+  @staticmethod
   def _construct_conversion_test(op_name, *test_inputs, **kwargs):
     global _GLOBAL_FILENAME
     _GLOBAL_FILENAME = '{}.pb'.format(op_name)
@@ -105,6 +140,23 @@ class TestConvert(unittest.TestCase):
 
     return graph_def, actual, prot_class
 
+  @staticmethod
+  def _construct_empty_conversion_test(op_name, **kwargs):
+    global _GLOBAL_FILENAME
+    _GLOBAL_FILENAME = '{}.pb'.format(op_name)
+    open(_GLOBAL_FILENAME, "w+")
+    protocol = kwargs.pop('protocol')
+
+    path = _GLOBAL_FILENAME
+    tf.reset_default_graph()
+
+    graph_def = read_graph(path)
+    tf.reset_default_graph()
+
+    prot_class = getattr(tfe.protocol, protocol)
+
+    return graph_def, prot_class
+
   @classmethod
   def _test_with_ndarray_input_fn(
       cls,
@@ -124,6 +176,29 @@ class TestConvert(unittest.TestCase):
       input_fn = cls.ndarray_input_fn(test_input)
       cls._assert_successful_conversion(
           prot, graph_def, actual, input_fn, decimals=decimals, **kwargs)
+
+  def test_empty_model(self):
+    test_input = np.ones([1, 8, 8, 1])
+    graph_def, prot_class = self._construct_empty_conversion_test(
+        'empty_model',
+        protocol='SecureNN'
+    )
+    with prot_class() as prot:
+      input_fn = self.ndarray_input_fn(test_input)
+      prot.clear_initializers()
+      converter = Converter(
+          registry(),
+          config=tfe.get_config(),
+          protocol=prot,
+          model_provider='model-provider',
+      )
+      self.assertRaises(
+          ValueError,
+          converter.convert,
+          graph_def,
+          'input-provider',
+          input_fn
+      )
 
   def test_keras_multilayer(self):
     test_input = np.ones([1, 8, 8, 1])

@@ -57,6 +57,9 @@ class Converter:
       inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]] = None
   ) -> Any:
     """Convert a frozen GraphDef to a TFE Graph."""
+    if not graph_def.node:
+      raise ValueError("An empty model was passed to the converter.")
+
     if isinstance(input_player, str):
       input_player = get_config().get_player('input-provider')
     assert isinstance(input_player, Player)
