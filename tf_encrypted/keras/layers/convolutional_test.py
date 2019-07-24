@@ -42,9 +42,9 @@ class TestConv2d(unittest.TestCase):
     initializer = tf.keras.initializers.Constant(kernel)
 
     base_kwargs = {
-      "filters": filters,
-      "strides": 2,
-      "kernel_initializer": initializer,
+        "filters": filters,
+        "strides": 2,
+        "kernel_initializer": initializer,
     }
 
     kwargs = {**base_kwargs, **layer_kwargs}
@@ -93,8 +93,8 @@ class TestDepthwiseConv2d(unittest.TestCase):
     initializer = tf.keras.initializers.Constant(kernel)
 
     base_kwargs = {
-      "strides": 2,
-      "depthwise_initializer": initializer,
+        "strides": 2,
+        "depthwise_initializer": initializer,
     }
 
     kwargs = {**base_kwargs, **layer_kwargs}

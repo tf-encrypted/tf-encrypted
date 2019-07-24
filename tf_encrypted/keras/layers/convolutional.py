@@ -106,7 +106,7 @@ class Conv2D(Layer):
     self.rank = 2
     self.filters = filters
     self.kernel_size = conv_utils.normalize_tuple(
-      kernel_size, self.rank, 'kernel_size')
+        kernel_size, self.rank, 'kernel_size')
     if self.kernel_size[0] != self.kernel_size[1]:
       raise NotImplementedError("TF Encrypted currently only supports same "
                                 "stride along the height and the width."
@@ -279,21 +279,21 @@ class DepthwiseConv2D(Conv2D):
                **kwargs):
 
     super(DepthwiseConv2D, self).__init__(
-      filters=None,
-      kernel_size=kernel_size,
-      strides=strides,
-      padding=padding,
-      data_format=data_format,
-      activation=activation,
-      use_bias=use_bias,
-      bias_regularizer=bias_regularizer,
-      activity_regularizer=activity_regularizer,
-      bias_constraint=bias_constraint,
-      **kwargs)
+        filters=None,
+        kernel_size=kernel_size,
+        strides=strides,
+        padding=padding,
+        data_format=data_format,
+        activation=activation,
+        use_bias=use_bias,
+        bias_regularizer=bias_regularizer,
+        activity_regularizer=activity_regularizer,
+        bias_constraint=bias_constraint,
+        **kwargs)
 
     self.rank = 2
     self.kernel_size = conv_utils.normalize_tuple(
-      kernel_size, self.rank, 'kernel_size')
+        kernel_size, self.rank, 'kernel_size')
     if self.kernel_size[0] != self.kernel_size[1]:
       raise NotImplementedError("TF Encrypted currently only supports same "
                                 "stride along the height and the width."
@@ -337,7 +337,8 @@ class DepthwiseConv2D(Conv2D):
       raise ValueError('The channel dimension of the inputs '
                        'should be defined. Found `None`.')
     self.input_dim = int(input_shape[channel_axis])
-    self.kernel_shape = self.kernel_size + (self.input_dim, self.depth_multiplier)
+    self.kernel_shape = self.kernel_size + \
+                        (self.input_dim, self.depth_multiplier)
 
     kernel = self.depthwise_initializer(self.kernel_shape)
     kernel = self.rearrange_kernel(kernel)
@@ -355,7 +356,10 @@ class DepthwiseConv2D(Conv2D):
     self.built = True
 
   def rearrange_kernel(self, kernel):
-
+    """ Rearrange kernel to match normal convoluion kernels
+    Arguments:
+      kernel: kernel to be rearranged
+    """
     mask = self.get_mask(self.input_dim)
 
     if isinstance(kernel, tf.Tensor):
@@ -370,7 +374,7 @@ class DepthwiseConv2D(Conv2D):
         # rearrange kernel
         kernel = tf.transpose(kernel, [0, 1, 3, 2])
         kernel = tf.reshape(kernel, shape=self.kernel_size +
-                                          (self.input_dim * self.depth_multiplier, 1))
+                            (self.input_dim * self.depth_multiplier, 1))
 
       return tf.multiply(kernel, mask)
 
@@ -379,19 +383,19 @@ class DepthwiseConv2D(Conv2D):
         # rearrange kernel
         kernel = np.transpose(kernel, [0, 1, 3, 2])
         kernel = np.reshape(kernel, newshape=self.kernel_size +
-                                             (self.input_dim * self.depth_multiplier, 1))
+                            (self.input_dim * self.depth_multiplier, 1))
 
       return np.multiply(kernel, mask)
 
-    elif isinstance(kernel, PondPrivateTensor):
-      mask = tfe.define_public_variable(mask)
-      if self.depth_multiplier > 1:
-        # rearrange kernel
-        kernel = tfe.transpose(kernel, [0, 1, 3, 2])
-        kernel = tfe.reshape(kernel, shape=self.kernel_size +
-                                           (self.input_dim * self.depth_multiplier, 1))
+    #kernel is of type PondPrivateTensor
+    mask = tfe.define_public_variable(mask)
+    if self.depth_multiplier > 1:
+      # rearrange kernel
+      kernel = tfe.transpose(kernel, [0, 1, 3, 2])
+      kernel = tfe.reshape(kernel, shape=self.kernel_size +
+                           (self.input_dim * self.depth_multiplier, 1))
 
-      return tfe.mul(kernel, mask)
+    return tfe.mul(kernel, mask)
 
   def call(self, inputs):
 
