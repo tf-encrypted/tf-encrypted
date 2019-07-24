@@ -85,41 +85,6 @@ class TestConvert(unittest.TestCase):
         np.testing.assert_array_almost_equal(o_i, a_i, decimal=decimals)
 
   @staticmethod
-  def _assert_unsuccessful_conversion(
-      prot,
-      graph_def,
-      actual,
-      *input_fns,
-      decimals=3,
-      **kwargs  # pylint: disable=unused-argument
-  ):
-    prot.clear_initializers()
-    converter = Converter(
-        registry(),
-        config=tfe.get_config(),
-        protocol=prot,
-        model_provider='model-provider',
-    )
-
-    x = converter.convert(graph_def, 'input-provider', list(input_fns))
-
-    with tfe.Session() as sess:
-      sess.run(tf.global_variables_initializer())
-      if not isinstance(x, (list, tuple)):
-        x = [x]
-        actual = [actual]
-      else:
-        assert isinstance(actual, (list, tuple)
-                          ), "expected output to be tensor sequence"
-      try:
-        output = sess.run([xi.reveal().decode() for xi in x], tag='reveal')
-      except AttributeError:
-        # assume all xi are all public
-        output = sess.run([xi for xi in x], tag='reveal')
-      for o_i, a_i in zip(output, actual):
-        np.testing.assert_array_almost_equal(o_i, a_i, decimal=decimals)
-
-  @staticmethod
   def _construct_conversion_test(op_name, *test_inputs, **kwargs):
     global _GLOBAL_FILENAME
     _GLOBAL_FILENAME = '{}.pb'.format(op_name)
