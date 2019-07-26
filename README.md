@@ -13,6 +13,13 @@ TF Encrypted is available as a package on [PyPI](https://pypi.org/project/tf-enc
 ```bash
 pip3 install tf-encrypted
 ```
+Creating a conda environment to run TF Encrypted code can be done using:
+```
+conda create -n tfe python=3.6
+conda activate tfe
+conda install tensorflow notebook
+pip install tf-encrypted
+```
 
 Alternatively, installing from source can be done using:
 
