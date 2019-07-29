@@ -228,3 +228,39 @@ class GlobalAveragePooling2D(GlobalPooling2D):
 
     return x_reduced * self.scalar
 
+
+class GlobalMaxPooling2D(GlobalPooling2D):
+  """Global max pooling operation for spatial data.
+
+  Arguments:
+      data_format: A string,
+          one of `channels_last` (default) or `channels_first`.
+          The ordering of the dimensions in the inputs.
+          `channels_last` corresponds to inputs with shape
+          `(batch, height, width, channels)` while `channels_first`
+          corresponds to inputs with shape
+          `(batch, channels, height, width)`.
+          It defaults to the `image_data_format` value found in your
+          Keras config file at `~/.keras/keras.json`.
+          If you never set it, then it will be "channels_last".
+
+  Input shape:
+      - If `data_format='channels_last'`:
+          4D tensor with shape:
+          `(batch_size, rows, cols, channels)`
+      - If `data_format='channels_first'`:
+          4D tensor with shape:
+          `(batch_size, channels, rows, cols)`
+
+  Output shape:
+      2D tensor with shape:
+      `(batch_size, channels)`
+  """
+
+  def call(self, inputs):
+    if self.data_format == 'channels_last':
+      x_reduced = self.prot.reduce_max(inputs, axis=2)
+      return self.prot.reduce_max(x_reduced, axis=1)
+    else:
+      x_reduced = self.prot.reduce_max(inputs, axis=3)
+      return self.prot.reduce_max(x_reduced, axis=2)
