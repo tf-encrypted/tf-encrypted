@@ -1,6 +1,4 @@
 """Sequential model API."""
-import logging
-
 from tensorflow.keras import utils
 
 import tf_encrypted as tfe
