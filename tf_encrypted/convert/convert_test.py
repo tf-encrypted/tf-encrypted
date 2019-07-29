@@ -290,12 +290,12 @@ class TestConvert(unittest.TestCase):
   def test_keras_global_avgpool_convert(self):
     test_input = np.ones([1, 10, 10, 3])
     self._test_with_ndarray_input_fn(
-      'keras_global_avgpool', test_input, decimals=2, protocol='Pond')
+        'keras_global_avgpool', test_input, decimals=2, protocol='Pond')
 
   def test_keras_global_maxgpool_convert(self):
     test_input = np.ones([1, 10, 10, 3])
     self._test_with_ndarray_input_fn(
-      'keras_global_maxpool', test_input, protocol='SecureNN')
+        'keras_global_maxpool', test_input, protocol='SecureNN')
 
 def export_argmax(filename, input_shape, axis):
   pl = tf.placeholder(tf.float32, shape=input_shape)
@@ -1001,7 +1001,7 @@ def _keras_global_maxpool_core(shape=None, data=None):
 
   model = Sequential()
   layer = GlobalMaxPooling2D(input_shape=shape[1:],
-                                 data_format="channels_last")
+                             data_format="channels_last")
   model.add(layer)
 
   if data is None:
