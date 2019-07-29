@@ -11,7 +11,8 @@ from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 from tensorflow.keras import backend as K
-from tensorflow.keras.layers import Flatten, Conv2D, Dense, DepthwiseConv2D
+from tensorflow.keras.layers import Flatten, Conv2D, Dense, DepthwiseConv2D, \
+  GlobalAveragePooling2D
 from tensorflow.keras.models import Sequential
 
 import tf_encrypted as tfe
@@ -285,6 +286,11 @@ class TestConvert(unittest.TestCase):
     self._test_with_ndarray_input_fn('keras_batchnorm',
                                      test_input,
                                      protocol='Pond')
+
+  def test_keras_global_avgpool_convert(self):
+    test_input = np.ones([1, 10, 10, 3])
+    self._test_with_ndarray_input_fn(
+      'keras_global_avgpool', test_input, decimals=2, protocol='Pond')
 
 
 def export_argmax(filename, input_shape, axis):
@@ -935,6 +941,35 @@ def _keras_batchnorm_core(shape=None, data=None):
   model = Sequential()
   bn = tf.keras.layers.BatchNormalization(input_shape=shape[1:])
   model.add(bn)
+
+  if data is None:
+    data = np.random.uniform(size=shape)
+  out = model.predict(data)
+  return model, out
+
+
+def export_keras_global_avgpool(filename, input_shape):
+  model, _ = _keras_global_avgpool_core(shape=input_shape)
+
+  sess = K.get_session()
+  output = model.get_layer('global_average_pooling2d').output
+  return export(output, filename, sess=sess)
+
+
+def run_keras_global_avgpool(data):
+  _, out = _keras_global_avgpool_core(data=data)
+  return out
+
+
+def _keras_global_avgpool_core(shape=None, data=None):
+  assert shape is None or data is None
+  if shape is None:
+    shape = data.shape
+
+  model = Sequential()
+  layer = GlobalAveragePooling2D(input_shape=shape[1:],
+                                 data_format="channels_last")
+  model.add(layer)
 
   if data is None:
     data = np.random.uniform(size=shape)
