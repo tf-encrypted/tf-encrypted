@@ -262,7 +262,7 @@ class GlobalMaxPooling2D(GlobalPooling2D):
   def call(self, inputs):
     if self.data_format == 'channels_last':
       x_reduced = self.prot.reduce_max(inputs, axis=2)
-      x_reduced =  self.prot.reduce_max(x_reduced, axis=1)
+      x_reduced = self.prot.reduce_max(x_reduced, axis=1)
     else:
       x_reduced = self.prot.reduce_max(inputs, axis=3)
       x_reduced = self.prot.reduce_max(x_reduced, axis=2)
