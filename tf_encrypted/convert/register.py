@@ -10,7 +10,8 @@ import numpy as np
 import tensorflow as tf
 
 from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
-from ..keras.layers import BatchNormalization, DepthwiseConv2D, GlobalAveragePooling2D
+from ..keras.layers import BatchNormalization, DepthwiseConv2D, \
+  GlobalAveragePooling2D, GlobalMaxPooling2D
 from ..protocol.pond import PondPrivateTensor, PondMaskedTensor
 
 
@@ -55,6 +56,7 @@ def registry():
       "batch_normalization_v1": _keras_batchnorm,
       "depthwise_conv2d": _keras_depthwise_conv2d,
       "Mean": _global_avgpool,
+      "Max": _global_maxpool,
   }
 
   return reg
@@ -611,6 +613,22 @@ def _global_avgpool(converter, node: Any, inputs: List[str]) -> Any:
     data_format = 'channels_first'
 
   layer = GlobalAveragePooling2D(data_format=data_format)
+
+  return layer(x_in)
+
+
+def _global_maxpool(converter, node: Any, inputs: List[str]) -> Any:
+  x_in = converter.outputs[inputs[0]]
+
+  content = converter.outputs[inputs[1]].attr["value"].tensor.tensor_content
+  reduction_indices = array.array('i', content)
+
+  if reduction_indices == array.array('i', [1, 2]):
+    data_format = 'channels_last'
+  else:
+    data_format = 'channels_first'
+
+  layer = GlobalMaxPooling2D(data_format=data_format)
 
   return layer(x_in)
 
