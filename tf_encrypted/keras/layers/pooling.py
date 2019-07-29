@@ -178,9 +178,11 @@ class GlobalPooling2D(Layer):
 
   def compute_output_shape(self, input_shape):
     if self.data_format == 'channels_last':
-      return [input_shape[0], input_shape[3]]
+      output_shape = [input_shape[0], input_shape[3]]
     else:
-      return [input_shape[0], input_shape[1]]
+      output_shape = [input_shape[0], input_shape[1]]
+
+    return output_shape
 
   def call(self, inputs):
     raise NotImplementedError
@@ -260,7 +262,9 @@ class GlobalMaxPooling2D(GlobalPooling2D):
   def call(self, inputs):
     if self.data_format == 'channels_last':
       x_reduced = self.prot.reduce_max(inputs, axis=2)
-      return self.prot.reduce_max(x_reduced, axis=1)
+      x_reduced =  self.prot.reduce_max(x_reduced, axis=1)
     else:
       x_reduced = self.prot.reduce_max(inputs, axis=3)
-      return self.prot.reduce_max(x_reduced, axis=2)
+      x_reduced = self.prot.reduce_max(x_reduced, axis=2)
+
+    return x_reduced
