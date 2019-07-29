@@ -11,9 +11,9 @@ def sigmoid(x):
   """Computes sigmoid of x element-wise"""
   return get_protocol().sigmoid(x)
 
-def sigmoid_deriv(y):
+def sigmoid_deriv(y, d_y):
   """Computes derive sigmoid of y"""
-  return y * (get_protocol().negative(y) + 1)
+  return d_y * y * (get_protocol().negative(y) + 1)
 
 def tanh(x):
   """Computes tanh of x element-wise"""
@@ -40,11 +40,15 @@ def get_deriv(identifier):
   if identifier is None:
     return linear
   if callable(identifier):
-    return identifier
+    raise NotImplementedError('During training, please use a string '
+                              '(e.g "relu") to specify the activation '
+                              'function instead of calling directly '
+                              'the activation function.')
   if isinstance(identifier, str):
     activations = {"sigmoid": sigmoid_deriv}
     if identifier not in activations.keys():
-      return None
+      raise NotImplementedError('Activation function {} not yet implemented '
+                                'during training'.format(identifier))
     return activations[identifier]
 
   raise ValueError('Could not interpret '

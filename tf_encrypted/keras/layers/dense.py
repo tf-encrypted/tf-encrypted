@@ -55,7 +55,8 @@ class Dense(Layer):
     super(Dense, self).__init__(**kwargs)
 
     self.units = int(units)
-    self.activation = activations.get(activation)
+    self.activation_identifier = activation
+    self.activation = activations.get(self.activation_identifier)
     self.use_bias = use_bias
 
     self.kernel_initializer = initializers.get(kernel_initializer)
@@ -104,16 +105,24 @@ class Dense(Layer):
     else:
       outputs = inputs.matmul(self.kernel)
 
-    if self.activation is not None:
-      return self.activation(outputs)
+    if self.activation_identifier is not None:
+      outputs = self.activation(outputs)
+
+    self._layer_output = outputs
 
     return outputs
 
   def backward(self, d_y):
     """dense backward"""
     x = self._layer_input
+    y = self._layer_output
     kernel = self.weights[0]
     grad_weights = []
+
+    if self.activation_identifier is not None:
+      self._activation_deriv = activations.get_deriv(self.activation_identifier)
+      d_y = self._activation_deriv(y, d_y)
+
     d_x = d_y.matmul(kernel.transpose())
     d_weights = x.transpose().matmul(d_y)
     grad_weights.append(d_weights)
