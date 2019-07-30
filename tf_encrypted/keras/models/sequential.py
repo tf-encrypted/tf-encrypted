@@ -1,4 +1,5 @@
 """Sequential model API."""
+import tensorflow as tf
 from tensorflow.keras import utils
 
 import tf_encrypted as tfe
@@ -130,6 +131,13 @@ class Sequential(Layer):
     self._current_loss = sess.run(loss.reveal())
 
   def fit(self, x, y, epochs=1, steps_per_epoch=1):
+    """Trains the model for a given number of epochs
+    (iterations on a dataset)."""
+
+    # Initialize variables before starting to train
+    sess = KE.get_session()
+    sess.run(tf.global_variables_initializer())
+
     for e in range(epochs):
       print('Epoch {}/{}'.format(e + 1, epochs))
       batch_size = x.shape.as_list()[0]
