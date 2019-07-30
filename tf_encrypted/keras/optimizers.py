@@ -5,6 +5,11 @@ import tf_encrypted as tfe
 
 
 class SGD:
+  """Stochastic gradient descent optimizer.
+
+  Arguments:
+    lr: float >= 0. Learning rate.
+  """
   def __init__(self, lr=0.01):
     self.lr = lr
 

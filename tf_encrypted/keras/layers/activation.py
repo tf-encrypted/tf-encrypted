@@ -1,6 +1,7 @@
 """Activation Layer implementation."""
-from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
+from tf_encrypted.keras.engine import Layer
+
 
 class Activation(Layer):
   """Applies an activation function to an output.

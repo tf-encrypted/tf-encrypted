@@ -117,12 +117,24 @@ class Sequential(Layer):
       self._optimizer.apply_gradients(layer.weights, grad_weights)
 
   def compile(self, optimizer, loss):
+    """Configures the model for training.
+
+      Arguments:
+        optimizer: Optimizer instance
+        loss: Objective function
+    """
     self._optimizer = optimizers.get(optimizer)
     self._loss = loss
     assert self._optimizer is not None, "An optimizer must be specified."
     assert self._loss is not None, "A loss must be specified."
 
   def fit_batch(self, x, y):
+    """Trains the model on a single batch.
+
+    Arguments:
+      x: Private tensor of training data
+      y: Private tensor of target (label) data
+    """
     y_pred = self.call(x)
     dy = self._loss.grad(y, y_pred)
     self.backward(dy)
@@ -133,8 +145,15 @@ class Sequential(Layer):
 
   def fit(self, x, y, epochs=1, steps_per_epoch=1):
     """Trains the model for a given number of epochs
-    (iterations on a dataset)."""
+    (iterations on a dataset).
 
+    Arguments:
+      x: Private tensor of training data
+      y: Private tensor of target (label) data
+      epochs: Integer. Number of epochs to train the model.
+      steps_per_epoch: Integer. Total number of steps (batches of samples)
+        before declaring one epoch finished and starting the next epoch.
+    """
     assert isinstance(x, PondPrivateTensor), type(value)
     assert isinstance(y, PondPrivateTensor), type(value)
 
