@@ -7,6 +7,7 @@ from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras import optimizers
 from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import InputLayer, Input
+from tf_encrypted.protocol.pond import PondPrivateTensor
 
 
 class Sequential(Layer):
@@ -133,6 +134,9 @@ class Sequential(Layer):
   def fit(self, x, y, epochs=1, steps_per_epoch=1):
     """Trains the model for a given number of epochs
     (iterations on a dataset)."""
+
+    assert isinstance(x, PondPrivateTensor), type(value)
+    assert isinstance(y, PondPrivateTensor), type(value)
 
     # Initialize variables before starting to train
     sess = KE.get_session()
