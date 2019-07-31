@@ -55,8 +55,8 @@ def registry():
       "dense": _keras_dense,
       "batch_normalization_v1": _keras_batchnorm,
       "depthwise_conv2d": _keras_depthwise_conv2d,
-      "Mean": _global_avgpool,
-      "Max": _global_maxpool,
+      "Mean": _keras_global_avgpool,
+      "Max": _keras_global_maxpool,
   }
 
   return reg
@@ -601,7 +601,7 @@ def _avgpool(converter, node: Any, inputs: List[str]) -> Any:
 
   return out
 
-def _global_avgpool(converter, node: Any, inputs: List[str]) -> Any:
+def _keras_global_avgpool(converter, node: Any, inputs: List[str]) -> Any:
   x_in = converter.outputs[inputs[0]]
 
   content = converter.outputs[inputs[1]].attr["value"].tensor.tensor_content
@@ -617,7 +617,7 @@ def _global_avgpool(converter, node: Any, inputs: List[str]) -> Any:
   return layer(x_in)
 
 
-def _global_maxpool(converter, node: Any, inputs: List[str]) -> Any:
+def _keras_global_maxpool(converter, node: Any, inputs: List[str]) -> Any:
   x_in = converter.outputs[inputs[0]]
 
   content = converter.outputs[inputs[1]].attr["value"].tensor.tensor_content
