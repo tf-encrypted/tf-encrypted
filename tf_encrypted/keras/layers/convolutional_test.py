@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
+from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.testing_utils import agreement_test, layer_test
 
 np.random.seed(42)
@@ -75,6 +76,36 @@ class TestDepthwiseConv2d(unittest.TestCase):
 
   def test_depthwise_conv2d_depth_multiplier(self):
     self._core_depthwise_conv2d(kernel_size=2, depth_multiplier=2)
+
+  def test_depthwise_conv2d_set_weights(self):
+    input_shape = (1, 10, 10, 3)
+    input_data = np.random.normal(size=input_shape)
+
+    with tf.Session():
+      model = tf.keras.models.Sequential()
+
+      model.add(tf.keras.layers.DepthwiseConv2D(kernel_size=(2,2),
+                                                batch_input_shape=input_shape))
+
+      expected = model.predict(input_data)
+      k_weights = model.get_weights()
+      k_config = model.get_config()
+
+    with tfe.protocol.SecureNN():
+      x = tfe.define_private_input(
+        "inputter",
+        lambda: tf.convert_to_tensor(input_data))
+
+      tfe_model = tfe.keras.models.model_from_config(k_config)
+      tfe_model.set_weights(k_weights)
+      y = tfe_model(x)
+
+    with KE.get_session() as sess:
+      actual = sess.run(y.reveal())
+
+      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-2)
+
+    KE.clear_session()
 
   def _core_depthwise_conv2d(self, **layer_kwargs):
     filters_in = 3
