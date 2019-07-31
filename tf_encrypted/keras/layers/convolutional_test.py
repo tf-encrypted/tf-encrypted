@@ -84,7 +84,7 @@ class TestDepthwiseConv2d(unittest.TestCase):
     with tf.Session():
       model = tf.keras.models.Sequential()
 
-      model.add(tf.keras.layers.DepthwiseConv2D(kernel_size=(2,2),
+      model.add(tf.keras.layers.DepthwiseConv2D(kernel_size=(2, 2),
                                                 batch_input_shape=input_shape))
 
       expected = model.predict(input_data)
@@ -93,8 +93,8 @@ class TestDepthwiseConv2d(unittest.TestCase):
 
     with tfe.protocol.SecureNN():
       x = tfe.define_private_input(
-        "inputter",
-        lambda: tf.convert_to_tensor(input_data))
+          "inputter",
+          lambda: tf.convert_to_tensor(input_data))
 
       tfe_model = tfe.keras.models.model_from_config(k_config)
       tfe_model.set_weights(k_weights)
