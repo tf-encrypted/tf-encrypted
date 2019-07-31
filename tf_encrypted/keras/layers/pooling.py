@@ -1,4 +1,5 @@
 """Pooling Layer implementation."""
+from abc import abstractmethod
 from tensorflow.python.keras.utils import conv_utils
 
 from tf_encrypted.keras.engine import Layer
@@ -184,6 +185,7 @@ class GlobalPooling2D(Layer):
 
     return output_shape
 
+  @abstractmethod
   def call(self, inputs):
     raise NotImplementedError
 
