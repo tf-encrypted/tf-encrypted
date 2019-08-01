@@ -15,28 +15,33 @@ _SESSION = threading.local()
 def get_session(op_input_list=()):
   """Returns the session object for the current thread."""
   global _SESSION
-  if getattr(_SESSION, 'session', None) is not None:
-    return _SESSION.session
-  default_session = ops.get_default_session()
-  if default_session is not None:
-    # If the default session is a TFE Session return this session
-    if isinstance(default_session, tfe.Session()):
-      return default_session
-    if not isinstance(default_session, tfe.Session()):
-      raise TypeError(
-          'The default session should be a tfe.Session(). '
-          'You are probably trying to run this graph with '
-          'tf.Session() instead of tfe.Session()')
-  else:
-    if ops.inside_function():
-      raise RuntimeError('Cannot get session inside Tensorflow graph function.')
-      # If we don't have a session, or that session does not match the current
-      # graph, create and cache a new session.
-    if (getattr(_SESSION, 'session', None) is None or
-        _SESSION.session.graph is not _current_graph(op_input_list)):
-      _SESSION.session = tfe.Session()
-    session = _SESSION.session
-  return session
+
+  def valid_session(session):
+    if session is None:
+      return False
+    if not isinstance(session, tfe.Session):
+      return False
+    if session.graph is not _current_graph(op_input_list):
+      return False
+    return True
+
+  if ops.inside_function():
+    raise RuntimeError('Cannot get session inside Tensorflow graph function.')
+
+  # return any suitable session already specified
+  session = getattr(_SESSION, 'session', None)
+  if valid_session(session):
+    return session
+
+  # return default TF session if of right type
+  session = ops.get_default_session()
+  if valid_session(session):
+    return session
+
+  # we don't have a suitable session, create and cache a new one
+  _SESSION.session = tfe.Session()
+  assert valid_session(_SESSION.session)
+  return _SESSION.session
 
 
 def _current_graph(op_input_list):
