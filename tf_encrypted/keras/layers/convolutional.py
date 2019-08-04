@@ -6,9 +6,12 @@ import tensorflow as tf
 from tensorflow.python.keras import initializers
 from tensorflow.python.keras.utils import conv_utils
 
+import tf_encrypted as tfe
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
 from tf_encrypted.keras.layers.layers_utils import default_args_check
+from tf_encrypted.keras import backend as KE
+from tf_encrypted.protocol.pond import PondPrivateTensor
 
 logger = logging.getLogger('tf_encrypted')
 
@@ -194,7 +197,7 @@ class Conv2D(Layer):
     return [n_x, n_filters, h_out, w_out]
 
 
-class DepthwiseConv2D(Layer):
+class DepthwiseConv2D(Conv2D):
   """Depthwise separable 2D convolution.
 
   Depthwise Separable convolutions consists in performing
@@ -275,7 +278,18 @@ class DepthwiseConv2D(Layer):
                bias_constraint=None,
                **kwargs):
 
-    super(DepthwiseConv2D, self).__init__(**kwargs)
+    super(DepthwiseConv2D, self).__init__(
+        filters=None,
+        kernel_size=kernel_size,
+        strides=strides,
+        padding=padding,
+        data_format=data_format,
+        activation=activation,
+        use_bias=use_bias,
+        bias_regularizer=bias_regularizer,
+        activity_regularizer=activity_regularizer,
+        bias_constraint=bias_constraint,
+        **kwargs)
 
     self.rank = 2
     self.kernel_size = conv_utils.normalize_tuple(
@@ -322,36 +336,68 @@ class DepthwiseConv2D(Layer):
     if input_shape[channel_axis] is None:
       raise ValueError('The channel dimension of the inputs '
                        'should be defined. Found `None`.')
-    input_dim = int(input_shape[channel_axis])
-    self.kernel_shape = self.kernel_size + (input_dim, self.depth_multiplier)
+    self.input_dim = int(input_shape[channel_axis])
+    self.kernel_shape = self.kernel_size + \
+                        (self.input_dim, self.depth_multiplier)
 
     kernel = self.depthwise_initializer(self.kernel_shape)
-    mask = tf.constant(self.get_mask(input_dim).tolist(),
-                       dtype=tf.float32,
-                       shape=(self.kernel_size[0],
-                              self.kernel_size[1],
-                              input_dim * self.depth_multiplier,
-                              input_dim))
-
-    if self.depth_multiplier > 1:
-      # re-arange kernel
-      kernel = tf.transpose(kernel, [0, 1, 3, 2])
-      kernel = tf.reshape(kernel, shape=self.kernel_size +
-                          (input_dim * self.depth_multiplier, 1))
-
-    kernel = tf.multiply(kernel, mask)
+    kernel = self.rearrange_kernel(kernel)
     self.kernel = self.add_weight(kernel)
 
     if self.use_bias:
       # Expand bias shape dimensions. Bias needs to have
       # a rank of 3 to be added to the output
-      bias_shape = [input_dim * self.depth_multiplier, 1, 1]
+      bias_shape = [self.input_dim * self.depth_multiplier, 1, 1]
       bias = self.bias_initializer(bias_shape)
       self.bias = self.add_weight(bias)
     else:
       self.bias = None
 
     self.built = True
+
+  def rearrange_kernel(self, kernel):
+    """ Rearrange kernel to match normal convoluion kernels
+    Arguments:
+      kernel: kernel to be rearranged
+    """
+    mask = self.get_mask(self.input_dim)
+
+    if isinstance(kernel, tf.Tensor):
+      mask = tf.constant(mask.tolist(),
+                         dtype=tf.float32,
+                         shape=(self.kernel_size[0],
+                                self.kernel_size[1],
+                                self.input_dim * self.depth_multiplier,
+                                self.input_dim))
+
+      if self.depth_multiplier > 1:
+        # rearrange kernel
+        kernel = tf.transpose(kernel, [0, 1, 3, 2])
+        kernel = tf.reshape(kernel, shape=self.kernel_size +
+                            (self.input_dim * self.depth_multiplier, 1))
+
+      kernel = tf.multiply(kernel, mask)
+
+    elif isinstance(kernel, np.ndarray):
+      if self.depth_multiplier > 1:
+        # rearrange kernel
+        kernel = np.transpose(kernel, [0, 1, 3, 2])
+        kernel = np.reshape(kernel, newshape=self.kernel_size +
+                            (self.input_dim * self.depth_multiplier, 1))
+
+      kernel = np.multiply(kernel, mask)
+
+    elif isinstance(kernel, PondPrivateTensor):
+      mask = tfe.define_public_variable(mask)
+      if self.depth_multiplier > 1:
+        # rearrange kernel
+        kernel = tfe.transpose(kernel, [0, 1, 3, 2])
+        kernel = tfe.reshape(kernel, shape=self.kernel_size +
+                             (self.input_dim * self.depth_multiplier, 1))
+
+      kernel = tfe.mul(kernel, mask)
+
+    return kernel
 
   def call(self, inputs):
 
@@ -399,3 +445,49 @@ class DepthwiseConv2D(Layer):
       for i in range(in_channels):
         mask[:, :, i, i + (d * in_channels)] = 1.
     return np.transpose(mask, [0, 1, 3, 2])
+
+  def set_weights(self, weights, sess=None):
+    """ Sets the weights of the layer.
+    Arguments:
+      weights: A list of Numpy arrays with shapes and types
+          matching the output of layer.get_weights() or a list
+          of private variables
+      sess: tfe session"""
+
+    weights_types = (np.ndarray, PondPrivateTensor)
+    assert isinstance(weights[0], weights_types), type(weights[0])
+
+    # Assign new keras weights to existing weights defined by
+    # default when tfe layer was instantiated
+    if not sess:
+      sess = KE.get_session()
+
+    if isinstance(weights[0], np.ndarray):
+      for i, w in enumerate(self.weights):
+        shape = w.shape.as_list()
+        tfe_weights_pl = tfe.define_private_placeholder(shape)
+
+        new_weight = weights[i]
+        if i == 0:
+          # kernel
+          new_weight = self.rearrange_kernel(new_weight)
+        else:
+          # bias
+          new_weight = new_weight.reshape(shape)
+
+        fd = tfe_weights_pl.feed(new_weight)
+        sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
+
+    elif isinstance(weights[0], PondPrivateTensor):
+      for i, w in enumerate(self.weights):
+        shape = w.shape.as_list()
+
+        new_weight = weights[i]
+        if i == 0:
+          # kernel
+          new_weight = self.rearrange_kernel(new_weight)
+        else:
+          # bias
+          new_weight = new_weight.reshape(shape)
+
+        sess.run(tfe.assign(w, new_weight))
