@@ -1,4 +1,5 @@
 """Pooling Layer implementation."""
+from abc import abstractmethod
 from tensorflow.python.keras.utils import conv_utils
 
 from tf_encrypted.keras.engine import Layer
@@ -167,3 +168,105 @@ class AveragePooling2D(Pooling2D):
         self.prot.avgpool2d,
         pool_size=pool_size, strides=strides,
         padding=padding, data_format=data_format, **kwargs)
+
+class GlobalPooling2D(Layer):
+  """Abstract class for different global pooling 2D layers.
+  """
+
+  def __init__(self, data_format=None, **kwargs):
+    super(GlobalPooling2D, self).__init__(**kwargs)
+    self.data_format = conv_utils.normalize_data_format(data_format)
+
+  def compute_output_shape(self, input_shape):
+    if self.data_format == 'channels_last':
+      output_shape = [input_shape[0], input_shape[3]]
+    else:
+      output_shape = [input_shape[0], input_shape[1]]
+
+    return output_shape
+
+  @abstractmethod
+  def call(self, inputs):
+    raise NotImplementedError
+
+class GlobalAveragePooling2D(GlobalPooling2D):
+  """Global average pooling operation for spatial data.
+
+  Arguments:
+      data_format: A string,
+          one of `channels_last` (default) or `channels_first`.
+          The ordering of the dimensions in the inputs.
+          `channels_last` corresponds to inputs with shape
+          `(batch, height, width, channels)` while `channels_first`
+          corresponds to inputs with shape
+          `(batch, channels, height, width)`.
+          It defaults to the `image_data_format` value found in your
+          Keras config file at `~/.keras/keras.json`.
+          If you never set it, then it will be "channels_last".
+
+  Input shape:
+      - If `data_format='channels_last'`:
+          4D tensor with shape:
+          `(batch_size, rows, cols, channels)`
+      - If `data_format='channels_first'`:
+          4D tensor with shape:
+          `(batch_size, channels, rows, cols)`
+
+  Output shape:
+      2D tensor with shape:
+      `(batch_size, channels)`
+  """
+  def build(self, input_shape):
+    if self.data_format == 'channels_last':
+      _, h_in, w_in, _ = input_shape
+    else:
+      _, _, h_in, w_in = input_shape
+
+    self.scalar = 1 / int(h_in * w_in)
+
+  def call(self, inputs):
+    if self.data_format == 'channels_last':
+      x_reduced = inputs.reduce_sum(axis=2).reduce_sum(axis=1)
+    else:
+      x_reduced = inputs.reduce_sum(axis=3).reduce_sum(axis=2)
+
+    return x_reduced * self.scalar
+
+
+class GlobalMaxPooling2D(GlobalPooling2D):
+  """Global max pooling operation for spatial data.
+
+  Arguments:
+      data_format: A string,
+          one of `channels_last` (default) or `channels_first`.
+          The ordering of the dimensions in the inputs.
+          `channels_last` corresponds to inputs with shape
+          `(batch, height, width, channels)` while `channels_first`
+          corresponds to inputs with shape
+          `(batch, channels, height, width)`.
+          It defaults to the `image_data_format` value found in your
+          Keras config file at `~/.keras/keras.json`.
+          If you never set it, then it will be "channels_last".
+
+  Input shape:
+      - If `data_format='channels_last'`:
+          4D tensor with shape:
+          `(batch_size, rows, cols, channels)`
+      - If `data_format='channels_first'`:
+          4D tensor with shape:
+          `(batch_size, channels, rows, cols)`
+
+  Output shape:
+      2D tensor with shape:
+      `(batch_size, channels)`
+  """
+
+  def call(self, inputs):
+    if self.data_format == 'channels_last':
+      x_reduced = self.prot.reduce_max(inputs, axis=2)
+      x_reduced = self.prot.reduce_max(x_reduced, axis=1)
+    else:
+      x_reduced = self.prot.reduce_max(inputs, axis=3)
+      x_reduced = self.prot.reduce_max(x_reduced, axis=2)
+
+    return x_reduced
