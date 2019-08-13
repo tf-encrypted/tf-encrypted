@@ -94,7 +94,9 @@ class Converter:
         # Register high level special operations
         for s in specop_dict:
           # If this node is the output of the current specop, register it
-          if match_numbered_scope(s, node.name, return_group=False, not_numbered=True):
+          if match_numbered_scope(s, node.name,
+                                  return_group=False,
+                                  not_numbered=True):
             self._register_specop(node, specop_dict[s])
 
     return self.outputs[graph_def.node[-1].name]
@@ -284,7 +286,9 @@ def find_leaves(scope, subscope_map):
   return input_leaves, output_leaves
 
 
-def match_numbered_scope(specop, search_string, return_group=True, not_numbered=False):
+def match_numbered_scope(specop, search_string,
+                         return_group=True,
+                         not_numbered=False):
   """
   Find a numbered scope matching a specop from REGISTERED_SPECOPS,
   and return it if found
