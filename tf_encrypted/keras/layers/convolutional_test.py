@@ -8,7 +8,7 @@ import tf_encrypted as tfe
 from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.testing_utils import agreement_test, layer_test
 
-np.random.seed(42)
+np.random.seed(1242)
 
 
 class TestConv2d(unittest.TestCase):
