@@ -94,7 +94,7 @@ class Converter:
         # Register high level special operations
         for s in specop_dict:
           # If this node is the output of the current specop, register it
-          if match_numbered_scope(s, node.name, return_group=False):
+          if match_numbered_scope(s, node.name, return_group=False, not_numbered=True):
             self._register_specop(node, specop_dict[s])
 
     return self.outputs[graph_def.node[-1].name]
@@ -264,7 +264,12 @@ def find_leaves(scope, subscope_map):
   output_leaves = list(subscope_map.keys())
   for _, node in subscope_map.items():
     for inp in node.input:
-      if match_numbered_scope(scope, inp) is None:
+
+      if match_numbered_scope(scope, inp) is None \
+              and re.search('(.*/)*keras_learning_phase$', inp) is None:
+        # edge case - the keras_learning_phase node is an input to other
+        # batchnorm nodes, but is irrelevent to the converter
+        # and therefore can be ignored
         input_leaves.append(inp)
 
       if re.search(r':\d+$', inp) is not None:
@@ -279,21 +284,28 @@ def find_leaves(scope, subscope_map):
   return input_leaves, output_leaves
 
 
-def match_numbered_scope(specop, search_string, return_group=True):
+def match_numbered_scope(specop, search_string, return_group=True, not_numbered=False):
   """
   Find a numbered scope matching a specop from REGISTERED_SPECOPS,
   and return it if found
 
+  :param not_numbered: only match exact numbering  -
+  i.e. conv2d_1 will only match conv2d_1 and not conv2d etc.
+
   Example: 'conv2d' will match '...conv2d_345/...' and return 'conv2d_345'.
   """
-  expr = '(^{0})/|(^{0}_[0-9]+)/'.format(specop)
+  if not_numbered:
+    expr = '^(.*/)*({0})/'.format(specop)
+  else:
+    expr = '^(.*/)*({0})/|(^(.*/)*({0}_[0-9]+))/'.format(specop)
+
   match = re.search(expr, search_string)
   if match is not None:
     if not return_group:
       return match
-    if match.group(2) is not None:
-      return match.group(2)
-    return match.group(1)
+    for grp in reversed(match.groups()):
+      if grp is not None:
+        return grp
   return match
 
 
