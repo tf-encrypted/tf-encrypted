@@ -8,7 +8,7 @@ import tf_encrypted as tfe
 from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.testing_utils import agreement_test, layer_test
 
-np.random.seed(4325)
+np.random.seed(42)
 
 
 class TestConv2d(unittest.TestCase):
@@ -132,7 +132,7 @@ class TestDepthwiseConv2d(unittest.TestCase):
     agreement_test(tfe.keras.layers.DepthwiseConv2D,
                    kwargs=kwargs,
                    input_shape=input_shape,
-                   atol=1e-3)
+                   atol=1e-2)
     layer_test(tfe.keras.layers.DepthwiseConv2D,
                kwargs=kwargs,
                batch_input_shape=input_shape)
