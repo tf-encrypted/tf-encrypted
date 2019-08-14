@@ -1,3 +1,3 @@
-Bloom's protocol
+Bloom's method
 ==================================
 TODO
