@@ -132,7 +132,7 @@ class TestDepthwiseConv2d(unittest.TestCase):
     agreement_test(tfe.keras.layers.DepthwiseConv2D,
                    kwargs=kwargs,
                    input_shape=input_shape,
-                   atol=1e-3)
+                   atol=1e-2)
     layer_test(tfe.keras.layers.DepthwiseConv2D,
                kwargs=kwargs,
                batch_input_shape=input_shape)
