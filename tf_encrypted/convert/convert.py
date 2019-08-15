@@ -288,16 +288,19 @@ def find_leaves(scope, subscope_map):
 
 def match_numbered_scope(specop, search_string,
                          return_group=True,
-                         numbered=True
-                         ):
+                         numbered=True):
   """
   Find a numbered scope matching a specop from REGISTERED_SPECOPS,
   and return it if found.
     Example: 'conv2d' will match '...conv2d_345/...' and return 'conv2d_345'.
 
   Args:
+    specop: the specop to match.
+    search_string: the op name to search.
+    return group: if True, returns the last matching group, otherwise return
+        the match object.
     numbered: only match exact numbering  -
-            i.e. conv2d_1 will only match conv2d_1 and not conv2d etc.
+        i.e. conv2d_1 will only match conv2d_1 and not conv2d etc.
 
   """
   if numbered:
