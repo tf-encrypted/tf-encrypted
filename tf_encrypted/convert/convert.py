@@ -96,7 +96,7 @@ class Converter:
           # If this node is the output of the current specop, register it
           if match_numbered_scope(s, node.name,
                                   return_group=False,
-                                  not_numbered=True):
+                                  numbered=False):
             self._register_specop(node, specop_dict[s])
 
     return self.outputs[graph_def.node[-1].name]
@@ -288,20 +288,22 @@ def find_leaves(scope, subscope_map):
 
 def match_numbered_scope(specop, search_string,
                          return_group=True,
-                         not_numbered=False):
+                         numbered=True
+                         ):
   """
   Find a numbered scope matching a specop from REGISTERED_SPECOPS,
-  and return it if found
+  and return it if found.
+    Example: 'conv2d' will match '...conv2d_345/...' and return 'conv2d_345'.
 
-  :param not_numbered: only match exact numbering  -
-  i.e. conv2d_1 will only match conv2d_1 and not conv2d etc.
+  Args:
+    numbered: only match exact numbering  -
+            i.e. conv2d_1 will only match conv2d_1 and not conv2d etc.
 
-  Example: 'conv2d' will match '...conv2d_345/...' and return 'conv2d_345'.
   """
-  if not_numbered:
-    expr = '^(.*/)*({0})/'.format(specop)
-  else:
+  if numbered:
     expr = '^(.*/)*({0})/|(^(.*/)*({0}_[0-9]+))/'.format(specop)
+  else:
+    expr = '^(.*/)*({0})/'.format(specop)
 
   match = re.search(expr, search_string)
   if match is not None:
