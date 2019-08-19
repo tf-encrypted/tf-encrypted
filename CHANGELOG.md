@@ -6,6 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.8]
+
+**Added**
+
+- Converter support for DepthwiseConv2d layer
+- `tfe.keras.GlobalAveragePooling2D`: now support global average pooling operation for spatial data
+- `tfe.keras.GlobalMaxPooling2D`: now supports global max pooling operation for spatial data
+- Added training support basic models:
+  - Backpropagation for `tfe.keras.layers.dense` and sigmoid activation
+   - `tfe.keras.losses.BinaryCrossentropy`: now supports binary cross-entropy loss.
+   - `tfe.keras.optimizers.SGD`: now supports stochastic gradient descent optimizer. 
+   - Added `compile` method to `tfe.keras.models.Sequential` to configure the model for training.
+   - Added `fit` method to `tfe.keras.models.Sequential` to trains models for a given number of epochs.
+ - Bloom's example for fast linear regression
+ - Add example of Keras model training with differential privacy, combined with predictions on encrypted data.
+
+**Changed**
+
+- More detailed error message when raising error for unknown layer arguments.
+
+**Fixed**
+- Explicitly use int64 for numpy in Pond protocol because `int` is interpreted differently on Windows (32bits) and macOS (64 bits).
+- Converter raises exception when passing empty model.
+
 ## [0.5.7]
 
 **Added**
