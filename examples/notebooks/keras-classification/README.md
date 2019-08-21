@@ -1,6 +1,6 @@
 # Private Predictions with tfe.keras
 
-This directory contains a list of notebooks demonstrating how you train a model with tf.keras, then start serving private predictions with tfe.keras. 
+This directory contains a list of notebooks demonstrating how you train a model with tf.keras, then start serving private predictions with tfe.keras. This tutorial was originally created during the [TFE integration with PySyft](https://github.com/OpenMined/PySyft/tree/dev/examples/tutorials) and for the [Private AI](https://github.com/udacity/private-ai) course on Udacity.
 
 To start serving private predictions you can run the notebooks in the following order:
 - *a - Public Training without DP*
