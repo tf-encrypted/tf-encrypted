@@ -74,6 +74,7 @@ For more information, check out the [documentation](./docs/) or the [examples](.
 
 The following texts provide further in-depth presentations of the project:
 
+- [Encrypted Deep Learning Training and Predictions with TF Encrypted Keras](https://medium.com/dropoutlabs/encrypted-deep-learning-training-and-predictions-with-tf-encrypted-keras-557193284f44) introduces and illustrates first parts of our encrypted Keras interface
 - [Growing TF Encrypted](https://medium.com/dropoutlabs/growing-tf-encrypted-a1cb7b109ab5) outlines the roadmap and motivates why TF Encrypted is a community project
 - [Experimenting with TF Encrypted](https://medium.com/dropoutlabs/experimenting-with-tf-encrypted-fe37977ff03c) walks through a simple example of turning an existing TensorFlow prediction model private
 - [Private Machine Learning in TensorFlow using Secure Computation](https://arxiv.org/abs/1810.08130) further elaborates on the benefits of the approach, outlines the adaptation of a secure computation protocol, and reports on concrete performance numbers
