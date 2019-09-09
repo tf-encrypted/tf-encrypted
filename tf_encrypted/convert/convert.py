@@ -381,15 +381,13 @@ def find_output_names(graph_def, node_name, num_outputs):
   output_node = [None] * num_outputs
   node_name_list = list(graph_def.keys())
   n_i = node_name_list.index(node_name)
-  #
   # Forward lookahead from the node we want register
   for n in node_name_list[n_i + 1:]:
-
     if not n.startswith(node_name):
       gdf = graph_def[n]
       for x in gdf.input:
-
-        #we insert the names by their index, and not by the order of appearance in the graph
+        # we insert the names by their index,
+        # and not by the order of appearance in the graph
         if x.startswith(node_name):
           if ':' not in x:
             output_node[0] = x
