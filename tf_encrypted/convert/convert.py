@@ -82,8 +82,8 @@ class Converter:
     # Create a dictionary excluding all the sub ops related to required_space_to_batch_paddings
     # Except the sub ops related to the input or output of this special ops.
     pb_trimmed, graph_def = select_relevant_ops(specop_inputs,
-                                     specop_outputs,
-                                     graph_def)
+                                                specop_outputs,
+                                                graph_def)
     node_list = pb_trimmed.values()
 
     # If the ops are not related to the special ops, use the existing approach to register them.
