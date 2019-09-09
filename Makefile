@@ -48,6 +48,7 @@ endif
 endif
 
 bootstrap: pythoncheck pipcheck
+	pip intall -U pip
 	pip install -r requirements.txt
 	pip install -e .
 	$(MAKE) build
