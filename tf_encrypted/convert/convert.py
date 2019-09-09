@@ -81,7 +81,7 @@ class Converter:
 
     # Create a dictionary excluding all the sub ops related to required_space_to_batch_paddings
     # Except the sub ops related to the input or output of this special ops.
-    pb_trimmed = select_relevant_ops(specop_inputs,
+    pb_trimmed, graph_def = select_relevant_ops(specop_inputs,
                                      specop_outputs,
                                      graph_def)
     node_list = pb_trimmed.values()
@@ -91,7 +91,7 @@ class Converter:
     # high level operation then register.
     for node in node_list:
       if node.name not in specop_outputs:
-        self._register_op(node, inputs_iterable, input_player, pb_trimmed)
+        self._register_op(node, inputs_iterable, input_player, graph_def)
 
       else:
         # Register high level special operations
@@ -102,9 +102,9 @@ class Converter:
                                   numbered=False):
             self._register_specop(node, specop_dict[s])
 
-    return self.outputs[graph_def.node[-1].name]
+    return self.outputs[output_name]
 
-  def _register_op(self, node, inputs_iterable, input_player, pb_trimmed):
+  def _register_op(self, node, inputs_iterable, input_player, graph_def):
     """Register single ops."""
     output = strip_tensor_info(node.name)
     inputs = [x for x in node.input]
@@ -123,7 +123,7 @@ class Converter:
     # if the operation returns a list or tuple with several ouputs,
     # identify the outputs node name
     if isinstance(out, (list, tuple)):
-      output_name = find_output_names(pb_trimmed, node.name)
+      output_name = find_output_names(graph_def, node.name, len(out))
       # If output_name is empty, it means this node
       # is the last one in the graph
       if not output_name:
@@ -160,7 +160,10 @@ def select_relevant_ops(all_specop_inputs, all_specop_outputs, graph_def):
   """
 
   trimmed_graph = OrderedDict()
+  ordered_graph = OrderedDict()
+
   for n in graph_def.node:
+    ordered_graph[n.name] = n
     for op in REGISTERED_SPECOPS:
 
       matched = False
@@ -177,7 +180,7 @@ def select_relevant_ops(all_specop_inputs, all_specop_outputs, graph_def):
     if not matched:
       trimmed_graph[n.name] = n
 
-  return trimmed_graph
+  return trimmed_graph, ordered_graph
 
 
 def find_specops(graph_def, output_name):
@@ -357,7 +360,7 @@ class InvalidArgumentError(Exception):
   pass
 
 
-def find_output_names(pb_trimmed, node_name):
+def find_output_names(graph_def, node_name, num_outputs):
   """
   List ouput names for a specific node.
 
@@ -375,17 +378,25 @@ def find_output_names(pb_trimmed, node_name):
     input: "split:1"
     }
   """
-  output_node = []
-  node_name_list = list(pb_trimmed.keys())
+  output_node = [None] * num_outputs
+  node_name_list = list(graph_def.keys())
   n_i = node_name_list.index(node_name)
-
+  #
   # Forward lookahead from the node we want register
   for n in node_name_list[n_i + 1:]:
-    if not n.startswith(node_name):
-      gdf = pb_trimmed[n]
-      inputs = [x for x in gdf.input if x.startswith(node_name)]
 
-    if inputs:
-      output_node += inputs
+    if not n.startswith(node_name):
+      gdf = graph_def[n]
+      for x in gdf.input:
+
+        #we insert the names by their index, and not by the order of appearance in the graph
+        if x.startswith(node_name):
+          if ':' not in x:
+            output_node[0] = x
+          else:
+            output_node[int(x.split(':')[-1])] = x
+
+  #assert if not all output nodes appear in the graph
+  assert None not in output_node
 
   return output_node
