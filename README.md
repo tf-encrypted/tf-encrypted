@@ -74,11 +74,12 @@ For more information, check out the [documentation](./docs/) or the [examples](.
 
 The following texts provide further in-depth presentations of the project:
 
-- [Encrypted Deep Learning Training and Predictions with TF Encrypted Keras](https://medium.com/dropoutlabs/encrypted-deep-learning-training-and-predictions-with-tf-encrypted-keras-557193284f44) introduces and illustrates first parts of our encrypted Keras interface
-- [Growing TF Encrypted](https://medium.com/dropoutlabs/growing-tf-encrypted-a1cb7b109ab5) outlines the roadmap and motivates why TF Encrypted is a community project
-- [Experimenting with TF Encrypted](https://medium.com/dropoutlabs/experimenting-with-tf-encrypted-fe37977ff03c) walks through a simple example of turning an existing TensorFlow prediction model private
-- [Private Machine Learning in TensorFlow using Secure Computation](https://arxiv.org/abs/1810.08130) further elaborates on the benefits of the approach, outlines the adaptation of a secure computation protocol, and reports on concrete performance numbers
-- [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) describes the initial motivation and implementation
+- [Bridging Microsoft SEAL into TensorFlow](https://medium.com/dropoutlabs/bridging-microsoft-seal-into-tensorflow-b04cc2761ad4) takes a first step towards integrating the Microsoft SEAL homomorphic encryption library and some of the technical challenges involved (*by Justin Patriquin at Dropout Labs*)
+- [Encrypted Deep Learning Training and Predictions with TF Encrypted Keras](https://medium.com/dropoutlabs/encrypted-deep-learning-training-and-predictions-with-tf-encrypted-keras-557193284f44) introduces and illustrates first parts of our encrypted Keras interface (*by Yann Dupis at Dropout Labs*)
+- [Growing TF Encrypted](https://medium.com/dropoutlabs/growing-tf-encrypted-a1cb7b109ab5) outlines the roadmap and motivates TF Encrypted as a community project (*by Morten Dahl at Dropout Labs*)
+- [Experimenting with TF Encrypted](https://medium.com/dropoutlabs/experimenting-with-tf-encrypted-fe37977ff03c) walks through a simple example of turning an existing TensorFlow prediction model private (*by Morten Dahl and Jason Mancuso at Dropout Labs*)
+- [Private Machine Learning in TensorFlow using Secure Computation](https://arxiv.org/abs/1810.08130) further elaborates on the benefits of the approach, outlines the adaptation of a secure computation protocol, and reports on concrete performance numbers (*by Dropout Labs*)
+- [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) describes the initial motivation and implementation (*by Morten Dahl*)
 
 # Contributing
 
