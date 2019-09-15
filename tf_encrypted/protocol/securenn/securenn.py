@@ -353,9 +353,41 @@ class SecureNN(Pond):
 
     :param PondTensor x: Input tensor.
     """
-    with tf.name_scope('relu'):
-      drelu = self.non_negative(x)
-      return drelu * x
+
+    def relu(x):
+      with tf.name_scope('relu'):
+        drelu = self.non_negative(x)
+        return drelu * x
+
+
+    max_size = 224*224*95
+    shape = x.shape.as_list()
+
+    if np.prod(shape) >= max_size:
+      #tensor is too big and will raise OOM
+
+      def check_num_split(num_split):
+        if shape[-1] % num_split == 0 and \
+                np.prod(shape[:-1] + [shape[-1] / num_split]) < max_size:
+          return True
+        else:
+          return False
+
+      #look for best num_split value
+      num_split = 2
+      while not check_num_split(num_split):
+        num_split += 1
+
+      x_split = self.split(x, 2, axis=-1)
+
+      for i in range(len(x_split)):
+        x_split[i] = relu(x_split[i])
+
+      return self.concat(x_split, axis=-1)
+
+    else:
+      return relu(x)
+
 
   def maxpool2d(self, x, pool_size, strides, padding):
     """
