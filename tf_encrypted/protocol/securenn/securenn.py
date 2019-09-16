@@ -367,26 +367,23 @@ class SecureNN(Pond):
       #tensor is too big and will raise OOM
 
       def check_num_split(num_split):
-        if shape[-1] % num_split == 0 and \
-                np.prod(shape[:-1] + [shape[-1] / num_split]) < max_size:
-          return True
-        else:
-          return False
+        return (shape[-1] % num_split == 0 and
+                np.prod(shape[:-1] + [shape[-1] / num_split]) < max_size)
+
 
       #look for best num_split value
       num_split = 2
       while not check_num_split(num_split):
         num_split += 1
 
-      x_split = self.split(x, 2, axis=-1)
+      x_split = self.split(x, num_split, axis=-1)
 
-      for i in range(len(x_split)):
+      for i in range(num_split):
         x_split[i] = relu(x_split[i])
 
       return self.concat(x_split, axis=-1)
 
-    else:
-      return relu(x)
+    return relu(x)
 
 
   def maxpool2d(self, x, pool_size, strides, padding):
