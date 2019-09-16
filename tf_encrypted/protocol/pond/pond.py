@@ -1109,7 +1109,7 @@ class Pond(Protocol):
   @memoize
   def split(self,
             x: "PondTensor",
-            num_split: int,
+            num_split: Union[int, list],
             axis=0) -> List["PondTensor"]:
     return self.dispatch("split", x, num_split, axis=axis)
 
@@ -1186,7 +1186,7 @@ class Pond(Protocol):
     return z
 
   @memoize
-  def relu(self, x: "PondTensor"):
+  def relu(self, x: "PondTensor", **kwargs):
     """A Chebyshev polynomial approximation of the ReLU function."""
     assert isinstance(x, PondTensor), type(x)
 

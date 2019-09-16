@@ -340,7 +340,7 @@ class SecureNN(Pond):
     return self.dispatch('equal_zero', x, container=_thismodule, dtype=dtype)
 
   @memoize
-  def relu(self, x, max_size=224*224*95):
+  def relu(self, x, max_size=224*224*95, **kwargs):
     """
     relu(x) -> PondTensor
 
@@ -362,24 +362,19 @@ class SecureNN(Pond):
 
     shape = x.shape.as_list()
 
+    #tensor is too big and will raise OOM
     if np.prod(shape) >= max_size:
-      #tensor is too big and will raise OOM
+      #max channels in sub tensor such that it won't raise OOM
+      max_channel = max_size // np.prod(shape[:-1])
+      size_split = [max_channel] * int(shape[-1] / max_channel)
+      if np.sum(size_split) < shape[-1]:
+          #there is a leftover from the orig tensor
+          size_split += [shape[-1] - np.sum(size_split)]
 
-      def check_num_split(num_split):
-        #find a way to split the tensor such that the split is valid
-        # and each new tensor will not exceed the max_size
-        return (shape[-1] % num_split == 0 and
-                np.prod(shape[:-1] + [shape[-1] / num_split]) < max_size)
+      x_split = self.split(x, size_split, axis=-1)
 
-
-      #look for best num_split value
-      num_split = 2
-      while not check_num_split(num_split):
-        num_split += 1
-
-      x_split = self.split(x, num_split, axis=-1)
-
-      for i in range(num_split):
+      # for i in range(num_split):
+      for i, _ in enumerate(x_split):
         x_split[i] = actual_relu(x_split[i])
 
       return self.concat(x_split, axis=-1)
