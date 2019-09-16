@@ -340,7 +340,7 @@ class SecureNN(Pond):
     return self.dispatch('equal_zero', x, container=_thismodule, dtype=dtype)
 
   @memoize
-  def relu(self, x):
+  def relu(self, x, max_size=224*224*95):
     """
     relu(x) -> PondTensor
 
@@ -352,21 +352,22 @@ class SecureNN(Pond):
         [0, 0, 1, 3, 3]
 
     :param PondTensor x: Input tensor.
+    :param int max_size: max size of tensor that won't raise OOM
     """
 
-    def relu(x):
+    def actual_relu(x):
       with tf.name_scope('relu'):
         drelu = self.non_negative(x)
         return drelu * x
 
-
-    max_size = 224*224*95
     shape = x.shape.as_list()
 
     if np.prod(shape) >= max_size:
       #tensor is too big and will raise OOM
 
       def check_num_split(num_split):
+        #find a way to split the tensor such that the split is valid
+        # and each new tensor will not exceed the max_size
         return (shape[-1] % num_split == 0 and
                 np.prod(shape[:-1] + [shape[-1] / num_split]) < max_size)
 
@@ -379,11 +380,11 @@ class SecureNN(Pond):
       x_split = self.split(x, num_split, axis=-1)
 
       for i in range(num_split):
-        x_split[i] = relu(x_split[i])
+        x_split[i] = actual_relu(x_split[i])
 
       return self.concat(x_split, axis=-1)
 
-    return relu(x)
+    return actual_relu(x)
 
 
   def maxpool2d(self, x, pool_size, strides, padding):
