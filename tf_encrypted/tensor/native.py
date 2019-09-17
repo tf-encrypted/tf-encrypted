@@ -363,6 +363,10 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
     def value(self):
       return self._value
 
+    @property
+    def support(self):
+      return [self._value]
+
   class UniformTensor(Tensor):
     """Class representing a uniform-random, lazily sampled tensor.
 
@@ -389,6 +393,10 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
             maxval=self._maxval,
             seed=self._seed,
         )
+
+    @property
+    def support(self):
+      return [self._seed]
 
   class Constant(DenseTensor, AbstractConstant):
     """Native Constant class."""
