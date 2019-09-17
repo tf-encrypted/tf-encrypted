@@ -1,7 +1,13 @@
 """Executable for hosting a Player"""
+import logging
+
 from tf_encrypted.config import RemoteConfig
 
 if __name__ == '__main__':
+
+  logging.basicConfig()
+  logger = logging.getLogger(__name__)
+  logger.setLevel(logging.DEBUG)
 
   import argparse
 
