@@ -5,6 +5,7 @@ Also performs plaintext training.
 """
 
 import sys
+import logging
 
 import tensorflow as tf
 import tensorflow.keras as keras
@@ -170,6 +171,10 @@ class PredictionClient():
 
 
 if __name__ == "__main__":
+
+  logging.basicConfig()
+  logger = logging.getLogger(__name__)
+  logger.setLevel(logging.DEBUG)
 
   model_owner = ModelOwner(
       player_name="model-owner",

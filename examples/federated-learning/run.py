@@ -1,6 +1,7 @@
 """An example of the secure aggregation protocol for federated learning."""
 
 import sys
+import logging
 
 import tensorflow as tf
 import tf_encrypted as tfe
@@ -166,6 +167,10 @@ class DataOwner:
 
 
 if __name__ == "__main__":
+
+  logging.basicConfig()
+  logger = logging.getLogger(__name__)
+  logger.setLevel(logging.DEBUG)
 
   model_owner = ModelOwner("model-owner")
   data_owners = [
