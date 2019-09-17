@@ -329,6 +329,10 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
     def shape(self):
       pass
 
+    def identity(self):
+      backing = [tf.identity(x) for x in self.backing]
+      return DenseTensor(backing)
+
     @property
     def modulus(self):
       return MODULUS

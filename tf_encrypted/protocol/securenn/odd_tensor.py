@@ -126,6 +126,10 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
     def shape(self):
       pass
 
+    def identity(self):
+      value = tf.identity(self.value)
+      return OddDenseTensor(value)
+
     def __repr__(self) -> str:
       return '{}(shape={}, NATIVE_TYPE={})'.format(
           type(self),

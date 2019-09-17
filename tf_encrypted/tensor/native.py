@@ -175,6 +175,10 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
     def shape(self):
       pass
 
+    def identity(self):
+      value = tf.identity(self.value)
+      return DenseTensor(value)
+
     def to_native(self) -> tf.Tensor:
       return self.value
 

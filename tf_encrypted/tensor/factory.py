@@ -22,6 +22,10 @@ class AbstractTensor(abc.ABC):
   def shape(self):
     pass
 
+  @abc.abstractmethod
+  def identity(self):
+    pass
+
 # pylint: disable=abstract-method
 
 
