@@ -19,7 +19,7 @@ genebanks = [
 ]
 
 logging.basicConfig()
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("tf_encrypted")
 logger.setLevel(logging.DEBUG)
 
 model = BloomRegressor()

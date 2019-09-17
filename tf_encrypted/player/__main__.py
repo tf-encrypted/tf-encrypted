@@ -6,7 +6,7 @@ from tf_encrypted.config import RemoteConfig
 if __name__ == '__main__':
 
   logging.basicConfig()
-  logger = logging.getLogger(__name__)
+  logger = logging.getLogger("tf_encrypted")
   logger.setLevel(logging.DEBUG)
 
   import argparse
