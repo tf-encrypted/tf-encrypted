@@ -1,5 +1,6 @@
 """Example of a simple average using TF Encrypted."""
 
+import logging
 import sys
 
 import tensorflow as tf
@@ -26,6 +27,9 @@ def receive_output(average: tf.Tensor) -> tf.Operation:
 
 
 if __name__ == '__main__':
+
+  logging.basicConfig(level=logging.DEBUG)
+
   # get input from inputters as private values
   inputs = [
       provide_input(player_name='inputter-0'),  # pylint: disable=unexpected-keyword-arg

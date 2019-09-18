@@ -18,9 +18,7 @@ genebanks = [
     DataOwner("genebank-6", NUM_FEATURES, TRAINING_SET_SIZE, TEST_SET_SIZE),
 ]
 
-logging.basicConfig()
-logger = logging.getLogger("tf_encrypted")
-logger.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 model = BloomRegressor()
 model.fit(genebanks)
