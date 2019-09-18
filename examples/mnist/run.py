@@ -172,9 +172,7 @@ class PredictionClient():
 
 if __name__ == "__main__":
 
-  logging.basicConfig()
-  logger = logging.getLogger("tf_encrypted")
-  logger.setLevel(logging.DEBUG)
+  logging.basicConfig(level=logging.DEBUG)
 
   model_owner = ModelOwner(
       player_name="model-owner",
