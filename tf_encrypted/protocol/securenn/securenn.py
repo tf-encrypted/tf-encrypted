@@ -384,9 +384,7 @@ class SecureNN(Pond):
     with tf.name_scope('relu'):
       xs = self.split(x, split_vector, axis=-1)
 
-      xs[0] = actual_relu(xs[0], 'subrelu')
-      for i, _ in enumerate(xs[1:]):
-        assert isinstance(xs[i - 1], (PondPublicTensor, PondPrivateTensor))
+      for i, _ in enumerate(xs):
         xs[i] = actual_relu(xs[i], 'subrelu')
 
       return self.concat(xs, axis=-1)
