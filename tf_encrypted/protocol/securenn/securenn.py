@@ -363,7 +363,7 @@ class SecureNN(Pond):
 
     total_size = np.prod(shape)
 
-    max_size = kwargs.get('max_size', 4000000)
+    max_size = kwargs.get('max_size', 2500000)
     if not max_size or total_size <= max_size:
       return actual_relu(x, 'relu')
 
