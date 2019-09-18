@@ -340,7 +340,7 @@ class SecureNN(Pond):
     return self.dispatch('equal_zero', x, container=_thismodule, dtype=dtype)
 
   @memoize
-  def relu(self, x, max_size=224*224*95, **kwargs):
+  def relu(self, x, **kwargs):
     """
     relu(x) -> PondTensor
 
@@ -354,6 +354,7 @@ class SecureNN(Pond):
     :param PondTensor x: Input tensor.
     :param int max_size: max size of tensor that won't raise OOM
     """
+    max_size = kwargs.get('max_size', 224*224*95)
 
     def actual_relu(x):
       with tf.name_scope('relu'):
@@ -368,12 +369,11 @@ class SecureNN(Pond):
       max_channel = max_size // np.prod(shape[:-1])
       size_split = [max_channel] * int(shape[-1] / max_channel)
       if np.sum(size_split) < shape[-1]:
-          #there is a leftover from the orig tensor
-          size_split += [shape[-1] - np.sum(size_split)]
+        #there is a leftover from the orig tensor
+        size_split += [shape[-1] - np.sum(size_split)]
 
       x_split = self.split(x, size_split, axis=-1)
 
-      # for i in range(num_split):
       for i, _ in enumerate(x_split):
         x_split[i] = actual_relu(x_split[i])
 

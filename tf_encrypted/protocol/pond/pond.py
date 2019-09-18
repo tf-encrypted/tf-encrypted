@@ -1186,7 +1186,7 @@ class Pond(Protocol):
     return z
 
   @memoize
-  def relu(self, x: "PondTensor", **kwargs):
+  def relu(self, x: "PondTensor", **kwargs):# pylint: disable=unused-argument
     """A Chebyshev polynomial approximation of the ReLU function."""
     assert isinstance(x, PondTensor), type(x)
 
