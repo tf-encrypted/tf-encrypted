@@ -352,35 +352,48 @@ class SecureNN(Pond):
         [0, 0, 1, 3, 3]
 
     :param PondTensor x: Input tensor.
-    :param int max_size: max size of tensor that won't raise OOM
     """
-    max_size = kwargs.get('max_size', 224*224*95)
 
-    def actual_relu(x):
-      with tf.name_scope('relu'):
+    def actual_relu(x, name_scope):
+      with tf.name_scope(name_scope):
         drelu = self.non_negative(x)
         return drelu * x
 
     shape = x.shape.as_list()
 
-    #tensor is too big and will raise OOM
-    if np.prod(shape) >= max_size:
-      #max channels in sub tensor such that it won't raise OOM
-      max_channel = max_size // np.prod(shape[:-1])
-      size_split = [max_channel] * int(shape[-1] / max_channel)
-      if np.sum(size_split) < shape[-1]:
-        #there is a leftover from the orig tensor
-        size_split += [shape[-1] - np.sum(size_split)]
+    total_size = np.prod(shape)
 
-      x_split = self.split(x, size_split, axis=-1)
+    max_size = kwargs.get('max_size', 4000000)
+    if not max_size or total_size <= max_size:
+      return actual_relu(x, 'relu')
 
-      for i, _ in enumerate(x_split):
-        x_split[i] = actual_relu(x_split[i])
+    # tensor is too big and might raise OOM; split it along the last
+    # dimension and process subtensors individually, using sizes as
+    # close as possible to `maxsize` (but possibly larger)
 
-      return self.concat(x_split, axis=-1)
+    # compute how large the last dimension can be while being at least 1
+    max_last_dimension = max(max_size // np.prod(shape[:-1]), 1)
+    # compute split vector
+    last_dimension = shape[-1]
+    number_of_max_last_dimension = last_dimension // max_last_dimension
+    leftover = last_dimension % max_last_dimension
+    split_vector = [max_last_dimension] * number_of_max_last_dimension
+    split_vector += [leftover] if leftover > 0 else []
+    assert np.sum(split_vector) == last_dimension
 
-    return actual_relu(x)
+    with tf.name_scope('relu'):
+      xs = self.split(x, split_vector, axis=-1)
 
+      xs[0] = actual_relu(xs[0], 'subrelu')
+      for i, _ in enumerate(xs[1:]):
+        assert isinstance(xs[i - 1], (PondPublicTensor, PondPrivateTensor))
+        control0, control1 = xs[i - 1].unwrapped
+        xs[i] = self.identity(xs[i],
+                              control_dependencies_0=control0.support,
+                              control_dependencies_1=control1.support)
+        xs[i] = actual_relu(xs[i], 'subrelu')
+
+      return self.concat(xs, axis=-1)
 
   def maxpool2d(self, x, pool_size, strides, padding):
     """

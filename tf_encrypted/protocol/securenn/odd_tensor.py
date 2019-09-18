@@ -126,6 +126,10 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
     def shape(self):
       pass
 
+    def identity(self):
+      value = tf.identity(self.value)
+      return OddDenseTensor(value)
+
     def __repr__(self) -> str:
       return '{}(shape={}, NATIVE_TYPE={})'.format(
           type(self),
@@ -226,6 +230,10 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
     def shape(self):
       return self._value.shape
 
+    @property
+    def support(self):
+      return [self._value]
+
   class OddUniformTensor(OddTensor):
     """
     Represents a tensor with uniform values defined implicitly through a seed.
@@ -249,6 +257,10 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
         value = _construct_value_from_sampler(sampler=sampler,
                                               shape=self._shape)
         return value
+
+    @property
+    def support(self):
+      return [self._seed]
 
   def _lift(x, y) -> Tuple[OddTensor, OddTensor]:
     """
