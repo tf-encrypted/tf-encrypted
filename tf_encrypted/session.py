@@ -18,9 +18,7 @@ __TENSORBOARD_DIR__ = str(os.getenv('TFE_EVENTS_DIR', '/tmp/tensorboard'))
 
 _run_counter = defaultdict(int)
 
-logging.basicConfig()
 logger = logging.getLogger('tf_encrypted')
-logger.setLevel(logging.DEBUG)
 
 
 class Session(tf.Session):

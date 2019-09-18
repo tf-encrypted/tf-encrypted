@@ -11,10 +11,7 @@ from tensorflow.core.protobuf import rewriter_config_pb2
 
 from .player import Player
 
-
-logging.basicConfig()
 logger = logging.getLogger('tf_encrypted')
-logger.setLevel(logging.DEBUG)
 
 
 def tensorflow_supports_int64():

@@ -1,4 +1,6 @@
 """Main entrypoint for running Bloom regression example."""
+import logging
+
 import tensorflow as tf
 
 from regressor import BloomRegressor, DataOwner
@@ -15,6 +17,8 @@ genebanks = [
     DataOwner("genebank-5", NUM_FEATURES, TRAINING_SET_SIZE, TEST_SET_SIZE),
     DataOwner("genebank-6", NUM_FEATURES, TRAINING_SET_SIZE, TEST_SET_SIZE),
 ]
+
+logging.basicConfig(level=logging.DEBUG)
 
 model = BloomRegressor()
 model.fit(genebanks)

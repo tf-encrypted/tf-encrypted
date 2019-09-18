@@ -10,9 +10,7 @@ from ...config import get_config
 from ...utils import wrap_in_variables, reachable_nodes, unwrap_fetches
 
 
-logging.basicConfig()
 logger = logging.getLogger('tf_encrypted')
-logger.setLevel(logging.DEBUG)
 
 
 class TripleSource(abc.ABC):
