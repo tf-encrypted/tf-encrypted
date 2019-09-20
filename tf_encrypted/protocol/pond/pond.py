@@ -948,6 +948,9 @@ class Pond(Protocol):
   def dot(self, x, y):
     return self.matmul(x, y)
 
+  def reciprocal(self, x):
+    return self.dispatch("reciprocal", x)
+
   @memoize
   def div(self, x, y):
     """
@@ -964,7 +967,7 @@ class Pond(Protocol):
     if isinstance(y, int):
       y_inverse = 1. / float(y)
     elif isinstance(y, PondPublicTensor):
-      y_inverse = 1. / y.decode()
+      y_inverse = self.reciprocal(y)
     else:
       raise TypeError("Don't know how to divide by type {}".format(type(y)))
 
@@ -1843,7 +1846,7 @@ class PondPublicTensor(PondTensor):
         with tf.device(prot.player_1.device_name):
             # act on y_0
 
-    In most cases you will not need to use this method.  All funtions
+    In most cases you will not need to use this method.  All functions
     will hide this functionality for you (e.g. `add`, `mul`, etc).
     """
     return (self.value_on_0, self.value_on_1)
@@ -2922,6 +2925,47 @@ def _mul_masked_masked(prot, x, y):
     z = PondPrivateTensor(prot, z0, z1, x.is_scaled or y.is_scaled)
     z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
     return z
+
+
+#
+# reciprocal helpers
+#
+
+
+def _reciprocal_public(prot, x):
+  assert isinstance(x, PondPublicTensor), type(x)
+
+  backing_dtype = x.backing_dtype
+  x_on_0, x_on_1 = x.unwrapped
+  is_scaled = x.is_scaled
+  assert is_scaled, "Can only reciprocal of scaled numbers"
+
+  with tf.name_scope("reciprocal"):
+
+    with tf.device(prot.server_0.device_name):
+      # decode value as ordinary tensor locally and compute reciprocal
+      x_on_0_decoded = prot._decode(x_on_0, is_scaled)  # pylint: disable=protected-access
+      y_on_0_decoded = tf.math.reciprocal(x_on_0_decoded)
+      # re-encode and re-wrap
+      y_on_0 = backing_dtype.tensor(
+          prot._encode(  # pylint: disable=protected-access
+              y_on_0_decoded,
+              apply_scaling=is_scaled,
+              tf_int_type=backing_dtype.native_type))
+
+    with tf.device(prot.server_1.device_name):
+      # decode value as ordinary tensor locally and compute reciprocal
+      x_on_1_decoded = prot._decode(x_on_1, is_scaled)  # pylint: disable=protected-access
+      y_on_1_decoded = tf.math.reciprocal(x_on_1_decoded)
+      # re-encode and re-wrap
+      y_on_1 = backing_dtype.tensor(
+          prot._encode(  # pylint: disable=protected-access
+              y_on_1_decoded,
+              apply_scaling=is_scaled,
+              tf_int_type=backing_dtype.native_type))
+
+    y = PondPublicTensor(prot, y_on_0, y_on_1, is_scaled)
+    return y
 
 
 #

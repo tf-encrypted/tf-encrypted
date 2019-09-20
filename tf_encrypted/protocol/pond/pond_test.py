@@ -72,7 +72,6 @@ class TestTruncate(unittest.TestCase):
       np.testing.assert_allclose(actual, expected)
 
 
-
 class TestPondPublicEqual(unittest.TestCase):
 
   def test_public_compare(self):
@@ -92,6 +91,43 @@ class TestPondPublicEqual(unittest.TestCase):
         answer = sess.run(res)
 
       assert np.array_equal(answer, expected)
+
+
+class TestPondPublicDivision(unittest.TestCase):
+
+  def test_public_division(self):
+
+    x_raw = np.array([10., 20., 30., 40.])
+    y_raw = np.array([1., 2., 3., 4.])
+    expected = x_raw / y_raw
+
+    with tfe.protocol.Pond() as prot:
+
+      x = prot.define_private_variable(x_raw)
+      y = prot.define_constant(y_raw)
+      z = x / y
+
+      with tfe.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        actual = sess.run(z.reveal())
+
+      np.testing.assert_array_almost_equal(actual, expected, decimal=2)
+
+  def test_public_reciprocal(self):
+
+    x_raw = np.array([10., 20., 30., 40.])
+    expected = 1. / x_raw
+
+    with tfe.protocol.Pond() as prot:
+
+      x = prot.define_constant(x_raw)
+      y = prot.reciprocal(x)
+
+      with tfe.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        actual = sess.run(y)
+
+      np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
 
 class TestShare(unittest.TestCase):
