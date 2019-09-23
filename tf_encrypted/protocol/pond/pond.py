@@ -2385,8 +2385,11 @@ def _truncate_private_interactive(
     # assumption that the values originally lie in `[-B, B)`, and will
     # leak private information otherwise
 
+    # 'a + bound' will automatically lift 'bound' by another scaling factor,
+    # so we should first divide bound by the scaling factor if we want to
+    # use this convenient '+' operation.
     bound = prot.fixedpoint_config.bound_double_precision
-    b = a + bound
+    b = a + (bound / scaling_factor)
 
     # next step is for server0 to add a statistical mask to `b`, reveal
     # it to server1, and compute the lower part
