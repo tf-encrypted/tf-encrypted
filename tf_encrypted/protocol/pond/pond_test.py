@@ -179,5 +179,48 @@ class TestIdentity(unittest.TestCase):
     np.testing.assert_array_equal(actual, expected)
 
 
+class TestPondAssign(unittest.TestCase):
+
+  def test_assign_synchronization(self):
+    # from https://github.com/tf-encrypted/tf-encrypted/pull/665
+
+    tf.reset_default_graph()
+    tfe.get_protocol().clear_initializers()
+
+    prot = tfe.protocol.Pond()
+    tfe.set_protocol(prot)
+
+    def poc(x, y):
+      x_shares = x.unwrapped
+      y_shares = y.unwrapped
+      z_shares = [None, None]
+
+      with tf.name_scope("fabricated_test"):
+        with tf.device(prot.server_0.device_name):
+          z_shares[0] = x_shares[1] + y_shares[1]
+        with tf.device(prot.server_1.device_name):
+          z_shares[1] = x_shares[0] + y_shares[0]
+
+      return tfe.protocol.pond.PondPrivateTensor(
+          prot,
+          z_shares[0],
+          z_shares[1],
+          x.is_scaled)
+
+    a = prot.define_private_variable(tf.ones(shape=(1, 1)))
+    b = prot.define_private_variable(tf.ones(shape=(1, 1)))
+
+    op = prot.assign(a, poc(a, b))
+
+    with tfe.Session() as sess:
+      sess.run(tfe.global_variables_initializer())
+
+      for _ in range(100):
+        sess.run(op)
+
+      result = sess.run(a.reveal())
+      assert result == np.array([101.])
+
+
 if __name__ == '__main__':
   unittest.main()
