@@ -340,7 +340,7 @@ class SecureNN(Pond):
     return self.dispatch('equal_zero', x, container=_thismodule, dtype=dtype)
 
   @memoize
-  def relu(self, x):
+  def relu(self, x, **kwargs):
     """
     relu(x) -> PondTensor
 
@@ -353,9 +353,41 @@ class SecureNN(Pond):
 
     :param PondTensor x: Input tensor.
     """
+
+    def actual_relu(x, name_scope):
+      with tf.name_scope(name_scope):
+        drelu = self.non_negative(x)
+        return drelu * x
+
+    shape = x.shape.as_list()
+
+    total_size = np.prod(shape)
+
+    max_size = kwargs.get('max_size', 2500000)
+    if not max_size or total_size <= max_size:
+      return actual_relu(x, 'relu')
+
+    # tensor is too big and might raise OOM; split it along the last
+    # dimension and process subtensors individually, using sizes as
+    # close as possible to `maxsize` (but possibly larger)
+
+    # compute how large the last dimension can be while being at least 1
+    max_last_dimension = max(max_size // np.prod(shape[:-1]), 1)
+    # compute split vector
+    last_dimension = shape[-1]
+    number_of_max_last_dimension = last_dimension // max_last_dimension
+    leftover = last_dimension % max_last_dimension
+    split_vector = [max_last_dimension] * number_of_max_last_dimension
+    split_vector += [leftover] if leftover > 0 else []
+    assert np.sum(split_vector) == last_dimension
+
     with tf.name_scope('relu'):
-      drelu = self.non_negative(x)
-      return drelu * x
+      xs = self.split(x, split_vector, axis=-1)
+
+      for i, _ in enumerate(xs):
+        xs[i] = actual_relu(xs[i], 'subrelu')
+
+      return self.concat(xs, axis=-1)
 
   def maxpool2d(self, x, pool_size, strides, padding):
     """

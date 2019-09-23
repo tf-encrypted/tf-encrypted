@@ -814,6 +814,17 @@ class Pond(Protocol):
 
     return op
 
+  def identity(
+      self,
+      x,
+      control_dependencies_0=None,
+      control_dependencies_1=None,
+  ):
+    return self.dispatch("identity",
+                         x,
+                         control_dependencies_0=control_dependencies_0,
+                         control_dependencies_1=control_dependencies_1)
+
   @memoize
   def add(self, x, y):
     """
@@ -1112,7 +1123,7 @@ class Pond(Protocol):
   @memoize
   def split(self,
             x: "PondTensor",
-            num_split: int,
+            num_split: Union[int, list],
             axis=0) -> List["PondTensor"]:
     return self.dispatch("split", x, num_split, axis=axis)
 
@@ -1189,7 +1200,7 @@ class Pond(Protocol):
     return z
 
   @memoize
-  def relu(self, x: "PondTensor"):
+  def relu(self, x: "PondTensor", **kwargs):  # pylint: disable=unused-argument
     """A Chebyshev polynomial approximation of the ReLU function."""
     assert isinstance(x, PondTensor), type(x)
 
@@ -1393,7 +1404,7 @@ class Pond(Protocol):
 
   def dispatch(self, base_name, *args, container=None, **kwargs):
     """
-    Finds the correct protocol logicto perform based on the dispatch_id
+    Finds the correct protocol logic to perform based on the dispatch_id
     attribute of the input tensors in args.
     """
     suffix = "_".join([arg.dispatch_id
@@ -2225,6 +2236,71 @@ def debug(x: PondTensor, summarize=None, message=""):
 
   else:
     raise TypeError("Don't know how to debug {}".format(type(x)))
+
+
+#
+# identity
+#
+
+
+def _identity_public(
+    prot,
+    x,
+    control_dependencies_0,
+    control_dependencies_1,
+):
+  assert isinstance(x, PondPublicTensor), type(x)
+
+  x_on_0, x_on_1 = x.unwrapped
+
+  with tf.name_scope("identity"):
+
+    with tf.device(prot.server_0.device_name):
+      if control_dependencies_0:
+        with tf.control_dependencies(control_dependencies_0):
+          y_on_0 = x_on_0.identity()
+      else:
+        y_on_0 = x_on_0.identity()
+
+    with tf.device(prot.server_1.device_name):
+      if control_dependencies_1:
+        with tf.control_dependencies(control_dependencies_1):
+          y_on_1 = x_on_1.identity()
+      else:
+        y_on_1 = x_on_1.identity()
+
+    y = PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
+    return y
+
+
+def _identity_private(
+    prot,
+    x,
+    control_dependencies_0,
+    control_dependencies_1,
+):
+  assert isinstance(x, PondPrivateTensor), type(x)
+
+  x0, x1 = x.unwrapped
+
+  with tf.name_scope("identity"):
+
+    with tf.device(prot.server_0.device_name):
+      if control_dependencies_0:
+        with tf.control_dependencies(control_dependencies_0):
+          y0 = x0.identity()
+      else:
+        y0 = x0.identity()
+
+    with tf.device(prot.server_1.device_name):
+      if control_dependencies_1:
+        with tf.control_dependencies(control_dependencies_1):
+          y1 = x1.identity()
+      else:
+        y1 = x1.identity()
+
+    y = PondPrivateTensor(prot, y0, y1, x.is_scaled)
+    return y
 
 
 #

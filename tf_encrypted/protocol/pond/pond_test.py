@@ -157,6 +157,27 @@ class TestShare(unittest.TestCase):
     self._core_test_sharing(native_factory(tf.int32, 67))
 
 
+class TestIdentity(unittest.TestCase):
+
+  def setUp(self):
+    tf.reset_default_graph()
+
+  def test_same_value_different_instance(self):
+
+    expected = np.array([[1, 2, 3], [4, 5, 6]])
+
+    with tfe.protocol.Pond() as prot:
+
+      x = prot.define_private_variable(expected)
+      y = prot.identity(x)
+
+      with tfe.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        actual = sess.run(y.reveal())
+
+    assert x is not y
+    np.testing.assert_array_equal(actual, expected)
+
 
 if __name__ == '__main__':
   unittest.main()

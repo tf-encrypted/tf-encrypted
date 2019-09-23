@@ -329,6 +329,10 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
     def shape(self):
       pass
 
+    def identity(self):
+      backing = [tf.identity(x) for x in self.backing]
+      return DenseTensor(backing)
+
     @property
     def modulus(self):
       return MODULUS
@@ -643,6 +647,10 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
     def backing(self):
       return self._backing
 
+    @property
+    def support(self):
+      return self._backing
+
   class UniformTensor(Tensor):
     """Class representing a uniform-random, lazily sampled tensor.
 
@@ -667,6 +675,10 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                                                     dtype=INT_TYPE)
                 for (mi, seed) in zip(MODULI, self._seeds)]
 
+    @property
+    def support(self):
+      return self._seeds
+
   class BoundedTensor(Tensor):
     """CRT bounded-randomness tensor."""
 
@@ -690,6 +702,10 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
         chunk_values = [sampler(maxval=2 ** chunk_size, seed=seed_value)
                         for chunk_size, seed_value in zipped]
         return _construct_backing_from_chunks(self._chunk_sizes, chunk_values)
+
+    @property
+    def support(self):
+      return self._seeds
 
   class Constant(DenseTensor, AbstractConstant):
     """CRT Constant class."""

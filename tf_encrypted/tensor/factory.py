@@ -22,6 +22,15 @@ class AbstractTensor(abc.ABC):
   def shape(self):
     pass
 
+  @property
+  @abc.abstractproperty
+  def support(self):
+    pass
+
+  @abc.abstractmethod
+  def identity(self):
+    pass
+
 # pylint: disable=abstract-method
 
 
