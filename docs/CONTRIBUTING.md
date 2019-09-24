@@ -7,6 +7,7 @@ This document helps you get started on:
 - [Tracking work on ZenHub](#tracking-work-on-zenhub)
 - [Submitting a pull request](#submitting-a-pull-request)
 - [Writing documentation](#writing-documentation)
+- [Useful Tricks](#useful-tricks)
 - [Reporting a bug](#reporting-a-bug)
 - [Asking for help](#asking-for-help)
 
