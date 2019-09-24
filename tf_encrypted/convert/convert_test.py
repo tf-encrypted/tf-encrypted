@@ -227,6 +227,12 @@ class TestConvert(unittest.TestCase):
     test_input = np.random.random([1, 10, 10, 3])
     self._test_with_ndarray_input_fn('split', test_input, protocol='Pond')
 
+  def test_split_edge_case_convert(self):
+    test_input = np.random.random([1, 10, 10, 4])
+    self._test_with_ndarray_input_fn('split_edge_case',
+                                     test_input,
+                                     protocol='Pond')
+
   def test_split_v_convert(self):
     test_input = np.random.random([1, 10, 10, 3])
     self._test_with_ndarray_input_fn('split_v', test_input, protocol='Pond')
@@ -705,6 +711,33 @@ def export_split(filename, input_shape):
   x = tf.split(a, num_or_size_splits=3, axis=-1)
   return export(x, filename)
 
+def split_edge_case_builder(input_shape,
+                            filters=2,
+                            kernel_size=3):
+  x = tf.keras.Input(shape=input_shape[1:])
+  y1, y2 = tf.keras.layers.Lambda(
+      lambda tensor: tf.split(tensor,
+                              num_or_size_splits=2,
+                              axis=-1))(x)
+  y = tf.keras.layers.Conv2D(filters,
+                             kernel_size,
+                             use_bias=True,
+                             padding='same')(y2)
+  y = tf.keras.layers.Concatenate(axis=-1)([y1, y])
+
+  return tf.keras.Model(x, y)
+
+def export_split_edge_case(filename, input_shape):
+  model, _ = _keras_model_core(split_edge_case_builder, shape=input_shape)
+
+  sess = K.get_session()
+  output = model.output
+  return export(output, filename, sess=sess)
+
+
+def run_split_edge_case(data):
+  _, out = _keras_model_core(split_edge_case_builder, data=data)
+  return out
 
 def run_split_v(data):
   a = tf.placeholder(tf.float32, shape=data.shape, name="input")
