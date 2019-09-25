@@ -311,7 +311,7 @@ $(LIBSODIUM_OUT):
 $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECURE_IN_H)
 	mkdir -p $(PACKAGE_DIR)/secure_random
 	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
-		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium
+		-fPIC $(TF_CFLAGS) $(word 1,$(TF_LFLAGS)) -ltensorflow_framework -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium
 
 build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
 
