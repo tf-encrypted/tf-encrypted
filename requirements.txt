@@ -8,7 +8,7 @@ numpy==1.14.5
 protobuf==3.6.1
 pyasn1==0.4.2
 s3transfer==0.1.13
-tensorflow==1.13.1
+tensorflow==1.14.0
 termcolor==1.1.0
 sphinx-rtd-theme==0.4.2
 recommonmark==0.4.0
