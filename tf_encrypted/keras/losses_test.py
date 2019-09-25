@@ -44,7 +44,7 @@ class TestLosses(unittest.TestCase):
     y_true = tfe.define_private_variable(y_true_np)
     y_pred = tfe.define_private_variable(y_pred_np)
 
-    loss = MeanSquaredError()
+    loss = tfe.keras.losses.MeanSquaredError()
     out = loss(y_true, y_pred)
 
     with tfe.Session() as sess:
