@@ -19,6 +19,7 @@ Reserved Scope | TF Counterpart
 `batch_normalization_v1`|[tf.keras.layers.BatchNormalization](https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization)
 `conv2d`|[tf.keras.layers.Conv2D](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Conv2D)
 `dense`|[tf.keras.layers.Dense](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense)
+`depthwise_conv2d`|[tf.keras.layers.DepthwiseConv2D](https://www.tensorflow.org/api_docs/python/tf/keras/layers/DepthwiseConv2D)
 `flatten`|[tf.keras.layers.Flatten](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Flatten)
 `required_space_to_batch_paddings`|[tf.required_space_to_batch_paddings](https://www.tensorflow.org/api_docs/python/tf/required_space_to_batch_paddings)
 
