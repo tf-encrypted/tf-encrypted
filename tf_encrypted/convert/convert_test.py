@@ -327,7 +327,8 @@ class TestConvert(unittest.TestCase):
         protocol='Pond',
     )
 
-  # TODO(justin1121): how to re-enable???
+  # TODO(justin1121): This is a bug in tf 1.14.0. We can re-enable
+  #                   with tf > 1.14.0.
   # def test_keras_batchnorm_convert(self):
   #   test_input = np.ones([1, 28, 28, 1])
   #   self._test_with_ndarray_input_fn('keras_batchnorm',
