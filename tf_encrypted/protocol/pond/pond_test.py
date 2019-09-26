@@ -27,7 +27,7 @@ class TestPond(unittest.TestCase):
 
 class TestTruncate(unittest.TestCase):
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_interactive_truncate(self):
 
@@ -46,7 +46,7 @@ class TestTruncate(unittest.TestCase):
       v = prot.truncate(w)  # single precision
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         actual = sess.run(v.reveal())
 
       np.testing.assert_allclose(actual, expected)
@@ -66,7 +66,7 @@ class TestTruncate(unittest.TestCase):
           expected * prot.fixedpoint_config.scaling_factor)  # double precision
       v = prot.truncate(w)  # single precision
 
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       actual = sess.run(v.reveal())
 
       np.testing.assert_allclose(actual, expected)
@@ -87,7 +87,7 @@ class TestPondPublicEqual(unittest.TestCase):
       res = prot.equal(x, 100)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         answer = sess.run(res)
 
       assert np.array_equal(answer, expected)
@@ -108,7 +108,7 @@ class TestPondPublicDivision(unittest.TestCase):
       z = x / y
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         actual = sess.run(z.reveal())
 
       np.testing.assert_array_almost_equal(actual, expected, decimal=2)
@@ -124,7 +124,7 @@ class TestPondPublicDivision(unittest.TestCase):
       y = prot.reciprocal(x)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         actual = sess.run(y)
 
       np.testing.assert_array_almost_equal(actual, expected, decimal=3)
@@ -133,7 +133,7 @@ class TestPondPublicDivision(unittest.TestCase):
 class TestShare(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def _core_test_sharing(self, dtype):
 
@@ -160,7 +160,7 @@ class TestShare(unittest.TestCase):
 class TestIdentity(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_same_value_different_instance(self):
 
@@ -172,7 +172,7 @@ class TestIdentity(unittest.TestCase):
       y = prot.identity(x)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         actual = sess.run(y.reveal())
 
     assert x is not y

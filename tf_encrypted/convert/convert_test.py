@@ -10,7 +10,7 @@ import tensorflow as tf
 from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
-from tensorflow.keras import backend as K
+from tensorflow.compat.v1.keras import backend as K
 from tensorflow.keras.layers import Flatten, Conv2D, Dense, DepthwiseConv2D, \
   GlobalAveragePooling2D, GlobalMaxPooling2D
 from tensorflow.keras.models import Sequential
@@ -23,13 +23,13 @@ from tf_encrypted.convert.register import registry
 _GLOBAL_FILENAME = ''
 _SEED = 826485786
 np.random.seed(_SEED)
-tf.set_random_seed(_SEED)
+tf.compat.v1.set_random_seed(_SEED)
 
 
 class TestConvert(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
     self.previous_logging_level = logging.getLogger().level
     logging.getLogger().setLevel(logging.ERROR)
@@ -37,7 +37,7 @@ class TestConvert(unittest.TestCase):
   def tearDown(self):
     global _GLOBAL_FILENAME
 
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
     K.clear_session()
 
     logging.debug("Cleaning file: %s", _GLOBAL_FILENAME)
@@ -70,7 +70,7 @@ class TestConvert(unittest.TestCase):
     x = converter.convert(graph_def, 'input-provider', list(input_fns))
 
     with tfe.Session() as sess:
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       if not isinstance(x, (list, tuple)):
         x = [x]
         actual = [actual]
@@ -94,13 +94,13 @@ class TestConvert(unittest.TestCase):
     protocol = kwargs.pop('protocol')
 
     path = exporter(_GLOBAL_FILENAME, test_inputs[0].shape, **kwargs)
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
     graph_def = read_graph(path)
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
     actual = runner(*test_inputs, **kwargs)
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
     prot_class = getattr(tfe.protocol, protocol)
 
@@ -114,10 +114,10 @@ class TestConvert(unittest.TestCase):
     protocol = kwargs.pop('protocol')
 
     path = _GLOBAL_FILENAME
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
     graph_def = read_graph(path)
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
     prot_class = getattr(tfe.protocol, protocol)
 
@@ -346,9 +346,9 @@ class TestConvert(unittest.TestCase):
         'keras_global_maxpool', test_input, protocol='SecureNN')
 
 def export_argmax(filename, input_shape, axis):
-  pl = tf.placeholder(tf.float32, shape=input_shape)
+  pl = tf.compat.v1.placeholder(tf.float32, shape=input_shape)
 
-  output = tf.argmax(pl, axis)
+  output = tf.argmax(input=pl, axis=axis)
 
   return export(output, filename)
 
@@ -356,9 +356,9 @@ def export_argmax(filename, input_shape, axis):
 def run_argmax(data, axis):
   inp = tf.constant(data)
 
-  output = tf.argmax(inp, axis)
+  output = tf.argmax(input=inp, axis=axis)
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     out = sess.run(output)
 
   return out
@@ -370,16 +370,16 @@ def run_stack(input1, input2, input3):
   z = tf.constant(input3)
   out = tf.stack([x, y, z])
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     out = sess.run(out)
 
   return out
 
 
 def export_stack(filename: str, input_shape: Tuple[int]):
-  x = tf.placeholder(tf.float32, shape=input_shape)
-  y = tf.placeholder(tf.float32, shape=input_shape)
-  z = tf.placeholder(tf.float32, shape=input_shape)
+  x = tf.compat.v1.placeholder(tf.float32, shape=input_shape)
+  y = tf.compat.v1.placeholder(tf.float32, shape=input_shape)
+  z = tf.compat.v1.placeholder(tf.float32, shape=input_shape)
 
   out = tf.stack([x, y, z])
 
@@ -387,45 +387,45 @@ def export_stack(filename: str, input_shape: Tuple[int]):
 
 
 def run_avgpool(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
 
-  x = tf.nn.avg_pool(a, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+  x = tf.nn.avg_pool2d(a, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
 
   return output
 
 
 def export_avgpool(filename, input_shape):
-  pl = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  pl = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
 
-  x = tf.nn.avg_pool(pl, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+  x = tf.nn.avg_pool2d(pl, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
 
   return export(x, filename)
 
 
 def run_maxpool(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
 
-  x = tf.nn.max_pool(a, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+  x = tf.nn.max_pool2d(input=a, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
 
   return output
 
 
 def export_maxpool(filename, input_shape):
-  pl = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  pl = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
 
-  x = tf.nn.max_pool(pl, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+  x = tf.nn.max_pool2d(input=pl, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
 
   return export(x, filename)
 
 
 def run_batchnorm(data):
-  x = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  x = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
 
   dim = data.shape[3]
   mean = np.ones((1, 1, 1, dim)) * 1
@@ -435,14 +435,14 @@ def run_batchnorm(data):
 
   y = tf.nn.batch_normalization(x, mean, variance, offset, scale, 0.00001)
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(y, feed_dict={x: data})
 
   return output
 
 
 def export_batchnorm(filename: str, input_shape: List[int]):
-  pl = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  pl = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
 
   mean = np.ones((1, 1, 1, input_shape[3]), dtype=np.float32) * 1
   variance = np.ones((1, 1, 1, input_shape[3]), dtype=np.float32) * 2
@@ -455,18 +455,18 @@ def export_batchnorm(filename: str, input_shape: List[int]):
 
 
 def run_conv2d(data, data_format="NCHW"):
-  feed_me = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  feed_me = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
 
   x = feed_me
   if data_format == "NCHW":
-    x = tf.transpose(x, (0, 2, 3, 1))
+    x = tf.transpose(a=x, perm=(0, 2, 3, 1))
 
   filtered = tf.constant(np.ones((3, 3, 1, 3)),
                          dtype=tf.float32,
                          name="weights")
-  x = tf.nn.conv2d(x, filtered, (1, 1, 1, 1), "SAME", name="nn_conv2d")
+  x = tf.nn.conv2d(input=x, filters=filtered, strides=(1, 1, 1, 1), padding="SAME", name="nn_conv2d")
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={feed_me: data})
 
     if data_format == "NCHW":
@@ -476,31 +476,31 @@ def run_conv2d(data, data_format="NCHW"):
 
 
 def export_conv2d(filename: str, input_shape: List[int], data_format="NCHW"):
-  pl = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  pl = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
 
   filtered = tf.constant(np.ones((3, 3, 1, 3)),
                          dtype=tf.float32,
                          name="weights")
-  x = tf.nn.conv2d(pl, filtered, (1, 1, 1, 1), "SAME",
+  x = tf.nn.conv2d(input=pl, filters=filtered, strides=(1, 1, 1, 1), padding="SAME",
                    data_format=data_format, name="nn_conv2d")
 
   return export(x, filename)
 
 
 def run_matmul(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
   b = tf.constant(np.ones((data.shape[1], 1)), dtype=tf.float32)
 
   x = tf.matmul(a, b)
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
 
   return output
 
 
 def export_matmul(filename: str, input_shape: List[int]):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   b = tf.constant(np.ones((input_shape[1], 1)), dtype=tf.float32)
 
   x = tf.matmul(a, b)
@@ -509,7 +509,7 @@ def export_matmul(filename: str, input_shape: List[int]):
 
 
 def export_neg(filename: str, input_shape: List[int]):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
 
   x = tf.negative(a)
 
@@ -517,30 +517,30 @@ def export_neg(filename: str, input_shape: List[int]):
 
 
 def run_neg(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
 
   x = tf.negative(a)
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
 
   return output
 
 
 def run_add(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
   b = tf.constant(np.ones((data.shape[1], 1)), dtype=tf.float32)
 
   x = tf.add(a, b)
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
 
   return output
 
 
 def export_add(filename: str, input_shape: List[int]):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   b = tf.constant(np.ones((input_shape[0], 1)), dtype=tf.float32)
 
   x = tf.add(a, b)
@@ -549,26 +549,26 @@ def export_add(filename: str, input_shape: List[int]):
 
 
 def run_transpose(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
 
-  x = tf.transpose(a, perm=(0, 3, 1, 2))
+  x = tf.transpose(a=a, perm=(0, 3, 1, 2))
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
 
   return output
 
 
 def export_transpose(filename: str, input_shape: List[int]):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
 
-  x = tf.transpose(a, perm=(0, 3, 1, 2))
+  x = tf.transpose(a=a, perm=(0, 3, 1, 2))
 
   return export(x, filename)
 
 
 def run_reshape(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
 
   last_size = 1
   for i in data.shape[1:]:
@@ -576,14 +576,14 @@ def run_reshape(data):
 
   x = tf.reshape(a, [-1, last_size])
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
 
   return output
 
 
 def export_reshape(filename: str, input_shape: List[int]):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
 
   last_size = 1
   for i in input_shape[1:]:
@@ -595,18 +595,18 @@ def export_reshape(filename: str, input_shape: List[int]):
 
 
 def run_expand_dims(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
 
   x = tf.expand_dims(a, axis=0)
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
 
   return output
 
 
 def export_expand_dims(filename: str, input_shape: List[int]):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
 
   x = tf.expand_dims(a, axis=0)
 
@@ -614,29 +614,29 @@ def export_expand_dims(filename: str, input_shape: List[int]):
 
 
 def run_pad(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
 
-  x = tf.pad(a, paddings=tf.constant([[2, 2], [3, 4]]), mode="CONSTANT")
+  x = tf.pad(tensor=a, paddings=tf.constant([[2, 2], [3, 4]]), mode="CONSTANT")
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
 
   return output
 
 
 def export_pad(filename: str, input_shape: List[int]):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
 
-  x = tf.pad(a, paddings=tf.constant([[2, 2], [3, 4]]), mode="CONSTANT")
+  x = tf.pad(tensor=a, paddings=tf.constant([[2, 2], [3, 4]]), mode="CONSTANT")
 
   return export(x, filename)
 
 
 def _construct_batch_to_space_nd(input_shape):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   block_shape = tf.constant([2, 2], dtype=tf.int32)
   crops = tf.constant([[0, 0], [2, 0]], dtype=tf.int32)
-  x = tf.batch_to_space_nd(a, block_shape=block_shape, crops=crops)
+  x = tf.compat.v1.batch_to_space_nd(a, block_shape=block_shape, crops=crops)
   return x, a
 
 
@@ -647,16 +647,16 @@ def export_batch_to_space_nd(filename, input_shape):
 
 def run_batch_to_space_nd(data):
   x, a = _construct_batch_to_space_nd(data.shape)
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
   return output
 
 
 def _construct_space_to_batch_nd(input_shape):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   block_shape = tf.constant([2, 2], dtype=tf.int32)
   paddings = tf.constant([[0, 0], [2, 0]], dtype=tf.int32)
-  x = tf.space_to_batch_nd(a, block_shape=block_shape, paddings=paddings)
+  x = tf.compat.v1.space_to_batch_nd(a, block_shape=block_shape, paddings=paddings)
   return x, a
 
 
@@ -667,56 +667,56 @@ def export_space_to_batch_nd(filename, input_shape):
 
 def run_space_to_batch_nd(data):
   x, a = _construct_space_to_batch_nd(data.shape)
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
   return output
 
 
 def run_squeeze(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
   x = tf.squeeze(a, axis=[0, 3])
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
   return output
 
 
 def export_squeeze(filename, input_shape):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   x = tf.squeeze(a, axis=[0, 3])
   return export(x, filename)
 
 
 def run_gather(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
   x = tf.gather(a, indices=[1, 3], axis=0)
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
   return output
 
 
 def export_gather(filename, input_shape):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   x = tf.gather(a, indices=[1, 3], axis=0)
   return export(x, filename)
 
 
 def run_split(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
   x = tf.split(a, num_or_size_splits=3, axis=-1)
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
   return output
 
 
 def export_split(filename, input_shape):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   x = tf.split(a, num_or_size_splits=3, axis=-1)
   return export(x, filename)
 
 def split_edge_case_builder(input_shape,
                             filters=2,
                             kernel_size=3):
-  init = tf.keras.initializers.RandomNormal(seed=1)
+  init = tf.compat.v1.keras.initializers.RandomNormal(seed=1)
 
   x = tf.keras.Input(shape=input_shape[1:])
   y1, y2 = tf.keras.layers.Lambda(
@@ -745,47 +745,47 @@ def run_split_edge_case(data):
   return out
 
 def run_split_v(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
   x = tf.split(a, num_or_size_splits=[1, 1, 1], axis=-1)
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
   return output
 
 
 def export_split_v(filename, input_shape):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   x = tf.split(a, num_or_size_splits=[1, 1, 1], axis=-1)
   return export(x, filename)
 
 
 def run_concat(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
   x = tf.concat([a, a, a], axis=-1)
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
   return output
 
 
 def export_concat(filename, input_shape):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   x = tf.concat([a, a, a], axis=-1)
   return export(x, filename)
 
 
 def run_sub(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
   b = tf.constant(np.ones((data.shape[0], 1)), dtype=tf.float32)
 
   x = tf.subtract(a, b)
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
 
   return output
 
 
 def export_sub(filename, input_shape):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   b = tf.constant(np.ones((input_shape[0], 1)), dtype=tf.float32)
 
   x = tf.subtract(a, b)
@@ -794,20 +794,20 @@ def export_sub(filename, input_shape):
 
 
 def run_mul(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
   b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(
       data.shape), dtype=tf.float32)
 
   x = tf.multiply(a, b)
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
 
   return output
 
 
 def export_mul(filename, input_shape):
-  a = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(
       input_shape), dtype=tf.float32)
 
@@ -817,34 +817,34 @@ def export_mul(filename, input_shape):
 
 
 def export_strided_slice(filename, input_shape):
-  t = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  t = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   out = tf.strided_slice(t, [1, 0, 0], [2, 1, 3], [1, 1, 1])
 
   return export(out, filename)
 
 
 def run_strided_slice(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
   out = tf.strided_slice(a, [1, 0, 0], [2, 1, 3], [1, 1, 1])
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(out, feed_dict={a: data})
 
   return output
 
 
 def export_slice(filename, input_shape):
-  t = tf.placeholder(tf.float32, shape=input_shape, name="input")
+  t = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   out = tf.slice(t, [1, 0, 0], [2, 1, -1])
 
   return export(out, filename)
 
 
 def run_slice(data):
-  a = tf.placeholder(tf.float32, shape=data.shape, name="input")
+  a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
   out = tf.slice(a, [1, 0, 0], [2, 1, -1])
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(out, feed_dict={a: data})
 
   return output
@@ -872,7 +872,7 @@ def keras_multilayer_builder(input_shape,
                              kernel_size=3,
                              pool_size=2,
                              units=2):
-  init = tf.keras.initializers.RandomNormal(seed=1)
+  init = tf.compat.v1.keras.initializers.RandomNormal(seed=1)
   x = tf.keras.Input(shape=input_shape[1:])
   y = tf.keras.layers.Conv2D(filters, kernel_size,
                              kernel_initializer=init)(x)
@@ -932,7 +932,7 @@ def _keras_conv2d_core(shape=None, data=None):
   if shape is None:
     shape = data.shape
 
-  init = tf.keras.initializers.RandomNormal(seed=1)
+  init = tf.compat.v1.keras.initializers.RandomNormal(seed=1)
 
   model = Sequential()
   c2d = Conv2D(2, (3, 3),
@@ -966,7 +966,7 @@ def _keras_depthwise_conv2d_core(shape=None, data=None):
   if shape is None:
     shape = data.shape
 
-  init = tf.keras.initializers.RandomNormal(seed=1)
+  init = tf.compat.v1.keras.initializers.RandomNormal(seed=1)
 
   model = Sequential()
   c2d = DepthwiseConv2D((3, 3),
@@ -1000,7 +1000,7 @@ def _keras_dense_core(shape=None, data=None):
   if shape is None:
     shape = data.shape
 
-  init = tf.keras.initializers.RandomNormal(seed=1)
+  init = tf.compat.v1.keras.initializers.RandomNormal(seed=1)
 
   model = Sequential()
   d = Dense(2,
@@ -1102,13 +1102,13 @@ def _keras_global_maxpool_core(shape=None, data=None):
 
 def run_required_space_to_batch_paddings(data):
 
-  x = tf.placeholder(tf.int32, shape=data.shape, name="input_shape")
+  x = tf.compat.v1.placeholder(tf.int32, shape=data.shape, name="input_shape")
   y = tf.constant(np.array([2, 3, 2]), dtype=tf.int32)
   p = tf.constant(np.array([[2, 3], [4, 3], [5, 2]]), dtype=tf.int32)
 
   out = tf.required_space_to_batch_paddings(x, y, base_paddings=p)
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     output = sess.run(out, feed_dict={x: data})
 
   return output
@@ -1116,7 +1116,7 @@ def run_required_space_to_batch_paddings(data):
 
 def export_required_space_to_batch_paddings(filename, input_shape):
 
-  x = tf.placeholder(tf.int32, shape=input_shape, name="input_shape")
+  x = tf.compat.v1.placeholder(tf.int32, shape=input_shape, name="input_shape")
   y = tf.constant(np.array([2, 3, 2]), dtype=tf.int32)
   p = tf.constant(np.array([[2, 3], [4, 3], [5, 2]]), dtype=tf.int32)
 
@@ -1129,7 +1129,7 @@ def export(x: tf.Tensor, filename: str, sess=None):
   should_close = False
   if sess is None:
     should_close = True
-    sess = tf.Session()
+    sess = tf.compat.v1.Session()
 
   pred_node_names = ["output"]
   tf.identity(x, name=pred_node_names[0])
@@ -1151,7 +1151,7 @@ def export(x: tf.Tensor, filename: str, sess=None):
 
 def read_graph(path: str):
   with gfile.GFile(path, 'rb') as f:
-    graph_def = tf.GraphDef()
+    graph_def = tf.compat.v1.GraphDef()
     graph_def.ParseFromString(f.read())
 
   return graph_def

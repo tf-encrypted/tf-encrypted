@@ -10,7 +10,7 @@ from tf_encrypted.keras.testing_utils import agreement_test, layer_test
 class TestActivation(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_activation_relu(self):
     self._core_activation(activation="relu")
@@ -45,14 +45,14 @@ class TestActivation(unittest.TestCase):
       _, d_x = tfe_layer.backward(d_out)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         tfe_loss = sess.run(loss.reveal())
         tfe_d_x = sess.run(d_x.reveal())
 
     # reset graph
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
 
       tf_layer = tf.keras.layers.Activation("sigmoid", input_shape=[4])
 
@@ -64,7 +64,7 @@ class TestActivation(unittest.TestCase):
       # backward
       d_x = tf.gradients(xs=x, ys=loss)
 
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       tf_loss, tf_d_x = sess.run([loss, d_x])
 
       np.testing.assert_array_almost_equal(tfe_loss, tf_loss, decimal=1)

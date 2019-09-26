@@ -49,7 +49,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
     def crt_recombine_lagrange(x):
 
-      with tf.name_scope('crt_recombine_lagrange'):
+      with tf.compat.v1.name_scope('crt_recombine_lagrange'):
         res = sum(xi * li for xi, li in zip(x, lambdas)) % MODULUS
         res = res.astype(object)
         return res
@@ -66,7 +66,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
       big_b = MODULUS % bound
       b = [np.array([(MODULUS // mi) % bound], dtype=np.int64) for mi in MODULI]
 
-      with tf.name_scope('crt_recombine_explicit'):
+      with tf.compat.v1.name_scope('crt_recombine_explicit'):
 
         if isinstance(x[0], np.ndarray):
           # backed by np.ndarray
@@ -89,11 +89,11 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
           t = [(xi * qi) % mi for xi, qi, mi in zip(x, q, MODULI)]
           alpha = tf.round(
               tf.reduce_sum(
-                  [tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, MODULI)],
+                  input_tensor=[tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, MODULI)],
                   axis=0
               ))
           u = tf.cast(tf.reduce_sum(
-              [ti * bi for ti, bi in zip(t, b)], axis=0), tf.int64)
+              input_tensor=[ti * bi for ti, bi in zip(t, b)], axis=0), tf.int64)
           v = tf.cast(alpha, tf.int64) * big_b
           w = u - v
           res = w % bound
@@ -116,15 +116,15 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
       big_b = MODULUS % k
       b = [(MODULUS // mi) % k for mi in MODULI]
 
-      with tf.name_scope('crt_mod'):
+      with tf.compat.v1.name_scope('crt_mod'):
         t = [(xi * qi) % mi for xi, qi, mi in zip(x, q, MODULI)]
         alpha = tf.round(
             tf.reduce_sum(
-                [tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, MODULI)],
+                input_tensor=[tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, MODULI)],
                 axis=0
             )
         )
-        u = tf.reduce_sum([ti * bi for ti, bi in zip(t, b)], axis=0)
+        u = tf.reduce_sum(input_tensor=[ti * bi for ti, bi in zip(t, b)], axis=0)
         v = tf.cast(alpha, INT_TYPE) * big_b
         w = u - v
         return w % k
@@ -194,7 +194,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                    for mi in MODULI]
         return DenseTensor(backing)
 
-      backing = [tf.random_uniform(shape,
+      backing = [tf.random.uniform(shape,
                                    minval=0,
                                    maxval=mi,
                                    dtype=INT_TYPE)
@@ -220,7 +220,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
       if secure_random.supports_secure_randomness():
         sampler = secure_random.random_uniform
       else:
-        sampler = tf.random_uniform
+        sampler = tf.random.uniform
 
       chunk_values = [sampler(shape=shape,
                               minval=0,
@@ -250,7 +250,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
         return DenseTensor(backing)
 
       if isinstance(value, np.ndarray):
-        backing = [tf.convert_to_tensor(component, dtype=INT_TYPE)
+        backing = [tf.convert_to_tensor(value=component, dtype=INT_TYPE)
                    for component in _crt_decompose(value)]
         return DenseTensor(backing)
 
@@ -353,7 +353,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
       factory = factory or self.factory
 
-      with tf.name_scope('to_bits'):
+      with tf.compat.v1.name_scope('to_bits'):
 
         # we will extract the bits in chunks of 16 as that's reasonable for the explicit CRT
         max_chunk_bitsize = 16
@@ -407,7 +407,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
           # pick between corrected and uncorrected based on MSB
           msb = chunks[-1][0] >= (chunks_modulus[-1]) // 2
           chunks = [
-              tf.where(
+              tf.compat.v1.where(
                   msb,
                   chunk[1],  # corrected
                   chunk[0],  # uncorrected
@@ -485,7 +485,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
       # we need to split the tensors, process independently, and then recombine
 
-      with tf.name_scope('split'):
+      with tf.compat.v1.name_scope('split'):
         z_split = []
 
         num_columns = int(x.backing[0].shape[1])
@@ -504,7 +504,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
           z_split.append((inner_x, inner_y))
 
-      with tf.name_scope('recombine'):
+      with tf.compat.v1.name_scope('recombine'):
         split_products = [_crt_matmul(xi, yi) for xi, yi in z_split]
         z_backing = reduce(_crt_add, split_products)
 
@@ -515,13 +515,13 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
       return DenseTensor(backing)
 
     def reduce_sum(self, axis, keepdims=None):
-      with tf.name_scope('crt_reduce_sum'):
-        backing = [tf.reduce_sum(xi, axis, keepdims) % mi
+      with tf.compat.v1.name_scope('crt_reduce_sum'):
+        backing = [tf.reduce_sum(input_tensor=xi, axis=axis, keepdims=keepdims) % mi
                    for xi, mi in zip(self.backing, MODULI)]
         return DenseTensor(backing)
 
     def cumsum(self, axis, exclusive, reverse):
-      with tf.name_scope('crt_cumsum'):
+      with tf.compat.v1.name_scope('crt_cumsum'):
         backing = [tf.cumsum(xi,
                              axis=axis,
                              exclusive=exclusive,
@@ -533,10 +533,10 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
       """Check equality with zero."""
       factory = factory or master_factory
 
-      with tf.name_scope('crt_equal_zero'):
+      with tf.compat.v1.name_scope('crt_equal_zero'):
         zeros = [tf.cast(tf.equal(xi, 0), factory.native_type)
                  for xi in self.backing]
-        number_of_zeros = tf.reduce_sum(zeros, axis=0)
+        number_of_zeros = tf.reduce_sum(input_tensor=zeros, axis=0)
         backing = tf.equal(number_of_zeros, len(MODULI))
         all_zeros = tf.cast(backing, factory.native_type)
 
@@ -547,17 +547,17 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
       x, y = _lift(self, other)
       factory = factory or x.factory
 
-      with tf.name_scope('crt_equal'):
+      with tf.compat.v1.name_scope('crt_equal'):
         matches = [tf.cast(tf.equal(xi, yi), factory.native_type)
                    for xi, yi in zip(x.backing, y.backing)]
-        number_of_matches = tf.reduce_sum(matches, axis=0)
+        number_of_matches = tf.reduce_sum(input_tensor=matches, axis=0)
         backing = tf.equal(number_of_matches, len(MODULI))
         all_matches = tf.cast(backing, factory.native_type)
 
       return factory.tensor(all_matches)
 
     def im2col(self, h_filter: int, w_filter: int, padding: str, stride: int):
-      with tf.name_scope('crt_im2col'):
+      with tf.compat.v1.name_scope('crt_im2col'):
         backing = [im2col(xi,
                           h_filter=h_filter,
                           w_filter=w_filter,
@@ -571,23 +571,23 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
       return conv2d(x, y, stride, padding)  # type: ignore
 
     def batch_to_space_nd(self, block_shape, crops):
-      with tf.name_scope("crt_batch_to_space_nd"):
-        backing = [tf.batch_to_space_nd(xi,
+      with tf.compat.v1.name_scope("crt_batch_to_space_nd"):
+        backing = [tf.compat.v1.batch_to_space_nd(xi,
                                         block_shape=block_shape,
                                         crops=crops)
                    for xi in self.backing]
         return DenseTensor(backing)
 
     def space_to_batch_nd(self, block_shape, paddings):
-      with tf.name_scope("crt_space_to_batch_nd"):
-        backing = [tf.space_to_batch_nd(xi,
+      with tf.compat.v1.name_scope("crt_space_to_batch_nd"):
+        backing = [tf.compat.v1.space_to_batch_nd(xi,
                                         block_shape=block_shape,
                                         paddings=paddings)
                    for xi in self.backing]
         return DenseTensor(backing)
 
     def transpose(self, perm):
-      backing = [tf.transpose(xi, perm=perm) for xi in self.backing]
+      backing = [tf.transpose(a=xi, perm=perm) for xi in self.backing]
       return DenseTensor(backing)
 
     def strided_slice(self, args, kwargs):
@@ -667,7 +667,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
     @property
     def backing(self):
-      with tf.name_scope('expand-seed'):
+      with tf.compat.v1.name_scope('expand-seed'):
         return [secure_random.seeded_random_uniform(self._shape,
                                                     minval=0,
                                                     maxval=mi,
@@ -693,7 +693,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
     @property
     def backing(self):
-      with tf.name_scope('expand-seed'):
+      with tf.compat.v1.name_scope('expand-seed'):
         sampler = partial(secure_random.seeded_random_uniform,
                           self._shape,
                           minval=0,
@@ -721,7 +721,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
     """CRT Placeholder class."""
 
     def __init__(self, shape) -> None:
-      self.placeholders = [tf.placeholder(INT_TYPE, shape=shape)
+      self.placeholders = [tf.compat.v1.placeholder(INT_TYPE, shape=shape)
                            for _ in MODULI]
       super(Placeholder, self).__init__(self.placeholders)
 
@@ -756,7 +756,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
     def assign_from_same(self, value: Tensor):
       assert isinstance(value, Tensor), type(value)
-      assign_ops = [tf.assign(xi, vi).op
+      assign_ops = [tf.compat.v1.assign(xi, vi).op
                     for xi, vi in zip(self.variables, value.backing)]
       return tf.group(*assign_ops)
 

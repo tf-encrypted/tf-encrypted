@@ -9,7 +9,7 @@ from tf_encrypted.layers import Reshape
 
 class TestReshape(unittest.TestCase):
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_forward(self):
     input_shape = [2, 3, 4, 5]
@@ -26,19 +26,19 @@ class TestReshape(unittest.TestCase):
 
       with tfe.Session() as sess:
 
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         # outputs
         out_pond = sess.run(reshape_out_pond.reveal())
 
       # reset graph
-      tf.reset_default_graph()
+      tf.compat.v1.reset_default_graph()
 
-      with tf.Session() as sess:
+      with tf.compat.v1.Session() as sess:
         x = tf.Variable(input_reshape, dtype=tf.float32)
 
         reshape_out_tf = tf.reshape(x, output_shape)
 
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
 
         out_tensorflow = sess.run(reshape_out_tf)
 

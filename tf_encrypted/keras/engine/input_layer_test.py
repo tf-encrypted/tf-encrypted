@@ -13,7 +13,7 @@ np.random.seed(42)
 class TestInput(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_input(self):
     x = Input(shape=(2,), batch_size=1)

@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.compat.v1.keras import backend as K
 
 import tf_encrypted as tfe
 from tf_encrypted.private_model import PrivateModel
@@ -15,7 +15,7 @@ from tf_encrypted.convert.convert_test import read_graph, export_matmul
 class TestPrivateModel(unittest.TestCase):
   def test_private_model(self):
     def provide_input():
-      return tf.placeholder(dtype=tf.float32, shape=[1, 2], name="api/0")
+      return tf.compat.v1.placeholder(dtype=tf.float32, shape=[1, 2], name="api/0")
 
     export_matmul("matmul.pb", [1, 2])
 
@@ -42,7 +42,7 @@ class TestSecureModel(unittest.TestCase):
 
   def test_secure_model(self):
     with tfe.protocol.Pond():
-      tf.random.set_random_seed(42)
+      tf.compat.v1.random.set_random_seed(42)
 
       d = tf.keras.layers.Dense(1, input_shape=(10,), use_bias=False)
       model = tf.keras.Sequential([
@@ -59,7 +59,7 @@ class TestSecureModel(unittest.TestCase):
 
   def test_secure_model_batch(self):
     with tfe.protocol.Pond():
-      tf.random.set_random_seed(42)
+      tf.compat.v1.random.set_random_seed(42)
 
       d = tf.keras.layers.Dense(1, input_shape=(10,), use_bias=False)
       model = tf.keras.Sequential([

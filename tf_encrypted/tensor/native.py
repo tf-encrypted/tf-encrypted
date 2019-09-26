@@ -31,7 +31,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
         return DenseTensor(value)
 
       if isinstance(value, np.ndarray):
-        value = tf.convert_to_tensor(value, dtype=self.native_type)
+        value = tf.convert_to_tensor(value=value, dtype=self.native_type)
         return DenseTensor(value)
 
       raise TypeError("Don't know how to handle {}".format(type(value)))
@@ -98,7 +98,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
       if secure_random.supports_secure_randomness():
         sampler = secure_random.random_uniform
       else:
-        sampler = tf.random_uniform
+        sampler = tf.random.uniform
       value = sampler(
           shape=shape,
           minval=minval,
@@ -121,7 +121,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
       if secure_random.supports_secure_randomness():
         sampler = secure_random.random_uniform
       else:
-        sampler = tf.random_uniform
+        sampler = tf.random.uniform
       value = sampler(
           shape=shape,
           minval=0,
@@ -269,11 +269,11 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
       return conv2d(x, y, stride, padding)
 
     def batch_to_space_nd(self, block_shape, crops):
-      value = tf.batch_to_space_nd(self.value, block_shape, crops)
+      value = tf.compat.v1.batch_to_space_nd(self.value, block_shape, crops)
       return DenseTensor(value)
 
     def space_to_batch_nd(self, block_shape, paddings):
-      value = tf.space_to_batch_nd(self.value, block_shape, paddings)
+      value = tf.compat.v1.space_to_batch_nd(self.value, block_shape, paddings)
       return DenseTensor(value)
 
     def mod(self, k: int):
@@ -283,7 +283,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
       return DenseTensor(value)
 
     def transpose(self, perm):
-      return DenseTensor(tf.transpose(self.value, perm))
+      return DenseTensor(tf.transpose(a=self.value, perm=perm))
 
     def strided_slice(self, args, kwargs):
       return DenseTensor(tf.strided_slice(self.value, *args, **kwargs))
@@ -305,7 +305,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
       return DenseTensor(value)
 
     def reduce_sum(self, axis, keepdims=None):
-      value = tf.reduce_sum(self.value, axis, keepdims)
+      value = tf.reduce_sum(input_tensor=self.value, axis=axis, keepdims=keepdims)
       if EXPLICIT_MODULUS is not None:
         value %= EXPLICIT_MODULUS
       return DenseTensor(value)
@@ -385,7 +385,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
 
     @property
     def value(self):
-      with tf.name_scope('expand-seed'):
+      with tf.compat.v1.name_scope('expand-seed'):
         return secure_random.seeded_random_uniform(
             shape=self._shape,
             dtype=NATIVE_TYPE,
@@ -412,7 +412,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
     """Native Placeholder class."""
 
     def __init__(self, shape: List[int]) -> None:
-      self.placeholder = tf.placeholder(NATIVE_TYPE, shape=shape)
+      self.placeholder = tf.compat.v1.placeholder(NATIVE_TYPE, shape=shape)
       super(Placeholder, self).__init__(self.placeholder)
 
     def __repr__(self) -> str:
@@ -442,6 +442,6 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
 
     def assign_from_same(self, value: Tensor) -> tf.Operation:
       assert isinstance(value, Tensor), type(value)
-      return tf.assign(self.variable, value.value).op
+      return tf.compat.v1.assign(self.variable, value.value).op
 
   return FACTORY

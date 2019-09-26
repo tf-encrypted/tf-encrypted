@@ -372,7 +372,7 @@ class DepthwiseConv2D(Conv2D):
 
       if self.depth_multiplier > 1:
         # rearrange kernel
-        kernel = tf.transpose(kernel, [0, 1, 3, 2])
+        kernel = tf.transpose(a=kernel, perm=[0, 1, 3, 2])
         kernel = tf.reshape(kernel, shape=self.kernel_size +
                             (self.input_dim * self.depth_multiplier, 1))
 

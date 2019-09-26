@@ -21,7 +21,7 @@ _run_counter = defaultdict(int)
 logger = logging.getLogger('tf_encrypted')
 
 
-class Session(tf.Session):
+class Session(tf.compat.v1.Session):
   """
   Wrap a Tensorflow Session.
 
@@ -97,13 +97,13 @@ class Session(tf.Session):
       run_tag = os.path.join(__TENSORBOARD_DIR__, session_tag)
       _run_counter[tag] += 1
 
-      writer = tf.summary.FileWriter(run_tag, self.graph)
-      run_options = tf.RunOptions(
-          trace_level=tf.RunOptions.FULL_TRACE,
+      writer = tf.compat.v1.summary.FileWriter(run_tag, self.graph)
+      run_options = tf.compat.v1.RunOptions(
+          trace_level=tf.compat.v1.RunOptions.FULL_TRACE,
           output_partition_graphs=output_partition_graphs
       )
 
-      run_metadata = tf.RunMetadata()
+      run_metadata = tf.compat.v1.RunMetadata()
 
       fetches_out = super(Session, self).run(
           sanitized_fetches,

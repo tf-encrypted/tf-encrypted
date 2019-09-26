@@ -81,11 +81,11 @@ class Config(ABC):
   @classmethod
   def build_graph_options(cls, disable_optimizations):
     if not disable_optimizations:
-      return tf.GraphOptions()
+      return tf.compat.v1.GraphOptions()
 
-    return tf.GraphOptions(
-        optimizer_options=tf.OptimizerOptions(
-            opt_level=tf.OptimizerOptions.L0,
+    return tf.compat.v1.GraphOptions(
+        optimizer_options=tf.compat.v1.OptimizerOptions(
+            opt_level=tf.compat.v1.OptimizerOptions.L0,
             do_common_subexpression_elimination=False,
             do_constant_folding=False,
             do_function_inlining=False,
@@ -168,7 +168,7 @@ class LocalConfig(Config):
   ):
     logger.info("Players: %s", [player.name for player in self.players])
     target = ''
-    config = tf.ConfigProto(
+    config = tf.compat.v1.ConfigProto(
         log_device_placement=log_device_placement,
         allow_soft_placement=False,
         device_count={"CPU": len(self._players)},
@@ -275,7 +275,7 @@ class RemoteConfig(Config):
     assert player is not None, "'{}' not found in configuration".format(name)
     cluster = tf.train.ClusterSpec({self._job_name: self.hosts})
     logger.debug("Creating server for '%s' using %s", name, cluster)
-    server = tf.train.Server(
+    server = tf.distribute.Server(
         cluster,
         job_name=self._job_name,
         task_index=player.index,
@@ -294,13 +294,13 @@ class RemoteConfig(Config):
     target = 'grpc://{}'.format(self.hosts[0])
     cpu_cores = _get_docker_cpu_quota()
     if cpu_cores is None:
-      config = tf.ConfigProto(
+      config = tf.compat.v1.ConfigProto(
           log_device_placement=log_device_placement,
           allow_soft_placement=False,
           graph_options=self.build_graph_options(disable_optimizations)
       )
     else:
-      config = tf.ConfigProto(
+      config = tf.compat.v1.ConfigProto(
           log_device_placement=log_device_placement,
           allow_soft_placement=False,
           inter_op_parallelism_threads=cpu_cores,

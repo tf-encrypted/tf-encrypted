@@ -27,6 +27,7 @@ def registry():
       'Shape': _shape,
       'StridedSlice': _strided_slice,
       'Add': _add,
+      'AddV2': _add,
       'Sub': _sub,
       'Transpose': _transpose,
       'Reshape': _reshape,
@@ -73,7 +74,7 @@ with open(specops_path, "r") as stream:
 # pylint: disable=unused-argument
 # pylint: disable=missing-docstring
 def _placeholder(converter, node: Any, inputs: List[str]) -> Any:
-  return tf.placeholder(node.attr["dtype"].type,
+  return tf.compat.v1.placeholder(node.attr["dtype"].type,
                         shape=node.attr["shape"].shape)
 
 
@@ -127,7 +128,7 @@ def _conv2d(converter, node, inputs):
   x_in = converter.outputs[inputs[0]]
   kernel = converter.outputs[inputs[1]]
 
-  if isinstance(kernel, tf.NodeDef):
+  if isinstance(kernel, tf.compat.v1.NodeDef):
     shape = [i.size for i in kernel.attr["value"].tensor.tensor_shape.dim]
     w = _nodef_to_private_pond(converter, kernel)
   else:
@@ -188,12 +189,12 @@ def _keras_depthwise_conv2d(converter, interiors, inputs):
 
   kernel = interiors["depthwise_kernel"]
   k = _nodef_to_numpy_array(kernel)
-  kernel_init = tf.keras.initializers.Constant(k)
+  kernel_init = tf.compat.v1.keras.initializers.Constant(k)
 
   try:
     bias = interiors["bias"]
     b = _nodef_to_numpy_array(bias)
-    bias_init = tf.keras.initializers.Constant(b)
+    bias_init = tf.compat.v1.keras.initializers.Constant(b)
     use_bias = True
   except KeyError:
     use_bias = False
@@ -249,16 +250,16 @@ def _keras_batchnorm(converter, interiors, inputs):
   fmt = bn_op.attr["data_format"].s.decode('ascii')
 
   gamma = _nodef_to_numpy_array(interiors["gamma"])
-  gamma_init = tf.keras.initializers.Constant(gamma)
+  gamma_init = tf.compat.v1.keras.initializers.Constant(gamma)
 
   beta = _nodef_to_numpy_array(interiors["beta"])
-  beta_init = tf.keras.initializers.Constant(beta)
+  beta_init = tf.compat.v1.keras.initializers.Constant(beta)
 
   moving_mean = _nodef_to_numpy_array(interiors["moving_mean"])
-  moving_mean_init = tf.keras.initializers.Constant(moving_mean)
+  moving_mean_init = tf.compat.v1.keras.initializers.Constant(moving_mean)
 
   moving_variance = _nodef_to_numpy_array(interiors["moving_variance"])
-  moving_variance_init = tf.keras.initializers.Constant(moving_variance)
+  moving_variance_init = tf.compat.v1.keras.initializers.Constant(moving_variance)
 
   input_shape = x_in.shape.as_list()
 
@@ -287,7 +288,7 @@ def _sigmoid(converter, node: Any, inputs: List[str]) -> Any:
 def _strided_slice(converter, node: Any, inputs: List[str]) -> Any:
   x_in = converter.outputs[inputs[0]]
 
-  if isinstance(x_in, tf.NodeDef):
+  if isinstance(x_in, tf.compat.v1.NodeDef):
     input_out = _nodef_to_private_pond(converter, x_in)
   else:
     input_out = x_in
@@ -320,7 +321,7 @@ def _pack(converter, node: Any, inputs: List[str]) -> Any:
 
   for x_in in inputs:
     input_c = converter.outputs[x_in]
-    if isinstance(input_c, tf.NodeDef):
+    if isinstance(input_c, tf.compat.v1.NodeDef):
       final_inputs.append(_nodef_to_private_pond(converter, input_c))
     else:
       final_inputs.append(input_c)
@@ -332,12 +333,12 @@ def _bias_add(converter, node: Any, inputs: List[str]) -> Any:
   a = converter.outputs[inputs[0]]
   b = converter.outputs[inputs[1]]
 
-  if isinstance(a, tf.NodeDef):
+  if isinstance(a, tf.compat.v1.NodeDef):
     a_out = _nodef_to_private_pond(converter, a)
   else:
     a_out = a
 
-  if isinstance(b, tf.NodeDef):
+  if isinstance(b, tf.compat.v1.NodeDef):
     b_out = _nodef_to_private_pond(converter, b)
   else:
     b_out = b
@@ -409,7 +410,7 @@ def _transpose(converter, node: Any, inputs: List[str]) -> Any:
 def _expand_dims(converter, node: Any, inputs: List[str]) -> Any:
   x_in = converter.outputs[inputs[0]]
 
-  if isinstance(x_in, tf.NodeDef):
+  if isinstance(x_in, tf.compat.v1.NodeDef):
     input_out = _nodef_to_private_pond(converter, x_in)
   else:
     input_out = x_in
@@ -424,7 +425,7 @@ def _expand_dims(converter, node: Any, inputs: List[str]) -> Any:
 def _negative(converter, node: Any, inputs: List[str]) -> Any:
   x_in = converter.outputs[inputs[0]]
 
-  if isinstance(x_in, tf.NodeDef):
+  if isinstance(x_in, tf.compat.v1.NodeDef):
     input_out = _nodef_to_private_pond(converter, x_in)
   else:
     input_out = x_in
@@ -437,7 +438,7 @@ def _gather(converter, node: Any, inputs: List[str]) -> Any:
   indices = converter.outputs[inputs[1]]
   axis = converter.outputs[inputs[2]]
 
-  if isinstance(x_in, tf.NodeDef):
+  if isinstance(x_in, tf.compat.v1.NodeDef):
     input_out = _nodef_to_private_pond(converter, x_in)
   else:
     input_out = x_in
@@ -474,7 +475,7 @@ def _split(converter, node: Any, inputs: List[str]) -> Any:
 
     num_or_size_splits = node.attr["num_split"].i
 
-  if isinstance(x_in, tf.NodeDef):
+  if isinstance(x_in, tf.compat.v1.NodeDef):
     input_out = _nodef_to_private_pond(converter, x_in)
   else:
     input_out = x_in
@@ -500,7 +501,7 @@ def _pad(converter, node: Any, inputs: List[str]) -> Any:
 def _rsqrt(converter, node: Any, inputs: List[str]) -> Any:
   x_in = converter.outputs[inputs[0]]
 
-  if isinstance(x_in, tf.NodeDef):
+  if isinstance(x_in, tf.compat.v1.NodeDef):
     tensor = x_in.attr["value"].tensor
     shape = [i.size for i in tensor.tensor_shape.dim]
 
@@ -522,7 +523,7 @@ def _rsqrt(converter, node: Any, inputs: List[str]) -> Any:
     decoded = converter.protocol._decode(x_in.value_on_0, True)  # pylint: disable=protected-access
 
     def inputter_fn():
-      return tf.rsqrt(decoded)
+      return tf.math.rsqrt(decoded)
 
   x = converter.protocol.define_public_input(
       converter.model_provider, inputter_fn)
@@ -534,12 +535,12 @@ def _add(converter, node: Any, inputs: List[str]) -> Any:
   a = converter.outputs[inputs[0]]
   b = converter.outputs[inputs[1]]
 
-  if isinstance(a, tf.NodeDef):
+  if isinstance(a, tf.compat.v1.NodeDef):
     a_out = _nodef_to_public_pond(converter, a)
   else:
     a_out = a
 
-  if isinstance(b, tf.NodeDef):
+  if isinstance(b, tf.compat.v1.NodeDef):
     b_out = _nodef_to_public_pond(converter, b)
   else:
     b_out = b
@@ -551,12 +552,12 @@ def _sub(converter, node: Any, inputs: List[str]) -> Any:
   a = converter.outputs[inputs[0]]
   b = converter.outputs[inputs[1]]
 
-  if isinstance(a, tf.NodeDef):
+  if isinstance(a, tf.compat.v1.NodeDef):
     a_out = _nodef_to_public_pond(converter, a)
   else:
     a_out = a
 
-  if isinstance(b, tf.NodeDef):
+  if isinstance(b, tf.compat.v1.NodeDef):
     b_out = _nodef_to_public_pond(converter, b)
   else:
     b_out = b
@@ -568,12 +569,12 @@ def _mul(converter, node: Any, inputs: List[str]) -> Any:
   a = converter.outputs[inputs[0]]
   b = converter.outputs[inputs[1]]
 
-  if isinstance(a, tf.NodeDef):
+  if isinstance(a, tf.compat.v1.NodeDef):
     a_out = _nodef_to_public_pond(converter, a)
   else:
     a_out = a
 
-  if isinstance(b, tf.NodeDef):
+  if isinstance(b, tf.compat.v1.NodeDef):
     b_out = _nodef_to_public_pond(converter, b)
   else:
     b_out = b
@@ -680,7 +681,7 @@ def _required_space_to_batch_paddings(converter, node, inputs: List[str]):
                        "required_space_to_batch_paddings assumes public "
                        "input."))
       inputs_int32.append(tf.cast(x_in.reveal().decode(), tf.int32))
-    elif isinstance(x_in, tf.NodeDef):
+    elif isinstance(x_in, tf.compat.v1.NodeDef):
       inputs_int32.append(_nodef_to_numpy_array(x_in))
     else:
       raise TypeError("Unexpected input of type {}.".format(type(x_in)))
@@ -734,7 +735,7 @@ def _slice(converter, node, inputs):
   begin = _nodef_to_numpy_array(converter.outputs[inputs[1]])
   size = _nodef_to_numpy_array(converter.outputs[inputs[2]])
 
-  if isinstance(x_in, tf.NodeDef):
+  if isinstance(x_in, tf.compat.v1.NodeDef):
     input_out = _nodef_to_private_pond(converter, x_in)
   else:
     input_out = x_in

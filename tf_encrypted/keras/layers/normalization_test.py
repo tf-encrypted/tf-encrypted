@@ -13,7 +13,7 @@ np.random.seed(42)
 class TestBatchNormalization(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_batchnorm_2d(self):
     self._core_batchnorm([1, 4], axis=1)
@@ -33,14 +33,14 @@ class TestBatchNormalization(unittest.TestCase):
   def test_batchnorm_non_default_mean_init(self):
     input_shape = [1, 1, 3]
     const = np.random.normal(input_shape)
-    initializer = tf.keras.initializers.Constant(const)
+    initializer = tf.compat.v1.keras.initializers.Constant(const)
 
     self._core_batchnorm([1] + input_shape, moving_mean_initializer=initializer)
 
   def test_batchnorm_non_default_variance_init(self):
     input_shape = [1, 1, 3]
     const = np.random.uniform(input_shape)
-    initializer = tf.keras.initializers.Constant(const)
+    initializer = tf.compat.v1.keras.initializers.Constant(const)
 
     self._core_batchnorm([1] + input_shape,
                          moving_variance_initializer=initializer)

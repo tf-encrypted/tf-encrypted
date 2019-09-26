@@ -11,7 +11,7 @@ from tf_encrypted.layers import AveragePooling2D, MaxPooling2D
 
 class TestAveragePooling2D(unittest.TestCase):
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def _get_fixtures(self, even=True):
     if even:
@@ -29,15 +29,15 @@ class TestAveragePooling2D(unittest.TestCase):
 
   def _tf_tiled_forward(self, input_pool: np.ndarray) -> np.ndarray:
     x = tf.constant(input_pool, dtype=tf.float32)
-    x_nhwc = tf.transpose(x, (0, 2, 3, 1))
+    x_nhwc = tf.transpose(a=x, perm=(0, 2, 3, 1))
     ksize = [1, 2, 2, 1]
-    pool_out_tf = tf.nn.avg_pool(x_nhwc,
+    pool_out_tf = tf.nn.avg_pool2d(x_nhwc,
                                  ksize=ksize,
                                  strides=ksize,
                                  padding="VALID",
                                  data_format='NHWC')
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       out_tf = sess.run(pool_out_tf).transpose(0, 3, 1, 2)
 
     return out_tf
@@ -58,14 +58,14 @@ class TestAveragePooling2D(unittest.TestCase):
       pool_out_pond = pool.forward(x_in)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         if t_type in ['private', 'masked']:
           out_pond = sess.run(pool_out_pond.reveal())
         else:
           out_pond = sess.run(pool_out_pond)
 
     # reset tf graph
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
     # pooling in tf
     out_tf = self._tf_tiled_forward(input_pool)
@@ -94,10 +94,10 @@ class TestAveragePooling2D(unittest.TestCase):
 @pytest.mark.slow
 class TestMaxPooling2D(unittest.TestCase):
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def tearDown(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_maxpool2d(self):
     with tfe.protocol.SecureNN() as prot:
@@ -115,7 +115,7 @@ class TestMaxPooling2D(unittest.TestCase):
       result = pool.forward(x)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         answer = sess.run(result.reveal())
 
     assert np.array_equal(answer, expected)
