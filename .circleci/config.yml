@@ -64,7 +64,7 @@ variables:
 jobs:
   build:
     docker:
-      - image: circleci/python:3.5-jessie
+      - image: circleci/python:3.7-jessie
     working_directory: ~/repo
     steps:
       - *docker-caching
