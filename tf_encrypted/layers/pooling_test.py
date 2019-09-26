@@ -32,10 +32,10 @@ class TestAveragePooling2D(unittest.TestCase):
     x_nhwc = tf.transpose(a=x, perm=(0, 2, 3, 1))
     ksize = [1, 2, 2, 1]
     pool_out_tf = tf.nn.avg_pool2d(x_nhwc,
-                                 ksize=ksize,
-                                 strides=ksize,
-                                 padding="VALID",
-                                 data_format='NHWC')
+                                   ksize=ksize,
+                                   strides=ksize,
+                                   padding="VALID",
+                                   data_format='NHWC')
 
     with tf.compat.v1.Session() as sess:
       out_tf = sess.run(pool_out_tf).transpose(0, 3, 1, 2)

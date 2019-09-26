@@ -389,7 +389,8 @@ def export_stack(filename: str, input_shape: Tuple[int]):
 def run_avgpool(data):
   a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
 
-  x = tf.nn.avg_pool2d(a, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
+  x = tf.nn.avg_pool2d(a, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
+                       padding='VALID')
 
   with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
@@ -400,7 +401,8 @@ def run_avgpool(data):
 def export_avgpool(filename, input_shape):
   pl = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
 
-  x = tf.nn.avg_pool2d(pl, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
+  x = tf.nn.avg_pool2d(pl, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
+                       padding='VALID')
 
   return export(x, filename)
 
@@ -408,7 +410,8 @@ def export_avgpool(filename, input_shape):
 def run_maxpool(data):
   a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
 
-  x = tf.nn.max_pool2d(input=a, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
+  x = tf.nn.max_pool2d(input=a, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
+                       padding='VALID')
 
   with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={a: data})
@@ -419,7 +422,8 @@ def run_maxpool(data):
 def export_maxpool(filename, input_shape):
   pl = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
 
-  x = tf.nn.max_pool2d(input=pl, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
+  x = tf.nn.max_pool2d(input=pl, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
+                       padding='VALID')
 
   return export(x, filename)
 
@@ -464,7 +468,8 @@ def run_conv2d(data, data_format="NCHW"):
   filtered = tf.constant(np.ones((3, 3, 1, 3)),
                          dtype=tf.float32,
                          name="weights")
-  x = tf.nn.conv2d(input=x, filters=filtered, strides=(1, 1, 1, 1), padding="SAME", name="nn_conv2d")
+  x = tf.nn.conv2d(input=x, filters=filtered, strides=(1, 1, 1, 1),
+                   padding="SAME", name="nn_conv2d")
 
   with tf.compat.v1.Session() as sess:
     output = sess.run(x, feed_dict={feed_me: data})
@@ -481,7 +486,8 @@ def export_conv2d(filename: str, input_shape: List[int], data_format="NCHW"):
   filtered = tf.constant(np.ones((3, 3, 1, 3)),
                          dtype=tf.float32,
                          name="weights")
-  x = tf.nn.conv2d(input=pl, filters=filtered, strides=(1, 1, 1, 1), padding="SAME",
+  x = tf.nn.conv2d(input=pl, filters=filtered,
+                   strides=(1, 1, 1, 1), padding="SAME",
                    data_format=data_format, name="nn_conv2d")
 
   return export(x, filename)
@@ -656,7 +662,8 @@ def _construct_space_to_batch_nd(input_shape):
   a = tf.compat.v1.placeholder(tf.float32, shape=input_shape, name="input")
   block_shape = tf.constant([2, 2], dtype=tf.int32)
   paddings = tf.constant([[0, 0], [2, 0]], dtype=tf.int32)
-  x = tf.compat.v1.space_to_batch_nd(a, block_shape=block_shape, paddings=paddings)
+  x = tf.compat.v1.space_to_batch_nd(a, block_shape=block_shape,
+                                     paddings=paddings)
   return x, a
 
 

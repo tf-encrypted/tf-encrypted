@@ -293,9 +293,10 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
                               minval=NATIVE_TYPE.min + 1,
                               maxval=NATIVE_TYPE.max)
     value = tf.compat.v1.where(unshifted_value < 0,
-                     unshifted_value + tf.ones(shape=unshifted_value.shape,
-                                               dtype=unshifted_value.dtype),
-                     unshifted_value)
+                               unshifted_value +
+                               tf.ones(shape=unshifted_value.shape,
+                                       dtype=unshifted_value.dtype),
+                               unshifted_value)
     return value
 
   def _lessthan_as_unsigned(x, y, bitlength):

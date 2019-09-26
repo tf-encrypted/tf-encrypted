@@ -15,7 +15,8 @@ from tf_encrypted.convert.convert_test import read_graph, export_matmul
 class TestPrivateModel(unittest.TestCase):
   def test_private_model(self):
     def provide_input():
-      return tf.compat.v1.placeholder(dtype=tf.float32, shape=[1, 2], name="api/0")
+      return tf.compat.v1.placeholder(dtype=tf.float32, shape=[1, 2],
+                                      name="api/0")
 
     export_matmul("matmul.pb", [1, 2])
 

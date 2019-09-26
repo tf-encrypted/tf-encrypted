@@ -75,7 +75,7 @@ with open(specops_path, "r") as stream:
 # pylint: disable=missing-docstring
 def _placeholder(converter, node: Any, inputs: List[str]) -> Any:
   return tf.compat.v1.placeholder(node.attr["dtype"].type,
-                        shape=node.attr["shape"].shape)
+                                  shape=node.attr["shape"].shape)
 
 
 def _constant(converter, node: Any, inputs: List[str]) -> Any:
@@ -259,7 +259,8 @@ def _keras_batchnorm(converter, interiors, inputs):
   moving_mean_init = tf.compat.v1.keras.initializers.Constant(moving_mean)
 
   moving_variance = _nodef_to_numpy_array(interiors["moving_variance"])
-  moving_variance_init = tf.compat.v1.keras.initializers.Constant(moving_variance)
+  var_init = tf.compat.v1.keras.initializers.Constant(moving_variance)
+  moving_variance_init = var_init
 
   input_shape = x_in.shape.as_list()
 

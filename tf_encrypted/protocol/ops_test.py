@@ -72,7 +72,8 @@ class TestBatchToSpaceND(unittest.TestCase):
   @staticmethod
   def _generic_public_test(t, block_shape, crops):
     with tf.compat.v1.Session() as sess:
-      out = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape, crops=crops)
+      out = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape,
+                                           crops=crops)
       actual = sess.run(out)
 
     with tfe.protocol.Pond() as prot:
@@ -87,12 +88,14 @@ class TestBatchToSpaceND(unittest.TestCase):
   @staticmethod
   def _generic_private_test(t, block_shape, crops):
     with tf.compat.v1.Session() as sess:
-      out = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape, crops=crops)
+      out = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape,
+                                           crops=crops)
       actual = sess.run(out)
 
     with tfe.protocol.Pond() as prot:
       b = prot.define_private_variable(t)
-      out = prot.batch_to_space_nd(b, block_shape=block_shape, crops=crops)
+      out = prot.batch_to_space_nd(b, block_shape=block_shape,
+                                   crops=crops)
       with tfe.Session() as sess:
         sess.run(tf.compat.v1.global_variables_initializer())
         final = sess.run(out.reveal())
@@ -102,12 +105,14 @@ class TestBatchToSpaceND(unittest.TestCase):
   @staticmethod
   def _generic_masked_test(t, block_shape, crops):
     with tf.compat.v1.Session() as sess:
-      out = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape, crops=crops)
+      out = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape,
+                                           crops=crops)
       actual = sess.run(out)
 
     with tfe.protocol.Pond() as prot:
       b = prot.mask(prot.define_private_variable(t))
-      out = prot.batch_to_space_nd(b, block_shape=block_shape, crops=crops)
+      out = prot.batch_to_space_nd(b, block_shape=block_shape,
+                                   crops=crops)
       with tfe.Session() as sess:
         sess.run(tf.compat.v1.global_variables_initializer())
         final = sess.run(out.reveal())
@@ -179,7 +184,8 @@ class TestSpaceToBatchND(unittest.TestCase):
   @staticmethod
   def _generic_public_test(t, block_shape, paddings):
     with tf.compat.v1.Session() as sess:
-      out = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape, paddings=paddings)
+      out = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape,
+                                           paddings=paddings)
       actual = sess.run(out)
 
     with tfe.protocol.Pond() as prot:
@@ -195,7 +201,8 @@ class TestSpaceToBatchND(unittest.TestCase):
   @staticmethod
   def _generic_private_test(t, block_shape, paddings):
     with tf.compat.v1.Session() as sess:
-      out = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape, paddings=paddings)
+      out = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape,
+                                           paddings=paddings)
       actual = sess.run(out)
 
     with tfe.protocol.Pond() as prot:
@@ -211,7 +218,8 @@ class TestSpaceToBatchND(unittest.TestCase):
   @staticmethod
   def _generic_masked_test(t, block_shape, paddings):
     with tf.compat.v1.Session() as sess:
-      out = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape, paddings=paddings)
+      out = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape,
+                                           paddings=paddings)
       actual = sess.run(out)
 
     with tfe.protocol.Pond() as prot:
@@ -517,9 +525,11 @@ class TestPad(unittest.TestCase):
       tf.compat.v1.reset_default_graph()
 
       def run_pad(data):
-        a = tf.compat.v1.placeholder(tf.float32, shape=data.shape, name="input")
+        a = tf.compat.v1.placeholder(tf.float32, shape=data.shape,
+                                     name="input")
 
-        x = tf.pad(tensor=a, paddings=tf.constant([[2, 2], [3, 4]]), mode="CONSTANT")
+        x = tf.pad(tensor=a, paddings=tf.constant([[2, 2], [3, 4]]),
+                   mode="CONSTANT")
 
         with tf.compat.v1.Session() as sess:
           output = sess.run(x, feed_dict={a: data})

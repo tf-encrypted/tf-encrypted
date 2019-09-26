@@ -139,7 +139,7 @@ class Pond(Protocol):
 
     v = self._encode(value, apply_scaling)
 
-    with tf.compat.v1.name_scope("constant{}".format("-" + name if name else "")):
+    with tf.name_scope("constant{}".format("-" + name if name else "")):
 
       with tf.device(self.server_0.device_name):
         x_on_0 = factory.constant(v)
@@ -270,7 +270,7 @@ class Pond(Protocol):
 
     factory = factory or self.tensor_factory
 
-    with tf.compat.v1.name_scope("public-var{}".format("-" + name if name else "")):
+    with tf.name_scope("public-var{}".format("-" + name if name else "")):
 
       if isinstance(initial_value, np.ndarray):
         v = self._encode(initial_value, apply_scaling)
@@ -609,7 +609,7 @@ class Pond(Protocol):
       raise TypeError(("Don't know how to process input argument "
                        "of type {}").format(type(x)))
 
-    with tf.compat.v1.name_scope(name_scope if name_scope else "local-computation"):
+    with tf.name_scope(name_scope if name_scope else "local-computation"):
 
       with tf.device(player.device_name):
         if arguments is None:
@@ -4378,7 +4378,7 @@ def _zeros_private(
 
   factory = factory or prot.tensor_factory
 
-  with tf.compat.v1.name_scope('private-zeros{}'.format('-' + name if name else '')):
+  with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
 
     # pylint: disable=protected-access
     v = factory.tensor(prot._encode(zeros_array, apply_scaling))
@@ -4407,7 +4407,7 @@ def _zeros_public(
 
   factory = factory or prot.tensor_factory
 
-  with tf.compat.v1.name_scope('private-zeros{}'.format('-' + name if name else '')):
+  with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
 
     enc = prot._encode(zeros_array, apply_scaling)  # pylint: disable=protected-access
     v = factory.tensor(enc)

@@ -305,7 +305,8 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
       return DenseTensor(value)
 
     def reduce_sum(self, axis, keepdims=None):
-      value = tf.reduce_sum(input_tensor=self.value, axis=axis, keepdims=keepdims)
+      value = tf.reduce_sum(input_tensor=self.value, axis=axis,
+                            keepdims=keepdims)
       if EXPLICIT_MODULUS is not None:
         value %= EXPLICIT_MODULUS
       return DenseTensor(value)

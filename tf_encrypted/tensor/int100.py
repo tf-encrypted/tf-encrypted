@@ -89,7 +89,9 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
           t = [(xi * qi) % mi for xi, qi, mi in zip(x, q, MODULI)]
           alpha = tf.round(
               tf.reduce_sum(
-                  input_tensor=[tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, MODULI)],
+                  input_tensor=[
+                      tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, MODULI)
+                  ],
                   axis=0
               ))
           u = tf.cast(tf.reduce_sum(
@@ -120,11 +122,15 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
         t = [(xi * qi) % mi for xi, qi, mi in zip(x, q, MODULI)]
         alpha = tf.round(
             tf.reduce_sum(
-                input_tensor=[tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, MODULI)],
+                input_tensor=[
+                    tf.cast(ti, tf.float32) / mi for ti, mi in zip(t, MODULI)
+                ],
                 axis=0
             )
         )
-        u = tf.reduce_sum(input_tensor=[ti * bi for ti, bi in zip(t, b)], axis=0)
+        u = tf.reduce_sum(input_tensor=[
+            ti * bi for ti, bi in zip(t, b)
+            ], axis=0)
         v = tf.cast(alpha, INT_TYPE) * big_b
         w = u - v
         return w % k
@@ -516,8 +522,10 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
     def reduce_sum(self, axis, keepdims=None):
       with tf.compat.v1.name_scope('crt_reduce_sum'):
-        backing = [tf.reduce_sum(input_tensor=xi, axis=axis, keepdims=keepdims) % mi
-                   for xi, mi in zip(self.backing, MODULI)]
+        backing = [
+            tf.reduce_sum(input_tensor=xi, axis=axis, keepdims=keepdims) % mi
+            for xi, mi in zip(self.backing, MODULI)
+        ]
         return DenseTensor(backing)
 
     def cumsum(self, axis, exclusive, reverse):
@@ -573,16 +581,16 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
     def batch_to_space_nd(self, block_shape, crops):
       with tf.compat.v1.name_scope("crt_batch_to_space_nd"):
         backing = [tf.compat.v1.batch_to_space_nd(xi,
-                                        block_shape=block_shape,
-                                        crops=crops)
+                                                  block_shape=block_shape,
+                                                  crops=crops)
                    for xi in self.backing]
         return DenseTensor(backing)
 
     def space_to_batch_nd(self, block_shape, paddings):
       with tf.compat.v1.name_scope("crt_space_to_batch_nd"):
         backing = [tf.compat.v1.space_to_batch_nd(xi,
-                                        block_shape=block_shape,
-                                        paddings=paddings)
+                                                  block_shape=block_shape,
+                                                  paddings=paddings)
                    for xi in self.backing]
         return DenseTensor(backing)
 

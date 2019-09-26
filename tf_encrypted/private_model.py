@@ -70,7 +70,8 @@ def load_graph(model_file, model_name=None, batch_size=1):
         else:
           name = "api/{}/{}".format(model_name, i)
 
-        pl = tf.compat.v1.placeholder(tf.float32, shape=spec['shape'], name=name)
+        pl = tf.compat.v1.placeholder(tf.float32, shape=spec['shape'],
+                                      name=name)
         return pl
 
       return provide_input

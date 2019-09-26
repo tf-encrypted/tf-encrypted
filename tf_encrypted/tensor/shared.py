@@ -63,12 +63,16 @@ def im2col(x: Union[tf.Tensor, np.ndarray],
     )
 
     # change back to NCHW
-    patch_tensor_nchw = tf.reshape(tf.transpose(a=patch_tensor, perm=[3, 1, 2, 0]),
-                                   (h_filter, w_filter, channels, -1))
+    patch_tensor_nchw = tf.reshape(
+        tf.transpose(a=patch_tensor, perm=[3, 1, 2, 0]),
+        (h_filter, w_filter, channels, -1)
+    )
 
     # reshape to x_col
-    x_col_tensor = tf.reshape(tf.transpose(a=patch_tensor_nchw, perm=[2, 0, 1, 3]),
-                              (channels * h_filter * w_filter, -1))
+    x_col_tensor = tf.reshape(
+        tf.transpose(a=patch_tensor_nchw, perm=[2, 0, 1, 3]),
+        (channels * h_filter * w_filter, -1)
+    )
 
     return x_col_tensor
 
