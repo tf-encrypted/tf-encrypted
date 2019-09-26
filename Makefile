@@ -308,10 +308,19 @@ $(LIBSODIUM_OUT):
 	$(MAKE) -C $(LIBSODIUM_DIR)
 	$(MAKE) -C $(LIBSODIUM_DIR) install
 
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	FINAL_TF_LFLAGS = $(TF_LFLAGS)
+endif
+ifeq ($(UNAME_S),Darwin)
+	FINAL_TF_LFLAGS = $(word 1,$(TF_LFLAGS)) -ltensorflow_framework
+endif
+
 $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECURE_IN_H)
 	mkdir -p $(PACKAGE_DIR)/secure_random
+
 	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
-		-fPIC $(TF_CFLAGS) $(TF_LFLAGS) -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium
+		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium
 
 build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
 
