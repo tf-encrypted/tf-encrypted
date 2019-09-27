@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.9]
+
+**Added**
+
+- We now support TensorFlow 1.14.0
+- OpenMined as organizational contributor in the README
+- Links to TF Seal and Keras blog posts in the README
+
+
+**Changed**
+
+- Add more detailed explanations to the Keras Classification notebooks
+
+**Fixed**
+
+- Public division by adding reciprotal (tf.math.reciprotal) support
+- A bug in interactive truncation which could have lead to overflow
+- SecureNN's ReLU out of memory error for large tensors. Above a certain threshold (tensor size), the tensor gets splitted. ReLU is performed on each split and the results are then concatenated.
+- An edge case in `tfe.convert` where it couldnt't convert a model correctly using specific special ops in the graph
+
+
 ## [0.5.8]
 
 **Added**
