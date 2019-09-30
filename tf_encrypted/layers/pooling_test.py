@@ -102,9 +102,9 @@ class TestMaxPooling2D(unittest.TestCase):
     def securenn():
       with tfe.protocol.SecureNN() as prot:
         x_in = np.array([[[[1, 2, 3, 4],
-                             [3, 2, 4, 1],
-                             [1, 2, 3, 4],
-                             [3, 2, 4, 1]]]])
+                           [3, 2, 4, 1],
+                           [1, 2, 3, 4],
+                           [3, 2, 4, 1]]]])
 
         x = prot.define_private_tensor(x_in)
         pool = MaxPooling2D([0, 1, 4, 4], pool_size=2, padding="VALID")

@@ -1,10 +1,8 @@
 """Base abstraction for a Protocol."""
-from abc import ABC, abstractmethod
+from abc import ABC
 import functools
 from typing import Optional, Any, Callable
 from types import TracebackType
-
-import tensorflow as tf
 
 from ..tensor.factory import AbstractTensor
 

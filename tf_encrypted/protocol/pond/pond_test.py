@@ -44,7 +44,7 @@ class TestTruncate(unittest.TestCase):
       @tf.function
       def func():
         w = prot.define_private_tensor(
-          expected * prot.fixedpoint_config.scaling_factor)  # double precision
+            expected * prot.fixedpoint_config.scaling_factor)  # double precision
         v = prot.truncate(w)  # single precision
 
         return unwrap_fetches(v.reveal())
@@ -63,7 +63,7 @@ class TestTruncate(unittest.TestCase):
     @tf.function
     def func():
       w = prot.define_private_tensor(
-        expected * prot.fixedpoint_config.scaling_factor)  # double precision
+          expected * prot.fixedpoint_config.scaling_factor)  # double precision
       v = prot.truncate(w)  # single precision
 
       return unwrap_fetches(v.reveal())

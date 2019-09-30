@@ -74,7 +74,7 @@ class TestBatchToSpaceND(unittest.TestCase):
   @staticmethod
   def _generic_public_test(t, block_shape, crops):
     actual = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape,
-                                           crops=crops)
+                                            crops=crops)
 
     with tfe.protocol.Pond() as prot:
       @tf.function
@@ -96,7 +96,7 @@ class TestBatchToSpaceND(unittest.TestCase):
       def func():
         b = prot.define_private_tensor(t)
         out = prot.batch_to_space_nd(b, block_shape=block_shape,
-                                   crops=crops)
+                                     crops=crops)
 
         return unwrap_fetches(out.reveal())
 
@@ -183,7 +183,7 @@ class TestSpaceToBatchND(unittest.TestCase):
   @staticmethod
   def _generic_public_test(t, block_shape, paddings):
     actual = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape,
-                                           paddings=paddings)
+                                            paddings=paddings)
 
     with tfe.protocol.Pond() as prot:
       @tf.function
@@ -198,7 +198,7 @@ class TestSpaceToBatchND(unittest.TestCase):
   @staticmethod
   def _generic_private_test(t, block_shape, paddings):
     actual = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape,
-                                           paddings=paddings)
+                                            paddings=paddings)
 
     with tfe.protocol.Pond() as prot:
       @tf.function
