@@ -7,10 +7,12 @@ import tensorflow as tf
 
 import tf_encrypted as tfe
 
+from tf_encrypted.utils import unwrap_fetches
+
 
 class TestBatchToSpaceND(unittest.TestCase):
   def setUp(self):
-    tf.compat.v1.reset_default_graph()
+    tf.compat.v1.enable_v2_behavior()
     tf.compat.v1.set_random_seed(4224)
 
   def test_4d_no_crops(self):
@@ -71,58 +73,55 @@ class TestBatchToSpaceND(unittest.TestCase):
 
   @staticmethod
   def _generic_public_test(t, block_shape, crops):
-    with tf.compat.v1.Session() as sess:
-      out = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape,
+    actual = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape,
                                            crops=crops)
-      actual = sess.run(out)
 
     with tfe.protocol.Pond() as prot:
-      b = prot.define_public_variable(t)
-      out = prot.batch_to_space_nd(b, block_shape=block_shape, crops=crops)
-      with tfe.Session() as sess:
-        sess.run(tf.compat.v1.global_variables_initializer())
-        final = sess.run(out)
+      @tf.function
+      def func():
+        b = prot.define_constant(t)
+        out = prot.batch_to_space_nd(b, block_shape=block_shape, crops=crops)
 
-    np.testing.assert_array_almost_equal(final, actual, decimal=3)
+        return unwrap_fetches(out)
+
+    np.testing.assert_array_almost_equal(func(), actual, decimal=3)
 
   @staticmethod
   def _generic_private_test(t, block_shape, crops):
-    with tf.compat.v1.Session() as sess:
-      out = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape,
-                                           crops=crops)
-      actual = sess.run(out)
+    actual = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape,
+                                            crops=crops)
 
     with tfe.protocol.Pond() as prot:
-      b = prot.define_private_variable(t)
-      out = prot.batch_to_space_nd(b, block_shape=block_shape,
+      @tf.function
+      def func():
+        b = prot.define_private_tensor(t)
+        out = prot.batch_to_space_nd(b, block_shape=block_shape,
                                    crops=crops)
-      with tfe.Session() as sess:
-        sess.run(tf.compat.v1.global_variables_initializer())
-        final = sess.run(out.reveal())
 
-    np.testing.assert_array_almost_equal(final, actual, decimal=3)
+        return unwrap_fetches(out.reveal())
+
+    np.testing.assert_array_almost_equal(func(), actual, decimal=3)
 
   @staticmethod
   def _generic_masked_test(t, block_shape, crops):
-    with tf.compat.v1.Session() as sess:
-      out = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape,
-                                           crops=crops)
-      actual = sess.run(out)
+    actual = tf.compat.v1.batch_to_space_nd(t, block_shape=block_shape,
+                                            crops=crops)
 
     with tfe.protocol.Pond() as prot:
-      b = prot.mask(prot.define_private_variable(t))
-      out = prot.batch_to_space_nd(b, block_shape=block_shape,
-                                   crops=crops)
-      with tfe.Session() as sess:
-        sess.run(tf.compat.v1.global_variables_initializer())
-        final = sess.run(out.reveal())
+      @tf.function
+      def func():
+        b = prot.mask(prot.define_private_tensor(t))
+        out = prot.batch_to_space_nd(b, block_shape=block_shape,
+                                     crops=crops)
 
-    np.testing.assert_array_almost_equal(final, actual, decimal=3)
+        return unwrap_fetches(out.reveal())
+
+    np.testing.assert_array_almost_equal(func(), actual, decimal=3)
 
 
 class TestSpaceToBatchND(unittest.TestCase):
   def setUp(self):
-    tf.compat.v1.reset_default_graph()
+    tf.compat.v1.enable_v2_behavior()
     tf.compat.v1.set_random_seed(4224)
 
   def test_4d_no_crops(self):
@@ -183,70 +182,61 @@ class TestSpaceToBatchND(unittest.TestCase):
 
   @staticmethod
   def _generic_public_test(t, block_shape, paddings):
-    with tf.compat.v1.Session() as sess:
-      out = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape,
+    actual = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape,
                                            paddings=paddings)
-      actual = sess.run(out)
 
     with tfe.protocol.Pond() as prot:
-      b = prot.define_public_variable(t)
-      out = prot.space_to_batch_nd(
-          b, block_shape=block_shape, paddings=paddings)
-      with tfe.Session() as sess:
-        sess.run(tf.compat.v1.global_variables_initializer())
-        final = sess.run(out)
+      @tf.function
+      def func():
+        b = prot.define_constant(t)
+        out = prot.space_to_batch_nd(
+            b, block_shape=block_shape, paddings=paddings)
+        return unwrap_fetches(out)
 
-    np.testing.assert_array_almost_equal(final, actual, decimal=3)
+    np.testing.assert_array_almost_equal(func(), actual, decimal=3)
 
   @staticmethod
   def _generic_private_test(t, block_shape, paddings):
-    with tf.compat.v1.Session() as sess:
-      out = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape,
+    actual = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape,
                                            paddings=paddings)
-      actual = sess.run(out)
 
     with tfe.protocol.Pond() as prot:
-      b = prot.define_private_variable(t)
-      out = prot.space_to_batch_nd(
-          b, block_shape=block_shape, paddings=paddings)
-      with tfe.Session() as sess:
-        sess.run(tf.compat.v1.global_variables_initializer())
-        final = sess.run(out.reveal())
+      @tf.function
+      def func():
+        b = prot.define_private_tensor(t)
+        out = prot.space_to_batch_nd(
+            b, block_shape=block_shape, paddings=paddings)
 
-    np.testing.assert_array_almost_equal(final, actual, decimal=3)
+        return unwrap_fetches(out.reveal())
+
+    np.testing.assert_array_almost_equal(func(), actual, decimal=3)
 
   @staticmethod
   def _generic_masked_test(t, block_shape, paddings):
-    with tf.compat.v1.Session() as sess:
-      out = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape,
-                                           paddings=paddings)
-      actual = sess.run(out)
+    actual = tf.compat.v1.space_to_batch_nd(t, block_shape=block_shape,
+                                            paddings=paddings)
 
     with tfe.protocol.Pond() as prot:
-      b = prot.mask(prot.define_private_variable(t))
-      out = prot.space_to_batch_nd(
-          b, block_shape=block_shape, paddings=paddings)
-      with tfe.Session() as sess:
-        sess.run(tf.compat.v1.global_variables_initializer())
-        final = sess.run(out.reveal())
+      @tf.function
+      def func():
+        b = prot.mask(prot.define_private_tensor(t))
+        out = prot.space_to_batch_nd(
+            b, block_shape=block_shape, paddings=paddings)
 
-    np.testing.assert_array_almost_equal(final, actual, decimal=3)
+        return unwrap_fetches(out.reveal())
+
+    np.testing.assert_array_almost_equal(func(), actual, decimal=3)
 
 
 
-class Testconcat(unittest.TestCase):
+class TestConcat(unittest.TestCase):
   def setUp(self):
-    tf.compat.v1.reset_default_graph()
+    tf.compat.v1.enable_v2_behavior()
 
   def test_concat(self):
-
-    with tf.compat.v1.Session() as sess:
-      t1 = [[1, 2, 3], [4, 5, 6]]
-      t2 = [[7, 8, 9], [10, 11, 12]]
-      out = tf.concat([t1, t2], 0)
-      actual = sess.run(out)
-
-    tf.compat.v1.reset_default_graph()
+    t1 = [[1, 2, 3], [4, 5, 6]]
+    t2 = [[7, 8, 9], [10, 11, 12]]
+    actual = tf.concat([t1, t2], 0)
 
     with tfe.protocol.Pond() as prot:
       x = prot.define_private_variable(np.array(t1))

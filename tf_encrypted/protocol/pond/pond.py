@@ -14,6 +14,7 @@ import sys
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.framework.ops import EagerTensor
 
 from ...utils import wrap_in_variables
 from ...tensor.helpers import inverse
@@ -41,7 +42,6 @@ TFETensor = Union[TFEPublicTensor, "PondPrivateTensor", "PondMaskedTensor"]
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 TF_INT_TYPES = [tf.int8, tf.int16, tf.int32, tf.int64]
 
-_initializers = list()
 _THISMODULE = sys.modules[__name__]
 
 
@@ -133,9 +133,12 @@ class Pond(Protocol):
     :param AbstractFactory factory: Which tensor type to represent this value
         with.
     """
-    assert isinstance(value, np.ndarray), type(value)
+    assert isinstance(value, (np.ndarray, EagerTensor)), type(value)
 
     factory = factory or self.tensor_factory
+
+    if isinstance(value, EagerTensor):
+      value = value.numpy()
 
     v = self._encode(value, apply_scaling)
 
@@ -295,7 +298,72 @@ class Pond(Protocol):
         x_on_1 = factory.variable(v_on_1)
 
     x = PondPublicVariable(self, x_on_0, x_on_1, apply_scaling)
-    _initializers.append(x.initializer)
+    return x
+
+  def define_private_tensor(
+      self,
+      value,
+      apply_scaling: bool = True,
+      name: Optional[str] = None,
+      factory: Optional[AbstractFactory] = None,
+  ):
+    # pylint: disable=line-too-long
+    """
+    define_private_tensor(value, apply_scaling, name, factory) -> PondPrivateTensor
+
+    Define a private tensor.
+
+    This will take the passed value and construct shares that will be split up
+    between those involved in the computation.
+
+    For example, in a two party architecture, this will split the value into
+    two sets of shares and transfer them between each party in a secure manner.
+
+    :see tf.Tensor
+
+    :param Union[np.ndarray,tf.Tensor,PondPublicTensor] value: The value.
+    :param bool apply_scaling: Whether or not to scale the value.
+    :param str name: What name to give to this node in the graph.
+    :param AbstractFactory factory: Which tensor type to represent this value
+        with.
+    """
+    # pylint: enable=line-too-long
+    init_val_types = (np.ndarray,
+                      tf.Tensor,
+                      PondPublicTensor)
+    assert isinstance(value, init_val_types), type(value)
+
+    factory = factory or self.tensor_factory
+    suffix = "-" + name if name else ""
+
+    with tf.name_scope("private-tensor{}".format(suffix)):
+
+      if isinstance(value, np.ndarray):
+        v = factory.tensor(self._encode(value, apply_scaling))
+        v0, v1 = self._share(v)
+
+      elif isinstance(value, EagerTensor):
+        value = value.numpy()
+        v = factory.tensor(self._encode(value, apply_scaling))
+        v0, v1 = self._share(v)
+
+      elif isinstance(value, tf.Tensor):
+        v = factory.tensor(self._encode(value, apply_scaling,
+                                        tf_int_type=factory.native_type))
+        v0, v1 = self._share(v)
+
+      elif isinstance(value, PondPublicTensor):
+        v_on_0, _ = value.unwrapped
+        with tf.device(self.server_0.device_name):
+          # NOTE[Morten]
+          # we can alternatively avoid transfer of v1 from server0 and server1
+          # by having the crypto producer (pre-)generate sharings of zero
+          v0, v1 = self._share(v_on_0)
+      else:
+        raise TypeError(("Don't know how to turn {} "
+                         "into private variable").format(type(value)))
+
+    x = PondPrivateTensor(self, v0, v1, apply_scaling)
     return x
 
   def define_private_variable(
@@ -336,7 +404,7 @@ class Pond(Protocol):
     factory = factory or self.tensor_factory
     suffix = "-" + name if name else ""
 
-    with tf.compat.v1.name_scope("private-var{}".format(suffix)):
+    with tf.name_scope("private-var{}".format(suffix)):
 
       if isinstance(initial_value, np.ndarray):
         v = factory.tensor(self._encode(initial_value, apply_scaling))
@@ -369,7 +437,6 @@ class Pond(Protocol):
         x1 = factory.variable(v1)
 
     x = PondPrivateVariable(self, x0, x1, apply_scaling)
-    _initializers.append(x.initializer)
     return x
 
   def fifo_queue(self, capacity, shape, shared_name):
@@ -693,13 +760,6 @@ class Pond(Protocol):
         name_scope=name_scope if name_scope else "output",
     )
 
-  @property
-  def initializer(self) -> tf.Operation:
-    return tf.group(*_initializers)
-
-  def clear_initializers(self) -> None:
-    del _initializers[:]
-
   def _encode(self,
               rationals: Union[tf.Tensor, np.ndarray],
               apply_scaling: bool,
@@ -710,7 +770,7 @@ class Pond(Protocol):
     of same type as input to allow function to be used for constants.
     """
 
-    with tf.compat.v1.name_scope("encode"):
+    with tf.name_scope("encode"):
 
       # we first scale as needed
 
@@ -2104,9 +2164,6 @@ class PondPublicVariable(PondPublicTensor):
     )
     self.variable_on_0 = variable_on_0
     self.variable_on_1 = variable_on_1
-    self.initializer = tf.group(
-        *[var.initializer for var in [variable_on_0, variable_on_1]]
-    )
 
   def __repr__(self) -> str:
     return "PondPublicVariable(shape={})".format(self.shape)
@@ -2129,9 +2186,6 @@ class PondPrivateVariable(PondPrivateTensor):
     )
     self.variable0 = variable0
     self.variable1 = variable1
-    self.initializer = tf.group(
-        *[var.initializer for var in [variable0, variable1]]
-    )
 
   def __repr__(self) -> str:
     return "PondPrivateVariable(shape={})".format(self.shape)
@@ -2519,7 +2573,7 @@ def _truncate_masked(prot: Pond, x: PondMaskedTensor) -> PondMaskedTensor:
 def _reveal_private(prot, x):
   assert isinstance(x, PondPrivateTensor), type(x)
 
-  with tf.compat.v1.name_scope("reveal"):
+  with tf.name_scope("reveal"):
 
     x0, x1 = x.unwrapped
 
@@ -3201,18 +3255,17 @@ def _matmul_masked_masked(prot, x, y):
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
   b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
 
-  with tf.compat.v1.name_scope("matmul"):
-
+  with tf.name_scope("matmul"):
     ab0, ab1 = prot.triple_source.matmul_triple(a, b)
 
     with tf.device(prot.server_0.device_name):
-      with tf.compat.v1.name_scope("combine"):
+      with tf.name_scope("combine"):
         alpha = alpha_on_0
         beta = beta_on_0
         z0 = ab0 + a0.matmul(beta) + alpha.matmul(b0) + alpha.matmul(beta)
 
     with tf.device(prot.server_1.device_name):
-      with tf.compat.v1.name_scope("combine"):
+      with tf.name_scope("combine"):
         alpha = alpha_on_1
         beta = beta_on_1
         z1 = ab1 + a1.matmul(beta) + alpha.matmul(b1)
@@ -3334,9 +3387,14 @@ def _avgpool2d_core(
     padding: str,
 ) -> Tuple[AbstractTensor, AbstractTensor, float]:
   x_on_0, x_on_1 = x.unwrapped
+
+  tf.compat.v1.disable_v2_tensorshape()
   _, _, h, w = x.shape
+  tf.compat.v1.enable_v2_tensorshape()
+
   scalar = 1 / (pool_size[0] * pool_size[1])
   siamese = pool_size == strides and pool_size[0] == pool_size[1]
+
   even = h.value % pool_size[0] == 0 and w.value % pool_size[1] == 0
 
   if siamese and even:
@@ -4030,11 +4088,11 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
 
   x0, x1 = x.unwrapped
 
-  with tf.compat.v1.name_scope("mask"):
+  with tf.name_scope("mask"):
 
     a, a0, a1 = prot.triple_source.mask(x.backing_dtype, x.shape)
 
-    with tf.compat.v1.name_scope("online"):
+    with tf.name_scope("online"):
 
       with tf.device(prot.server_0.device_name):
         alpha0 = x0 - a0

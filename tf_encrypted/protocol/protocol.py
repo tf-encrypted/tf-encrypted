@@ -36,12 +36,6 @@ class Protocol(ABC):
   ) -> Optional[bool]:
     set_protocol(self.last_protocol)
 
-  @property
-  @abstractmethod
-  def initializer(self) -> tf.Operation:
-    pass
-
-
 def set_protocol(prot: Protocol) -> None:
   """
   set_protocol(prot)

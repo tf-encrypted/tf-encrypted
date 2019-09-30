@@ -7,11 +7,12 @@ import tensorflow as tf
 
 import tf_encrypted as tfe
 from tf_encrypted.layers import AveragePooling2D, MaxPooling2D
+from tf_encrypted.utils import unwrap_fetches
 
 
 class TestAveragePooling2D(unittest.TestCase):
   def setUp(self):
-    tf.compat.v1.reset_default_graph()
+    tf.compat.v1.enable_v2_behavior()
 
   def _get_fixtures(self, even=True):
     if even:
@@ -37,8 +38,7 @@ class TestAveragePooling2D(unittest.TestCase):
                                    padding="VALID",
                                    data_format='NHWC')
 
-    with tf.compat.v1.Session() as sess:
-      out_tf = sess.run(pool_out_tf).transpose(0, 3, 1, 2)
+    out_tf = tf.transpose(pool_out_tf, (0, 3, 1, 2))
 
     return out_tf
 
@@ -48,29 +48,30 @@ class TestAveragePooling2D(unittest.TestCase):
 
     # pooling in pond
     with tfe.protocol.Pond() as prot:
-      if t_type == 'public':
-        x_in = prot.define_public_variable(input_pool)
-      elif t_type in ['private', 'masked']:
-        x_in = prot.define_private_variable(input_pool)
-      if t_type == 'masked':
-        x_in = prot.mask(x_in)
-      pool = AveragePooling2D(list(input_shape), pool_size=2, padding="VALID")
-      pool_out_pond = pool.forward(x_in)
+      @tf.function
+      def pond():
+        if t_type == 'public':
+          x_in = prot.define_constant(input_pool)
+        elif t_type in ['private', 'masked']:
+          x_in = prot.define_private_tensor(input_pool)
 
-      with tfe.Session() as sess:
-        sess.run(tf.compat.v1.global_variables_initializer())
+        if t_type == 'masked':
+          x_in = prot.mask(x_in)
+
+        pool = AveragePooling2D(list(input_shape), pool_size=2, padding="VALID")
+        pool_out_pond = pool.forward(x_in)
+
         if t_type in ['private', 'masked']:
-          out_pond = sess.run(pool_out_pond.reveal())
+          out_pond = pool_out_pond.reveal()
         else:
-          out_pond = sess.run(pool_out_pond)
+          out_pond = pool_out_pond
 
-    # reset tf graph
-    tf.compat.v1.reset_default_graph()
+        return unwrap_fetches(out_pond)
 
     # pooling in tf
     out_tf = self._tf_tiled_forward(input_pool)
 
-    np.testing.assert_array_almost_equal(out_pond, out_tf, decimal=3)
+    np.testing.assert_array_almost_equal(pond(), out_tf, decimal=3)
 
   def test_public_tiled_forward(self):
     self._generic_tiled_forward('public', True)
@@ -94,33 +95,27 @@ class TestAveragePooling2D(unittest.TestCase):
 @pytest.mark.slow
 class TestMaxPooling2D(unittest.TestCase):
   def setUp(self):
-    tf.compat.v1.reset_default_graph()
-
-  def tearDown(self):
-    tf.compat.v1.reset_default_graph()
+    tf.compat.v1.enable_v2_behavior()
 
   def test_maxpool2d(self):
-    with tfe.protocol.SecureNN() as prot:
+    @tf.function
+    def securenn():
+      with tfe.protocol.SecureNN() as prot:
+        x_in = np.array([[[[1, 2, 3, 4],
+                             [3, 2, 4, 1],
+                             [1, 2, 3, 4],
+                             [3, 2, 4, 1]]]])
 
-      x_in = np.array([[[[1, 2, 3, 4],
-                         [3, 2, 4, 1],
-                         [1, 2, 3, 4],
-                         [3, 2, 4, 1]]]])
+        x = prot.define_private_tensor(x_in)
+        pool = MaxPooling2D([0, 1, 4, 4], pool_size=2, padding="VALID")
+        result = pool.forward(x)
 
-      expected = np.array([[[[3, 4],
-                             [3, 4]]]], dtype=np.float64)
+      return unwrap_fetches(result.reveal())
 
-      x = prot.define_private_variable(x_in)
-      pool = MaxPooling2D([0, 1, 4, 4], pool_size=2, padding="VALID")
-      result = pool.forward(x)
+    expected = np.array([[[[3, 4],
+                           [3, 4]]]], dtype=np.float64)
 
-      with tfe.Session() as sess:
-        sess.run(tf.compat.v1.global_variables_initializer())
-        answer = sess.run(result.reveal())
-
-    assert np.array_equal(answer, expected)
-
-
+    assert np.array_equal(securenn(), expected)
 
 if __name__ == '__main__':
   unittest.main()
