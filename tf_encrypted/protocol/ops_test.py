@@ -9,7 +9,7 @@ import tf_encrypted as tfe
 
 from tf_encrypted.utils import unwrap_fetches
 
-
+@pytest.mark.tf2
 class TestBatchToSpaceND(unittest.TestCase):
   def setUp(self):
     tf.compat.v1.enable_v2_behavior()
@@ -118,7 +118,7 @@ class TestBatchToSpaceND(unittest.TestCase):
 
     np.testing.assert_array_almost_equal(func(), actual, decimal=3)
 
-
+@pytest.mark.tf2
 class TestSpaceToBatchND(unittest.TestCase):
   def setUp(self):
     tf.compat.v1.enable_v2_behavior()
@@ -227,16 +227,18 @@ class TestSpaceToBatchND(unittest.TestCase):
 
     np.testing.assert_array_almost_equal(func(), actual, decimal=3)
 
-
-
 class TestConcat(unittest.TestCase):
   def setUp(self):
-    tf.compat.v1.enable_v2_behavior()
+    tf.compat.v1.reset_default_graph()
 
   def test_concat(self):
-    t1 = [[1, 2, 3], [4, 5, 6]]
-    t2 = [[7, 8, 9], [10, 11, 12]]
-    actual = tf.concat([t1, t2], 0)
+    with tf.compat.v1.Session() as sess:
+      t1 = [[1, 2, 3], [4, 5, 6]]
+      t2 = [[7, 8, 9], [10, 11, 12]]
+      out = tf.concat([t1, t2], 0)
+      actual = sess.run(out)
+
+    tf.compat.v1.reset_default_graph()
 
     with tfe.protocol.Pond() as prot:
       x = prot.define_private_variable(np.array(t1))
@@ -271,8 +273,6 @@ class TestConcat(unittest.TestCase):
         final = sess.run(out.unmasked.reveal())
 
     np.testing.assert_array_equal(final, actual)
-
-
 
 class TestConv2D(unittest.TestCase):
   def setUp(self):
@@ -381,8 +381,6 @@ class TestConv2D(unittest.TestCase):
   def test_backward(self):
     pass
 
-
-
 class TestMatMul(unittest.TestCase):
   def setUp(self):
     tf.compat.v1.reset_default_graph()
@@ -453,7 +451,6 @@ class TestMatMul(unittest.TestCase):
       out_tensorflow = sess.run(out)
 
     np.testing.assert_allclose(out_pond, out_tensorflow, atol=.1)
-
 
 class TestNegative(unittest.TestCase):
   def setUp(self):

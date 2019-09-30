@@ -9,7 +9,7 @@ import tf_encrypted as tfe
 from tf_encrypted.layers import AveragePooling2D, MaxPooling2D
 from tf_encrypted.utils import unwrap_fetches
 
-
+@pytest.mark.tf2
 class TestAveragePooling2D(unittest.TestCase):
   def setUp(self):
     tf.compat.v1.enable_v2_behavior()

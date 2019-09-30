@@ -4,12 +4,15 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
+import pytest
+
 import tf_encrypted as tfe
 from tf_encrypted.protocol.pond import PondPublicTensor
 from tf_encrypted.tensor import int64factory, int100factory, native_factory
 from tf_encrypted.tensor import fixed100, fixed100_ni
 from tf_encrypted.utils import unwrap_fetches
 
+@pytest.mark.tf2
 def test_encode():
   tf.compat.v1.enable_v2_behavior()
   prot = tfe.protocol.Pond()
@@ -23,7 +26,7 @@ def test_encode():
 
   np.testing.assert_array_almost_equal(func(), expected, decimal=3)
 
-
+@pytest.mark.tf2
 class TestTruncate(unittest.TestCase):
   def setUp(self):
     tf.compat.v1.enable_v2_behavior()
@@ -67,7 +70,7 @@ class TestTruncate(unittest.TestCase):
 
     np.testing.assert_allclose(func(), expected)
 
-
+@pytest.mark.tf2
 class TestPondPublicEqual(unittest.TestCase):
   def setUp(self):
     tf.compat.v1.enable_v2_behavior()
@@ -90,7 +93,7 @@ class TestPondPublicEqual(unittest.TestCase):
 
       assert np.array_equal(func(), expected)
 
-
+@pytest.mark.tf2
 class TestPondPublicDivision(unittest.TestCase):
   def setUp(self):
     tf.compat.v1.enable_v2_behavior()
@@ -127,6 +130,7 @@ class TestPondPublicDivision(unittest.TestCase):
 
       np.testing.assert_array_almost_equal(func(), expected, decimal=3)
 
+@pytest.mark.tf2
 class TestShare(unittest.TestCase):
   def setUp(self):
     tf.compat.v1.enable_v2_behavior()
@@ -153,11 +157,11 @@ class TestShare(unittest.TestCase):
   def test_prime(self):
     self._core_test_sharing(native_factory(tf.int32, 67))
 
-
+@pytest.mark.tf2
 class TestIdentity(unittest.TestCase):
 
   def setUp(self):
-    tf.compat.v1.reset_default_graph()
+    tf.compat.v1.enable_v2_behavior()
 
   def test_same_value_different_instance(self):
 

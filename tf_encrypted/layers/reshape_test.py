@@ -1,12 +1,15 @@
 # pylint: disable=missing-docstring
 import unittest
 
+import pytest
+
 import numpy as np
 import tensorflow as tf
 import tf_encrypted as tfe
 from tf_encrypted.layers import Reshape
 from tf_encrypted.utils import unwrap_fetches
 
+@pytest.mark.tf2
 def test_forward():
   tf.compat.v1.enable_v2_behavior()
 
@@ -32,7 +35,3 @@ def test_forward():
     out_tensorflow = tf.reshape(x, output_shape)
 
     assert np.isclose(out_pond, out_tensorflow, atol=0.6).all()
-
-
-if __name__ == '__main__':
-  unittest.main()
