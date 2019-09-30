@@ -13,7 +13,7 @@ np.random.seed(42)
 class TestDense(unittest.TestCase):
 
   def setUp(self):
-    tf.compat.v1.reset_default_graph()
+    tf.compat.v1.enable_v2_behavior()
 
   def test_dense_bias(self):
     self._core_dense(use_bias=True)
@@ -26,7 +26,7 @@ class TestDense(unittest.TestCase):
 
   def _core_dense(self, **layer_kwargs):
     input_shape = [4, 5]
-    kernel = np.random.normal(input_shape[::-1])
+    kernel = np.random.normal(size=input_shape[::-1])
     initializer = tf.compat.v1.keras.initializers.Constant(kernel)
 
     base_kwargs = {
@@ -37,9 +37,9 @@ class TestDense(unittest.TestCase):
     agreement_test(tfe.keras.layers.Dense,
                    kwargs=kwargs,
                    input_shape=input_shape)
-    layer_test(tfe.keras.layers.Dense,
-               kwargs=kwargs,
-               batch_input_shape=input_shape)
+    # layer_test(tfe.keras.layers.Dense,
+    #            kwargs=kwargs,
+    #            batch_input_shape=input_shape)
 
 
   def test_backward(self) -> None:

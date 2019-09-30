@@ -427,12 +427,10 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
 
   class Variable(DenseTensor, AbstractVariable):
     """Native Variable class."""
-
     def __init__(self, initial_value: Union[tf.Tensor, np.ndarray]) -> None:
       self.variable = tf.Variable(
           initial_value, dtype=NATIVE_TYPE, trainable=False)
-      self.initializer = self.variable.initializer
-      super(Variable, self).__init__(self.variable.read_value())
+      super().__init__(self.variable)
 
     def __repr__(self) -> str:
       return 'Variable(shape={})'.format(self.shape)
@@ -444,5 +442,8 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
     def assign_from_same(self, value: Tensor) -> tf.Operation:
       assert isinstance(value, Tensor), type(value)
       return tf.compat.v1.assign(self.variable, value.value).op
+
+    def to_native(self) -> tf.Tensor:
+      return self.variable
 
   return FACTORY

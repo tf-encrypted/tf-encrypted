@@ -4,6 +4,7 @@ import tensorflow as tf
 
 import tf_encrypted as tfe
 from tf_encrypted.keras.models import Sequential
+from tf_encrypted.utils import unwrap_fetches
 
 
 def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,
@@ -26,25 +27,20 @@ def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,
   tf_layer_cls = getattr(tf.keras.layers, tfe_layer_cls.__name__)
   tfe_kwargs = {**kwargs, **tfe_kwargs}
 
-  with tfe.protocol.SecureNN():
-    tfe_layer = tfe_layer_cls(**tfe_kwargs)
-    x = tfe.define_private_variable(input_data)
-    y = tfe_layer(x)
+  tfe_layer = tfe_layer_cls(**tfe_kwargs)
 
-    with tfe.Session() as sess:
-      sess.run(tf.compat.v1.global_variables_initializer())
-      actual = sess.run(y.reveal())
+  @tf.function
+  def func(input_data):
+    with tfe.protocol.Pond():
+      x = tfe.define_private_tensor(input_data)
+      y = tfe_layer(x)
 
-  tf.compat.v1.reset_default_graph()
+      return unwrap_fetches(y.reveal())
 
-  with tf.compat.v1.Session() as sess:
-    tf_layer = tf_layer_cls(**kwargs)
-    x = tf.Variable(input_data, dtype=tf.float32)
-    y = tf_layer(x)
-    sess.run(tf.compat.v1.global_variables_initializer())
-    expected = sess.run(y)
+  tf_layer = tf_layer_cls(**kwargs)
+  expected = tf_layer(input_data)
 
-  np.testing.assert_allclose(actual, expected, rtol=rtol, atol=atol)
+  np.testing.assert_allclose(func(input_data), expected, rtol=rtol, atol=atol)
 
 
 def layer_test(layer_cls, kwargs=None, batch_input_shape=None,

@@ -56,11 +56,10 @@ class Dense(Layer):
 
     self.units = int(units)
     self.activation_identifier = activation
-    self.activation = activations.get(self.activation_identifier)
     self.use_bias = use_bias
 
-    self.kernel_initializer = initializers.get(kernel_initializer)
-    self.bias_initializer = initializers.get(bias_initializer)
+    self.kernel_initializer_orig = kernel_initializer
+    self.bias_initializer_orig = bias_initializer
 
     # Not implemented arguments
     default_args_check(kernel_regularizer, "kernel_regularizer", "Dense")
@@ -70,6 +69,8 @@ class Dense(Layer):
                        "Dense")
     default_args_check(kernel_constraint, "kernel_constraint", "Dense")
     default_args_check(bias_constraint, "bias_constraint", "Dense")
+    self.kernel = None
+    self.bias = None
 
   def compute_output_shape(self, input_shape):
     return [input_shape[0], self.units]
@@ -83,14 +84,22 @@ class Dense(Layer):
           "For dense layer, TF Encrypted currently support only input with "
           "a rank equal to 2 instead of {}.".format(len(input_shape)))
 
+    self.kernel_initializer = initializers.get(self.kernel_initializer_orig)
+    self.bias_initializer = initializers.get(self.bias_initializer_orig)
+
+    self.activation = activations.get(self.activation_identifier)
+
     units_in = int(input_shape[1])
-    kernel = self.kernel_initializer([units_in,
-                                      self.units])
-    self.kernel = self.add_weight(kernel)
+
+    if self.kernel is None:
+      kernel = self.kernel_initializer([units_in,
+                                        self.units])
+      self.kernel = self.add_weight(kernel)
 
     if self.use_bias:
-      bias = self.bias_initializer([self.units])
-      self.bias = self.add_weight(bias)
+      if self.bias is None:
+        bias = self.bias_initializer([self.units])
+        self.bias = self.add_weight(bias)
     else:
       self.bias = None
 
