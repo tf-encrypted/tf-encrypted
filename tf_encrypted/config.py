@@ -8,7 +8,7 @@ from pathlib import Path
 
 import tensorflow as tf
 from tensorflow.core.protobuf import rewriter_config_pb2
-from tensorflow import config
+from tensorflow import config as tf_config
 
 from .player import Player
 
@@ -178,32 +178,52 @@ class LocalConfig(Config):
     return (target, config)
 
 class EagerLocalConfig(LocalConfig):
+  """
+  Configure TF Encrypted to use threads on the local CPU.
+
+  Each thread instantiates a different Player to simulate secure computations
+  without requiring networking. Mostly intended for development/debugging use.
+
+  By default new players will be added when looked up for the first time;
+  this is useful for  instance to get a complete list of players involved
+  in a particular computation (see `auto_add_unknown_players`).
+
+  This is very similar to the LocalConfig but uses new APIs to configure
+  TensorFlow rather than the ConfigProto class.
+
+  :param (str) player_names: List of players to be used in the session.
+  :param str job_name: The name of the job.
+  :param bool auto_add_unknown_players: Auto-add player on first lookup.
+  :param bool log_device_placement: Unimplemented
+  :param bool disable_optimizations: Disable a few optimizations for debugging
+  """
   def __init__(
-    self,
-    player_names=None,
-    job_name='localhost',
-    auto_add_unknown_players=True,
-    log_device_placement=False,
-    disable_optimizations=False
+      self,
+      player_names=None,
+      job_name='localhost',
+      auto_add_unknown_players=True,
+      log_device_placement=False, #pylint: disable=unused-argument
+      disable_optimizations=False
   ):
     super().__init__(player_names, job_name, auto_add_unknown_players)
 
     virtual_devices = [
-        config.experimental.VirtualDeviceConfiguration()
+        tf_config.experimental.VirtualDeviceConfiguration()
         for _ in player_names
     ]
 
-    physical_devices = config.experimental.list_physical_devices('CPU')
+    physical_devices = tf_config.experimental.list_physical_devices('CPU')
 
-    config.experimental.set_virtual_device_configuration(physical_devices[0], virtual_devices)
+    tf_config.experimental.set_virtual_device_configuration(physical_devices[0],
+                                                            virtual_devices)
 
     if disable_optimizations:
       config.optimizer.set_experimental_options(
-        {
-          "constant_folding": False,
-          "arithmetic_optimization": False,
-          "function_optimization": False,
-        }
+          {
+              "constant_folding": False,
+              "arithmetic_optimization": False,
+              "function_optimization": False,
+          }
       )
 
 
