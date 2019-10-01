@@ -8,6 +8,7 @@ from .config import Config
 from .config import LocalConfig
 from .config import RemoteConfig
 from .config import get_config
+from .config import EagerLocalConfig
 from .player import player
 from .protocol import get_protocol
 from .protocol import Pond
@@ -76,6 +77,7 @@ set_protocol(Pond())
 __all__ = [
     "LocalConfig",
     "RemoteConfig",
+    "EagerLocalConfig",
     "set_tfe_events_flag",
     "set_tfe_trace_flag",
     "set_log_directory",

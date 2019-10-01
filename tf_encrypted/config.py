@@ -8,6 +8,7 @@ from pathlib import Path
 
 import tensorflow as tf
 from tensorflow.core.protobuf import rewriter_config_pb2
+from tensorflow import config
 
 from .player import Player
 
@@ -175,6 +176,35 @@ class LocalConfig(Config):
         graph_options=self.build_graph_options(disable_optimizations)
     )
     return (target, config)
+
+class EagerLocalConfig(LocalConfig):
+  def __init__(
+    self,
+    player_names=None,
+    job_name='localhost',
+    auto_add_unknown_players=True,
+    log_device_placement=False,
+    disable_optimizations=False
+  ):
+    super().__init__(player_names, job_name, auto_add_unknown_players)
+
+    virtual_devices = [
+        config.experimental.VirtualDeviceConfiguration()
+        for _ in player_names
+    ]
+
+    physical_devices = config.experimental.list_physical_devices('CPU')
+
+    config.experimental.set_virtual_device_configuration(physical_devices[0], virtual_devices)
+
+    if disable_optimizations:
+      config.optimizer.set_experimental_options(
+        {
+          "constant_folding": False,
+          "arithmetic_optimization": False,
+          "function_optimization": False,
+        }
+      )
 
 
 class RemoteConfig(Config):
