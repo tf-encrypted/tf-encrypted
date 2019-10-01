@@ -1,5 +1,7 @@
 # pylint: disable=missing-docstring
 # pylint: disable=invalid-name
+import unittest
+
 import numpy as np
 import tensorflow as tf
 
