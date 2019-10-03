@@ -693,6 +693,9 @@ class Pond(Protocol):
         if isinstance(outputs, tf.Operation):
           return outputs
 
+        if isinstance(outputs, tf.data.Dataset):
+          return outputs
+
         if isinstance(outputs, tf.Tensor):
           return share_output(outputs)
 
