@@ -192,7 +192,7 @@ if __name__ == "__main__":
     train_step_master(model_owner, data_owners)
 
     with writer.as_default():
-      tf.summary.trace_export(name="my_func_trace", step=0,
+      tf.summary.trace_export(name="train_step_master", step=0,
                               profiler_outdir=logdir)
   else:
     for i in range(EPOCHS):

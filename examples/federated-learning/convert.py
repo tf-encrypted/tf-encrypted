@@ -39,10 +39,14 @@ def encode(image, label):
 
 def decode(serialized_example):
   """Decode an instance from a tf.train.Example in a TFRecord."""
-  features = tf.io.parse_single_example(serialized=serialized_example, features={
-      'image': tf.io.FixedLenFeature([], tf.string),
-      'label': tf.io.FixedLenFeature([], tf.int64)
-  })
+  features = tf.io.parse_single_example(
+      serialized=serialized_example,
+      features={
+          'image': tf.io.FixedLenFeature([], tf.string),
+          'label': tf.io.FixedLenFeature([], tf.int64)
+      }
+  )
+
   image = decode_image(features['image'])
   label = decode_label(features['label'])
   return image, label
@@ -57,9 +61,10 @@ def normalize(image, label):
 
 def get_data_from_tfrecord(filename, batch_size: int):
   """Construct a TFRecordDataset iterator."""
-  return tf.compat.v1.data.make_one_shot_iterator(tf.data.TFRecordDataset([filename]) \
+  return tf.compat.v1.data.make_one_shot_iterator(
+      tf.data.TFRecordDataset([filename]) \
                 .map(decode) \
                 .map(normalize) \
                 .repeat() \
                 .batch(batch_size) \
-                )
+  )
