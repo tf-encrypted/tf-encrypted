@@ -37,6 +37,7 @@ class TestLosses(unittest.TestCase):
       expected = sess.run(out)
 
     np.testing.assert_allclose(actual, expected, rtol=1e-1, atol=1e-1)
+
   def test_mean_squared_error(self):
     y_true_np = np.array([1, 2, 3, 4]).astype(float)
     y_pred_np = np.array([0.9, 2.1, 3.2, 4.1]).astype(float)
