@@ -84,13 +84,24 @@ open build/html/index.html
 ## Git and GitHub
 
 - [GitHub Desktop](https://desktop.github.com/) provides a useful interface for inspecting and committing code changes
-- `git add -p` lets you leave out some changes in a file (GitHub Desktop can be used for this as well)
-- `git commit --amend` allows you to add to the previous commit instead of creating a new one
-- `git rebase -i <commit>~N` allows you to [squeeze and reorder commits](https://git-scm.com/book/en/v2/Git-Tools-Rewriting-History) and last `N` commits
-- `git rebase master` to [pull in latest updates](https://git-scm.com/book/en/v2/Git-Branching-Rebasing) on `master`
-- `git fetch --no-tags <repo> <remote branch>:<local branch>` pulls down a remote branch from e.g. a fork and makes it available to check out as a local branch
-- `git push <repo> <remote branch>` pushes the current branch to a remote branch on e.g. a fork
-- `git tag -d <tag> && git push origin :refs/tags/<tag>` can be used to delete a tag remotely
+- `git add -p`
+  - lets you leave out some changes in a file (GitHub Desktop can be used for this as well)
+- `git commit --amend`
+  - allows you to add to the previous commit instead of creating a new one
+- `git rebase -i <commit>`
+  - allows you to [squeeze and reorder commits](https://git-scm.com/book/en/v2/Git-Tools-Rewriting-History)
+  - use `HEAD~5` to consider 5 most recent commits
+  - use `<hash>~1` to start from commit identified by `<hash>`
+- `git rebase master`
+  - [pull in latest updates](https://git-scm.com/book/en/v2/Git-Branching-Rebasing) on `master`
+- `git fetch --no-tags <repo> <remote branch>:<local branch>`
+  - pulls down a remote branch from e.g. a fork and makes it available to check out as a local branch
+  - `<repo>` is e.g. `git@github.com:<user>/tf-encrypted.git`
+- `git push <repo> <local branch>:<remote branch>`
+  - pushes the local branch to a remote branch on e.g. a fork
+  - `<repo>` is e.g. `git@github.com:<user>/tf-encrypted.git`
+- `git tag -d <tag> && git push origin :refs/tags/<tag>`
+  - can be used to delete a tag remotely
 
 # Reporting a Bug
 
