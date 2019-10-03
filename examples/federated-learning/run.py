@@ -1,7 +1,9 @@
 """An example of the secure aggregation protocol for federated learning."""
-
+#pylint: disable=redefined-outer-name
+#pylint:disable=unexpected-keyword-arg
 import sys
 import logging
+from datetime import datetime
 
 import tensorflow as tf
 import tf_encrypted as tfe
@@ -30,6 +32,8 @@ tfe.set_protocol(tfe.protocol.Pond())
 EPOCHS = 1
 BATCH_SIZE = 256
 BATCHES = 60000 // BATCH_SIZE
+
+TRACING = True
 
 @tfe.local_computation
 def build_data_pipeline(validation=False, batch_size=BATCH_SIZE):
@@ -93,10 +97,12 @@ def update_model(model_owner, *grads):
   Args:
     *grads: `tf.Variables` representing the federally computed gradients.
   """
-  params = model_owner.model.trainable_variables
   grads = [tf.cast(grad, tf.float32) for grad in grads]
   with tf.name_scope('update'):
-    model_owner.optimizer.apply_gradients(zip(grads, model_owner.model.trainable_variables))
+    model_owner.optimizer.apply_gradients(zip(
+        grads,
+        model_owner.model.trainable_variables
+    ))
 
   return grads
 
@@ -111,6 +117,7 @@ def securely_aggregate(model_grads):
 
 @tfe.local_computation
 def validation_step(model_owner):
+  """Runs a validation step!"""
   x, y = next(model_owner.dataset)
 
   with tf.name_scope('validate'):
@@ -126,6 +133,7 @@ def validation_step(model_owner):
 
 @tfe.local_computation
 def train_step(data_owner):
+  """Runs a single training step!"""
   x, y = next(data_owner.dataset)
 
   with tf.name_scope('gradient_computation'):
@@ -140,6 +148,7 @@ def train_step(data_owner):
 
 @tf.function
 def train_step_master(model_owner, data_owners):
+  """Runs a single training step on each data owner!"""
   grads = []
 
   for data_owner in data_owners:
@@ -155,7 +164,8 @@ if __name__ == "__main__":
   logging.basicConfig(level=logging.DEBUG)
 
   model = tf.keras.Sequential((
-      tf.keras.layers.Dense(512, input_shape=[None, 28 * 28], activation='sigmoid'),
+      tf.keras.layers.Dense(512, input_shape=[None, 28 * 28],
+                            activation='sigmoid'),
       tf.keras.layers.Dense(10),
   ))
 
@@ -163,16 +173,31 @@ if __name__ == "__main__":
 
   loss = tf.keras.losses.sparse_categorical_crossentropy
 
-  model_owner = ModelOwner("model-owner", model, tf.keras.optimizers.Adam(), loss)
+  model_owner = ModelOwner("model-owner", model,
+                           tf.keras.optimizers.Adam(), loss)
   data_owners = [
       DataOwner("data-owner-0", "./data/train.tfrecord", loss),
       DataOwner("data-owner-1", "./data/train.tfrecord", loss),
       DataOwner("data-owner-2", "./data/train.tfrecord", loss),
   ]
 
-  for i in range(EPOCHS):
-    for i in range(BATCHES):
-      if i % 100 == 0:
-        print("Batch {}".format(i))
+  if TRACING:
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    logdir = 'logs/func/%s' % stamp
+    writer = tf.summary.create_file_writer(logdir)
 
-      train_step_master(model_owner, data_owners)
+    tf.summary.trace_on(graph=True, profiler=True)
+
+    # only run once for TRACING
+    train_step_master(model_owner, data_owners)
+
+    with writer.as_default():
+      tf.summary.trace_export(name="my_func_trace", step=0,
+                              profiler_outdir=logdir)
+  else:
+    for i in range(EPOCHS):
+      for i in range(BATCHES):
+        if i % 100 == 0:
+          print("Batch {}".format(i))
+
+        train_step_master(model_owner, data_owners)
