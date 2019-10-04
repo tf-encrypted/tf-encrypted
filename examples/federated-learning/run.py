@@ -78,10 +78,11 @@ class DataOwner:
     build_update_step: `Callable`, the function used to construct
                        a local federated learning update.
   """
-  def __init__(self, player_name, local_data_file, loss):
+  def __init__(self, player_name, local_data_file, model, loss):
     self.player_name = player_name
     self.local_data_file = local_data_file
     self.loss = loss
+    self.model = tf.keras.models.clone_model(model)
 
     device_name = tfe.get_config().get_player(player_name).device_name
 
@@ -139,10 +140,10 @@ def train_step(data_owner):
 
   with tf.name_scope('gradient_computation'):
     with tf.GradientTape() as tape:
-      predictions = model(x)
+      predictions = data_owner.model(x)
       loss = tf.reduce_mean(data_owner.loss(y, predictions, from_logits=True))
 
-    grads = tape.gradient(loss, model.trainable_variables)
+    grads = tape.gradient(loss, data_owner.model.trainable_variables)
 
   return grads
 
@@ -175,9 +176,9 @@ if __name__ == "__main__":
   model_owner = ModelOwner("model-owner", model,
                            tf.keras.optimizers.Adam(), loss)
   data_owners = [
-      DataOwner("data-owner-0", "./data/train.tfrecord", loss),
-      DataOwner("data-owner-1", "./data/train.tfrecord", loss),
-      DataOwner("data-owner-2", "./data/train.tfrecord", loss),
+      DataOwner("data-owner-0", "./data/train.tfrecord", model, loss),
+      DataOwner("data-owner-1", "./data/train.tfrecord", model, loss),
+      DataOwner("data-owner-2", "./data/train.tfrecord", model, loss),
   ]
 
   if TRACING:
@@ -186,6 +187,9 @@ if __name__ == "__main__":
     writer = tf.summary.create_file_writer(logdir)
 
     tf.summary.trace_on(graph=True, profiler=True)
+
+    for data_owner in data_owners:
+      data_owner.model.set_weights(model_owner.model.get_weights())
 
     # only run once for TRACING
     train_step_master(model_owner, data_owners)
@@ -196,6 +200,9 @@ if __name__ == "__main__":
   else:
     for i in range(EPOCHS):
       for i in range(BATCHES):
+        for data_owner in data_owners:
+          data_owner.model.set_weights(model_owner.model.get_weights())
+
         if i % 100 == 0:
           print("Batch {}".format(i))
 
