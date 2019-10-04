@@ -33,9 +33,8 @@ EPOCHS = 1
 BATCH_SIZE = 256
 BATCHES = 60000 // BATCH_SIZE
 
-TRACING = True
+TRACING = False
 
-@tfe.local_computation
 def build_data_pipeline(validation=False, batch_size=BATCH_SIZE):
   """Build data pipeline for validation by model owner."""
   def normalize(image, label):
@@ -47,9 +46,6 @@ def build_data_pipeline(validation=False, batch_size=BATCH_SIZE):
   dataset = dataset.map(normalize)
   dataset = dataset.batch(batch_size, drop_remainder=True)
   dataset = dataset.repeat()
-
-  if validation:
-    dataset = dataset.take(1)  # keep validating on the same items
 
   return dataset
 
@@ -68,8 +64,10 @@ class ModelOwner:
     self.optimizer = optimizer
     self.loss = loss
 
-    self.dataset = iter(build_data_pipeline(validation=True, batch_size=50,
-                                            player_name=self.player_name))
+    device_name = tfe.get_config().get_player(player_name).device_name
+
+    with tf.device(device_name):
+      self.dataset = iter(build_data_pipeline(validation=True, batch_size=50))
 
 class DataOwner:
   """Contains methods meant to be executed by a data owner.
@@ -85,7 +83,10 @@ class DataOwner:
     self.local_data_file = local_data_file
     self.loss = loss
 
-    self.dataset = iter(build_data_pipeline(player_name=self.player_name))
+    device_name = tfe.get_config().get_player(player_name).device_name
+
+    with tf.device(device_name):
+      self.dataset = iter(build_data_pipeline())
 
 @tfe.local_computation
 def update_model(model_owner, *grads):
@@ -95,7 +96,7 @@ def update_model(model_owner, *grads):
   after securely aggregating gradients.
 
   Args:
-    *grads: `tf.Variables` representing the federally computed gradients.
+    *grads: `tf.Tensors` representing the federally computed gradients.
   """
   grads = [tf.cast(grad, tf.float32) for grad in grads]
   with tf.name_scope('update'):
@@ -149,15 +150,13 @@ def train_step(data_owner):
 @tf.function
 def train_step_master(model_owner, data_owners):
   """Runs a single training step on each data owner!"""
-  grads = []
-
-  for data_owner in data_owners:
-    grads.append(train_step(data_owner, player_name=data_owner.player_name))
+  grads = [train_step(data_owner, player_name=data_owner.player_name)
+           for data_owner in data_owners]
 
   agg_grads = securely_aggregate(zip(*grads))
 
   update_model(model_owner, *agg_grads, player_name=model_owner.player_name)
-  validation_step(model_owner, player_name=model_owner.player_name)
+  validation_step(model_owner)
 
 if __name__ == "__main__":
 

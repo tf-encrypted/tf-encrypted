@@ -57,14 +57,3 @@ def normalize(image, label):
   x = tf.cast(image, tf.float32) / 255.
   image = (x - 0.1307) / 0.3081  # image = (x - mean) / std
   return image, label
-
-
-def get_data_from_tfrecord(filename, batch_size: int):
-  """Construct a TFRecordDataset iterator."""
-  return tf.compat.v1.data.make_one_shot_iterator(
-      tf.data.TFRecordDataset([filename]) \
-                .map(decode) \
-                .map(normalize) \
-                .repeat() \
-                .batch(batch_size) \
-  )
