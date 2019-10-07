@@ -65,7 +65,7 @@ def build_data_pipeline(filename, batch_size=BATCH_SIZE):
     image = tf.cast(image, tf.float32) / 255.0
     return image, label
 
-  dataset = tf.data.TFRecordDataset(["./data/train.tfrecord"])
+  dataset = tf.data.TFRecordDataset([filename])
   dataset = dataset.map(decode)
   dataset = dataset.map(normalize)
   dataset = dataset.batch(batch_size, drop_remainder=True)
@@ -91,7 +91,8 @@ class ModelOwner:
 
     with tf.device(device_name):
       self.model = tf.keras.models.clone_model(model) # clone the model, get new weights
-      self.dataset = iter(build_data_pipeline("./data/train.tfrecord", batch_size=50))
+      self.dataset = iter(build_data_pipeline("./data/train.tfrecord",
+                                              batch_size=50))
 
 class DataOwner:
   """Contains methods meant to be executed by a data owner.
