@@ -82,11 +82,11 @@ class DataOwner:
     self.player_name = player_name
     self.local_data_file = local_data_file
     self.loss = loss
-    self.model = tf.keras.models.clone_model(model)
 
     device_name = tfe.get_config().get_player(player_name).device_name
 
     with tf.device(device_name):
+      self.model = tf.keras.models.clone_model(model)
       self.dataset = iter(build_data_pipeline())
 
 @tfe.local_computation(name_scope='update_model')
