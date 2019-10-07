@@ -20,7 +20,7 @@ variables:
         fi
 
         bash Miniconda3-latest-MacOSX-x86_64.sh -b -f
-        ../miniconda3/bin/conda create -n py35 python=3.5 2> /dev/null || true
+        ../miniconda3/bin/conda create -n py35 python=3.5 --yes 2> /dev/null || true
         ../miniconda3/envs/py35/bin/python -m venv venv
         . venv/bin/activate
 
