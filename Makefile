@@ -10,7 +10,7 @@ all: test
 # Rules for bootstrapping the Makefile such as checking for docker, python versions, etc.
 # ###############################################
 DOCKER_REQUIRED_VERSION=18.
-PYTHON_REQUIRED_VERSION=3.7.
+PYTHON_REQUIRED_VERSION=3.5.
 SHELL := /bin/bash
 
 CURRENT_DIR=$(shell pwd)
