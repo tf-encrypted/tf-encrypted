@@ -35,7 +35,7 @@ BATCHES = 60000 // BATCH_SIZE
 
 TRACING = False
 
-def build_data_pipeline(validation=False, batch_size=BATCH_SIZE):
+def build_data_pipeline(batch_size=BATCH_SIZE):
   """Build data pipeline for validation by model owner."""
   def normalize(image, label):
     image = tf.cast(image, tf.float32) / 255.0
@@ -60,14 +60,14 @@ class ModelOwner:
   def __init__(self, player_name, model, optimizer, loss):
     self.player_name = player_name
 
-    self.model = model
     self.optimizer = optimizer
     self.loss = loss
 
     device_name = tfe.get_config().get_player(player_name).device_name
 
     with tf.device(device_name):
-      self.dataset = iter(build_data_pipeline(validation=True, batch_size=50))
+      self.model = tf.keras.models.clone_model(model) # clone the model, get new weights
+      self.dataset = iter(build_data_pipeline(batch_size=50))
 
 class DataOwner:
   """Contains methods meant to be executed by a data owner.
