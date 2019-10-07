@@ -23,19 +23,43 @@ else:
       'model-owner',
       'data-owner-0',
       'data-owner-1',
-      'data-owner-2',
+      'data-owner-2'
   ])
 
 tfe.set_config(config)
 tfe.set_protocol(tfe.protocol.Pond())
 
 EPOCHS = 1
+NUM_DATA_OWNERS = 3
+
 BATCH_SIZE = 256
-BATCHES = 60000 // BATCH_SIZE
+DATA_ITEMS = 60000
+BATCHES = DATA_ITEMS // NUM_DATA_OWNERS // BATCH_SIZE
 
 TRACING = False
 
-def build_data_pipeline(batch_size=BATCH_SIZE):
+def split_dataset(num_data_owners):
+  """
+  Helper function to help split the dataset evenly between
+  data owners. USE FOR SIMULATION ONLY.
+  """
+
+  print("WARNING: Splitting dataset for {} data owners. "
+        "This is for simulation use only".format(num_data_owners))
+
+  all_dataset = tf.data.TFRecordDataset(["./data/train.tfrecord"])
+
+  split = DATA_ITEMS // num_data_owners
+  index = 0
+  for i in range(num_data_owners):
+    dataset = all_dataset.skip(index)
+    dataset = all_dataset.take(split)
+
+    filename = './data/train{}.tfrecord'.format(i)
+    writer = tf.data.experimental.TFRecordWriter(filename)
+    writer.write(dataset)
+
+def build_data_pipeline(filename, batch_size=BATCH_SIZE):
   """Build data pipeline for validation by model owner."""
   def normalize(image, label):
     image = tf.cast(image, tf.float32) / 255.0
@@ -67,7 +91,7 @@ class ModelOwner:
 
     with tf.device(device_name):
       self.model = tf.keras.models.clone_model(model) # clone the model, get new weights
-      self.dataset = iter(build_data_pipeline(batch_size=50))
+      self.dataset = iter(build_data_pipeline("./data/train.tfrecord", batch_size=50))
 
 class DataOwner:
   """Contains methods meant to be executed by a data owner.
@@ -87,7 +111,7 @@ class DataOwner:
 
     with tf.device(device_name):
       self.model = tf.keras.models.clone_model(model)
-      self.dataset = iter(build_data_pipeline())
+      self.dataset = iter(build_data_pipeline(self.local_data_file))
 
 @tfe.local_computation(name_scope='update_model')
 def update_model(model_owner, *grads):
@@ -160,12 +184,13 @@ def train_step_master(model_owner, data_owners):
   validation_step(model_owner)
 
 if __name__ == "__main__":
+  split_dataset(NUM_DATA_OWNERS)
 
   logging.basicConfig(level=logging.DEBUG)
 
   model = tf.keras.Sequential((
       tf.keras.layers.Dense(512, input_shape=[None, 28 * 28],
-                            activation='sigmoid'),
+                            activation='relu'),
       tf.keras.layers.Dense(10),
   ))
 
@@ -175,11 +200,11 @@ if __name__ == "__main__":
 
   model_owner = ModelOwner("model-owner", model,
                            tf.keras.optimizers.Adam(), loss)
-  data_owners = [
-      DataOwner("data-owner-0", "./data/train.tfrecord", model, loss),
-      DataOwner("data-owner-1", "./data/train.tfrecord", model, loss),
-      DataOwner("data-owner-2", "./data/train.tfrecord", model, loss),
-  ]
+
+  data_owners = [DataOwner("data-owner-{}".format(i),
+                           "./data/train{}.tfrecord".format(i),
+                           model,
+                           loss) for i in range(NUM_DATA_OWNERS)]
 
   if TRACING:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -203,7 +228,7 @@ if __name__ == "__main__":
         for data_owner in data_owners:
           data_owner.model.set_weights(model_owner.model.get_weights())
 
-        if i % 100 == 0:
+        if i % 10 == 0:
           print("Batch {}".format(i))
 
         train_step_master(model_owner, data_owners)
