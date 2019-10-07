@@ -89,7 +89,7 @@ class DataOwner:
     with tf.device(device_name):
       self.dataset = iter(build_data_pipeline())
 
-@tfe.local_computation
+@tfe.local_computation(name_scope='update_model')
 def update_model(model_owner, *grads):
   """Perform a single update step.
 
@@ -117,7 +117,7 @@ def securely_aggregate(model_grads):
 
   return aggregated_model_grads
 
-@tfe.local_computation
+@tfe.local_computation(name_scope='validation_step')
 def validation_step(model_owner):
   """Runs a validation step!"""
   x, y = next(model_owner.dataset)
@@ -133,7 +133,7 @@ def validation_step(model_owner):
   tf.print("result", y_hat, summarize=50)
   return loss, y, y_hat
 
-@tfe.local_computation
+@tfe.local_computation(name_scope='train_step')
 def train_step(data_owner):
   """Runs a single training step!"""
   x, y = next(data_owner.dataset)
