@@ -8,7 +8,7 @@ import tensorflow as tf
 import tf_encrypted as tfe
 
 from players import BaseModelOwner, BaseDataOwner
-from func_lib import default_model_fn, secure_aggregation, evaluate_classifier
+from func_lib import default_model_fn, secure_mean, evaluate_classifier
 
 if len(sys.argv) > 1:
   # config file was specified
@@ -73,7 +73,7 @@ class ModelOwner(BaseModelOwner):
 
   @classmethod
   def aggregator_fn(cls, model_gradients):
-    return secure_aggregation(model_gradients)
+    return secure_mean(model_gradients)
 
   @classmethod
   def evaluator_fn(cls, model_owner):

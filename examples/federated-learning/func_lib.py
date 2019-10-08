@@ -41,9 +41,9 @@ def reptile_model_fn(data_owner, iterations=3,
 
 ### Example aggregator_fns ###
 
-def secure_aggregation(collected_inputs):
+def secure_mean(collected_inputs):
 
-  with tf.name_scope('secure_aggregation'):
+  with tf.name_scope('secure_mean'):
 
     return [
         tfe.add_n(inputs) / len(inputs)
