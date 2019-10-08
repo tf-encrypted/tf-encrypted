@@ -5,11 +5,26 @@ import tf_encrypted as tfe
 
 from util import UndefinedModelFnError
 
+from convert import decode
+
+def build_data_pipeline(filename, batch_size):
+  """Build data pipeline for validation by model owner."""
+  def normalize(image, label):
+    image = tf.cast(image, tf.float32) / 255.0
+    return image, label
+
+  dataset = tf.data.TFRecordDataset([filename])
+  dataset = dataset.map(decode)
+  dataset = dataset.map(normalize)
+  dataset = dataset.batch(batch_size, drop_remainder=True)
+  dataset = dataset.repeat()
+
+  return dataset
 
 class Owner(type):
 
   def __call__(self, *args, **kwargs):
-    owner_obj = type.__call__(*args, **kwargs)
+    owner_obj = type.__call__(self, *args, **kwargs)
 
     # Decorate user-defined TF function that needs to be pinned to a particular
     # device and compiled
@@ -20,14 +35,16 @@ class Owner(type):
       self.handle_tf_local_fn(owner_obj, "evaluator_fn")
 
     # Decorate user-defined TFE local_computations
-    if has_attr(obj, "model_fn"):
+    if hasattr(owner_obj, "model_fn"):
       self.handle_tfe_local_fn(owner_obj, "model_fn")
+
+    return owner_obj
 
   @classmethod
   def handle_tf_local_fn(mcs, owner_obj, func_name):
     func = getattr(owner_obj, func_name)
-    pinned_evaluator = self.pin_to_owner(owner_obj)(func)
-    setattr(owner_obj, func_name, tf.function(pinned_evaluator))
+    pinned_evaluator = Owner.pin_to_owner(owner_obj)(func)
+    setattr(owner_obj, func_name, pinned_evaluator)
 
   @classmethod
   def handle_tfe_local_fn(mcs, owner_obj, func_name):
@@ -67,7 +84,7 @@ class BaseModelOwner(metaclass=Owner):
     with self.device:
       # TODO: don't assume it's a tf.keras model
       self.model = tf.keras.models.clone_model(model)  # clone the model, get new weights
-      self.evaluation_dataset = iter(build_data_pipeline(batch_size=50))
+      self.evaluation_dataset = iter(build_data_pipeline("./data/train.tfrecord", 50))
 
   def fit(self,
           data_owners,
@@ -94,7 +111,8 @@ class BaseModelOwner(metaclass=Owner):
     raise NotImplementedError()
 
   def _runner(self, data_owners, rounds, evaluate, evaluate_every, **kwargs):
-    for r in rounds:
+    prog = tf.keras.utils.Progbar(rounds, stateful_metrics=["Loss"])
+    for r in range(rounds):
       # Train one step
       self._update_one_round(data_owners, **kwargs)
 
@@ -105,7 +123,8 @@ class BaseModelOwner(metaclass=Owner):
 
       # Evaluate once (maybe)
       if evaluate and (r + 1) % evaluate_every == 0:
-        self.evaluator_fn(self.evaluation_dataset)
+        loss = self.evaluator_fn()
+        prog.update(r, [("Loss", loss)])
 
   def _update_one_round(self, data_owners, **kwargs):
     player_gradients = []
@@ -114,19 +133,21 @@ class BaseModelOwner(metaclass=Owner):
     for owner in data_owners:
 
       try:  # If the DataOwner implements a model_fn, use it
-        player_gradients.append(owner.model_fn(**kwargs))
+        player_gradients.append(owner.model_fn(player_name=owner.player_name, **kwargs))
 
       except NotImplementedError:  # Otherwise, fall back to the ModelOwner's
-        player_gradients.append(self.model_fn(owner, **kwargs))
+        player_gradients.append(self.model_fn(owner, player_name=owner.player_name, **kwargs))
 
-      except:  # Fail gracefully
+      except NotImplementedError:  # Fail gracefully
         raise UndefinedModelFnError()
 
     # Aggregation step
-    aggregate_gradients = self.aggregator_fn(player_gradients)
+    aggr_gradients = self.aggregator_fn(zip(*player_gradients))
 
     # Update step
     with self.device:
+      aggr_gradients = [tf.cast(aggr.reveal().to_native(), tf.float32)
+                        for aggr in aggr_gradients]
       self.optimizer.apply_gradients(zip(aggr_gradients, self.model.trainable_variables))
 
 
@@ -139,7 +160,7 @@ class BaseDataOwner(metaclass=Owner):
     build_update_step: `Callable`, the function used to construct
                        a local federated learning update.
   """
-  def __init__(self, player_name, local_data_file, model, loss, optimizer):
+  def __init__(self, player_name, local_data_file, model, loss, optimizer=None):
     self.player_name = player_name
     self.local_data_file = local_data_file
     self.loss = loss
@@ -149,7 +170,7 @@ class BaseDataOwner(metaclass=Owner):
 
     with self.device:
       self.model = tf.keras.models.clone_model(model)
-      self.dataset = iter(build_data_pipeline())
+      self.dataset = iter(build_data_pipeline(local_data_file, 256))
 
   def model_fn(self, **kwargs):
     raise NotImplementedError()

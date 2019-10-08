@@ -12,6 +12,9 @@ import tf_encrypted as tfe
 from convert import decode
 from util import UndefinedModelFnError
 
+from players import BaseModelOwner, BaseDataOwner
+from func_lib import default_model_fn, secure_aggregation, evaluate_classifier
+
 if len(sys.argv) > 1:
   # config file was specified
   config_file = sys.argv[1]
@@ -61,66 +64,7 @@ def split_dataset(num_data_owners):
     writer = tf.data.experimental.TFRecordWriter(filename)
     writer.write(dataset)
 
-def build_data_pipeline(filename, batch_size=BATCH_SIZE):
-  """Build data pipeline for validation by model owner."""
-  def normalize(image, label):
-    image = tf.cast(image, tf.float32) / 255.0
-    return image, label
-
-  dataset = tf.data.TFRecordDataset([filename])
-  dataset = dataset.map(decode)
-  dataset = dataset.map(normalize)
-  dataset = dataset.batch(batch_size, drop_remainder=True)
-  dataset = dataset.repeat()
-
-  return dataset
-
-
-### Owner Metaclass ###
-
-class Owner(type):
-  def __call__(self, *args, **kwargs):
-    owner_obj = type.__call__(*args, **kwargs)
-
-    # Decorate user-defined TF function that needs to be pinned to a particular
-    # device and compiled
-    if hasattr(owner_obj, "aggregator_fn"):
-      self.handle_tf_local_fn(owner_obj, "aggregator_fn")
-
-    if hasattr(owner_obj, "evaluator_fn"):
-      self.handle_tf_local_fn(owner_obj, "evaluator_fn")
-
-    # Decorate user-defined TFE local_computations
-    if has_attr(obj, "model_fn"):
-      self.handle_tfe_local_fn(owner_obj, "model_fn")
-
-  @classmethod
-  def handle_tf_local_fn(mcs, owner_obj, func_name):
-    func = getattr(owner_obj, func_name)
-    pinned_evaluator = self.pin_to_owner(owner_obj)(func)
-    setattr(owner_obj, func_name, tf.function(pinned_evaluator))
-
-  @classmethod
-  def handle_tfe_local_fn(mcs, owner_obj, func_name):
-    func = getattr(owner_obj, func_name)
-    setattr(owner_obj, func_name, tfe.local_computation(func))
-
-  @classmethod
-  def pin_to_owner(mcs, owner_obj):
-    def wrapper(func):
-
-      @functools.wraps(func)
-      def pinned_fn(*args, **kwargs):
-        with owner_obj.device:
-          return func(*args, **kwargs)
-
-      return pinned_fn
-    return wrapper
-
-
 ### Owner classes ###
-
-
 class ModelOwner(BaseModelOwner):
   """Contains code meant to be executed by some `ModelOwner` Player.
 
@@ -167,38 +111,12 @@ if __name__ == "__main__":
 
   loss = tf.keras.losses.sparse_categorical_crossentropy
 
-  model_owner = ModelOwner("model-owner", model,
-                           tf.keras.optimizers.Adam(), loss)
+  model_owner = ModelOwner("model-owner", model, loss,
+                           optimizer=tf.keras.optimizers.Adam())
 
   data_owners = [DataOwner("data-owner-{}".format(i),
                            "./data/train{}.tfrecord".format(i),
                            model,
                            loss) for i in range(NUM_DATA_OWNERS)]
 
-  # if TRACING:
-  #   stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-  #   logdir = 'logs/func/%s' % stamp
-  #   writer = tf.summary.create_file_writer(logdir)
-  #
-  #   tf.summary.trace_on(graph=True, profiler=True)
-  #
-  #   for data_owner in data_owners:
-  #     data_owner.model.set_weights(model_owner.model.get_weights())
-  #
-  #   # only run once for TRACING
-  #   train_step_master(model_owner, data_owners)
-  #
-  #   with writer.as_default():
-  #     tf.summary.trace_export(name="train_step_master", step=0,
-  #                             profiler_outdir=logdir)
-  # else:
-  #   for i in range(EPOCHS):
-  #     for i in range(BATCHES):
-  #       for data_owner in data_owners:
-  #         data_owner.model.set_weights(model_owner.model.get_weights())
-  #
-  #       if i % 10 == 0:
-  #         print("Batch {}".format(i))
-  #
-  #       train_step_master(model_owner, data_owners)
   model_owner.fit(data_owners, rounds=BATCHES, evaluate_every=10)

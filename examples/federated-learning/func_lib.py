@@ -12,7 +12,7 @@ def default_model_fn(data_owner):
 
     with tf.GradientTape() as tape:
       preds = data_owner.model(x)
-      loss = tf.reduce_mean(data.loss(y, preds, from_logits=True))
+      loss = tf.reduce_mean(data_owner.loss(y, preds, from_logits=True))
 
     grads = tape.gradient(loss, data_owner.model.trainable_variables)
 
@@ -49,7 +49,7 @@ def secure_aggregation(collected_inputs):
 
 def evaluate_classifier(model_owner):
   """Runs a validation step!"""
-  x, y = next(model_owner.dataset)
+  x, y = next(model_owner.evaluation_dataset)
 
   with tf.name_scope('validate'):
     predictions = model_owner.model(x)
@@ -57,7 +57,4 @@ def evaluate_classifier(model_owner):
 
     y_hat = tf.argmax(input=predictions, axis=1)
 
-  tf.print("loss", loss)
-  tf.print("expect", y, summarize=50)
-  tf.print("result", y_hat, summarize=50)
-  return loss, y, y_hat
+  return loss
