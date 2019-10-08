@@ -1,3 +1,6 @@
+""" Base classes for the FL players """
+#pylint:disable=unexpected-keyword-arg
+
 import functools
 
 import tensorflow as tf
@@ -21,50 +24,18 @@ def build_data_pipeline(filename, batch_size):
 
   return dataset
 
-class Owner(type):
+def pin_to_owner(func):
 
-  def __call__(self, *args, **kwargs):
-    owner_obj = type.__call__(self, *args, **kwargs)
+  @functools.wraps(func)
+  def wrapper(*args, **kwargs):
+    with args[0].device:
+      return func(*args, **kwargs)
 
-    # Decorate user-defined TF function that needs to be pinned to a particular
-    # device and compiled
-    if hasattr(owner_obj, "aggregator_fn"):
-      self.handle_tf_local_fn(owner_obj, "aggregator_fn")
+    return pinned_fn
 
-    if hasattr(owner_obj, "evaluator_fn"):
-      self.handle_tf_local_fn(owner_obj, "evaluator_fn")
+  return wrapper
 
-    # Decorate user-defined TFE local_computations
-    if hasattr(owner_obj, "model_fn"):
-      self.handle_tfe_local_fn(owner_obj, "model_fn")
-
-    return owner_obj
-
-  @classmethod
-  def handle_tf_local_fn(mcs, owner_obj, func_name):
-    func = getattr(owner_obj, func_name)
-    pinned_evaluator = Owner.pin_to_owner(owner_obj)(func)
-    setattr(owner_obj, func_name, pinned_evaluator)
-
-  @classmethod
-  def handle_tfe_local_fn(mcs, owner_obj, func_name):
-    func = getattr(owner_obj, func_name)
-    setattr(owner_obj, func_name, tfe.local_computation(func))
-
-  @classmethod
-  def pin_to_owner(mcs, owner_obj):
-    def wrapper(func):
-
-      @functools.wraps(func)
-      def pinned_fn(*args, **kwargs):
-        with owner_obj.device:
-          return func(*args, **kwargs)
-
-      return pinned_fn
-    return wrapper
-
-
-class BaseModelOwner(metaclass=Owner):
+class BaseModelOwner:
   """Contains code meant to be executed by some `ModelOwner` Player.
 
   Args:
@@ -84,7 +55,9 @@ class BaseModelOwner(metaclass=Owner):
     with self.device:
       # TODO: don't assume it's a tf.keras model
       self.model = tf.keras.models.clone_model(model)  # clone the model, get new weights
-      self.evaluation_dataset = iter(build_data_pipeline("./data/train.tfrecord", 50))
+
+      filename = "./data/train.tfrecord"
+      self.evaluation_dataset = iter(build_data_pipeline(filename, 50))
 
   def fit(self,
           data_owners,
@@ -102,16 +75,18 @@ class BaseModelOwner(metaclass=Owner):
     raise NotImplementedError()
 
   @classmethod
-  def aggregator_fn(cls, weights_or_grads):
+  def aggregator_fn(cls, model_gradients):
     raise NotImplementedError()
 
   @classmethod
-  def evaluator_fn(cls, dataset):
+  def evaluator_fn(cls, batches_or_owner):
     # TODO: figure out & fix the signature here
     raise NotImplementedError()
 
   def _runner(self, data_owners, rounds, evaluate, evaluate_every, **kwargs):
+    """ Handles the train loop """
     prog = tf.keras.utils.Progbar(rounds, stateful_metrics=["Loss"])
+
     for r in range(rounds):
       # Train one step
       self._update_one_round(data_owners, **kwargs)
@@ -124,36 +99,53 @@ class BaseModelOwner(metaclass=Owner):
       # Evaluate once (maybe)
       if evaluate and (r + 1) % evaluate_every == 0:
         # TODO: can we leak the loss here???
-        loss = self.evaluator_fn()
+        loss = self._call_evaluator_fn()
+        prog.update(r, [("Loss", loss)])
 
-      prog.update(r, [("Loss", loss)])
+  @pin_to_owner
+  def _call_aggregator_fn(self, grads):
+    return self.aggregator_fn(grads)
+
+  @pin_to_owner
+  def _call_evaluator_fn(self):
+    return self.evaluator_fn(self)
+
+  @tfe.local_computation
+  def call_model_fn(self, batches_or_owner):
+    return self.model_fn(batches_or_owner)
 
   def _update_one_round(self, data_owners, **kwargs):
+    """ Updates after one FL round """
     player_gradients = []
 
     # One round is an aggregation over all DataOwners
     for owner in data_owners:
 
       try:  # If the DataOwner implements a model_fn, use it
-        player_gradients.append(owner.model_fn(player_name=owner.player_name, **kwargs))
-
+        grads = owner.call_model_fn(owner, player_name=owner.player_name,
+                                    **kwargs)
+        player_gradients.append(grads)
       except NotImplementedError:  # Otherwise, fall back to the ModelOwner's
-        player_gradients.append(self.model_fn(owner, player_name=owner.player_name, **kwargs))
+        grads = self.call_model_fn(owner, player_name=owner.player_name,
+                                   **kwargs)
+        player_gradients.append(grads)
 
-      except NotImplementedError:  # Fail gracefully
+      # Fail gracefully
+      except NotImplementedError: #pylint: disable=duplicate-except
         raise UndefinedModelFnError()
 
     # Aggregation step
-    aggr_gradients = self.aggregator_fn(zip(*player_gradients))
+    aggr_gradients = self._call_aggregator_fn(zip(*player_gradients))
 
     # Update step
     with self.device:
       aggr_gradients = [tf.cast(aggr.reveal().to_native(), tf.float32)
                         for aggr in aggr_gradients]
-      self.optimizer.apply_gradients(zip(aggr_gradients, self.model.trainable_variables))
+      self.optimizer.apply_gradients(zip(aggr_gradients,
+                                         self.model.trainable_variables))
 
 
-class BaseDataOwner(metaclass=Owner):
+class BaseDataOwner:
   """Contains methods meant to be executed by a data owner.
 
   Args:
@@ -166,6 +158,7 @@ class BaseDataOwner(metaclass=Owner):
     self.player_name = player_name
     self.local_data_file = local_data_file
     self.loss = loss
+    self.optimizer = optimizer
 
     device_name = tfe.get_config().get_player(player_name).device_name
     self.device = tf.device(device_name)
@@ -174,5 +167,10 @@ class BaseDataOwner(metaclass=Owner):
       self.model = tf.keras.models.clone_model(model)
       self.dataset = iter(build_data_pipeline(local_data_file, 256))
 
-  def model_fn(self, **kwargs):
+  @tfe.local_computation
+  def call_model_fn(self, batches_or_owner, *args, **kwargs):
+    return self.model_fn(batches_or_owner, *args, **kwargs)
+
+  @classmethod
+  def model_fn(cls, batches_or_owner, *args, **kwargs):
     raise NotImplementedError()

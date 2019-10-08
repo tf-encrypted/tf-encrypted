@@ -1,2 +1,9 @@
+""" Example utils """
+
 class UndefinedModelFnError(Exception):
-  pass
+  """
+  UndefinedModelFnError
+
+  Occurs if a data owner or model owner hasn't defined
+  a model function
+  """

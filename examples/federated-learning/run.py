@@ -1,16 +1,11 @@
 """An example of the secure aggregation protocol for federated learning."""
 #pylint: disable=redefined-outer-name
 #pylint:disable=unexpected-keyword-arg
-from datetime import datetime
-import functools
 import logging
 import sys
 
 import tensorflow as tf
 import tf_encrypted as tfe
-
-from convert import decode
-from util import UndefinedModelFnError
 
 from players import BaseModelOwner, BaseDataOwner
 from func_lib import default_model_fn, secure_aggregation, evaluate_classifier
@@ -72,15 +67,17 @@ class ModelOwner(BaseModelOwner):
     player_name: `str`, name of the `tfe.player.Player`
                  representing the model owner.
   """
-
+  @classmethod
   def model_fn(cls, data_owner):
     return default_model_fn(data_owner)
 
+  @classmethod
   def aggregator_fn(cls, model_gradients):
     return secure_aggregation(model_gradients)
 
-  def evaluator_fn(self):
-    return evaluate_classifier(self)
+  @classmethod
+  def evaluator_fn(cls, model_owner):
+    return evaluate_classifier(model_owner)
 
 
 class DataOwner(BaseDataOwner):
@@ -94,7 +91,6 @@ class DataOwner(BaseDataOwner):
   """
   # TODO: stick `build_data_pipeline` somewhere in here
   # TODO: can also move model_fn in here -- we leave it up to the user atm
-  pass
 
 if __name__ == "__main__":
   split_dataset(NUM_DATA_OWNERS)
