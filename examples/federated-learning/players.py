@@ -123,8 +123,10 @@ class BaseModelOwner(metaclass=Owner):
 
       # Evaluate once (maybe)
       if evaluate and (r + 1) % evaluate_every == 0:
+        # TODO: can we leak the loss here???
         loss = self.evaluator_fn()
-        prog.update(r, [("Loss", loss)])
+
+      prog.update(r, [("Loss", loss)])
 
   def _update_one_round(self, data_owners, **kwargs):
     player_gradients = []
