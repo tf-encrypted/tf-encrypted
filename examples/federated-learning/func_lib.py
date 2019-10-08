@@ -55,6 +55,18 @@ def secure_mean(collected_inputs):
 
     return aggr_inputs
 
+def secure_reptile(collected_inputs, model):
+
+  aggr_weights = secure_mean(collected_inputs)
+
+  weights_deltas = [
+      weight - update for (weight, update) in zip(
+          model.trainable_variables, aggr_weights,
+      )
+  ]
+  return weights_deltas
+
+
 ### Example evaluator_fns ###
 
 def evaluate_classifier(model_owner):
