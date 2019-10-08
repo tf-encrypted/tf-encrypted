@@ -1,14 +1,16 @@
 """An example of the secure aggregation protocol for federated learning."""
 #pylint: disable=redefined-outer-name
 #pylint:disable=unexpected-keyword-arg
-import sys
-import logging
 from datetime import datetime
+import functools
+import logging
+import sys
 
 import tensorflow as tf
 import tf_encrypted as tfe
 
 from convert import decode
+from util import UndefinedModelFnError
 
 if len(sys.argv) > 1:
   # config file was specified
@@ -73,7 +75,53 @@ def build_data_pipeline(filename, batch_size=BATCH_SIZE):
 
   return dataset
 
-class ModelOwner:
+
+### Owner Metaclass ###
+
+class Owner(type):
+  def __call__(self, *args, **kwargs):
+    owner_obj = type.__call__(*args, **kwargs)
+
+    # Decorate user-defined TF function that needs to be pinned to a particular
+    # device and compiled
+    if hasattr(owner_obj, "aggregator_fn"):
+      self.handle_tf_local_fn(owner_obj, "aggregator_fn")
+
+    if hasattr(owner_obj, "evaluator_fn"):
+      self.handle_tf_local_fn(owner_obj, "evaluator_fn")
+
+    # Decorate user-defined TFE local_computations
+    if has_attr(obj, "model_fn"):
+      self.handle_tfe_local_fn(owner_obj, "model_fn")
+
+  @classmethod
+  def handle_tf_local_fn(mcs, owner_obj, func_name):
+    func = getattr(owner_obj, func_name)
+    pinned_evaluator = self.pin_to_owner(owner_obj)(func)
+    setattr(owner_obj, func_name, tf.function(pinned_evaluator))
+
+  @classmethod
+  def handle_tfe_local_fn(mcs, owner_obj, func_name):
+    func = getattr(owner_obj, func_name)
+    setattr(owner_obj, func_name, tfe.local_computation(func))
+
+  @classmethod
+  def pin_to_owner(mcs, owner_obj):
+    def wrapper(func):
+
+      @functools.wraps(func)
+      def pinned_fn(*args, **kwargs):
+        with owner_obj.device:
+          return func(*args, **kwargs)
+
+      return pinned_fn
+    return wrapper
+
+
+### Owner classes ###
+
+
+class ModelOwner(BaseModelOwner):
   """Contains code meant to be executed by some `ModelOwner` Player.
 
   Args:
@@ -81,20 +129,17 @@ class ModelOwner:
                  representing the model owner.
   """
 
-  def __init__(self, player_name, model, optimizer, loss):
-    self.player_name = player_name
+  def model_fn(cls, data_owner):
+    return default_model_fn(data_owner)
 
-    self.optimizer = optimizer
-    self.loss = loss
+  def aggregator_fn(cls, model_gradients):
+    return secure_aggregation(model_gradients)
 
-    device_name = tfe.get_config().get_player(player_name).device_name
+  def evaluator_fn(self):
+    return evaluate_classifier(self)
 
-    with tf.device(device_name):
-      self.model = tf.keras.models.clone_model(model) # clone the model, get new weights
-      self.dataset = iter(build_data_pipeline("./data/train.tfrecord",
-                                              batch_size=50))
 
-class DataOwner:
+class DataOwner(BaseDataOwner):
   """Contains methods meant to be executed by a data owner.
 
   Args:
@@ -103,86 +148,9 @@ class DataOwner:
     build_update_step: `Callable`, the function used to construct
                        a local federated learning update.
   """
-  def __init__(self, player_name, local_data_file, model, loss):
-    self.player_name = player_name
-    self.local_data_file = local_data_file
-    self.loss = loss
-
-    device_name = tfe.get_config().get_player(player_name).device_name
-
-    with tf.device(device_name):
-      self.model = tf.keras.models.clone_model(model)
-      self.dataset = iter(build_data_pipeline(self.local_data_file))
-
-@tfe.local_computation(name_scope='update_model')
-def update_model(model_owner, *grads):
-  """Perform a single update step.
-
-  This will be performed on the ModelOwner device
-  after securely aggregating gradients.
-
-  Args:
-    *grads: `tf.Tensors` representing the federally computed gradients.
-  """
-  grads = [tf.cast(grad, tf.float32) for grad in grads]
-  with tf.name_scope('update'):
-    model_owner.optimizer.apply_gradients(zip(
-        grads,
-        model_owner.model.trainable_variables
-    ))
-
-  return grads
-
-def securely_aggregate(model_grads):
-  with tf.name_scope('secure_aggregation'):
-    aggregated_model_grads = [
-        tfe.add_n(grads) / len(grads)
-        for grads in model_grads
-    ]
-
-  return aggregated_model_grads
-
-@tfe.local_computation(name_scope='validation_step')
-def validation_step(model_owner):
-  """Runs a validation step!"""
-  x, y = next(model_owner.dataset)
-
-  with tf.name_scope('validate'):
-    predictions = model_owner.model(x)
-    loss = tf.reduce_mean(model_owner.loss(y, predictions, from_logits=True))
-
-    y_hat = tf.argmax(input=predictions, axis=1)
-
-  tf.print("loss", loss)
-  tf.print("expect", y, summarize=50)
-  tf.print("result", y_hat, summarize=50)
-  return loss, y, y_hat
-
-@tfe.local_computation(name_scope='train_step')
-def train_step(data_owner):
-  """Runs a single training step!"""
-  x, y = next(data_owner.dataset)
-
-  with tf.name_scope('gradient_computation'):
-    with tf.GradientTape() as tape:
-      predictions = data_owner.model(x)
-      loss = tf.reduce_mean(data_owner.loss(y, predictions, from_logits=True))
-
-    grads = tape.gradient(loss, data_owner.model.trainable_variables)
-
-  return grads
-
-
-@tf.function
-def train_step_master(model_owner, data_owners):
-  """Runs a single training step on each data owner!"""
-  grads = [train_step(data_owner, player_name=data_owner.player_name)
-           for data_owner in data_owners]
-
-  agg_grads = securely_aggregate(zip(*grads))
-
-  update_model(model_owner, *agg_grads, player_name=model_owner.player_name)
-  validation_step(model_owner)
+  # TODO: stick `build_data_pipeline` somewhere in here
+  # TODO: can also move model_fn in here -- we leave it up to the user atm
+  pass
 
 if __name__ == "__main__":
   split_dataset(NUM_DATA_OWNERS)
@@ -207,29 +175,30 @@ if __name__ == "__main__":
                            model,
                            loss) for i in range(NUM_DATA_OWNERS)]
 
-  if TRACING:
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    logdir = 'logs/func/%s' % stamp
-    writer = tf.summary.create_file_writer(logdir)
-
-    tf.summary.trace_on(graph=True, profiler=True)
-
-    for data_owner in data_owners:
-      data_owner.model.set_weights(model_owner.model.get_weights())
-
-    # only run once for TRACING
-    train_step_master(model_owner, data_owners)
-
-    with writer.as_default():
-      tf.summary.trace_export(name="train_step_master", step=0,
-                              profiler_outdir=logdir)
-  else:
-    for i in range(EPOCHS):
-      for i in range(BATCHES):
-        for data_owner in data_owners:
-          data_owner.model.set_weights(model_owner.model.get_weights())
-
-        if i % 10 == 0:
-          print("Batch {}".format(i))
-
-        train_step_master(model_owner, data_owners)
+  # if TRACING:
+  #   stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+  #   logdir = 'logs/func/%s' % stamp
+  #   writer = tf.summary.create_file_writer(logdir)
+  #
+  #   tf.summary.trace_on(graph=True, profiler=True)
+  #
+  #   for data_owner in data_owners:
+  #     data_owner.model.set_weights(model_owner.model.get_weights())
+  #
+  #   # only run once for TRACING
+  #   train_step_master(model_owner, data_owners)
+  #
+  #   with writer.as_default():
+  #     tf.summary.trace_export(name="train_step_master", step=0,
+  #                             profiler_outdir=logdir)
+  # else:
+  #   for i in range(EPOCHS):
+  #     for i in range(BATCHES):
+  #       for data_owner in data_owners:
+  #         data_owner.model.set_weights(model_owner.model.get_weights())
+  #
+  #       if i % 10 == 0:
+  #         print("Batch {}".format(i))
+  #
+  #       train_step_master(model_owner, data_owners)
+  model_owner.fit(data_owners, rounds=BATCHES, evaluate_every=10)

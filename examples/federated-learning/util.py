@@ -1,0 +1,2 @@
+class UndefinedModelFnError(Exception):
+  pass
