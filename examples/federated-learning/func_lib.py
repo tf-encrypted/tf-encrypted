@@ -20,7 +20,6 @@ def default_model_fn(data_owner):
 
   return grads
 
-
 def reptile_model_fn(data_owner, iterations=3,
                      grad_fn=default_model_fn, **kwargs):
   """
@@ -45,10 +44,27 @@ def secure_mean(collected_inputs):
 
   with tf.name_scope('secure_mean'):
 
-    return [
+    aggr_inputs = [
         tfe.add_n(inputs) / len(inputs)
         for inputs in collected_inputs
     ]
+
+    # Reveal aggregated values & cast to native tf.float32
+    aggr_inputs = [tf.cast(inp.reveal().to_native(), tf.float32)
+                      for inp in aggr_inputs]
+
+    return aggr_inputs
+
+def secure_reptile(collected_inputs, model):
+
+  aggr_weights = secure_mean(collected_inputs)
+
+  weights_deltas = [
+      weight - update for (weight, update) in zip(
+          model.trainable_variables, aggr_weights,
+      )
+  ]
+  return weights_deltas
 
 
 ### Example evaluator_fns ###

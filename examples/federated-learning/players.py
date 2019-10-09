@@ -139,8 +139,6 @@ class BaseModelOwner:
 
     # Update step
     with self.device:
-      aggr_gradients = [tf.cast(aggr.reveal().to_native(), tf.float32)
-                        for aggr in aggr_gradients]
       self.optimizer.apply_gradients(zip(aggr_gradients,
                                          self.model.trainable_variables))
 
