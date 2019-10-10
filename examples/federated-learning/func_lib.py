@@ -41,6 +41,7 @@ def reptile_model_fn(data_owner, iterations=3,
 ### Example aggregator_fns ###
 
 def secure_mean(collected_inputs):
+  """ securely calculates the mean of the collected_inputs """
 
   with tf.name_scope('secure_mean'):
 
@@ -51,7 +52,7 @@ def secure_mean(collected_inputs):
 
     # Reveal aggregated values & cast to native tf.float32
     aggr_inputs = [tf.cast(inp.reveal().to_native(), tf.float32)
-                      for inp in aggr_inputs]
+                   for inp in aggr_inputs]
 
     return aggr_inputs
 

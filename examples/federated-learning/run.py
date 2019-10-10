@@ -1,16 +1,19 @@
 """An example of the secure aggregation protocol for federated learning."""
 #pylint: disable=redefined-outer-name
 #pylint:disable=unexpected-keyword-arg
+#pylint:disable=wrong-import-position
 import logging
-import sys
 import argparse
 
 import tensorflow as tf
 import tf_encrypted as tfe
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--remote-config', type=str, default=None, help="Specify remote configuration")
-parser.add_argument('--data-root', type=str, default="./data", help="Specify the root directory of the data")
+parser.add_argument('--remote-config', type=str,
+                    default=None, help="Specify remote configuration")
+parser.add_argument('--data-root', type=str,
+                    default="./data",
+                    help="Specify the root directory of the data")
 
 args = parser.parse_args()
 
