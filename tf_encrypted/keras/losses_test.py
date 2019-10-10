@@ -50,12 +50,12 @@ class TestLosses(unittest.TestCase):
     out = loss(y_true, y_pred)
 
     with tfe.Session() as sess:
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       actual = sess.run(out.reveal())
 
-    tf.reset_default_graph()
-    with tf.Session() as sess:
-      sess.run(tf.global_variables_initializer())
+    tf.compat.v1.reset_default_graph()
+    with tf.compat.v1.Session() as sess:
+      sess.run(tf.compat.v1.global_variables_initializer())
       y_true = tf.convert_to_tensor(y_true_np)
       y_pred = tf.convert_to_tensor(y_pred_np)
 
