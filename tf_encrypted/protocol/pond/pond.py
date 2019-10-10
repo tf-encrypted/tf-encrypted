@@ -2194,9 +2194,11 @@ class PondPrivateVariable(PondPrivateTensor):
     self.variable0 = variable0
     self.variable1 = variable1
 
-    self.initializer = tf.group(
-        *[var.initializer for var in [variable0, variable1]]
-    )
+    # TensorFlow 2.0 variables don't have initializers??
+    if variable0.initializer is not None:
+      self.initializer = tf.group(
+          *[var.initializer for var in [variable0, variable1]]
+      )
 
   def __repr__(self) -> str:
     return "PondPrivateVariable(shape={})".format(self.shape)
