@@ -3,17 +3,20 @@
 #pylint:disable=unexpected-keyword-arg
 import logging
 import sys
+import argparse
 
 import tensorflow as tf
 import tf_encrypted as tfe
 
-from players import BaseModelOwner, BaseDataOwner
-from func_lib import default_model_fn, secure_mean, evaluate_classifier
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('--remote-config', type=str, default=None, help="Specify remote configuration")
+parser.add_argument('--data-root', type=str, default="./data", help="Specify the root directory of the data")
 
-if len(sys.argv) > 1:
+args = parser.parse_args()
+
+if args.remote_config is not None:
   # config file was specified
-  config_file = sys.argv[1]
-  config = tfe.RemoteConfig.load(config_file)
+  config = tfe.RemoteConfig.load(args.remote_config)
   config.connect_to_cluster()
 else:
   config = tfe.EagerLocalConfig([
@@ -28,6 +31,9 @@ else:
 
 tfe.set_config(config)
 tfe.set_protocol(tfe.protocol.Pond())
+
+from players import BaseModelOwner, BaseDataOwner
+from func_lib import default_model_fn, secure_mean, evaluate_classifier
 
 EPOCHS = 1
 NUM_DATA_OWNERS = 3
@@ -47,7 +53,7 @@ def split_dataset(num_data_owners):
   print("WARNING: Splitting dataset for {} data owners. "
         "This is for simulation use only".format(num_data_owners))
 
-  all_dataset = tf.data.TFRecordDataset(["./data/train.tfrecord"])
+  all_dataset = tf.data.TFRecordDataset([args.data_root + "/train.tfrecord"])
 
   split = DATA_ITEMS // num_data_owners
   index = 0
@@ -55,7 +61,7 @@ def split_dataset(num_data_owners):
     dataset = all_dataset.skip(index)
     dataset = all_dataset.take(split)
 
-    filename = './data/train{}.tfrecord'.format(i)
+    filename = '{}/train{}.tfrecord'.format(args.data_root, i)
     writer = tf.data.experimental.TFRecordWriter(filename)
     writer.write(dataset)
 
@@ -107,11 +113,13 @@ if __name__ == "__main__":
 
   loss = tf.keras.losses.sparse_categorical_crossentropy
 
-  model_owner = ModelOwner("model-owner", model, loss,
+  model_owner = ModelOwner("model-owner",
+                           "{}/train.tfrecord".format(args.data_root),
+                           model, loss,
                            optimizer=tf.keras.optimizers.Adam())
 
   data_owners = [DataOwner("data-owner-{}".format(i),
-                           "./data/train{}.tfrecord".format(i),
+                           "{}/train{}.tfrecord".format(args.data_root, i),
                            model,
                            loss) for i in range(NUM_DATA_OWNERS)]
 

@@ -43,7 +43,7 @@ class BaseModelOwner:
                  representing the model owner.
   """
 
-  def __init__(self, player_name, model, loss, optimizer=None):
+  def __init__(self, player_name, local_data_file, model, loss, optimizer=None):
     self.player_name = player_name
 
     self.optimizer = optimizer
@@ -56,8 +56,7 @@ class BaseModelOwner:
       # TODO: don't assume it's a tf.keras model
       self.model = tf.keras.models.clone_model(model)  # clone the model, get new weights
 
-      filename = "./data/train.tfrecord"
-      self.evaluation_dataset = iter(build_data_pipeline(filename, 50))
+      self.evaluation_dataset = iter(build_data_pipeline(local_data_file, 50))
 
   def fit(self,
           data_owners,
