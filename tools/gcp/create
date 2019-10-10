@@ -1,6 +1,13 @@
 #!/bin/sh
 
-gcloud compute instances create \
-    $@ \
-    --image tfe-image \
-    --machine-type=n1-standard-4
+for instance in $@
+do
+    gcloud compute instances create-with-container $instance \
+        --container-image=docker.io/tfencrypted/tf-encrypted \
+        --container-command=python \
+        --container-arg="tf_encrypted/player/__main__.py" \
+        --container-arg="--config=/config/config.json" \
+        --container-arg="$instance" \
+        --container-mount-host-path=host-path=/tmp,mount-path=/config \
+        --machine-type=n1-standard-4
+done

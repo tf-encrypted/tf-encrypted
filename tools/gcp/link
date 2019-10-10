@@ -5,41 +5,49 @@ import os
 import sys
 import json
 import subprocess
+import argparse
 
 import tf_encrypted as tfe
 
-INSTANCE_NAMES = [name.strip() for arg in sys.argv[1:]
-                  for name in os.path.expandvars(arg).split(' ') if name]
 BASE_PORT = 4440
 LOCAL_CONFIG_FILE = '/tmp/config.json'
-REMOTE_CONFIG_FILE = 'config.json'
+REMOTE_CONFIG_FILE = '/tmp/config.json'
 
-CMD_INTERNAL_HOST = """gcloud --format='value(networkInterfaces[0].networkIP)'
- compute instances list {instance_name}""".rstrip()
+parser = argparse.ArgumentParser(description='Link together the players with a config file')
+parser.add_argument('players', nargs='+', help="List of the players instance names")
+parser.add_argument('--internal', action="store_true", help='Whether to use internal IP or not')
+
+args = parser.parse_args()
+
+INSTANCE_NAMES = args.players
+
+if args.internal:
+  CMD_HOST = "gcloud --format='value(networkInterfaces[0].networkIP)' compute instances list {instance_name}"
+else:
+  CMD_HOST = "gcloud --format='value(networkInterfaces[0].accessConfigs[0]['natIP'])' compute instances list {instance_name}"
+
 HOSTS = [
-    subprocess.check_output(CMD_INTERNAL_HOST.format(
+    subprocess.check_output(CMD_HOST.format(
         instance_name=instance_name), shell=True).decode("utf-8").strip()
     for instance_name in INSTANCE_NAMES
 ]
 
 HOSTS = [
-    '{}:{}'.format(host, BASE_PORT+index)
+    '{}:{}'.format(host, BASE_PORT)
     for index, host in enumerate(HOSTS)
 ]
 
-HOSTMAP = [
-    (name, host)
+HOSTMAP = {
+    name: host
     for name, host in zip(INSTANCE_NAMES, HOSTS)
-]
+}
 
-print("Hostmap:", json.dumps(
-    {name: host for (name, host) in HOSTMAP}, indent=2))
+print("Hostmap:", HOSTMAP)
 
 config = tfe.config.RemoteConfig(HOSTMAP)
-tfe.config.save(config, LOCAL_CONFIG_FILE)
+config.save(LOCAL_CONFIG_FILE)
 
-CMD_HOSTS_SCP = """gcloud compute scp {local_config_file}
- {instance_name}:{remote_config_file}""".rstrip()
+CMD_HOSTS_SCP = "gcloud compute scp {local_config_file} {instance_name}:{remote_config_file}".rstrip()
 for instance_name in INSTANCE_NAMES:
   subprocess.call(
       CMD_HOSTS_SCP.format(
@@ -48,3 +56,14 @@ for instance_name in INSTANCE_NAMES:
           instance_name=instance_name),
       shell=True
   )
+
+if not args.internal:
+  CMD_FIREWALL_RULE = "gcloud compute firewall-rules create tfe-server-rule --allow tcp:4440 --source-tags={} --source-ranges=0.0.0.0/0 --description='TF Encrypted Demo'"
+
+  string = ','.join(INSTANCE_NAMES)
+
+  subprocess.call(
+      CMD_FIREWALL_RULE.format(string),
+      shell=True
+  )
+
