@@ -16,12 +16,12 @@ class TestOddImplicitTensor(unittest.TestCase):
     # regular, overflow, underflow
     x = oddint64_factory.tensor(tf.constant([-2, -1, 0, 1], dtype=tf.int64))
     expected = np.array([-2, 0, 0, 1])
-    
+
     with tf.Session() as sess:
       actual = sess.run(x.value)
 
     np.testing.assert_array_almost_equal(actual, expected, decimal=3)
-    
+
   def test_add(self) -> None:
 
     # regular, overflow, underflow
