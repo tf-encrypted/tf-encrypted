@@ -315,7 +315,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
   def _map_minusone_to_zero(value, native_type):
     """ Maps all -1 values to zero. """
     zeros = tf.zeros(shape=value.shape, dtype=native_type)
-    return tf.where(value == -1, zeros, value)
+    return tf.where(tf.equal(value, -1), zeros, value)
 
   return master_factory
 
