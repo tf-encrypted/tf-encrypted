@@ -211,7 +211,7 @@ class EagerLocalConfig(LocalConfig):
         tf_config.experimental.VirtualDeviceConfiguration()
         for _ in player_names
     ]
-
+    tf.config.set_soft_device_placement(False)
     physical_devices = tf_config.experimental.list_physical_devices('CPU')
 
     tf_config.experimental.set_virtual_device_configuration(physical_devices[0],
@@ -358,6 +358,11 @@ class RemoteConfig(Config):
           graph_options=self.build_graph_options(disable_optimizations)
       )
     return (target, config)
+
+  def connect_to_cluster(self):
+    cluster = tf.train.ClusterSpec({self._job_name: self.hosts})
+    tf.config.set_soft_device_placement(False)
+    tf.config.experimental_connect_to_cluster(cluster)
 
 
 __config__ = LocalConfig()
