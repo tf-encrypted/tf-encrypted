@@ -84,9 +84,9 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
                        shape,
                        minval: Optional[int] = None,
                        maxval: Optional[int] = None):
-      minval = minval or self.min
+      minval = self.min if minval is None else minval
       # TODO(Morten) believe this should be native_type.max+1
-      maxval = maxval or self.max
+      maxval = self.max if maxval is None else maxval
 
       if secure_random.supports_seeded_randomness():
         seed = secure_random.secure_seed()
