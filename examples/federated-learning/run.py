@@ -148,15 +148,17 @@ def main(_):
 
   loss = tf.keras.losses.sparse_categorical_crossentropy
 
+  local_lr = FLAGS.local_learning_rate or FLAGS.learning_rate
+
   model_owner = ModelOwner("model-owner",
                            "{}/train.tfrecord".format(FLAGS.data_root),
                            model, loss,
-                           optimizer=tf.keras.optimizers.Adam())
+                           optimizer=tf.keras.optimizers.Adam(FLAGS.learning_rate))
 
   data_owners = [DataOwner("data-owner-{}".format(i),
-                           "{}/train{}.tfrecord".format(args.data_root, i),
+                           "{}/train{}.tfrecord".format(FLAGS.data_root, i),
                            model, loss,
-                           optimizer=tf.keras.optimizers.Adam())
+                           optimizer=tf.keras.optimizers.Adam(local_lr))
                  for i in range(NUM_DATA_OWNERS)]
 
   model_owner.fit(data_owners, rounds=BATCHES, evaluate_every=10)
