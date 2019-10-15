@@ -8,44 +8,51 @@ import argparse
 import tensorflow as tf
 import tf_encrypted as tfe
 
-parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--remote-config', type=str,
+parser = argparse.ArgumentParser(description="Federated learning example")
+parser.add_argument("--remote-config", type=str,
                     default=None, help="Specify remote configuration")
-parser.add_argument('--data-root', type=str,
+parser.add_argument("--data-root", type=str,
                     default="./data",
                     help="Specify the root directory of the data")
+parser.add_argument("--batch-size", type=int, default=256)
+parser.add_argument("--num-data-owners", type=int,
+                    default=3,
+                    help="Specify how many data owners should "
+                         "take part in the learning. If remote "
+                         "configuration is specified the number of data owners "
+                         "must match the number specified here")
+parser.add_argument("--no-split", action="store_true", default=False,
+                    help="Whether the script runner should help "
+                         "simulate the training by splitting the data and "
+                         "distributing it amongst the data owners. "
+                         "Only applicable for local computations.")
+parser.add_argument("--reptile", action="store_true", default=False,
+                    help="If set the ModelOwner will use the reptile "
+                         "method of calculating gradients "
+                         "and aggregating them.")
 
 args = parser.parse_args()
 
 if args.remote_config is not None:
-  # config file was specified
   config = tfe.RemoteConfig.load(args.remote_config)
   config.connect_to_cluster()
 else:
-  config = tfe.EagerLocalConfig([
-      'server0',
-      'server1',
-      'crypto-producer',
-      'model-owner',
-      'data-owner-0',
-      'data-owner-1',
-      'data-owner-2'
-  ])
+  players = ['server0', 'server1', 'crypto-producer', 'model-owner']
+  data_owners = ['data-owner-{}'.format(i) for i in range(args.num_data_owners)]
+  config = tfe.EagerLocalConfig(players + data_owners)
 
 tfe.set_config(config)
 tfe.set_protocol(tfe.protocol.Pond())
 
 from players import BaseModelOwner, BaseDataOwner
-from func_lib import default_model_fn, secure_mean, evaluate_classifier
+from func_lib import default_model_fn, secure_mean, evaluate_classifier, secure_reptile, reptile_model_fn
 
-EPOCHS = 1
-NUM_DATA_OWNERS = 3
+NUM_DATA_OWNERS = args.num_data_owners
 
-BATCH_SIZE = 256
+BATCH_SIZE = args.batch_size
 DATA_ITEMS = 60000
 BATCHES = DATA_ITEMS // NUM_DATA_OWNERS // BATCH_SIZE
-
-TRACING = False
+REPTILE = args.reptile
 
 def split_dataset(num_data_owners):
   """
@@ -78,10 +85,16 @@ class ModelOwner(BaseModelOwner):
   """
   @classmethod
   def model_fn(cls, data_owner):
+    if REPTILE:
+      return reptile_model_fn(data_owner)
+
     return default_model_fn(data_owner)
 
   @classmethod
-  def aggregator_fn(cls, model_gradients):
+  def aggregator_fn(cls, model_gradients, model):
+    if REPTILE:
+      return secure_reptile(model_gradients, model)
+
     return secure_mean(model_gradients)
 
   @classmethod
@@ -102,7 +115,8 @@ class DataOwner(BaseDataOwner):
   # TODO: can also move model_fn in here -- we leave it up to the user atm
 
 if __name__ == "__main__":
-  split_dataset(NUM_DATA_OWNERS)
+  if not args.no_split:
+    split_dataset(NUM_DATA_OWNERS)
 
   logging.basicConfig(level=logging.DEBUG)
 
@@ -123,7 +137,8 @@ if __name__ == "__main__":
 
   data_owners = [DataOwner("data-owner-{}".format(i),
                            "{}/train{}.tfrecord".format(args.data_root, i),
-                           model,
-                           loss) for i in range(NUM_DATA_OWNERS)]
+                           model, loss,
+                           optimizer=tf.keras.optimizers.Adam())
+                 for i in range(NUM_DATA_OWNERS)]
 
   model_owner.fit(data_owners, rounds=BATCHES, evaluate_every=10)
