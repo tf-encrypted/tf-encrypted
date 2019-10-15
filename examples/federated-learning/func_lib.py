@@ -35,7 +35,7 @@ def reptile_model_fn(data_owner, iterations=3,
         zip(grads_k, data_owner.model.trainable_variables),
     )
 
-  return model.trainable_variables
+  return [var.read_value() for var in data_owner.model.trainable_variables]
 
 
 ### Example aggregator_fns ###
