@@ -126,15 +126,11 @@ def main(_):
   tfe.set_config(config)
   tfe.set_protocol(tfe.protocol.Pond())
 
-  NUM_DATA_OWNERS = FLAGS.num_data_owners
 
-  BATCH_SIZE = FLAGS.batch_size
-  DATA_ITEMS = 60000
-  BATCHES = DATA_ITEMS // NUM_DATA_OWNERS // BATCH_SIZE
-  REPTILE = FLAGS.reptile
+  batches = FLAGS.data_items // FLAGS.num_data_owners // FLAGS.batch_size
 
   if FLAGS.split:
-    split_dataset(NUM_DATA_OWNERS)
+    split_dataset(FLAGS.num_data_owners)
 
   logging.basicConfig(level=logging.DEBUG)
 
@@ -159,9 +155,9 @@ def main(_):
                            "{}/train{}.tfrecord".format(FLAGS.data_root, i),
                            model, loss,
                            optimizer=tf.keras.optimizers.Adam(local_lr))
-                 for i in range(NUM_DATA_OWNERS)]
+                 for i in range(FLAGS.num_data_owners)]
 
-  model_owner.fit(data_owners, rounds=BATCHES, evaluate_every=10)
+  model_owner.fit(data_owners, rounds=batches, evaluate_every=10)
 
 if __name__ == "__main__":
   app.run(main)
