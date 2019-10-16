@@ -1,9 +1,6 @@
 version: 2
 
 variables:
-  docker-caching: &docker-caching
-    setup_remote_docker:
-      docker_layer_caching: true
   bootstrap: &bootstrap
     run:
       name: Bootstrap the environment
@@ -67,7 +64,6 @@ jobs:
       - image: circleci/python:3.5.7-stretch
     working_directory: ~/repo
     steps:
-      - *docker-caching
       - checkout
       - *restore-cache
       - *bootstrap
@@ -105,7 +101,6 @@ jobs:
       - image: circleci/python:3.5
     working_directory: ~/repo
     steps:
-      - *docker-caching
       - checkout
       - *restore-cache
       - *bootstrap
