@@ -74,7 +74,7 @@ class BaseModelOwner:
     raise NotImplementedError()
 
   @classmethod
-  def aggregator_fn(cls, model_gradients):
+  def aggregator_fn(cls, model_gradients, model):
     raise NotImplementedError()
 
   @classmethod
@@ -102,8 +102,8 @@ class BaseModelOwner:
         prog.update(r, [("Loss", loss)])
 
   @pin_to_owner
-  def _call_aggregator_fn(self, grads):
-    return self.aggregator_fn(grads)
+  def _call_aggregator_fn(self, grads, model):
+    return self.aggregator_fn(grads, model)
 
   @pin_to_owner
   def _call_evaluator_fn(self):
@@ -134,7 +134,8 @@ class BaseModelOwner:
         raise UndefinedModelFnError()
 
     # Aggregation step
-    aggr_gradients = self._call_aggregator_fn(zip(*player_gradients))
+    aggr_gradients = self._call_aggregator_fn(zip(*player_gradients),
+                                              self.model)
 
     # Update step
     with self.device:
