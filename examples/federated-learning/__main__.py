@@ -1,8 +1,9 @@
 """An example of the secure aggregation protocol for federated learning."""
-#pylint: disable=redefined-outer-name
-#pylint:disable=unexpected-keyword-arg
-#pylint:disable=wrong-import-position
-import argparse
+# pylint: disable=redefined-outer-name
+# pylint: disable=unexpected-keyword-arg
+# pylint: disable=wrong-import-position
+# pylint: disable=arguments-differ
+# pylint: disable=abstract-method
 import logging
 
 from absl import app
@@ -120,7 +121,9 @@ def main(_):
     config.connect_to_cluster()
   else:
     players = ['server0', 'server1', 'crypto-producer', 'model-owner']
-    data_owners = ['data-owner-{}'.format(i) for i in range(FLAGS.num_data_owners)]
+    data_owners = [
+        'data-owner-{}'.format(i) for i in range(FLAGS.num_data_owners)
+    ]
     config = tfe.EagerLocalConfig(players + data_owners)
 
   tfe.set_config(config)
@@ -146,10 +149,12 @@ def main(_):
 
   local_lr = FLAGS.local_learning_rate or FLAGS.learning_rate
 
-  model_owner = ModelOwner("model-owner",
-                           "{}/train.tfrecord".format(FLAGS.data_root),
-                           model, loss,
-                           optimizer=tf.keras.optimizers.Adam(FLAGS.learning_rate))
+  model_owner = ModelOwner(
+      "model-owner",
+      "{}/train.tfrecord".format(FLAGS.data_root),
+      model, loss,
+      optimizer=tf.keras.optimizers.Adam(FLAGS.learning_rate)
+  )
 
   data_owners = [DataOwner("data-owner-{}".format(i),
                            "{}/train{}.tfrecord".format(FLAGS.data_root, i),
