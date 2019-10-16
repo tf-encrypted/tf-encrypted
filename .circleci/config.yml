@@ -64,6 +64,7 @@ jobs:
       - image: circleci/python:3.5.7-stretch
     working_directory: ~/repo
     steps:
+      - setup_remote_docker
       - checkout
       - *restore-cache
       - *bootstrap
@@ -101,6 +102,7 @@ jobs:
       - image: circleci/python:3.5
     working_directory: ~/repo
     steps:
+      - setup_remote_docker
       - checkout
       - *restore-cache
       - *bootstrap
