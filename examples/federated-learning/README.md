@@ -2,7 +2,7 @@
 
 This example shows how TF Encrypted can be used to perform secure aggregation for federated learning, where a *model owner* is training a model by repeatedly asking a set of *data owners* to compute gradients on their locally held data set. As a way of reducing the privacy leakage, only the mean gradient is revealed to the model owner in each iteration.
 
-<p align="center"><img src="./flow.png" width="75%"/></p>
+<p align="center"><img src="./assets/flow.png" width="75%"/></p>
 
 ## Computation
 
