@@ -1,7 +1,9 @@
 """TF Encrypted namespace."""
 from __future__ import absolute_import
+from functools import wraps
 from typing import Optional, Any
 import inspect
+
 import tensorflow as tf
 
 from .config import Config
