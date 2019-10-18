@@ -50,10 +50,6 @@ def secure_mean(collected_inputs):
         for inputs in collected_inputs
     ]
 
-    # # Reveal aggregated values & cast to native tf.float32
-    # aggr_inputs = [tf.cast(inp.reveal().to_native(), tf.float32)
-    #                for inp in aggr_inputs]
-
     return aggr_inputs
 
 def secure_reptile(collected_inputs, model):
