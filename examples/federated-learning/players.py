@@ -5,6 +5,7 @@ import functools
 
 import tensorflow as tf
 import tf_encrypted as tfe
+from tf_encrypted.protocol.pond import PondPrivateTensor
 
 from util import UndefinedModelFnError
 
@@ -139,6 +140,10 @@ class BaseModelOwner:
 
     # Update step
     with self.device:
+      if isinstance(aggr_gradients[0], PondPrivateTensor):
+        aggr_gradients = [tf.cast(inp.reveal().to_native(), tf.float32)
+                          for inp in aggr_gradients]
+
       self.optimizer.apply_gradients(zip(aggr_gradients,
                                          self.model.trainable_variables))
 

@@ -50,15 +50,21 @@ def secure_mean(collected_inputs):
         for inputs in collected_inputs
     ]
 
-    # Reveal aggregated values & cast to native tf.float32
-    aggr_inputs = [tf.cast(inp.reveal().to_native(), tf.float32)
-                   for inp in aggr_inputs]
+    # # Reveal aggregated values & cast to native tf.float32
+    # aggr_inputs = [tf.cast(inp.reveal().to_native(), tf.float32)
+    #                for inp in aggr_inputs]
 
     return aggr_inputs
 
 def secure_reptile(collected_inputs, model):
+  """
+  secure_reptile computes the deltas using the reptile meta learning algorithm
+  must be called on the model owner
+  """
 
   aggr_weights = secure_mean(collected_inputs)
+  aggr_weights = [tf.cast(inp.reveal().to_native(), tf.float32)
+                  for inp in aggr_weights]
 
   weights_deltas = [
       weight - update for (weight, update) in zip(
