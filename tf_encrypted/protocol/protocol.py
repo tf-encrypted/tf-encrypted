@@ -1,10 +1,8 @@
 """Base abstraction for a Protocol."""
-from abc import ABC, abstractmethod
+from abc import ABC
 import functools
 from typing import Optional, Any, Callable
 from types import TracebackType
-
-import tensorflow as tf
 
 from ..tensor.factory import AbstractTensor
 
@@ -35,12 +33,6 @@ class Protocol(ABC):
       traceback: Optional[TracebackType],
   ) -> Optional[bool]:
     set_protocol(self.last_protocol)
-
-  @property
-  @abstractmethod
-  def initializer(self) -> tf.Operation:
-    pass
-
 
 def set_protocol(prot: Protocol) -> None:
   """

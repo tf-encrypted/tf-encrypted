@@ -159,7 +159,7 @@ class Sequential(Layer):
 
     # Initialize variables before starting to train
     sess = KE.get_session()
-    sess.run(tf.global_variables_initializer())
+    sess.run(tf.compat.v1.global_variables_initializer())
 
     for e in range(epochs):
       print('Epoch {}/{}'.format(e + 1, epochs))

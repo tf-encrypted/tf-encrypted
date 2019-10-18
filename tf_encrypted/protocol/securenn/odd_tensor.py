@@ -88,7 +88,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
       if secure_random.supports_secure_randomness():
         sampler = secure_random.random_uniform
       else:
-        sampler = tf.random_uniform
+        sampler = tf.random.uniform
 
       value = _construct_value_from_sampler(sampler=sampler, shape=shape)
       return OddDenseTensor(value)
@@ -151,7 +151,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
       x, y = _lift(self, other)
       bitlength = math.ceil(math.log2(master_factory.modulus))
 
-      with tf.name_scope('add'):
+      with tf.compat.v1.name_scope('add'):
 
         # the below avoids redundant seed expansion; can be removed once
         # we have a (per-device) caching mechanism in place
@@ -160,7 +160,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
         z = x_value + y_value
 
-        with tf.name_scope('correct_wrap'):
+        with tf.compat.v1.name_scope('correct_wrap'):
 
           # we want to compute whether we wrapped around, ie `pos(x) + pos(y) >= m - 1`,
           # for correction purposes which, since `m - 1 == 1` for signed integers, can be
@@ -181,7 +181,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
       x, y = _lift(self, other)
       bitlength = math.ceil(math.log2(master_factory.modulus))
 
-      with tf.name_scope('sub'):
+      with tf.compat.v1.name_scope('sub'):
 
         # the below avoids redundant seed expansion; can be removed once
         # we have a (per-device) caching mechanism in place
@@ -190,7 +190,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
         z = x_value - y_value
 
-        with tf.name_scope('correct-wrap'):
+        with tf.compat.v1.name_scope('correct-wrap'):
 
           # we want to compute whether we wrapped around, ie `pos(x) - pos(y) < 0`,
           # for correction purposes which can be rewritten as
@@ -252,7 +252,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
     @property
     def value(self) -> tf.Tensor:
       # TODO(Morten) result should be stored in a (per-device) cache
-      with tf.name_scope('expand-seed'):
+      with tf.compat.v1.name_scope('expand-seed'):
         sampler = partial(secure_random.seeded_random_uniform, seed=self._seed)
         value = _construct_value_from_sampler(sampler=sampler,
                                               shape=self._shape)
@@ -292,10 +292,11 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
                               dtype=NATIVE_TYPE,
                               minval=NATIVE_TYPE.min + 1,
                               maxval=NATIVE_TYPE.max)
-    value = tf.where(unshifted_value < 0,
-                     unshifted_value + tf.ones(shape=unshifted_value.shape,
-                                               dtype=unshifted_value.dtype),
-                     unshifted_value)
+    value = tf.compat.v1.where(unshifted_value < 0,
+                               unshifted_value +
+                               tf.ones(shape=unshifted_value.shape,
+                                       dtype=unshifted_value.dtype),
+                               unshifted_value)
     return value
 
   def _lessthan_as_unsigned(x, y, bitlength):
@@ -304,7 +305,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
     e.g. `1 < -1`. Taken from Section 2-12, page 23, of
     [Hacker's Delight](https://www.hackersdelight.org/).
     """
-    with tf.name_scope('unsigned-compare'):
+    with tf.compat.v1.name_scope('unsigned-compare'):
       not_x = tf.bitwise.invert(x)
       lhs = tf.bitwise.bitwise_and(not_x, y)
       rhs = tf.bitwise.bitwise_and(tf.bitwise.bitwise_or(not_x, y), x - y)
@@ -315,7 +316,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
   def _map_minusone_to_zero(value, native_type):
     """ Maps all -1 values to zero. """
     zeros = tf.zeros(shape=value.shape, dtype=native_type)
-    return tf.where(tf.equal(value, -1), zeros, value)
+    return tf.compat.v1.where(tf.equal(value, -1), zeros, value)
 
   return master_factory
 

@@ -13,7 +13,7 @@ np.random.seed(42)
 class TestDense(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_dense_bias(self):
     self._core_dense(use_bias=True)
@@ -27,7 +27,7 @@ class TestDense(unittest.TestCase):
   def _core_dense(self, **layer_kwargs):
     input_shape = [4, 5]
     kernel = np.random.normal(input_shape[::-1])
-    initializer = tf.keras.initializers.Constant(kernel)
+    initializer = tf.compat.v1.keras.initializers.Constant(kernel)
 
     base_kwargs = {
         "units": 4,
@@ -48,7 +48,7 @@ class TestDense(unittest.TestCase):
     input_data = np.ones(input_shape)
     weights_second_layer = np.ones(shape=[1, 5])
     kernel = np.ones([5, 5])
-    initializer = tf.keras.initializers.Constant(kernel)
+    initializer = tf.compat.v1.keras.initializers.Constant(kernel)
 
     with tfe.protocol.SecureNN() as prot:
 
@@ -70,18 +70,18 @@ class TestDense(unittest.TestCase):
       grad, d_x = tfe_layer.backward(d_out)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         tfe_loss = sess.run(loss.reveal())
         tfe_d_k = sess.run(grad[0].reveal())
         tfe_d_b = sess.run(grad[1].reveal())
         tfe_d_x = sess.run(d_x.reveal())
 
     # reset graph
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
 
-      initializer = tf.keras.initializers.Constant(kernel)
+      initializer = tf.compat.v1.keras.initializers.Constant(kernel)
 
       tf_layer = tf.keras.layers.Dense(
           5,
@@ -98,7 +98,7 @@ class TestDense(unittest.TestCase):
       # backward
       d_x, d_k, d_b = tf.gradients(xs=[x, k, b], ys=loss)
 
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       tf_loss, tf_d_x, tf_d_k, tf_d_b = sess.run([loss, d_x, d_k, d_b])
 
       np.testing.assert_array_almost_equal(tfe_loss, tf_loss, decimal=2)

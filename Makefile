@@ -59,7 +59,8 @@ bootstrap: pythoncheck pipcheck
 # Rules for running our tests and for running various different linters
 # ###############################################
 test: pythoncheck
-	pytest -n 8 -x -m "not slow and not convert_maxpool"
+	pytest -n 8 -x -m tf2
+	pytest -n 8 -x -m "not slow and not convert_maxpool and not tf2"
 	pytest -n 8 -x -m slow
 	pytest -n 8 -x -m convert_maxpool
 

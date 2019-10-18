@@ -13,7 +13,7 @@ from tf_encrypted.tensor import int100factory, fixed100_ni
 class TestInt100Tensor(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_pond(self) -> None:
 
@@ -29,7 +29,7 @@ class TestInt100Tensor(unittest.TestCase):
       z = x * y
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         actual = sess.run(z.reveal())
 
       expected = np.array([4, 4])
@@ -56,7 +56,7 @@ class TestInt100Tensor(unittest.TestCase):
     epi = ensure_positive_interpretation
     y = x.bits(ensure_positive_interpretation=epi).to_native()
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       actual = sess.run(y)
 
     np.testing.assert_array_equal(actual, expected)
@@ -95,7 +95,7 @@ class TestInt100Tensor(unittest.TestCase):
 class TestConv2D(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_forward(self) -> None:
 
@@ -112,29 +112,29 @@ class TestConv2D(unittest.TestCase):
 
     inp = int100factory.tensor(input_conv)
     out = inp.conv2d(int100factory.tensor(filter_values), strides)
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       actual = sess.run(out.to_native())
 
     # reset graph
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
     # convolution tensorflow
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       # conv input
       x = tf.Variable(input_conv, dtype=tf.float32)
-      x_nhwc = tf.transpose(x, (0, 2, 3, 1))
+      x_nhwc = tf.transpose(a=x, perm=(0, 2, 3, 1))
 
       # convolution Tensorflow
       filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
       conv_out_tf = tf.nn.conv2d(
-          x_nhwc,
-          filters_tf,
+          input=x_nhwc,
+          filters=filters_tf,
           strides=[1, strides, strides, 1],
           padding="SAME"
       )
 
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       expected = sess.run(conv_out_tf).transpose(0, 3, 1, 2)
 
     np.testing.assert_array_almost_equal(actual, expected, decimal=3)

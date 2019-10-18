@@ -13,7 +13,7 @@ np.random.seed(42)
 class TestReshape(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_reshape(self):
     self._core_reshape([2, 2, 2, 2], target_shape=[8])

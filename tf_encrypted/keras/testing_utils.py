@@ -32,16 +32,16 @@ def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,
     y = tfe_layer(x)
 
     with tfe.Session() as sess:
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       actual = sess.run(y.reveal())
 
-  tf.reset_default_graph()
+  tf.compat.v1.reset_default_graph()
 
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     tf_layer = tf_layer_cls(**kwargs)
     x = tf.Variable(input_data, dtype=tf.float32)
     y = tf_layer(x)
-    sess.run(tf.global_variables_initializer())
+    sess.run(tf.compat.v1.global_variables_initializer())
     expected = sess.run(y)
 
   np.testing.assert_allclose(actual, expected, rtol=rtol, atol=atol)

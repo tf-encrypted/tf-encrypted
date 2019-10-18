@@ -10,7 +10,7 @@ from tf_encrypted.layers.activation import Relu, Sigmoid, Tanh
 
 class TestRelu(unittest.TestCase):
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_forward(self):
     input_shape = [2, 2, 2, 50]
@@ -19,21 +19,21 @@ class TestRelu(unittest.TestCase):
 
     with tfe.protocol.SecureNN() as prot:
 
-      tf.reset_default_graph()
+      tf.compat.v1.reset_default_graph()
 
       relu_input = prot.define_private_variable(input_relu)
       relu_layer = Relu(input_shape)
       relu_out_pond = relu_layer.forward(relu_input)
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         out_pond = sess.run(relu_out_pond.reveal(), tag='tfe')
 
-      tf.reset_default_graph()
+      tf.compat.v1.reset_default_graph()
 
       x = tf.Variable(input_relu, dtype=tf.float32)
       relu_out_tf = tf.nn.relu(x)
-      with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+      with tf.compat.v1.Session() as sess:
+        sess.run(tf.compat.v1.global_variables_initializer())
         out_tensorflow = sess.run(relu_out_tf)
 
       np.testing.assert_allclose(out_pond, out_tensorflow, atol=.01)
@@ -41,7 +41,7 @@ class TestRelu(unittest.TestCase):
 
 class TestSigmoid(unittest.TestCase):
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_forward(self):
     input_shape = [4]
@@ -57,19 +57,19 @@ class TestSigmoid(unittest.TestCase):
 
       with tfe.Session() as sess:
 
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         # outputs
         out_pond = sess.run(sigmoid_out_pond.reveal())
 
       # reset graph
-      tf.reset_default_graph()
+      tf.compat.v1.reset_default_graph()
 
-      with tf.Session() as sess:
+      with tf.compat.v1.Session() as sess:
         x = tf.Variable(input_sigmoid, dtype=tf.float32)
 
         sigmoid_out_tf = tf.nn.sigmoid(x)
 
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
 
         out_tensorflow = sess.run(sigmoid_out_tf)
 
@@ -78,7 +78,7 @@ class TestSigmoid(unittest.TestCase):
 
 class TestTanh(unittest.TestCase):
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_forward(self):
     input_shape = [4]
@@ -94,19 +94,19 @@ class TestTanh(unittest.TestCase):
 
       with tfe.Session() as sess:
 
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         # outputs
         out_pond = sess.run(tanh_out_pond.reveal())
 
       # reset graph
-      tf.reset_default_graph()
+      tf.compat.v1.reset_default_graph()
 
-      with tf.Session() as sess:
+      with tf.compat.v1.Session() as sess:
         x = tf.Variable(input_tanh, dtype=tf.float32)
 
         tanh_out_tf = tf.nn.tanh(x)
 
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
 
         out_tensorflow = sess.run(tanh_out_tf)
 

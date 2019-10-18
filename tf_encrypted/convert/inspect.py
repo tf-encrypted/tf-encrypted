@@ -25,7 +25,7 @@ def _gen_graph_def(subgraph, input_shape, sess):
 
 def _read_graph(path):
   with tf.io.gfile.GFile(path, 'rb') as f:
-    graph_def = tf.GraphDef()
+    graph_def = tf.compat.v1.GraphDef()
     graph_def.ParseFromString(f.read())
 
   return graph_def
@@ -51,17 +51,17 @@ def export(x: tf.Tensor, filename, sess=None):
   should_close = False
   if sess is None:
     should_close = True
-    sess = tf.Session()
+    sess = tf.compat.v1.Session()
 
   pred_node_names = ["output"]
   tf.identity(x, name=pred_node_names[0])
-  graph = tf.graph_util.convert_variables_to_constants(
+  graph = tf.compat.v1.graph_util.convert_variables_to_constants(
       sess,
       sess.graph.as_graph_def(),
       pred_node_names
     )
 
-  graph = tf.graph_util.remove_training_nodes(graph)
+  graph = tf.compat.v1.graph_util.remove_training_nodes(graph)
 
   path = tf.io.write_graph(graph, ".", filename, as_text=False)
 

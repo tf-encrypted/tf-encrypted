@@ -9,7 +9,7 @@ from tf_encrypted.keras.testing_utils import agreement_test
 class TestActivation(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_activation_relu(self):
     self._core_relu()

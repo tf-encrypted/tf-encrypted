@@ -13,7 +13,7 @@ np.random.seed(42)
 class TestPooling2d(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_maxpooling2d_valid(self):
     self._core_maxpooling2d(strides=2, padding='valid')
@@ -71,7 +71,7 @@ class TestPooling2d(unittest.TestCase):
 class TestGlobalPooling2d(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_global_maxpooling2d(self):
     self._core_global_maxpooling2d()

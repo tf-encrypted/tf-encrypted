@@ -9,7 +9,7 @@ from tf_encrypted.tensor import native_factory
 
 class TestPrimeTensor(unittest.TestCase):
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def set_up_indexing(self):
     m = 2 ** 31
@@ -74,7 +74,7 @@ class TestPrimeTensor(unittest.TestCase):
     x = prime_factory.tensor(tf.constant([2**16, 2**16 + 1]))
     y = prime_factory.tensor(tf.constant([2**16 + 2, 2]))
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       z = (x * y).value
       z0 = sess.run(z)
 
@@ -107,7 +107,7 @@ class TestPrimeTensor(unittest.TestCase):
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]).reshape([3, 10])
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       actual = sess.run(y.value)
 
     np.testing.assert_array_equal(actual, expected)

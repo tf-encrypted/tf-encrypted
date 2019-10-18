@@ -10,14 +10,14 @@ from tf_encrypted.protocol.securenn.odd_tensor import oddint64_factory
 class TestOddImplicitTensor(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_tensor(self) -> None:
     # regular, overflow, underflow
     x = oddint64_factory.tensor(tf.constant([-2, -1, 0, 1], dtype=tf.int64))
     expected = np.array([-2, 0, 0, 1])
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       actual = sess.run(x.value)
 
     np.testing.assert_array_almost_equal(actual, expected, decimal=3)
@@ -32,7 +32,7 @@ class TestOddImplicitTensor(unittest.TestCase):
 
     expected = np.array([5, 2])
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       actual = sess.run(z.value)
 
     np.testing.assert_array_almost_equal(actual, expected, decimal=3)
@@ -47,7 +47,7 @@ class TestOddImplicitTensor(unittest.TestCase):
 
     expected = np.array([-2, -5])
 
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       actual = sess.run(z.value)
 
     np.testing.assert_array_almost_equal(actual, expected, decimal=3)

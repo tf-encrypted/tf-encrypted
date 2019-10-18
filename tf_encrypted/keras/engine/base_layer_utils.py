@@ -26,7 +26,7 @@ PER_GRAPH_OBJECT_NAME_UIDS = weakref.WeakKeyDictionary()
 
 
 def _get_default_graph_uid_map():
-  graph = tf.get_default_graph()
+  graph = tf.compat.v1.get_default_graph()
   name_uid_map = PER_GRAPH_OBJECT_NAME_UIDS.get(graph, None)
   if name_uid_map is None:
     name_uid_map = collections.defaultdict(int)

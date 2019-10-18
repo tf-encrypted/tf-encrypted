@@ -6,7 +6,7 @@ helper."""
 from __future__ import absolute_import
 from typing import Tuple, List, Union, Optional, Any, NewType, Callable
 import abc
-from functools import reduce, wraps
+from functools import reduce
 import logging
 from math import log2, ceil
 import random
@@ -14,6 +14,7 @@ import sys
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.framework.ops import EagerTensor
 
 from ...utils import wrap_in_variables
 from ...tensor.helpers import inverse
@@ -41,7 +42,6 @@ TFETensor = Union[TFEPublicTensor, "PondPrivateTensor", "PondMaskedTensor"]
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 TF_INT_TYPES = [tf.int8, tf.int16, tf.int32, tf.int64]
 
-_initializers = list()
 _THISMODULE = sys.modules[__name__]
 
 
@@ -133,9 +133,12 @@ class Pond(Protocol):
     :param AbstractFactory factory: Which tensor type to represent this value
         with.
     """
-    assert isinstance(value, np.ndarray), type(value)
+    assert isinstance(value, (np.ndarray, EagerTensor)), type(value)
 
     factory = factory or self.tensor_factory
+
+    if isinstance(value, EagerTensor):
+      value = value.numpy()
 
     v = self._encode(value, apply_scaling)
 
@@ -180,7 +183,7 @@ class Pond(Protocol):
     factory = factory or self.tensor_factory
     suffix = "-" + name if name else ""
 
-    with tf.name_scope("public-placeholder{}".format(suffix)):
+    with tf.compat.v1.name_scope("public-placeholder{}".format(suffix)):
 
       with tf.device(self.server_0.device_name):
         x_on_0 = factory.placeholder(shape)
@@ -221,7 +224,7 @@ class Pond(Protocol):
     factory = factory or self.tensor_factory
 
     suffix = "-" + name if name else ""
-    with tf.name_scope("private-placeholder{}".format(suffix)):
+    with tf.compat.v1.name_scope("private-placeholder{}".format(suffix)):
 
       with tf.device(self.server_0.device_name):
         x0 = factory.placeholder(shape)
@@ -295,7 +298,72 @@ class Pond(Protocol):
         x_on_1 = factory.variable(v_on_1)
 
     x = PondPublicVariable(self, x_on_0, x_on_1, apply_scaling)
-    _initializers.append(x.initializer)
+    return x
+
+  def define_private_tensor(
+      self,
+      value,
+      apply_scaling: bool = True,
+      name: Optional[str] = None,
+      factory: Optional[AbstractFactory] = None,
+  ):
+    # pylint: disable=line-too-long
+    """
+    define_private_tensor(value, apply_scaling, name, factory) -> PondPrivateTensor
+
+    Define a private tensor.
+
+    This will take the passed value and construct shares that will be split up
+    between those involved in the computation.
+
+    For example, in a two party architecture, this will split the value into
+    two sets of shares and transfer them between each party in a secure manner.
+
+    :see tf.Tensor
+
+    :param Union[np.ndarray,tf.Tensor,PondPublicTensor] value: The value.
+    :param bool apply_scaling: Whether or not to scale the value.
+    :param str name: What name to give to this node in the graph.
+    :param AbstractFactory factory: Which tensor type to represent this value
+        with.
+    """
+    # pylint: enable=line-too-long
+    init_val_types = (np.ndarray,
+                      tf.Tensor,
+                      PondPublicTensor)
+    assert isinstance(value, init_val_types), type(value)
+
+    factory = factory or self.tensor_factory
+    suffix = "-" + name if name else ""
+
+    with tf.name_scope("private-tensor{}".format(suffix)):
+
+      if isinstance(value, np.ndarray):
+        v = factory.tensor(self._encode(value, apply_scaling))
+        v0, v1 = self._share(v)
+
+      elif isinstance(value, EagerTensor):
+        value = value.numpy()
+        v = factory.tensor(self._encode(value, apply_scaling))
+        v0, v1 = self._share(v)
+
+      elif isinstance(value, tf.Tensor):
+        v = factory.tensor(self._encode(value, apply_scaling,
+                                        tf_int_type=factory.native_type))
+        v0, v1 = self._share(v)
+
+      elif isinstance(value, PondPublicTensor):
+        v_on_0, _ = value.unwrapped
+        with tf.device(self.server_0.device_name):
+          # NOTE[Morten]
+          # we can alternatively avoid transfer of v1 from server0 and server1
+          # by having the crypto producer (pre-)generate sharings of zero
+          v0, v1 = self._share(v_on_0)
+      else:
+        raise TypeError(("Don't know how to turn {} "
+                         "into private variable").format(type(value)))
+
+    x = PondPrivateTensor(self, v0, v1, apply_scaling)
     return x
 
   def define_private_variable(
@@ -369,7 +437,6 @@ class Pond(Protocol):
         x1 = factory.variable(v1)
 
     x = PondPrivateVariable(self, x0, x1, apply_scaling)
-    _initializers.append(x.initializer)
     return x
 
   def fifo_queue(self, capacity, shape, shared_name):
@@ -421,7 +488,7 @@ class Pond(Protocol):
       w = factory.tensor(enc)
       return PondPublicTensor(self, w, w, apply_scaling)
 
-    with tf.name_scope("public-input{}".format(suffix)):
+    with tf.compat.v1.name_scope("public-input{}".format(suffix)):
 
       with tf.device(player.device_name):
 
@@ -438,104 +505,6 @@ class Pond(Protocol):
 
         raise TypeError(("Don't know how to handle inputs "
                          "of type {}").format(type(inputs)))
-
-  def local_computation(
-      self,
-      player_name=None,
-      **kwargs
-  ):
-    """Annotate a function `compute_func` for local computation.
-
-    This decorator can be used to pin a function's code to a specific player's
-    device for remote execution.  This is useful when defining player-specific
-    handlers for e.g. providing model weights, or input and output tensors.
-
-    The decorator can handle global functions, normal object methods, or
-    classmethods. If wrapping a method, it's presumed that the method's object
-    has an attribute named `player_name`, or that the user will provide the
-    `player_name` later on as a kwarg to the `compute_func`.
-
-    Example:
-      ```
-      @tfe.local_computation('input-provider')
-      def provide_input():
-        return tf.random.normal((3, 3))
-
-      @tfe.local_computation
-      def receive_output(logits):
-        return tf.print(tf.argmax(logits, axis=-1))
-
-      x = provide_input()
-      y = model(x)
-      receive_op = receive_output(y, player_name='output-receiver')
-      with tfe.Session():
-        sess.run(receive_op)
-      ```
-
-    Arguments:
-      player_name: Name of the player who should execute the function.
-      kwargs: Keyword arguments to use when encoding or encrypting
-        inputs/outputs to compute_func: see tfe.define_local_computation for
-        details.
-
-    Returns:
-      The compute_func, but decorated for remote execution.
-    """
-    if callable(player_name):
-      # The user has called us as a standard decorator:
-      #
-      # @tfe.local_computation
-      # def provide_input():
-      #   return tf.zeros((2, 2))
-      actual_compute_func = player_name
-      player_name = None
-    else:
-      # The user has called us as a function, maybe with non-default args:
-      #
-      # @tfe.local_computation('input-provider')
-      # def provide_input():
-      #   return tf.zeros((2, 2))
-      actual_compute_func = None
-
-    def decorator(compute_func):
-
-      @wraps(compute_func)
-      def compute_func_wrapper(*compute_func_args, **compute_func_kwargs):
-
-        # Assumer user has passed player_name to decorator. If not, try to recover.
-        actual_player_name = player_name
-        if actual_player_name is None:
-          # Maybe user has passed player_name to compute_func as a kwarg
-          actual_player_name = compute_func_kwargs.get("player_name", None)
-        if actual_player_name is None:
-          # Assume compute_func is a method and its instance has some attribute
-          # 'player_name'
-          if compute_func_args:
-            parent_instance = compute_func_args[0]
-            actual_player_name = getattr(parent_instance, 'player_name', None)
-        if actual_player_name is None:
-          # Fallback to error
-          raise ValueError("'player_name' not provided. Please provide "
-                           "'player_name' as a keyword argument to this "
-                           "function, or as an argument to the "
-                           "tfe.local_computation decorator.")
-
-        return self.define_local_computation(
-            actual_player_name,
-            compute_func,
-            arguments=compute_func_args,
-            **kwargs,
-        )
-
-      return compute_func_wrapper
-
-    if actual_compute_func is None:
-      # User has not yet passed a compute_func, so we'll expect them to
-      # pass it outside of this function's scope (e.g. as a decorator).
-      return decorator
-
-    # User has already passed a compute_func, so return the decorated version.
-    return decorator(actual_compute_func)
 
   def define_local_computation(
       self,
@@ -577,7 +546,7 @@ class Pond(Protocol):
 
       if not masked:
         return x
-      with tf.name_scope("local_mask"):
+      with tf.compat.v1.name_scope("local_mask"):
         a0 = factory.sample_uniform(v.shape)
         a1 = factory.sample_uniform(v.shape)
         a = a0 + a1
@@ -618,7 +587,7 @@ class Pond(Protocol):
           if not isinstance(arguments, (list, tuple)):
             arguments = [arguments]
 
-          inputs = tf.contrib.framework.nest.map_structure(
+          inputs = tf.nest.map_structure(
               reconstruct_input, arguments)
 
         outputs = computation_fn(*inputs)
@@ -693,13 +662,6 @@ class Pond(Protocol):
         name_scope=name_scope if name_scope else "output",
     )
 
-  @property
-  def initializer(self) -> tf.Operation:
-    return tf.group(*_initializers)
-
-  def clear_initializers(self) -> None:
-    del _initializers[:]
-
   def _encode(self,
               rationals: Union[tf.Tensor, np.ndarray],
               apply_scaling: bool,
@@ -744,7 +706,7 @@ class Pond(Protocol):
               is_scaled: bool) -> Union[tf.Tensor, np.ndarray]:
     """Decode tensor of ring elements into tensor of rational numbers."""
 
-    with tf.name_scope("decode"):
+    with tf.compat.v1.name_scope("decode"):
 
       bound = self.fixedpoint_config.bound_single_precision
       scaled = (elements + bound).to_native() - bound
@@ -767,7 +729,7 @@ class Pond(Protocol):
       A pair of `AbstractTensor`, the shares.
     """
 
-    with tf.name_scope("share"):
+    with tf.compat.v1.name_scope("share"):
       share0 = secret.factory.sample_uniform(secret.shape)
       share1 = secret - share0
 
@@ -785,7 +747,7 @@ class Pond(Protocol):
     return PondPrivateTensor(self, s0, s1, is_scaled)
 
   def _reconstruct(self, share0, share1):
-    with tf.name_scope("reconstruct"):
+    with tf.compat.v1.name_scope("reconstruct"):
       return share0 + share1
 
   @memoize
@@ -802,7 +764,7 @@ class Pond(Protocol):
     var0, var1 = variable.variable0, variable.variable1
     val0, val1 = value.share0, value.share1
 
-    with tf.name_scope("assign"):
+    with tf.compat.v1.name_scope("assign"):
 
       # Having this control_dependencies is important in order to avoid that
       # computationally-dependent shares are updated in different pace
@@ -1185,7 +1147,7 @@ class Pond(Protocol):
     w7 = -0.0000018848
     w9 = 0.0000000072
 
-    with tf.name_scope("sigmoid"):
+    with tf.compat.v1.name_scope("sigmoid"):
 
       # TODO[Morten] try in single round
       x1 = x
@@ -1218,7 +1180,7 @@ class Pond(Protocol):
     w6 = 9.009136367360004e-06
     w8 = -2.1097433984e-08
 
-    with tf.name_scope("relu"):
+    with tf.compat.v1.name_scope("relu"):
 
       x1 = x
       x2 = x.square()
@@ -1249,7 +1211,7 @@ class Pond(Protocol):
     w5 = 0.010654528
     w7 = -0.000423424
 
-    with tf.name_scope("relu"):
+    with tf.compat.v1.name_scope("relu"):
 
       x1 = x
       x2 = x.square()
@@ -1279,7 +1241,7 @@ class Pond(Protocol):
     w4 = -17.30367641
     w5 = 3.82474222
 
-    with tf.name_scope("log"):
+    with tf.compat.v1.name_scope("log"):
 
       x1 = x
       x2 = x.square()
@@ -1459,7 +1421,7 @@ class Pond(Protocol):
 
     def prepend_zeros(tensor, pad_amt, axis):
 
-      with tf.name_scope('prepend'):
+      with tf.compat.v1.name_scope('prepend'):
 
         if pad_amt == 0:
           return tensor
@@ -1473,7 +1435,7 @@ class Pond(Protocol):
 
     def append_zeros(tensor, pad_amt, axis):
 
-      with tf.name_scope('append'):
+      with tf.compat.v1.name_scope('append'):
 
         if pad_amt == 0:
           return tensor
@@ -1485,7 +1447,7 @@ class Pond(Protocol):
 
         return self.concat([tensor, zeros(padshape)], axis=axis)
 
-    with tf.name_scope('pad'):
+    with tf.compat.v1.name_scope('pad'):
       for axis, (pad_before, pad_after) in enumerate(paddings):
         x = append_zeros(x, pad_after, axis)
         x = prepend_zeros(x, pad_before, axis)
@@ -2111,9 +2073,6 @@ class PondPublicVariable(PondPublicTensor):
     )
     self.variable_on_0 = variable_on_0
     self.variable_on_1 = variable_on_1
-    self.initializer = tf.group(
-        *[var.initializer for var in [variable_on_0, variable_on_1]]
-    )
 
   def __repr__(self) -> str:
     return "PondPublicVariable(shape={})".format(self.shape)
@@ -2136,9 +2095,12 @@ class PondPrivateVariable(PondPrivateTensor):
     )
     self.variable0 = variable0
     self.variable1 = variable1
-    self.initializer = tf.group(
-        *[var.initializer for var in [variable0, variable1]]
-    )
+
+    # TensorFlow 2.0 variables don't have initializers??
+    if variable0.initializer is not None:
+      self.initializer = tf.group(
+          *[var.initializer for var in [variable0, variable1]]
+      )
 
   def __repr__(self) -> str:
     return "PondPrivateVariable(shape={})".format(self.shape)
@@ -2260,7 +2222,7 @@ def _identity_public(
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("identity"):
+  with tf.compat.v1.name_scope("identity"):
 
     with tf.device(prot.server_0.device_name):
       if control_dependencies_0:
@@ -2290,7 +2252,7 @@ def _identity_private(
 
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("identity"):
+  with tf.compat.v1.name_scope("identity"):
 
     with tf.device(prot.server_0.device_name):
       if control_dependencies_0:
@@ -2320,7 +2282,7 @@ def _cache_public(prot, x):
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("cache"):
+  with tf.compat.v1.name_scope("cache"):
 
     with tf.device(prot.server_0.device_name):
       updater0, [x_on_0_cached] = wrap_in_variables(x_on_0)
@@ -2344,7 +2306,7 @@ def _cache_private(prot, x):
 
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("cache"):
+  with tf.compat.v1.name_scope("cache"):
 
     with tf.device(prot.server_0.device_name):
       updater0, [x0_cached] = wrap_in_variables(x0)
@@ -2368,7 +2330,7 @@ def _cache_masked(prot, x):
 
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
-  with tf.name_scope("cache"):
+  with tf.compat.v1.name_scope("cache"):
 
     with tf.device(prot.server_0.device_name):
       updater0, [a0_cached, alpha_on_0_cached] = \
@@ -2409,7 +2371,7 @@ def _truncate_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
   amount = prot.fixedpoint_config.precision_fractional
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("truncate"):
+  with tf.compat.v1.name_scope("truncate"):
 
     with tf.device(prot.server_0.device_name):
       y_on_0 = x_on_0.truncate(amount, base)
@@ -2438,7 +2400,7 @@ def _truncate_private_noninteractive(
   amount = prot.fixedpoint_config.precision_fractional
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("truncate-ni"):
+  with tf.compat.v1.name_scope("truncate-ni"):
 
     with tf.device(prot.server_0.device_name):
       y0 = x0.truncate(amount, base)
@@ -2456,7 +2418,7 @@ def _truncate_private_interactive(
   "Secure Computation With Fixed-Point Numbers" by Octavian Catrina and Amitabh
   Saxena, FC'10."""
 
-  with tf.name_scope("truncate-i"):
+  with tf.compat.v1.name_scope("truncate-i"):
 
     scaling_factor = prot.fixedpoint_config.scaling_factor
     scaling_factor_inverse = inverse(
@@ -2558,7 +2520,7 @@ def _add_public_public(prot, x, y):
   x_on_0, x_on_1 = x.unwrapped
   y_on_0, y_on_1 = y.unwrapped
 
-  with tf.name_scope("add"):
+  with tf.compat.v1.name_scope("add"):
 
     with tf.device(prot.server_0.device_name):
       z_on_0 = x_on_0 + y_on_0
@@ -2578,7 +2540,7 @@ def _add_public_private(prot, x, y):
   x_on_0, _ = x.unwrapped
   y0, y1 = y.unwrapped
 
-  with tf.name_scope("add"):
+  with tf.compat.v1.name_scope("add"):
 
     with tf.device(prot.server_0.device_name):
       z0 = x_on_0 + y0
@@ -2604,7 +2566,7 @@ def _add_private_public(prot, x, y):
   x0, x1 = x.unwrapped
   y_on_0, _ = y.unwrapped
 
-  with tf.name_scope("add"):
+  with tf.compat.v1.name_scope("add"):
 
     with tf.device(prot.server_0.device_name):
       z0 = x0 + y_on_0
@@ -2627,7 +2589,7 @@ def _add_private_private(prot, x, y):
   x0, x1 = x.unwrapped
   y0, y1 = y.unwrapped
 
-  with tf.name_scope("add"):
+  with tf.compat.v1.name_scope("add"):
 
     with tf.device(prot.server_0.device_name):
       z0 = x0 + y0
@@ -2676,7 +2638,7 @@ def _reduce_sum_public(
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("reduce_sum"):
+  with tf.compat.v1.name_scope("reduce_sum"):
 
     with tf.device(prot.server_0.device_name):
       y_on_0 = x_on_0.reduce_sum(axis, keepdims)
@@ -2696,7 +2658,7 @@ def _reduce_sum_private(
 
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("reduce_sum"):
+  with tf.compat.v1.name_scope("reduce_sum"):
 
     with tf.device(prot.server_0.device_name):
       y0 = x0.reduce_sum(axis, keepdims)
@@ -2731,7 +2693,7 @@ def _cumsum_public(
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("cumsum"):
+  with tf.compat.v1.name_scope("cumsum"):
 
     with tf.device(prot.server_0.device_name):
       y_on_0 = x_on_0.cumsum(axis=axis, exclusive=exclusive, reverse=reverse)
@@ -2752,7 +2714,7 @@ def _cumsum_private(
 
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("cumsum"):
+  with tf.compat.v1.name_scope("cumsum"):
 
     with tf.device(prot.server_0.device_name):
       y0 = x0.cumsum(axis=axis, exclusive=exclusive, reverse=reverse)
@@ -2789,7 +2751,7 @@ def _sub_public_public(prot, x, y):
   x_on_0, x_on_1 = x.unwrapped
   y_on_0, y_on_1 = y.unwrapped
 
-  with tf.name_scope("sub"):
+  with tf.compat.v1.name_scope("sub"):
 
     with tf.device(prot.server_0.device_name):
       z_on_0 = x_on_0 - y_on_0
@@ -2809,7 +2771,7 @@ def _sub_public_private(prot, x, y):
   x_on_0, _ = x.unwrapped
   y0, y1 = y.unwrapped
 
-  with tf.name_scope("sub"):
+  with tf.compat.v1.name_scope("sub"):
 
     with tf.device(prot.server_0.device_name):
       z0 = x_on_0 - y0
@@ -2835,7 +2797,7 @@ def _sub_private_public(prot, x, y):
   x0, x1 = x.unwrapped
   y_on_0, _ = y.unwrapped
 
-  with tf.name_scope("sub"):
+  with tf.compat.v1.name_scope("sub"):
 
     with tf.device(prot.server_0.device_name):
       z0 = x0 - y_on_0
@@ -2855,7 +2817,7 @@ def _sub_private_private(prot, x, y):
   x0, x1 = x.unwrapped
   y0, y1 = y.unwrapped
 
-  with tf.name_scope("sub"):
+  with tf.compat.v1.name_scope("sub"):
 
     with tf.device(prot.server_0.device_name):
       z0 = x0 - y0
@@ -2902,7 +2864,7 @@ def _mul_public_public(prot, x, y):
   x_on_0, x_on_1 = x.unwrapped
   y_on_0, y_on_1 = y.unwrapped
 
-  with tf.name_scope("mul"):
+  with tf.compat.v1.name_scope("mul"):
 
     with tf.device(prot.server_0.device_name):
       z_on_0 = x_on_0 * y_on_0
@@ -2922,7 +2884,7 @@ def _mul_public_private(prot, x, y):
   x_on_0, x_on_1 = x.unwrapped
   y0, y1 = y.unwrapped
 
-  with tf.name_scope("mul"):
+  with tf.compat.v1.name_scope("mul"):
 
     with tf.device(prot.server_0.device_name):
       z0 = x_on_0 * y0
@@ -2948,7 +2910,7 @@ def _mul_private_public(prot, x, y):
   x0, x1 = x.unwrapped
   y_on_0, y_on_1 = y.unwrapped
 
-  with tf.name_scope("mul"):
+  with tf.compat.v1.name_scope("mul"):
 
     with tf.device(prot.server_0.device_name):
       z0 = x0 * y_on_0
@@ -2992,18 +2954,18 @@ def _mul_masked_masked(prot, x, y):
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
   b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
 
-  with tf.name_scope("mul"):
+  with tf.compat.v1.name_scope("mul"):
 
     ab0, ab1 = prot.triple_source.mul_triple(a, b)
 
     with tf.device(prot.server_0.device_name):
-      with tf.name_scope("combine"):
+      with tf.compat.v1.name_scope("combine"):
         alpha = alpha_on_0
         beta = beta_on_0
         z0 = ab0 + (a0 * beta) + (alpha * b0) + (alpha * beta)
 
     with tf.device(prot.server_1.device_name):
-      with tf.name_scope("combine"):
+      with tf.compat.v1.name_scope("combine"):
         alpha = alpha_on_1
         beta = beta_on_1
         z1 = ab1 + (a1 * beta) + (alpha * b1)
@@ -3026,7 +2988,7 @@ def _reciprocal_public(prot, x):
   is_scaled = x.is_scaled
   assert is_scaled, "Can only reciprocal of scaled numbers"
 
-  with tf.name_scope("reciprocal"):
+  with tf.compat.v1.name_scope("reciprocal"):
 
     with tf.device(prot.server_0.device_name):
       # decode value as ordinary tensor locally and compute reciprocal
@@ -3064,7 +3026,7 @@ def _square_public(prot, x):
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("square"):
+  with tf.compat.v1.name_scope("square"):
 
     with tf.device(prot.server_0.device_name):
       y_on_0 = x_on_0 * x_on_0
@@ -3087,17 +3049,17 @@ def _square_masked(prot, x):
 
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
-  with tf.name_scope("square"):
+  with tf.compat.v1.name_scope("square"):
 
     aa0, aa1 = prot.triple_source.square_triple(a)
 
     with tf.device(prot.server_0.device_name):
-      with tf.name_scope("combine"):
+      with tf.compat.v1.name_scope("combine"):
         alpha = alpha_on_0
         y0 = aa0 + (a0 * alpha) * 2 + (alpha * alpha)
 
     with tf.device(prot.server_1.device_name):
-      with tf.name_scope("combine"):
+      with tf.compat.v1.name_scope("combine"):
         alpha = alpha_on_1
         y1 = aa1 + (a1 * alpha) * 2
 
@@ -3118,7 +3080,7 @@ def _matmul_public_public(
   x_on_0, x_on_1 = x.unwrapped
   y_on_0, y_on_1 = y.unwrapped
 
-  with tf.name_scope("matmul"):
+  with tf.compat.v1.name_scope("matmul"):
 
     with tf.device(prot.server_0.device_name):
       z_on_0 = x_on_0.matmul(y_on_0)
@@ -3138,7 +3100,7 @@ def _matmul_public_private(prot, x, y):
   x_on_0, x_on_1 = x.unwrapped
   y0, y1 = y.unwrapped
 
-  with tf.name_scope("matmul"):
+  with tf.compat.v1.name_scope("matmul"):
 
     with tf.device(prot.server_0.device_name):
       z0 = x_on_0.matmul(y0)
@@ -3164,7 +3126,7 @@ def _matmul_private_public(prot, x, y):
   x0, x1 = x.unwrapped
   y_on_0, y_on_1 = y.unwrapped
 
-  with tf.name_scope("matmul"):
+  with tf.compat.v1.name_scope("matmul"):
 
     with tf.device(prot.server_0.device_name):
       z0 = x0.matmul(y_on_0)
@@ -3209,7 +3171,6 @@ def _matmul_masked_masked(prot, x, y):
   b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
 
   with tf.name_scope("matmul"):
-
     ab0, ab1 = prot.triple_source.matmul_triple(a, b)
 
     with tf.device(prot.server_0.device_name):
@@ -3242,7 +3203,7 @@ def _conv2d_public_public(prot, x, y, strides, padding):
   x_0, x_1 = x.unwrapped
   y_0, y_1 = y.unwrapped
 
-  with tf.name_scope("conv2d"):
+  with tf.compat.v1.name_scope("conv2d"):
 
     with tf.device(prot.server_0.device_name):
       z0 = x_0.conv2d(y_0, strides, padding)
@@ -3296,14 +3257,14 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
   b, b0, b1, beta_on_0, beta_on_1 = y.unwrapped
 
-  with tf.name_scope("conv2d"):
+  with tf.compat.v1.name_scope("conv2d"):
 
     a_conv2d_b0, a_conv2d_b1 = prot.triple_source.conv2d_triple(
         a, b, strides, padding,
     )
 
     with tf.device(prot.server_0.device_name):
-      with tf.name_scope("combine"):
+      with tf.compat.v1.name_scope("combine"):
         alpha = alpha_on_0
         beta = beta_on_0
         z0 = (
@@ -3314,7 +3275,7 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
         )
 
     with tf.device(prot.server_1.device_name):
-      with tf.name_scope("combine"):
+      with tf.compat.v1.name_scope("combine"):
         alpha = alpha_on_1
         beta = beta_on_1
         z1 = (
@@ -3341,9 +3302,14 @@ def _avgpool2d_core(
     padding: str,
 ) -> Tuple[AbstractTensor, AbstractTensor, float]:
   x_on_0, x_on_1 = x.unwrapped
+
+  tf.compat.v1.disable_v2_tensorshape()
   _, _, h, w = x.shape
+  tf.compat.v1.enable_v2_tensorshape()
+
   scalar = 1 / (pool_size[0] * pool_size[1])
   siamese = pool_size == strides and pool_size[0] == pool_size[1]
+
   even = h.value % pool_size[0] == 0 and w.value % pool_size[1] == 0
 
   if siamese and even:
@@ -3388,8 +3354,8 @@ def _avgpool2d_im2col_reduce(
 
 def _avgpool2d_reshape_reduce(x, pool_size: Tuple[int, int], *args):  # pylint: disable=unused-argument
   """Perform 2D average pooling by the reshape method."""
-  pool_height = tf.Dimension(pool_size[0])
-  pool_width = tf.Dimension(pool_size[1])
+  pool_height = tf.compat.v1.Dimension(pool_size[0])
+  pool_width = tf.compat.v1.Dimension(pool_size[1])
   n, c, h, w = x.shape
   x_reshaped = x.reshape(
       [n, c, h // pool_height, pool_height, w // pool_width, pool_width],
@@ -3405,7 +3371,7 @@ def _avgpool2d_public(
     padding: str,
 ) -> PondPublicTensor:
 
-  with tf.name_scope("avgpool2d"):
+  with tf.compat.v1.name_scope("avgpool2d"):
     y_on_0, y_on_1, scalar = _avgpool2d_core(
         prot, x, pool_size, strides, padding,
     )
@@ -3420,7 +3386,7 @@ def _avgpool2d_private(
     padding: str,
 ) -> PondPrivateTensor:
 
-  with tf.name_scope("avgpool2d"):
+  with tf.compat.v1.name_scope("avgpool2d"):
     y_on_0, y_on_1, scalar = _avgpool2d_core(
         prot, x, pool_size, strides, padding,
     )
@@ -3435,7 +3401,7 @@ def _avgpool2d_masked(
     padding: str,
 ) -> PondPrivateTensor:
 
-  with tf.name_scope("avgpool2d"):
+  with tf.compat.v1.name_scope("avgpool2d"):
     y_on_0, y_on_1, scalar = _avgpool2d_core(
         prot, x.unmasked, pool_size, strides, padding
     )
@@ -3461,7 +3427,7 @@ def _batch_to_space_nd_core(prot, tensor, block_shape, crops):
 
 def _batch_to_space_nd_public(prot, tensor, block_shape, crops):
 
-  with tf.name_scope("batch_to_space_nd"):
+  with tf.compat.v1.name_scope("batch_to_space_nd"):
     space_on_0, space_on_1 = _batch_to_space_nd_core(
         prot, tensor, block_shape, crops,
     )
@@ -3471,7 +3437,7 @@ def _batch_to_space_nd_public(prot, tensor, block_shape, crops):
 
 def _batch_to_space_nd_private(prot, tensor, block_shape, crops):
 
-  with tf.name_scope("batch_to_space_nd"):
+  with tf.compat.v1.name_scope("batch_to_space_nd"):
     space_on_0, space_on_1 = _batch_to_space_nd_core(
         prot, tensor, block_shape, crops,
     )
@@ -3481,7 +3447,7 @@ def _batch_to_space_nd_private(prot, tensor, block_shape, crops):
 
 def _batch_to_space_nd_masked(prot, tensor, block_shape, crops):
 
-  with tf.name_scope("batch_to_space_nd"):
+  with tf.compat.v1.name_scope("batch_to_space_nd"):
     space_on_0, space_on_1 = _batch_to_space_nd_core(
         prot, tensor.unmasked, block_shape, crops,
     )
@@ -3492,7 +3458,7 @@ def _batch_to_space_nd_masked(prot, tensor, block_shape, crops):
 def _space_to_batch_nd_core(prot, tensor, block_shape, paddings):
   tensor_on_0, tensor_on_1 = tensor.unwrapped
 
-  with tf.name_scope("space_to_batch_nd"):
+  with tf.compat.v1.name_scope("space_to_batch_nd"):
 
     with tf.device(prot.server_0.device_name):
       batch_on_0 = tensor_on_0.space_to_batch_nd(block_shape, paddings)
@@ -3505,7 +3471,7 @@ def _space_to_batch_nd_core(prot, tensor, block_shape, paddings):
 
 def _space_to_batch_nd_public(prot, tensor, block_shape, paddings):
 
-  with tf.name_scope("space_to_batch_nd"):
+  with tf.compat.v1.name_scope("space_to_batch_nd"):
     batch_on_0, batch_on_1 = _space_to_batch_nd_core(
         prot, tensor, block_shape, paddings,
     )
@@ -3515,7 +3481,7 @@ def _space_to_batch_nd_public(prot, tensor, block_shape, paddings):
 
 def _space_to_batch_nd_private(prot, tensor, block_shape, paddings):
 
-  with tf.name_scope("space_to_batch_nd"):
+  with tf.compat.v1.name_scope("space_to_batch_nd"):
     batch_on_0, batch_on_1 = _space_to_batch_nd_core(
         prot, tensor, block_shape, paddings,
     )
@@ -3525,7 +3491,7 @@ def _space_to_batch_nd_private(prot, tensor, block_shape, paddings):
 
 def _space_to_batch_nd_masked(prot, tensor, block_shape, paddings):
 
-  with tf.name_scope("space_to_batch_nd"):
+  with tf.compat.v1.name_scope("space_to_batch_nd"):
     batch_on_0, batch_on_1 = _space_to_batch_nd_core(
         prot, tensor.unmasked, block_shape, paddings,
     )
@@ -3542,7 +3508,7 @@ def _indexer_public(prot: Pond,
                     tensor: PondPublicTensor,
                     slc) -> "PondPublicTensor":
 
-  with tf.name_scope("index"):
+  with tf.compat.v1.name_scope("index"):
 
     with tf.device(prot.server_0.device_name):
       v_on_0 = tensor.value_on_0[slc]
@@ -3557,7 +3523,7 @@ def _indexer_private(prot: Pond,
                      tensor: PondPrivateTensor,
                      slc) -> "PondPrivateTensor":
 
-  with tf.name_scope("index"):
+  with tf.compat.v1.name_scope("index"):
 
     with tf.device(prot.server_0.device_name):
       s0 = tensor.share0[slc]
@@ -3572,7 +3538,7 @@ def _indexer_masked(prot: Pond,
                     tensor: PondMaskedTensor,
                     slc) -> "PondMaskedTensor":
 
-  with tf.name_scope("index"):
+  with tf.compat.v1.name_scope("index"):
 
     # TODO(Morten) we could save a0 and a1 on disk as well; what's best performance wise?
     a = prot.triple_source.indexer_mask(tensor.a, slc)
@@ -3607,7 +3573,7 @@ def _transpose_public(prot, x, perm=None):
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("transpose"):
+  with tf.compat.v1.name_scope("transpose"):
 
     with tf.device(prot.server_0.device_name):
       x_on_0_t = x_on_0.transpose(perm=perm)
@@ -3623,7 +3589,7 @@ def _transpose_private(prot, x, perm=None):
 
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("transpose"):
+  with tf.compat.v1.name_scope("transpose"):
 
     with tf.device(prot.server_0.device_name):
       x0_t = x0.transpose(perm=perm)
@@ -3639,7 +3605,7 @@ def _transpose_masked(prot, x, perm=None):
 
   _, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
-  with tf.name_scope("transpose"):
+  with tf.compat.v1.name_scope("transpose"):
 
     a_t = prot.triple_source.transpose_mask(a, perm=perm)
 
@@ -3673,7 +3639,7 @@ def _strided_slice_public(prot, x: PondPublicTensor, args: Any, kwargs: Any):
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("strided_slice"):
+  with tf.compat.v1.name_scope("strided_slice"):
 
     with tf.device(prot.server_0.device_name):
       x_on_0_slice = x_on_0.strided_slice(args, kwargs)
@@ -3689,7 +3655,7 @@ def _strided_slice_private(prot, x: PondPrivateTensor, args: Any, kwargs: Any):
 
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("strided_slice"):
+  with tf.compat.v1.name_scope("strided_slice"):
 
     with tf.device(prot.server_0.device_name):
       x0_slice = x0.strided_slice(args, kwargs)
@@ -3705,7 +3671,7 @@ def _strided_slice_masked(prot, x: PondMaskedTensor, args: Any, kwargs: Any):
 
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
-  with tf.name_scope("strided_slice"):
+  with tf.compat.v1.name_scope("strided_slice"):
 
     a_slice = prot.triple_source.strided_slice_mask(a, args, kwargs)
 
@@ -3740,7 +3706,7 @@ def _gather_public(
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("gather"):
+  with tf.compat.v1.name_scope("gather"):
 
     with tf.device(prot.server_0.device_name):
       y_on_0_g = x_on_0.gather(indices, axis=axis)
@@ -3757,7 +3723,7 @@ def _gather_private(
 
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("gather"):
+  with tf.compat.v1.name_scope("gather"):
 
     with tf.device(prot.server_0.device_name):
       y0_g = x0.gather(indices, axis=axis)
@@ -3774,7 +3740,7 @@ def _gather_masked(
   assert isinstance(x, PondMaskedTensor)
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
-  with tf.name_scope("gather"):
+  with tf.compat.v1.name_scope("gather"):
 
     with tf.device(prot.crypto_producer.device_name):
       a_g = a.gather(indices, axis=axis)
@@ -3810,7 +3776,7 @@ def _split_public(
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("split"):
+  with tf.compat.v1.name_scope("split"):
     with tf.device(prot.server_0.device_name):
       ys_on_0 = x_on_0.split(num_split, axis=axis)
 
@@ -3830,7 +3796,7 @@ def _split_private(
 
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("split"):
+  with tf.compat.v1.name_scope("split"):
 
     with tf.device(prot.server_0.device_name):
       ys0 = x0.split(num_split, axis=axis)
@@ -3849,7 +3815,7 @@ def _split_masked(prot: Pond,
 
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
-  with tf.name_scope("split"):
+  with tf.compat.v1.name_scope("split"):
 
     bs = prot.triple_source.split_mask(a, num_split=num_split, axis=axis)
 
@@ -3885,7 +3851,7 @@ def _stack_public(prot: Pond,
   is_scaled = xs[0].is_scaled
   xs_on_0, xs_on_1 = zip(*(x.unwrapped for x in xs))
 
-  with tf.name_scope("stack"):
+  with tf.compat.v1.name_scope("stack"):
 
     with tf.device(prot.server_0.device_name):
       x_on_0_stacked = factory.stack(xs_on_0, axis=axis)
@@ -3905,7 +3871,7 @@ def _stack_private(prot: Pond,
   is_scaled = xs[0].is_scaled
   xs0, xs1 = zip(*(x.unwrapped for x in xs))
 
-  with tf.name_scope("stack"):
+  with tf.compat.v1.name_scope("stack"):
 
     with tf.device(prot.server_0.device_name):
       x0_stacked = factory.stack(xs0, axis=axis)
@@ -3925,7 +3891,7 @@ def _stack_masked(prot: Pond,
   is_scaled = xs[0].is_scaled
   a, a0, a1, alpha_on_0, alpha_on_1 = zip(*(x.unwrapped for x in xs))
 
-  with tf.name_scope("stack"):
+  with tf.compat.v1.name_scope("stack"):
 
     a_stacked = prot.triple_source.stack_mask(a, axis=axis)
 
@@ -3963,7 +3929,7 @@ def _concat_public(
   is_scaled = xs[0].is_scaled
   xs_on_0, xs_on_1 = zip(*(x.unwrapped for x in xs))
 
-  with tf.name_scope("concat"):
+  with tf.compat.v1.name_scope("concat"):
 
     with tf.device(prot.server_0.device_name):
       x_on_0_concat = factory.concat(xs_on_0, axis=axis)
@@ -3983,7 +3949,7 @@ def _concat_private(prot: Pond,
   is_scaled = xs[0].is_scaled
   xs0, xs1 = zip(*(x.unwrapped for x in xs))
 
-  with tf.name_scope("concat"):
+  with tf.compat.v1.name_scope("concat"):
 
     with tf.device(prot.server_0.device_name):
       x0_concat = factory.concat(xs0, axis=axis)
@@ -4003,7 +3969,7 @@ def _concat_masked(prot: Pond,
   is_scaled = xs[0].is_scaled
   a, a0, a1, alpha_on_0, alpha_on_1 = zip(*(x.unwrapped for x in xs))
 
-  with tf.name_scope("concat"):
+  with tf.compat.v1.name_scope("concat"):
 
     a_concat = prot.triple_source.concat_mask(a, axis=axis)
 
@@ -4072,7 +4038,7 @@ def _reshape_public(
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("reshape"):
+  with tf.compat.v1.name_scope("reshape"):
 
     with tf.device(prot.server_0.device_name):
       x_on_0_reshaped = x_on_0.reshape(shape)
@@ -4092,7 +4058,7 @@ def _reshape_private(
 
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("reshape"):
+  with tf.compat.v1.name_scope("reshape"):
 
     with tf.device(prot.server_0.device_name):
       x0_reshaped = x0.reshape(shape)
@@ -4109,7 +4075,7 @@ def _reshape_masked(
   assert isinstance(x, PondMaskedTensor)
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
-  with tf.name_scope("reshape"):
+  with tf.compat.v1.name_scope("reshape"):
 
     a_reshaped = prot.triple_source.reshape_mask(a, shape=shape)
 
@@ -4142,7 +4108,7 @@ def _negative_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("negative"):
+  with tf.compat.v1.name_scope("negative"):
 
     with tf.device(prot.server_0.device_name):
       x_on_0_negative = x_on_0.negative()
@@ -4160,7 +4126,7 @@ def _negative_private(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
 
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("negative"):
+  with tf.compat.v1.name_scope("negative"):
 
     with tf.device(prot.server_0.device_name):
       x0_negative = x0.negative()
@@ -4175,7 +4141,7 @@ def _negative_masked(prot: Pond, x: PondMaskedTensor) -> PondMaskedTensor:
   assert isinstance(x, PondMaskedTensor)
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
-  with tf.name_scope("negative"):
+  with tf.compat.v1.name_scope("negative"):
 
     with tf.device(prot.crypto_producer.device_name):
       a_negative = a.negative()
@@ -4212,7 +4178,7 @@ def _expand_dims_public(
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("expand"):
+  with tf.compat.v1.name_scope("expand"):
 
     with tf.device(prot.server_0.device_name):
       x_on_0_e = x_on_0.expand_dims(axis=axis)
@@ -4230,7 +4196,7 @@ def _expand_dims_private(
 
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("expand"):
+  with tf.compat.v1.name_scope("expand"):
 
     with tf.device(prot.server_0.device_name):
       x0_e = x0.expand_dims(axis=axis)
@@ -4247,7 +4213,7 @@ def _expand_dims_masked(
   assert isinstance(x, PondMaskedTensor)
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
-  with tf.name_scope("expand"):
+  with tf.compat.v1.name_scope("expand"):
 
     a_e = prot.triple_source.expand_dims_mask(a, axis=axis)
 
@@ -4283,7 +4249,7 @@ def _squeeze_public(
 
   x_on_0, x_on_1 = x.unwrapped
 
-  with tf.name_scope("squeeze"):
+  with tf.compat.v1.name_scope("squeeze"):
 
     with tf.device(prot.server_0.device_name):
       x_on_0_squeezed = x_on_0.squeeze(axis)
@@ -4303,7 +4269,7 @@ def _squeeze_private(
 
   x0, x1 = x.unwrapped
 
-  with tf.name_scope("squeeze"):
+  with tf.compat.v1.name_scope("squeeze"):
 
     with tf.device(prot.server_0.device_name):
       x0_squeezed = x0.squeeze(axis)
@@ -4321,7 +4287,7 @@ def _squeeze_masked(
 
   _, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
-  with tf.name_scope("squeeze"):
+  with tf.compat.v1.name_scope("squeeze"):
 
     a_squeezed = prot.triple_source.squeeze_mask(axis=axis)
 
@@ -4357,7 +4323,7 @@ def _equal_public_public(
   x_on_0, x_on_1 = x.unwrapped
   y_on_0, y_on_1 = y.unwrapped
 
-  with tf.name_scope("equal"):
+  with tf.compat.v1.name_scope("equal"):
 
     with tf.device(prot.server_0.device_name):
       z_on_0 = x_on_0.equal(y_on_0)

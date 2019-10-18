@@ -43,7 +43,7 @@ class BaseTripleSource(TripleSource):
 
   def mask(self, backing_dtype, shape):
 
-    with tf.name_scope("triple-generation"):
+    with tf.compat.v1.name_scope("triple-generation"):
       with tf.device(self.producer.device_name):
         a0 = backing_dtype.sample_uniform(shape)
         a1 = backing_dtype.sample_uniform(shape)
@@ -54,7 +54,7 @@ class BaseTripleSource(TripleSource):
 
   def mul_triple(self, a, b):
 
-    with tf.name_scope("triple-generation"):
+    with tf.compat.v1.name_scope("triple-generation"):
       with tf.device(self.producer.device_name):
         ab = a * b
         ab0, ab1 = self._share(ab)
@@ -63,7 +63,7 @@ class BaseTripleSource(TripleSource):
 
   def square_triple(self, a):
 
-    with tf.name_scope("triple-generation"):
+    with tf.compat.v1.name_scope("triple-generation"):
       with tf.device(self.producer.device_name):
         aa = a * a
         aa0, aa1 = self._share(aa)
@@ -72,7 +72,7 @@ class BaseTripleSource(TripleSource):
 
   def matmul_triple(self, a, b):
 
-    with tf.name_scope("triple-generation"):
+    with tf.compat.v1.name_scope("triple-generation"):
       with tf.device(self.producer.device_name):
         ab = a.matmul(b)
         ab0, ab1 = self._share(ab)
@@ -82,7 +82,7 @@ class BaseTripleSource(TripleSource):
   def conv2d_triple(self, a, b, strides, padding):
 
     with tf.device(self.producer.device_name):
-      with tf.name_scope("triple"):
+      with tf.compat.v1.name_scope("triple"):
         ab = a.conv2d(b, strides, padding)
         ab0, ab1 = self._share(ab)
 
@@ -90,7 +90,7 @@ class BaseTripleSource(TripleSource):
 
   def indexer_mask(self, a, slc):
 
-    with tf.name_scope("mask-transformation"):
+    with tf.compat.v1.name_scope("mask-transformation"):
       with tf.device(self.producer.device_name):
         a_sliced = a[slc]
 
@@ -98,7 +98,7 @@ class BaseTripleSource(TripleSource):
 
   def transpose_mask(self, a, perm):
 
-    with tf.name_scope("mask-transformation"):
+    with tf.compat.v1.name_scope("mask-transformation"):
       with tf.device(self.producer.device_name):
         a_t = a.transpose(perm=perm)
 
@@ -106,7 +106,7 @@ class BaseTripleSource(TripleSource):
 
   def strided_slice_mask(self, a, args, kwargs):
 
-    with tf.name_scope("mask-transformation"):
+    with tf.compat.v1.name_scope("mask-transformation"):
       with tf.device(self.producer.device_name):
         a_slice = a.strided_slice(args, kwargs)
 
@@ -114,7 +114,7 @@ class BaseTripleSource(TripleSource):
 
   def split_mask(self, a, num_split, axis):
 
-    with tf.name_scope("mask-transformation"):
+    with tf.compat.v1.name_scope("mask-transformation"):
       with tf.device(self.producer.device_name):
         bs = a.split(num_split=num_split, axis=axis)
 
@@ -124,7 +124,7 @@ class BaseTripleSource(TripleSource):
 
     factory = bs[0].factory
 
-    with tf.name_scope("mask-transformation"):
+    with tf.compat.v1.name_scope("mask-transformation"):
       with tf.device(self.producer.device_name):
         b_stacked = factory.stack(bs, axis=axis)
 
@@ -134,7 +134,7 @@ class BaseTripleSource(TripleSource):
 
     factory = bs[0].factory
 
-    with tf.name_scope("mask-transformation"):
+    with tf.compat.v1.name_scope("mask-transformation"):
       with tf.device(self.producer.device_name):
         b_stacked = factory.concat(bs, axis=axis)
 
@@ -142,7 +142,7 @@ class BaseTripleSource(TripleSource):
 
   def reshape_mask(self, a, shape):
 
-    with tf.name_scope("mask-transformation"):
+    with tf.compat.v1.name_scope("mask-transformation"):
       with tf.device(self.producer.device_name):
         a_reshaped = a.reshape(shape)
 
@@ -150,7 +150,7 @@ class BaseTripleSource(TripleSource):
 
   def expand_dims_mask(self, a, axis):
 
-    with tf.name_scope("mask-transformation"):
+    with tf.compat.v1.name_scope("mask-transformation"):
       with tf.device(self.producer.device_name):
         a_e = a.expand_dims(axis=axis)
 
@@ -158,14 +158,14 @@ class BaseTripleSource(TripleSource):
 
   def squeeze_mask(self, a, axis):
 
-    with tf.name_scope("mask-transformation"):
+    with tf.compat.v1.name_scope("mask-transformation"):
       with tf.device(self.producer.device_name):
         a_squeezed = a.squeeze(axis=axis)
 
     return a_squeezed
 
   def _share(self, secret):
-    with tf.name_scope("share"):
+    with tf.compat.v1.name_scope("share"):
       share0 = secret.factory.sample_uniform(secret.shape)
       share1 = secret - share0
       # randomized swap to distribute who gets the seed
@@ -257,7 +257,7 @@ class QueuedOnlineTripleSource(BaseTripleSource):
     dtype = mask.factory.native_type
     shape = mask.shape
 
-    with tf.name_scope("triple-store-{}".format(player_id)):
+    with tf.compat.v1.name_scope("triple-store-{}".format(player_id)):
 
       q = tf.queue.FIFOQueue(
           capacity=self.capacity,

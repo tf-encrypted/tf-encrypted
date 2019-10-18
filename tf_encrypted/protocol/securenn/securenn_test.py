@@ -13,7 +13,7 @@ from tf_encrypted.tensor import int100factory
 class TestPrivateCompare(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_int64(self):
     self._core_test(tfe.tensor.int64factory)
@@ -62,14 +62,14 @@ class TestPrivateCompare(unittest.TestCase):
     ], dtype=np.int32).reshape(2, 2, 2)
 
     expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
-    x_native = tf.convert_to_tensor(x, dtype=val_dtype.native_type)
+    x_native = tf.convert_to_tensor(value=x, dtype=val_dtype.native_type)
     x_bits_preshare = val_dtype.tensor(x_native).bits(bit_dtype)
     x_bits = prot._share(x_bits_preshare)  # pylint: disable=protected-access
 
-    r_native = tf.convert_to_tensor(r, dtype=val_dtype.native_type)
+    r_native = tf.convert_to_tensor(value=r, dtype=val_dtype.native_type)
     r0 = r1 = val_dtype.tensor(r_native)
 
-    beta_native = tf.convert_to_tensor(beta, dtype=bit_dtype.native_type)
+    beta_native = tf.convert_to_tensor(value=beta, dtype=bit_dtype.native_type)
     beta0 = beta1 = bit_dtype.tensor(beta_native)
 
     res = _private_compare(
@@ -102,7 +102,7 @@ class TestSelectShare(unittest.TestCase):
       select = prot.select(bit_input, alice_input, bob_input)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         chosen = sess.run(select.reveal())
 
       np.testing.assert_equal(expected, chosen)
@@ -111,7 +111,7 @@ class TestSelectShare(unittest.TestCase):
 class TestLSB(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def _core_lsb(self, tensor_factory, prime_factory):
 
@@ -132,7 +132,7 @@ class TestLSB(unittest.TestCase):
       x_lsb = prot.lsb(x_in)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         actual_lsb = sess.run(x_lsb.reveal(), tag='lsb')
 
         np.testing.assert_array_equal(actual_lsb, expected_lsb)
@@ -148,7 +148,7 @@ class TestLSB(unittest.TestCase):
 class TestArgMax(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   @unittest.skipUnless(tfe.config.tensorflow_supports_int64(),
                        "Too slow on Circle CI otherwise")
@@ -156,15 +156,15 @@ class TestArgMax(unittest.TestCase):
 
     t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).astype(float)
 
-    with tf.Session() as sess:
-      out_tf = tf.argmax(t)
+    with tf.compat.v1.Session() as sess:
+      out_tf = tf.argmax(input=t)
       expected = sess.run(out_tf)
 
     with tfe.protocol.SecureNN() as prot:
       out_tfe = prot.argmax(prot.define_private_variable(tf.constant(t)))
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         actual = sess.run(out_tfe.reveal())
 
     np.testing.assert_array_equal(actual, expected)
@@ -175,8 +175,8 @@ class TestArgMax(unittest.TestCase):
 
     t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape(2, 4).astype(float)
 
-    with tf.Session() as sess:
-      out_tf = tf.argmax(t, axis=0)
+    with tf.compat.v1.Session() as sess:
+      out_tf = tf.argmax(input=t, axis=0)
       expected = sess.run(out_tf)
 
     with tfe.protocol.SecureNN() as prot:
@@ -184,7 +184,7 @@ class TestArgMax(unittest.TestCase):
           prot.define_private_variable(tf.constant(t)), axis=0)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         actual = sess.run(out_tfe.reveal())
 
     np.testing.assert_array_equal(actual, expected)
@@ -195,8 +195,8 @@ class TestArgMax(unittest.TestCase):
 
     t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape(2, 4).astype(float)
 
-    with tf.Session() as sess:
-      out_tf = tf.argmax(t, axis=1)
+    with tf.compat.v1.Session() as sess:
+      out_tf = tf.argmax(input=t, axis=1)
       expected = sess.run(out_tf)
 
     with tfe.protocol.SecureNN() as prot:
@@ -204,7 +204,7 @@ class TestArgMax(unittest.TestCase):
           prot.define_private_variable(tf.constant(t)), axis=1)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         actual = sess.run(out_tfe.reveal())
 
     np.testing.assert_array_equal(actual, expected)
@@ -215,8 +215,8 @@ class TestArgMax(unittest.TestCase):
 
     t = np.array(np.arange(128)).reshape(8, 2, 2, 2, 2)
 
-    with tf.Session() as sess:
-      out = tf.argmax(t, axis=0)
+    with tf.compat.v1.Session() as sess:
+      out = tf.argmax(input=t, axis=0)
       expected = sess.run(out)
 
     with tfe.protocol.SecureNN() as prot:
@@ -224,7 +224,7 @@ class TestArgMax(unittest.TestCase):
           prot.define_private_variable(tf.constant(t)), axis=0)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         actual = sess.run(out_tfe.reveal())
 
     np.testing.assert_array_equal(actual, expected)

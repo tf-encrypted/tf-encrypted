@@ -56,4 +56,3 @@ class Flatten(Layer):
     else:
       output_shape += [None]
     return output_shape
-  

@@ -13,7 +13,7 @@ np.random.seed(42)
 class TestFlatten(unittest.TestCase):
 
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_flatten_rank_four(self):
     self._core_flatten(input_shape=[4, 5, 2, 2])

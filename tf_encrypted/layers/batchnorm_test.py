@@ -10,7 +10,7 @@ from tf_encrypted.layers import Batchnorm
 
 class TestBatchnorm(unittest.TestCase):
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_channels_first(self) -> None:
     """
@@ -49,19 +49,19 @@ class TestBatchnorm(unittest.TestCase):
       batchnorm_out_pond = batchnorm_layer.forward(batchnorm_input)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         out_pond = sess.run(batchnorm_out_pond.reveal())
 
       # reset graph
-      tf.reset_default_graph()
+      tf.compat.v1.reset_default_graph()
 
-      with tf.Session() as sess:
+      with tf.compat.v1.Session() as sess:
         x = tf.Variable(input_batchnorm, dtype=tf.float32)
 
         batchnorm_out_tf = tf.nn.batch_normalization(
             x, mean, variance, offset, scale, variance_epsilon)
 
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
 
         out_tensorflow = sess.run(batchnorm_out_tf)
 
@@ -105,19 +105,19 @@ class TestBatchnorm(unittest.TestCase):
       batchnorm_out_pond = batchnorm_layer.forward(batchnorm_input)
 
       with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         out_pond = sess.run(batchnorm_out_pond.reveal())
 
       # reset graph
-      tf.reset_default_graph()
+      tf.compat.v1.reset_default_graph()
 
-      with tf.Session() as sess:
+      with tf.compat.v1.Session() as sess:
         x = tf.Variable(input_batchnorm, dtype=tf.float32)
 
         batchnorm_out_tf = tf.nn.batch_normalization(
             x, mean, variance, offset, scale, variance_epsilon)
 
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
 
         out_tensorflow = sess.run(batchnorm_out_tf)
 

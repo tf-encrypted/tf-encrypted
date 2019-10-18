@@ -11,7 +11,7 @@ def save_training_data(images, labels, filename):
   assert images.shape[0] == labels.shape[0]
   num_examples = images.shape[0]
 
-  with tf.python_io.TFRecordWriter(filename) as writer:
+  with tf.io.TFRecordWriter(filename) as writer:
 
     for index in range(num_examples):
 

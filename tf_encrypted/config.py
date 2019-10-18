@@ -8,6 +8,7 @@ from pathlib import Path
 
 import tensorflow as tf
 from tensorflow.core.protobuf import rewriter_config_pb2
+from tensorflow import config as tf_config
 
 from .player import Player
 
@@ -81,11 +82,11 @@ class Config(ABC):
   @classmethod
   def build_graph_options(cls, disable_optimizations):
     if not disable_optimizations:
-      return tf.GraphOptions()
+      return tf.compat.v1.GraphOptions()
 
-    return tf.GraphOptions(
-        optimizer_options=tf.OptimizerOptions(
-            opt_level=tf.OptimizerOptions.L0,
+    return tf.compat.v1.GraphOptions(
+        optimizer_options=tf.compat.v1.OptimizerOptions(
+            opt_level=tf.compat.v1.OptimizerOptions.L0,
             do_common_subexpression_elimination=False,
             do_constant_folding=False,
             do_function_inlining=False,
@@ -168,13 +169,62 @@ class LocalConfig(Config):
   ):
     logger.info("Players: %s", [player.name for player in self.players])
     target = ''
-    config = tf.ConfigProto(
+    config = tf.compat.v1.ConfigProto(
         log_device_placement=log_device_placement,
         allow_soft_placement=False,
         device_count={"CPU": len(self._players)},
         graph_options=self.build_graph_options(disable_optimizations)
     )
     return (target, config)
+
+class EagerLocalConfig(LocalConfig):
+  """
+  Configure TF Encrypted to use threads on the local CPU.
+
+  Each thread instantiates a different Player to simulate secure computations
+  without requiring networking. Mostly intended for development/debugging use.
+
+  By default new players will be added when looked up for the first time;
+  this is useful for  instance to get a complete list of players involved
+  in a particular computation (see `auto_add_unknown_players`).
+
+  This is very similar to the LocalConfig but uses new APIs to configure
+  TensorFlow rather than the ConfigProto class.
+
+  :param (str) player_names: List of players to be used in the session.
+  :param str job_name: The name of the job.
+  :param bool auto_add_unknown_players: Auto-add player on first lookup.
+  :param bool log_device_placement: Unimplemented
+  :param bool disable_optimizations: Disable a few optimizations for debugging
+  """
+  def __init__(
+      self,
+      player_names=None,
+      job_name='localhost',
+      auto_add_unknown_players=True,
+      log_device_placement=False, #pylint: disable=unused-argument
+      disable_optimizations=False
+  ):
+    super().__init__(player_names, job_name, auto_add_unknown_players)
+
+    virtual_devices = [
+        tf_config.experimental.VirtualDeviceConfiguration()
+        for _ in player_names
+    ]
+    tf.config.set_soft_device_placement(False)
+    physical_devices = tf_config.experimental.list_physical_devices('CPU')
+
+    tf_config.experimental.set_virtual_device_configuration(physical_devices[0],
+                                                            virtual_devices)
+
+    if disable_optimizations:
+      config.optimizer.set_experimental_options(
+          {
+              "constant_folding": False,
+              "arithmetic_optimization": False,
+              "function_optimization": False,
+          }
+      )
 
 
 class RemoteConfig(Config):
@@ -275,7 +325,7 @@ class RemoteConfig(Config):
     assert player is not None, "'{}' not found in configuration".format(name)
     cluster = tf.train.ClusterSpec({self._job_name: self.hosts})
     logger.debug("Creating server for '%s' using %s", name, cluster)
-    server = tf.train.Server(
+    server = tf.distribute.Server(
         cluster,
         job_name=self._job_name,
         task_index=player.index,
@@ -294,13 +344,13 @@ class RemoteConfig(Config):
     target = 'grpc://{}'.format(self.hosts[0])
     cpu_cores = _get_docker_cpu_quota()
     if cpu_cores is None:
-      config = tf.ConfigProto(
+      config = tf.compat.v1.ConfigProto(
           log_device_placement=log_device_placement,
           allow_soft_placement=False,
           graph_options=self.build_graph_options(disable_optimizations)
       )
     else:
-      config = tf.ConfigProto(
+      config = tf.compat.v1.ConfigProto(
           log_device_placement=log_device_placement,
           allow_soft_placement=False,
           inter_op_parallelism_threads=cpu_cores,
@@ -308,6 +358,11 @@ class RemoteConfig(Config):
           graph_options=self.build_graph_options(disable_optimizations)
       )
     return (target, config)
+
+  def connect_to_cluster(self):
+    cluster = tf.train.ClusterSpec({self._job_name: self.hosts})
+    tf.config.set_soft_device_placement(False)
+    tf.config.experimental_connect_to_cluster(cluster)
 
 
 __config__ = LocalConfig()

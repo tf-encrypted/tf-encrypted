@@ -6,11 +6,11 @@ import tensorflow as tf
 
 import tf_encrypted as tfe
 np.random.seed(42)
-tf.random.set_random_seed(42)
+tf.compat.v1.random.set_random_seed(42)
 
 class TestLosses(unittest.TestCase):
   def setUp(self):
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
   def test_binary_crossentropy(self):
 
@@ -24,14 +24,15 @@ class TestLosses(unittest.TestCase):
     out = loss(y_true, y_pred)
 
     with tfe.Session() as sess:
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       actual = sess.run(out.reveal())
 
-    tf.reset_default_graph()
-    with tf.Session() as sess:
-      sess.run(tf.global_variables_initializer())
-      y_true = tf.convert_to_tensor(y_true_np)
-      y_pred = tf.convert_to_tensor(y_pred_np)
+    tf.compat.v1.reset_default_graph()
+    with tf.compat.v1.Session() as sess:
+      sess.run(tf.compat.v1.global_variables_initializer())
+      y_true = tf.convert_to_tensor(value=y_true_np)
+      y_pred = tf.convert_to_tensor(value=y_pred_np)
+
       loss = tf.keras.losses.BinaryCrossentropy()
       out = loss(y_true, y_pred)
       expected = sess.run(out)
@@ -49,12 +50,12 @@ class TestLosses(unittest.TestCase):
     out = loss(y_true, y_pred)
 
     with tfe.Session() as sess:
-      sess.run(tf.global_variables_initializer())
+      sess.run(tf.compat.v1.global_variables_initializer())
       actual = sess.run(out.reveal())
 
-    tf.reset_default_graph()
-    with tf.Session() as sess:
-      sess.run(tf.global_variables_initializer())
+    tf.compat.v1.reset_default_graph()
+    with tf.compat.v1.Session() as sess:
+      sess.run(tf.compat.v1.global_variables_initializer())
       y_true = tf.convert_to_tensor(y_true_np)
       y_pred = tf.convert_to_tensor(y_pred_np)
 
