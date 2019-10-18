@@ -70,6 +70,8 @@ For more information, check out the [documentation](./docs/) or the [examples](.
 
 - Support for third party libraries. While TF Encrypted has its own implementations of secure computation, there are other [excellent libraries](https://github.com/rdragos/awesome-mpc/) out there for both secure computation and homomorphic encryption. We want to bring these on board and provide a bridge from TensorFlow.
 
+<img src="https://raw.githubusercontent.com/tf-encrypted/assets/master/app-stack.png" width="55%" />
+
 # Background & Further Reading
 
 The following texts provide further in-depth presentations of the project:
