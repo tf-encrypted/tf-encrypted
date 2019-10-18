@@ -592,6 +592,9 @@ class Pond(Protocol):
 
         outputs = computation_fn(*inputs)
 
+        if outputs is None:
+          return None
+
         if isinstance(outputs, tf.Operation):
           return outputs
 
