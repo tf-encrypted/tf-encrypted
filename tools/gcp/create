@@ -1,9 +1,11 @@
 #!/bin/sh
 
+TFE_IMAGE=${TFE_IMAGE:=docker.io/tfencrypted/tf-encrypted:latest}
+
 for instance in $@
 do
     gcloud compute instances create-with-container $instance \
-        --container-image=docker.io/tfencrypted/tf-encrypted \
+        --container-image=$TFE_IMAGE \
         --container-command=python \
         --container-arg="tf_encrypted/player/__main__.py" \
         --container-arg="--config=/config/config.json" \
