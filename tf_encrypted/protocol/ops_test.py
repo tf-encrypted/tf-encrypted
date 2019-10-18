@@ -241,8 +241,8 @@ class TestConcat(unittest.TestCase):
     tf.compat.v1.reset_default_graph()
 
     with tfe.protocol.Pond() as prot:
-      x = prot.define_private_variable(np.array(t1))
-      y = prot.define_private_variable(np.array(t2))
+      x = prot.Variable(np.array(t1))
+      y = prot.Variable(np.array(t2))
 
       out = prot.concat([x, y], 0)
 
@@ -263,8 +263,8 @@ class TestConcat(unittest.TestCase):
     tf.compat.v1.reset_default_graph()
 
     with tfe.protocol.Pond() as prot:
-      x = prot.mask(prot.define_private_variable(np.array(t1)))
-      y = prot.mask(prot.define_private_variable(np.array(t2)))
+      x = prot.mask(prot.Variable(np.array(t1)))
+      y = prot.mask(prot.Variable(np.array(t2)))
 
       out = prot.concat([x, y], 0)
 
@@ -293,7 +293,7 @@ class TestConv2D(unittest.TestCase):
     # convolution pond
     with tfe.protocol.Pond() as prot:
 
-      conv_input = prot.define_private_variable(input_conv)
+      conv_input = prot.Variable(input_conv)
       conv_layer = tfe.layers.Conv2D(input_shape, filter_shape, strides=2)
       conv_layer.initialize(initial_weights=filter_values)
       conv_out_pond = conv_layer.forward(conv_input)
@@ -340,7 +340,7 @@ class TestConv2D(unittest.TestCase):
     # convolution pond
     with tfe.protocol.Pond() as prot:
 
-      conv_input = prot.define_private_variable(input_conv)
+      conv_input = prot.Variable(input_conv)
       conv_layer = tfe.layers.Conv2D(input_shape, filter_shape, strides=2)
 
       output_shape = conv_layer.get_output_shape()
@@ -395,8 +395,8 @@ class TestMatMul(unittest.TestCase):
       filter_shape = [5, 4]
       filter_values = np.random.normal(size=filter_shape)
 
-      input_input = prot.define_private_variable(x_in)
-      filter_filter = prot.define_private_variable(filter_values)
+      input_input = prot.Variable(x_in)
+      filter_filter = prot.Variable(filter_values)
 
       out = prot.matmul(input_input, filter_filter)
 
@@ -428,8 +428,8 @@ class TestMatMul(unittest.TestCase):
       filter_shape = [4500, 64]
       filter_values = np.random.normal(size=filter_shape)
 
-      input_input = prot.define_private_variable(x_in)
-      filter_filter = prot.define_private_variable(filter_values)
+      input_input = prot.Variable(x_in)
+      filter_filter = prot.Variable(filter_values)
 
       out = prot.matmul(input_input, filter_filter)
 
@@ -463,7 +463,7 @@ class TestNegative(unittest.TestCase):
     # reshape pond
     with tfe.protocol.Pond() as prot:
 
-      neg_input = prot.define_private_variable(input_neg)
+      neg_input = prot.Variable(input_neg)
 
       neg_out_pond = prot.negative(neg_input)
 
@@ -499,7 +499,7 @@ class TestPad(unittest.TestCase):
       tf.compat.v1.reset_default_graph()
 
       x_in = np.array([[1, 2, 3], [4, 5, 6]])
-      input_input = prot.define_private_variable(x_in)
+      input_input = prot.Variable(x_in)
 
       paddings = [[2, 2], [3, 4]]
 
@@ -547,7 +547,7 @@ class TestReduceMax(unittest.TestCase):
       expected = sess.run(out_tf)
 
     with tfe.protocol.SecureNN() as prot:
-      b = prot.define_private_variable(tf.constant(t))
+      b = prot.Variable(tf.constant(t))
       out_tfe = prot.reduce_max(b)
 
       with tfe.Session() as sess:
@@ -566,7 +566,7 @@ class TestReduceMax(unittest.TestCase):
       expected = sess.run(out_tf)
 
     with tfe.protocol.SecureNN() as prot:
-      b = prot.define_private_variable(tf.constant(t))
+      b = prot.Variable(tf.constant(t))
       out_tfe = prot.reduce_max(b, axis=0)
 
       with tfe.Session() as sess:
@@ -585,7 +585,7 @@ class TestReduceMax(unittest.TestCase):
       expected = sess.run(out_tf)
 
     with tfe.protocol.SecureNN() as prot:
-      b = prot.define_private_variable(tf.constant(t))
+      b = prot.Variable(tf.constant(t))
       out_tfe = prot.reduce_max(b, axis=1)
 
       with tfe.Session() as sess:
@@ -604,7 +604,7 @@ class TestReduceMax(unittest.TestCase):
       expected = sess.run(out)
 
     with tfe.protocol.SecureNN() as prot:
-      b = prot.define_private_variable(tf.constant(t))
+      b = prot.Variable(tf.constant(t))
       out_tfe = prot.reduce_max(b, axis=0)
 
       with tfe.Session() as sess:
@@ -628,7 +628,7 @@ class TestReduceSum(unittest.TestCase):
       actual = sess.run(out)
 
     with tfe.protocol.Pond() as prot:
-      b = prot.define_private_variable(tf.constant(t))
+      b = prot.Variable(tf.constant(t))
       out = prot.reduce_sum(b)
 
       with tfe.Session() as sess:
@@ -645,7 +645,7 @@ class TestReduceSum(unittest.TestCase):
       actual = sess.run(out)
 
     with tfe.protocol.Pond() as prot:
-      b = prot.define_private_variable(tf.constant(t))
+      b = prot.Variable(tf.constant(t))
       out = prot.reduce_sum(b, axis=1)
 
       with tfe.Session() as sess:
@@ -662,7 +662,7 @@ class TestReduceSum(unittest.TestCase):
       actual = sess.run(out)
 
     with tfe.protocol.Pond() as prot:
-      b = prot.define_private_variable(tf.constant(t))
+      b = prot.Variable(tf.constant(t))
       out = prot.reduce_sum(b)
 
       with tfe.Session() as sess:
@@ -689,9 +689,9 @@ class TestStack(unittest.TestCase):
     tf.compat.v1.reset_default_graph()
 
     with tfe.protocol.Pond() as prot:
-      x = prot.define_private_variable(np.array([1, 4]))
-      y = prot.define_private_variable(np.array([2, 5]))
-      z = prot.define_private_variable(np.array([3, 6]))
+      x = prot.Variable(np.array([1, 4]))
+      y = prot.Variable(np.array([2, 5]))
+      z = prot.Variable(np.array([3, 6]))
 
       out = prot.stack((x, y, z))
 
@@ -723,7 +723,7 @@ class TestStridedSlice(unittest.TestCase):
                     [[3, 3, 3], [4, 4, 4]],
                     [[5, 5, 5], [6, 6, 6]]])
 
-      out = prot.define_private_variable(x)
+      out = prot.Variable(x)
 
       out = prot.strided_slice(out, [1, 0, 0], [2, 1, 3], [1, 1, 1])
 

@@ -208,8 +208,8 @@ class TestPondAssign(unittest.TestCase):
           z_shares[1],
           x.is_scaled)
 
-    a = prot.define_private_variable(tf.ones(shape=(1, 1)))
-    b = prot.define_private_variable(tf.ones(shape=(1, 1)))
+    a = prot.Variable(tf.ones(shape=(1, 1)))
+    b = prot.Variable(tf.ones(shape=(1, 1)))
 
     op = prot.assign(a, poc(a, b))
 

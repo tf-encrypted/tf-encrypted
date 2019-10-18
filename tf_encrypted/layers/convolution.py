@@ -77,12 +77,12 @@ class Conv2D(Layer):
     if is_secret(initial_weights):
       self.weights = initial_weights
     else:
-      self.weights = self.prot.define_private_variable(initial_weights)
+      self.weights = self.prot.Variable(initial_weights)
 
     if initial_bias is None or is_secret(initial_bias):
       self.bias = initial_bias
     else:
-      self.bias = self.prot.define_private_variable(initial_bias)
+      self.bias = self.prot.Variable(initial_bias)
 
   def forward(self, x):
     """Compute the forward convolution."""

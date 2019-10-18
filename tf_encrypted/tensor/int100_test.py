@@ -23,7 +23,7 @@ class TestInt100Tensor(unittest.TestCase):
         fixedpoint_config=fixed100_ni,
     ) as prot:
 
-      x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
+      x = prot.Variable(np.array([2, 2]), apply_scaling=False)
       y = prot.define_public_variable(np.array([2, 2]), apply_scaling=False)
 
       z = x * y

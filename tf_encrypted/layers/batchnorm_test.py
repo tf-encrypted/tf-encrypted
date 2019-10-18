@@ -36,7 +36,7 @@ class TestBatchnorm(unittest.TestCase):
     variance_epsilon = 1e-8
 
     with tfe.protocol.Pond() as prot:
-      batchnorm_input = prot.define_private_variable(input_batchnorm)
+      batchnorm_input = prot.Variable(input_batchnorm)
 
       batchnorm_layer = Batchnorm(
           input_shape,
@@ -92,7 +92,7 @@ class TestBatchnorm(unittest.TestCase):
     variance_epsilon = 1e-8
 
     with tfe.protocol.Pond() as prot:
-      batchnorm_input = prot.define_private_variable(input_batchnorm)
+      batchnorm_input = prot.Variable(input_batchnorm)
 
       batchnorm_layer = Batchnorm(
           input_shape,

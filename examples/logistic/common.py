@@ -7,10 +7,10 @@ import tf_encrypted as tfe
 class LogisticRegression:
   """Contains methods to build and train logistic regression."""
   def __init__(self, num_features):
-    self.w = tfe.define_private_variable(
+    self.w = tfe.Variable(
         tf.random_uniform([num_features, 1], -0.01, 0.01))
     self.w_masked = tfe.mask(self.w)
-    self.b = tfe.define_private_variable(tf.zeros([1]))
+    self.b = tfe.Variable(tf.zeros([1]))
     self.b_masked = tfe.mask(self.b)
 
   @property

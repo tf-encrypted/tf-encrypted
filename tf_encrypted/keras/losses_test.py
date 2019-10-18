@@ -17,8 +17,8 @@ class TestLosses(unittest.TestCase):
     y_true_np = np.array([1, 1, 0, 0]).astype(float)
     y_pred_np = np.array([0.9, 0.1, 0.9, 0.1]).astype(float)
 
-    y_true = tfe.define_private_variable(y_true_np)
-    y_pred = tfe.define_private_variable(y_pred_np)
+    y_true = tfe.Variable(y_true_np)
+    y_pred = tfe.Variable(y_pred_np)
 
     loss = tfe.keras.losses.BinaryCrossentropy()
     out = loss(y_true, y_pred)
@@ -43,8 +43,8 @@ class TestLosses(unittest.TestCase):
     y_true_np = np.array([1, 2, 3, 4]).astype(float)
     y_pred_np = np.array([0.9, 2.1, 3.2, 4.1]).astype(float)
 
-    y_true = tfe.define_private_variable(y_true_np)
-    y_pred = tfe.define_private_variable(y_pred_np)
+    y_true = tfe.Variable(y_true_np)
+    y_pred = tfe.Variable(y_pred_np)
 
     loss = tfe.keras.losses.MeanSquaredError()
     out = loss(y_true, y_pred)

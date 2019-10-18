@@ -47,7 +47,7 @@ def provide_input():
     return tf.ones(shape=(5, 10))
 
 # define inputs
-w = tfe.define_private_variable(tf.ones(shape=(10,10)))
+w = tfe.Variable(tf.ones(shape=(10,10)))
 x = provide_input()
 
 # define computation

@@ -21,7 +21,7 @@ class TestRelu(unittest.TestCase):
 
       tf.compat.v1.reset_default_graph()
 
-      relu_input = prot.define_private_variable(input_relu)
+      relu_input = prot.Variable(input_relu)
       relu_layer = Relu(input_shape)
       relu_out_pond = relu_layer.forward(relu_input)
       with tfe.Session() as sess:
@@ -50,7 +50,7 @@ class TestSigmoid(unittest.TestCase):
     # sigmoid pond
     with tfe.protocol.Pond() as prot:
 
-      sigmoid_input = prot.define_private_variable(input_sigmoid)
+      sigmoid_input = prot.Variable(input_sigmoid)
       sigmoid_layer = Sigmoid(input_shape)
 
       sigmoid_out_pond = sigmoid_layer.forward(sigmoid_input)
@@ -87,7 +87,7 @@ class TestTanh(unittest.TestCase):
     # tanh pond
     with tfe.protocol.Pond() as prot:
 
-      tanh_input = prot.define_private_variable(input_tanh)
+      tanh_input = prot.Variable(input_tanh)
       tanh_layer = Tanh(input_shape)
 
       tanh_out_pond = tanh_layer.forward(tanh_input)

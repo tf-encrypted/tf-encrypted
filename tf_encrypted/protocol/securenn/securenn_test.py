@@ -95,9 +95,9 @@ class TestSelectShare(unittest.TestCase):
     expected = np.array([2, 1, 2, 1]).astype(np.float32)
 
     with tfe.protocol.SecureNN() as prot:
-      alice_input = prot.define_private_variable(alice, apply_scaling=True)
-      bob_input = prot.define_private_variable(bob, apply_scaling=True)
-      bit_input = prot.define_private_variable(bit, apply_scaling=False)
+      alice_input = prot.Variable(alice, apply_scaling=True)
+      bob_input = prot.Variable(bob, apply_scaling=True)
+      bit_input = prot.Variable(bit, apply_scaling=False)
 
       select = prot.select(bit_input, alice_input, bob_input)
 
@@ -127,7 +127,7 @@ class TestLSB(unittest.TestCase):
         prime_factory=prime_factory,
     ) as prot:
 
-      x_in = prot.define_private_variable(
+      x_in = prot.Variable(
           raw, apply_scaling=False, name='test_lsb_input')
       x_lsb = prot.lsb(x_in)
 
@@ -161,7 +161,7 @@ class TestArgMax(unittest.TestCase):
       expected = sess.run(out_tf)
 
     with tfe.protocol.SecureNN() as prot:
-      out_tfe = prot.argmax(prot.define_private_variable(tf.constant(t)))
+      out_tfe = prot.argmax(prot.Variable(tf.constant(t)))
 
       with tfe.Session() as sess:
         sess.run(tf.compat.v1.global_variables_initializer())
@@ -181,7 +181,7 @@ class TestArgMax(unittest.TestCase):
 
     with tfe.protocol.SecureNN() as prot:
       out_tfe = prot.argmax(
-          prot.define_private_variable(tf.constant(t)), axis=0)
+          prot.Variable(tf.constant(t)), axis=0)
 
       with tfe.Session() as sess:
         sess.run(tf.compat.v1.global_variables_initializer())
@@ -201,7 +201,7 @@ class TestArgMax(unittest.TestCase):
 
     with tfe.protocol.SecureNN() as prot:
       out_tfe = prot.argmax(
-          prot.define_private_variable(tf.constant(t)), axis=1)
+          prot.Variable(tf.constant(t)), axis=1)
 
       with tfe.Session() as sess:
         sess.run(tf.compat.v1.global_variables_initializer())
@@ -221,7 +221,7 @@ class TestArgMax(unittest.TestCase):
 
     with tfe.protocol.SecureNN() as prot:
       out_tfe = prot.argmax(
-          prot.define_private_variable(tf.constant(t)), axis=0)
+          prot.Variable(tf.constant(t)), axis=0)
 
       with tfe.Session() as sess:
         sess.run(tf.compat.v1.global_variables_initializer())
