@@ -21,19 +21,19 @@ which will place the converted files in the `./data` subdirectory
 To then run locally use:
 
 ```sh
-python3 examples/federated-learning/run.py
+python3 examples/federated-learning/main.py
 ```
 
 or remotely using:
 
 ```sh
-python3 examples/federated-learning/run.py --remote-config config.json
+python3 examples/federated-learning/main.py --remote-config config.json
 ```
 
 There are other configuration flags, please explore them with:
 
 ```sh
-python3 examples/federated-learning/run.py --help
+python3 examples/federated-learning/main.py --help
 ```
 
 See more details in the [documentation](/docs/RUNNING.md).
