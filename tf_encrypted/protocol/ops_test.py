@@ -597,7 +597,7 @@ class TestReduceMax(unittest.TestCase):
 
   def test_reduce_max_3d_axis0(self):
 
-    t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape(2, 2, 2)
+    t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape((2, 2, 2))
 
     with tf.compat.v1.Session() as sess:
       out = tf.reduce_max(input_tensor=t, axis=0)

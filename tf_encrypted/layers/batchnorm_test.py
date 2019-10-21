@@ -25,14 +25,11 @@ class TestBatchnorm(unittest.TestCase):
 
     # I reshaped the input because tf.nn.batch_normalization doesn't reshape it
     # automatically However tf encrypted will reshape automatically the input
-    mean = np.array([2.0, 1.5, 20.8]).reshape(
-        1, channels_in, 1, 1).astype(np.float32)
-    variance = np.array([0.5, 0.3, 0.1]).reshape(
-        1, channels_in, 1, 1).astype(np.float32)
-    scale = np.array([0.3, 0.5, 0.8]).reshape(
-        1, channels_in, 1, 1).astype(np.float32)
-    offset = np.array([1.5, 1.2, 1.4]).reshape(
-        1, channels_in, 1, 1).astype(np.float32)
+    shape = (1, channels_in, 1, 1)
+    mean = np.array([2.0, 1.5, 20.8]).reshape(shape).astype(np.float32)
+    variance = np.array([0.5, 0.3, 0.1]).reshape(shape).astype(np.float32)
+    scale = np.array([0.3, 0.5, 0.8]).reshape(shape).astype(np.float32)
+    offset = np.array([1.5, 1.2, 1.4]).reshape(shape).astype(np.float32)
     variance_epsilon = 1e-8
 
     with tfe.protocol.Pond() as prot:
@@ -81,14 +78,11 @@ class TestBatchnorm(unittest.TestCase):
 
     # I reshaped the input because tf.nn.batch_normalization doesn't reshape it
     # automatically However tf encrypted will reshape automatically the input
-    mean = np.array([2.0, 1.5, 20.8]).reshape(
-        1, 1, 1, channels_in).astype(np.float32)
-    variance = np.array([0.5, 0.3, 0.1]).reshape(
-        1, 1, 1, channels_in).astype(np.float32)
-    scale = np.array([0.3, 0.5, 0.8]).reshape(
-        1, 1, 1, channels_in).astype(np.float32)
-    offset = np.array([1.5, 1.2, 1.4]).reshape(
-        1, 1, 1, channels_in).astype(np.float32)
+    shape = (1, 1, 1, channels_in)
+    mean = np.array([2.0, 1.5, 20.8]).reshape(shape).astype(np.float32)
+    variance = np.array([0.5, 0.3, 0.1]).reshape(shape).astype(np.float32)
+    scale = np.array([0.3, 0.5, 0.8]).reshape(shape).astype(np.float32)
+    offset = np.array([1.5, 1.2, 1.4]).reshape(shape).astype(np.float32)
     variance_epsilon = 1e-8
 
     with tfe.protocol.Pond() as prot:

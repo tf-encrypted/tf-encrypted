@@ -739,9 +739,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
     def feed(self, value):
       assert isinstance(value, np.ndarray), type(value)
       backing = _crt_decompose(value)
-      return {
-          p: v for p, v in zip(self.placeholders, backing)
-      }
+      return dict(zip(self.placeholders, backing))
 
   class Variable(DenseTensor, AbstractVariable):
     """CRT Variable class."""

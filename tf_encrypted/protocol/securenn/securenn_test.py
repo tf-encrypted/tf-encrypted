@@ -37,7 +37,7 @@ class TestPrivateCompare(unittest.TestCase):
         21,
         21,
         21
-    ], dtype=np.int32).reshape(2, 2, 2)
+    ], dtype=np.int32).reshape((2, 2, 2))
 
     r = np.array([
         36,
@@ -48,7 +48,7 @@ class TestPrivateCompare(unittest.TestCase):
         20,
         21,
         22
-    ], dtype=np.int32).reshape(2, 2, 2)
+    ], dtype=np.int32).reshape((2, 2, 2))
 
     beta = np.array([
         0,
@@ -59,7 +59,7 @@ class TestPrivateCompare(unittest.TestCase):
         1,
         1,
         1
-    ], dtype=np.int32).reshape(2, 2, 2)
+    ], dtype=np.int32).reshape((2, 2, 2))
 
     expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
     x_native = tf.convert_to_tensor(value=x, dtype=val_dtype.native_type)
@@ -119,7 +119,7 @@ class TestLSB(unittest.TestCase):
     f_get = np.vectorize(lambda x, ix: x[ix])
 
     raw = np.array([random.randrange(0, 10000000000)
-                    for _ in range(20)]).reshape(2, 2, 5)
+                    for _ in range(20)]).reshape((2, 2, 5))
     expected_lsb = f_get(f_bin(raw), -1).astype(np.int32)
 
     with tfe.protocol.SecureNN(
@@ -213,7 +213,7 @@ class TestArgMax(unittest.TestCase):
                        "Too slow on Circle CI otherwise")
   def test_argmax_3d_axis0(self):
 
-    t = np.array(np.arange(128)).reshape(8, 2, 2, 2, 2)
+    t = np.array(np.arange(128)).reshape((8, 2, 2, 2, 2))
 
     with tf.compat.v1.Session() as sess:
       out = tf.argmax(input=t, axis=0)
