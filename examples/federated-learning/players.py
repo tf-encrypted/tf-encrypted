@@ -8,22 +8,6 @@ import tf_encrypted as tfe
 
 from util import UndefinedModelFnError
 
-from convert import decode
-
-def build_data_pipeline(filename, batch_size):
-  """Build data pipeline for validation by model owner."""
-  def normalize(image, label):
-    image = tf.cast(image, tf.float32) / 255.0
-    return image, label
-
-  dataset = tf.data.TFRecordDataset([filename])
-  dataset = dataset.map(decode)
-  dataset = dataset.map(normalize)
-  dataset = dataset.batch(batch_size, drop_remainder=True)
-  dataset = dataset.repeat()
-
-  return dataset
-
 def pin_to_owner(func):
 
   @functools.wraps(func)
@@ -56,7 +40,7 @@ class BaseModelOwner:
       # TODO: don't assume it's a tf.keras model
       self.model = tf.keras.models.clone_model(model)  # clone the model, get new weights
 
-      self.evaluation_dataset = iter(build_data_pipeline(local_data_file, 50))
+      self.evaluation_dataset = iter(self.build_data_pipeline(local_data_file))
 
   def fit(self,
           data_owners,
@@ -80,6 +64,10 @@ class BaseModelOwner:
   @classmethod
   def evaluator_fn(cls, batches_or_owner):
     # TODO: figure out & fix the signature here
+    raise NotImplementedError()
+
+  @classmethod
+  def build_data_pipeline_fn(cls, local_data_file):
     raise NotImplementedError()
 
   def _runner(self, data_owners, rounds, evaluate, evaluate_every, **kwargs):
@@ -163,7 +151,7 @@ class BaseDataOwner:
 
     with self.device:
       self.model = tf.keras.models.clone_model(model)
-      self.dataset = iter(build_data_pipeline(local_data_file, 256))
+      self.dataset = iter(self.build_data_pipeline(local_data_file))
 
   @tfe.local_computation
   def call_model_fn(self, batches_or_owner, *args, **kwargs):
@@ -171,4 +159,8 @@ class BaseDataOwner:
 
   @classmethod
   def model_fn(cls, batches_or_owner, *args, **kwargs):
+    raise NotImplementedError()
+
+  @classmethod
+  def build_data_pipeline_fn(cls, local_data_file):
     raise NotImplementedError()
