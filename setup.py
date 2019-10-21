@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tf-encrypted",
-    version="0.6.0-pre",
+    version="0.6.0-rc0",
     packages=setuptools.find_packages(),
     package_data={'tf_encrypted': [
         'operations/secure_random/*.so',
