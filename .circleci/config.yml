@@ -17,8 +17,8 @@ variables:
         fi
 
         bash Miniconda3-latest-MacOSX-x86_64.sh -b -f
-        ../miniconda3/bin/conda create -n py35 python=3.5 --yes 2> /dev/null || true
-        ../miniconda3/envs/py35/bin/python -m venv venv
+        ../miniconda3/bin/conda create -n py37 python=3.7 --yes 2> /dev/null || true
+        ../miniconda3/envs/py37/bin/python -m venv venv
         . venv/bin/activate
 
         HOMEBREW_NO_AUTO_UPDATE=1 brew install libtool automake
@@ -61,7 +61,7 @@ variables:
 jobs:
   build:
     docker:
-      - image: circleci/python:3.5.7-stretch
+      - image: circleci/python:3.7
     working_directory: ~/repo
     steps:
       - setup_remote_docker
@@ -99,7 +99,7 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/python:3.5
+      - image: circleci/python:3.7
     working_directory: ~/repo
     steps:
       - setup_remote_docker
