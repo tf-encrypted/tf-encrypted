@@ -25,7 +25,7 @@ class TestSequential(unittest.TestCase):
       model.add(Dense(2, input_shape=shape))
       model.add(Dense(3))
 
-      x = tfe.define_private_variable(input_data)
+      x = tfe.Variable(input_data)
       model(x)
 
   def test_model_from_config(self):
@@ -108,7 +108,7 @@ class TestSequential(unittest.TestCase):
           lambda: tf.convert_to_tensor(value=input_data))
 
       tfe_model = tfe.keras.models.model_from_config(k_config)
-      weights_private_var = [tfe.define_private_variable(w) for w in k_weights]
+      weights_private_var = [tfe.Variable(w) for w in k_weights]
 
       with tfe.Session() as sess:
         for w in weights_private_var:

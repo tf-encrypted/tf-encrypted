@@ -47,9 +47,9 @@ class Dense(Layer):
       initial_size = (self.in_features, self.out_features)
       initial_weights = np.random.normal(scale=0.1, size=initial_size)
     if initial_bias is not None:
-      self.bias = self.prot.define_private_variable(initial_bias)
+      self.bias = self.prot.Variable(initial_bias)
 
-    self.weights = self.prot.define_private_variable(initial_weights)
+    self.weights = self.prot.Variable(initial_weights)
 
     if self.transpose_weight:
       self.weights = self.weights.transpose()

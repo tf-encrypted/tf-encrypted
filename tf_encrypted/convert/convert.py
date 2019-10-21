@@ -107,7 +107,7 @@ class Converter:
   def _register_op(self, node, inputs_iterable, input_player, graph_def):
     """Register single ops."""
     output = strip_tensor_info(node.name)
-    inputs = [x for x in node.input]
+    inputs = list(node.input)
     if node.op == "Placeholder":
       try:
         _, item = inputs_iterable.__next__()

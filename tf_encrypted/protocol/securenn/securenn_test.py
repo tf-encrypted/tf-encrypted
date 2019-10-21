@@ -37,7 +37,7 @@ class TestPrivateCompare(unittest.TestCase):
         21,
         21,
         21
-    ], dtype=np.int32).reshape(2, 2, 2)
+    ], dtype=np.int32).reshape((2, 2, 2))
 
     r = np.array([
         36,
@@ -48,7 +48,7 @@ class TestPrivateCompare(unittest.TestCase):
         20,
         21,
         22
-    ], dtype=np.int32).reshape(2, 2, 2)
+    ], dtype=np.int32).reshape((2, 2, 2))
 
     beta = np.array([
         0,
@@ -59,7 +59,7 @@ class TestPrivateCompare(unittest.TestCase):
         1,
         1,
         1
-    ], dtype=np.int32).reshape(2, 2, 2)
+    ], dtype=np.int32).reshape((2, 2, 2))
 
     expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
     x_native = tf.convert_to_tensor(value=x, dtype=val_dtype.native_type)
@@ -95,9 +95,9 @@ class TestSelectShare(unittest.TestCase):
     expected = np.array([2, 1, 2, 1]).astype(np.float32)
 
     with tfe.protocol.SecureNN() as prot:
-      alice_input = prot.define_private_variable(alice, apply_scaling=True)
-      bob_input = prot.define_private_variable(bob, apply_scaling=True)
-      bit_input = prot.define_private_variable(bit, apply_scaling=False)
+      alice_input = prot.Variable(alice, apply_scaling=True)
+      bob_input = prot.Variable(bob, apply_scaling=True)
+      bit_input = prot.Variable(bit, apply_scaling=False)
 
       select = prot.select(bit_input, alice_input, bob_input)
 
@@ -119,7 +119,7 @@ class TestLSB(unittest.TestCase):
     f_get = np.vectorize(lambda x, ix: x[ix])
 
     raw = np.array([random.randrange(0, 10000000000)
-                    for _ in range(20)]).reshape(2, 2, 5)
+                    for _ in range(20)]).reshape((2, 2, 5))
     expected_lsb = f_get(f_bin(raw), -1).astype(np.int32)
 
     with tfe.protocol.SecureNN(
@@ -127,7 +127,7 @@ class TestLSB(unittest.TestCase):
         prime_factory=prime_factory,
     ) as prot:
 
-      x_in = prot.define_private_variable(
+      x_in = prot.Variable(
           raw, apply_scaling=False, name='test_lsb_input')
       x_lsb = prot.lsb(x_in)
 
@@ -161,7 +161,7 @@ class TestArgMax(unittest.TestCase):
       expected = sess.run(out_tf)
 
     with tfe.protocol.SecureNN() as prot:
-      out_tfe = prot.argmax(prot.define_private_variable(tf.constant(t)))
+      out_tfe = prot.argmax(prot.Variable(tf.constant(t)))
 
       with tfe.Session() as sess:
         sess.run(tf.compat.v1.global_variables_initializer())
@@ -181,7 +181,7 @@ class TestArgMax(unittest.TestCase):
 
     with tfe.protocol.SecureNN() as prot:
       out_tfe = prot.argmax(
-          prot.define_private_variable(tf.constant(t)), axis=0)
+          prot.Variable(tf.constant(t)), axis=0)
 
       with tfe.Session() as sess:
         sess.run(tf.compat.v1.global_variables_initializer())
@@ -201,7 +201,7 @@ class TestArgMax(unittest.TestCase):
 
     with tfe.protocol.SecureNN() as prot:
       out_tfe = prot.argmax(
-          prot.define_private_variable(tf.constant(t)), axis=1)
+          prot.Variable(tf.constant(t)), axis=1)
 
       with tfe.Session() as sess:
         sess.run(tf.compat.v1.global_variables_initializer())
@@ -213,7 +213,7 @@ class TestArgMax(unittest.TestCase):
                        "Too slow on Circle CI otherwise")
   def test_argmax_3d_axis0(self):
 
-    t = np.array(np.arange(128)).reshape(8, 2, 2, 2, 2)
+    t = np.array(np.arange(128)).reshape((8, 2, 2, 2, 2))
 
     with tf.compat.v1.Session() as sess:
       out = tf.argmax(input=t, axis=0)
@@ -221,7 +221,7 @@ class TestArgMax(unittest.TestCase):
 
     with tfe.protocol.SecureNN() as prot:
       out_tfe = prot.argmax(
-          prot.define_private_variable(tf.constant(t)), axis=0)
+          prot.Variable(tf.constant(t)), axis=0)
 
       with tfe.Session() as sess:
         sess.run(tf.compat.v1.global_variables_initializer())

@@ -158,7 +158,8 @@ def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
 
 
 def set_config(config: Config) -> None:
-  from .config import set_config as set_global_config
+  # TODO(Morten) re-enable lint after switch to absolute imports
+  from .config import set_config as set_global_config  # pylint: disable=import-outside-toplevel
 
   set_global_config(config)
   set_protocol(None)

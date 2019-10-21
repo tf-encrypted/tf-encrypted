@@ -10,7 +10,6 @@ all: test
 # Rules for bootstrapping the Makefile such as checking for docker, python versions, etc.
 # ###############################################
 DOCKER_REQUIRED_VERSION=18.
-PYTHON_REQUIRED_VERSION=3.5.
 SHELL := /bin/bash
 
 CURRENT_DIR=$(shell pwd)
@@ -33,13 +32,6 @@ endif
 endif
 endif
 
-pythoncheck:
-ifeq (,$(findstring $(PYTHON_REQUIRED_VERSION),$(shell python -V 2>&1)))
-ifeq (,$(BYPASS_PYTHON_CHECK))
-	$(error "Python version $(PYTHON_REQUIRED_VERSION) is required.")
-endif
-endif
-
 pipcheck:
 ifeq (,$(PIP_PATH))
 ifeq (,$(BYPASS_PIP_CHECK))
@@ -47,7 +39,7 @@ ifeq (,$(BYPASS_PIP_CHECK))
 endif
 endif
 
-bootstrap: pythoncheck pipcheck
+bootstrap: pipcheck
 	pip install -U pip setuptools
 	pip install -r requirements.txt
 	pip install -e .
@@ -58,7 +50,7 @@ bootstrap: pythoncheck pipcheck
 #
 # Rules for running our tests and for running various different linters
 # ###############################################
-test: pythoncheck
+test:
 	pytest -n 8 -x -m tf2
 	pytest -n 8 -x -m "not slow and not convert_maxpool and not tf2"
 	pytest -n 8 -x -m slow
@@ -66,18 +58,18 @@ test: pythoncheck
 
 CONVERT_DIR=tf_encrypted/convert
 BUILD_RESERVED_SCOPES=$(CONVERT_DIR)/specops.yaml
-$(BUILD_RESERVED_SCOPES): pythoncheck
+$(BUILD_RESERVED_SCOPES):
 	python -m tf_encrypted.convert.gen.generate_reserved_scopes
 
 BUILD_CONVERTER_README=$(CONVERT_DIR)/gen/readme_template.md
-$(BUILD_CONVERTER_README): $(BUILD_RESERVED_SCOPES) pythoncheck
+$(BUILD_CONVERTER_README): $(BUILD_RESERVED_SCOPES)
 	python -m tf_encrypted.convert.gen.generate_reserved_scopes
 
-lint: $(BUILD_CONVERTER_README) pythoncheck
+lint: $(BUILD_CONVERTER_README)
 	pylint tf_encrypted examples operations
 	pylint bin/run bin/process bin/pull_model bin/serve bin/write
 
-typecheck: pythoncheck
+typecheck:
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
 
 .PHONY: lint test typecheck
@@ -224,7 +216,7 @@ ifeq (,$(PYPI_PLATFORM))
 PYPI_PLATFORM=$(DEFAULT_PLATFORM)
 endif
 
-pypi-build: pythoncheck pipcheck pypi-platform-check pypi-version-check build-all
+pypi-build: pipcheck pypi-platform-check pypi-version-check build-all
 	pip install --upgrade setuptools wheel twine
 	rm -rf dist
 ifeq ($(PYPI_PLATFORM),$(DEFAULT_PLATFORM))

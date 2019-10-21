@@ -366,6 +366,14 @@ class Pond(Protocol):
     x = PondPrivateTensor(self, v0, v1, apply_scaling)
     return x
 
+  def Variable(self, initial_value, apply_scaling=True, name=None):  # pylint: disable=invalid-name
+    """See define_private_variable."""
+    return self.define_private_variable(
+        initial_value=initial_value,
+        apply_scaling=apply_scaling,
+        name=name,
+    )
+
   def define_private_variable(
       self,
       initial_value,
@@ -591,6 +599,9 @@ class Pond(Protocol):
               reconstruct_input, arguments)
 
         outputs = computation_fn(*inputs)
+
+        if outputs is None:
+          return None
 
         if isinstance(outputs, tf.Operation):
           return outputs

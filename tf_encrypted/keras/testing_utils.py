@@ -28,7 +28,7 @@ def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,
 
   with tfe.protocol.SecureNN():
     tfe_layer = tfe_layer_cls(**tfe_kwargs)
-    x = tfe.define_private_variable(input_data)
+    x = tfe.Variable(input_data)
     y = tfe_layer(x)
 
     with tfe.Session() as sess:
@@ -74,7 +74,7 @@ def layer_test(layer_cls, kwargs=None, batch_input_shape=None,
     model = Sequential()
     model.add(layer)
 
-    x = tfe.define_private_variable(input_data)
+    x = tfe.Variable(input_data)
     model(x)
 
 

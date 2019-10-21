@@ -4,7 +4,7 @@ import tf_encrypted as tfe
 
 a = np.ones((10, 10))
 
-x = tfe.define_private_variable(a)
+x = tfe.Variable(a)
 
 b = a
 y = x
