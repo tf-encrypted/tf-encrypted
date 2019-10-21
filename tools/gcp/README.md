@@ -2,114 +2,62 @@
 
 A few tools for making it slightly easier to run experiments on the Google Cloud Platform.
 
-All steps here assume that the [Cloud SDK](https://cloud.google.com/sdk/) has already been installed (for macOS this may be done via e.g. Homebrew: `brew cask install google-cloud-sdk`) and a project set up.
+All steps here assume that you have a Google Cloud account and that you can install Google Cloud SDK. Please see [this](https://cloud.google.com/sdk/install) link for details on how install the SDK for all platforms.
 
-It also assumes that you are running the commands from this directory (`cd tools/gcp/` from the project root.)
-
-## Base Image
-
-We first create a base image with all needed software for future GCP instances running TF Encrypted. To that end we start with a template instance whos disk turns into the image.
-
-Run the following to create the template instance
-
-```shell
-gcloud compute instances create tfe-template \
-    --machine-type=n1-standard-4 \
-    --image=ubuntu-minimal-1804-bionic-v20180814 \
-    --image-project=ubuntu-os-cloud \
-    --boot-disk-size=20GB
-```
-
-and this to afterwards install the needed software
-
-```shell
-gcloud compute ssh tfe-template < debian-install.sh
-```
-
-Then, to create the image, we run
-
-```shell
-gcloud compute instances stop tfe-template
-gcloud compute images create tfe-image --source-disk tfe-template
-```
-
-and can optionally finally [delete the template instance](#cleaning-up) to save on cost. If you encountered an error when creating the image tfe-image from the tfe-template, it might be because you already have the tfe-image created, in which case you have to delete it first.
+If not already done you'll need to clone the git repository `https://github.com/tf-encrypted/tf-encrypted`. These commands will be run from within the repo (`cd tf-encrypted/tools/gcp`).
 
 ## Running
 
-We have assume that environment variable `INSTANCE_NAMES` contains a list of all instances we which to manage. For instance, we might have 
+First, we need to specify all of the instance names we need. For example, for running a private prediction we only need three `server0`, `server1` and `server2`. We export an environement variable called `INSTANCE_NAMES` containing a list of the names.
 
 ```shell
-export INSTANCE_NAMES="master server0 server1 server2 model-owner prediction-client"
+export INSTANCE_NAMES="server0 server1 server2"
 ```
 
 ### Setup instances
 
-With the image in place we can easily create more instances with
+Next we can launch the instances with a helper script:
 
 ```shell
-gcloud compute instances create \
-    INSTANCE_NAMES \
-    --image tfe-image \
-    --machine-type=n1-standard-4
+./create $INSTANCE_NAMES
 ```
 
-or simply use the [`create`](./create) script
+To use another image other than the default `docker.io/tfencrypted/tf-encrypted:latest` image you use an environment variable to specify which one
 
 ```shell
-./tools/gcp/create $INSTANCE_NAMES
+TFE_IMAGE=docker.io/tfencrypted/tf-encrypted:0.5.8 ./create $INSTANCE_NAMES
 ```
 
-Alternatively, if they have already been created but are current terminated, simply start them again with
+NOTE: docker.io must be passed as the gcloud command expect the full path.
+
+Alternatively, if they have already been created but are currently terminated, simply start them again with
 
 ```shell
-./tools/gcp/start $INSTANCE_NAMES
+./start $INSTANCE_NAMES
 ```
 
+These commands causes the instances to launch a docker container that runs the TF Encrypted server. At this point they are waiting for a configuration to use to connect to other servers.
 
-### Launching servers
+### Linking Instances
 
-Once the instances are ready and running the next step is to link them together by creating and distributing a new configuration file
+We can generate and share a configuration file amongst all of the instance with:
 
 ```shell
-./tools/gcp/link $INSTANCE_NAMES
+./link $INSTANCE_NAMES
 ```
 
-which will put an updated `config.json` file in the home directory on each instance, followed by
+This uses the instances external addresses to connect one another and also opens a port on each instance at 4440.
+
+### Cleaning Up
+
+Once done, the instances can either simply be stopped with:
 
 ```shell
-./tools/gcp/serve $INSTANCE_NAMES
-```
-
-which will launch a TensorFlow server on all of them.
-
-### Stopping
-
-Once done, the instances can either simply be stopped with
-
-```shell
-./tools/gcp/stop $INSTANCE_NAMES
+./stop $INSTANCE_NAMES
 ```
 
 or destroyed entirely with
 
 ```shell
-./tools/gcp/delete $INSTANCE_NAMES
-```
-
-## Cleaning up
-
-To clean up the template instance and its disk we run
-
-```shell
-gcloud compute instances delete tfe-template --quiet
-gcloud compute disks delete tfe-template --quiet
-```
-
-which can be done as soon as the image was been created without breaking anything.
-
-If we wish to clean up fully the base image can also be deleted with
-
-```shell
-gcloud compute images delete tfe-image --quiet
+./delete $INSTANCE_NAMES
 ```

@@ -1,5 +1,4 @@
 #!/bin/sh
 
-gcloud compute instances delete \
-    $@ \
-    --quiet
+gcloud compute instances delete $@ --quiet
+gcloud compute firewall-rules delete tfe-server-rule --quiet
