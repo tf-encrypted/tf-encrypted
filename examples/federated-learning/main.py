@@ -18,6 +18,7 @@ from func_lib import (
     evaluate_classifier,
     secure_reptile,
     reptile_model_fn,
+    default_build_data_pipeline
 )
 
 # Data flags
@@ -101,6 +102,9 @@ class ModelOwner(BaseModelOwner):
   def evaluator_fn(cls, model_owner):
     return evaluate_classifier(model_owner)
 
+  @classmethod
+  def build_data_pipeline(cls, local_data_file):
+    return default_build_data_pipeline(local_data_file, 50)
 
 class DataOwner(BaseDataOwner):
   """Contains methods meant to be executed by a data owner.
@@ -111,9 +115,11 @@ class DataOwner(BaseDataOwner):
     build_update_step: `Callable`, the function used to construct
                        a local federated learning update.
   """
-  # TODO: stick `build_data_pipeline` somewhere in here
-  # TODO: can also move model_fn in here -- we leave it up to the user atm
+  @classmethod
+  def build_data_pipeline(cls, local_data_file):
+    return default_build_data_pipeline(local_data_file, FLAGS.batch_size)
 
+  # TODO: can move model_fn in here -- we leave it up to the user atm
 
 def main(_):
   if FLAGS.remote_config is not None:
