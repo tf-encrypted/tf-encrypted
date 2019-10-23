@@ -5,9 +5,11 @@ import tf_encrypted as tfe
 
 from convert import decode
 
+from util import pin_to_owner
+
 ### Example model_fns ###
 
-def default_model_fn(data_owner):
+def _model_fn(data_owner):
   """Runs a single training step!"""
   x, y = next(data_owner.dataset)
 
@@ -21,8 +23,18 @@ def default_model_fn(data_owner):
 
   return grads
 
+@tfe.local_computation
+def encrypted_model_fn(data_owner):
+  res = _model_fn(data_owner)
+  return res
+
+@pin_to_owner
+def model_fn(data_owner, **kwargs): #pylint: disable=unused-argument
+  return _model_fn(data_owner)
+
+@tfe.local_computation
 def reptile_model_fn(data_owner, iterations=3,
-                     grad_fn=default_model_fn, **kwargs):
+                     grad_fn=_model_fn, **kwargs):
   """
   This corresponds to the Reptile variant that computes k steps of SGD.
   When paired with the secure_aggregation aggregator_fn, this model_fn
@@ -54,6 +66,18 @@ def secure_mean(collected_inputs):
     # Reveal aggregated values & cast to native tf.float32
     aggr_inputs = [tf.cast(inp.reveal().to_native(), tf.float32)
                    for inp in aggr_inputs]
+
+    return aggr_inputs
+
+def mean(collected_inputs):
+  """ securely calculates the mean of the collected_inputs """
+
+  with tf.name_scope('mean'):
+
+    aggr_inputs = [
+        tf.add_n(inputs) / len(inputs)
+        for inputs in collected_inputs
+    ]
 
     return aggr_inputs
 

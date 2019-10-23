@@ -13,8 +13,10 @@ import tf_encrypted as tfe
 
 from players import BaseModelOwner, BaseDataOwner
 from func_lib import (
-    default_model_fn,
+    encrypted_model_fn,
+    model_fn,
     secure_mean,
+    mean,
     evaluate_classifier,
     secure_reptile,
     reptile_model_fn,
@@ -41,6 +43,10 @@ flags.DEFINE_boolean("reptile", False,
                      ("If True, the ModelOwner will use the Reptile "
                       "meta-learning algorithm for performing updates to the "
                       "master model."))
+flags.DEFINE_boolean("secure_aggr", True,
+                     ("If True, the DataOwner will return encrypted value "
+                      "from the model_fn and securely aggregate the "
+                      "gradients."))
 flags.DEFINE_integer("epochs", 3, ("Number of epochs - used with number of "
                                    "data owners & batch size to determine "
                                    "total number of iterations"))
@@ -85,18 +91,24 @@ class ModelOwner(BaseModelOwner):
                  representing the model owner.
   """
   @classmethod
-  def model_fn(cls, data_owner):
+  def model_fn(cls, data_owner, player_name=None):
     if FLAGS.reptile:
-      return reptile_model_fn(data_owner)
+      return reptile_model_fn(data_owner, player_name=player_name)
 
-    return default_model_fn(data_owner)
+    if FLAGS.secure_aggr:
+      return encrypted_model_fn(data_owner, player_name=player_name)
+
+    return model_fn(data_owner, player_name=player_name)
 
   @classmethod
   def aggregator_fn(cls, model_gradients, model):
     if FLAGS.reptile:
       return secure_reptile(model_gradients, model)
 
-    return secure_mean(model_gradients)
+    if FLAGS.secure_aggr:
+      return secure_mean(model_gradients)
+
+    return mean(model_gradients)
 
   @classmethod
   def evaluator_fn(cls, model_owner):
@@ -122,6 +134,11 @@ class DataOwner(BaseDataOwner):
   # TODO: can move model_fn in here -- we leave it up to the user atm
 
 def main(_):
+  if not FLAGS.secure_aggr and FLAGS.reptile:
+    print("ERROR: Secure Aggregation must be used with "
+          "the reptile meta-learning algorithm.")
+    return
+
   if FLAGS.remote_config is not None:
     config = tfe.RemoteConfig.load(FLAGS.remote_config)
     config.connect_to_cluster()

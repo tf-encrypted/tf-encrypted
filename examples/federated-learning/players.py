@@ -1,23 +1,11 @@
 """ Base classes for the FL players """
 #pylint:disable=unexpected-keyword-arg
 
-import functools
-
 import tensorflow as tf
 import tf_encrypted as tfe
 
-from util import UndefinedModelFnError
+from util import UndefinedModelFnError, pin_to_owner
 
-def pin_to_owner(func):
-
-  @functools.wraps(func)
-  def wrapper(*args, **kwargs):
-    with args[0].device:
-      return func(*args, **kwargs)
-
-    return pinned_fn
-
-  return wrapper
 
 class BaseModelOwner:
   """Contains code meant to be executed by some `ModelOwner` Player.
@@ -97,9 +85,8 @@ class BaseModelOwner:
   def _call_evaluator_fn(self):
     return self.evaluator_fn(self)
 
-  @tfe.local_computation
-  def call_model_fn(self, batches_or_owner):
-    return self.model_fn(batches_or_owner)
+  def call_model_fn(self, batches_or_owner, *args, **kwargs):
+    return self.model_fn(batches_or_owner, *args, **kwargs)
 
   def _update_one_round(self, data_owners, **kwargs):
     """ Updates after one FL round """
@@ -153,7 +140,6 @@ class BaseDataOwner:
       self.model = tf.keras.models.clone_model(model)
       self.dataset = iter(self.build_data_pipeline(local_data_file))
 
-  @tfe.local_computation
   def call_model_fn(self, batches_or_owner, *args, **kwargs):
     return self.model_fn(batches_or_owner, *args, **kwargs)
 
