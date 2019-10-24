@@ -2,6 +2,7 @@
 #pylint:disable=unexpected-keyword-arg
 
 import functools
+import os
 
 import tensorflow as tf
 import tf_encrypted as tfe
@@ -89,6 +90,9 @@ class BaseModelOwner:
         loss = self._call_evaluator_fn()
         prog.update(r, [("Loss", loss)])
 
+    # progress bar doesn't end with a newline XD
+    print()
+
   @pin_to_owner
   def _call_aggregator_fn(self, grads, model):
     return self.aggregator_fn(grads, model)
@@ -129,6 +133,18 @@ class BaseModelOwner:
     with self.device:
       self.optimizer.apply_gradients(zip(aggr_gradients,
                                          self.model.trainable_variables))
+
+  def save_model(self, save_dir):
+    if not os.path.exists(save_dir):
+      os.makedirs(save_dir)
+
+    location = save_dir + "/fl_model.h5"
+
+    print("INFO: Model saved at ", location)
+
+    with self.device:
+      tf.keras.models.save_model(self.model, location,
+                                 save_format="h5")
 
 
 class BaseDataOwner:

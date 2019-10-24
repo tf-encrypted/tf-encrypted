@@ -52,6 +52,9 @@ flags.DEFINE_boolean("split", True,
                       "simulate the training by splitting the data and "
                       "distributing it amongst the data owners. "
                       "Only applicable for local computations."))
+flags.DEFINE_string("save_dir", None,
+                    ("Where the model (h5 format) should be saved. If None the "
+                     "model isn't saved."))
 
 FLAGS = flags.FLAGS
 
@@ -169,6 +172,9 @@ def main(_):
                  for i in range(FLAGS.num_data_owners)]
 
   model_owner.fit(data_owners, rounds=batches, evaluate_every=10)
+
+  if FLAGS.save_dir:
+    model_owner.save_model(FLAGS.save_dir)
 
 if __name__ == "__main__":
   app.run(main)
