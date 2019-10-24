@@ -176,7 +176,7 @@ def main(_):
                            optimizer=tf.keras.optimizers.Adam(local_lr))
                  for i in range(FLAGS.num_data_owners)]
 
-  #model_owner.fit(data_owners, rounds=batches, evaluate_every=10)
+  model_owner.fit(data_owners, rounds=batches, evaluate_every=10)
 
   if FLAGS.save_path:
     model_owner.save_model(FLAGS.save_path, FLAGS.save_format)

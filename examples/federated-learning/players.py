@@ -145,8 +145,6 @@ class BaseModelOwner:
       os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
     with self.device:
-      # if save_format == 'tf':
-      #   save_format = None
       tf.keras.models.save_model(self.model, save_path,
                                  save_format=save_format)
 
