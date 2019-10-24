@@ -1,0 +1,16 @@
+#!/bin/sh
+
+i=0
+for instance in $@
+do
+    if [[ $instance == *"data-owner"* ]]; then
+        gcloud compute ssh $instance --command='mkdir -p /tmp/data'
+        gcloud compute scp examples/federated-learning/data/train$i.tfrecord $instance:/tmp/data/train$i.tfrecord
+        i=$((i+1))
+    fi
+
+    if [[ $instance == *"model-owner"* ]]; then
+        gcloud compute ssh $instance --command='mkdir -p /tmp/data'
+        gcloud compute scp examples/federated-learning/data/train.tfrecord $instance:/tmp/data/train.tfrecord
+    fi
+done
