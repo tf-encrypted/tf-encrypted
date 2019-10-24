@@ -152,7 +152,7 @@ def main(_):
   logging.basicConfig(level=logging.DEBUG)
 
   model = tf.keras.Sequential((
-      tf.keras.layers.Dense(512, input_shape=[None, 28 * 28],
+      tf.keras.layers.Dense(512, batch_input_shape=[FLAGS.batch_size, 28 * 28],
                             activation='relu'),
       tf.keras.layers.Dense(10),
   ))
