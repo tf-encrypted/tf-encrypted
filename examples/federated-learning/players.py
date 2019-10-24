@@ -134,18 +134,23 @@ class BaseModelOwner:
       self.optimizer.apply_gradients(zip(aggr_gradients,
                                          self.model.trainable_variables))
 
-  def save_model(self, save_dir):
-    if not os.path.exists(save_dir):
-      os.makedirs(save_dir)
+  def save_model(self, save_path, save_format):
+    """
+    save_model saves a model to save_path in either 'h5'
+    format or as a SavedModel when 'tf' is passed
+    """
 
-    location = save_dir + "/fl_model.h5"
-
-    print("INFO: Model saved at ", location)
+    directory = os.path.dirname(save_path)
+    if directory != "":
+      os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
     with self.device:
-      tf.keras.models.save_model(self.model, location,
-                                 save_format="h5")
+      # if save_format == 'tf':
+      #   save_format = None
+      tf.keras.models.save_model(self.model, save_path,
+                                 save_format=save_format)
 
+      print("INFO: Model saved at", save_path)
 
 class BaseDataOwner:
   """Contains methods meant to be executed by a data owner.
