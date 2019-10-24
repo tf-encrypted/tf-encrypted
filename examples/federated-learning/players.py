@@ -85,9 +85,6 @@ class BaseModelOwner:
   def _call_evaluator_fn(self):
     return self.evaluator_fn(self)
 
-  def call_model_fn(self, batches_or_owner, *args, **kwargs):
-    return self.model_fn(batches_or_owner, *args, **kwargs)
-
   def _update_one_round(self, data_owners, **kwargs):
     """ Updates after one FL round """
     player_gradients = []
@@ -96,12 +93,12 @@ class BaseModelOwner:
     for owner in data_owners:
 
       try:  # If the DataOwner implements a model_fn, use it
-        grads = owner.call_model_fn(owner, player_name=owner.player_name,
-                                    **kwargs)
+        grads = owner.model_fn(owner, player_name=owner.player_name,
+                               **kwargs)
         player_gradients.append(grads)
       except NotImplementedError:  # Otherwise, fall back to the ModelOwner's
-        grads = self.call_model_fn(owner, player_name=owner.player_name,
-                                   **kwargs)
+        grads = self.model_fn(owner, player_name=owner.player_name,
+                              **kwargs)
         player_gradients.append(grads)
 
       # Fail gracefully
@@ -139,9 +136,6 @@ class BaseDataOwner:
     with self.device:
       self.model = tf.keras.models.clone_model(model)
       self.dataset = iter(self.build_data_pipeline(local_data_file))
-
-  def call_model_fn(self, batches_or_owner, *args, **kwargs):
-    return self.model_fn(batches_or_owner, *args, **kwargs)
 
   @classmethod
   def model_fn(cls, batches_or_owner, *args, **kwargs):
