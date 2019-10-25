@@ -9,7 +9,7 @@ from util import pin_to_owner
 
 ### Example model_fns ###
 
-def base_model_fn(data_owner, **kwargs):
+def base_model_fn(data_owner, **kwargs): #pylint: disable=unused-argument
   """Runs a single training step!"""
   x, y = next(data_owner.dataset)
 
