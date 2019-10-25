@@ -9,7 +9,7 @@ from util import pin_to_owner
 
 ### Example model_fns ###
 
-def base_model_fn(data_owner):
+def base_model_fn(data_owner, **kwargs):
   """Runs a single training step!"""
   x, y = next(data_owner.dataset)
 
@@ -23,18 +23,8 @@ def base_model_fn(data_owner):
 
   return grads
 
-@tfe.local_computation
-def encrypted_model_fn(data_owner):
-  res = base_model_fn(data_owner)
-  return res
-
-@pin_to_owner
-def model_fn(data_owner, **kwargs): #pylint: disable=unused-argument
-  return base_model_fn(data_owner)
-
-@tfe.local_computation
-def reptile_model_fn(data_owner, iterations=3,
-                     grad_fn=base_model_fn, **kwargs):
+def base_reptile_model_fn(data_owner, iterations=3,
+                          grad_fn=base_model_fn, **kwargs):
   """
   This corresponds to the Reptile variant that computes k steps of SGD.
   When paired with the secure_aggregation aggregator_fn, this model_fn
@@ -50,6 +40,25 @@ def reptile_model_fn(data_owner, iterations=3,
 
   return [var.read_value() for var in data_owner.model.trainable_variables]
 
+@tfe.local_computation
+def encrypted_model_fn(data_owner):
+  return base_model_fn(data_owner)
+
+@pin_to_owner
+def model_fn(data_owner, **kwargs): #pylint: disable=unused-argument
+  return base_model_fn(data_owner)
+
+@tfe.local_computation
+def encrypted_reptile_model_fn(data_owner, iterations=3,
+                               grad_fn=base_model_fn, **kwargs):
+  return base_reptile_model_fn(data_owner, iterations=iterations,
+                               grad_fn=grad_fn, **kwargs)
+
+@pin_to_owner
+def reptile_model_fn(data_owner, iterations=3,
+                     grad_fn=base_model_fn, **kwargs):
+  return base_reptile_model_fn(data_owner, iterations=iterations,
+                               grad_fn=grad_fn, **kwargs)
 
 ### Example aggregator_fns ###
 
@@ -84,6 +93,17 @@ def mean(collected_inputs):
 def secure_reptile(collected_inputs, model):
 
   aggr_weights = secure_mean(collected_inputs)
+
+  weights_deltas = [
+      weight - update for (weight, update) in zip(
+          model.trainable_variables, aggr_weights,
+      )
+  ]
+  return weights_deltas
+
+def reptile(collected_inputs, model):
+
+  aggr_weights = mean(collected_inputs)
 
   weights_deltas = [
       weight - update for (weight, update) in zip(

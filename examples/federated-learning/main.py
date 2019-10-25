@@ -17,6 +17,8 @@ from func_lib import (
     model_fn,
     secure_mean,
     mean,
+    encrypted_reptile_model_fn,
+    reptile,
     evaluate_classifier,
     secure_reptile,
     reptile_model_fn,
@@ -92,6 +94,9 @@ class ModelOwner(BaseModelOwner):
   """
   @classmethod
   def model_fn(cls, data_owner, player_name=None):
+    if FLAGS.reptile and FLAGS.secure_aggr:
+      return encrypted_reptile_model_fn(data_owner, player_name=player_name)
+
     if FLAGS.reptile:
       return reptile_model_fn(data_owner, player_name=player_name)
 
@@ -102,8 +107,11 @@ class ModelOwner(BaseModelOwner):
 
   @classmethod
   def aggregator_fn(cls, model_gradients, model):
-    if FLAGS.reptile:
+    if FLAGS.reptile and FLAGS.secure_aggr:
       return secure_reptile(model_gradients, model)
+
+    if FLAGS.reptile:
+      return reptile(model_gradients, model)
 
     if FLAGS.secure_aggr:
       return secure_mean(model_gradients)
@@ -134,11 +142,6 @@ class DataOwner(BaseDataOwner):
   # TODO: can move model_fn in here -- we leave it up to the user atm
 
 def main(_):
-  if not FLAGS.secure_aggr and FLAGS.reptile:
-    print("ERROR: Secure Aggregation must be used with "
-          "the reptile meta-learning algorithm.")
-    return
-
   if FLAGS.remote_config is not None:
     config = tfe.RemoteConfig.load(FLAGS.remote_config)
     config.connect_to_cluster()
