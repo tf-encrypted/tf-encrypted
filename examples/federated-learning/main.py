@@ -52,6 +52,14 @@ flags.DEFINE_boolean("split", True,
                       "simulate the training by splitting the data and "
                       "distributing it amongst the data owners. "
                       "Only applicable for local computations."))
+flags.DEFINE_string("save_path", None,
+                    ("Where the model should be saved. If None the "
+                     "model isn't saved. With save_format 'h5' "
+                     "it must be a path to a file, with 'tf' its a "
+                     "path to a directory."))
+flags.DEFINE_string("save_format", "h5",
+                    ("Format of the saved model. Either 'h5' or 'tf',"
+                     "'tf' saves it as a SavedModel."))
 
 FLAGS = flags.FLAGS
 
@@ -144,7 +152,7 @@ def main(_):
   logging.basicConfig(level=logging.DEBUG)
 
   model = tf.keras.Sequential((
-      tf.keras.layers.Dense(512, input_shape=[None, 28 * 28],
+      tf.keras.layers.Dense(512, batch_input_shape=[FLAGS.batch_size, 28 * 28],
                             activation='relu'),
       tf.keras.layers.Dense(10),
   ))
@@ -169,6 +177,9 @@ def main(_):
                  for i in range(FLAGS.num_data_owners)]
 
   model_owner.fit(data_owners, rounds=batches, evaluate_every=10)
+
+  if FLAGS.save_path:
+    model_owner.save_model(FLAGS.save_path, FLAGS.save_format)
 
 if __name__ == "__main__":
   app.run(main)
