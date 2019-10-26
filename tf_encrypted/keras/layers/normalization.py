@@ -138,6 +138,10 @@ class BatchNormalization(Layer):
                        "adjustment",
                        "BatchNormalization")
 
+    # Axis from get_config can be in ListWrapper format
+    if isinstance(axis, list):
+      axis = axis[0]
+
     # Axis -3 is equivalent to 1, and axis -1 is equivalent to 3, because the
     # input rank is required to be 4 (which is checked later).
     if axis not in (1, 3):
@@ -161,22 +165,26 @@ class BatchNormalization(Layer):
 
     if self.scale:
       gamma = self.gamma_initializer(param_shape)
-      self.gamma = self.prot.define_public_variable(gamma)
+      self.gamma = self.add_weight(gamma, make_private=False)
     else:
       self.gamma = None
 
     if self.center:
       beta = self.beta_initializer(param_shape)
-      self.beta = self.prot.define_public_variable(beta)
+      self.beta = self.add_weight(beta, make_private=False)
     else:
       self.beta = None
 
     moving_mean = self.moving_mean_initializer(param_shape)
-    self.moving_mean = self.prot.define_public_variable(moving_mean)
+    self.moving_mean = self.add_weight(moving_mean, make_private=False)
 
     moving_variance = self.moving_variance_initializer(param_shape)
+    moving_variance = self.add_weight(moving_variance, make_private=False)
 
-    denomtemp = 1.0 / tf.sqrt(moving_variance + self.epsilon)
+    # to_navive() tranformation is bad and not yet working
+    # Find solution to compute tf.sqrt on PondPublicVariable
+    # or use different approach
+    denomtemp = 1.0 / tf.sqrt(moving_variance.to_native(), + self.epsilon)
     self.denom = self.prot.define_public_variable(denomtemp)
 
     self.built = True

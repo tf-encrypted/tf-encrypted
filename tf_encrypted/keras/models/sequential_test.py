@@ -135,6 +135,7 @@ class TestSequential(unittest.TestCase):
                                        (3, 3),
                                        batch_input_shape=input_shape))
       model.add(tf.keras.layers.AveragePooling2D((2, 2)))
+      model.add(tf.keras.layers.BatchNormalization())
       model.add(tf.keras.layers.Conv2D(2, (3, 3)))
       model.add(tf.keras.layers.AveragePooling2D((2, 2)))
       model.add(tf.keras.layers.Flatten())
@@ -150,6 +151,7 @@ class TestSequential(unittest.TestCase):
           lambda: tf.convert_to_tensor(input_data))
 
       tfe_model = tfe.keras.models.model_from_config(k_config)
+
       tfe_model.set_weights(k_weights)
       y = tfe_model(x)
 

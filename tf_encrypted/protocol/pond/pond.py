@@ -791,33 +791,66 @@ class Pond(Protocol):
   @memoize
   def assign(self, variable: "PondPrivateVariable", value) -> tf.Operation:
     """See tf.assign."""
-    assert isinstance(variable, PondPrivateVariable), type(variable)
-    assert isinstance(value, PondPrivateTensor), type(value)
-    assert (variable.is_scaled == value.is_scaled), ("Scaling must match: "
-                                                     "{}, {}").format(
-                                                         variable.is_scaled,
-                                                         value.is_scaled,
-                                                     )
 
-    var0, var1 = variable.variable0, variable.variable1
-    val0, val1 = value.share0, value.share1
+    # [TODO] fix control flow
+    if isinstance(variable, PondPrivateVariable):
+      assert isinstance(variable, PondPrivateVariable), type(variable)
+      assert isinstance(value, PondPrivateTensor), type(value)
+      assert (variable.is_scaled == value.is_scaled), ("Scaling must match: "
+                                                      "{}, {}").format(
+                                                          variable.is_scaled,
+                                                          value.is_scaled,
+                                                      )
 
-    with tf.name_scope("assign"):
+      var0, var1 = variable.variable0, variable.variable1
+      val0, val1 = value.share0, value.share1
 
-      # Having this control_dependencies is important in order to avoid that
-      # computationally-dependent shares are updated in different pace
-      # (e.g., share0 is computed from share1, and we need to make sure that
-      # share1 is NOT already updated).
-      # See https://github.com/tf-encrypted/tf-encrypted/pull/665 for details.
-      with tf.control_dependencies(val0.support + val1.support):
+      with tf.name_scope("assign"):
 
-        with tf.device(self.server_0.device_name):
-          op0 = var0.assign_from_same(val0)
+        # Having this control_dependencies is important in order to avoid that
+        # computationally-dependent shares are updated in different pace
+        # (e.g., share0 is computed from share1, and we need to make sure that
+        # share1 is NOT already updated).
+        # See https://github.com/tf-encrypted/tf-encrypted/pull/665 for details.
+        with tf.control_dependencies(val0.support + val1.support):
 
-        with tf.device(self.server_1.device_name):
-          op1 = var1.assign_from_same(val1)
+          with tf.device(self.server_0.device_name):
+            op0 = var0.assign_from_same(val0)
 
-        op = tf.group(op0, op1)
+          with tf.device(self.server_1.device_name):
+            op1 = var1.assign_from_same(val1)
+
+          op = tf.group(op0, op1)
+
+    elif isinstance(variable, PondPublicVariable):
+      assert isinstance(variable, PondPublicVariable), type(variable)
+      assert isinstance(value, PondPublicTensor), type(value)
+      assert (variable.is_scaled == value.is_scaled), ("Scaling must match: "
+                                                      "{}, {}").format(
+                                                          variable.is_scaled,
+                                                          value.is_scaled,
+                                                      )
+
+      var0, var1 = variable.variable_on_0, variable.variable_on_1
+      val0, val1 = value.value_on_0, value.value_on_1
+
+      with tf.name_scope("assign"):
+
+        # Having this control_dependencies is important in order to avoid that
+        # computationally-dependent shares are updated in different pace
+        # (e.g., share0 is computed from share1, and we need to make sure that
+        # share1 is NOT already updated).
+        # See https://github.com/tf-encrypted/tf-encrypted/pull/665 for details.
+        with tf.control_dependencies(val0.support + val1.support):
+
+          with tf.device(self.server_0.device_name):
+            op0 = var0.assign_from_same(val0)
+
+          with tf.device(self.server_1.device_name):
+            op1 = var1.assign_from_same(val1)
+
+          op = tf.group(op0, op1)
+
 
     return op
 
@@ -2033,6 +2066,16 @@ class PondPublicPlaceholder(PondPublicTensor):
 
   def __repr__(self) -> str:
     return "PondPublicPlaceholder(shape={})".format(self.shape)
+
+  def feed(self, value):
+    """
+    Feed `value` to placeholder
+    """
+    assert isinstance(value, np.ndarray), type(value)
+
+    feed0 = self.placeholder_on_0.feed(value)
+    feed1 = self.placeholder_on_1.feed(value)
+    return {**feed0, **feed1}
 
 
 class PondPrivatePlaceholder(PondPrivateTensor):

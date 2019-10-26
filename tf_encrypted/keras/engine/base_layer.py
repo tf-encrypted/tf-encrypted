@@ -103,12 +103,15 @@ class Layer(ABC):
 
     return outputs
 
-  def add_weight(self, variable):
+  def add_weight(self, variable, make_private=True):
+    if make_private:
+      variable = self.prot.define_private_variable(variable)
+      self.weights.append(variable)
+    else:
+      variable = self.prot.define_public_variable(variable)
+      self.weights.append(variable)
 
-    private_variable = self.prot.define_private_variable(variable)
-    self.weights.append(private_variable)
-
-    return private_variable
+    return variable
 
   def set_weights(self, weights, sess=None):
     """ Sets the weights of the layer.
@@ -128,10 +131,21 @@ class Layer(ABC):
 
     if isinstance(weights[0], np.ndarray):
       for i, w in enumerate(self.weights):
-        shape = w.shape.as_list()
-        tfe_weights_pl = tfe.define_private_placeholder(shape)
-        fd = tfe_weights_pl.feed(weights[i].reshape(shape))
-        sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
+        if isinstance(w, PondPrivateTensor):
+          shape = w.shape.as_list()
+          tfe_weights_pl = tfe.define_private_placeholder(shape)
+          fd = tfe_weights_pl.feed(weights[i].reshape(shape))
+          sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
+        else:
+          shape = w.shape.as_list()
+          tfe_weights_pl = tfe.define_public_placeholder(shape)
+          fd = tfe_weights_pl.feed(weights[i].reshape(shape))
+          sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
+          # shape = w.shape.as_list()
+          # tf_pl = tf.placeholder(tf.float32, shape=shape)
+          # fd = {tf_pl: weights[i].reshape(shape)}
+          # sess.run(tf.assign(w, tf_pl), feed_dict=fd)
+
     elif isinstance(weights[0], PondPrivateTensor):
       for i, w in enumerate(self.weights):
         shape = w.shape.as_list()
