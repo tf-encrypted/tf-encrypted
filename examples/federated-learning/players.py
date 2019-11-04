@@ -28,11 +28,12 @@ class BaseModelOwner:
                  representing the model owner.
   """
 
-  def __init__(self, player_name, local_data_file, model, loss, optimizer=None):
+  def __init__(self, player_name, local_tfrecords, model, loss, optimizer=None):
     self.player_name = player_name
 
-    self.optimizer = optimizer
     self.loss = loss
+    self.optimizer = optimizer
+    self.dataset = tf.data.TFRecordDataset(local_tfrecords)
 
     device_name = tfe.get_config().get_player(player_name).device_name
     self.device = tf.device(device_name)
@@ -40,8 +41,7 @@ class BaseModelOwner:
     with self.device:
       # TODO: don't assume it's a tf.keras model
       self.model = tf.keras.models.clone_model(model)  # clone the model, get new weights
-
-      self.evaluation_dataset = iter(self.build_data_pipeline(local_data_file))
+      self.dataset = iter(self.build_data_pipeline(self.dataset))
 
   def fit(self,
           data_owners,
@@ -68,7 +68,7 @@ class BaseModelOwner:
     raise NotImplementedError()
 
   @classmethod
-  def build_data_pipeline_fn(cls, local_data_file):
+  def build_data_pipeline(cls, dataset):
     raise NotImplementedError()
 
   def _runner(self, data_owners, rounds, evaluate, evaluate_every, **kwargs):
@@ -159,18 +159,18 @@ class BaseDataOwner:
     build_update_step: `Callable`, the function used to construct
                        a local federated learning update.
   """
-  def __init__(self, player_name, local_data_file, model, loss, optimizer=None):
+  def __init__(self, player_name, local_tfrecords, model, loss, optimizer=None):
     self.player_name = player_name
-    self.local_data_file = local_data_file
     self.loss = loss
     self.optimizer = optimizer
+    self.dataset = tf.data.TFRecordDataset(local_tfrecords)
 
     device_name = tfe.get_config().get_player(player_name).device_name
     self.device = tf.device(device_name)
 
     with self.device:
       self.model = tf.keras.models.clone_model(model)
-      self.dataset = iter(self.build_data_pipeline(local_data_file))
+      self.dataset = iter(self.build_data_pipeline(self.dataset))
 
   @tfe.local_computation
   def call_model_fn(self, batches_or_owner, *args, **kwargs):
@@ -181,5 +181,5 @@ class BaseDataOwner:
     raise NotImplementedError()
 
   @classmethod
-  def build_data_pipeline_fn(cls, local_data_file):
+  def build_data_pipeline(cls, dataset):
     raise NotImplementedError()
