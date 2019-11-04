@@ -81,13 +81,12 @@ def evaluate_classifier(model_owner):
 
   return loss
 
-def default_build_data_pipeline(filename, batch_size):
+def mnist_data_pipeline(dataset, batch_size):
   """Build data pipeline for validation by model owner."""
   def normalize(image, label):
     image = tf.cast(image, tf.float32) / 255.0
     return image, label
 
-  dataset = tf.data.TFRecordDataset([filename])
   dataset = dataset.map(decode)
   dataset = dataset.map(normalize)
   dataset = dataset.batch(batch_size, drop_remainder=True)

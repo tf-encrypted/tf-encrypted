@@ -43,7 +43,7 @@ def decode(serialized_example):
       serialized=serialized_example,
       features={
           'image': tf.io.FixedLenFeature([], tf.string),
-          'label': tf.io.FixedLenFeature([], tf.int64)
+          'label': tf.io.FixedLenFeature([], tf.string)
       }
   )
 
