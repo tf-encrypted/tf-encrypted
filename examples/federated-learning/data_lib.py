@@ -46,45 +46,18 @@ def tfds_random_splitter(dataset_name, num_splits, validation_split, **loader_kw
   return tfds.load(dataset_name, split=splits, **loader_kwargs)
 
 
-def dict_to_tensors(feature_dict):
-  """expects key-value of features that are already tensors"""
-
-  ordered_features = list(feature_dict.items())
-
-  def _lift_to_tf_string(x):
-    return tf.constant(x, dtype=tf.string)
-
-  feature_names = []
-  feature_values = []
-  feature_dtypes = []
-  for tensor_name, tensor in ordered_features:
-    name = _lift_to_tf_string(tensor_name)
-    dtype = _lift_to_tf_string(tensor.dtype.name)
-
-    feature_names.append(name)
-    feature_values.append(tensor)
-    feature_dtypes.append(dtype)
-
-  return feature_names + feature_values + feature_dtypes
-
 def from_simulated_dataset(data_pipeline_func):
   """Wraps a data_pipeline_func meant for a simulated TF Dataset."""
-  pattern = re.compile(".*-dtype")
 
-  def reconstruct_example(instance):
-    example = tf.train.Example()
-    example.ParseFromString(instance.numpy())
-
-    features = {}
-    feature_dtypes = {}
-    for name, val in example.items():
-      match = re.match(name, pattern)
-      if match is None:
-        dtype = instance["{}-dtype".format(name)]
-        parsed_tensor = tf.io.parse_tensor(tensor, tf.as_dtype(dtype))
-        features[name] = parsed_tensor
-    return features
-
+  def reconstruct_example(example_proto):
+    feature_desc = {
+      "image": tf.io.FixedLenFeature([], tf.string, ''),
+      "label": tf.io.FixedLenFeature([], tf.string, ''),
+    }
+    example = tf.io.parse_single_example(example_proto, feature_desc)
+    example["image"] = tf.io.parse_tensor(example["image"], tf.uint8)
+    example["label"] = tf.io.parse_tensor(example["label"], tf.int64)
+    return example
 
   @wraps(data_pipeline_func)
   def wrapped(*args, **kwargs):
@@ -97,40 +70,27 @@ def from_simulated_dataset(data_pipeline_func):
   return wrapped
 
 
-def serialize_example(*features):
-  third = len(features) // 3
-  feature_names = features[:third]
-  feature_values = features[third:2 * third]
-  feature_dtypes = features[2 * third:]
+def serialize_image_example(instance):
 
-  feature = {}
+  def _serializer(image, label):
+    eager_type = type(tf.constant(0))
 
-  nested_iterator = zip(feature_names, zip(feature_values, feature_dtypes))
+    im = tf.io.serialize_tensor(image)
+    lbl = tf.io.serialize_tensor(label)
+    if isinstance(im, eager_type):
+      im = im.numpy()
+      lbl = lbl.numpy()
+    im_feat = tf.train.Feature(bytes_list=tf.train.BytesList(value=[im]))
+    lbl_feat = tf.train.Feature(bytes_list=tf.train.BytesList(value=[lbl]))
 
-  for tensor_name, (tensor_val, tensor_dtype) in nested_iterator:
-    feature_name = tensor_name.numpy()
-    feature_dtype_name = "{}-dtype".format(feature_name.decode("utf-8"))
+    features = dict(image=im_feat, label=lbl_feat)
+    ex_proto = tf.train.Example(features=tf.train.Features(feature=features))
 
-    tensor_string = tf.io.serialize_tensor(tensor_val)
-    tensor_bytes = tf.train.BytesList(
-        value=[tensor_string.numpy()],
-    )
-    dtype_bytes = tf.train.BytesList(value=[tensor_dtype.numpy()])
+    return ex_proto.SerializeToString()
 
-    tensor = tf.train.Feature(bytes_list=tensor_bytes)
-    dtype = tf.train.Feature(bytes_list=dtype_bytes)
-
-    feature[feature_name] = tensor
-    feature[feature_dtype_name] = dtype
-
-  example_proto = tf.train.Example(features=tf.train.Features(feature=feature))
-
-  return example_proto.SerializeToString()
-
-
-def tf_serialize_example(*features):
-  tf_string = tf.py_function(serialize_example, features, tf.string)
-  return tf.reshape(tf_string, ())
+  inputs = [instance['image'], instance['label']]
+  tf_str = tf.py_function(_serializer, inputs, tf.string)
+  return tf.reshape(tf_str, ())
 
 
 def federate_dataset(
@@ -138,6 +98,7 @@ def federate_dataset(
     data_owner_names,
     model_owner_name=None,
     splitter_fn=tfds_random_splitter,
+    serializer_fn=serialize_image_example,
     validation_split=None,
     data_root = None,
     **load_kwargs):
@@ -222,8 +183,7 @@ def federate_dataset(
   for player, ds in zip(players, datasets):
     local_path = filepath_factory_fn(player.name)
     writer = tf.data.experimental.TFRecordWriter(local_path)
-    ds = ds.map(dict_to_tensors)
-    ds = ds.map(tf_serialize_example)
+    ds = ds.map(serializer_fn)
     writer.write(ds)
     players_to_tfrecords[player.name] = [local_path]
   return players_to_tfrecords

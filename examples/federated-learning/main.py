@@ -108,8 +108,9 @@ class ModelOwner(BaseModelOwner):
   def evaluator_fn(cls, model_owner):
     return evaluate_classifier(model_owner)
 
-  def build_data_pipeline(self, dataset):
-    return mnist_data_pipeline(dataset, 50)
+  @from_simulated_dataset
+  def build_data_pipeline(self):
+    return mnist_data_pipeline(self.dataset, 50)
 
 
 class DataOwner(BaseDataOwner):
@@ -122,8 +123,9 @@ class DataOwner(BaseDataOwner):
                        a local federated learning update.
   """
 
-  def build_data_pipeline(self, dataset):
-    return mnist_data_pipeline(dataset, FLAGS.batch_size)
+  @from_simulated_dataset
+  def build_data_pipeline(self):
+    return mnist_data_pipeline(self.dataset, FLAGS.batch_size)
 
 
 def main(_):
@@ -147,9 +149,6 @@ def main(_):
     else:
       model_owner = 'model-owner'
 
-    DataOwner.build_data_pipeline = from_simulated_dataset(DataOwner.build_data_pipeline)
-    ModelOwner.build_data_pipeline = from_simulated_dataset(ModelOwner.build_data_pipeline)
-
     simulation_tfrecords = federate_dataset(
         FLAGS.dataset,
         data_owners,
@@ -169,8 +168,8 @@ def main(_):
   logging.basicConfig(level=logging.DEBUG)
 
   model = tf.keras.Sequential((
-      tf.keras.layers.Dense(512, batch_input_shape=[FLAGS.batch_size, 28 * 28],
-                            activation='relu'),
+      tf.keras.layers.Flatten(batch_input_shape=[FLAGS.batch_size, 28, 28, 1]),
+      tf.keras.layers.Dense(512, activation='relu'),
       tf.keras.layers.Dense(10),
   ))
 

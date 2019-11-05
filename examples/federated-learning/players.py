@@ -41,7 +41,7 @@ class BaseModelOwner:
     with self.device:
       # TODO: don't assume it's a tf.keras model
       self.model = tf.keras.models.clone_model(model)  # clone the model, get new weights
-      self.dataset = iter(self.build_data_pipeline(self.dataset))
+      self.dataset = iter(self.build_data_pipeline())
 
   def fit(self,
           data_owners,
@@ -67,8 +67,7 @@ class BaseModelOwner:
     # TODO: figure out & fix the signature here
     raise NotImplementedError()
 
-  @classmethod
-  def build_data_pipeline(cls, dataset):
+  def build_data_pipeline(self):
     raise NotImplementedError()
 
   def _runner(self, data_owners, rounds, evaluate, evaluate_every, **kwargs):
@@ -173,7 +172,7 @@ class BaseDataOwner:
 
     with self.device:
       self.model = tf.keras.models.clone_model(model)
-      self.dataset = iter(self.build_data_pipeline(self.dataset))
+      self.dataset = iter(self.build_data_pipeline())
 
   @tfe.local_computation
   def call_model_fn(self, batches_or_owner, *args, **kwargs):
@@ -183,6 +182,5 @@ class BaseDataOwner:
   def model_fn(cls, batches_or_owner, *args, **kwargs):
     raise NotImplementedError()
 
-  @classmethod
-  def build_data_pipeline(cls, dataset):
+  def build_data_pipeline(self):
     raise NotImplementedError()
