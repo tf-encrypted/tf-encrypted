@@ -239,12 +239,5 @@ class TestPondAssign(unittest.TestCase):
       np.testing.assert_array_equal(result, np.zeros([2, 2]))
 
 
-
-
-
-
-
-
-
 if __name__ == '__main__':
   unittest.main()
