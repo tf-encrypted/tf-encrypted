@@ -73,7 +73,7 @@ def secure_reptile(collected_inputs, model):
 
 def evaluate_classifier(model_owner):
   """Runs a validation step!"""
-  x, y = next(model_owner.evaluation_dataset)
+  x, y = next(model_owner.dataset)
 
   with tf.name_scope('validate'):
     predictions = model_owner.model(x)
@@ -83,11 +83,17 @@ def evaluate_classifier(model_owner):
 
 def mnist_data_pipeline(dataset, batch_size):
   """Build data pipeline for validation by model owner."""
-  def normalize(image, label):
-    image = tf.cast(image, tf.float32) / 255.0
-    return image, label
+  def to_tensors(instance):
+    return instance["image"], instance["label"]
 
-  dataset = dataset.map(decode)
+  def cast(image, label):
+    return tf.cast(image, tf.float32), tf.cast(label, tf.int32)
+
+  def normalize(image, label):
+    return image / 255, label
+
+  dataset = dataset.map(to_tensors)
+  dataset = dataset.map(cast)
   dataset = dataset.map(normalize)
   dataset = dataset.batch(batch_size, drop_remainder=True)
   dataset = dataset.repeat()
