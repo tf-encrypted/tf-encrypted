@@ -3,8 +3,6 @@
 import tensorflow as tf
 import tf_encrypted as tfe
 
-from convert import decode
-
 ### Example model_fns ###
 
 def default_model_fn(data_owner):
