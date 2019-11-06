@@ -4,8 +4,6 @@ from functools import wraps
 import logging
 import os
 from pathlib import Path
-import re
-import sys
 
 import tensorflow as tf
 import tensorflow_datasets as tfds
@@ -15,9 +13,23 @@ logger = logging.getLogger('tf_encrypted')
 DEFAULT_PATH_PREFIX = os.path.join(str(Path.home()), ".tfe_data")
 
 
-def tfds_random_splitter(dataset_name, num_splits, validation_split, **loader_kwargs):
+def tfds_random_splitter(
+    dataset_name, num_splits, validation_split, **load_kwargs,
+):
+  """Select & load random splits from a TF Dataset.
+
+  Args:
+    dataset_name: str, TF Dataset to split.
+    num_splits: int, number of splits.
+    validation_split: Optional float on the interval (0,1), proportion of data
+        to keep on ModelOwner for validation. Defaults to None (i.e. 0).
+    load_kwargs: If dataset_or_name is a registered dataset name from TFDS,
+        these get passed to a call to tfds.load in the splitter_fn. If it's a
+        tf.data.Dataset object, these get passed to the splitter_fn that handles
+        it.
+  """
   # Get split_name, if available
-  split_name = loader_kwargs.pop("split", "train")
+  split_name = load_kwargs.pop("split", "train")
 
   def build_split_str(x, y=None):
     nonlocal split_name
@@ -25,7 +37,9 @@ def tfds_random_splitter(dataset_name, num_splits, validation_split, **loader_kw
       split_name = 'train'
     if y is None:
       return "{split}[:{np}%]".format(split=split_name, np=int(x))
-    return "{split}[{cp}%:{np}%]".format(split=split_name, cp=int(x), np=int(y))
+    return "{split}[{cp}%:{np}%]".format(
+        split=split_name, cp=int(x), np=int(y),
+    )
 
   # Figure out subsplit quantities
   if validation_split is not None:
@@ -35,15 +49,15 @@ def tfds_random_splitter(dataset_name, num_splits, validation_split, **loader_kw
   else:
     main_subsplit = 100
     current_percentile = 0
-  per_subsplit =  main_subsplit // num_splits
+  per_subsplit = main_subsplit // num_splits
 
 
   splits = [build_split_str(current_percentile)]
-  for i in range(num_splits):
+  for _ in range(num_splits):
     next_percentile = current_percentile + per_subsplit
     splits.append(build_split_str(current_percentile, next_percentile))
     current_percentile = next_percentile
-  return tfds.load(dataset_name, split=splits, **loader_kwargs)
+  return tfds.load(dataset_name, split=splits, **load_kwargs)
 
 
 def from_simulated_dataset(data_pipeline_func):
@@ -51,8 +65,8 @@ def from_simulated_dataset(data_pipeline_func):
 
   def reconstruct_example(example_proto):
     feature_desc = {
-      "image": tf.io.FixedLenFeature([], tf.string, ''),
-      "label": tf.io.FixedLenFeature([], tf.string, ''),
+        "image": tf.io.FixedLenFeature([], tf.string, ''),
+        "label": tf.io.FixedLenFeature([], tf.string, ''),
     }
     example = tf.io.parse_single_example(example_proto, feature_desc)
     example["image"] = tf.io.parse_tensor(example["image"], tf.uint8)
@@ -71,6 +85,17 @@ def from_simulated_dataset(data_pipeline_func):
 
 
 def serialize_image_example(instance):
+  """Serialize a specific kind of tf.train.Example.
+
+  Example must contain `image` and `label` tf.train.Features. The function is
+  meant to be mapped over an entire Dataset.
+
+  Args:
+    instance: tf.train.Example to serialize.
+
+  Returns:
+    A serialized representation of the Example.
+  """
 
   def _serializer(image, label):
     eager_type = type(tf.constant(0))
@@ -100,7 +125,7 @@ def federate_dataset(
     splitter_fn=tfds_random_splitter,
     serializer_fn=serialize_image_example,
     validation_split=None,
-    data_root = None,
+    data_root=None,
     **load_kwargs):
   """Helper to split a dataset between data owners.
 
@@ -117,8 +142,8 @@ def federate_dataset(
   data_root: Path-like designating where to write TFRecords on the data owners.
       If None, defaults to {prefix}, which assumes all devices are using the
       same filesystem format as this one (i.e. Windows vs. Unix).
-  kwargs: If dataset_or_name is a registered dataset name from TFDS, these get
-      passed to a call to tfds.load in the splitter_fn. If it's a
+  load_kwargs: If dataset_or_name is a registered dataset name from TFDS,
+      these get passed to a call to tfds.load in the splitter_fn. If it's a
       tf.data.Dataset object, these get passed to the splitter_fn that handles
       it.
   """.format(prefix=DEFAULT_PATH_PREFIX)
@@ -141,7 +166,7 @@ def federate_dataset(
     all_dataset = dataset_or_name
     dataset_name = None
   else:
-    raise
+    raise Exception()
 
   num_splits = len(data_owner_names)
   if all_dataset is None:

@@ -62,8 +62,8 @@ flags.DEFINE_integer("batch_size", 100, "Local batch size")
 # Simulation flags
 flags.DEFINE_boolean("simulation", True,
                      ("Whether the script runner should help simulate the "
-                     "training by splitting the data and distributing it "
-                     "among the participants."))
+                      "training by splitting the data and distributing it "
+                      "among the participants."))
 flags.DEFINE_string("dataset", "fashion_mnist:3.0.0",
                     ("Specify a TF Dataset to perform supervised learning on. "
                      "Must be a TF Dataset compatible with the S3 API. For "
