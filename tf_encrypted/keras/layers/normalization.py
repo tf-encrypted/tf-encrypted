@@ -179,9 +179,6 @@ class BatchNormalization(Layer):
     moving_variance = self.moving_variance_initializer(param_shape)
     moving_variance = self.add_weight(moving_variance, make_private=False)
 
-    # to_navive() tranformation is bad and not yet working
-    # Find solution to compute tf.sqrt on PondPublicVariable
-    # or use different approach
     denomtemp = self.prot.reciprocal(
         self.prot.sqrt(
             self.prot.add(moving_variance, self.epsilon)
