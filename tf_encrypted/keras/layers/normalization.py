@@ -1,11 +1,8 @@
 """Normalization layers implementation."""
-
-import tensorflow as tf
 from tensorflow.python.keras import initializers
 
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
-from tf_encrypted.keras import backend as KE
 
 class BatchNormalization(Layer):
   """Batch normalization layer (Ioffe and Szegedy, 2014).
@@ -185,10 +182,12 @@ class BatchNormalization(Layer):
     # to_navive() tranformation is bad and not yet working
     # Find solution to compute tf.sqrt on PondPublicVariable
     # or use different approach
-    denomtemp = 1.0 / tf.sqrt(moving_variance.to_native() + self.epsilon)
-    self.denom = self.prot.define_public_variable(denomtemp)
-    sess = KE.get_session()
-    sess.run(self.denom.initializer)
+    denomtemp = self.prot.reciprocal(
+        self.prot.sqrt(
+            self.prot.add(moving_variance, self.epsilon)
+        )
+    )
+    self.denom = denomtemp
 
     self.built = True
 
