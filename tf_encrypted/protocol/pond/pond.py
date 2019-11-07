@@ -2071,10 +2071,13 @@ class PondPublicPlaceholder(PondPublicTensor):
     """
     Feed `value` to placeholder
     """
+
     assert isinstance(value, np.ndarray), type(value)
 
-    feed0 = self.placeholder_on_0.feed(value)
-    feed1 = self.placeholder_on_1.feed(value)
+    enc = self.prot._encode(value, self.is_scaled)  # pylint: disable=protected-access
+
+    feed0 = self.placeholder_on_0.feed(enc)
+    feed1 = self.placeholder_on_1.feed(enc)
     return {**feed0, **feed1}
 
 

@@ -226,17 +226,15 @@ class TestPondAssign(unittest.TestCase):
     tf.reset_default_graph()
 
     with tfe.protocol.Pond() as prot:
-      x_var = prot.define_public_variable(np.ones(shape=(2, 2)))
-      data = np.zeros((2, 2))
+      x_var = prot.define_public_variable(np.zeros(shape=(2, 2)))
+      data = np.ones((2, 2))
       x_pl = tfe.define_public_placeholder(shape=(2, 2))
       fd = x_pl.feed(data.reshape((2, 2)))
 
     with tfe.Session() as sess:
-      sess.run(tf.global_variables_initializer())
       sess.run(tfe.assign(x_var, x_pl), feed_dict=fd)
-
       result = sess.run(x_var)
-      np.testing.assert_array_equal(result, np.zeros([2, 2]))
+      np.testing.assert_array_equal(result, np.ones([2, 2]))
 
 
 if __name__ == '__main__':
