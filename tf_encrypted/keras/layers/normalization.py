@@ -184,8 +184,8 @@ class BatchNormalization(Layer):
     # to_navive() tranformation is bad and not yet working
     # Find solution to compute tf.sqrt on PondPublicVariable
     # or use different approach
-    denomtemp = 1.0 / tf.sqrt(moving_variance.to_native(), + self.epsilon)
-    self.denom = self.prot.define_public_variable(denomtemp)
+    denomtemp = 1.0 / tf.sqrt(moving_variance.to_native() + self.epsilon)
+    self.denom = self.prot.define_public_input("inputter", lambda: denomtemp)
 
     self.built = True
 
