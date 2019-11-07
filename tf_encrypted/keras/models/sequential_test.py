@@ -162,6 +162,39 @@ class TestSequential(unittest.TestCase):
 
     KE.clear_session()
 
+  def test_clone_batchnorm(self):
+
+    input_shape = (1, 5, 5, 1)
+    input_data = np.random.normal(size=input_shape)
+
+    with tf.Session():
+      model = tf.keras.models.Sequential()
+
+      model.add(tf.keras.layers.BatchNormalization(
+          batch_input_shape=input_shape))
+
+      expected = model.predict(input_data)
+      k_weights = model.get_weights()
+      k_config = model.get_config()
+
+    with tfe.protocol.SecureNN():
+      x = tfe.define_private_input(
+          "inputter",
+          lambda: tf.convert_to_tensor(input_data))
+
+      tfe_model = tfe.keras.models.model_from_config(k_config)
+
+      tfe_model.set_weights(k_weights)
+      y = tfe_model(x)
+
+    with KE.get_session() as sess:
+      actual = sess.run(y.reveal())
+      for w in tfe_model.layers[0].weights:
+        print(sess.run(w.to_native()))
+      np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-2)
+
+    KE.clear_session()
+
 def _model_predict_keras(input_data, input_shape):
   with tf.Session():
     model = tf.keras.models.Sequential()
