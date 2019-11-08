@@ -789,18 +789,20 @@ class Pond(Protocol):
       return share0 + share1
 
   @memoize
-  def assign(self, variable: "PondPrivateVariable", value) -> tf.Operation:
+  def assign(
+      self,
+      variable: Union["PondPrivateVariable", "PondPublicVariable"],
+      value
+  ) -> tf.Operation:
     """See tf.assign."""
 
-    # [TODO] fix control flow
     if isinstance(variable, PondPrivateVariable):
-      assert isinstance(variable, PondPrivateVariable), type(variable)
       assert isinstance(value, PondPrivateTensor), type(value)
       assert (variable.is_scaled == value.is_scaled), ("Scaling must match: "
-                                                      "{}, {}").format(
-                                                          variable.is_scaled,
-                                                          value.is_scaled,
-                                                      )
+                                                       "{}, {}").format(
+                                                           variable.is_scaled,
+                                                           value.is_scaled,
+                                                       )
 
       var0, var1 = variable.variable0, variable.variable1
       val0, val1 = value.share0, value.share1
@@ -823,13 +825,12 @@ class Pond(Protocol):
           op = tf.group(op0, op1)
 
     elif isinstance(variable, PondPublicVariable):
-      assert isinstance(variable, PondPublicVariable), type(variable)
       assert isinstance(value, PondPublicTensor), type(value)
       assert (variable.is_scaled == value.is_scaled), ("Scaling must match: "
-                                                      "{}, {}").format(
-                                                          variable.is_scaled,
-                                                          value.is_scaled,
-                                                      )
+                                                       "{}, {}").format(
+                                                           variable.is_scaled,
+                                                           value.is_scaled,
+                                                       )
 
       var0, var1 = variable.variable_on_0, variable.variable_on_1
       val0, val1 = value.value_on_0, value.value_on_1
@@ -850,6 +851,10 @@ class Pond(Protocol):
             op1 = var1.assign_from_same(val1)
 
           op = tf.group(op0, op1)
+
+    else:
+      raise TypeError(("Don't know how to handle variable "
+                       "of type {}").format(type(variable)))
 
 
     return op

@@ -184,6 +184,7 @@ class BatchNormalization(Layer):
             self.prot.add(moving_variance, self.epsilon)
         )
     )
+
     self.denom = denomtemp
 
     self.built = True

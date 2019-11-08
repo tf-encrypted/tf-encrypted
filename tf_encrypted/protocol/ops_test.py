@@ -492,6 +492,41 @@ class TestNegative(unittest.TestCase):
 
     assert np.isclose(out_pond, out_tensorflow, atol=0.6).all()
 
+class TestSqrt(unittest.TestCase):
+  def setUp(self):
+    tf.reset_default_graph()
+
+  def test_sqrt(self):
+    input_shape = [2, 2]
+    input_sqrt = np.ones(input_shape)
+
+    # reshape pond
+    with tfe.protocol.Pond() as prot:
+
+      sqrt_input = prot.define_public_variable(input_sqrt)
+
+      sqrt_out_pond = prot.sqrt(sqrt_input)
+
+      with tfe.Session() as sess:
+
+        sess.run(tf.global_variables_initializer())
+        # outputs
+        out_pond = sess.run(sqrt_out_pond)
+
+      # reset graph
+      tf.reset_default_graph()
+
+      with tf.Session() as sess:
+        x = tf.Variable(input_sqrt, dtype=tf.float32)
+
+        sqrt_out_tf = tf.math.sqrt(x)
+
+        sess.run(tf.global_variables_initializer())
+
+        out_tensorflow = sess.run(sqrt_out_tf)
+
+    assert np.isclose(out_pond, out_tensorflow, atol=0.6).all()
+
 
 class TestPad(unittest.TestCase):
   def setUp(self):
