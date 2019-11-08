@@ -1,8 +1,12 @@
 """Normalization layers implementation."""
+import numpy as np
+import tensorflow as tf
 from tensorflow.python.keras import initializers
 
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
+from tf_encrypted.protocol.pond import PondPublicTensor
+
 
 class BatchNormalization(Layer):
   """Batch normalization layer (Ioffe and Szegedy, 2014).
@@ -176,16 +180,12 @@ class BatchNormalization(Layer):
     moving_mean = self.moving_mean_initializer(param_shape)
     self.moving_mean = self.add_weight(moving_mean, make_private=False)
 
-    moving_variance = self.moving_variance_initializer(param_shape)
-    moving_variance = self.add_weight(moving_variance, make_private=False)
+    moving_variance_init = self.moving_variance_initializer(param_shape)
+    self.moving_variance = self.add_weight(moving_variance_init,
+                                           make_private=False)
 
-    denomtemp = self.prot.reciprocal(
-        self.prot.sqrt(
-            self.prot.add(moving_variance, self.epsilon)
-        )
-    )
-
-    self.denom = denomtemp
+    denomtemp = 1.0 / tf.sqrt(moving_variance_init + self.epsilon)
+    self.denom = self.prot.define_public_variable(denomtemp)
 
     self.built = True
 
@@ -202,3 +202,34 @@ class BatchNormalization(Layer):
 
   def compute_output_shape(self, input_shape):
     return input_shape
+
+  def set_weights(self, weights, sess=None):
+
+    if not sess:
+      sess = KE.get_session()
+
+    if isinstance(weights[0], np.ndarray):
+      for i, w in enumerate(self.weights):
+        if isinstance(w, PondPublicTensor):
+          shape = w.shape.as_list()
+          tfe_weights_pl = self.prot.define_public_placeholder(shape)
+          fd = tfe_weights_pl.feed(weights[i].reshape(shape))
+          sess.run(self.prot.assign(w, tfe_weights_pl), feed_dict=fd)
+        else:
+          raise TypeError(("Don't know how to handle weights "
+                           "of type {}. Barchnorm expects public tensors"
+                           "as weights").format(type(w)))
+
+    elif isinstance(weights[0], PondPublicTensor):
+      for i, w in enumerate(self.weights):
+        shape = w.shape.as_list()
+        sess.run(self.prot.assign(w, weights[i].reshape(shape)))
+
+    
+    denomtemp = self.prot.reciprocal(
+        self.prot.sqrt(
+            self.prot.add(self.moving_variance, self.epsilon)
+        )
+    )
+
+    sess.run(self.prot.assign(self.denom, denomtemp))
