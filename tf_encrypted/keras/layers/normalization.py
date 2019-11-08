@@ -225,7 +225,7 @@ class BatchNormalization(Layer):
         shape = w.shape.as_list()
         sess.run(self.prot.assign(w, weights[i].reshape(shape)))
 
-    
+
     denomtemp = self.prot.reciprocal(
         self.prot.sqrt(
             self.prot.add(self.moving_variance, self.epsilon)
