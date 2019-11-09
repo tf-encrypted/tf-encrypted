@@ -11,7 +11,6 @@ from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
 from tf_encrypted.protocol.pond import (PondPrivateTensor,
                                         PondMaskedTensor,
-                                        PondPublicTensor
                                        )
 
 logger = logging.getLogger('tf_encrypted')
@@ -134,17 +133,10 @@ class Layer(ABC):
 
     if isinstance(weights[0], np.ndarray):
       for i, w in enumerate(self.weights):
-        if isinstance(w, PondPrivateTensor):
-          shape = w.shape.as_list()
-          tfe_weights_pl = tfe.define_private_placeholder(shape)
-          fd = tfe_weights_pl.feed(weights[i].reshape(shape))
-          sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
-        elif isinstance(w, PondPublicTensor):
-          shape = w.shape.as_list()
-          tfe_weights_pl = tfe.define_public_placeholder(shape)
-          fd = tfe_weights_pl.feed(weights[i].reshape(shape))
-          sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
-
+        shape = w.shape.as_list()
+        tfe_weights_pl = tfe.define_private_placeholder(shape)
+        fd = tfe_weights_pl.feed(weights[i].reshape(shape))
+        sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
     elif isinstance(weights[0], PondPrivateTensor):
       for i, w in enumerate(self.weights):
         shape = w.shape.as_list()
