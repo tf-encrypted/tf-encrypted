@@ -4133,12 +4133,12 @@ def _sqrt_public(prot, x):
   backing_dtype = x.backing_dtype
   x_on_0, x_on_1 = x.unwrapped
   is_scaled = x.is_scaled
-  assert is_scaled, "Can only reciprocal of scaled numbers"
+  assert is_scaled, "Can only sqrt of scaled numbers"
 
-  with tf.name_scope("reciprocal"):
+  with tf.name_scope("sqrt"):
 
     with tf.device(prot.server_0.device_name):
-      # decode value as ordinary tensor locally and compute reciprocal
+      # decode value as ordinary tensor locally and compute sqrt
       x_on_0_decoded = prot._decode(x_on_0, is_scaled)  # pylint: disable=protected-access
       y_on_0_decoded = tf.math.sqrt(x_on_0_decoded)
       # re-encode and re-wrap
@@ -4149,7 +4149,7 @@ def _sqrt_public(prot, x):
               tf_int_type=backing_dtype.native_type))
 
     with tf.device(prot.server_1.device_name):
-      # decode value as ordinary tensor locally and compute reciprocal
+      # decode value as ordinary tensor locally and compute sqrt
       x_on_1_decoded = prot._decode(x_on_1, is_scaled)  # pylint: disable=protected-access
       y_on_1_decoded = tf.math.sqrt(x_on_1_decoded)
       # re-encode and re-wrap
