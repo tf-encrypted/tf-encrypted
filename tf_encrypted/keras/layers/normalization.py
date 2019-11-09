@@ -140,7 +140,8 @@ class BatchNormalization(Layer):
                        "adjustment",
                        "BatchNormalization")
 
-    # Axis from get_config can be in ListWrapper format
+    # Axis from get_config can be in ListWrapper format even if
+    # the layer is expecting an integer for the axis
     if isinstance(axis, list):
       axis = axis[0]
 
@@ -185,6 +186,9 @@ class BatchNormalization(Layer):
                                            make_private=False)
 
     denomtemp = 1.0 / tf.sqrt(moving_variance_init + self.epsilon)
+
+    # We have two different public variables for moving_variance and
+    # denomtemp to avoid calling tfe.sqrt everytime denom is used
     self.denom = self.prot.define_public_variable(denomtemp)
 
     self.built = True
@@ -204,6 +208,14 @@ class BatchNormalization(Layer):
     return input_shape
 
   def set_weights(self, weights, sess=None):
+    """ Update layer weights from numpy array or Public Tensors
+      including denom.
+
+    Arguments:
+      weights: A list of Numpy arrays with shapes and types
+          matching the output of layer.get_weights() or a list
+          of private variables
+      sess: tfe session"""
 
     if not sess:
       sess = KE.get_session()
@@ -217,7 +229,7 @@ class BatchNormalization(Layer):
           sess.run(self.prot.assign(w, tfe_weights_pl), feed_dict=fd)
         else:
           raise TypeError(("Don't know how to handle weights "
-                           "of type {}. Barchnorm expects public tensors"
+                           "of type {}. Batchnorm expects public tensors"
                            "as weights").format(type(w)))
 
     elif isinstance(weights[0], PondPublicTensor):
@@ -225,11 +237,12 @@ class BatchNormalization(Layer):
         shape = w.shape.as_list()
         sess.run(self.prot.assign(w, weights[i].reshape(shape)))
 
-
+    # Compute denom on public tensors before being lifted to private tensor
     denomtemp = self.prot.reciprocal(
         self.prot.sqrt(
             self.prot.add(self.moving_variance, self.epsilon)
         )
     )
 
+    # Update denom as well when moving variance gets updated
     sess.run(self.prot.assign(self.denom, denomtemp))
