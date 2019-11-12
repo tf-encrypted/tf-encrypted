@@ -48,7 +48,6 @@ endif
 endif
 
 bootstrap: pythoncheck pipcheck
-	#pip install -U pip setuptools
 	curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 	python get-pip.py
 	pip install -r requirements.txt
