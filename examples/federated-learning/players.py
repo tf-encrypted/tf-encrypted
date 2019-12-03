@@ -80,11 +80,12 @@ class BaseModelOwner:
       self._update_one_round(data_owners, **kwargs)
 
       # Broadcast master model
+      # TODO: don't assume it's a tf.keras model
+      master_vars = self.model.trainable_variables
       for owner in data_owners:
-        # TODO: don't assume it's a tf.keras model
-        for var_do, var_mo in zip(owner.model.trainable_variables,
-                                  self.model.trainable_variables):
-          var_do.assign(var_mo)
+        with owner.device:
+          for v_d, v_m in zip(owner.model.trainable_variables, master_vars):
+            v_d.assign(v_m)
 
       # Evaluate once (maybe)
       if evaluate and (r + 1) % evaluate_every == 0:
