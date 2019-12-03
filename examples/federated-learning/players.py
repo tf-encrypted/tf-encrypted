@@ -82,7 +82,9 @@ class BaseModelOwner:
       # Broadcast master model
       for owner in data_owners:
         # TODO: don't assume it's a tf.keras model
-        owner.model.set_weights(self.model.get_weights())
+        for var_do, var_mo in zip(owner.model.trainable_variables,
+                                  self.model.trainable_variables):
+          var_do.assign(var_mo)
 
       # Evaluate once (maybe)
       if evaluate and (r + 1) % evaluate_every == 0:
