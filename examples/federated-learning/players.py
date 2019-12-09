@@ -32,15 +32,15 @@ class BaseModelOwner:
     self.player_name = player_name
 
     self.loss = loss
-    self.optimizer = optimizer
-    self.dataset = tf.data.TFRecordDataset(local_tfrecords)
 
     device_name = tfe.get_config().get_player(player_name).device_name
     self.device = tf.device(device_name)
 
     with self.device:
       # TODO: don't assume it's a tf.keras model
+      self.optimizer = optimizer
       self.model = tf.keras.models.clone_model(model)  # clone the model, get new weights
+      self.dataset = tf.data.TFRecordDataset(local_tfrecords)
       self.dataset = iter(self.build_data_pipeline())
 
   def fit(self,
@@ -161,13 +161,13 @@ class BaseDataOwner:
   def __init__(self, player_name, local_tfrecords, model, loss, optimizer=None):
     self.player_name = player_name
     self.loss = loss
-    self.optimizer = optimizer
-    self.dataset = tf.data.TFRecordDataset(local_tfrecords)
 
     device_name = tfe.get_config().get_player(player_name).device_name
     self.device = tf.device(device_name)
 
     with self.device:
+      self.optimizer = optimizer
+      self.dataset = tf.data.TFRecordDataset(local_tfrecords)
       self.model = tf.keras.models.clone_model(model)
       self.dataset = iter(self.build_data_pipeline())
 
