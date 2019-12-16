@@ -4,19 +4,7 @@ This example shows how TF Encrypted can be used to perform secure aggregation fo
 
 <p align="center"><img src="./assets/flow.png" width="75%"/></p>
 
-## Computation
-
-TODO
-
 ## Running
-
-Make sure to have the training and test data sets downloaded before running the example:
-
-```sh
-python3 examples/federated-learning/download.py
-```
-
-which will place the converted files in the `./data` subdirectory
 
 To then run locally use:
 
@@ -30,10 +18,12 @@ or remotely using:
 python3 examples/federated-learning/main.py --remote-config config.json
 ```
 
-There are other configuration flags, please explore them with:
+These examples with automatically download the required data and then launch the training process.
+
+There are some tweaks that be made. These can be explored with:
 
 ```sh
 python3 examples/federated-learning/main.py --help
 ```
 
-See more details in the [documentation](/docs/RUNNING.md).
+See more details about how to run with remote configration in the [documentation](/docs/RUNNING.md).
