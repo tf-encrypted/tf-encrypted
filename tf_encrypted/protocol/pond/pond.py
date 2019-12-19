@@ -837,11 +837,6 @@ class Pond(Protocol):
 
       with tf.name_scope("assign"):
 
-        # Having this control_dependencies is important in order to avoid that
-        # computationally-dependent shares are updated in different pace
-        # (e.g., share0 is computed from share1, and we need to make sure that
-        # share1 is NOT already updated).
-        # See https://github.com/tf-encrypted/tf-encrypted/pull/665 for details.
         with tf.control_dependencies(val0.support + val1.support):
 
           with tf.device(self.server_0.device_name):

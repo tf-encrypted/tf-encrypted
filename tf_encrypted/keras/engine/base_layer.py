@@ -9,9 +9,8 @@ import tf_encrypted as tfe
 from tf_encrypted import get_protocol
 from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
-from tf_encrypted.protocol.pond import (PondPrivateTensor,
-                                        PondMaskedTensor,
-                                       )
+from tf_encrypted.protocol.pond import PondPrivateTensor
+from tf_encrypted.protocol.pond import PondMaskedTensor
 
 logger = logging.getLogger('tf_encrypted')
 
