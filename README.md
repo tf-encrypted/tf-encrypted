@@ -115,8 +115,9 @@ We are very grateful for the significant contributions made by the following org
 
 <table>
     <tr>
-        <td><a href="https://dropoutlabs.com/"><img src="https://raw.githubusercontent.com/dropoutlabs/files/master/dropout-labs-logo-white-2500.png" alt="Dropout Labs" width="150"/></a></td>
-        <td><a href="https://openmined.org/"><img src="https://raw.githubusercontent.com/OpenMined/design-assets/master/logos/OM/mark-primary-trans.png" alt="OpenMined" width="150"/></a></td>
+        <td><a href="https://dropoutlabs.com/"><img src="https://raw.githubusercontent.com/tf-encrypted/assets/master/other/dropoutlabs-logo.png" alt="Dropout Labs" width="150"/></a></td>
+        <td><a href="https://www.alibabagroup.com/"><img src="https://raw.githubusercontent.com/tf-encrypted/assets/master/other/alibaba-logo.png" alt="Alibaba Security Group" width="150"/></a></td>
+        <td><a href="https://openmined.org/"><img src="https://raw.githubusercontent.com/tf-encrypted/assets/master/other/openmined-logo.png" alt="OpenMined" width="150"/></a></td>
     </tr>
 </table>
 
