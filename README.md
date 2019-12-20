@@ -84,11 +84,9 @@ Overview and background:
 
 Examples and uses:
 
-- [Crypto-Oriented Neural Architecture Design](https://arxiv.org/abs/1911.12322) uses TF Encrypted to benchmark ML optimizations made to better support the encrypted domain (*by Avital Shafran, Gil Segev, Shmuel Peleg, and Yedid Hoshen*)
-
-
 - [Federated Learning with Secure Aggregation in TensorFlow](https://medium.com/dropoutlabs/federated-learning-with-secure-aggregation-in-tensorflow-95f2f96ebecd) demonstrates using TF Encrypted for secure aggregation of federated learning in pure TensorFlow (*by Justin Patriquin at Dropout Labs*)
 
+- [Crypto-Oriented Neural Architecture Design](https://arxiv.org/abs/1911.12322) uses TF Encrypted to benchmark ML optimizations made to better support the encrypted domain (*by Avital Shafran, Gil Segev, Shmuel Peleg, and Yedid Hoshen*)
 
 - [Encrypted Deep Learning Training and Predictions with TF Encrypted Keras](https://medium.com/dropoutlabs/encrypted-deep-learning-training-and-predictions-with-tf-encrypted-keras-557193284f44) introduces and illustrates first parts of our encrypted Keras interface (*by Yann Dupis at Dropout Labs*)
 
