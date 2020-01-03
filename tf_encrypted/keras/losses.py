@@ -52,6 +52,22 @@ def binary_crossentropy(y_true, y_pred):
   return bce
 
 
+class BinaryCrossentropy_with_sigmoid(Loss):
+  """Computes the cross-entropy loss between true
+  labels and predicted labels.
+  """
+  def __init__(self):
+    super(BinaryCrossentropy_with_sigmoid, self).__init__(
+        binary_crossentropy_with_sigmoid)
+
+  def grad(self, y_true, y_pred):
+    return get_protocol().sigmoid(y_pred) - y_true
+
+def binary_crossentropy_with_sigmoid(y_true, y_pred):
+  y_pred=get_protocol().sigmoid(y_pred)
+  return binary_crossentropy(y_true, y_pred)
+
+
 class MeanSquaredError(Loss):
   """Computes the MSE loss between true
   labels and predicted labels.
@@ -72,3 +88,4 @@ def mean_squared_error(y_true, y_pred):
   out = out.square()
   mse_loss = out.reduce_sum(axis=0) * batch_size_inv
   return  mse_loss
+
