@@ -39,20 +39,18 @@ class BinaryCrossentropy(Loss):
         that `y_pred` contains probabilities (i.e., values in [0, 1]).
   """
   def __init__(self, from_logits=False):
-    self.from_logits=from_logits
+    self.from_logits = from_logits
     if from_logits:
-      super(BinaryCrossentropy, self).__init__(
-        binary_crossentropy_from_logits)
+      super(BinaryCrossentropy, self).__init__(binary_crossentropy_from_logits)
     else:
-      super(BinaryCrossentropy, self).__init__(
-        binary_crossentropy)
+      super(BinaryCrossentropy, self).__init__(binary_crossentropy)
 
   def grad(self, y_true, y_pred):
     if self.from_logits:
-      return get_protocol().sigmoid(y_pred) - y_true
+      grad = get_protocol().sigmoid(y_pred) - y_true
     else:
-      return y_pred - y_true
-
+      grad = y_pred - y_true
+    return grad
 def binary_crossentropy(y_true, y_pred):
 
   batch_size = y_true.shape.as_list()[0]
@@ -90,4 +88,3 @@ def mean_squared_error(y_true, y_pred):
   out = out.square()
   mse_loss = out.reduce_sum(axis=0) * batch_size_inv
   return  mse_loss
-
