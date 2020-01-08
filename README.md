@@ -92,6 +92,8 @@ Examples and uses:
 
 - [Experimenting with TF Encrypted](https://medium.com/dropoutlabs/experimenting-with-tf-encrypted-fe37977ff03c) walks through a simple example of turning an existing TensorFlow prediction model private (*by Morten Dahl and Jason Mancuso at Dropout Labs*)
 
+- [Introducing TF Encrypted](https://alibaba-gemini-lab.github.io/docs/blog/tfe/) walks through a simple example showing two data owners jointly training a logistic regression model using TF Encrypted on a vertically split dataset. (*by Alibaba Gemini Lab*)
+
 Presentations:
 
 - [Privacy-Preserving Machine Learning with TensorFlow](https://github.com/dropoutlabs/tf-world-tutorial), TF World 2019 (*by Jason Mancuso and Yann Dupis at Dropout Labs*)
