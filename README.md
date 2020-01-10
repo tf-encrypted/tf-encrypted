@@ -96,9 +96,9 @@ Examples and uses:
 
 Presentations:
 
-- [Privacy-Preserving Machine Learning with TensorFlow](https://github.com/dropoutlabs/tf-world-tutorial), TF World 2019 (*by Jason Mancuso and Yann Dupis at Dropout Labs*)
+- [Privacy-Preserving Machine Learning with TensorFlow](https://github.com/dropoutlabs/tf-world-tutorial), TF World 2019 (*by Jason Mancuso and Yann Dupis at Dropout Labs*); see also the [slides](https://github.com/dropoutlabs/tf-world-tutorial/blob/master/TensorFlow-World-Tutorial-2019-final.pdf)
 
-- [Privacy-Preserving Machine Learning in TensorFlow with TF Encrypted](https://conferences.oreilly.com/artificial-intelligence/ai-ny-2019/public/schedule/detail/76542), O'Reilly AI 2019 (*by Morten Dahl at Dropout Labs*)
+- [Privacy-Preserving Machine Learning in TensorFlow with TF Encrypted](https://conferences.oreilly.com/artificial-intelligence/ai-ny-2019/public/schedule/detail/76542), O'Reilly AI 2019 (*by Morten Dahl at Dropout Labs*); see also the [slides](https://github.com/mortendahl/talks/blob/master/OReillyAI19-slides.pdf)
 
 Other:
 
