@@ -161,8 +161,6 @@ class ABY3(Protocol):
       seed_2 = crypto.secure_seed()
 
 
-        b2a_nonce = 0
-        return b2a_keys_1, b2a_keys_2, b2a_nonce
 
     def define_constant(
             self,
@@ -187,6 +185,8 @@ class ABY3(Protocol):
       b2a_keys_2[2][2] = seed_2
 
         .. code-block:: python
+    b2a_nonce = 0
+    return b2a_keys_1, b2a_keys_2, b2a_nonce
 
             x = prot.define_constant(np.array([1,2,3,4]), apply_scaling=False)
 
