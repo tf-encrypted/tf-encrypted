@@ -229,8 +229,8 @@ def test_matmul_private_private():
   x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
   y = tfe.define_private_variable(tf.constant([[7, 8], [9, 10], [11, 12]]))
 
+  z = tfe.matmul(x, y)
 
-    z = tfe.matmul(x, y)
 
     with tfe.Session() as sess:
         # initialize variables
