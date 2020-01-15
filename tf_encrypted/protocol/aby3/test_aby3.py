@@ -5,65 +5,65 @@ from tf_encrypted.protocol.aby3.aby3 import i64_factory, b_factory
 import numpy as np
 
 
-def close(x, y, threshold = 0.01):
-    z = np.abs(x - y)
-    assert(np.all(z < threshold)), "\nExpected: \n {}, \ngot: \n {}".format(y, x)
+def close(x, y, threshold=0.01):
+  z = np.abs(x - y)
+  assert (np.all(z < threshold)), "\nExpected: \n {}, \ngot: \n {}".format(y, x)
 
 
 def test_add_private_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    def provide_input():
-        # normal TensorFlow operations can be run locally
-        # as part of defining a private input, in this
-        # case on the machine of the input provider
-        return tf.ones(shape=(2, 2)) * 1.3
+  def provide_input():
+    # normal TensorFlow operations can be run locally
+    # as part of defining a private input, in this
+    # case on the machine of the input provider
+    return tf.ones(shape=(2, 2)) * 1.3
 
-    # define inputs
-    x = tfe.define_private_variable(tf.ones(shape=(2,2)))
-    y = tfe.define_private_input('input-provider', provide_input)
+  # define inputs
+  x = tfe.define_private_variable(tf.ones(shape=(2, 2)))
+  y = tfe.define_private_input('input-provider', provide_input)
 
-    # define computation
-    z = x + y
+  # define computation
+  z = x + y
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        # Should be [[2.3, 2.3], [2.3, 2.3]]
-        close(result, np.array([[2.3, 2.3], [2.3, 2.3]]))
-        print("test_add_private_private succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    # Should be [[2.3, 2.3], [2.3, 2.3]]
+    close(result, np.array([[2.3, 2.3], [2.3, 2.3]]))
+    print("test_add_private_private succeeds")
 
 
 def test_add_private_public():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    # define inputs
-    x = tfe.define_private_variable(tf.ones(shape=(2,2)))
-    y = tfe.define_constant(np.array([[0.6, 0.7], [0.8, 0.9]]))
+  # define inputs
+  x = tfe.define_private_variable(tf.ones(shape=(2, 2)))
+  y = tfe.define_constant(np.array([[0.6, 0.7], [0.8, 0.9]]))
 
-    # define computation
-    z = x + y
-    z = y + z
+  # define computation
+  z = x + y
+  z = y + z
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        close(result, np.array([[2.2, 2.4], [2.6, 2.8]]))
-        print("test_add_private_public succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    close(result, np.array([[2.2, 2.4], [2.6, 2.8]]))
+    print("test_add_private_public succeeds")
 
 
 def test_sub_private_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
 
     prot = ABY3()
