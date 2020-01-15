@@ -26,7 +26,6 @@ from ...config import get_config
 from ..protocol import Protocol, memoize
 from ...operations import secure_random as crypto
 
-
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 TF_NATIVE_TYPES = [tf.bool, tf.int8, tf.int16, tf.int32, tf.int64]
 
@@ -42,23 +41,21 @@ b_factory = bool_factory()
 
 
 class ABY3(Protocol):
-    """
-    ABY3 framework.
-    """
+  """ABY3 framework."""
 
-    def __init__(
-            self,
-            server_0 = None,
-            server_1 = None,
-            server_2 = None,
-            use_noninteractive_truncation = True
-    ):
-        self._initializers = list()
-        config = get_config()
-        self.servers = [None, None, None]
-        self.servers[0] = config.get_player(server_0 if server_0 else "server0")
-        self.servers[1] = config.get_player(server_1 if server_1 else "server1")
-        self.servers[2] = config.get_player(server_2 if server_2 else "server2")
+  def __init__(
+      self,
+      server_0=None,
+      server_1=None,
+      server_2=None,
+      use_noninteractive_truncation=True,
+  ):
+    self._initializers = list()
+    config = get_config()
+    self.servers = [None, None, None]
+    self.servers[0] = config.get_player(server_0 if server_0 else "server0")
+    self.servers[1] = config.get_player(server_1 if server_1 else "server1")
+    self.servers[2] = config.get_player(server_2 if server_2 else "server2")
 
         int_factory = i64_factory
 
