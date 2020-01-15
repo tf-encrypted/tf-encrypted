@@ -620,67 +620,72 @@ def test_ot():
       prot.pairwise_nonces[0],
   )
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(prot._decode(m_c, False))
-        close(result, np.array([[2, 2, 4], [4, 6, 6]]))
-        print("test_ot succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(prot._decode(m_c, False))
+    close(result, np.array([[2, 2, 4], [4, 6, 6]]))
+    print("test_ot succeeds")
 
 
 def test_mul_AB_public_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_constant(np.array([[1, 2, 3], [4, 5, 6]]), share_type = ARITHMETIC)
-    y = tfe.define_private_variable(tf.constant([[1, 0, 0], [0, 1, 0]]),
-                                    apply_scaling=False, share_type = BOOLEAN,
-                                    factory = prot.bool_factory)
+  x = tfe.define_constant(np.array([[1, 2, 3], [4, 5, 6]]), share_type=ARITHMETIC)
+  y = tfe.define_private_variable(tf.constant([[1, 0, 0], [0, 1, 0]]),
+                                  apply_scaling=False,
+                                  share_type=BOOLEAN,
+                                  factory=prot.bool_factory)
 
-    z = tfe.mul_AB(x, y)
+  z = tfe.mul_AB(x, y)
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        close(result, np.array([[1, 0, 0], [0, 5, 0]]))
-        print("test_mul_AB_public_private succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    close(result, np.array([[1, 0, 0], [0, 5, 0]]))
+    print("test_mul_AB_public_private succeeds")
 
 
 def test_mul_AB_private_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(np.array([[1, 2, 3], [4, 5, 6]]), share_type = ARITHMETIC)
-    y = tfe.define_private_variable(tf.constant([[1, 0, 0], [0, 1, 0]]),
-                                    apply_scaling=False, share_type = BOOLEAN,
-                                    factory = prot.bool_factory)
+  x = tfe.define_private_variable(np.array([[1, 2, 3], [4, 5, 6]]), share_type=ARITHMETIC)
+  y = tfe.define_private_variable(tf.constant([[1, 0, 0], [0, 1, 0]]),
+                                  apply_scaling=False,
+                                  share_type=BOOLEAN,
+                                  factory=prot.bool_factory)
 
-    z = tfe.mul_AB(x, y)
+  z = tfe.mul_AB(x, y)
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        close(result, np.array([[1, 0, 0], [0, 5, 0]]))
-        print("test_mul_AB_private_private succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    close(result, np.array([[1, 0, 0], [0, 5, 0]]))
+    print("test_mul_AB_private_private succeeds")
 
 
 def test_bit_extract():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(np.array([[1, -2, 3], [-4, -5, 6]]), share_type = ARITHMETIC)
-    y = tfe.define_private_variable(np.array([[1, -2, 3], [-4, -5, 6]]), share_type=ARITHMETIC, apply_scaling=False)
+  x = tfe.define_private_variable(np.array([[1, -2, 3], [-4, -5, 6]]),
+                                  share_type=ARITHMETIC)
+  y = tfe.define_private_variable(np.array([[1, -2, 3], [-4, -5, 6]]),
+                                  share_type=ARITHMETIC,
+                                  apply_scaling=False)
 
     z = tfe.bit_extract(x, 63) # The sign bit. Since x is scaled, you should be more careful about extracting other bits.
     w = tfe.bit_extract(y, 1) # y is not scaled
