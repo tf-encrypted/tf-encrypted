@@ -231,43 +231,43 @@ def test_matmul_private_private():
 
   z = tfe.matmul(x, y)
 
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    close(result, np.array([[58, 64], [139, 154]]))
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        close(result, np.array([[58, 64], [139, 154]]))
+    print("test_matmul_private_private succeeds")
 
-        print("test_matmul_private_private succeeds")
 
 def test_3d_matmul_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    # 3-D matrix mult
-    x = tfe.define_private_variable(tf.constant(np.arange(1, 13), shape=[2, 2, 3]))
-    y = tfe.define_private_variable(tf.constant(np.arange(13, 25), shape=[2, 3, 2]))
+  # 3-D matrix mult
+  x = tfe.define_private_variable(tf.constant(np.arange(1, 13), shape=[2, 2, 3]))
+  y = tfe.define_private_variable(tf.constant(np.arange(13, 25), shape=[2, 3, 2]))
 
-    z = tfe.matmul(x, y)
+  z = tfe.matmul(x, y)
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        close(result, np.array([[[94, 100], [229, 244]], [[508, 532], [697, 730]]]))
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    close(result, np.array([[[94, 100], [229, 244]], [[508, 532], [697, 730]]]))
 
-        print("test_3d_matmul_private succeeds")
+    print("test_3d_matmul_private succeeds")
 
 
 def test_boolean_sharing():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
     x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type = BOOLEAN)
     y = tfe.define_private_variable(tf.constant([[7, 8, 9], [10, 11, 12]]), share_type = BOOLEAN)
