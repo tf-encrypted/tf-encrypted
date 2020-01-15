@@ -75,12 +75,12 @@ class ABY3(Protocol):
   def nbits(self):
     return self.int_factory.nbits
 
-    def setup_pairwise_randomness(self):
-        """
-        Initial setup for pairwise randomness: Every two parties hold a shared key
-        """
-        if not crypto.supports_seeded_randomness():
-            raise NotImplementedError("Secure randomness implementation is not available.")
+  def setup_pairwise_randomness(self):
+    """
+    Initial setup for pairwise randomness: Every two parties hold a shared key.
+    """
+    if not crypto.supports_seeded_randomness():
+      raise NotImplementedError("Secure randomness implementation is not available.")
 
         keys = [[None, None], [None, None], [None, None]]
         with tf.device(self.servers[0].device_name):
