@@ -17,9 +17,6 @@ from ..operations import secure_random as crypto
 
 
 def bool_factory():
-
-
-
   """Constructs the native tensor Factory."""
 
   class Factory(AbstractFactory):
