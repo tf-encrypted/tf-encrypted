@@ -208,8 +208,6 @@ def bool_factory():
     def __and__(self, other):
       return self.and_(other)
 
-    class DenseTensor(Tensor):
-        """Public native Tensor class."""
     def and_(self, other):
       # Because "and" is a keyword in Python, the naming "and_" follows the way how Python handles this:
       # https://docs.python.org/3.4/library/operator.html
@@ -224,12 +222,14 @@ def bool_factory():
       value = tf.math.logical_not(self.value)
       return DenseTensor(value)
 
-        def __init__(self, value):
-            self._value = value
+  class DenseTensor(Tensor):
+    """Public native Tensor class."""
 
         @property
         def shape(self):
             return self._value.shape
+    def __init__(self, value):
+      self._value = value
 
         @property
         def value(self):
