@@ -18,15 +18,8 @@ from ..operations import secure_random as crypto
 
 def bool_factory():
 
-        def strided_slice(self, args, kwargs):
-            return DenseTensor(tf.strided_slice(self.value, *args, **kwargs))
 
-        def gather(self, indices: list, axis: int = 0):
-            return DenseTensor(tf.gather(self.value, indices, axis=axis))
 
-        def split(self, num_split: int, axis: int = 0):
-            values = tf.split(self.value, num_split, axis=axis)
-            return [DenseTensor(value) for value in values]
   """Constructs the native tensor Factory."""
 
   class Factory(AbstractFactory):
@@ -181,15 +174,22 @@ def bool_factory():
 
         def reshape(self, axes: Union[tf.Tensor, List[int]]):
             return DenseTensor(tf.reshape(self.value, axes))
+    def strided_slice(self, args, kwargs):
+      return DenseTensor(tf.strided_slice(self.value, *args, **kwargs))
 
         def equal(self, other, factory=None):
             x, y = _lift(self, other)
             factory = factory or FACTORY
             return factory.tensor(tf.cast(tf.equal(x.value, y.value),
                                           dtype=factory.native_type))
+    def gather(self, indices: list, axis: int = 0):
+      return DenseTensor(tf.gather(self.value, indices, axis=axis))
 
         def expand_dims(self, axis: Optional[int] = None):
             return DenseTensor(tf.expand_dims(self.value, axis))
+    def split(self, num_split: int, axis: int = 0):
+      values = tf.split(self.value, num_split, axis=axis)
+      return [DenseTensor(value) for value in values]
 
         def squeeze(self, axis: Optional[List[int]] = None):
             return DenseTensor(tf.squeeze(self.value, axis=axis))
