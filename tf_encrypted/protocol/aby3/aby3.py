@@ -211,26 +211,27 @@ class ABY3(Protocol):
       with tf.device(self.servers[1].device_name):
         x_on_1 = factory.constant(value)
 
-    def define_private_variable(
-            self,
-            initial_value,
-            apply_scaling: bool = True,
-            share_type = ARITHMETIC,
-            name: Optional[str] = None,
-            factory: Optional[AbstractFactory] = None):
-        """
-        Define a private variable.
       with tf.device(self.servers[2].device_name):
         x_on_2 = factory.constant(value)
 
-        This will take the passed value and construct shares that will be split up
-        between those involved in the computation.
     return ABY3Constant(self, x_on_0, x_on_1, x_on_2, apply_scaling, share_type)
 
         For example, in a three party replicated sharing, this will split the value into
         three shares and transfer two shares to each party in a secure manner.
+  def define_private_variable(
+      self,
+      initial_value,
+      apply_scaling: bool = True,
+      share_type=ARITHMETIC,
+      name: Optional[str] = None,
+      factory: Optional[AbstractFactory] = None,
+  ):
+    """
+    Define a private variable.
 
         :see tf.Variable
+    This will take the passed value and construct shares that will be split up
+    between those involved in the computation.
 
         :param Union[np.ndarray,tf.Tensor,ABY3PublicTensor] initial_value: The
             initial value.
