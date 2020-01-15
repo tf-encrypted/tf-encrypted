@@ -868,219 +868,217 @@ def test_concat():
 
 
 def test_simple_lr_model():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    import time
-    start = time.time()
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  import time
+  start = time.time()
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    # define inputs
-    x_raw = tf.random.uniform(minval=-0.5, maxval=0.5, shape=[99, 10], seed=1000)
-    x = tfe.define_private_variable(x_raw, name="x")
-    y_raw = tf.cast(tf.reduce_mean(x_raw, axis=1, keepdims=True) > 0, dtype=tf.float32)
-    y = tfe.define_private_variable(y_raw, name="y")
-    w = tfe.define_private_variable(tf.random_uniform([10, 1], -0.01, 0.01, seed=100), name="w")
-    b = tfe.define_private_variable(tf.zeros([1]), name="b")
-    learning_rate = 0.01
+  # define inputs
+  x_raw = tf.random.uniform(minval=-0.5, maxval=0.5, shape=[99, 10], seed=1000)
+  x = tfe.define_private_variable(x_raw, name="x")
+  y_raw = tf.cast(tf.reduce_mean(x_raw, axis=1, keepdims=True) > 0, dtype=tf.float32)
+  y = tfe.define_private_variable(y_raw, name="y")
+  w = tfe.define_private_variable(tf.random_uniform([10, 1], -0.01, 0.01, seed=100),
+                                  name="w")
+  b = tfe.define_private_variable(tf.zeros([1]), name="b")
+  learning_rate = 0.01
 
-    with tf.name_scope("forward"):
-        out = tfe.matmul(x, w) + b
-        y_hat = tfe.sigmoid(out)
+  with tf.name_scope("forward"):
+    out = tfe.matmul(x, w) + b
+    y_hat = tfe.sigmoid(out)
 
-    with tf.name_scope("loss-grad"):
-        dy = y_hat - y
-    batch_size = x.shape.as_list()[0]
-    with tf.name_scope("backward"):
-        dw = tfe.matmul(tfe.transpose(x), dy) / batch_size
-        db = tfe.reduce_sum(dy, axis=0) / batch_size
-        upd1 = dw * learning_rate
-        upd2 = db * learning_rate
-        assign_ops = [
-            tfe.assign(w, w - upd1),
-            tfe.assign(b, b - upd2)
-        ]
+  with tf.name_scope("loss-grad"):
+    dy = y_hat - y
+  batch_size = x.shape.as_list()[0]
+  with tf.name_scope("backward"):
+    dw = tfe.matmul(tfe.transpose(x), dy) / batch_size
+    db = tfe.reduce_sum(dy, axis=0) / batch_size
+    upd1 = dw * learning_rate
+    upd2 = db * learning_rate
+    assign_ops = [tfe.assign(w, w - upd1), tfe.assign(b, b - upd2)]
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        for i in range(1):
-            sess.run(assign_ops)
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    for i in range(1):
+      sess.run(assign_ops)
 
-        print(sess.run(w.reveal()))
-    end = time.time()
-    print("Elapsed time: {} seconds".format(end - start))
+    print(sess.run(w.reveal()))
+  end = time.time()
+  print("Elapsed time: {} seconds".format(end - start))
 
 
 def test_mul2_private_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    def provide_input():
-        # normal TensorFlow operations can be run locally
-        # as part of defining a private input, in this
-        # case on the machine of the input provider
-        return tf.ones(shape=(2, 2)) * 1.3
+  def provide_input():
+    # normal TensorFlow operations can be run locally
+    # as part of defining a private input, in this
+    # case on the machine of the input provider
+    return tf.ones(shape=(2, 2)) * 1.3
 
-    # define inputs
-    x = tfe.define_private_variable(tf.ones(shape=(2,2))*2)
-    y = tfe.define_private_input("input-provider", provide_input)
+  # define inputs
+  x = tfe.define_private_variable(tf.ones(shape=(2, 2)) * 2)
+  y = tfe.define_private_input("input-provider", provide_input)
 
-    # define computation
-    z = tfe.mul2(x, y)
+  # define computation
+  z = tfe.mul2(x, y)
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal(), tag="mul2")
-        close(result, np.array([[2.6, 2.6], [2.6, 2.6]]))
-        print("test_mul2_private_private succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal(), tag="mul2")
+    close(result, np.array([[2.6, 2.6], [2.6, 2.6]]))
+    print("test_mul2_private_private succeeds")
 
 
 def test_error():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    a = tf.random_uniform([6, 10000], -3, 3)
-    b = tf.random_uniform([10000, 1], -0.1, 0.1)
-    x = tfe.define_private_input("input-provider", lambda: a)
-    y = tfe.define_private_input("input-provider", lambda: b)
+  a = tf.random_uniform([6, 10000], -3, 3)
+  b = tf.random_uniform([10000, 1], -0.1, 0.1)
+  x = tfe.define_private_input("input-provider", lambda: a)
+  y = tfe.define_private_input("input-provider", lambda: b)
 
-    z = tfe.matmul(x, y)
-    w = tf.matmul(a, b)
+  z = tfe.matmul(x, y)
+  w = tf.matmul(a, b)
 
-    with tfe.Session() as sess:
-        sess.run(tfe.global_variables_initializer())
-        for i in range(1000):
-            result1, result2 = sess.run(
-                [z.reveal(), w])
-            close(result1, result2, 0.1)
-        print("test_error succeeds")
+  with tfe.Session() as sess:
+    sess.run(tfe.global_variables_initializer())
+    for i in range(1000):
+      result1, result2 = sess.run([z.reveal(), w])
+      close(result1, result2, 0.1)
+    print("test_error succeeds")
 
 
 def test_write_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    def provide_input():
-        # normal TensorFlow operations can be run locally
-        # as part of defining a private input, in this
-        # case on the machine of the input provider
-        return tf.ones(shape=(2, 2)) * 1.3
+  def provide_input():
+    # normal TensorFlow operations can be run locally
+    # as part of defining a private input, in this
+    # case on the machine of the input provider
+    return tf.ones(shape=(2, 2)) * 1.3
 
-    # define inputs
-    x = tfe.define_private_input('input-provider', provide_input)
+  # define inputs
+  x = tfe.define_private_input('input-provider', provide_input)
 
-    write_op = x.write("x.tfrecord")
+  write_op = x.write("x.tfrecord")
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        sess.run(write_op)
-        print("test_write_private succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    sess.run(write_op)
+    print("test_write_private succeeds")
 
 
 def test_read_private():
 
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    def provide_input():
-        return tf.reshape(tf.range(0, 8), [4, 2])
+  def provide_input():
+    return tf.reshape(tf.range(0, 8), [4, 2])
 
-    # define inputs
-    x = tfe.define_private_input('input-provider', provide_input)
+  # define inputs
+  x = tfe.define_private_input('input-provider', provide_input)
 
-    write_op = x.write("x.tfrecord")
+  write_op = x.write("x.tfrecord")
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        sess.run(write_op)
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    sess.run(write_op)
 
-    x = tfe.read("x.tfrecord", batch_size=5, n_columns=2)
-    with tfe.Session() as sess:
-        result = sess.run(x.reveal())
-        close(result, np.array(list(range(0, 8)) + [0, 1]).reshape([5, 2]))
-        print("test_read_private succeeds")
+  x = tfe.read("x.tfrecord", batch_size=5, n_columns=2)
+  with tfe.Session() as sess:
+    result = sess.run(x.reveal())
+    close(result, np.array(list(range(0, 8)) + [0, 1]).reshape([5, 2]))
+    print("test_read_private succeeds")
 
 
 def test_iterate_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    def provide_input():
-        return tf.reshape(tf.range(0, 8), [4, 2])
+  def provide_input():
+    return tf.reshape(tf.range(0, 8), [4, 2])
 
-    # define inputs
-    x = tfe.define_private_input('input-provider', provide_input)
+  # define inputs
+  x = tfe.define_private_input('input-provider', provide_input)
 
-    write_op = x.write("x.tfrecord")
+  write_op = x.write("x.tfrecord")
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        sess.run(write_op)
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    sess.run(write_op)
 
-    x = tfe.read("x.tfrecord", batch_size=5, n_columns=2)
-    y = tfe.iterate(x, batch_size=3, repeat=True, shuffle=False)
-    z = tfe.iterate(x, batch_size=3, repeat=True, shuffle=True)
-    with tfe.Session() as sess:
-        sess.run(tfe.global_variables_initializer())
-        print(sess.run(x.reveal()))
-        print(sess.run(y.reveal()))
-        print(sess.run(y.reveal()))
-        print(sess.run(x.reveal()))
-        print(sess.run(z.reveal()))
+  x = tfe.read("x.tfrecord", batch_size=5, n_columns=2)
+  y = tfe.iterate(x, batch_size=3, repeat=True, shuffle=False)
+  z = tfe.iterate(x, batch_size=3, repeat=True, shuffle=True)
+  with tfe.Session() as sess:
+    sess.run(tfe.global_variables_initializer())
+    print(sess.run(x.reveal()))
+    print(sess.run(y.reveal()))
+    print(sess.run(y.reveal()))
+    print(sess.run(x.reveal()))
+    print(sess.run(z.reveal()))
 
 
 if __name__ == "__main__":
-    def test_arithmetic_boolean():
-        test_add_private_private()
-        test_add_private_public()
-        test_sub_private_private()
-        test_sub_private_public()
-        test_neg()
-        test_mul_private_public()
-        test_mul_private_private()
-        test_matmul_public_private()
-        test_matmul_private_private()
-        test_3d_matmul_private()
-        test_boolean_sharing()
-        test_not_private()
-        test_native_ppa_sklansky(nbits=64)
-        test_native_ppa_kogge_stone()
-        test_lshift_private()
-        test_rshift_private()
-        test_ppa_private_private()
-        test_a2b_private()
-        test_b2a_private()
-        test_ot()
-        test_mul_AB_public_private()
-        test_mul_AB_private_private()
-        test_bit_extract()
-        test_pow_private()
-        test_polynomial_private()
-        test_polynomial_piecewise()
-        test_transpose()
-        test_reduce_sum()
-        test_concat()
-        test_simple_lr_model()
-        test_mul2_private_private()
-        test_error()
 
-    test_arithmetic_boolean()
+  def test_arithmetic_boolean():
+    test_add_private_private()
+    test_add_private_public()
+    test_sub_private_private()
+    test_sub_private_public()
+    test_neg()
+    test_mul_private_public()
+    test_mul_private_private()
+    test_matmul_public_private()
+    test_matmul_private_private()
+    test_3d_matmul_private()
+    test_boolean_sharing()
+    test_not_private()
+    test_native_ppa_sklansky(nbits=64)
+    test_native_ppa_kogge_stone()
+    test_lshift_private()
+    test_rshift_private()
+    test_ppa_private_private()
+    test_a2b_private()
+    test_b2a_private()
+    test_ot()
+    test_mul_AB_public_private()
+    test_mul_AB_private_private()
+    test_bit_extract()
+    test_pow_private()
+    test_polynomial_private()
+    test_polynomial_piecewise()
+    test_transpose()
+    test_reduce_sum()
+    test_concat()
+    test_simple_lr_model()
+    test_mul2_private_private()
+    test_error()
+
+  test_arithmetic_boolean()
