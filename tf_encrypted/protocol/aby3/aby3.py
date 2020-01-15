@@ -175,7 +175,6 @@ class ABY3(Protocol):
     b2a_nonce = 0
     return b2a_keys_1, b2a_keys_2, b2a_nonce
 
-            x = prot.define_constant(np.array([1,2,3,4]), apply_scaling=False)
   def define_constant(
       self,
       value: Union[np.ndarray, int, float],
@@ -187,12 +186,13 @@ class ABY3(Protocol):
     """
     Define a constant to use in computation.
 
-        :See: tf.constant
     .. code-block:: python
 
+        x = prot.define_constant(np.array([1,2,3,4]), apply_scaling=False)
 
         if isinstance(value, (int, float)):
             value = np.array([value])
+    :See: tf.constant
 
         factory = factory or self.int_factory
     :param bool apply_scaling: Whether or not to scale the value.
