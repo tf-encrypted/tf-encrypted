@@ -687,105 +687,107 @@ def test_bit_extract():
                                   share_type=ARITHMETIC,
                                   apply_scaling=False)
 
-    z = tfe.bit_extract(x, 63) # The sign bit. Since x is scaled, you should be more careful about extracting other bits.
-    w = tfe.bit_extract(y, 1) # y is not scaled
-    s = tfe.msb(x) # Sign bit
+  z = tfe.bit_extract(
+      x, 63
+  )  # The sign bit. Since x is scaled, you should be more careful about extracting other bits.
+  w = tfe.bit_extract(y, 1)  # y is not scaled
+  s = tfe.msb(x)  # Sign bit
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        close(result.astype(int), np.array([[0, 1, 0], [1, 1, 0]]))
-        result = sess.run(w.reveal())
-        close(result.astype(int), np.array([[0, 1, 1], [0, 1, 1]]))
-        result = sess.run(s.reveal())
-        close(result.astype(int), np.array([[0, 1, 0], [1, 1, 0]]))
-        print("test_bit_extract succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    close(result.astype(int), np.array([[0, 1, 0], [1, 1, 0]]))
+    result = sess.run(w.reveal())
+    close(result.astype(int), np.array([[0, 1, 1], [0, 1, 1]]))
+    result = sess.run(s.reveal())
+    close(result.astype(int), np.array([[0, 1, 0], [1, 1, 0]]))
+    print("test_bit_extract succeeds")
 
 
 def test_pow_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
+  x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
 
-    y = x ** 2
-    z = x ** 3
+  y = x**2
+  z = x**3
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(y.reveal())
-        close(result, np.array([[1, 4, 9], [16, 25, 36]]))
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(y.reveal())
+    close(result, np.array([[1, 4, 9], [16, 25, 36]]))
 
-        result = sess.run(z.reveal())
-        close(result, np.array([[1, 8, 27], [64, 125, 216]]))
+    result = sess.run(z.reveal())
+    close(result, np.array([[1, 8, 27], [64, 125, 216]]))
 
-        print("test_pow_private succeeds")
+    print("test_pow_private succeeds")
 
 
 def test_polynomial_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
+  x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
 
-    # Friendly version
-    y = 1 + 1.2*x + 3*(x**2) + 0.5*(x**3)
-    # More optimized version: No truncation for multiplying integer coefficients (e.g., '3' in this example)
-    z = tfe.polynomial(x, [1, 1.2, 3, 0.5])
+  # Friendly version
+  y = 1 + 1.2 * x + 3 * (x**2) + 0.5 * (x**3)
+  # More optimized version: No truncation for multiplying integer coefficients (e.g., '3' in this example)
+  z = tfe.polynomial(x, [1, 1.2, 3, 0.5])
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(y.reveal())
-        close(result, np.array([[5.7, 19.4, 45.1], [85.8, 144.5, 224.2]]))
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(y.reveal())
+    close(result, np.array([[5.7, 19.4, 45.1], [85.8, 144.5, 224.2]]))
 
-        result = sess.run(z.reveal())
-        close(result, np.array([[5.7, 19.4, 45.1], [85.8, 144.5, 224.2]]))
+    result = sess.run(z.reveal())
+    close(result, np.array([[5.7, 19.4, 45.1], [85.8, 144.5, 224.2]]))
 
-        print("test_polynomial_private succeeds")
+    print("test_polynomial_private succeeds")
 
 
 def test_polynomial_piecewise():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    import time
-    start = time.time()
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  import time
+  start = time.time()
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(tf.constant([[-1, -0.5, -0.25], [0, 0.25, 2]]))
+  x = tfe.define_private_variable(tf.constant([[-1, -0.5, -0.25], [0, 0.25, 2]]))
 
-    # This is the approximation of the sigmoid function by using a piecewise function:
-    # f(x) = (0 if x<-0.5), (x+0.5 if -0.5<=x<0.5), (1 if x>=0.5)
-    z1 = tfe.polynomial_piecewise(
-        x,
-        (-0.5, 0.5),
-        ((0, ), (0.5, 1), (1, )) # Should use tuple because list is not hashable for the memoir cache key
-    )
-    # Or, simply use the pre-defined sigmoid API which includes a different approximation
-    z2 = tfe.sigmoid(x)
+  # This is the approximation of the sigmoid function by using a piecewise function:
+  # f(x) = (0 if x<-0.5), (x+0.5 if -0.5<=x<0.5), (1 if x>=0.5)
+  z1 = tfe.polynomial_piecewise(
+      x,
+      (-0.5, 0.5),
+      ((0,), (0.5, 1), (1,))  # use tuple because list is not hashable for the memoir cache key
+  )
+  # Or, simply use the pre-defined sigmoid API which includes a different approximation
+  z2 = tfe.sigmoid(x)
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z1.reveal())
-        close(result, np.array([[0, 0, 0.25], [0.5, 0.75, 1]]))
-        result = sess.run(z2.reveal())
-        close(result, np.array([[0.33, 0.415, 0.4575], [0.5, 0.5425, 0.84]]))
-        print("test_polynomial_piecewise succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z1.reveal())
+    close(result, np.array([[0, 0, 0.25], [0.5, 0.75, 1]]))
+    result = sess.run(z2.reveal())
+    close(result, np.array([[0.33, 0.415, 0.4575], [0.5, 0.5425, 0.84]]))
+    print("test_polynomial_piecewise succeeds")
 
-    end = time.time()
-    print("Elapsed time: {} seconds".format(end - start))
+  end = time.time()
+  print("Elapsed time: {} seconds".format(end - start))
 
 
 def test_transpose():
