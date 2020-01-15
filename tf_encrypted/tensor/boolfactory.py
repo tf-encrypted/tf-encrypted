@@ -216,8 +216,10 @@ def bool_factory():
       x, y = _lift(self, other)
       value = tf.math.logical_and(x.value, y.value)
       return DenseTensor(value)
+
     def __invert__(self):
       return self.invert()
+
     def invert(self):
       value = tf.math.logical_not(self.value)
       return DenseTensor(value)
