@@ -190,17 +190,16 @@ class ABY3(Protocol):
         :See: tf.constant
     .. code-block:: python
 
-        :param bool apply_scaling: Whether or not to scale the value.
-        :param str name: What name to give to this node in the graph.
-        :param AbstractFactory factory: Which tensor type to represent this value
-            with.
-        """
-        assert isinstance(value, (np.ndarray, int, float))
 
         if isinstance(value, (int, float)):
             value = np.array([value])
 
         factory = factory or self.int_factory
+    :param bool apply_scaling: Whether or not to scale the value.
+    :param str name: What name to give to this node in the graph.
+    :param AbstractFactory factory: Which tensor type to represent this value with.
+    """
+    assert isinstance(value, (np.ndarray, int, float))
 
         value = self._encode(value, apply_scaling)
         with tf.name_scope("constant{}".format("-" + name if name else "")):
