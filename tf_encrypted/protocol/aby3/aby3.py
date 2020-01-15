@@ -82,62 +82,62 @@ class ABY3(Protocol):
     if not crypto.supports_seeded_randomness():
       raise NotImplementedError("Secure randomness implementation is not available.")
 
-        keys = [[None, None], [None, None], [None, None]]
-        with tf.device(self.servers[0].device_name):
-            seed_0 = crypto.secure_seed()
-        with tf.device(self.servers[1].device_name):
-            seed_1 = crypto.secure_seed()
-        with tf.device(self.servers[2].device_name):
-            seed_2 = crypto.secure_seed()
+    keys = [[None, None], [None, None], [None, None]]
+    with tf.device(self.servers[0].device_name):
+      seed_0 = crypto.secure_seed()
+    with tf.device(self.servers[1].device_name):
+      seed_1 = crypto.secure_seed()
+    with tf.device(self.servers[2].device_name):
+      seed_2 = crypto.secure_seed()
 
-        # Replicated keys
-        with tf.device(self.servers[0].device_name):
-            keys[0][0] = seed_0
-            keys[0][1] = seed_1
-        with tf.device(self.servers[1].device_name):
-            keys[1][0] = seed_1
-            keys[1][1] = seed_2
-        with tf.device(self.servers[2].device_name):
-            keys[2][0] = seed_2
-            keys[2][1] = seed_0
+    # Replicated keys
+    with tf.device(self.servers[0].device_name):
+      keys[0][0] = seed_0
+      keys[0][1] = seed_1
+    with tf.device(self.servers[1].device_name):
+      keys[1][0] = seed_1
+      keys[1][1] = seed_2
+    with tf.device(self.servers[2].device_name):
+      keys[2][0] = seed_2
+      keys[2][1] = seed_0
 
-        # nonces[0] for server 0 and 1, nonces[1] for server 1 and 2, nonces[2] for server 2 and 0
-        nonces = np.array([0, 0, 0], dtype=np.int)
+    # nonces[0] for server 0 and 1, nonces[1] for server 1 and 2, nonces[2] for server 2 and 0
+    nonces = np.array([0, 0, 0], dtype=np.int)
 
-        # TODO: Think about the security: Do we really need PRF for zero sharing?
-        #
-        # According to the discussion here:
-        # https://crypto.stackexchange.com/questions/5333/difference-between-stream-cipher-and-block-cipher
-        # stream ciphers can also be treated as a keyed pseudorandom function family, like block ciphers.
-        # And the underlying C++ implementation of the secure_random.py uses exactly chacha20 stream cipher from
-        # the libsodium library. Therefore, if we can treated stream ciphers as pseudorandom functions, then it
-        # should be fine to directly use G(k + id) to generate the random numbers, where the seed "k + id" is
-        # used as the key of the stream cipher in the C++ code: generators.h
-        #
-        # Otherwise, the absolutely secure way is to implement our own PRF by using block ciphers.
-        # In practice, people normally use stream ciphers for PRG, and use block ciphers for PRF.
+    # TODO: Think about the security: Do we really need PRF for zero sharing?
+    #
+    # According to the discussion here:
+    # https://crypto.stackexchange.com/questions/5333/difference-between-stream-cipher-and-block-cipher
+    # stream ciphers can also be treated as a keyed pseudorandom function family, like block ciphers.
+    # And the underlying C++ implementation of the secure_random.py uses exactly chacha20 stream cipher from
+    # the libsodium library. Therefore, if we can treated stream ciphers as pseudorandom functions, then it
+    # should be fine to directly use G(k + id) to generate the random numbers, where the seed "k + id" is
+    # used as the key of the stream cipher in the C++ code: generators.h
+    #
+    # Otherwise, the absolutely secure way is to implement our own PRF by using block ciphers.
+    # In practice, people normally use stream ciphers for PRG, and use block ciphers for PRF.
 
-        return keys, nonces
+    return keys, nonces
 
-    def setup_b2a_generator(self):
-        """
-        Initial setup for generating shares during the conversion
-        from boolean sharing to arithmetic sharing
+  def setup_b2a_generator(self):
+    """
+    Initial setup for generating shares during the conversion
+    from boolean sharing to arithmetic sharing
 
-        TODO: Think about the security: Do we really need PRF?
-        """
+    TODO: Think about the security: Do we really need PRF?
+    """
 
-        if not crypto.supports_seeded_randomness():
-            raise NotImplementedError("Secure randomness implementation is not available.")
+    if not crypto.supports_seeded_randomness():
+      raise NotImplementedError("Secure randomness implementation is not available.")
 
-        # Type 1: Server 0 and 1 hold three keys, while server 2 holds two
-        b2a_keys_1 = [[None, None, None], [None, None, None], [None, None, None]]
-        with tf.device(self.servers[0].device_name):
-            seed_0 = crypto.secure_seed()
-        with tf.device(self.servers[1].device_name):
-            seed_1 = crypto.secure_seed()
-        with tf.device(self.servers[2].device_name):
-            seed_2 = crypto.secure_seed()
+    # Type 1: Server 0 and 1 hold three keys, while server 2 holds two
+    b2a_keys_1 = [[None, None, None], [None, None, None], [None, None, None]]
+    with tf.device(self.servers[0].device_name):
+      seed_0 = crypto.secure_seed()
+    with tf.device(self.servers[1].device_name):
+      seed_1 = crypto.secure_seed()
+    with tf.device(self.servers[2].device_name):
+      seed_2 = crypto.secure_seed()
 
         with tf.device(self.servers[0].device_name):
             b2a_keys_1[0][0] = seed_0
