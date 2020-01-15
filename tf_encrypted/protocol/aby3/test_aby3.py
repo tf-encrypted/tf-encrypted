@@ -320,161 +320,172 @@ def test_not_private():
 
 
 def test_native_ppa_sklansky(nbits=128):
-    from math import log2
-    from random import randint
-    n = 10
-    while n > 0:
-        n = n-1
+  from math import log2
+  from random import randint
+  n = 10
+  while n > 0:
+    n = n - 1
 
+    if nbits == 64:
+      x = randint(1, 2**31)
+      y = randint(1, 2**31)
+      keep_masks = [
+          0x5555555555555555, 0x3333333333333333,
+          0x0f0f0f0f0f0f0f0f, 0x00ff00ff00ff00ff,
+          0x0000ffff0000ffff, 0x00000000ffffffff
+      ] # yapf: disable
+      copy_masks = [
+          0x5555555555555555, 0x2222222222222222,
+          0x0808080808080808, 0x0080008000800080,
+          0x0000800000008000, 0x0000000080000000
+      ] # yapf: disable
+    elif nbits == 128:
+      x = randint(1, 2**125)
+      y = randint(1, 2**125)
+      keep_masks = [
+          0x55555555555555555555555555555555, 0x33333333333333333333333333333333,
+          0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f, 0x00ff00ff00ff00ff00ff00ff00ff00ff,
+          0x0000ffff0000ffff0000ffff0000ffff, 0x00000000ffffffff00000000ffffffff,
+          0x0000000000000000ffffffffffffffff
+      ]
+      copy_masks = [
+          0x55555555555555555555555555555555, 0x22222222222222222222222222222222,
+          0x08080808080808080808080808080808, 0x00800080008000800080008000800080,
+          0x00008000000080000000800000008000, 0x00000000800000000000000080000000,
+          0x00000000000000008000000000000000
+      ]
+    G = x & y
+    P = x ^ y
+    k = nbits
+    for i in range(int(log2(k))):
+      c_mask = copy_masks[i]
+      k_mask = keep_masks[i]
+      # Copy the selected bit to 2^i positions:
+      # For example, when i=2, the 4-th bit is copied to the (5, 6, 7, 8)-th bits
+      G1 = (G & c_mask) << 1
+      P1 = (P & c_mask) << 1
+      for j in range(i):
+        G1 = (G1 << (2**j)) ^ G1
+        P1 = (P1 << (2**j)) ^ P1
+      """
+      Two-round impl. using algo. specified in the slides that assume using OR gate is free, but in fact,
+      here using OR gate cost one round.
+      The PPA operator 'o' is defined as:
+      (G, P) o (G1, P1) = (G + P*G1, P*P1), where '+' is OR, '*' is AND
+      """
+      # G1 and P1 are 0 for those positions that we do not copy the selected bit to.
+      # Hence for those positions, the result is: (G, P) = (G, P) o (0, 0) = (G, 0).
+      # In order to keep (G, P) for these positions so that they can be used in the future,
+      # we need to let (G1, P1) = (G, P) for these positions, because (G, P) o (G, P) = (G, P)
+      #
+      # G1 = G1 ^ (G & k_mask)
+      # P1 = P1 ^ (P & k_mask)
+      #
+      # G = G | (P & G1)
+      # P = P & P1
+      """
+      One-round impl. by modifying the PPA operator 'o' as:
+      (G, P) o (G1, P1) = (G ^ (P*G1), P*P1), where '^' is XOR, '*' is AND
+      This is a valid definition: when calculating the carry bit c_i = g_i + p_i * c_{i-1},
+      the OR '+' can actually be replaced with XOR '^' because we know g_i and p_i will NOT take '1'
+      at the same time.
+      And this PPA operator 'o' is also associative. BUT, it is NOT idempotent, hence (G, P) o (G, P) != (G, P).
+      This does not matter, because we can do (G, P) o (0, P) = (G, P), or (G, P) o (0, 1) = (G, P)
+      if we want to keep G and P bits.
+      """
+      # Option 1: Using (G, P) o (0, P) = (G, P)
+      # P1 = P1 ^ (P & k_mask)
+      # Option 2: Using (G, P) o (0, 1) = (G, P)
+      P1 = P1 ^ k_mask
 
-        if nbits == 64:
-            x = randint(1, 2**31)
-            y = randint(1, 2**31)
-            keep_masks = [0x5555555555555555, 0x3333333333333333, 0x0f0f0f0f0f0f0f0f,
-                          0x00ff00ff00ff00ff, 0x0000ffff0000ffff, 0x00000000ffffffff]
-            copy_masks = [0x5555555555555555, 0x2222222222222222, 0x0808080808080808,
-                          0x0080008000800080, 0x0000800000008000, 0x0000000080000000]
-        elif nbits == 128:
-            x = randint(1, 2**125)
-            y = randint(1, 2**125)
-            keep_masks = [
-                    0x55555555555555555555555555555555, 0x33333333333333333333333333333333,
-                    0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f, 0x00ff00ff00ff00ff00ff00ff00ff00ff,
-                    0x0000ffff0000ffff0000ffff0000ffff, 0x00000000ffffffff00000000ffffffff,
-                    0x0000000000000000ffffffffffffffff]
-            copy_masks = [
-                    0x55555555555555555555555555555555, 0x22222222222222222222222222222222,
-                    0x08080808080808080808080808080808, 0x00800080008000800080008000800080,
-                    0x00008000000080000000800000008000, 0x00000000800000000000000080000000,
-                    0x00000000000000008000000000000000]
-        G = x & y
-        P = x ^ y
-        k = nbits
-        for i in range(int(log2(k))):
-            c_mask = copy_masks[i]
-            k_mask = keep_masks[i]
-            # Copy the selected bit to 2^i positions:
-            # For example, when i=2, the 4-th bit is copied to the (5, 6, 7, 8)-th bits
-            G1 = (G & c_mask) << 1
-            P1 = (P & c_mask) << 1
-            for j in range(i):
-                G1 = (G1 << (2**j)) ^ G1
-                P1 = (P1 << (2**j)) ^ P1
-            '''
-            Two-round impl. using algo. specified in the slides that assume using OR gate is free, but in fact,
-            here using OR gate cost one round.
-            The PPA operator 'o' is defined as:
-            (G, P) o (G1, P1) = (G + P*G1, P*P1), where '+' is OR, '*' is AND
-            '''
-            # G1 and P1 are 0 for those positions that we do not copy the selected bit to.
-            # Hence for those positions, the result is: (G, P) = (G, P) o (0, 0) = (G, 0).
-            # In order to keep (G, P) for these positions so that they can be used in the future,
-            # we need to let (G1, P1) = (G, P) for these positions, because (G, P) o (G, P) = (G, P)
-            #
-            # G1 = G1 ^ (G & k_mask)
-            # P1 = P1 ^ (P & k_mask)
-            #
-            # G = G | (P & G1)
-            # P = P & P1
+      G = G ^ (P & G1)
+      P = P & P1
 
+    # G stores the carry-in to the next position
+    C = G << 1
+    P = x ^ y
+    z = C ^ P
 
-            '''
-            One-round impl. by modifying the PPA operator 'o' as:
-            (G, P) o (G1, P1) = (G ^ (P*G1), P*P1), where '^' is XOR, '*' is AND
-            This is a valid definition: when calculating the carry bit c_i = g_i + p_i * c_{i-1},
-            the OR '+' can actually be replaced with XOR '^' because we know g_i and p_i will NOT take '1'
-            at the same time.
-            And this PPA operator 'o' is also associative. BUT, it is NOT idempotent, hence (G, P) o (G, P) != (G, P).
-            This does not matter, because we can do (G, P) o (0, P) = (G, P), or (G, P) o (0, 1) = (G, P)
-            if we want to keep G and P bits.
-            '''
-            # Option 1: Using (G, P) o (0, P) = (G, P)
-            # P1 = P1 ^ (P & k_mask)
-            # Option 2: Using (G, P) o (0, 1) = (G, P)
-            P1 = P1 ^ k_mask
+    truth = x + y
 
-            G = G ^ (P & G1)
-            P = P & P1
-
-        # G stores the carry-in to the next position
-        C = G << 1
-        P = x ^ y
-        z = C ^ P
-
-        truth = x + y
-
-        assert z==truth
-    print("test_native_ppa_sklansky succeeds")
+    assert z == truth
+  print("test_native_ppa_sklansky succeeds")
 
 
 def test_native_ppa_kogge_stone():
-    from math import log2
-    from random import randint
-    n = 10
-    while n > 0:
-        n = n-1
-        x = randint(1, 2**31)
-        y = randint(1, 2**31)
-        G = x & y
-        P = x ^ y
-        keep_masks = [0x0000000000000001, 0x0000000000000003, 0x000000000000000f,
-                      0x00000000000000ff, 0x000000000000ffff, 0x00000000ffffffff]
-        copy_masks = [0x5555555555555555, 0x2222222222222222, 0x0808080808080808,
-                      0x0080008000800080, 0x0000800000008000, 0x0000000080000000]
-        k = 64
-        for i in range(int(log2(k))):
-            c_mask = copy_masks[i]
-            k_mask = keep_masks[i]
-            # Copy the selected bit to 2^i positions:
-            # For example, when i=2, the 4-th bit is copied to the (5, 6, 7, 8)-th bits
-            G1 = G << (2**i)
-            P1 = P << (2**i)
-            '''
-            One-round impl. by modifying the PPA operator 'o' as:
-            (G, P) o (G1, P1) = (G ^ (P*G1), P*P1), where '^' is XOR, '*' is AND
-            This is a valid definition: when calculating the carry bit c_i = g_i + p_i * c_{i-1},
-            the OR '+' can actually be replaced with XOR '^' because we know g_i and p_i will NOT take '1'
-            at the same time.
-            And this PPA operator 'o' is also associative. BUT, it is NOT idempotent, hence (G, P) o (G, P) != (G, P).
-            This does not matter, because we can do (G, P) o (0, P) = (G, P), or (G, P) o (0, 1) = (G, P)
-            if we want to keep G and P bits.
-            '''
-            # Option 1: Using (G, P) o (0, P) = (G, P)
-            # P1 = P1 ^ (P & k_mask)
-            # Option 2: Using (G, P) o (0, 1) = (G, P)
-            P1 = P1 ^ k_mask
+  from math import log2
+  from random import randint
+  n = 10
+  while n > 0:
+    n = n - 1
+    x = randint(1, 2**31)
+    y = randint(1, 2**31)
+    G = x & y
+    P = x ^ y
+    keep_masks = [
+        0x0000000000000001, 0x0000000000000003,
+        0x000000000000000f, 0x00000000000000ff,
+        0x000000000000ffff, 0x00000000ffffffff
+    ] # yapf: disable
+    copy_masks = [
+        0x5555555555555555, 0x2222222222222222,
+        0x0808080808080808, 0x0080008000800080,
+        0x0000800000008000, 0x0000000080000000
+    ] # yapf: disable
+    k = 64
+    for i in range(int(log2(k))):
+      c_mask = copy_masks[i]
+      k_mask = keep_masks[i]
+      # Copy the selected bit to 2^i positions:
+      # For example, when i=2, the 4-th bit is copied to the (5, 6, 7, 8)-th bits
+      G1 = G << (2**i)
+      P1 = P << (2**i)
+      """
+      One-round impl. by modifying the PPA operator 'o' as:
+      (G, P) o (G1, P1) = (G ^ (P*G1), P*P1), where '^' is XOR, '*' is AND
+      This is a valid definition: when calculating the carry bit c_i = g_i + p_i * c_{i-1},
+      the OR '+' can actually be replaced with XOR '^' because we know g_i and p_i will NOT take '1'
+      at the same time.
+      And this PPA operator 'o' is also associative. BUT, it is NOT idempotent, hence (G, P) o (G, P) != (G, P).
+      This does not matter, because we can do (G, P) o (0, P) = (G, P), or (G, P) o (0, 1) = (G, P)
+      if we want to keep G and P bits.
+      """
+      # Option 1: Using (G, P) o (0, P) = (G, P)
+      # P1 = P1 ^ (P & k_mask)
+      # Option 2: Using (G, P) o (0, 1) = (G, P)
+      P1 = P1 ^ k_mask
 
-            G = G ^ (P & G1)
-            P = P & P1
+      G = G ^ (P & G1)
+      P = P & P1
 
-        # G stores the carry-in to the next position
-        C = G << 1
-        P = x ^ y
-        z = C ^ P
+    # G stores the carry-in to the next position
+    C = G << 1
+    P = x ^ y
+    z = C ^ P
 
-        truth = x + y
+    truth = x + y
 
-        assert z==truth
-    print("test_native_ppa_kogge_stone succeeds")
+    assert z == truth
+  print("test_native_ppa_kogge_stone succeeds")
 
 
 def test_lshift_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type = BOOLEAN)
+  x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=BOOLEAN)
 
-    z = x << 1
+  z = x << 1
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        close(result, np.array([[2, 4, 6], [8, 10, 12]]))
-        print("test_lshift_private succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    close(result, np.array([[2, 4, 6], [8, 10, 12]]))
+    print("test_lshift_private succeeds")
 
 
 def test_rshift_private():
