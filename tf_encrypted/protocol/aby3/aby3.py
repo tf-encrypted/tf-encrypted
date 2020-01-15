@@ -190,11 +190,8 @@ class ABY3(Protocol):
 
         x = prot.define_constant(np.array([1,2,3,4]), apply_scaling=False)
 
-        if isinstance(value, (int, float)):
-            value = np.array([value])
     :See: tf.constant
 
-        factory = factory or self.int_factory
     :param bool apply_scaling: Whether or not to scale the value.
     :param str name: What name to give to this node in the graph.
     :param AbstractFactory factory: Which tensor type to represent this value with.
@@ -205,9 +202,12 @@ class ABY3(Protocol):
         with tf.name_scope("constant{}".format("-" + name if name else "")):
             with tf.device(self.servers[0].device_name):
                 x_on_0 = factory.constant(value)
+    if isinstance(value, (int, float)):
+      value = np.array([value])
 
             with tf.device(self.servers[1].device_name):
                 x_on_1 = factory.constant(value)
+    factory = factory or self.int_factory
 
             with tf.device(self.servers[2].device_name):
                 x_on_2 = factory.constant(value)
