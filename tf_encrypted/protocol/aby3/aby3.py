@@ -216,8 +216,6 @@ class ABY3(Protocol):
 
     return ABY3Constant(self, x_on_0, x_on_1, x_on_2, apply_scaling, share_type)
 
-        For example, in a three party replicated sharing, this will split the value into
-        three shares and transfer two shares to each party in a secure manner.
   def define_private_variable(
       self,
       initial_value,
@@ -229,7 +227,6 @@ class ABY3(Protocol):
     """
     Define a private variable.
 
-        :see tf.Variable
     This will take the passed value and construct shares that will be split up
     between those involved in the computation.
 
@@ -244,9 +241,12 @@ class ABY3(Protocol):
                           tf.Tensor,
                           ABY3PrivateTensor)
         assert isinstance(initial_value, init_val_types), type(initial_value)
+    For example, in a three party replicated sharing, this will split the value into
+    three shares and transfer two shares to each party in a secure manner.
 
         factory = factory or self.int_factory
         suffix = "-" + name if name else ""
+    :see tf.Variable
 
         with tf.name_scope("private-var{}".format(suffix)):
 
