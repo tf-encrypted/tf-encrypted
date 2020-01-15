@@ -225,22 +225,23 @@ def bool_factory():
   class DenseTensor(Tensor):
     """Public native Tensor class."""
 
-        @property
-        def shape(self):
-            return self._value.shape
     def __init__(self, value):
       self._value = value
 
-        @property
-        def value(self):
-            return self._value
+    @property
+    def shape(self):
+      return self._value.shape
 
-        @property
-        def support(self):
-            return [self._value]
+    @property
+    def value(self):
+      return self._value
 
-    class UniformTensor(Tensor):
-        """Class representing a uniform-random, lazily sampled tensor.
+    @property
+    def support(self):
+      return [self._value]
+
+  class UniformTensor(Tensor):
+    """Class representing a uniform-random, lazily sampled tensor.
 
         Lazy sampling optimizes communication by sending seeds in place of
         fully-expanded tensors."""
