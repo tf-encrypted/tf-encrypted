@@ -426,12 +426,12 @@ def test_native_ppa_kogge_stone():
         0x0000000000000001, 0x0000000000000003,
         0x000000000000000f, 0x00000000000000ff,
         0x000000000000ffff, 0x00000000ffffffff
-    ] # yapf: disable
+    ]  # yapf: disable
     copy_masks = [
         0x5555555555555555, 0x2222222222222222,
         0x0808080808080808, 0x0080008000800080,
         0x0000800000008000, 0x0000000080000000
-    ] # yapf: disable
+    ]  # yapf: disable
     k = 64
     for i in range(int(log2(k))):
       c_mask = copy_masks[i]
