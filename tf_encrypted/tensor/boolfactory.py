@@ -246,77 +246,72 @@ def bool_factory():
         Lazy sampling optimizes communication by sending seeds in place of
         fully-expanded tensors."""
 
-        def __init__(self, shape, seed, minval, maxval):
-            self._seed = seed
-            self._shape = shape
-            self._minval = minval
-            self._maxval = maxval
+    def __init__(self, shape, seed, minval, maxval):
+      self._seed = seed
+      self._shape = shape
+      self._minval = minval
+      self._maxval = maxval
 
-        @property
-        def shape(self):
-            return self._shape
+    @property
+    def shape(self):
+      return self._shape
 
-        @property
-        def value(self):
-            with tf.name_scope('expand-seed'):
-                return tf.cast(
-                    crypto.seeded_random_uniform(
-                        shape=self._shape,
-                        dtype=tf.int32,
-                        minval=self._minval,
-                        maxval=self._maxval,
-                        seed=self._seed),
-                    tf.bool)
+    @property
+    def value(self):
+      with tf.name_scope('expand-seed'):
+        return tf.cast(
+            crypto.seeded_random_uniform(shape=self._shape,
+                                         dtype=tf.int32,
+                                         minval=self._minval,
+                                         maxval=self._maxval,
+                                         seed=self._seed), tf.bool)
 
-        @property
-        def support(self):
-            return [self._seed]
+    @property
+    def support(self):
+      return [self._seed]
 
-    class Constant(DenseTensor, AbstractConstant):
-        """Native Constant class."""
+  class Constant(DenseTensor, AbstractConstant):
+    """Native Constant class."""
 
-        def __init__(self, constant: tf.Tensor) -> None:
-            assert isinstance(constant, tf.Tensor)
-            super(Constant, self).__init__(constant)
+    def __init__(self, constant: tf.Tensor) -> None:
+      assert isinstance(constant, tf.Tensor)
+      super(Constant, self).__init__(constant)
 
-        def __repr__(self) -> str:
-            return 'Constant(shape={})'.format(self.shape)
+    def __repr__(self) -> str:
+      return 'Constant(shape={})'.format(self.shape)
 
-    class Placeholder(DenseTensor, AbstractPlaceholder):
-        """Native Placeholder class."""
+  class Placeholder(DenseTensor, AbstractPlaceholder):
+    """Native Placeholder class."""
 
-        def __init__(self, shape: List[int]) -> None:
-            self.placeholder = tf.placeholder(tf.bool, shape=shape)
-            super(Placeholder, self).__init__(self.placeholder)
+    def __init__(self, shape: List[int]) -> None:
+      self.placeholder = tf.placeholder(tf.bool, shape=shape)
+      super(Placeholder, self).__init__(self.placeholder)
 
-        def __repr__(self) -> str:
-            return 'Placeholder(shape={})'.format(self.shape)
+    def __repr__(self) -> str:
+      return 'Placeholder(shape={})'.format(self.shape)
 
-        def feed(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
-            assert isinstance(value, np.ndarray), type(value)
-            return {
-                self.placeholder: value
-            }
+    def feed(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
+      assert isinstance(value, np.ndarray), type(value)
+      return {self.placeholder: value}
 
-    class Variable(DenseTensor, AbstractVariable):
-        """Native Variable class."""
+  class Variable(DenseTensor, AbstractVariable):
+    """Native Variable class."""
 
-        def __init__(self, initial_value: Union[tf.Tensor, np.ndarray]) -> None:
-            self.variable = tf.Variable(
-                initial_value, dtype=tf.bool, trainable=False)
-            self.initializer = self.variable.initializer
-            super(Variable, self).__init__(self.variable.read_value())
+    def __init__(self, initial_value: Union[tf.Tensor, np.ndarray]) -> None:
+      self.variable = tf.Variable(initial_value, dtype=tf.bool, trainable=False)
+      self.initializer = self.variable.initializer
+      super(Variable, self).__init__(self.variable.read_value())
 
-        def __repr__(self) -> str:
-            return 'Variable(shape={})'.format(self.shape)
+    def __repr__(self) -> str:
+      return 'Variable(shape={})'.format(self.shape)
 
-        def assign_from_native(self, value: np.ndarray) -> tf.Operation:
-            assert isinstance(value, np.ndarray), type(value)
-            return self.assign_from_same(FACTORY.tensor(value))
+    def assign_from_native(self, value: np.ndarray) -> tf.Operation:
+      assert isinstance(value, np.ndarray), type(value)
+      return self.assign_from_same(FACTORY.tensor(value))
 
-        def assign_from_same(self, value: Tensor) -> tf.Operation:
-            assert isinstance(value, Tensor), type(value)
-            return tf.assign(self.variable, value.value).op
+    def assign_from_same(self, value: Tensor) -> tf.Operation:
+      assert isinstance(value, Tensor), type(value)
+      return tf.assign(self.variable, value.value).op
 
-    FACTORY = Factory()
-    return FACTORY
+  FACTORY = Factory()
+  return FACTORY
