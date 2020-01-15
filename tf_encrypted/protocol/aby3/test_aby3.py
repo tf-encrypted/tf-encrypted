@@ -593,20 +593,32 @@ def test_b2a_private():
 def test_ot():
   tf.reset_default_graph()
 
-    m0 = prot.define_constant(np.array([[1, 2, 3], [4, 5, 6]]), apply_scaling=False).unwrapped[0]
-    m1 = prot.define_constant(np.array([[2, 3, 4], [5, 6, 7]]), apply_scaling=False).unwrapped[0]
-    c_on_receiver = prot.define_constant(np.array([[1, 0, 1], [0, 1, 0]]),
-            apply_scaling=False, factory=prot.bool_factory).unwrapped[0]
-    c_on_helper = prot.define_constant(np.array([[1, 0, 1], [0, 1, 0]]),
-            apply_scaling=False, factory=prot.bool_factory).unwrapped[0]
   prot = ABY3()
   tfe.set_protocol(prot)
 
-    m_c = prot._ot(prot.servers[1], prot.servers[2], prot.servers[0],
-                   m0, m1,
-                   c_on_receiver, c_on_helper,
-                   prot.pairwise_keys[1][0], prot.pairwise_keys[0][1],
-                   prot.pairwise_nonces[0])
+  m0 = prot.define_constant(np.array([[1, 2, 3], [4, 5, 6]]),
+                            apply_scaling=False).unwrapped[0]
+  m1 = prot.define_constant(np.array([[2, 3, 4], [5, 6, 7]]),
+                            apply_scaling=False).unwrapped[0]
+  c_on_receiver = prot.define_constant(np.array([[1, 0, 1], [0, 1, 0]]),
+                                       apply_scaling=False,
+                                       factory=prot.bool_factory).unwrapped[0]
+  c_on_helper = prot.define_constant(np.array([[1, 0, 1], [0, 1, 0]]),
+                                     apply_scaling=False,
+                                     factory=prot.bool_factory).unwrapped[0]
+
+  m_c = prot._ot(
+      prot.servers[1],
+      prot.servers[2],
+      prot.servers[0],
+      m0,
+      m1,
+      c_on_receiver,
+      c_on_helper,
+      prot.pairwise_keys[1][0],
+      prot.pairwise_keys[0][1],
+      prot.pairwise_nonces[0],
+  )
 
     with tfe.Session() as sess:
         # initialize variables
