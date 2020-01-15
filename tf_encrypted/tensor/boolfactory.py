@@ -194,33 +194,33 @@ def bool_factory():
     def squeeze(self, axis: Optional[List[int]] = None):
       return DenseTensor(tf.squeeze(self.value, axis=axis))
 
-        def __and__(self, other):
-            return self.and_(other)
     def cast(self, factory):
       return factory.tensor(self.value)
 
-        def and_(self, other):
-            # Because "and" is a keyword in Python, the naming "and_" follows the way how Python handles this:
-            # https://docs.python.org/3.4/library/operator.html
-            x, y = _lift(self, other)
-            value = tf.math.logical_and(x.value, y.value)
-            return DenseTensor(value)
     def __xor__(self, other):
       return self.xor(other)
 
-        def __invert__(self):
-            return self.invert()
     def xor(self, other):
       x, y = _lift(self, other)
       value = tf.math.logical_xor(x.value, y.value)
       return DenseTensor(value)
 
-        def invert(self):
-            value = tf.math.logical_not(self.value)
-            return DenseTensor(value)
+    def __and__(self, other):
+      return self.and_(other)
 
     class DenseTensor(Tensor):
         """Public native Tensor class."""
+    def and_(self, other):
+      # Because "and" is a keyword in Python, the naming "and_" follows the way how Python handles this:
+      # https://docs.python.org/3.4/library/operator.html
+      x, y = _lift(self, other)
+      value = tf.math.logical_and(x.value, y.value)
+      return DenseTensor(value)
+    def __invert__(self):
+      return self.invert()
+    def invert(self):
+      value = tf.math.logical_not(self.value)
+      return DenseTensor(value)
 
         def __init__(self, value):
             self._value = value
