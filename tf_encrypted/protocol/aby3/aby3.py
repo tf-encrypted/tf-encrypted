@@ -230,30 +230,26 @@ class ABY3(Protocol):
     This will take the passed value and construct shares that will be split up
     between those involved in the computation.
 
-        :param Union[np.ndarray,tf.Tensor,ABY3PublicTensor] initial_value: The
-            initial value.
-        :param bool apply_scaling: Whether or not to scale the value.
-        :param str name: What name to give to this node in the graph.
-        :param AbstractFactory factory: Which tensor type to represent this value
-            with.
-        """
-        init_val_types = (np.ndarray,
-                          tf.Tensor,
-                          ABY3PrivateTensor)
-        assert isinstance(initial_value, init_val_types), type(initial_value)
     For example, in a three party replicated sharing, this will split the value into
     three shares and transfer two shares to each party in a secure manner.
 
-        factory = factory or self.int_factory
-        suffix = "-" + name if name else ""
     :see tf.Variable
 
         with tf.name_scope("private-var{}".format(suffix)):
+    :param Union[np.ndarray,tf.Tensor,ABY3PublicTensor] initial_value: The initial value.
+    :param bool apply_scaling: Whether or not to scale the value.
+    :param str name: What name to give to this node in the graph.
+    :param AbstractFactory factory: Which tensor type to represent this value with.
+    """
+    init_val_types = (np.ndarray, tf.Tensor, ABY3PrivateTensor)
+    assert isinstance(initial_value, init_val_types), type(initial_value)
 
             if isinstance(initial_value, np.ndarray):
                 initial_value = self._encode(initial_value, apply_scaling)
                 v = factory.tensor(initial_value)
                 shares = self._share(v, share_type=share_type)
+    factory = factory or self.int_factory
+    suffix = "-" + name if name else ""
 
             elif isinstance(initial_value, tf.Tensor):
                 initial_value = self._encode(initial_value, apply_scaling)
