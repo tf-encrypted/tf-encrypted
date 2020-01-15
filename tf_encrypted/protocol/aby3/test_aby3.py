@@ -791,80 +791,80 @@ def test_polynomial_piecewise():
 
 
 def test_transpose():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
-    y = tfe.define_constant(np.array([[1, 2, 3], [4, 5, 6]]))
+  x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
+  y = tfe.define_constant(np.array([[1, 2, 3], [4, 5, 6]]))
 
-    z1 = x.transpose()
-    z2 = tfe.transpose(y)
+  z1 = x.transpose()
+  z2 = tfe.transpose(y)
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z1.reveal())
-        close(result, np.array([[1, 4], [2, 5], [3, 6]]))
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z1.reveal())
+    close(result, np.array([[1, 4], [2, 5], [3, 6]]))
 
-        result = sess.run(z2)
-        close(result, np.array([[1, 4], [2, 5], [3, 6]]))
+    result = sess.run(z2)
+    close(result, np.array([[1, 4], [2, 5], [3, 6]]))
 
-        print("test_transpose succeeds")
+    print("test_transpose succeeds")
 
 
 def test_reduce_sum():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
-    y = tfe.define_constant(np.array([[1, 2, 3], [4, 5, 6]]))
+  x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
+  y = tfe.define_constant(np.array([[1, 2, 3], [4, 5, 6]]))
 
-    z1 = x.reduce_sum(axis=1, keepdims=True)
-    z2 = tfe.reduce_sum(y, axis=0, keepdims=False)
+  z1 = x.reduce_sum(axis=1, keepdims=True)
+  z2 = tfe.reduce_sum(y, axis=0, keepdims=False)
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z1.reveal())
-        close(result, np.array([[6], [15]]))
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z1.reveal())
+    close(result, np.array([[6], [15]]))
 
-        result = sess.run(z2)
-        close(result, np.array([5, 7, 9]))
+    result = sess.run(z2)
+    close(result, np.array([5, 7, 9]))
 
-        print("test_reduce_sum succeeds")
+    print("test_reduce_sum succeeds")
 
 
 def test_concat():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x1 = tfe.define_private_variable(tf.constant([[1, 2], [4, 5]]))
-    x2 = tfe.define_private_variable(tf.constant([[3], [6]]))
-    y1 = tfe.define_constant(np.array([[1, 2, 3]]))
-    y2 = tfe.define_constant(np.array([[4, 5, 6]]))
+  x1 = tfe.define_private_variable(tf.constant([[1, 2], [4, 5]]))
+  x2 = tfe.define_private_variable(tf.constant([[3], [6]]))
+  y1 = tfe.define_constant(np.array([[1, 2, 3]]))
+  y2 = tfe.define_constant(np.array([[4, 5, 6]]))
 
-    z1 = tfe.concat([x1, x2], axis=1)
-    z2 = tfe.concat([y1, y2], axis=0)
+  z1 = tfe.concat([x1, x2], axis=1)
+  z2 = tfe.concat([y1, y2], axis=0)
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z1.reveal())
-        close(result, np.array([[1, 2, 3], [4, 5, 6]]))
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z1.reveal())
+    close(result, np.array([[1, 2, 3], [4, 5, 6]]))
 
-        result = sess.run(z2)
-        close(result, np.array([[1, 2, 3], [4, 5, 6]]))
+    result = sess.run(z2)
+    close(result, np.array([[1, 2, 3], [4, 5, 6]]))
 
-        print("test_concat succeeds")
+    print("test_concat succeeds")
 
 
 def test_simple_lr_model():
