@@ -57,23 +57,23 @@ class ABY3(Protocol):
     self.servers[1] = config.get_player(server_1 if server_1 else "server1")
     self.servers[2] = config.get_player(server_2 if server_2 else "server2")
 
-        int_factory = i64_factory
+    int_factory = i64_factory
 
-        if use_noninteractive_truncation:
-            fixedpoint_config = fixed64_ni
-        else:
-            fixedpoint_config = fixed64
+    if use_noninteractive_truncation:
+      fixedpoint_config = fixed64_ni
+    else:
+      fixedpoint_config = fixed64
 
-        self.fixedpoint_config = fixedpoint_config
-        self.int_factory = int_factory
-        self.bool_factory = b_factory
+    self.fixedpoint_config = fixedpoint_config
+    self.int_factory = int_factory
+    self.bool_factory = b_factory
 
-        self.pairwise_keys, self.pairwise_nonces = self.setup_pairwise_randomness()
-        self.b2a_keys_1, self.b2a_keys_2, self.b2a_nonce = self.setup_b2a_generator()
+    self.pairwise_keys, self.pairwise_nonces = self.setup_pairwise_randomness()
+    self.b2a_keys_1, self.b2a_keys_2, self.b2a_nonce = self.setup_b2a_generator()
 
-    @property
-    def nbits(self):
-        return self.int_factory.nbits
+  @property
+  def nbits(self):
+    return self.int_factory.nbits
 
     def setup_pairwise_randomness(self):
         """
