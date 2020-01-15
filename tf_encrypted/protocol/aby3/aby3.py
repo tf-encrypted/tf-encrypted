@@ -160,8 +160,6 @@ class ABY3(Protocol):
     with tf.device(self.servers[2].device_name):
       seed_2 = crypto.secure_seed()
 
-
-
     with tf.device(self.servers[0].device_name):
       b2a_keys_2[0][0] = seed_0
       b2a_keys_2[0][1] = seed_1
@@ -174,7 +172,6 @@ class ABY3(Protocol):
       b2a_keys_2[2][1] = seed_1
       b2a_keys_2[2][2] = seed_2
 
-        .. code-block:: python
     b2a_nonce = 0
     return b2a_keys_1, b2a_keys_2, b2a_nonce
 
@@ -191,6 +188,7 @@ class ABY3(Protocol):
     Define a constant to use in computation.
 
         :See: tf.constant
+    .. code-block:: python
 
         :param bool apply_scaling: Whether or not to scale the value.
         :param str name: What name to give to this node in the graph.
