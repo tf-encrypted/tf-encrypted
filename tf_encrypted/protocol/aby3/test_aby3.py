@@ -65,170 +65,170 @@ def test_add_private_public():
 def test_sub_private_private():
   tf.reset_default_graph()
 
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  def provide_input():
+    return tf.ones(shape=(2, 2)) * 1.3
 
-    def provide_input():
-        return tf.ones(shape=(2, 2)) * 1.3
+  x = tfe.define_private_variable(tf.ones(shape=(2, 2)))
+  y = tfe.define_private_input('input-provider', provide_input)
 
-    x = tfe.define_private_variable(tf.ones(shape=(2,2)))
-    y = tfe.define_private_input('input-provider', provide_input)
+  z = x - y
 
-    z = x - y
-
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        close(result, np.array([[-0.3, -0.3], [-0.3, -0.3]]))
-        print("test_sub_private_private succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    close(result, np.array([[-0.3, -0.3], [-0.3, -0.3]]))
+    print("test_sub_private_private succeeds")
 
 
 def test_sub_private_public():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    # define inputs
-    x = tfe.define_private_variable(tf.ones(shape=(2,2)))
-    y = tfe.define_constant(np.array([[0.6, 0.7], [0.8, 0.9]]))
+  # define inputs
+  x = tfe.define_private_variable(tf.ones(shape=(2, 2)))
+  y = tfe.define_constant(np.array([[0.6, 0.7], [0.8, 0.9]]))
 
-    # define computation
-    z1 = x - y
-    z2 = y - x
+  # define computation
+  z1 = x - y
+  z2 = y - x
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z1.reveal())
-        close(result, np.array([[0.4, 0.3], [0.2, 0.1]]))
-        result = sess.run(z2.reveal())
-        close(result, np.array([[-0.4, -0.3], [-0.2, -0.1]]))
-        print("test_sub_private_public succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z1.reveal())
+    close(result, np.array([[0.4, 0.3], [0.2, 0.1]]))
+    result = sess.run(z2.reveal())
+    close(result, np.array([[-0.4, -0.3], [-0.2, -0.1]]))
+    print("test_sub_private_public succeeds")
 
 
 def test_neg():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    # define inputs
-    x = tfe.define_private_variable(np.array([[0.6, -0.7], [-0.8, 0.9]]))
-    y = tfe.define_constant(np.array([[0.6, -0.7], [-0.8, 0.9]]))
+  # define inputs
+  x = tfe.define_private_variable(np.array([[0.6, -0.7], [-0.8, 0.9]]))
+  y = tfe.define_constant(np.array([[0.6, -0.7], [-0.8, 0.9]]))
 
-    # define computation
-    z1 = -x
-    z2 = -y
+  # define computation
+  z1 = -x
+  z2 = -y
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z1.reveal())
-        close(result, np.array([[-0.6, 0.7], [0.8, -0.9]]))
-        result = sess.run(z2)
-        close(result, np.array([[-0.6, 0.7], [0.8, -0.9]]))
-        print("test_neg succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z1.reveal())
+    close(result, np.array([[-0.6, 0.7], [0.8, -0.9]]))
+    result = sess.run(z2)
+    close(result, np.array([[-0.6, 0.7], [0.8, -0.9]]))
+    print("test_neg succeeds")
 
 
 def test_mul_private_public():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    # define inputs
-    x = tfe.define_private_variable(tf.ones(shape=(2,2))*2)
-    y = tfe.define_constant(np.array([[0.6, 0.7], [0.8, 0.9]]))
-    w = tfe.define_constant(np.array([[2, 2], [2, 2]]))
+  # define inputs
+  x = tfe.define_private_variable(tf.ones(shape=(2, 2)) * 2)
+  y = tfe.define_constant(np.array([[0.6, 0.7], [0.8, 0.9]]))
+  w = tfe.define_constant(np.array([[2, 2], [2, 2]]))
 
-    # define computation
-    z1 = y * x  # mul_public_private
-    z2 = z1 * w  # mul_private_public
+  # define computation
+  z1 = y * x  # mul_public_private
+  z2 = z1 * w  # mul_private_public
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z2.reveal())
-        close(result, np.array([[2.4, 2.8], [3.2, 3.6]]))
-        print("test_mul_private_public succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z2.reveal())
+    close(result, np.array([[2.4, 2.8], [3.2, 3.6]]))
+    print("test_mul_private_public succeeds")
 
 
 def test_mul_private_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    def provide_input():
-        # normal TensorFlow operations can be run locally
-        # as part of defining a private input, in this
-        # case on the machine of the input provider
-        return tf.ones(shape=(2, 2)) * 1.3
+  def provide_input():
+    # normal TensorFlow operations can be run locally
+    # as part of defining a private input, in this
+    # case on the machine of the input provider
+    return tf.ones(shape=(2, 2)) * 1.3
 
-    # define inputs
-    x = tfe.define_private_variable(tf.ones(shape=(2,2))*2)
-    y = tfe.define_private_input("input-provider", provide_input)
+  # define inputs
+  x = tfe.define_private_variable(tf.ones(shape=(2, 2)) * 2)
+  y = tfe.define_private_input("input-provider", provide_input)
 
-    # define computation
-    z = y * x
+  # define computation
+  z = y * x
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        close(result, np.array([[2.6, 2.6], [2.6, 2.6]]))
-        print("test_mul_private_private succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    close(result, np.array([[2.6, 2.6], [2.6, 2.6]]))
+    print("test_mul_private_private succeeds")
 
 
 def test_matmul_public_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    def provide_input():
-        # normal TensorFlow operations can be run locally
-        # as part of defining a private input, in this
-        # case on the machine of the input provider
-        return tf.constant(np.array([[1.1, 1.2], [1.3, 1.4], [1.5, 1.6]]))
+  def provide_input():
+    # normal TensorFlow operations can be run locally
+    # as part of defining a private input, in this
+    # case on the machine of the input provider
+    return tf.constant(np.array([[1.1, 1.2], [1.3, 1.4], [1.5, 1.6]]))
 
-    # define inputs
-    x = tfe.define_private_variable(tf.ones(shape=(2,2)))
-    y = tfe.define_public_input('input-provider', provide_input)
-    v = tfe.define_constant(np.ones((2, 2)))
+  # define inputs
+  x = tfe.define_private_variable(tf.ones(shape=(2, 2)))
+  y = tfe.define_public_input('input-provider', provide_input)
+  v = tfe.define_constant(np.ones((2, 2)))
 
-    # define computation
-    w = y.matmul(x) # matmul_public_private
-    z = w.matmul(v) # matmul_private_public
+  # define computation
+  w = y.matmul(x)  # matmul_public_private
+  z = w.matmul(v)  # matmul_private_public
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(w.reveal())
-        close(result, np.array([[2.3, 2.3], [2.7, 2.7], [3.1, 3.1]]))
-        result = sess.run(z.reveal())
-        close(result, np.array([[4.6, 4.6], [5.4, 5.4], [6.2, 6.2]]))
-        print("test_matmul_public_private succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(w.reveal())
+    close(result, np.array([[2.3, 2.3], [2.7, 2.7], [3.1, 3.1]]))
+    result = sess.run(z.reveal())
+    close(result, np.array([[4.6, 4.6], [5.4, 5.4], [6.2, 6.2]]))
+    print("test_matmul_public_private succeeds")
 
 
 def test_matmul_private_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    # 2-D matrix mult
-    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
-    y = tfe.define_private_variable(tf.constant([[7, 8], [9, 10], [11, 12]]))
+  # 2-D matrix mult
+  x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
+  y = tfe.define_private_variable(tf.constant([[7, 8], [9, 10], [11, 12]]))
+
 
     z = tfe.matmul(x, y)
 
