@@ -198,21 +198,18 @@ class ABY3(Protocol):
     """
     assert isinstance(value, (np.ndarray, int, float))
 
-        value = self._encode(value, apply_scaling)
-        with tf.name_scope("constant{}".format("-" + name if name else "")):
-            with tf.device(self.servers[0].device_name):
-                x_on_0 = factory.constant(value)
     if isinstance(value, (int, float)):
       value = np.array([value])
 
-            with tf.device(self.servers[1].device_name):
-                x_on_1 = factory.constant(value)
     factory = factory or self.int_factory
 
-            with tf.device(self.servers[2].device_name):
-                x_on_2 = factory.constant(value)
+    value = self._encode(value, apply_scaling)
+    with tf.name_scope("constant{}".format("-" + name if name else "")):
+      with tf.device(self.servers[0].device_name):
+        x_on_0 = factory.constant(value)
 
-        return ABY3Constant(self, x_on_0, x_on_1, x_on_2, apply_scaling, share_type)
+      with tf.device(self.servers[1].device_name):
+        x_on_1 = factory.constant(value)
 
     def define_private_variable(
             self,
@@ -223,9 +220,12 @@ class ABY3(Protocol):
             factory: Optional[AbstractFactory] = None):
         """
         Define a private variable.
+      with tf.device(self.servers[2].device_name):
+        x_on_2 = factory.constant(value)
 
         This will take the passed value and construct shares that will be split up
         between those involved in the computation.
+    return ABY3Constant(self, x_on_0, x_on_1, x_on_2, apply_scaling, share_type)
 
         For example, in a three party replicated sharing, this will split the value into
         three shares and transfer two shares to each party in a secure manner.
