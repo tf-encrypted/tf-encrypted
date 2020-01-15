@@ -139,26 +139,26 @@ class ABY3(Protocol):
     with tf.device(self.servers[2].device_name):
       seed_2 = crypto.secure_seed()
 
-        with tf.device(self.servers[0].device_name):
-            b2a_keys_1[0][0] = seed_0
-            b2a_keys_1[0][1] = seed_1
-            b2a_keys_1[0][2] = seed_2
-        with tf.device(self.servers[1].device_name):
-            b2a_keys_1[1][0] = seed_0
-            b2a_keys_1[1][1] = seed_1
-            b2a_keys_1[1][2] = seed_2
-        with tf.device(self.servers[2].device_name):
-            b2a_keys_1[2][0] = seed_0
-            b2a_keys_1[2][2] = seed_2
+    with tf.device(self.servers[0].device_name):
+      b2a_keys_1[0][0] = seed_0
+      b2a_keys_1[0][1] = seed_1
+      b2a_keys_1[0][2] = seed_2
+    with tf.device(self.servers[1].device_name):
+      b2a_keys_1[1][0] = seed_0
+      b2a_keys_1[1][1] = seed_1
+      b2a_keys_1[1][2] = seed_2
+    with tf.device(self.servers[2].device_name):
+      b2a_keys_1[2][0] = seed_0
+      b2a_keys_1[2][2] = seed_2
 
-        # Type 2: Server 1 and 2 hold three keys, while server 0 holds two
-        b2a_keys_2 = [[None, None, None], [None, None, None], [None, None, None]]
-        with tf.device(self.servers[0].device_name):
-            seed_0 = crypto.secure_seed()
-        with tf.device(self.servers[1].device_name):
-            seed_1 = crypto.secure_seed()
-        with tf.device(self.servers[2].device_name):
-            seed_2 = crypto.secure_seed()
+    # Type 2: Server 1 and 2 hold three keys, while server 0 holds two
+    b2a_keys_2 = [[None, None, None], [None, None, None], [None, None, None]]
+    with tf.device(self.servers[0].device_name):
+      seed_0 = crypto.secure_seed()
+    with tf.device(self.servers[1].device_name):
+      seed_1 = crypto.secure_seed()
+    with tf.device(self.servers[2].device_name):
+      seed_2 = crypto.secure_seed()
 
         with tf.device(self.servers[0].device_name):
             b2a_keys_2[0][0] = seed_0
