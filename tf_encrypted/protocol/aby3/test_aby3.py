@@ -771,7 +771,7 @@ def test_polynomial_piecewise():
   z1 = tfe.polynomial_piecewise(
       x,
       (-0.5, 0.5),
-      ((0,), (0.5, 1), (1,))  # use tuple because list is not hashable for the memoir cache key
+      ((0,), (0.5, 1), (1,))  # use tuple because list is not hashable
   )
   # Or, simply use the pre-defined sigmoid API which includes a different approximation
   z2 = tfe.sigmoid(x)
