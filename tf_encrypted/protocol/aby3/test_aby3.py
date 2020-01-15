@@ -524,68 +524,70 @@ def test_rshift_private():
 
 
 def test_ppa_private_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type = BOOLEAN)
-    y = tfe.define_private_variable(tf.constant([[7, 8, 9], [10, 11, 12]]), share_type = BOOLEAN)
+  x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=BOOLEAN)
+  y = tfe.define_private_variable(tf.constant([[7, 8, 9], [10, 11, 12]]),
+                                  share_type=BOOLEAN)
 
-    # Parallel prefix adder. It is simply an adder for boolean sharing.
-    z1 = tfe.B_ppa(x, y, topology="sklansky")
-    z2 = tfe.B_ppa(x, y, topology="kogge_stone")
+  # Parallel prefix adder. It is simply an adder for boolean sharing.
+  z1 = tfe.B_ppa(x, y, topology="sklansky")
+  z2 = tfe.B_ppa(x, y, topology="kogge_stone")
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z1.reveal())
-        close(result, np.array([[8, 10, 12], [14, 16, 18]]))
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z1.reveal())
+    close(result, np.array([[8, 10, 12], [14, 16, 18]]))
 
-        result = sess.run(z2.reveal())
-        close(result, np.array([[8, 10, 12], [14, 16, 18]]))
-        print("test_ppa_private_private succeeds")
+    result = sess.run(z2.reveal())
+    close(result, np.array([[8, 10, 12], [14, 16, 18]]))
+    print("test_ppa_private_private succeeds")
 
 
 def test_a2b_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type = ARITHMETIC)
+  x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]),
+                                  share_type=ARITHMETIC)
 
-    z = tfe.A2B(x)
-    assert z.share_type == BOOLEAN
+  z = tfe.A2B(x)
+  assert z.share_type == BOOLEAN
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        close(result, np.array([[1, 2, 3], [4, 5, 6]]))
-        print("test_a2b_private succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    close(result, np.array([[1, 2, 3], [4, 5, 6]]))
+    print("test_a2b_private succeeds")
 
 
 def test_b2a_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type = BOOLEAN)
+  x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=BOOLEAN)
 
-    z = tfe.B2A(x)
-    assert z.share_type == ARITHMETIC
+  z = tfe.B2A(x)
+  assert z.share_type == ARITHMETIC
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        close(result, np.array([[1, 2, 3], [4, 5, 6]]))
-        print("test_b2a_private succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    close(result, np.array([[1, 2, 3], [4, 5, 6]]))
+    print("test_b2a_private succeeds")
 
 
 def test_ot():
