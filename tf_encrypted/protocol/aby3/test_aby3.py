@@ -269,50 +269,54 @@ def test_boolean_sharing():
   prot = ABY3()
   tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type = BOOLEAN)
-    y = tfe.define_private_variable(tf.constant([[7, 8, 9], [10, 11, 12]]), share_type = BOOLEAN)
+  x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=BOOLEAN)
+  y = tfe.define_private_variable(tf.constant([[7, 8, 9], [10, 11, 12]]),
+                                  share_type=BOOLEAN)
 
-    z1 = tfe.B_xor(x, y)
+  z1 = tfe.B_xor(x, y)
 
-    z2 = tfe.B_and(x, y)
+  z2 = tfe.B_and(x, y)
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z1.reveal())
-        close(result, np.array([[6, 10, 10], [14, 14, 10]]))
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z1.reveal())
+    close(result, np.array([[6, 10, 10], [14, 14, 10]]))
 
-        result = sess.run(z2.reveal())
-        close(result, np.array([[1, 0, 1], [0, 1, 4]]))
+    result = sess.run(z2.reveal())
+    close(result, np.array([[1, 0, 1], [0, 1, 4]]))
 
-        print("test_boolean_sharing succeeds")
+    print("test_boolean_sharing succeeds")
 
 
 def test_not_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type = BOOLEAN, apply_scaling=False)
-    y = tfe.define_private_variable(tf.constant([[1, 0, 0], [0, 1, 0]]),
-                                    apply_scaling=False, share_type = BOOLEAN,
-                                    factory = prot.bool_factory)
-    z1 = ~x
-    z2 = ~y
+  x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]),
+                                  share_type=BOOLEAN,
+                                  apply_scaling=False)
+  y = tfe.define_private_variable(tf.constant([[1, 0, 0], [0, 1, 0]]),
+                                  apply_scaling=False,
+                                  share_type=BOOLEAN,
+                                  factory=prot.bool_factory)
+  z1 = ~x
+  z2 = ~y
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z1.reveal())
-        close(result, np.array([[-2, -3, -4], [-5, -6, -7]]))
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z1.reveal())
+    close(result, np.array([[-2, -3, -4], [-5, -6, -7]]))
 
-        result = sess.run(z2.reveal())
-        close(result, np.array([[0, 1, 1], [1, 0, 1]]))
+    result = sess.run(z2.reveal())
+    close(result, np.array([[0, 1, 1], [1, 0, 1]]))
 
-        print("test_not_private succeeds")
+    print("test_not_private succeeds")
 
 
 def test_native_ppa_sklansky(nbits=128):
