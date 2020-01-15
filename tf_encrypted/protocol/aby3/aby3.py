@@ -160,17 +160,6 @@ class ABY3(Protocol):
     with tf.device(self.servers[2].device_name):
       seed_2 = crypto.secure_seed()
 
-        with tf.device(self.servers[0].device_name):
-            b2a_keys_2[0][0] = seed_0
-            b2a_keys_2[0][1] = seed_1
-        with tf.device(self.servers[1].device_name):
-            b2a_keys_2[1][0] = seed_0
-            b2a_keys_2[1][1] = seed_1
-            b2a_keys_2[1][2] = seed_2
-        with tf.device(self.servers[2].device_name):
-            b2a_keys_2[2][0] = seed_0
-            b2a_keys_2[2][1] = seed_1
-            b2a_keys_2[2][2] = seed_2
 
         b2a_nonce = 0
         return b2a_keys_1, b2a_keys_2, b2a_nonce
@@ -185,6 +174,17 @@ class ABY3(Protocol):
     ):
         """
         Define a constant to use in computation.
+    with tf.device(self.servers[0].device_name):
+      b2a_keys_2[0][0] = seed_0
+      b2a_keys_2[0][1] = seed_1
+    with tf.device(self.servers[1].device_name):
+      b2a_keys_2[1][0] = seed_0
+      b2a_keys_2[1][1] = seed_1
+      b2a_keys_2[1][2] = seed_2
+    with tf.device(self.servers[2].device_name):
+      b2a_keys_2[2][0] = seed_0
+      b2a_keys_2[2][1] = seed_1
+      b2a_keys_2[2][2] = seed_2
 
         .. code-block:: python
 
