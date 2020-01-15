@@ -489,31 +489,39 @@ def test_lshift_private():
 
 
 def test_rshift_private():
-    tf.reset_default_graph()
+  tf.reset_default_graph()
 
-    prot = ABY3()
-    tfe.set_protocol(prot)
+  prot = ABY3()
+  tfe.set_protocol(prot)
 
-    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type = BOOLEAN)
-    y = tfe.define_private_variable(tf.constant([[-1, -2, -3], [-4, 5, 6]]),
-                                    share_type = BOOLEAN, apply_scaling = False)
+  x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=BOOLEAN)
+  y = tfe.define_private_variable(tf.constant([[-1, -2, -3], [-4, 5, 6]]),
+                                  share_type=BOOLEAN,
+                                  apply_scaling=False)
 
-    z = x >> 1
-    w = y >> 1
-    s = y.logical_rshift(1)
+  z = x >> 1
+  w = y >> 1
+  s = y.logical_rshift(1)
 
-    with tfe.Session() as sess:
-        # initialize variables
-        sess.run(tfe.global_variables_initializer())
-        # reveal result
-        result = sess.run(z.reveal())
-        close(result, np.array([[0.5, 1, 1.5], [2, 2.5, 3]]))  # NOTE: x is scaled and treated as fixed-point number
-        result = sess.run(w.reveal())
-        close(result, np.array([[-1, -1, -2], [-2, 2, 3]]))
-        result = sess.run(s.reveal())
-        close(result, np.array([[(-1 & ((1<<prot.nbits)-1)) >> 1, (-2 & ((1<<prot.nbits)-1)) >> 1, (-3 & ((1<<prot.nbits)-1)) >> 1],
-                                [(-4 & ((1<<prot.nbits)-1)) >> 1, 2, 3]]))
-        print("test_rshift_private succeeds")
+  with tfe.Session() as sess:
+    # initialize variables
+    sess.run(tfe.global_variables_initializer())
+    # reveal result
+    result = sess.run(z.reveal())
+    close(result, np.array([[0.5, 1, 1.5],
+                            [2, 2.5,
+                             3]]))  # NOTE: x is scaled and treated as fixed-point number
+    result = sess.run(w.reveal())
+    close(result, np.array([[-1, -1, -2], [-2, 2, 3]]))
+    result = sess.run(s.reveal())
+    close(
+        result,
+        np.array([[(-1 & ((1 << prot.nbits) - 1)) >> 1,
+                   (-2 & ((1 << prot.nbits) - 1)) >> 1,
+                   (-3 & ((1 << prot.nbits) - 1)) >> 1],
+                  [(-4 & ((1 << prot.nbits) - 1)) >> 1, 2, 3]]))
+    print("test_rshift_private succeeds")
+
 
 def test_ppa_private_private():
     tf.reset_default_graph()
