@@ -182,28 +182,22 @@ def bool_factory():
     def reshape(self, axes: Union[tf.Tensor, List[int]]):
       return DenseTensor(tf.reshape(self.value, axes))
 
-        def cast(self, factory):
-            return factory.tensor(self.value)
     def equal(self, other, factory=None):
       x, y = _lift(self, other)
       factory = factory or FACTORY
       return factory.tensor(tf.cast(tf.equal(x.value, y.value),
                                     dtype=factory.native_type))
 
-        def __xor__(self, other):
-            return self.xor(other)
     def expand_dims(self, axis: Optional[int] = None):
       return DenseTensor(tf.expand_dims(self.value, axis))
 
-        def xor(self, other):
-            x, y = _lift(self, other)
-            value = tf.math.logical_xor(x.value, y.value)
-            return DenseTensor(value)
     def squeeze(self, axis: Optional[List[int]] = None):
       return DenseTensor(tf.squeeze(self.value, axis=axis))
 
         def __and__(self, other):
             return self.and_(other)
+    def cast(self, factory):
+      return factory.tensor(self.value)
 
         def and_(self, other):
             # Because "and" is a keyword in Python, the naming "and_" follows the way how Python handles this:
@@ -211,9 +205,15 @@ def bool_factory():
             x, y = _lift(self, other)
             value = tf.math.logical_and(x.value, y.value)
             return DenseTensor(value)
+    def __xor__(self, other):
+      return self.xor(other)
 
         def __invert__(self):
             return self.invert()
+    def xor(self, other):
+      x, y = _lift(self, other)
+      value = tf.math.logical_xor(x.value, y.value)
+      return DenseTensor(value)
 
         def invert(self):
             value = tf.math.logical_not(self.value)
