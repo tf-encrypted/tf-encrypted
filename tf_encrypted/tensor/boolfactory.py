@@ -17,11 +17,6 @@ from ..operations import secure_random as crypto
 
 
 def bool_factory():
-        def __getitem__(self, slc):
-            return DenseTensor(self.value[slc])
-
-        def transpose(self, perm):
-            return DenseTensor(tf.transpose(self.value, perm))
 
         def strided_slice(self, args, kwargs):
             return DenseTensor(tf.strided_slice(self.value, *args, **kwargs))
@@ -178,6 +173,11 @@ def bool_factory():
     def dtype(self):
       return self.factory.native_type
 
+    def __getitem__(self, slc):
+      return DenseTensor(self.value[slc])
+
+    def transpose(self, perm):
+      return DenseTensor(tf.transpose(self.value, perm))
 
         def reshape(self, axes: Union[tf.Tensor, List[int]]):
             return DenseTensor(tf.reshape(self.value, axes))
