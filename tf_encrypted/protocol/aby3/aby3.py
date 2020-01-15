@@ -162,16 +162,6 @@ class ABY3(Protocol):
 
 
 
-    def define_constant(
-            self,
-            value: Union[np.ndarray, int, float],
-            apply_scaling: bool = True,
-            share_type=ARITHMETIC,
-            name: Optional[str] = None,
-            factory: Optional[AbstractFactory] = None
-    ):
-        """
-        Define a constant to use in computation.
     with tf.device(self.servers[0].device_name):
       b2a_keys_2[0][0] = seed_0
       b2a_keys_2[0][1] = seed_1
@@ -189,6 +179,16 @@ class ABY3(Protocol):
     return b2a_keys_1, b2a_keys_2, b2a_nonce
 
             x = prot.define_constant(np.array([1,2,3,4]), apply_scaling=False)
+  def define_constant(
+      self,
+      value: Union[np.ndarray, int, float],
+      apply_scaling: bool = True,
+      share_type=ARITHMETIC,
+      name: Optional[str] = None,
+      factory: Optional[AbstractFactory] = None,
+  ):
+    """
+    Define a constant to use in computation.
 
         :See: tf.constant
 
