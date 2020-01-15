@@ -17,37 +17,6 @@ from ..operations import secure_random as crypto
 
 
 def bool_factory():
-    class Tensor(AbstractTensor):
-        """Base class for other native tensor classes."""
-
-        @property
-        @abc.abstractproperty
-        def value(self):
-            pass
-
-        @property
-        @abc.abstractproperty
-        def shape(self):
-            pass
-
-        def identity(self):
-            value = tf.identity(self.value)
-            return DenseTensor(value)
-
-        def to_native(self) -> tf.Tensor:
-            return self.value
-
-        def __repr__(self) -> str:
-            return '{}(shape={})'.format(type(self), self.shape)
-
-        @property
-        def factory(self):
-            return FACTORY
-
-        @property
-        def dtype(self):
-            return self.factory.native_type
-
         def __getitem__(self, slc):
             return DenseTensor(self.value[slc])
 
@@ -177,6 +146,37 @@ def bool_factory():
       return y.factory.tensor(x), y
 
     raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
+
+  class Tensor(AbstractTensor):
+    """Base class for other native tensor classes."""
+
+    @property
+    @abc.abstractproperty
+    def value(self):
+      pass
+
+    @property
+    @abc.abstractproperty
+    def shape(self):
+      pass
+
+    def identity(self):
+      value = tf.identity(self.value)
+      return DenseTensor(value)
+
+    def to_native(self) -> tf.Tensor:
+      return self.value
+
+    def __repr__(self) -> str:
+      return '{}(shape={})'.format(type(self), self.shape)
+
+    @property
+    def factory(self):
+      return FACTORY
+
+    @property
+    def dtype(self):
+      return self.factory.native_type
 
 
         def reshape(self, axes: Union[tf.Tensor, List[int]]):
