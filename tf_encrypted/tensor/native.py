@@ -80,6 +80,10 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
     def native_type(self):
       return NATIVE_TYPE
 
+    @property
+    def nbits(self):
+      return NATIVE_TYPE.size * 8
+
     def sample_uniform(self,
                        shape,
                        minval: Optional[int] = None,
@@ -106,6 +110,28 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
           dtype=NATIVE_TYPE
       )
       return DenseTensor(value)
+
+    def sample_seeded_uniform(self,
+                              shape,
+                              seed,
+                              minval: Optional[int] = None,
+                              maxval: Optional[int] = None):
+      minval = self.min if minval is None else minval
+      maxval = self.max if maxval is None else maxval
+
+      if secure_random.supports_seeded_randomness():
+        # Don't use UniformTensor for lazy sampling here, because the `seed` might be something (e.g., key) we
+        # want to protect, and we cannot send it to another party
+        value = secure_random.seeded_random_uniform(
+                shape=shape,
+                dtype=NATIVE_TYPE,
+                minval=minval,
+                maxval=maxval,
+                seed=seed,
+        )
+        return DenseTensor(value)
+      else:
+        raise NotImplementedError("Secure seeded randomness implementation is not available.")
 
     def sample_bounded(self, shape, bitlength: int):
       maxval = 2 ** bitlength
@@ -141,6 +167,16 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
     def concat(self, xs: list, axis: int):
       assert all(isinstance(x, Tensor) for x in xs)
       value = tf.concat([x.value for x in xs], axis=axis)
+      return DenseTensor(value)
+
+    def where(self, condition, x, y, v2=False):
+      if not isinstance(condition, tf.Tensor):
+        msg = "Don't know how to handle `condition` of type {}"
+        raise TypeError(msg.format(type(condition)))
+      if not v2:
+        value = tf.where(condition, x.value, y.value)
+      else:
+        value = tf.compat.v2.where(condition, x.value, y.value)
       return DenseTensor(value)
 
   FACTORY = Factory()  # pylint: disable=invalid-name
@@ -348,6 +384,68 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
 
     def cast(self, factory):
       return factory.tensor(self.value)
+
+    def __or__(self, other):
+      return self.or_(other)
+
+    def or_(self, other):
+      x, y = _lift(self, other)
+      value = tf.bitwise.bitwise_or(x.value, y.value)
+      return DenseTensor(value)
+
+    def __xor__(self, other):
+      return self.xor(other)
+
+    def xor(self, other):
+      x, y = _lift(self, other)
+      value = tf.bitwise.bitwise_xor(x.value, y.value)
+      return DenseTensor(value)
+
+    def __and__(self, other):
+      return self.and_(other)
+
+    def and_(self, other):
+      # Because "and" is a keyword in Python, the naming "and_" follows the way how Python handles this:
+      # https://docs.python.org/3.4/library/operator.html
+      x, y = _lift(self, other)
+      value = tf.bitwise.bitwise_and(x.value, y.value)
+      return DenseTensor(value)
+
+    def __invert__(self):
+      return self.invert()
+
+    def invert(self):
+      value = tf.bitwise.invert(self.value)
+      return DenseTensor(value)
+
+    def __lshift__(self, bitlength):
+      return self.lshift(bitlength)
+
+    def lshift(self, bitlength):
+      return DenseTensor(tf.bitwise.left_shift(self.value, bitlength))
+
+    def __rshift__(self, bitlength):
+      """
+      Arithmetic shift.
+      Please refer to `self.logical_rshift` if a logical right shift is desired.
+      """
+      return self.right_shift(bitlength)
+
+    def logical_rshift(self, bitlength):
+      # There is some bug in TF when casting from int to uint: the uint result becomes 0. So the following code does not work.
+      # cast_map = {tf.int8: tf.uint8, tf.int16: tf.uint16,
+      #             tf.int32: tf.uint32, tf.int64: tf.uint64}
+      # x = tf.bitwise.right_shift(tf.cast(self.value, dtype=cast_map[NATIVE_TYPE]), bitlength)
+      # x = tf.cast(x, NATIVE_TYPE)
+      if bitlength < 0:
+        raise ValueError("Unsupported shift steps.")
+      elif bitlength == 0:
+        return self
+      total = NATIVE_TYPE.size * 8
+      mask = ~((-1) << (total - bitlength))
+      x = tf.bitwise.right_shift(self.value, bitlength)
+      x = tf.bitwise.bitwise_and(x, mask)
+      return DenseTensor(x)
 
   class DenseTensor(Tensor):
     """Public native Tensor class."""
