@@ -235,7 +235,6 @@ class ABY3(Protocol):
 
     :see tf.Variable
 
-        with tf.name_scope("private-var{}".format(suffix)):
     :param Union[np.ndarray,tf.Tensor,ABY3PublicTensor] initial_value: The initial value.
     :param bool apply_scaling: Whether or not to scale the value.
     :param str name: What name to give to this node in the graph.
@@ -255,6 +254,7 @@ class ABY3(Protocol):
                 initial_value = self._encode(initial_value, apply_scaling)
                 v = factory.tensor(initial_value)
                 shares = self._share(v, share_type=share_type)
+    with tf.name_scope("private-var{}".format(suffix)):
 
             elif isinstance(initial_value, ABY3PrivateTensor):
                 shares = initial_value.unwrapped
