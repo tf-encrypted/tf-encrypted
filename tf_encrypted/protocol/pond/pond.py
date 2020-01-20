@@ -789,35 +789,68 @@ class Pond(Protocol):
       return share0 + share1
 
   @memoize
-  def assign(self, variable: "PondPrivateVariable", value) -> tf.Operation:
+  def assign(
+      self,
+      variable: Union["PondPrivateVariable", "PondPublicVariable"],
+      value
+  ) -> tf.Operation:
     """See tf.assign."""
-    assert isinstance(variable, PondPrivateVariable), type(variable)
-    assert isinstance(value, PondPrivateTensor), type(value)
-    assert (variable.is_scaled == value.is_scaled), ("Scaling must match: "
-                                                     "{}, {}").format(
-                                                         variable.is_scaled,
-                                                         value.is_scaled,
-                                                     )
 
-    var0, var1 = variable.variable0, variable.variable1
-    val0, val1 = value.share0, value.share1
+    if isinstance(variable, PondPrivateVariable):
+      assert isinstance(value, PondPrivateTensor), type(value)
+      assert (variable.is_scaled == value.is_scaled), ("Scaling must match: "
+                                                       "{}, {}").format(
+                                                           variable.is_scaled,
+                                                           value.is_scaled,
+                                                       )
 
-    with tf.name_scope("assign"):
+      var0, var1 = variable.variable0, variable.variable1
+      val0, val1 = value.share0, value.share1
 
-      # Having this control_dependencies is important in order to avoid that
-      # computationally-dependent shares are updated in different pace
-      # (e.g., share0 is computed from share1, and we need to make sure that
-      # share1 is NOT already updated).
-      # See https://github.com/tf-encrypted/tf-encrypted/pull/665 for details.
-      with tf.control_dependencies(val0.support + val1.support):
+      with tf.name_scope("assign"):
 
-        with tf.device(self.server_0.device_name):
-          op0 = var0.assign_from_same(val0)
+        # Having this control_dependencies is important in order to avoid that
+        # computationally-dependent shares are updated in different pace
+        # (e.g., share0 is computed from share1, and we need to make sure that
+        # share1 is NOT already updated).
+        # See https://github.com/tf-encrypted/tf-encrypted/pull/665 for details.
+        with tf.control_dependencies(val0.support + val1.support):
 
-        with tf.device(self.server_1.device_name):
-          op1 = var1.assign_from_same(val1)
+          with tf.device(self.server_0.device_name):
+            op0 = var0.assign_from_same(val0)
 
-        op = tf.group(op0, op1)
+          with tf.device(self.server_1.device_name):
+            op1 = var1.assign_from_same(val1)
+
+          op = tf.group(op0, op1)
+
+    elif isinstance(variable, PondPublicVariable):
+      assert isinstance(value, PondPublicTensor), type(value)
+      assert (variable.is_scaled == value.is_scaled), ("Scaling must match: "
+                                                       "{}, {}").format(
+                                                           variable.is_scaled,
+                                                           value.is_scaled,
+                                                       )
+
+      var0, var1 = variable.variable_on_0, variable.variable_on_1
+      val0, val1 = value.value_on_0, value.value_on_1
+
+      with tf.name_scope("assign"):
+
+        with tf.control_dependencies(val0.support + val1.support):
+
+          with tf.device(self.server_0.device_name):
+            op0 = var0.assign_from_same(val0)
+
+          with tf.device(self.server_1.device_name):
+            op1 = var1.assign_from_same(val1)
+
+          op = tf.group(op0, op1)
+
+    else:
+      raise TypeError(("Don't know how to handle variable "
+                       "of type {}").format(type(variable)))
+
 
     return op
 
@@ -990,6 +1023,17 @@ class Pond(Protocol):
       raise TypeError("Don't know how to divide by type {}".format(type(y)))
 
     return self.mul(x, y_inverse)
+
+  @memoize
+  def sqrt(self, x):
+    """
+    sqrt(x) -> PondTensor
+
+    Computes numerical square root value element-wise.
+
+    :param PondTensor x: Input tensor.
+    """
+    return self.dispatch("sqrt", x)
 
   @memoize
   def truncate(self, x: "PondTensor"):
@@ -2033,6 +2077,19 @@ class PondPublicPlaceholder(PondPublicTensor):
 
   def __repr__(self) -> str:
     return "PondPublicPlaceholder(shape={})".format(self.shape)
+
+  def feed(self, value):
+    """
+    Feed `value` to placeholder
+    """
+
+    assert isinstance(value, np.ndarray), type(value)
+
+    enc = self.prot._encode(value, self.is_scaled)  # pylint: disable=protected-access
+
+    feed0 = self.placeholder_on_0.feed(enc)
+    feed1 = self.placeholder_on_1.feed(enc)
+    return {**feed0, **feed1}
 
 
 class PondPrivatePlaceholder(PondPrivateTensor):
@@ -4061,8 +4118,44 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
 
 
 #
-# reshape helpers
+# sqrt helpers
 #
+
+
+def _sqrt_public(prot, x):
+  assert isinstance(x, PondPublicTensor), type(x)
+
+  backing_dtype = x.backing_dtype
+  x_on_0, x_on_1 = x.unwrapped
+  is_scaled = x.is_scaled
+  assert is_scaled, "Can only sqrt of scaled numbers"
+
+  with tf.name_scope("sqrt"):
+
+    with tf.device(prot.server_0.device_name):
+      # decode value as ordinary tensor locally and compute sqrt
+      x_on_0_decoded = prot._decode(x_on_0, is_scaled)  # pylint: disable=protected-access
+      y_on_0_decoded = tf.math.sqrt(x_on_0_decoded)
+      # re-encode and re-wrap
+      y_on_0 = backing_dtype.tensor(
+          prot._encode(  # pylint: disable=protected-access
+              y_on_0_decoded,
+              apply_scaling=is_scaled,
+              tf_int_type=backing_dtype.native_type))
+
+    with tf.device(prot.server_1.device_name):
+      # decode value as ordinary tensor locally and compute sqrt
+      x_on_1_decoded = prot._decode(x_on_1, is_scaled)  # pylint: disable=protected-access
+      y_on_1_decoded = tf.math.sqrt(x_on_1_decoded)
+      # re-encode and re-wrap
+      y_on_1 = backing_dtype.tensor(
+          prot._encode(  # pylint: disable=protected-access
+              y_on_1_decoded,
+              apply_scaling=is_scaled,
+              tf_int_type=backing_dtype.native_type))
+
+    y = PondPublicTensor(prot, y_on_0, y_on_1, is_scaled)
+    return y
 
 
 def _reshape_public(

@@ -221,6 +221,21 @@ class TestPondAssign(unittest.TestCase):
       result = sess.run(a.reveal())
       assert result == np.array([101.])
 
+  def test_public_assign(self):
+
+    tf.reset_default_graph()
+
+    with tfe.protocol.Pond() as prot:
+      x_var = prot.define_public_variable(np.zeros(shape=(2, 2)))
+      data = np.ones((2, 2))
+      x_pl = tfe.define_public_placeholder(shape=(2, 2))
+      fd = x_pl.feed(data.reshape((2, 2)))
+
+    with tfe.Session() as sess:
+      sess.run(tfe.assign(x_var, x_pl), feed_dict=fd)
+      result = sess.run(x_var)
+      np.testing.assert_array_equal(result, np.ones([2, 2]))
+
 
 if __name__ == '__main__':
   unittest.main()

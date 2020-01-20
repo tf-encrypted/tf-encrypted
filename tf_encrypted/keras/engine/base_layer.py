@@ -9,7 +9,8 @@ import tf_encrypted as tfe
 from tf_encrypted import get_protocol
 from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
-from tf_encrypted.protocol.pond import PondPrivateTensor, PondMaskedTensor
+from tf_encrypted.protocol.pond import PondPrivateTensor
+from tf_encrypted.protocol.pond import PondMaskedTensor
 
 logger = logging.getLogger('tf_encrypted')
 
@@ -103,12 +104,15 @@ class Layer(ABC):
 
     return outputs
 
-  def add_weight(self, variable):
+  def add_weight(self, variable, make_private=True):
+    if make_private:
+      variable = self.prot.define_private_variable(variable)
+      self.weights.append(variable)
+    else:
+      variable = self.prot.define_public_variable(variable)
+      self.weights.append(variable)
 
-    private_variable = self.prot.define_private_variable(variable)
-    self.weights.append(private_variable)
-
-    return private_variable
+    return variable
 
   def set_weights(self, weights, sess=None):
     """ Sets the weights of the layer.
