@@ -27,6 +27,7 @@ def registry():
       'Shape': _shape,
       'StridedSlice': _strided_slice,
       'Add': _add,
+      'AddV2': _add,
       'Sub': _sub,
       'Transpose': _transpose,
       'Reshape': _reshape,
