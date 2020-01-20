@@ -588,7 +588,7 @@ class TestReduceMax(unittest.TestCase):
 
   def test_reduce_max_2d_axis0(self):
 
-    t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape(2, 4).astype(float)
+    t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape((2, 4)).astype(float)
 
     with tf.Session() as sess:
       out_tf = tf.reduce_max(t, axis=0)
@@ -607,7 +607,7 @@ class TestReduceMax(unittest.TestCase):
 
   def test_reduce_max_2d_axis1(self):
 
-    t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape(2, 4).astype(float)
+    t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape((2, 4)).astype(float)
 
     with tf.Session() as sess:
       out_tf = tf.reduce_max(t, axis=1)
@@ -626,7 +626,7 @@ class TestReduceMax(unittest.TestCase):
 
   def test_reduce_max_3d_axis0(self):
 
-    t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape(2, 2, 2)
+    t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape((2, 2, 2))
 
     with tf.Session() as sess:
       out = tf.reduce_max(t, axis=0)

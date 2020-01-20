@@ -60,23 +60,38 @@ def bool_factory():
     def modulus(self) -> int:
       return 2
 
-    def sample_uniform(self, shape):
+    def sample_uniform(self, shape):  # pylint: disable=arguments-differ
       minval = 0
       maxval = 2
 
       if crypto.supports_seeded_randomness():
         seed = crypto.secure_seed()
-        return UniformTensor(shape=shape, seed=seed, minval=minval, maxval=maxval)
+        return UniformTensor(shape=shape,
+                             seed=seed,
+                             minval=minval,
+                             maxval=maxval)
 
       if crypto.supports_secure_randomness():
         sampler = crypto.random_uniform
       else:
         sampler = tf.random_uniform
-      value = sampler(shape=shape, minval=minval, maxval=maxval, dtype=tf.int32)
+      value = sampler(shape=shape,
+                      minval=minval,
+                      maxval=maxval,
+                      dtype=tf.int32)
       value = tf.cast(value, tf.bool)
       return DenseTensor(value)
 
     def sample_seeded_uniform(self, shape, seed):
+      """Seeded sample of a random tensor.
+
+      Arguments:
+        shape (tuple of ints), shape of the tensor to sample
+        seed (int), seed for the sampler to use
+
+      Returns a tensor of shape `shape` drawn from a uniform distribution over
+      the interval [0,2].
+      """
       minval = 0
       maxval = 2
 
@@ -92,9 +107,9 @@ def bool_factory():
         )
         value = tf.cast(value, tf.bool)
         return DenseTensor(value)
-      else:
-        raise NotImplementedError(
-            "Secure seeded randomness implementation is not available.")
+
+      raise NotImplementedError(
+          "Secure seeded randomness implementation is not available.")
 
     def sample_bounded(self, shape, bitlength: int):
       raise NotImplementedError("No bounded sampling for boolean type.")
@@ -319,5 +334,6 @@ def bool_factory():
       assert isinstance(value, Tensor), type(value)
       return tf.assign(self.variable, value.value).op
 
-  FACTORY = Factory()
+  FACTORY = Factory()  # pylint: disable=invalid-name
+
   return FACTORY

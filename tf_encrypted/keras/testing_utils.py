@@ -87,7 +87,7 @@ def _sanitize_testing_args(input_shape, input_data):
     input_data_shape = list(input_shape)
     for i, e in enumerate(input_data_shape):
       if e is None:
-        input_data_shape[i] = np.random.randint(1, 4)
+        input_data_shape[i] = 2
     input_data = 10 * np.random.random(input_data_shape)
   elif input_shape is None:
     input_shape = input_data.shape
