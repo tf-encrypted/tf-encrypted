@@ -16,10 +16,10 @@ class TestReshape(unittest.TestCase):
     tf.reset_default_graph()
 
   def test_reshape(self):
-    self._core_reshape([2, 2, 2, 2], target_shape=[8])
+    self._core_reshape((2, 2, 2, 2), target_shape=[8])
 
   def test_reshape_unknown_dim(self):
-    self._core_reshape([2, 2, 2, 2], target_shape=[-1, 4])
+    self._core_reshape((2, 2, 2, 2), target_shape=[-1, 4])
 
   def _core_reshape(self, input_shape, **layer_kwargs):
 

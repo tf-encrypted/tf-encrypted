@@ -116,6 +116,17 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
                               seed,
                               minval: Optional[int] = None,
                               maxval: Optional[int] = None):
+      """Seeded sample of a random tensor.
+
+      Arguments:
+        shape (tuple of ints), shape of the tensor to sample
+        seed (int), seed for the sampler to use
+        minval (int), the a in the interval [a,b]
+        maxval (int), the b in the interval [a,b]
+
+      Returns a tensor of shape `shape` drawn from a uniform distribution over
+      the interval [minval,maxval].
+      """
       minval = self.min if minval is None else minval
       maxval = self.max if maxval is None else maxval
 
@@ -123,15 +134,17 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
         # Don't use UniformTensor for lazy sampling here, because the `seed` might be something (e.g., key) we
         # want to protect, and we cannot send it to another party
         value = secure_random.seeded_random_uniform(
-                shape=shape,
-                dtype=NATIVE_TYPE,
-                minval=minval,
-                maxval=maxval,
-                seed=seed,
+            shape=shape,
+            dtype=NATIVE_TYPE,
+            minval=minval,
+            maxval=maxval,
+            seed=seed,
         )
         return DenseTensor(value)
-      else:
-        raise NotImplementedError("Secure seeded randomness implementation is not available.")
+
+      raise NotImplementedError(
+          "Secure seeded randomness implementation is not available."
+      )
 
     def sample_bounded(self, shape, bitlength: int):
       maxval = 2 ** bitlength
@@ -430,8 +443,9 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
       return self.right_shift(bitlength)
 
     def logical_rshift(self, bitlength):
+      """Computes a bitshift to the right."""
       # There is some bug in TF when casting from int to uint: the uint result becomes 0.
-      # TF bug report: https://github.com/tensorflow/tensorflow/issues/30215
+      # Bug report: https://github.com/tensorflow/tensorflow/issues/30215
       # So the following code does not work.
       #
       # cast_map = {tf.int8: tf.uint8, tf.int16: tf.uint16,
@@ -442,7 +456,7 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
       # Instead, we have to do the following slightly more sophisticated stuff.
       if bitlength < 0:
         raise ValueError("Unsupported shift steps.")
-      elif bitlength == 0:
+      if bitlength == 0:
         return self
       total = NATIVE_TYPE.size * 8
       mask = ~((-1) << (total - bitlength))
