@@ -198,27 +198,33 @@ def bool_factory():
       return factory.tensor(self.value)
 
     def __xor__(self, other):
-      return self.xor(other)
+      return self.logical_xor(other)
 
-    def xor(self, other):
+    def logical_xor(self, other):
       x, y = _lift(self, other)
       value = tf.math.logical_xor(x.value, y.value)
       return DenseTensor(value)
 
     def __and__(self, other):
-      return self.and_(other)
+      return self.logical_and(other)
 
-    def and_(self, other):
-      # Because "and" is a keyword in Python, the naming "and_" follows the way how Python handles this:
-      # https://docs.python.org/3.4/library/operator.html
+    def logical_and(self, other):
       x, y = _lift(self, other)
       value = tf.math.logical_and(x.value, y.value)
       return DenseTensor(value)
 
-    def __invert__(self):
-      return self.invert()
+    def __or__(self, other):
+      return self.logical_or(other)
 
-    def invert(self):
+    def logical_or(self, other):
+      x, y = _lift(self, other)
+      value = tf.math.logical_or(x.value, y.value)
+      return DenseTensor(value)
+
+    def __invert__(self):
+      return self.logical_not()
+
+    def logical_not(self):
       value = tf.math.logical_not(self.value)
       return DenseTensor(value)
 

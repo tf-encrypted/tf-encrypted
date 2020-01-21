@@ -386,27 +386,25 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
       return factory.tensor(self.value)
 
     def __or__(self, other):
-      return self.or_(other)
+      return self.bitwise_or(other)
 
-    def or_(self, other):
+    def bitwise_or(self, other):
       x, y = _lift(self, other)
       value = tf.bitwise.bitwise_or(x.value, y.value)
       return DenseTensor(value)
 
     def __xor__(self, other):
-      return self.xor(other)
+      return self.bitwise_xor(other)
 
-    def xor(self, other):
+    def bitwise_xor(self, other):
       x, y = _lift(self, other)
       value = tf.bitwise.bitwise_xor(x.value, y.value)
       return DenseTensor(value)
 
     def __and__(self, other):
-      return self.and_(other)
+      return self.bitwise_and(other)
 
-    def and_(self, other):
-      # Because "and" is a keyword in Python, the naming "and_" follows the way how Python handles this:
-      # https://docs.python.org/3.4/library/operator.html
+    def bitwise_and(self, other):
       x, y = _lift(self, other)
       value = tf.bitwise.bitwise_and(x.value, y.value)
       return DenseTensor(value)
@@ -419,9 +417,9 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
       return DenseTensor(value)
 
     def __lshift__(self, bitlength):
-      return self.lshift(bitlength)
+      return self.left_shift(bitlength)
 
-    def lshift(self, bitlength):
+    def left_shift(self, bitlength):
       return DenseTensor(tf.bitwise.left_shift(self.value, bitlength))
 
     def __rshift__(self, bitlength):
@@ -432,11 +430,16 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
       return self.right_shift(bitlength)
 
     def logical_rshift(self, bitlength):
-      # There is some bug in TF when casting from int to uint: the uint result becomes 0. So the following code does not work.
+      # There is some bug in TF when casting from int to uint: the uint result becomes 0.
+      # TF bug report: https://github.com/tensorflow/tensorflow/issues/30215
+      # So the following code does not work.
+      #
       # cast_map = {tf.int8: tf.uint8, tf.int16: tf.uint16,
       #             tf.int32: tf.uint32, tf.int64: tf.uint64}
       # x = tf.bitwise.right_shift(tf.cast(self.value, dtype=cast_map[NATIVE_TYPE]), bitlength)
       # x = tf.cast(x, NATIVE_TYPE)
+      #
+      # Instead, we have to do the following slightly more sophisticated stuff.
       if bitlength < 0:
         raise ValueError("Unsupported shift steps.")
       elif bitlength == 0:
