@@ -75,6 +75,8 @@ $(BUILD_CONVERTER_README): $(BUILD_RESERVED_SCOPES) pythoncheck
 lint: $(BUILD_CONVERTER_README) pythoncheck
 	pylint tf_encrypted examples operations
 	pylint bin/run bin/process bin/pull_model bin/serve bin/write
+	flake8 tf_encrypted
+	yapf --recursive --parallel --diff tf_encrypted > /dev/null 
 
 typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
