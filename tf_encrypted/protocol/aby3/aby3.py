@@ -1147,16 +1147,6 @@ class ABY3(Protocol):
       raise TypeError("Only support iterating ABY3PrivateTensor.")
     return self.dispatch("iterate", tensor, batch_size, repeat, shuffle, seed)
 
-  def blinded_shuffle(self, tensor: "ABY3PrivateTensor"):
-    """
-    Shuffle the rows of the given tenosr privately.
-    After the shuffle, none of the share holder could know the exact shuffle order.
-    """
-    if not isinstance(tensor, ABY3PrivateTensor):
-      raise TypeError(("Only support blindly shuffle ABY3PrivateTensor. "
-                       "For public tensor, use the shuffle() method"))
-    return self.dispatch("blinded_shuffle", tensor)
-
   def dispatch(self, base_name, *args, container=None, **kwargs):
     """
     Finds the correct protocol logicto perform based on the dispatch_id
