@@ -522,17 +522,13 @@ class TestABY3(unittest.TestCase):
                                     share_type=BOOLEAN)
 
     # Parallel prefix adder. It is simply an adder for boolean sharing.
-    z1 = tfe.B_ppa(x, y, topology="sklansky")
-    z2 = tfe.B_ppa(x, y, topology="kogge_stone")
+    z = tfe.B_ppa(x, y)
 
     with tfe.Session() as sess:
       # initialize variables
       sess.run(tfe.global_variables_initializer())
       # reveal result
-      result = sess.run(z1.reveal())
-      np.testing.assert_allclose(result, np.array([[8, 10, 12], [14, 16, 18]]), rtol=0.0, atol=0.01)
-
-      result = sess.run(z2.reveal())
+      result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[8, 10, 12], [14, 16, 18]]), rtol=0.0, atol=0.01)
       print("test_ppa_private_private succeeds")
 
@@ -1000,6 +996,29 @@ class TestABY3(unittest.TestCase):
       print(sess.run(y.reveal()))
       print(sess.run(x.reveal()))
       print(sess.run(z.reveal()))
+
+
+  def test_while_loop(self):
+
+    def cond(i, a):
+      return i < 10
+    def body(i, a):
+      return (i + 1, a + 10)
+
+    i = 0
+    x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
+    y = x * 1
+    r1, r2 = tfe.while_loop(cond, body, [i, y])
+
+    with tfe.Session() as sess:
+      # initialize variables
+      sess.run(tfe.global_variables_initializer())
+      # reveal result
+      result = sess.run(r1)
+      np.testing.assert_allclose(result, np.array(10), rtol=0.0, atol=0.01)
+      result = sess.run(r2.reveal())
+      np.testing.assert_allclose(result, np.array([[101, 102, 103], [104, 105, 106]]), rtol=0.0, atol=0.01)
+      print("test_while_loop succeeds")
 
 
 if __name__ == "__main__":

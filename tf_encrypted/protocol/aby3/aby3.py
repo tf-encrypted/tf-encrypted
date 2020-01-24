@@ -1052,9 +1052,9 @@ class ABY3(Protocol):
     return self.dispatch("B_not", x)
 
   @memoize
-  def B_ppa(self, x, y, n_bits=None, topology="kogge_stone"):
+  def B_ppa(self, x, y, nbits=None, topology="kogge_stone"):
     x, y = self.lift(x, y, share_type=BOOLEAN)
-    return self.dispatch("B_ppa", x, y, n_bits, topology)
+    return self.dispatch("B_ppa", x, y, nbits, topology)
 
   @memoize
   def B_add(self, x, y):
@@ -1146,6 +1146,12 @@ class ABY3(Protocol):
     if not isinstance(tensor, ABY3PrivateTensor):
       raise TypeError("Only support iterating ABY3PrivateTensor.")
     return self.dispatch("iterate", tensor, batch_size, repeat, shuffle, seed)
+
+  def while_loop(self, cond, body, loop_vars):
+    """
+    Private version of `tf.while`, but works for ABY3 tensors.
+    """
+    return self.dispatch("while_loop", cond, body, loop_vars)
 
   def dispatch(self, base_name, *args, container=None, **kwargs):
     """
@@ -2490,112 +2496,24 @@ def _B_sub_private_private(prot, x, y):
   raise NotImplementedError("Sbustraction with boolean sharing is not implemented, and not recommended.")
 
 
-def _B_ppa_private_private(prot, x, y, n_bits, topology="kogge_stone"):
+def _B_ppa_private_private(prot, x, y, nbits, topology="kogge_stone"):
   """
   Parallel prefix adder (PPA). This adder can be used for addition of boolean sharings.
 
-  `n_bits` can be passed as an optimization to constrain the computation for least significant
-  `n_bits` bits.
+  `nbits` can be passed as an optimization to constrain the computation for least significant
+  `nbits` bits.
 
   AND Depth: log(k)
   Total gates: klog(k)
   """
 
   if topology == "kogge_stone":
-    return _B_ppa_kogge_stone_private_private(prot, x, y, n_bits)
-  elif topology == "sklansky":
-    return _B_ppa_sklansky_private_private(prot, x, y, n_bits)
+    return _B_ppa_kogge_stone_private_private(prot, x, y, nbits)
   else:
     raise NotImplementedError("Unknown adder topology.")
 
 
-def _B_ppa_sklansky_private_private(prot, x, y, n_bits):
-  """
-  Parallel prefix adder (PPA), using the Sklansky adder topology.
-  """
-
-  assert isinstance(x, ABY3PrivateTensor), type(x)
-  assert isinstance(y, ABY3PrivateTensor), type(y)
-
-  if x.backing_dtype.native_type != tf.int64:
-    raise NotImplementedError("Native type {} not supported".format(
-        x.backing_dtype.native_type))
-
-  with tf.name_scope("B_ppa"):
-    keep_masks = [
-        0x5555555555555555, 0x3333333333333333,
-        0x0f0f0f0f0f0f0f0f, 0x00ff00ff00ff00ff,
-        0x0000ffff0000ffff, 0x00000000ffffffff
-    ]  # yapf: disable
-    copy_masks = [
-        0x5555555555555555, 0x2222222222222222,
-        0x0808080808080808, 0x0080008000800080,
-        0x0000800000008000, 0x0000000080000000
-    ]  # yapf: disable
-
-    G = x & y
-    P = x ^ y
-
-    k = prot.nbits
-    if n_bits is not None:
-      k = n_bits
-    for i in range(ceil(log2(k))):
-      c_mask = prot.define_constant(np.ones(x.shape, dtype=np.object) * copy_masks[i],
-                                    apply_scaling=False,
-                                    share_type=BOOLEAN)
-      k_mask = prot.define_constant(np.ones(x.shape, dtype=np.object) * keep_masks[i],
-                                    apply_scaling=False,
-                                    share_type=BOOLEAN)
-      # Copy the selected bit to 2^i positions:
-      # For example, when i=2, the 4-th bit is copied to the (5, 6, 7, 8)-th bits
-      G1 = (G & c_mask) << 1
-      P1 = (P & c_mask) << 1
-      for j in range(i):
-        G1 = (G1 << (2**j)) ^ G1
-        P1 = (P1 << (2**j)) ^ P1
-      """
-      Two-round impl. using algo. that assume using OR gate is free, but in fact,
-      here using OR gate cost one round.
-      The PPA operator 'o' is defined as:
-      (G, P) o (G1, P1) = (G + P*G1, P*P1), where '+' is OR, '*' is AND
-      """
-      # G1 and P1 are 0 for those positions that we do not copy the selected bit to.
-      # Hence for those positions, the result is: (G, P) = (G, P) o (0, 0) = (G, 0).
-      # In order to keep (G, P) for these positions so that they can be used in the future,
-      # we need to let (G1, P1) = (G, P) for these positions, because (G, P) o (G, P) = (G, P)
-      #
-      # G1 = G1 ^ (G & k_mask)
-      # P1 = P1 ^ (P & k_mask)
-      #
-      # G = G | (P & G1)
-      # P = P & P1
-      """
-      One-round impl. by modifying the PPA operator 'o' as:
-      (G, P) o (G1, P1) = (G ^ (P*G1), P*P1), where '^' is XOR, '*' is AND
-      This is a valid definition: when calculating the carry bit c_i = g_i + p_i * c_{i-1},
-      the OR '+' can actually be replaced with XOR '^' because we know g_i and p_i will NOT take '1'
-      at the same time.
-      And this PPA operator 'o' is also associative. BUT, it is NOT idempotent: (G, P) o (G, P) != (G, P).
-      This does not matter, because we can do (G, P) o (0, P) = (G, P), or (G, P) o (0, 1) = (G, P)
-      if we want to keep G and P bits.
-      """
-      # Option 1: Using (G, P) o (0, P) = (G, P)
-      # P1 = P1 ^ (P & k_mask)
-      # Option 2: Using (G, P) o (0, 1) = (G, P)
-      P1 = P1 ^ k_mask
-
-      G = G ^ (P & G1)
-      P = P & P1
-
-    # G stores the carry-in to the next position
-    C = G << 1
-    P = x ^ y
-    z = C ^ P
-
-  return z
-
-
-def _B_ppa_kogge_stone_private_private(prot, x, y, n_bits):
+def _B_ppa_kogge_stone_private_private(prot, x, y, nbits):
   """
   Parallel prefix adder (PPA), using the Kogge-Stone adder topology.
   """
@@ -2610,24 +2528,27 @@ def _B_ppa_kogge_stone_private_private(prot, x, y, n_bits):
   with tf.name_scope("B_ppa"):
     keep_masks = []
     for i in range(ceil(log2(prot.nbits))):
-      keep_masks.append((1 << (2**i)) - 1)
-    """
+        keep_masks.append((1 << (2**i)) - 1)
+    keep_masks = prot.define_constant(np.array(keep_masks, dtype=np.object), apply_scaling=False)
+    '''
     For example, if prot.nbits = 64, then keep_masks is:
     keep_masks = [0x0000000000000001, 0x0000000000000003, 0x000000000000000f,
                   0x00000000000000ff, 0x000000000000ffff, 0x00000000ffffffff]
-    """
+    '''
 
     G = x & y
     P = x ^ y
-    k = prot.nbits if n_bits is None else n_bits
-    for i in range(ceil(log2(k))):
-      k_mask = prot.define_constant(np.ones(x.shape, dtype=np.object) * keep_masks[i],
-                                    apply_scaling=False,
-                                    share_type=BOOLEAN)
+    k = prot.nbits if nbits is None else nbits
 
-      G1 = G << (2**i)
-      P1 = P << (2**i)
-      """
+    def cond(i, G, P):
+      return i < ceil(log2(k))
+
+    def body(i, G, P):
+      k_mask = keep_masks[i]
+      G1 = G << (tf.cast(2**i, dtype=tf.int64))
+      P1 = P << (tf.cast(2**i, dtype=tf.int64))
+
+      '''
       One-round impl. by modifying the PPA operator 'o' as:
       (G, P) o (G1, P1) = (G ^ (P*G1), P*P1), where '^' is XOR, '*' is AND
       This is a valid definition: when calculating the carry bit c_i = g_i + p_i * c_{i-1},
@@ -2636,7 +2557,7 @@ def _B_ppa_kogge_stone_private_private(prot, x, y, n_bits):
       And this PPA operator 'o' is also associative. BUT, it is NOT idempotent: (G, P) o (G, P) != (G, P).
       This does not matter, because we can do (G, P) o (0, P) = (G, P), or (G, P) o (0, 1) = (G, P)
       if we want to keep G and P bits.
-      """
+      '''
       # Option 1: Using (G, P) o (0, P) = (G, P)
       # P1 = P1 ^ (P & k_mask)
       # Option 2: Using (G, P) o (0, 1) = (G, P)
@@ -2644,6 +2565,9 @@ def _B_ppa_kogge_stone_private_private(prot, x, y, n_bits):
 
       G = G ^ (P & G1)
       P = P & P1
+      return (i+1, G, P)
+
+    _, G, P = prot.while_loop(cond, body, [0, G, P])
 
     # G stores the carry-in to the next position
     C = G << 1
@@ -3246,6 +3170,18 @@ def _iterate_private(
   return ABY3PrivateTensor(prot, results, tensor.is_scaled, tensor.share_type)
 
 
+def _indexer_public(prot: ABY3, tensor: ABY3PublicTensor, slc) -> "ABY3PublicTensor":
+
+    values = tensor.unwrapped
+    results = [None]*3
+    with tf.name_scope("index"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                results[i] = values[i][slc]
+
+    return ABY3PublicTensor(prot, results, tensor.is_scaled, tensor.share_type)
+
+
 def _indexer_private(prot: ABY3, tensor: ABY3PrivateTensor, slc) -> "ABY3PrivateTensor":
   shares = tensor.unwrapped
   results = [[None] * 2 for _ in range(3)]
@@ -3266,3 +3202,70 @@ def _reshape_private(prot: ABY3, tensor: ABY3PrivateTensor, axe):
         results[i][0] = shares[i][0].reshape(axe)
         results[i][1] = shares[i][1].reshape(axe)
   return ABY3PrivateTensor(prot, results, tensor.is_scaled, tensor.share_type)
+
+
+def _while_loop_(prot, cond, body, loop_vars):
+
+    factory = prot.int_factory
+
+    def extract_var_aux_info(var):
+        info = {}
+        info["class"] = var.__class__
+        if isinstance(var, (ABY3PublicTensor, ABY3PrivateTensor)):
+            info["is_scaled"] = var.is_scaled
+            info["share_type"] = var.share_type
+        return info
+
+    def extract_var_native_vars(var):
+        # if isinstance(var, (ABY3PublicTensor, ABY3PrivateTensor)):
+            # a, b = var.unwrapped
+            # return (a.value, b.value)
+        if isinstance(var, ABY3PublicTensor):
+            values = var.unwrapped
+            return [v.value for v in values]
+        elif isinstance(var, ABY3PrivateTensor):
+            shares = var.unwrapped
+            return [ss.value for s in shares for ss in s]
+        else:
+            return var
+
+    def unwrap(var_list):
+        _aux = [extract_var_aux_info(var) for var in var_list]
+        _native = [extract_var_native_vars(var) for var in var_list]
+        return _aux, _native
+
+    def wrap(aux, native):
+        _wrapped_vars = []
+        for i in range(len(aux)):
+            if issubclass(aux[i]["class"], ABY3PublicTensor):
+                values = [factory.tensor(v) for v in native[i]]
+                var = ABY3PublicTensor(
+                        prot, values, aux[i]["is_scaled"])
+            elif issubclass(aux[i]["class"], ABY3PrivateTensor):
+                shares = [[None] * 2 for _ in range(3)]
+                for j in range(6):
+                    shares[j//2][j%2] = factory.tensor(native[i][j])
+                var = ABY3PrivateTensor(
+                        prot, shares, aux[i]["is_scaled"], aux[i]["share_type"])
+            else:
+                var = native[i]
+
+            _wrapped_vars.append(var)
+        return _wrapped_vars
+
+    def cond_wrapper(*unwrapped_loop_vars):
+        wrapped_loop_vars = wrap(aux_info, unwrapped_loop_vars)
+        return cond(*wrapped_loop_vars)
+
+    def body_wrapper(*unwrapped_loop_vars):
+        wrapped_loop_vars = wrap(aux_info, unwrapped_loop_vars)
+        wrapped_result = body(*wrapped_loop_vars)
+        _, unwrapped_result = unwrap(wrapped_result)
+        return unwrapped_result
+
+    aux_info, native_vars = unwrap(loop_vars)
+
+    result = tf.while_loop(cond_wrapper, body_wrapper, native_vars)
+    if not isinstance(result, (tuple, list)):
+        result = [result]
+    return wrap(aux_info, result)
