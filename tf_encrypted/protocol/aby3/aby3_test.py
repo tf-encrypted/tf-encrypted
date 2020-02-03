@@ -46,7 +46,6 @@ class TestABY3(unittest.TestCase):
       result = sess.run(z.reveal())
       # Should be [[2.3, 2.3], [2.3, 2.3]]
       np.testing.assert_allclose(result, np.array([[2.3, 2.3], [2.3, 2.3]]), rtol=0.0, atol=0.01)
-      print("test_add_private_private succeeds")
 
 
   def test_add_private_public(self):
@@ -69,7 +68,6 @@ class TestABY3(unittest.TestCase):
       # reveal result
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[2.2, 2.4], [2.6, 2.8]]), rtol=0.0, atol=0.01)
-      print("test_add_private_public succeeds")
 
 
   def test_sub_private_private(self):
@@ -92,7 +90,6 @@ class TestABY3(unittest.TestCase):
       # reveal result
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[-0.3, -0.3], [-0.3, -0.3]]), rtol=0.0, atol=0.01)
-      print("test_sub_private_private succeeds")
 
 
   def test_sub_private_public(self):
@@ -117,7 +114,6 @@ class TestABY3(unittest.TestCase):
       np.testing.assert_allclose(result, np.array([[0.4, 0.3], [0.2, 0.1]]), rtol=0.0, atol=0.01)
       result = sess.run(z2.reveal())
       np.testing.assert_allclose(result, np.array([[-0.4, -0.3], [-0.2, -0.1]]), rtol=0.0, atol=0.01)
-      print("test_sub_private_public succeeds")
 
 
   def test_neg(self):
@@ -142,7 +138,6 @@ class TestABY3(unittest.TestCase):
       np.testing.assert_allclose(result, np.array([[-0.6, 0.7], [0.8, -0.9]]), rtol=0.0, atol=0.01)
       result = sess.run(z2)
       np.testing.assert_allclose(result, np.array([[-0.6, 0.7], [0.8, -0.9]]), rtol=0.0, atol=0.01)
-      print("test_neg succeeds")
 
 
   def test_mul_private_public(self):
@@ -166,7 +161,6 @@ class TestABY3(unittest.TestCase):
       # reveal result
       result = sess.run(z2.reveal())
       np.testing.assert_allclose(result, np.array([[2.4, 2.8], [3.2, 3.6]]), rtol=0.0, atol=0.01)
-      print("test_mul_private_public succeeds")
 
 
   def test_mul_private_private(self):
@@ -194,7 +188,6 @@ class TestABY3(unittest.TestCase):
       # reveal result
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[2.6, 2.6], [2.6, 2.6]]), rtol=0.0, atol=0.01)
-      print("test_mul_private_private succeeds")
 
 
   def test_matmul_public_private(self):
@@ -226,7 +219,6 @@ class TestABY3(unittest.TestCase):
       np.testing.assert_allclose(result, np.array([[2.3, 2.3], [2.7, 2.7], [3.1, 3.1]]), rtol=0.0, atol=0.01)
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[4.6, 4.6], [5.4, 5.4], [6.2, 6.2]]), rtol=0.0, atol=0.01)
-      print("test_matmul_public_private succeeds")
 
 
   def test_matmul_private_private(self):
@@ -248,8 +240,6 @@ class TestABY3(unittest.TestCase):
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[58, 64], [139, 154]]), rtol=0.0, atol=0.01)
 
-      print("test_matmul_private_private succeeds")
-
 
   def test_3d_matmul_private(self):
     tf.reset_default_graph()
@@ -270,7 +260,6 @@ class TestABY3(unittest.TestCase):
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[[94, 100], [229, 244]], [[508, 532], [697, 730]]]), rtol=0.0, atol=0.01)
 
-      print("test_3d_matmul_private succeeds")
 
 
   def test_boolean_sharing(self):
@@ -296,8 +285,6 @@ class TestABY3(unittest.TestCase):
 
       result = sess.run(z2.reveal())
       np.testing.assert_allclose(result, np.array([[1, 0, 1], [0, 1, 4]]), rtol=0.0, atol=0.01)
-
-      print("test_boolean_sharing succeeds")
 
 
   def test_not_private(self):
@@ -325,8 +312,6 @@ class TestABY3(unittest.TestCase):
 
       result = sess.run(z2.reveal())
       np.testing.assert_allclose(result, np.array([[0, 1, 1], [1, 0, 1]]), rtol=0.0, atol=0.01)
-
-      print("test_not_private succeeds")
 
 
   def test_native_ppa_sklansky(self):
@@ -404,7 +389,6 @@ class TestABY3(unittest.TestCase):
       truth = x + y
 
       assert z == truth
-    print("test_native_ppa_sklansky succeeds")
 
 
   def test_native_ppa_kogge_stone(self):
@@ -461,7 +445,6 @@ class TestABY3(unittest.TestCase):
       truth = x + y
 
       assert z == truth
-    print("test_native_ppa_kogge_stone succeeds")
 
 
   def test_lshift_private(self):
@@ -480,7 +463,6 @@ class TestABY3(unittest.TestCase):
       # reveal result
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[2, 4, 6], [8, 10, 12]]), rtol=0.0, atol=0.01)
-      print("test_lshift_private succeeds")
 
 
   def test_rshift_private(self):
@@ -519,7 +501,6 @@ class TestABY3(unittest.TestCase):
                     [(-4 & ((1 << prot.nbits) - 1)) >> 1, 2, 3]]),
         rtol=0.0,
         atol=0.01)
-      print("test_rshift_private succeeds")
 
 
   def test_ppa_private_private(self):
@@ -545,7 +526,6 @@ class TestABY3(unittest.TestCase):
 
       result = sess.run(z2.reveal())
       np.testing.assert_allclose(result, np.array([[8, 10, 12], [14, 16, 18]]), rtol=0.0, atol=0.01)
-      print("test_ppa_private_private succeeds")
 
 
   def test_a2b_private(self):
@@ -566,7 +546,6 @@ class TestABY3(unittest.TestCase):
       # reveal result
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01)
-      print("test_a2b_private succeeds")
 
 
   def test_b2a_private(self):
@@ -586,7 +565,6 @@ class TestABY3(unittest.TestCase):
       # reveal result
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01)
-      print("test_b2a_private succeeds")
 
 
   def test_ot(self):
@@ -625,7 +603,6 @@ class TestABY3(unittest.TestCase):
       # reveal result
       result = sess.run(prot._decode(m_c, False))
       np.testing.assert_allclose(result, np.array([[2, 2, 4], [4, 6, 6]]), rtol=0.0, atol=0.01)
-      print("test_ot succeeds")
 
 
   def test_mul_AB_public_private(self):
@@ -648,7 +625,6 @@ class TestABY3(unittest.TestCase):
       # reveal result
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[1, 0, 0], [0, 5, 0]]), rtol=0.0, atol=0.01)
-      print("test_mul_AB_public_private succeeds")
 
 
   def test_mul_AB_private_private(self):
@@ -671,7 +647,6 @@ class TestABY3(unittest.TestCase):
       # reveal result
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[1, 0, 0], [0, 5, 0]]), rtol=0.0, atol=0.01)
-      print("test_mul_AB_private_private succeeds")
 
 
   def test_bit_extract(self):
@@ -702,7 +677,6 @@ class TestABY3(unittest.TestCase):
       np.testing.assert_allclose(result.astype(int), np.array([[0, 1, 1], [0, 1, 1]]), rtol=0.0, atol=0.01)
       result = sess.run(s.reveal())
       np.testing.assert_allclose(result.astype(int), np.array([[0, 1, 0], [1, 1, 0]]), rtol=0.0, atol=0.01)
-      print("test_bit_extract succeeds")
 
 
   def test_pow_private(self):
@@ -725,8 +699,6 @@ class TestABY3(unittest.TestCase):
 
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[1, 8, 27], [64, 125, 216]]), rtol=0.0, atol=0.01)
-
-      print("test_pow_private succeeds")
 
 
   def test_polynomial_private(self):
@@ -751,8 +723,6 @@ class TestABY3(unittest.TestCase):
 
       result = sess.run(z.reveal())
       np.testing.assert_allclose(result, np.array([[5.7, 19.4, 45.1], [85.8, 144.5, 224.2]]), rtol=0.0, atol=0.01)
-
-      print("test_polynomial_private succeeds")
 
 
   def test_polynomial_piecewise(self):
@@ -781,7 +751,6 @@ class TestABY3(unittest.TestCase):
       np.testing.assert_allclose(result, np.array([[0, 0, 0.25], [0.5, 0.75, 1]]), rtol=0.0, atol=0.01)
       result = sess.run(z2.reveal())
       np.testing.assert_allclose(result, np.array([[0.33, 0.415, 0.4575], [0.5, 0.5425, 0.84]]), rtol=0.0, atol=0.01)
-      print("test_polynomial_piecewise succeeds")
 
 
   def test_transpose(self):
@@ -806,8 +775,6 @@ class TestABY3(unittest.TestCase):
       result = sess.run(z2)
       np.testing.assert_allclose(result, np.array([[1, 4], [2, 5], [3, 6]]), rtol=0.0, atol=0.01)
 
-      print("test_transpose succeeds")
-
 
   def test_reduce_sum(self):
     tf.reset_default_graph()
@@ -830,8 +797,6 @@ class TestABY3(unittest.TestCase):
 
       result = sess.run(z2)
       np.testing.assert_allclose(result, np.array([5, 7, 9]), rtol=0.0, atol=0.01)
-
-      print("test_reduce_sum succeeds")
 
 
   def test_concat(self):
@@ -857,8 +822,6 @@ class TestABY3(unittest.TestCase):
 
       result = sess.run(z2)
       np.testing.assert_allclose(result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01)
-
-      print("test_concat succeeds")
 
 
   def test_simple_lr_model(self):
@@ -897,8 +860,6 @@ class TestABY3(unittest.TestCase):
       for i in range(1):
         sess.run(assign_ops)
 
-      print(sess.run(w.reveal()))
-
 
   def test_mul_trunc2_private_private(self):
     tf.reset_default_graph()
@@ -925,7 +886,6 @@ class TestABY3(unittest.TestCase):
       # reveal result
       result = sess.run(z.reveal(), tag="mul_trunc2")
       np.testing.assert_allclose(result, np.array([[2.6, 2.6], [2.6, 2.6]]), rtol=0.0, atol=0.01)
-      print("test_mul_trunc2_private_private succeeds")
 
 
   def test_write_private(self):
