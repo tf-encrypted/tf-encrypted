@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring
+
 import glob
 import os
 import unittest
@@ -7,7 +9,6 @@ import tensorflow as tf
 
 import tf_encrypted as tfe
 from tf_encrypted.protocol.aby3 import ABY3, ARITHMETIC, BOOLEAN
-from tf_encrypted.protocol.aby3.aby3 import i64_factory, b_factory
 
 
 class TestABY3(unittest.TestCase):
@@ -27,9 +28,6 @@ class TestABY3(unittest.TestCase):
     tfe.set_protocol(prot)
 
     def provide_input():
-      # normal TensorFlow operations can be run locally
-      # as part of defining a private input, in this
-      # case on the machine of the input provider
       return tf.ones(shape=(2, 2)) * 1.3
 
     # define inputs
@@ -45,7 +43,8 @@ class TestABY3(unittest.TestCase):
       # reveal result
       result = sess.run(z.reveal())
       # Should be [[2.3, 2.3], [2.3, 2.3]]
-      np.testing.assert_allclose(result, np.array([[2.3, 2.3], [2.3, 2.3]]), rtol=0.0, atol=0.01)
+      expected = np.array([[2.3, 2.3], [2.3, 2.3]])
+      np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
 
 
   def test_add_private_public(self):
@@ -67,7 +66,8 @@ class TestABY3(unittest.TestCase):
       sess.run(tfe.global_variables_initializer())
       # reveal result
       result = sess.run(z.reveal())
-      np.testing.assert_allclose(result, np.array([[2.2, 2.4], [2.6, 2.8]]), rtol=0.0, atol=0.01)
+      expected = np.array([[2.2, 2.4], [2.6, 2.8]])
+      np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
 
 
   def test_sub_private_private(self):
@@ -89,7 +89,8 @@ class TestABY3(unittest.TestCase):
       sess.run(tfe.global_variables_initializer())
       # reveal result
       result = sess.run(z.reveal())
-      np.testing.assert_allclose(result, np.array([[-0.3, -0.3], [-0.3, -0.3]]), rtol=0.0, atol=0.01)
+      expected = np.array([[-0.3, -0.3], [-0.3, -0.3]])
+      np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
 
 
   def test_sub_private_public(self):
@@ -111,9 +112,11 @@ class TestABY3(unittest.TestCase):
       sess.run(tfe.global_variables_initializer())
       # reveal result
       result = sess.run(z1.reveal())
-      np.testing.assert_allclose(result, np.array([[0.4, 0.3], [0.2, 0.1]]), rtol=0.0, atol=0.01)
+      z1_exp = np.array([[0.4, 0.3], [0.2, 0.1]])
+      np.testing.assert_allclose(result, z1_exp, rtol=0.0, atol=0.01)
       result = sess.run(z2.reveal())
-      np.testing.assert_allclose(result, np.array([[-0.4, -0.3], [-0.2, -0.1]]), rtol=0.0, atol=0.01)
+      z2_exp = np.array([[-0.4, -0.3], [-0.2, -0.1]])
+      np.testing.assert_allclose(result, z2_exp, rtol=0.0, atol=0.01)
 
 
   def test_neg(self):
@@ -135,9 +138,11 @@ class TestABY3(unittest.TestCase):
       sess.run(tfe.global_variables_initializer())
       # reveal result
       result = sess.run(z1.reveal())
-      np.testing.assert_allclose(result, np.array([[-0.6, 0.7], [0.8, -0.9]]), rtol=0.0, atol=0.01)
+      z1_exp = np.array([[-0.6, 0.7], [0.8, -0.9]])
+      np.testing.assert_allclose(result, z1_exp, rtol=0.0, atol=0.01)
       result = sess.run(z2)
-      np.testing.assert_allclose(result, np.array([[-0.6, 0.7], [0.8, -0.9]]), rtol=0.0, atol=0.01)
+      z2_exp = np.array([[-0.6, 0.7], [0.8, -0.9]])
+      np.testing.assert_allclose(result, z2_exp, rtol=0.0, atol=0.01)
 
 
   def test_mul_private_public(self):
@@ -324,14 +329,14 @@ class TestABY3(unittest.TestCase):
       x = randint(1, 2**31)
       y = randint(1, 2**31)
       keep_masks = [
-              0x5555555555555555, 0x3333333333333333,
-              0x0f0f0f0f0f0f0f0f, 0x00ff00ff00ff00ff,
-              0x0000ffff0000ffff, 0x00000000ffffffff
+          0x5555555555555555, 0x3333333333333333,
+          0x0f0f0f0f0f0f0f0f, 0x00ff00ff00ff00ff,
+          0x0000ffff0000ffff, 0x00000000ffffffff
       ] # yapf: disable
       copy_masks = [
-              0x5555555555555555, 0x2222222222222222,
-              0x0808080808080808, 0x0080008000800080,
-              0x0000800000008000, 0x0000000080000000
+          0x5555555555555555, 0x2222222222222222,
+          0x0808080808080808, 0x0080008000800080,
+          0x0000800000008000, 0x0000000080000000
       ] # yapf: disable
 
       G = x & y
@@ -347,32 +352,31 @@ class TestABY3(unittest.TestCase):
         for j in range(i):
           G1 = (G1 << (2**j)) ^ G1
           P1 = (P1 << (2**j)) ^ P1
-        """
-        Two-round impl. using algo. specified in the slides that assume using OR gate is free, but in fact,
-        here using OR gate cost one round.
-        The PPA operator 'o' is defined as:
-        (G, P) o (G1, P1) = (G + P*G1, P*P1), where '+' is OR, '*' is AND
-        """
+        # Two-round impl. using algo. specified in the slides that assume using OR gate is free, but in fact,
+        # here using OR gate cost one round.
+        # The PPA operator 'o' is defined as:
+        # (G, P) o (G1, P1) = (G + P*G1, P*P1), where '+' is OR, '*' is AND
+
         # G1 and P1 are 0 for those positions that we do not copy the selected bit to.
         # Hence for those positions, the result is: (G, P) = (G, P) o (0, 0) = (G, 0).
         # In order to keep (G, P) for these positions so that they can be used in the future,
         # we need to let (G1, P1) = (G, P) for these positions, because (G, P) o (G, P) = (G, P)
-        #
+
         # G1 = G1 ^ (G & k_mask)
         # P1 = P1 ^ (P & k_mask)
-        #
+
         # G = G | (P & G1)
         # P = P & P1
-        """
-        One-round impl. by modifying the PPA operator 'o' as:
-        (G, P) o (G1, P1) = (G ^ (P*G1), P*P1), where '^' is XOR, '*' is AND
-        This is a valid definition: when calculating the carry bit c_i = g_i + p_i * c_{i-1},
-        the OR '+' can actually be replaced with XOR '^' because we know g_i and p_i will NOT take '1'
-        at the same time.
-        And this PPA operator 'o' is also associative. BUT, it is NOT idempotent, hence (G, P) o (G, P) != (G, P).
-        This does not matter, because we can do (G, P) o (0, P) = (G, P), or (G, P) o (0, 1) = (G, P)
-        if we want to keep G and P bits.
-        """
+
+        # One-round impl. by modifying the PPA operator 'o' as:
+        # (G, P) o (G1, P1) = (G ^ (P*G1), P*P1), where '^' is XOR, '*' is AND
+        # This is a valid definition: when calculating the carry bit c_i = g_i + p_i * c_{i-1},
+        # the OR '+' can actually be replaced with XOR '^' because we know g_i and p_i will NOT take '1'
+        # at the same time.
+        # And this PPA operator 'o' is also associative. BUT, it is NOT idempotent, hence (G, P) o (G, P) != (G, P).
+        # This does not matter, because we can do (G, P) o (0, P) = (G, P), or (G, P) o (0, 1) = (G, P)
+        # if we want to keep G and P bits.
+
         # Option 1: Using (G, P) o (0, P) = (G, P)
         # P1 = P1 ^ (P & k_mask)
         # Option 2: Using (G, P) o (0, 1) = (G, P)
@@ -406,29 +410,23 @@ class TestABY3(unittest.TestCase):
           0x000000000000000f, 0x00000000000000ff,
           0x000000000000ffff, 0x00000000ffffffff
       ]  # yapf: disable
-      copy_masks = [
-          0x5555555555555555, 0x2222222222222222,
-          0x0808080808080808, 0x0080008000800080,
-          0x0000800000008000, 0x0000000080000000
-      ]  # yapf: disable
       k = 64
       for i in range(int(log2(k))):
-        c_mask = copy_masks[i]
         k_mask = keep_masks[i]
         # Copy the selected bit to 2^i positions:
         # For example, when i=2, the 4-th bit is copied to the (5, 6, 7, 8)-th bits
         G1 = G << (2**i)
         P1 = P << (2**i)
-        """
-        One-round impl. by modifying the PPA operator 'o' as:
-        (G, P) o (G1, P1) = (G ^ (P*G1), P*P1), where '^' is XOR, '*' is AND
-        This is a valid definition: when calculating the carry bit c_i = g_i + p_i * c_{i-1},
-        the OR '+' can actually be replaced with XOR '^' because we know g_i and p_i will NOT take '1'
-        at the same time.
-        And this PPA operator 'o' is also associative. BUT, it is NOT idempotent, hence (G, P) o (G, P) != (G, P).
-        This does not matter, because we can do (G, P) o (0, P) = (G, P), or (G, P) o (0, 1) = (G, P)
-        if we want to keep G and P bits.
-        """
+
+        # One-round impl. by modifying the PPA operator 'o' as:
+        # (G, P) o (G1, P1) = (G ^ (P*G1), P*P1), where '^' is XOR, '*' is AND
+        # This is a valid definition: when calculating the carry bit c_i = g_i + p_i * c_{i-1},
+        # the OR '+' can actually be replaced with XOR '^' because we know g_i and p_i will NOT take '1'
+        # at the same time.
+        # And this PPA operator 'o' is also associative. BUT, it is NOT idempotent, hence (G, P) o (G, P) != (G, P).
+        # This does not matter, because we can do (G, P) o (0, P) = (G, P), or (G, P) o (0, 1) = (G, P)
+        # if we want to keep G and P bits.
+
         # Option 1: Using (G, P) o (0, P) = (G, P)
         # P1 = P1 ^ (P & k_mask)
         # Option 2: Using (G, P) o (0, 1) = (G, P)
@@ -584,7 +582,7 @@ class TestABY3(unittest.TestCase):
                                        apply_scaling=False,
                                        factory=prot.bool_factory).unwrapped[0]
 
-    m_c = prot._ot(
+    m_c = prot._ot(  # pylint: disable=protected-access
         prot.servers[1],
         prot.servers[2],
         prot.servers[0],
@@ -601,7 +599,7 @@ class TestABY3(unittest.TestCase):
       # initialize variables
       sess.run(tfe.global_variables_initializer())
       # reveal result
-      result = sess.run(prot._decode(m_c, False))
+      result = sess.run(prot._decode(m_c, False))  # pylint: disable=protected-access
       np.testing.assert_allclose(result, np.array([[2, 2, 4], [4, 6, 6]]), rtol=0.0, atol=0.01)
 
 
@@ -857,8 +855,7 @@ class TestABY3(unittest.TestCase):
     with tfe.Session() as sess:
       # initialize variables
       sess.run(tfe.global_variables_initializer())
-      for i in range(1):
-        sess.run(assign_ops)
+      sess.run(assign_ops)
 
 
   def test_mul_trunc2_private_private(self):
