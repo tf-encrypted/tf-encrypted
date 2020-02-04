@@ -2,6 +2,7 @@
 
 import glob
 import os
+import tempfile
 import unittest
 
 import numpy as np
@@ -12,14 +13,6 @@ from tf_encrypted.protocol.aby3 import ABY3, ARITHMETIC, BOOLEAN
 
 
 class TestABY3(unittest.TestCase):
-
-  def setUp(self):
-    self.tfrecord_name = 'stash.tfrecord'
-
-  def tearDown(self):
-    filepaths = glob.glob(self.tfrecord_name+"*")
-    for f in filepaths:
-      os.remove(f)
 
   def test_add_private_private(self):
     tf.reset_default_graph()
@@ -900,13 +893,16 @@ class TestABY3(unittest.TestCase):
     # define inputs
     x = tfe.define_private_input('input-provider', provide_input)
 
-    write_op = x.write(self.tfrecord_name)
+    _, tmp_filename = tempfile.mkstemp()
+    write_op = x.write(tmp_filename)
 
     with tfe.Session() as sess:
       # initialize variables
       sess.run(tfe.global_variables_initializer())
       # reveal result
       sess.run(write_op)
+
+    os.remove(tmp_filename)
 
 
   def test_read_private(self):
@@ -922,7 +918,8 @@ class TestABY3(unittest.TestCase):
     # define inputs
     x = tfe.define_private_input('input-provider', provide_input)
 
-    write_op = x.write(self.tfrecord_name)
+    _, tmp_filename = tempfile.mkstemp()
+    write_op = x.write(tmp_filename)
 
     with tfe.Session() as sess:
       # initialize variables
@@ -930,10 +927,12 @@ class TestABY3(unittest.TestCase):
       # reveal result
       sess.run(write_op)
 
-    x = tfe.read(self.tfrecord_name, batch_size=5, n_columns=2)
+    x = tfe.read(tmp_filename, batch_size=5, n_columns=2)
     with tfe.Session() as sess:
       result = sess.run(x.reveal())
       np.testing.assert_allclose(result, np.array(list(range(0, 8)) + [0, 1]).reshape([5, 2]), rtol=0.0, atol=0.01)
+
+    os.remove(tmp_filename)
 
 
   def test_iterate_private(self):
@@ -948,7 +947,8 @@ class TestABY3(unittest.TestCase):
     # define inputs
     x = tfe.define_private_input('input-provider', provide_input)
 
-    write_op = x.write(self.tfrecord_name)
+    _, tmp_filename = tempfile.mkstemp()
+    write_op = x.write(tmp_filename)
 
     with tfe.Session() as sess:
       # initialize variables
@@ -956,7 +956,7 @@ class TestABY3(unittest.TestCase):
       # reveal result
       sess.run(write_op)
 
-    x = tfe.read(self.tfrecord_name, batch_size=5, n_columns=2)
+    x = tfe.read(tmp_filename, batch_size=5, n_columns=2)
     y = tfe.iterate(x, batch_size=3, repeat=True, shuffle=False)
     z = tfe.iterate(x, batch_size=3, repeat=True, shuffle=True)
     with tfe.Session() as sess:
@@ -967,6 +967,8 @@ class TestABY3(unittest.TestCase):
       print(sess.run(y.reveal()))
       print(sess.run(x.reveal()))
       print(sess.run(z.reveal()))
+
+    os.remove(tmp_filename)
 
 
 if __name__ == "__main__":
