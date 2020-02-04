@@ -185,7 +185,7 @@ class TestPondAssign(unittest.TestCase):
     # from https://github.com/tf-encrypted/tf-encrypted/pull/665
 
     tf.reset_default_graph()
-    tfe.get_protocol().clear_initializers()
+    tfe.clear_initializers()
 
     prot = tfe.protocol.Pond()
     tfe.set_protocol(prot)

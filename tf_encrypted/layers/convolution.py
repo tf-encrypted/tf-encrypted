@@ -2,6 +2,7 @@
 """Layer implementation for 2d convolution."""
 import numpy as np
 
+import tf_encrypted as tfe
 from .core import Layer
 from ..protocol.pond import PondPrivateTensor, PondMaskedTensor
 
@@ -77,12 +78,12 @@ class Conv2D(Layer):
     if is_secret(initial_weights):
       self.weights = initial_weights
     else:
-      self.weights = self.prot.define_private_variable(initial_weights)
+      self.weights = tfe.define_private_variable(initial_weights)
 
     if initial_bias is None or is_secret(initial_bias):
       self.bias = initial_bias
     else:
-      self.bias = self.prot.define_private_variable(initial_bias)
+      self.bias = tfe.define_private_variable(initial_bias)
 
   def forward(self, x):
     """Compute the forward convolution."""
@@ -90,14 +91,14 @@ class Conv2D(Layer):
     self.cache = x
 
     if not self.channels_first:
-      x = self.prot.transpose(x, perm=[0, 3, 1, 2])
+      x = tfe.transpose(x, perm=[0, 3, 1, 2])
 
-    out = self.prot.conv2d(x, self.weights, self.strides, self.padding)
+    out = tfe.conv2d(x, self.weights, self.strides, self.padding)
     if self.bias is not None:
       out = out + self.bias
 
     if not self.channels_first:
-      out = self.prot.transpose(out, perm=[0, 2, 3, 1])
+      out = tfe.transpose(out, perm=[0, 2, 3, 1])
 
     return out
 
@@ -120,7 +121,7 @@ class Conv2D(Layer):
           stride=self.strides
       )
 
-    d_w = self.prot.conv2d_bw(
+    d_w = tfe.conv2d_bw(
         x, d_y, self.weights.shape, self.strides, self.padding)
     d_bias = d_y.reduce_sum(axis=0)
 

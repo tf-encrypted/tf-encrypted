@@ -1,23 +1,22 @@
 # pylint: disable=inconsistent-return-statements
 """Provide activation functions"""
-from tf_encrypted import get_protocol
-
+import tf_encrypted as tfe
 
 def relu(x):
   """Computes relu of x element-wise"""
-  return get_protocol().relu(x)
+  return tfe.relu(x)
 
 def sigmoid(x):
   """Computes sigmoid of x element-wise"""
-  return get_protocol().sigmoid(x)
+  return tfe.sigmoid(x)
 
 def sigmoid_deriv(y, d_y):
   """Computes derive sigmoid of y"""
-  return d_y * y * (get_protocol().negative(y) + 1)
+  return d_y * y * (tfe.negative(y) + 1)
 
 def tanh(x):
   """Computes tanh of x element-wise"""
-  return get_protocol().tanh(x)
+  return tfe.tanh(x)
 
 def linear(x):
   return x

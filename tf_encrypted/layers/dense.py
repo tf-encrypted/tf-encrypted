@@ -4,6 +4,7 @@ from typing import Union, Optional
 import numpy as np
 import tensorflow as tf
 
+import tf_encrypted as tfe
 from tf_encrypted.layers.core import Layer
 from tf_encrypted.protocol.pond import PondPublicTensor, PondPrivateTensor
 
@@ -47,9 +48,9 @@ class Dense(Layer):
       initial_size = (self.in_features, self.out_features)
       initial_weights = np.random.normal(scale=0.1, size=initial_size)
     if initial_bias is not None:
-      self.bias = self.prot.define_private_variable(initial_bias)
+      self.bias = tfe.define_private_variable(initial_bias)
 
-    self.weights = self.prot.define_private_variable(initial_weights)
+    self.weights = tfe.define_private_variable(initial_weights)
 
     if self.transpose_weight:
       self.weights = self.weights.transpose()

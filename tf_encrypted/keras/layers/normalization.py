@@ -189,7 +189,7 @@ class BatchNormalization(Layer):
 
     # We have two different public variables for moving_variance and
     # denomtemp to avoid calling tfe.sqrt everytime denom is used
-    self.denom = self.prot.define_public_variable(denomtemp)
+    self.denom = tfe.define_public_variable(denomtemp)
 
     self.built = True
 
@@ -224,9 +224,9 @@ class BatchNormalization(Layer):
       for i, w in enumerate(self.weights):
         if isinstance(w, PondPublicTensor):
           shape = w.shape.as_list()
-          tfe_weights_pl = self.prot.define_public_placeholder(shape)
+          tfe_weights_pl = tfe.define_public_placeholder(shape)
           fd = tfe_weights_pl.feed(weights[i].reshape(shape))
-          sess.run(self.prot.assign(w, tfe_weights_pl), feed_dict=fd)
+          sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
         else:
           raise TypeError(("Don't know how to handle weights "
                            "of type {}. Batchnorm expects public tensors"
@@ -235,14 +235,12 @@ class BatchNormalization(Layer):
     elif isinstance(weights[0], PondPublicTensor):
       for i, w in enumerate(self.weights):
         shape = w.shape.as_list()
-        sess.run(self.prot.assign(w, weights[i].reshape(shape)))
+        sess.run(tfe.assign(w, weights[i].reshape(shape)))
 
     # Compute denom on public tensors before being lifted to private tensor
-    denomtemp = self.prot.reciprocal(
-        self.prot.sqrt(
-            self.prot.add(self.moving_variance, self.epsilon)
-        )
+    denomtemp = tfe.reciprocal(
+      tfe.sqrt(tfe.add(self.moving_variance, self.epsilon))
     )
 
     # Update denom as well when moving variance gets updated
-    sess.run(self.prot.assign(self.denom, denomtemp))
+    sess.run(tfe.assign(self.denom, denomtemp))

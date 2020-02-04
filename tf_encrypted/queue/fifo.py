@@ -5,7 +5,7 @@ FIFO queue data structure.
 from __future__ import absolute_import
 import abc
 
-from ..protocol import get_protocol
+import tf_encrypted as tfe
 
 
 class AbstractFIFOQueue(abc.ABC):
@@ -31,7 +31,7 @@ class AbstractFIFOQueue(abc.ABC):
 
 
 def FIFOQueue(capacity, shape, shared_name=None):
-  return get_protocol().fifo_queue(
+  return tfe.fifo_queue(
       capacity=capacity,
       shape=shape,
       shared_name=shared_name,

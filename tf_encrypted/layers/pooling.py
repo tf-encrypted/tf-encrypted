@@ -4,6 +4,7 @@ from abc import abstractmethod
 from typing import Optional, Union, Tuple, List
 import math
 
+import tf_encrypted as tfe
 from tf_encrypted.layers.core import Layer
 from ..protocol.pond import TFEVariable
 
@@ -65,7 +66,7 @@ class Pooling2D(Layer):
 
   def forward(self, x: TFEVariable) -> TFEVariable:
     if not self.channels_first:
-      x = self.prot.transpose(x, perm=[0, 3, 1, 2])
+      x = tfe.transpose(x, perm=[0, 3, 1, 2])
 
     self.cached_input_shape = x.shape
     self.cache = x
@@ -73,7 +74,7 @@ class Pooling2D(Layer):
     out = self.pool(x, self.pool_size, self.strides, self.padding)
 
     if not self.channels_first:
-      out = self.prot.transpose(out, perm=[0, 2, 3, 1])
+      out = tfe.transpose(out, perm=[0, 2, 3, 1])
 
     return out
 
@@ -89,7 +90,7 @@ class AveragePooling2D(Pooling2D):  # pylint: disable=abstract-method
   """
 
   def pool(self, x, pool_size, strides, padding):
-    return self.prot.avgpool2d(x, pool_size, strides, padding)
+    return tfe.avgpool2d(x, pool_size, strides, padding)
 
 
 class MaxPooling2D(Pooling2D):  # pylint: disable=abstract-method
@@ -101,4 +102,4 @@ class MaxPooling2D(Pooling2D):  # pylint: disable=abstract-method
   # TODO -- throw an error duing init if the protocol is not secureNN
 
   def pool(self, x, pool_size, strides, padding):
-    return self.prot.maxpool2d(x, pool_size, strides, padding)
+    return tfe.maxpool2d(x, pool_size, strides, padding)

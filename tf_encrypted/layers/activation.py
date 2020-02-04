@@ -2,6 +2,7 @@
 """Various activation functions implemented as Layer objects."""
 from typing import List
 
+import tf_encrypted as tfe
 from tf_encrypted.layers.core import Layer
 
 backward_msg = "`backward` is not implemented for layer {}"
@@ -21,7 +22,7 @@ class Sigmoid(Layer):
     pass
 
   def forward(self, x):
-    y = self.prot.sigmoid(x)
+    y = tfe.sigmoid(x)
     self.layer_output = y
     return y
 
@@ -50,7 +51,7 @@ class Relu(Layer):
     :rtype: ~tf_encrypted.protocol.pond.PondTensor
     :returns: A pond tensor with the same backing type as the input tensor.
     """
-    y = self.prot.relu(x)
+    y = tfe.relu(x)
     self.layer_output = y
     return y
 
@@ -78,7 +79,7 @@ class Tanh(Layer):
     pass
 
   def forward(self, x):
-    y = self.prot.tanh(x)
+    y = tfe.tanh(x)
     self.layer_output = y
     return y
 

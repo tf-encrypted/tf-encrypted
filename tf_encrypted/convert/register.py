@@ -9,6 +9,7 @@ import yaml
 import numpy as np
 import tensorflow as tf
 
+import tf_encrypted as tfe
 from ..layers import Conv2D, Relu, Sigmoid, Dense, AveragePooling2D, MaxPooling2D
 from ..keras.layers import BatchNormalization, DepthwiseConv2D, \
   GlobalAveragePooling2D, GlobalMaxPooling2D
@@ -116,7 +117,7 @@ def _matmul(converter, node: Any, inputs: List[str]) -> Any:
   def inputter_fn():
     return tf.constant(np.array(nums).reshape(b_shape))
 
-  w = converter.protocol.define_private_input(converter.model_provider,
+  w = tfe.define_private_input(converter.model_provider,
                                               inputter_fn)
 
   layer.initialize(initial_weights=w)
@@ -307,7 +308,7 @@ def _strided_slice(converter, node: Any, inputs: List[str]) -> Any:
   end = tf.constant(end.attr["value"].tensor)
   strides = tf.constant(strides.attr["value"].tensor)
 
-  return converter.protocol.strided_slice(input_out, begin, end,
+  return tfe.strided_slice(input_out, begin, end,
                                           strides=strides,
                                           begin_mask=begin_mask,
                                           end_mask=end_mask,
@@ -326,7 +327,7 @@ def _pack(converter, node: Any, inputs: List[str]) -> Any:
     else:
       final_inputs.append(input_c)
 
-  return converter.protocol.stack(final_inputs, axis=node.attr["axis"].i)
+  return tfe.stack(final_inputs, axis=node.attr["axis"].i)
 
 
 def _bias_add(converter, node: Any, inputs: List[str]) -> Any:
@@ -343,7 +344,7 @@ def _bias_add(converter, node: Any, inputs: List[str]) -> Any:
   else:
     b_out = b
 
-  return converter.protocol.add(a_out, b_out)
+  return tfe.add(a_out, b_out)
 
 
 def _maxpool(converter, node: Any, inputs: List[str]) -> Any:
@@ -386,7 +387,7 @@ def _reshape(converter, node: Any, inputs: List[str]) -> Any:
   else:
     raise TypeError("Unsupported dtype for reshape shape")
 
-  return converter.protocol.reshape(x_in, list(nums))
+  return tfe.reshape(x_in, list(nums))
 
 
 def _transpose(converter, node: Any, inputs: List[str]) -> Any:
@@ -404,7 +405,7 @@ def _transpose(converter, node: Any, inputs: List[str]) -> Any:
   else:
     raise TypeError("Unsupported dtype for transpose perm")
 
-  return converter.protocol.transpose(x_in, np.array(nums).reshape(shape))
+  return tfe.transpose(x_in, np.array(nums).reshape(shape))
 
 
 def _expand_dims(converter, node: Any, inputs: List[str]) -> Any:
@@ -419,7 +420,7 @@ def _expand_dims(converter, node: Any, inputs: List[str]) -> Any:
   axis_attr = input_axis.attr["value"].tensor.int_val
   axis_val = array.array('i', axis_attr)[0]
 
-  return converter.protocol.expand_dims(input_out, axis_val)
+  return tfe.expand_dims(input_out, axis_val)
 
 
 def _negative(converter, node: Any, inputs: List[str]) -> Any:
@@ -430,7 +431,7 @@ def _negative(converter, node: Any, inputs: List[str]) -> Any:
   else:
     input_out = x_in
 
-  return converter.protocol.negative(input_out)
+  return tfe.negative(input_out)
 
 
 def _gather(converter, node: Any, inputs: List[str]) -> Any:
@@ -447,7 +448,7 @@ def _gather(converter, node: Any, inputs: List[str]) -> Any:
 
   axis_val = axis.attr["value"].tensor.int_val[0]
 
-  return converter.protocol.gather(input_out, indices_out, axis_val)
+  return tfe.gather(input_out, indices_out, axis_val)
 
 
 def _squeeze(converter, node: Any, inputs: List[str]) -> Any:
@@ -455,7 +456,7 @@ def _squeeze(converter, node: Any, inputs: List[str]) -> Any:
 
   axis = node.attr["squeeze_dims"].list.i
 
-  return converter.protocol.squeeze(x_in, list(axis))
+  return tfe.squeeze(x_in, list(axis))
 
 
 def _split(converter, node: Any, inputs: List[str]) -> Any:
@@ -482,7 +483,7 @@ def _split(converter, node: Any, inputs: List[str]) -> Any:
 
   axis_val = axis.attr["value"].tensor.int_val[0]
 
-  return converter.protocol.split(input_out, num_or_size_splits, axis_val)
+  return tfe.split(input_out, num_or_size_splits, axis_val)
 
 
 def _pad(converter, node: Any, inputs: List[str]) -> Any:
@@ -495,7 +496,7 @@ def _pad(converter, node: Any, inputs: List[str]) -> Any:
   paddings_lst = [paddings_arr[i:i + 2]
                   for i in range(0, len(paddings_arr), 2)]
 
-  return converter.protocol.pad(x_in, paddings_lst)
+  return tfe.pad(x_in, paddings_lst)
 
 
 def _rsqrt(converter, node: Any, inputs: List[str]) -> Any:
@@ -520,12 +521,12 @@ def _rsqrt(converter, node: Any, inputs: List[str]) -> Any:
   else:
     # XXX this is a little weird but the input into rsqrt is public and
     # being used only for batchnorm at the moment
-    decoded = converter.protocol._decode(x_in.value_on_0, True)  # pylint: disable=protected-access
+    decoded = tfe._decode(x_in.value_on_0, True)  # pylint: disable=protected-access
 
     def inputter_fn():
       return tf.rsqrt(decoded)
 
-  x = converter.protocol.define_public_input(
+  x = tfe.define_public_input(
       converter.model_provider, inputter_fn)
 
   return x
@@ -545,7 +546,7 @@ def _add(converter, node: Any, inputs: List[str]) -> Any:
   else:
     b_out = b
 
-  return converter.protocol.add(a_out, b_out)
+  return tfe.add(a_out, b_out)
 
 
 def _sub(converter, node: Any, inputs: List[str]) -> Any:
@@ -562,7 +563,7 @@ def _sub(converter, node: Any, inputs: List[str]) -> Any:
   else:
     b_out = b
 
-  return converter.protocol.sub(a_out, b_out)
+  return tfe.sub(a_out, b_out)
 
 
 def _mul(converter, node: Any, inputs: List[str]) -> Any:
@@ -579,7 +580,7 @@ def _mul(converter, node: Any, inputs: List[str]) -> Any:
   else:
     b_out = b
 
-  return converter.protocol.mul(a_out, b_out)
+  return tfe.mul(a_out, b_out)
 
 
 def _avgpool(converter, node: Any, inputs: List[str]) -> Any:
@@ -639,7 +640,7 @@ def _concat(converter, node: Any, inputs: List[str]) -> Any:
   axis = converter.outputs[inputs[-1]]
   axis_int = axis.attr["value"].tensor.int_val[0]
 
-  return converter.protocol.concat(input_list, axis_int)
+  return tfe.concat(input_list, axis_int)
 
 
 def _batch_to_space_nd(converter, node, inputs):
@@ -647,7 +648,7 @@ def _batch_to_space_nd(converter, node, inputs):
   block_shape = converter.outputs[inputs[1]].attr["value"].tensor
   crops = converter.outputs[inputs[2]].attr["value"].tensor
 
-  return converter.protocol.batch_to_space_nd(x_in, block_shape, crops)
+  return tfe.batch_to_space_nd(x_in, block_shape, crops)
 
 
 def _space_to_batch_nd(converter, node, inputs):
@@ -655,7 +656,7 @@ def _space_to_batch_nd(converter, node, inputs):
   block_shape = converter.outputs[inputs[1]].attr["value"].tensor
   paddings = converter.outputs[inputs[2]].attr["value"].tensor
 
-  return converter.protocol.space_to_batch_nd(x_in, block_shape, paddings)
+  return tfe.space_to_batch_nd(x_in, block_shape, paddings)
 
 
 def _flatten(converter, node, inputs):
@@ -666,7 +667,7 @@ def _flatten(converter, node, inputs):
   for dim in shape[1:]:
     non_batch *= dim
 
-  return converter.protocol.reshape(x_in, [-1, non_batch])
+  return tfe.reshape(x_in, [-1, non_batch])
 
 
 def _required_space_to_batch_paddings(converter, node, inputs: List[str]):
@@ -715,9 +716,9 @@ def _required_space_to_batch_paddings(converter, node, inputs: List[str]):
       )
       return tf.cast(crops, tf.float64)
 
-  pad_private = converter.protocol.define_public_input(
+  pad_private = tfe.define_public_input(
       converter.model_provider, inputter_pad)
-  crop_private = converter.protocol.define_public_input(
+  crop_private = tfe.define_public_input(
       converter.model_provider, inputter_crop)
 
   return (pad_private, crop_private)
@@ -727,7 +728,7 @@ def _argmax(converter, node, inputs):
   x_in = converter.outputs[inputs[0]]
   axis = converter.outputs[inputs[1]].attr["value"].tensor.int_val[0]
 
-  return converter.protocol.argmax(x_in, axis=axis)
+  return tfe.argmax(x_in, axis=axis)
 
 
 def _slice(converter, node, inputs):
@@ -756,7 +757,7 @@ def _slice(converter, node, inputs):
     else:
       end[i] = begin[i] + size[i]
 
-  return converter.protocol.strided_slice(input_out, begin, end)
+  return tfe.strided_slice(input_out, begin, end)
 
 
 # pylint: enable=unused-argument
@@ -792,7 +793,7 @@ def _nodef_to_public_pond(converter, x):
     def inputter_fn():
       return tf.constant(np.array(nums).reshape(x_shape))
 
-  x_public = converter.protocol.define_public_input(
+  x_public = tfe.define_public_input(
       converter.model_provider, inputter_fn)
 
   return x_public
@@ -834,7 +835,7 @@ def _nodef_to_private_pond(converter, x):
     def inputter_fn():
       return tf.constant(np.array(nums).reshape(x_shape))
 
-  x_private = converter.protocol.define_private_input(
+  x_private = tfe.define_private_input(
       converter.model_provider, inputter_fn)
 
   return x_private

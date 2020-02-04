@@ -3,6 +3,7 @@
 from typing import List
 import numpy as np
 
+import tf_encrypted as tfe
 from .core import Layer
 
 
@@ -44,7 +45,7 @@ class Reshape(Layer):
     pass
 
   def forward(self, x):
-    y = self.prot.reshape(x, self.output_shape)
+    y = tfe.reshape(x, self.output_shape)
     self.layer_output = y
     return y
 
