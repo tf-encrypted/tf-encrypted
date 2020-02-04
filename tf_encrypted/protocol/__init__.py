@@ -6,8 +6,6 @@ import inspect
 from .protocol import (
     Protocol,
     memoize,
-    set_protocol,
-    get_protocol,
     nodes,
 )
 
@@ -38,6 +36,4 @@ __all__ = [
     "SecureNN",
     "TFEVariable",
     "TFETensor",
-    "set_protocol",
-    "get_protocol",
 ]
