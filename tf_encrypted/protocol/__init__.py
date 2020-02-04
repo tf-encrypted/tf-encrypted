@@ -9,6 +9,7 @@ from .protocol import (
     nodes,
 )
 
+from .aby3 import ABY3
 from .pond import Pond, TFEVariable, TFETensor
 from .securenn import SecureNN
 
@@ -17,7 +18,7 @@ def get_all_funcs():
   """Assemble public method names from all protocols into a list."""
   all_prot_method_names = set()
 
-  protocols = [Pond, SecureNN]
+  protocols = [Pond, SecureNN, ABY3]
   for protocol in protocols:
     members = inspect.getmembers(protocol, predicate=inspect.isfunction)
     all_prot_method_names |= set(
