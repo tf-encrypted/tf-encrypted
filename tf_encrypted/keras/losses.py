@@ -47,7 +47,7 @@ class BinaryCrossentropy(Loss):
 
   def grad(self, y_true, y_pred):
     if self.from_logits:
-      grad = get_protocol().sigmoid(y_pred) - y_true
+      grad = tfe.sigmoid(y_pred) - y_true
     else:
       grad = y_pred - y_true
     return grad
@@ -64,7 +64,7 @@ def binary_crossentropy(y_true, y_pred):
 
 
 def binary_crossentropy_from_logits(y_true, y_pred):
-  y_pred = get_protocol().sigmoid(y_pred)
+  y_pred = tfe.sigmoid(y_pred)
   return binary_crossentropy(y_true, y_pred)
 
 
