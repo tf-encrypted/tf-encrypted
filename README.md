@@ -74,25 +74,27 @@ For more information, check out the [documentation](./docs/) or the [examples](.
 
 # Background & Further Reading
 
-Overview and background:
+Blog posts:
 
-- [Growing TF Encrypted](https://medium.com/dropoutlabs/growing-tf-encrypted-a1cb7b109ab5) outlines the roadmap and motivates TF Encrypted as a community project (*by Morten Dahl*)
-
-- [Private Machine Learning in TensorFlow using Secure Computation](https://arxiv.org/abs/1810.08130) further elaborates on the benefits of the approach, outlines the adaptation of a secure computation protocol, and reports on concrete performance numbers (*by Morten Dahl, Jason Mancuso, Yann Dupis, et al. at Dropout Labs*)
-
-- [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) describes the initial motivation and implementation (*by Morten Dahl*)
-
-Examples and uses:
+- [Introducing TF Encrypted](https://alibaba-gemini-lab.github.io/docs/blog/tfe/) walks through a simple example showing two data owners jointly training a logistic regression model using TF Encrypted on a vertically split dataset (*by Alibaba Gemini Lab*)
 
 - [Federated Learning with Secure Aggregation in TensorFlow](https://medium.com/dropoutlabs/federated-learning-with-secure-aggregation-in-tensorflow-95f2f96ebecd) demonstrates using TF Encrypted for secure aggregation of federated learning in pure TensorFlow (*by Justin Patriquin at Dropout Labs*)
 
-- [Crypto-Oriented Neural Architecture Design](https://arxiv.org/abs/1911.12322) uses TF Encrypted to benchmark ML optimizations made to better support the encrypted domain (*by Avital Shafran, Gil Segev, Shmuel Peleg, and Yedid Hoshen*)
-
 - [Encrypted Deep Learning Training and Predictions with TF Encrypted Keras](https://medium.com/dropoutlabs/encrypted-deep-learning-training-and-predictions-with-tf-encrypted-keras-557193284f44) introduces and illustrates first parts of our encrypted Keras interface (*by Yann Dupis at Dropout Labs*)
+
+- [Growing TF Encrypted](https://medium.com/dropoutlabs/growing-tf-encrypted-a1cb7b109ab5) outlines the roadmap and motivates TF Encrypted as a community project (*by Morten Dahl*)
 
 - [Experimenting with TF Encrypted](https://medium.com/dropoutlabs/experimenting-with-tf-encrypted-fe37977ff03c) walks through a simple example of turning an existing TensorFlow prediction model private (*by Morten Dahl and Jason Mancuso at Dropout Labs*)
 
-- [Introducing TF Encrypted](https://alibaba-gemini-lab.github.io/docs/blog/tfe/) walks through a simple example showing two data owners jointly training a logistic regression model using TF Encrypted on a vertically split dataset. (*by Alibaba Gemini Lab*)
+- [Secure Computations as Dataflow Programs](https://mortendahl.github.io/2018/03/01/secure-computation-as-dataflow-programs/) describes the initial motivation and implementation (*by Morten Dahl*)
+
+Papers:
+
+- [Privacy-Preserving Collaborative Machine Learning on Genomic Data using TensorFlow](https://arxiv.org/abs/2002.04344) outlines the [iDASH'19](http://www.humangenomeprivacy.org/2019/) winning solution built on TF Encrypted (*by Cheng Hong, et al.*)
+
+- [Crypto-Oriented Neural Architecture Design](https://arxiv.org/abs/1911.12322) uses TF Encrypted to benchmark ML optimizations made to better support the encrypted domain (*by Avital Shafran, Gil Segev, Shmuel Peleg, and Yedid Hoshen*)
+
+- [Private Machine Learning in TensorFlow using Secure Computation](https://arxiv.org/abs/1810.08130) further elaborates on the benefits of the approach, outlines the adaptation of a secure computation protocol, and reports on concrete performance numbers (*by Morten Dahl, Jason Mancuso, Yann Dupis, et al.*)
 
 Presentations:
 
