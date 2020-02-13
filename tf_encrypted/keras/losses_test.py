@@ -77,8 +77,6 @@ class TestLosses(unittest.TestCase):
 
     np.testing.assert_allclose(actual, expected, rtol=1e-1, atol=1e-1)
     np.testing.assert_allclose(actual_der, expected_der, rtol=1e-1, atol=1e-1)
-    print("actual_der=", actual_der)
-    print("expected_der=", expected_der)
 
   def test_mean_squared_error(self):
     y_true_np = np.array([1, 2, 3, 4]).astype(float)
