@@ -273,7 +273,6 @@ class ABY3(Protocol):
         x[2][1] = factory.variable(shares[2][1])
 
     x = ABY3PrivateVariable(self, x, apply_scaling, share_type)
-    self._initializers.append(x.initializer)
     return x
 
   def define_local_computation(
@@ -489,16 +488,6 @@ class ABY3(Protocol):
         arguments=arguments,
         name="output{}".format("-" + name if name else ""),
     )
-
-  @property
-  def initializer(self) -> tf.Operation:
-    return tf.group(*self._initializers)
-
-  def add_initializers(self, *initializers):
-    self._initializers.append(tf.group(*initializers))
-
-  def clear_initializers(self) -> None:
-    del self._initializers[:]
 
   def _encode(
       self,
@@ -3242,7 +3231,8 @@ def _iterate_private(
         # Wrap the tf.tensor as a dense tensor (no extra encoding is needed)
         results[idx][i] = prot.int_factory.tensor(tf.reshape(batch, out_shape))
 
-      prot.add_initializers(*[iterators[idx][i].initializer for i in range(2)])
+      prot._initializers.append(tf.group(iterators[idx][0].initializer,
+                                         iterators[idx][1].initializer))
 
   for idx in range(3):
     helper(idx)
