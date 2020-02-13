@@ -9,6 +9,7 @@ np.random.seed(42)
 tf.random.set_random_seed(42)
 
 class TestLosses(unittest.TestCase):
+
   def setUp(self):
     tf.reset_default_graph()
 
@@ -42,9 +43,6 @@ class TestLosses(unittest.TestCase):
       expected_der = sess.run(der_for_y_pred)
 
     np.testing.assert_allclose(actual, expected, rtol=1e-1, atol=1e-1)
-    print("actual_der=", actual_der)
-    print("expected_der=", expected_der)
-
 
   def test_binary_crossentropy_from_logits(self):
 
