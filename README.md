@@ -11,7 +11,7 @@ See below for more [background material](#background--further-reading), explore 
 TF Encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.5+ and TensorFlow 1.12.0+:
 
 ```bash
-pip3 install tf-encrypted
+pip install tf-encrypted
 ```
 Creating a conda environment to run TF Encrypted code can be done using:
 ```
@@ -26,7 +26,8 @@ Alternatively, installing from source can be done using:
 ```bash
 git clone https://github.com/tf-encrypted/tf-encrypted.git
 cd tf-encrypted
-pip3 install -e .
+pip install -e .
+make build
 ```
 
 This latter is useful on platforms for which the pip package has not yet been compiled but is also needed for [development](./docs/CONTRIBUTING.md). Note that this will get you a working basic installation, yet a few more steps are required to match the performance and security of the version shipped in the pip package, see the [installation instructions](./docs/INSTALL.md).
