@@ -78,11 +78,8 @@ def set_config(config: Config) -> None:
   set_protocol(None)
 
 
-def global_variables_initializer() -> Optional[tf.Operation]:
-  prot = get_protocol()
-  if prot is not None:
-    return prot.initializer
-  return None
+def global_variables_initializer() -> tf.Operation:
+  return tf.global_variables_initializer()
 
 
 set_protocol(Pond())

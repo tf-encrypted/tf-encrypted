@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import initializers
 
+import tf_encrypted as tfe
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
 from tf_encrypted.protocol.pond import PondPublicTensor

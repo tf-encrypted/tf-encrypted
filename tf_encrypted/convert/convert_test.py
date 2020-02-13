@@ -60,7 +60,6 @@ class TestConvert(unittest.TestCase):
       decimals=3,
       **kwargs  # pylint: disable=unused-argument
   ):
-    tfe.clear_initializers()
     converter = Converter(
         registry(),
         config=tfe.get_config(),
@@ -151,7 +150,6 @@ class TestConvert(unittest.TestCase):
     )
     with prot_class() as prot:
       input_fn = self.ndarray_input_fn(test_input)
-      tfe.clear_initializers()
       converter = Converter(
           registry(),
           config=tfe.get_config(),

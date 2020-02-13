@@ -36,11 +36,9 @@ class TestSecureModel(unittest.TestCase):
 
   def setUp(self):
     K.clear_session()
-    tfe.clear_initializers()
 
   def tearDown(self):
     K.clear_session()
-    tfe.clear_initializers()
 
   def test_secure_model(self):
     with tfe.protocol.Pond():

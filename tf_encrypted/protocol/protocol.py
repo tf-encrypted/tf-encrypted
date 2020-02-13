@@ -36,11 +36,6 @@ class Protocol(ABC):
   ) -> Optional[bool]:
     tfe.set_protocol(self.last_protocol)
 
-  @property
-  @abstractmethod
-  def initializer(self) -> tf.Operation:
-    pass
-
 
 def memoize(func: Callable) -> Callable:
   """

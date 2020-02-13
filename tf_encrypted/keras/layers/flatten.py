@@ -3,6 +3,7 @@
 import numpy as np
 from tensorflow.python.keras.utils import conv_utils
 
+import tf_encrypted as tfe
 from tf_encrypted.keras.engine import Layer
 
 
