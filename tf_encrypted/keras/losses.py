@@ -1,5 +1,5 @@
 """TFE Keras loss function"""
-from tf_encrypted import get_protocol
+import tf_encrypted as tfe
 
 class Loss():
   """Loss base class."""
@@ -45,8 +45,8 @@ def binary_crossentropy(y_true, y_pred):
 
   batch_size = y_true.shape.as_list()[0]
   batch_size_inv = 1 / batch_size
-  out = y_true * get_protocol().log(y_pred)
-  out += (1 - y_true) * get_protocol().log(1 - y_pred)
+  out = y_true * tfe.log(y_pred)
+  out += (1 - y_true) * tfe.log(1 - y_pred)
   out = out.negative()
   bce = out.reduce_sum(axis=0) * batch_size_inv
   return bce

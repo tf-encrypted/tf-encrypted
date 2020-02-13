@@ -66,7 +66,7 @@ with tfe.protocol.Pond(*config.get_players('server0, server1, crypto-producer'))
       config.get_player('prediction-client'), x, receive_output)
 
   with tfe.Session(config=config) as sess:
-    sess.run(prot.initializer, tag='init')
+    sess.run(tfe.global_variables_initializer(), tag='init')
 
     sess.run(prediction_op, tag='prediction')
 

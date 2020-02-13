@@ -4,7 +4,6 @@ from typing import List, Optional
 from abc import ABC, abstractmethod
 
 from tf_encrypted.protocol.pond import TFEVariable
-from tf_encrypted.protocol.protocol import get_protocol, Protocol
 
 # TODO
 # Split backward function in compute_gradient and compute_backpropagated_error?
@@ -35,7 +34,3 @@ class Layer(ABC):
   # TODO[jason]: @abstractmethod
   def backward(self, *args, **kwargs) -> Optional[TFEVariable]:
     """Backward pass for training."""
-
-  @property
-  def prot(self) -> Optional[Protocol]:
-    return get_protocol()

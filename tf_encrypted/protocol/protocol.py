@@ -6,10 +6,10 @@ from types import TracebackType
 
 import tensorflow as tf
 
+import tf_encrypted as tfe
 from ..tensor.factory import AbstractTensor
 
 
-__PROTOCOL__ = None  # pylint: disable=invalid-name
 nodes = dict()
 
 
@@ -23,8 +23,8 @@ class Protocol(ABC):
   """
 
   def __enter__(self) -> "Protocol":
-    self.last_protocol = get_protocol()
-    set_protocol(self)
+    self.last_protocol = tfe.get_protocol()
+    tfe.set_protocol(self)
     return self
 
   def __exit__(
@@ -34,38 +34,7 @@ class Protocol(ABC):
       exception_value: Optional[Exception],
       traceback: Optional[TracebackType],
   ) -> Optional[bool]:
-    set_protocol(self.last_protocol)
-
-  @property
-  @abstractmethod
-  def initializer(self) -> tf.Operation:
-    pass
-
-
-def set_protocol(prot: Protocol) -> None:
-  """
-  set_protocol(prot)
-
-  Sets the global protocol.
-  E.g. :class:`~tf_encrypted.protocol.securenn.SecureNN` or
-  :class:`~tf_encrypted.protocol.pond.Pond`.
-
-  .. code-block::python
-      tfe.set_protocol(tfe.protocol.secureNN())
-
-  :param Protocol prot: An instance of a tfe protocol.
-  """
-  global __PROTOCOL__  # pylint: disable=invalid-name
-  __PROTOCOL__ = prot
-
-
-def get_protocol() -> Optional[Protocol]:
-  """
-  get_protocol() -> Protocol or None
-
-  Returns the current global protocol.
-  """
-  return __PROTOCOL__
+    tfe.set_protocol(self.last_protocol)
 
 
 def memoize(func: Callable) -> Callable:

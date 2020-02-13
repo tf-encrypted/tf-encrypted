@@ -41,7 +41,6 @@ TFETensor = Union[TFEPublicTensor, "PondPrivateTensor", "PondMaskedTensor"]
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 TF_INT_TYPES = [tf.int8, tf.int16, tf.int32, tf.int64]
 
-_initializers = list()
 _THISMODULE = sys.modules[__name__]
 
 
@@ -295,7 +294,6 @@ class Pond(Protocol):
         x_on_1 = factory.variable(v_on_1)
 
     x = PondPublicVariable(self, x_on_0, x_on_1, apply_scaling)
-    _initializers.append(x.initializer)
     return x
 
   def define_private_variable(
@@ -369,7 +367,6 @@ class Pond(Protocol):
         x1 = factory.variable(v1)
 
     x = PondPrivateVariable(self, x0, x1, apply_scaling)
-    _initializers.append(x.initializer)
     return x
 
   def fifo_queue(self, capacity, shape, shared_name):
@@ -692,13 +689,6 @@ class Pond(Protocol):
         arguments=arguments,
         name_scope=name_scope if name_scope else "output",
     )
-
-  @property
-  def initializer(self) -> tf.Operation:
-    return tf.group(*_initializers)
-
-  def clear_initializers(self) -> None:
-    del _initializers[:]
 
   def _encode(self,
               rationals: Union[tf.Tensor, np.ndarray],

@@ -10,7 +10,7 @@ import tf_encrypted as tfe
 from tf_encrypted.config import Config, get_config
 from tf_encrypted.convert.register import REGISTERED_SPECOPS
 from tf_encrypted.player import Player
-from tf_encrypted.protocol import Protocol, get_protocol
+from tf_encrypted.protocol import Protocol
 from tf_encrypted.protocol.pond import TFEInputter
 
 
@@ -40,7 +40,6 @@ class Converter:
     self.config = config if config is not None else get_config()
     if protocol is not None:
       tfe.set_protocol(protocol)
-    self.protocol = get_protocol()
     if model_provider is None:
       self.model_provider = self.config.get_player('model-provider')
     elif isinstance(model_provider, str):
@@ -114,7 +113,7 @@ class Converter:
       except StopIteration:
         raise InvalidArgumentError("Not enough placeholders supplied")
 
-      x = self.protocol.define_private_input(input_player, item)
+      x = tfe.define_private_input(input_player, item)
       self.outputs[output] = x
       return
 

@@ -26,6 +26,7 @@ class TestPond(unittest.TestCase):
 
 
 class TestTruncate(unittest.TestCase):
+
   def setUp(self):
     tf.reset_default_graph()
 
@@ -181,11 +182,11 @@ class TestIdentity(unittest.TestCase):
 
 class TestPondAssign(unittest.TestCase):
 
+  def setUp(self):
+    tf.reset_default_graph()
+
   def test_assign_synchronization(self):
     # from https://github.com/tf-encrypted/tf-encrypted/pull/665
-
-    tf.reset_default_graph()
-    tfe.get_protocol().clear_initializers()
 
     prot = tfe.protocol.Pond()
     tfe.set_protocol(prot)
@@ -222,8 +223,6 @@ class TestPondAssign(unittest.TestCase):
       assert result == np.array([101.])
 
   def test_public_assign(self):
-
-    tf.reset_default_graph()
 
     with tfe.protocol.Pond() as prot:
       x_var = prot.define_public_variable(np.zeros(shape=(2, 2)))

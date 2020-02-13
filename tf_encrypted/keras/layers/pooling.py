@@ -2,6 +2,7 @@
 from abc import abstractmethod
 from tensorflow.python.keras.utils import conv_utils
 
+import tf_encrypted as tfe
 from tf_encrypted.keras.engine import Layer
 
 
@@ -49,7 +50,7 @@ class Pooling2D(Layer):
   def call(self, inputs):
 
     if self.data_format != 'channels_first':
-      inputs = self.prot.transpose(inputs, perm=[0, 3, 1, 2])
+      inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
     outputs = self._pool_function(inputs,
                                   self.pool_size,
@@ -57,7 +58,7 @@ class Pooling2D(Layer):
                                   self.padding)
 
     if self.data_format != 'channels_first':
-      outputs = self.prot.transpose(outputs, perm=[0, 2, 3, 1])
+      outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
 
     return outputs
 
@@ -118,7 +119,7 @@ class MaxPooling2D(Pooling2D):
                data_format=None,
                **kwargs):
     super(MaxPooling2D, self).__init__(
-        self.prot.maxpool2d,
+        tfe.maxpool2d,
         pool_size=pool_size, strides=strides,
         padding=padding, data_format=data_format, **kwargs)
 
@@ -165,7 +166,7 @@ class AveragePooling2D(Pooling2D):
                data_format=None,
                **kwargs):
     super(AveragePooling2D, self).__init__(
-        self.prot.avgpool2d,
+        tfe.avgpool2d,
         pool_size=pool_size, strides=strides,
         padding=padding, data_format=data_format, **kwargs)
 
@@ -263,10 +264,10 @@ class GlobalMaxPooling2D(GlobalPooling2D):
 
   def call(self, inputs):
     if self.data_format == 'channels_last':
-      x_reduced = self.prot.reduce_max(inputs, axis=2)
-      x_reduced = self.prot.reduce_max(x_reduced, axis=1)
+      x_reduced = tfe.reduce_max(inputs, axis=2)
+      x_reduced = tfe.reduce_max(x_reduced, axis=1)
     else:
-      x_reduced = self.prot.reduce_max(inputs, axis=3)
-      x_reduced = self.prot.reduce_max(x_reduced, axis=2)
+      x_reduced = tfe.reduce_max(inputs, axis=3)
+      x_reduced = tfe.reduce_max(x_reduced, axis=2)
 
     return x_reduced

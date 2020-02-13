@@ -3,6 +3,7 @@
 from typing import List
 import numpy as np
 
+import tf_encrypted as tfe
 from tf_encrypted.layers.core import Layer
 
 
@@ -64,11 +65,11 @@ class Batchnorm(Layer):
 
     denomtemp = 1.0 / np.sqrt(self.variance + self.variance_epsilon)
 
-    self.denom = self.prot.define_public_variable(denomtemp)
-    self.mean = self.prot.define_public_variable(self.mean)
-    self.variance = self.prot.define_public_variable(self.variance)
-    self.scale = self.prot.define_public_variable(self.scale)
-    self.offset = self.prot.define_public_variable(self.offset)
+    self.denom = tfe.define_public_variable(denomtemp)
+    self.mean = tfe.define_public_variable(self.mean)
+    self.variance = tfe.define_public_variable(self.variance)
+    self.scale = tfe.define_public_variable(self.scale)
+    self.offset = tfe.define_public_variable(self.offset)
 
   def forward(self, x):
     if self.scale is None and self.offset is None:

@@ -6,7 +6,6 @@ import numpy as np
 from tensorflow.python.keras.utils import generic_utils
 
 import tf_encrypted as tfe
-from tf_encrypted import get_protocol
 from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
 from tf_encrypted.protocol.pond import PondPrivateTensor
@@ -106,10 +105,10 @@ class Layer(ABC):
 
   def add_weight(self, variable, make_private=True):
     if make_private:
-      variable = self.prot.define_private_variable(variable)
+      variable = tfe.define_private_variable(variable)
       self.weights.append(variable)
     else:
-      variable = self.prot.define_public_variable(variable)
+      variable = tfe.define_public_variable(variable)
       self.weights.append(variable)
 
     return variable
@@ -140,10 +139,6 @@ class Layer(ABC):
       for i, w in enumerate(self.weights):
         shape = w.shape.as_list()
         sess.run(tfe.assign(w, weights[i].reshape(shape)))
-
-  @property
-  def prot(self):
-    return get_protocol()
 
   @property
   def name(self):

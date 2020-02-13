@@ -307,7 +307,7 @@ else:
 
     with tfe.Session(config=config) as sess:
       print("Initialize tensors")
-      sess.run(tf.global_variables_initializer(), tag='init')
+      sess.run(tfe.global_variables_initializer(), tag='init')
 
       print("Predict")
 

@@ -935,6 +935,7 @@ class TestABY3(unittest.TestCase):
     os.remove(tmp_filename)
 
 
+  @unittest.skip
   def test_iterate_private(self):
     tf.reset_default_graph()
 

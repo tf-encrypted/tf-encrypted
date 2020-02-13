@@ -3,6 +3,7 @@
 import numpy as np
 from tensorflow.python.keras.utils import conv_utils
 
+import tf_encrypted as tfe
 from tf_encrypted.keras.engine import Layer
 
 
@@ -36,14 +37,14 @@ class Flatten(Layer):
       permutation = [0]
       permutation.extend([i for i in range(2, rank)])
       permutation.append(1)
-      inputs = self.prot.transpose(inputs, perm=permutation)
+      inputs = tfe.transpose(inputs, perm=permutation)
 
     if rank == 1:
       flatten_shape = [input_shape[0], 1]
     else:
       flatten_shape = [input_shape[0], -1]
 
-    outputs = self.prot.reshape(inputs, flatten_shape)
+    outputs = tfe.reshape(inputs, flatten_shape)
 
     return outputs
 

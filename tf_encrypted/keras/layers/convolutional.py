@@ -161,9 +161,9 @@ class Conv2D(Layer):
   def call(self, inputs):
 
     if self.data_format != 'channels_first':
-      inputs = self.prot.transpose(inputs, perm=[0, 3, 1, 2])
+      inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
-    outputs = self.prot.conv2d(inputs,
+    outputs = tfe.conv2d(inputs,
                                self.kernel,
                                self.strides[0],
                                self.padding)
@@ -172,7 +172,7 @@ class Conv2D(Layer):
       outputs = outputs + self.bias
 
     if self.data_format != 'channels_first':
-      outputs = self.prot.transpose(outputs, perm=[0, 2, 3, 1])
+      outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
 
     if self.activation is not None:
       return self.activation(outputs)
@@ -402,9 +402,9 @@ class DepthwiseConv2D(Conv2D):
   def call(self, inputs):
 
     if self.data_format != 'channels_first':
-      inputs = self.prot.transpose(inputs, perm=[0, 3, 1, 2])
+      inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
-    outputs = self.prot.conv2d(inputs,
+    outputs = tfe.conv2d(inputs,
                                self.kernel,
                                self.strides[0],
                                self.padding)
@@ -413,7 +413,7 @@ class DepthwiseConv2D(Conv2D):
       outputs = outputs + self.bias
 
     if self.data_format != 'channels_first':
-      outputs = self.prot.transpose(outputs, perm=[0, 2, 3, 1])
+      outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
 
     if self.activation is not None:
       return self.activation(outputs)

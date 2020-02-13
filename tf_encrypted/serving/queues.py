@@ -101,6 +101,8 @@ class QueueClient:
     self.output1 = output.share1
 
     # fixedpoint config
+    # TODO[jvmncs]: how do we access fixedpoint_config without calling
+    # get_protocol?
     self.modulus = output.backing_dtype.modulus
     self.bound = tfe.get_protocol().fixedpoint_config.bound_single_precision
     self.scaling_factor = tfe.get_protocol().fixedpoint_config.scaling_factor
