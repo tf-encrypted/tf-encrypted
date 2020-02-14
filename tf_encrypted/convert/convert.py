@@ -353,7 +353,7 @@ def specop_from_numberedscope(scope):
 
 def strip_tensor_info(node_name: str) -> str:
   if node_name.startswith("^"):
-    return n[1:]
+    return node_name[1:]
   return node_name.split(":")[0]
 
 

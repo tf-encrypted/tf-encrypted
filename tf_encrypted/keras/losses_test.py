@@ -39,17 +39,13 @@ class TestLosses(unittest.TestCase):
       y_pred = tf.convert_to_tensor(y_pred_np)
       loss = tf.keras.losses.BinaryCrossentropy()
       out = loss(y_true, y_pred)
-      der_for_y_pred = -(y_true / y_pred - (1 - y_true) / (1 - y_pred))
+      der_for_y_pred = y_true * (y_pred - 1) + (1 - y_true) * y_pred
 
       expected = sess.run(out)
       expected_der = sess.run(der_for_y_pred)
 
     np.testing.assert_allclose(actual, expected, rtol=1e-1, atol=1e-1)
-
-    # TODO: assertion below is currently failing; is this expected?
-    del actual_der
-    del expected_der
-    # np.testing.assert_allclose(actual_der, expected_der, rtol=1e-1, atol=1e-1)
+    np.testing.assert_allclose(actual_der, expected_der, rtol=1e-1, atol=1e-1)
 
   def test_binary_crossentropy_from_logits(self):
 
