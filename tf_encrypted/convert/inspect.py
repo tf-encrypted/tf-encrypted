@@ -8,7 +8,7 @@ import tensorflow as tf
 def inspect_subgraph(subgraph, input_shape, sess=None):
   path = _gen_graph_def(subgraph, input_shape, sess)
   graph = _read_graph(path)
-  print_graph(graph)
+  print_from_graphdef(graph)
 
 
 def _gen_graph_def(subgraph, input_shape, sess):
@@ -37,7 +37,7 @@ def print_from_graphdef(graphdef):
 
 
 def export(x: tf.Tensor, filename, sess=None):
-  """Export a GraphDef for the graph connected to x.
+  """Export a GraphDef for the subgraph connected to x.
 
   Args:
     x: The tensor whose parent Graph we want to export.
