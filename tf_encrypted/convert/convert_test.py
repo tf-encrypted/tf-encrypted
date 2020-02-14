@@ -11,14 +11,17 @@ from tensorflow.python.platform import gfile
 from tensorflow.python.framework import graph_util
 from tensorflow.python.framework import graph_io
 from tensorflow.keras import backend as K
-from tensorflow.keras.layers import Flatten, Conv2D, Dense, DepthwiseConv2D, \
-  GlobalAveragePooling2D, GlobalMaxPooling2D
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import DepthwiseConv2D
+from tensorflow.keras.layers import GlobalAveragePooling2D
+from tensorflow.keras.layers import GlobalMaxPooling2D
 from tensorflow.keras.models import Sequential
 
 import tf_encrypted as tfe
 from tf_encrypted.convert import Converter
 from tf_encrypted.convert.register import registry
-
 
 _GLOBAL_FILENAME = ''
 _SEED = 826485786
@@ -47,8 +50,10 @@ class TestConvert(unittest.TestCase):
 
   @staticmethod
   def ndarray_input_fn(x):
+
     def input_fn():
       return tf.constant(x)
+
     return input_fn
 
   @staticmethod
@@ -74,8 +79,8 @@ class TestConvert(unittest.TestCase):
         x = [x]
         actual = [actual]
       else:
-        assert isinstance(actual, (list, tuple)
-                          ), "expected output to be tensor sequence"
+        assert isinstance(
+            actual, (list, tuple)), "expected output to be tensor sequence"
       try:
         output = sess.run([xi.reveal().decode() for xi in x], tag='reveal')
       except AttributeError:
@@ -123,31 +128,28 @@ class TestConvert(unittest.TestCase):
     return graph_def, prot_class
 
   @classmethod
-  def _test_with_ndarray_input_fn(
-      cls,
-      op_name,
-      test_input,
-      protocol='Pond',
-      decimals=3,
-      **kwargs
-  ):
+  def _test_with_ndarray_input_fn(cls,
+                                  op_name,
+                                  test_input,
+                                  protocol='Pond',
+                                  decimals=3,
+                                  **kwargs):
     # Treat as an example of how to run tests with a particular kind of input
     graph_def, actual, prot_class = cls._construct_conversion_test(
-        op_name,
-        test_input,
-        protocol=protocol,
-        **kwargs)
+        op_name, test_input, protocol=protocol, **kwargs)
     with prot_class() as prot:
       input_fn = cls.ndarray_input_fn(test_input)
-      cls._assert_successful_conversion(
-          prot, graph_def, actual, input_fn, decimals=decimals, **kwargs)
+      cls._assert_successful_conversion(prot,
+                                        graph_def,
+                                        actual,
+                                        input_fn,
+                                        decimals=decimals,
+                                        **kwargs)
 
   def test_empty_model(self):
     test_input = np.ones([1, 8, 8, 1])
     graph_def, prot_class = self._construct_empty_conversion_test(
-        'empty_model',
-        protocol='SecureNN'
-    )
+        'empty_model', protocol='SecureNN')
     with prot_class() as prot:
       input_fn = self.ndarray_input_fn(test_input)
       converter = Converter(
@@ -161,13 +163,15 @@ class TestConvert(unittest.TestCase):
           converter.convert,
           graph_def,
           'input-provider',
-          input_fn
+          input_fn,
       )
 
   def test_keras_multilayer(self):
     test_input = np.ones([1, 8, 8, 1])
     self._test_with_ndarray_input_fn(
-        'keras_multilayer', test_input, protocol='SecureNN',
+        'keras_multilayer',
+        test_input,
+        protocol='SecureNN',
     )
 
   def test_conv2d_convert(self):
@@ -175,8 +179,10 @@ class TestConvert(unittest.TestCase):
     self._test_with_ndarray_input_fn('conv2d', test_input, protocol='Pond')
 
     test_input = np.ones([1, 8, 8, 1])
-    self._test_with_ndarray_input_fn(
-        'conv2d', test_input, protocol='Pond', data_format='NHWC')
+    self._test_with_ndarray_input_fn('conv2d',
+                                     test_input,
+                                     protocol='Pond',
+                                     data_format='NHWC')
 
   def test_matmul_convert(self):
     test_input = np.ones([1, 28])
@@ -200,8 +206,7 @@ class TestConvert(unittest.TestCase):
 
   def test_expand_dims_convert(self):
     test_input = np.ones([2, 3, 4])
-    self._test_with_ndarray_input_fn(
-        'expand_dims', test_input, protocol='Pond')
+    self._test_with_ndarray_input_fn('expand_dims', test_input, protocol='Pond')
 
   def test_pad_convert(self):
     test_input = np.ones([2, 3])
@@ -209,13 +214,15 @@ class TestConvert(unittest.TestCase):
 
   def test_batch_to_space_nd_convert(self):
     test_input = np.ones([8, 1, 3, 1])
-    self._test_with_ndarray_input_fn(
-        'batch_to_space_nd', test_input, protocol='Pond')
+    self._test_with_ndarray_input_fn('batch_to_space_nd',
+                                     test_input,
+                                     protocol='Pond')
 
   def test_space_to_batch_nd_convert(self):
     test_input = np.ones([2, 2, 4, 1])
-    self._test_with_ndarray_input_fn(
-        'space_to_batch_nd', test_input, protocol='Pond')
+    self._test_with_ndarray_input_fn('space_to_batch_nd',
+                                     test_input,
+                                     protocol='Pond')
 
   def test_squeeze_convert(self):
     test_input = np.ones([1, 2, 3, 1])
@@ -252,8 +259,9 @@ class TestConvert(unittest.TestCase):
     # test_input = np.array([[[1., 1., 1.], [2., 2., 2.]],
     #                        [[3., 3., 3.], [4., 4., 4.]],
     #                        [[5., 5., 5.], [6., 6., 6.]]])
-    self._test_with_ndarray_input_fn(
-        'strided_slice', test_input, protocol='Pond')
+    self._test_with_ndarray_input_fn('strided_slice',
+                                     test_input,
+                                     protocol='Pond')
 
   def test_slice_convert(self):
     test_input = np.array([[[1., 1., 1.], [2., 2., 2.]],
@@ -272,8 +280,7 @@ class TestConvert(unittest.TestCase):
   @pytest.mark.convert_maxpool
   def test_maxpool_convert(self):
     test_input = np.ones([1, 4, 4, 1])
-    self._test_with_ndarray_input_fn(
-        'maxpool', test_input, protocol='SecureNN')
+    self._test_with_ndarray_input_fn('maxpool', test_input, protocol='SecureNN')
 
   def test_stack_convert(self):
     input1 = np.array([1, 4])
@@ -281,9 +288,7 @@ class TestConvert(unittest.TestCase):
     input3 = np.array([3, 6])
     test_inputs = [input1, input2, input3]
     graph_def, actual, prot_class = self._construct_conversion_test(
-        'stack',
-        *test_inputs,
-        protocol='Pond')
+        'stack', *test_inputs, protocol='Pond')
 
     with prot_class() as prot:
       input_fns = [self.ndarray_input_fn(x) for x in test_inputs]
@@ -293,28 +298,35 @@ class TestConvert(unittest.TestCase):
                        "Too slow on Circle CI otherwise")
   def test_argmax_convert(self):
     test_input = np.array([1., 2., 3., 4.])
-    self._test_with_ndarray_input_fn(
-        'argmax', test_input, protocol='SecureNN', axis=0)
+    self._test_with_ndarray_input_fn('argmax',
+                                     test_input,
+                                     protocol='SecureNN',
+                                     axis=0)
 
   def test_required_space_to_batch_paddings_convert(self):
     test_input = np.array([4, 1, 3], dtype=np.int32)
-    self._test_with_ndarray_input_fn(
-        'required_space_to_batch_paddings', test_input, protocol='Pond')
+    self._test_with_ndarray_input_fn('required_space_to_batch_paddings',
+                                     test_input,
+                                     protocol='Pond')
 
   def test_flatten_convert(self):
     test_input = np.random.uniform(size=(1, 3, 3, 2)).astype(np.float32)
-    self._test_with_ndarray_input_fn(
-        'flatten', test_input, decimals=2, protocol='Pond')
+    self._test_with_ndarray_input_fn('flatten',
+                                     test_input,
+                                     decimals=2,
+                                     protocol='Pond')
 
   def test_keras_conv2d_convert(self):
     test_input = np.ones([1, 8, 8, 1])
-    self._test_with_ndarray_input_fn(
-        'keras_conv2d', test_input, protocol='Pond')
+    self._test_with_ndarray_input_fn('keras_conv2d',
+                                     test_input,
+                                     protocol='Pond')
 
   def test_keras_depthwise_conv2d_convert(self):
     test_input = np.ones([1, 8, 8, 1])
-    self._test_with_ndarray_input_fn(
-        'keras_depthwise_conv2d', test_input, protocol='Pond')
+    self._test_with_ndarray_input_fn('keras_depthwise_conv2d',
+                                     test_input,
+                                     protocol='Pond')
 
   def test_keras_dense_convert(self):
     test_input = np.ones([2, 10])
@@ -335,13 +347,17 @@ class TestConvert(unittest.TestCase):
 
   def test_keras_global_avgpool_convert(self):
     test_input = np.ones([1, 10, 10, 3])
-    self._test_with_ndarray_input_fn(
-        'keras_global_avgpool', test_input, decimals=2, protocol='Pond')
+    self._test_with_ndarray_input_fn('keras_global_avgpool',
+                                     test_input,
+                                     decimals=2,
+                                     protocol='Pond')
 
   def test_keras_global_maxgpool_convert(self):
     test_input = np.ones([1, 10, 10, 3])
-    self._test_with_ndarray_input_fn(
-        'keras_global_maxpool', test_input, protocol='SecureNN')
+    self._test_with_ndarray_input_fn('keras_global_maxpool',
+                                     test_input,
+                                     protocol='SecureNN')
+
 
 def export_argmax(filename, input_shape, axis):
   pl = tf.placeholder(tf.float32, shape=input_shape)
@@ -479,8 +495,11 @@ def export_conv2d(filename: str, input_shape: List[int], data_format="NCHW"):
   filtered = tf.constant(np.ones((3, 3, 1, 3)),
                          dtype=tf.float32,
                          name="weights")
-  x = tf.nn.conv2d(pl, filtered, (1, 1, 1, 1), "SAME",
-                   data_format=data_format, name="nn_conv2d")
+  x = tf.nn.conv2d(pl,
+                   filtered, (1, 1, 1, 1),
+                   "SAME",
+                   data_format=data_format,
+                   name="nn_conv2d")
 
   return export(x, filename)
 
@@ -711,16 +730,13 @@ def export_split(filename, input_shape):
   x = tf.split(a, num_or_size_splits=3, axis=-1)
   return export(x, filename)
 
-def split_edge_case_builder(input_shape,
-                            filters=2,
-                            kernel_size=3):
+
+def split_edge_case_builder(input_shape, filters=2, kernel_size=3):
   init = tf.keras.initializers.RandomNormal(seed=1)
 
   x = tf.keras.Input(shape=input_shape[1:])
   y1, y2 = tf.keras.layers.Lambda(
-      lambda tensor: tf.split(tensor,
-                              num_or_size_splits=2,
-                              axis=-1))(x)
+      lambda tensor: tf.split(tensor, num_or_size_splits=2, axis=-1))(x)
   y = tf.keras.layers.Conv2D(filters,
                              kernel_size,
                              kernel_initializer=init,
@@ -729,6 +745,7 @@ def split_edge_case_builder(input_shape,
   y = tf.keras.layers.Concatenate(axis=-1)([y1, y])
 
   return tf.keras.Model(x, y)
+
 
 def export_split_edge_case(filename, input_shape):
   model, _ = _keras_model_core(split_edge_case_builder, shape=input_shape)
@@ -741,6 +758,7 @@ def export_split_edge_case(filename, input_shape):
 def run_split_edge_case(data):
   _, out = _keras_model_core(split_edge_case_builder, data=data)
   return out
+
 
 def run_split_v(data):
   a = tf.placeholder(tf.float32, shape=data.shape, name="input")
@@ -793,8 +811,8 @@ def export_sub(filename, input_shape):
 
 def run_mul(data):
   a = tf.placeholder(tf.float32, shape=data.shape, name="input")
-  b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(
-      data.shape), dtype=tf.float32)
+  b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(data.shape),
+                  dtype=tf.float32)
 
   x = tf.multiply(a, b)
 
@@ -806,8 +824,8 @@ def run_mul(data):
 
 def export_mul(filename, input_shape):
   a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-  b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(
-      input_shape), dtype=tf.float32)
+  b = tf.constant(np.array([1.0, 2.0, 3.0, 4.0]).reshape(input_shape),
+                  dtype=tf.float32)
 
   x = tf.multiply(a, b)
 
@@ -872,13 +890,11 @@ def keras_multilayer_builder(input_shape,
                              units=2):
   init = tf.keras.initializers.RandomNormal(seed=1)
   x = tf.keras.Input(shape=input_shape[1:])
-  y = tf.keras.layers.Conv2D(filters, kernel_size,
-                             kernel_initializer=init)(x)
+  y = tf.keras.layers.Conv2D(filters, kernel_size, kernel_initializer=init)(x)
   y = tf.keras.layers.ReLU()(y)
   y = tf.keras.layers.MaxPooling2D(pool_size)(y)
   y = tf.keras.layers.Flatten()(y)
-  y = tf.keras.layers.Dense(units,
-                            kernel_initializer=init)(y)
+  y = tf.keras.layers.Dense(units, kernel_initializer=init)(y)
 
   return tf.keras.Model(x, y)
 
@@ -1001,16 +1017,14 @@ def _keras_dense_core(shape=None, data=None):
   init = tf.keras.initializers.RandomNormal(seed=1)
 
   model = Sequential()
-  d = Dense(2,
-            kernel_initializer=init,
-            use_bias=True,
-            input_shape=shape[1:])
+  d = Dense(2, kernel_initializer=init, use_bias=True, input_shape=shape[1:])
   model.add(d)
 
   if data is None:
     data = np.random.uniform(size=shape)
   out = model.predict(data)
   return model, out
+
 
 def export_keras_batchnorm(filename, input_shape):
   model, _ = _keras_batchnorm_core(shape=input_shape)
@@ -1088,8 +1102,7 @@ def _keras_global_maxpool_core(shape=None, data=None):
     shape = data.shape
 
   model = Sequential()
-  layer = GlobalMaxPooling2D(input_shape=shape[1:],
-                             data_format="channels_last")
+  layer = GlobalMaxPooling2D(input_shape=shape[1:], data_format="channels_last")
   model.add(layer)
 
   if data is None:
@@ -1131,11 +1144,9 @@ def export(x: tf.Tensor, filename: str, sess=None):
 
   pred_node_names = ["output"]
   tf.identity(x, name=pred_node_names[0])
-  graph = graph_util.convert_variables_to_constants(
-      sess,
-      sess.graph.as_graph_def(),
-      pred_node_names
-  )
+  graph = graph_util.convert_variables_to_constants(sess,
+                                                    sess.graph.as_graph_def(),
+                                                    pred_node_names)
 
   graph = graph_util.remove_training_nodes(graph)
 

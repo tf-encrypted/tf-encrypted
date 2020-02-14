@@ -11,10 +11,8 @@ from tf_encrypted.protocol.pond import PondPrivateTensor
 
 
 class Sequential(Layer):
-  """Model defined by a stack of layers in sequence.
+  """Model defined by a stack of layers in sequence."""
 
-  TODO
-  """
   def __init__(self, layers=None, name=None):
     super(Sequential, self).__init__(name=name)
 
@@ -53,9 +51,7 @@ class Sequential(Layer):
       batch_shape = layer._batch_input_shape  # pylint: disable=protected-access
 
       # Instantiate an input layer.
-      x = Input(
-          batch_shape=batch_shape,
-          name=layer.name + '_input')
+      x = Input(batch_shape=batch_shape, name=layer.name + '_input')
       # This will build the current layer
       # and create the node connecting the current layer
       # to the input layer we just created.
@@ -84,7 +80,12 @@ class Sequential(Layer):
     else:
       self._layers.append(layer)
 
-  def call(self, inputs, training=None, mask=None):  # pylint: disable=arguments-differ
+  def call(
+      self,
+      inputs,
+      training=None,
+      mask=None,
+  ):  # pylint: disable=arguments-differ
     if training is not None:
       raise NotImplementedError()
     if mask is not None:
@@ -154,8 +155,8 @@ class Sequential(Layer):
       steps_per_epoch: Integer. Total number of steps (batches of samples)
         before declaring one epoch finished and starting the next epoch.
     """
-    assert isinstance(x, PondPrivateTensor), type(value)
-    assert isinstance(y, PondPrivateTensor), type(value)
+    assert isinstance(x, PondPrivateTensor), type(x)
+    assert isinstance(y, PondPrivateTensor), type(y)
 
     # Initialize variables before starting to train
     sess = KE.get_session()
@@ -168,7 +169,6 @@ class Sequential(Layer):
       for _ in range(steps_per_epoch):
         self.fit_batch(x, y)
         progbar.add(batch_size, values=[("loss", self._current_loss)])
-
 
   def set_weights(self, weights, sess=None):
     """Sets the weights of the model.
@@ -208,6 +208,7 @@ class Sequential(Layer):
 
     return tfe_model
 
+
 def model_from_config(config):
   """Instantiates a TFE Keras model from its config.
 
@@ -226,6 +227,7 @@ def model_from_config(config):
     tfe_model.add(tfe_layer)
 
   return tfe_model
+
 
 def clone_model(model):
   """Clone any tf.keras.Model into a tfe.keras.Sequenial model.
@@ -246,6 +248,7 @@ def clone_model(model):
 
   return tfe_model
 
+
 def _instantiate_tfe_layer(keras_layer_config):
   """instantiate TFE layer based on Keras layer config.
 
@@ -265,9 +268,8 @@ def _instantiate_tfe_layer(keras_layer_config):
     # TODO: rethink how we warn the user about this, maybe codegen a list of
     #       supported layers in a doc somewhere
     raise RuntimeError(
-        "TF Encrypted does not yet support the " "{lcls} "
-        "layer.".format(lcls=keras_layer_type)
-    )
+        "TF Encrypted does not yet support the {lcls} layer.".format(
+            lcls=keras_layer_type))
 
   # get layer config to instiate the tfe layer with the right parameters
   config = keras_layer_config['config']

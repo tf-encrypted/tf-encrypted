@@ -15,6 +15,7 @@ from tf_encrypted.protocol.pond import PondPrivateTensor
 
 logger = logging.getLogger('tf_encrypted')
 
+
 class Conv2D(Layer):
   """2D convolution layer (e.g. spatial convolution over images).
   This layer creates a convolution kernel that is convolved
@@ -105,8 +106,8 @@ class Conv2D(Layer):
 
     self.rank = 2
     self.filters = filters
-    self.kernel_size = conv_utils.normalize_tuple(
-        kernel_size, self.rank, 'kernel_size')
+    self.kernel_size = conv_utils.normalize_tuple(kernel_size, self.rank,
+                                                  'kernel_size')
     if self.kernel_size[0] != self.kernel_size[1]:
       raise NotImplementedError("TF Encrypted currently only supports same "
                                 "stride along the height and the width."
@@ -127,9 +128,7 @@ class Conv2D(Layer):
     default_args_check(dilation_rate, "dilation_rate", "Conv2D")
     default_args_check(kernel_regularizer, "kernel_regularizer", "Conv2D")
     default_args_check(bias_regularizer, "bias_regularizer", "Conv2D")
-    default_args_check(activity_regularizer,
-                       "activity_regularizer",
-                       "Conv2D")
+    default_args_check(activity_regularizer, "activity_regularizer", "Conv2D")
     default_args_check(kernel_constraint, "kernel_constraint", "Conv2D")
     default_args_check(bias_constraint, "bias_constraint", "Conv2D")
 
@@ -163,10 +162,7 @@ class Conv2D(Layer):
     if self.data_format != 'channels_first':
       inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
-    outputs = tfe.conv2d(inputs,
-                               self.kernel,
-                               self.strides[0],
-                               self.padding)
+    outputs = tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
 
     if self.use_bias:
       outputs = outputs + self.bias
@@ -278,22 +274,22 @@ class DepthwiseConv2D(Conv2D):
                bias_constraint=None,
                **kwargs):
 
-    super(DepthwiseConv2D, self).__init__(
-        filters=None,
-        kernel_size=kernel_size,
-        strides=strides,
-        padding=padding,
-        data_format=data_format,
-        activation=activation,
-        use_bias=use_bias,
-        bias_regularizer=bias_regularizer,
-        activity_regularizer=activity_regularizer,
-        bias_constraint=bias_constraint,
-        **kwargs)
+    super(DepthwiseConv2D,
+          self).__init__(filters=None,
+                         kernel_size=kernel_size,
+                         strides=strides,
+                         padding=padding,
+                         data_format=data_format,
+                         activation=activation,
+                         use_bias=use_bias,
+                         bias_regularizer=bias_regularizer,
+                         activity_regularizer=activity_regularizer,
+                         bias_constraint=bias_constraint,
+                         **kwargs)
 
     self.rank = 2
-    self.kernel_size = conv_utils.normalize_tuple(
-        kernel_size, self.rank, 'kernel_size')
+    self.kernel_size = conv_utils.normalize_tuple(kernel_size, self.rank,
+                                                  'kernel_size')
     if self.kernel_size[0] != self.kernel_size[1]:
       raise NotImplementedError("TF Encrypted currently only supports same "
                                 "stride along the height and the width."
@@ -312,21 +308,14 @@ class DepthwiseConv2D(Conv2D):
     self.bias_initializer = initializers.get(bias_initializer)
 
     # Not implemented arguments
-    default_args_check(depthwise_regularizer,
-                       "depthwise_regularizer",
+    default_args_check(depthwise_regularizer, "depthwise_regularizer",
                        "DepthwiseConv2D")
-    default_args_check(bias_regularizer,
-                       "bias_regularizer",
+    default_args_check(bias_regularizer, "bias_regularizer", "DepthwiseConv2D")
+    default_args_check(activity_regularizer, "activity_regularizer",
                        "DepthwiseConv2D")
-    default_args_check(activity_regularizer,
-                       "activity_regularizer",
+    default_args_check(depthwise_constraint, "depthwise_constraint",
                        "DepthwiseConv2D")
-    default_args_check(depthwise_constraint,
-                       "depthwise_constraint",
-                       "DepthwiseConv2D")
-    default_args_check(bias_constraint,
-                       "bias_constraint",
-                       "DepthwiseConv2D")
+    default_args_check(bias_constraint, "bias_constraint", "DepthwiseConv2D")
 
   def build(self, input_shape):
     if self.data_format == 'channels_first':
@@ -337,8 +326,8 @@ class DepthwiseConv2D(Conv2D):
       raise ValueError('The channel dimension of the inputs '
                        'should be defined. Found `None`.')
     self.input_dim = int(input_shape[channel_axis])
-    self.kernel_shape = self.kernel_size + \
-                        (self.input_dim, self.depth_multiplier)
+    self.kernel_shape = self.kernel_size + (self.input_dim,
+                                            self.depth_multiplier)
 
     kernel = self.depthwise_initializer(self.kernel_shape)
     kernel = self.rearrange_kernel(kernel)
@@ -356,7 +345,8 @@ class DepthwiseConv2D(Conv2D):
     self.built = True
 
   def rearrange_kernel(self, kernel):
-    """ Rearrange kernel to match normal convoluion kernels
+    """Rearrange kernel to match normal convolution kernels
+
     Arguments:
       kernel: kernel to be rearranged
     """
@@ -365,15 +355,15 @@ class DepthwiseConv2D(Conv2D):
     if isinstance(kernel, tf.Tensor):
       mask = tf.constant(mask.tolist(),
                          dtype=tf.float32,
-                         shape=(self.kernel_size[0],
-                                self.kernel_size[1],
+                         shape=(self.kernel_size[0], self.kernel_size[1],
                                 self.input_dim * self.depth_multiplier,
                                 self.input_dim))
 
       if self.depth_multiplier > 1:
         # rearrange kernel
         kernel = tf.transpose(kernel, [0, 1, 3, 2])
-        kernel = tf.reshape(kernel, shape=self.kernel_size +
+        kernel = tf.reshape(kernel,
+                            shape=self.kernel_size +
                             (self.input_dim * self.depth_multiplier, 1))
 
       kernel = tf.multiply(kernel, mask)
@@ -382,7 +372,8 @@ class DepthwiseConv2D(Conv2D):
       if self.depth_multiplier > 1:
         # rearrange kernel
         kernel = np.transpose(kernel, [0, 1, 3, 2])
-        kernel = np.reshape(kernel, newshape=self.kernel_size +
+        kernel = np.reshape(kernel,
+                            newshape=self.kernel_size +
                             (self.input_dim * self.depth_multiplier, 1))
 
       kernel = np.multiply(kernel, mask)
@@ -392,7 +383,8 @@ class DepthwiseConv2D(Conv2D):
       if self.depth_multiplier > 1:
         # rearrange kernel
         kernel = tfe.transpose(kernel, [0, 1, 3, 2])
-        kernel = tfe.reshape(kernel, shape=self.kernel_size +
+        kernel = tfe.reshape(kernel,
+                             shape=self.kernel_size +
                              (self.input_dim * self.depth_multiplier, 1))
 
       kernel = tfe.mul(kernel, mask)
@@ -404,10 +396,7 @@ class DepthwiseConv2D(Conv2D):
     if self.data_format != 'channels_first':
       inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
-    outputs = tfe.conv2d(inputs,
-                               self.kernel,
-                               self.strides[0],
-                               self.padding)
+    outputs = tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
 
     if self.use_bias:
       outputs = outputs + self.bias
@@ -438,16 +427,17 @@ class DepthwiseConv2D(Conv2D):
     return [n_x, n_filters, h_out, w_out]
 
   def get_mask(self, in_channels):
-    mask = np.zeros((self.kernel_size[0],
-                     self.kernel_size[1],
-                     in_channels, in_channels * self.depth_multiplier))
+    mask = np.zeros((self.kernel_size[0], self.kernel_size[1], in_channels,
+                     in_channels * self.depth_multiplier))
     for d in range(self.depth_multiplier):
       for i in range(in_channels):
         mask[:, :, i, i + (d * in_channels)] = 1.
     return np.transpose(mask, [0, 1, 3, 2])
 
   def set_weights(self, weights, sess=None):
-    """ Sets the weights of the layer.
+    """
+    Sets the weights of the layer.
+
     Arguments:
       weights: A list of Numpy arrays with shapes and types
           matching the output of layer.get_weights() or a list

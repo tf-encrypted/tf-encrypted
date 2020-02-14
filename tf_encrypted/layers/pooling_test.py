@@ -10,6 +10,7 @@ from tf_encrypted.layers import AveragePooling2D, MaxPooling2D
 
 
 class TestAveragePooling2D(unittest.TestCase):
+
   def setUp(self):
     tf.reset_default_graph()
 
@@ -93,6 +94,7 @@ class TestAveragePooling2D(unittest.TestCase):
 
 @pytest.mark.slow
 class TestMaxPooling2D(unittest.TestCase):
+
   def setUp(self):
     tf.reset_default_graph()
 
@@ -102,13 +104,14 @@ class TestMaxPooling2D(unittest.TestCase):
   def test_maxpool2d(self):
     with tfe.protocol.SecureNN() as prot:
 
-      x_in = np.array([[[[1, 2, 3, 4],
-                         [3, 2, 4, 1],
-                         [1, 2, 3, 4],
-                         [3, 2, 4, 1]]]])
+      x_in = np.array([[[
+          [1, 2, 3, 4],
+          [3, 2, 4, 1],
+          [1, 2, 3, 4],
+          [3, 2, 4, 1],
+      ]]])
 
-      expected = np.array([[[[3, 4],
-                             [3, 4]]]], dtype=np.float64)
+      expected = np.array([[[[3, 4], [3, 4]]]], dtype=np.float64)
 
       x = prot.define_private_variable(x_in)
       pool = MaxPooling2D([0, 1, 4, 4], pool_size=2, padding="VALID")
@@ -119,7 +122,6 @@ class TestMaxPooling2D(unittest.TestCase):
         answer = sess.run(result.reveal())
 
     assert np.array_equal(answer, expected)
-
 
 
 if __name__ == '__main__':

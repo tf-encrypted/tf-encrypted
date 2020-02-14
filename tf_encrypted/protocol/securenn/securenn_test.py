@@ -28,38 +28,13 @@ class TestPrivateCompare(unittest.TestCase):
     bit_dtype = prot.prime_factory
     val_dtype = prot.tensor_factory
 
-    x = np.array([
-        21,
-        21,
-        21,
-        21,
-        21,
-        21,
-        21,
-        21
-    ], dtype=np.int32).reshape((2, 2, 2))
+    x = np.array([21, 21, 21, 21, 21, 21, 21, 21], dtype=np.int32).reshape(
+        (2, 2, 2))
 
-    r = np.array([
-        36,
-        20,
-        21,
-        22,
-        36,
-        20,
-        21,
-        22
-    ], dtype=np.int32).reshape((2, 2, 2))
+    r = np.array([36, 20, 21, 22, 36, 20, 21, 22], dtype=np.int32).reshape(
+        (2, 2, 2))
 
-    beta = np.array([
-        0,
-        0,
-        0,
-        0,
-        1,
-        1,
-        1,
-        1
-    ], dtype=np.int32).reshape((2, 2, 2))
+    beta = np.array([0, 0, 0, 0, 1, 1, 1, 1], dtype=np.int32).reshape((2, 2, 2))
 
     expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
     x_native = tf.convert_to_tensor(x, dtype=val_dtype.native_type)
@@ -72,12 +47,10 @@ class TestPrivateCompare(unittest.TestCase):
     beta_native = tf.convert_to_tensor(beta, dtype=bit_dtype.native_type)
     beta0 = beta1 = bit_dtype.tensor(beta_native)
 
-    res = _private_compare(
-        prot,
-        x_bits=PondPrivateTensor(prot, *x_bits, False),
-        r=PondPublicTensor(prot, r0, r1, False),
-        beta=PondPublicTensor(prot, beta0, beta1, False)
-    )
+    res = _private_compare(prot,
+                           x_bits=PondPrivateTensor(prot, *x_bits, False),
+                           r=PondPublicTensor(prot, r0, r1, False),
+                           beta=PondPublicTensor(prot, beta0, beta1, False))
 
     with tfe.Session() as sess:
       actual = sess.run(res.reveal().value_on_0.to_native())
@@ -118,8 +91,8 @@ class TestLSB(unittest.TestCase):
     f_bin = np.vectorize(np.binary_repr)
     f_get = np.vectorize(lambda x, ix: x[ix])
 
-    raw = np.array([random.randrange(0, 10000000000)
-                    for _ in range(20)]).reshape((2, 2, 5))
+    raw = np.array([random.randrange(0, 10000000000) for _ in range(20)])
+    raw = raw.reshape((2, 2, 5))
     expected_lsb = f_get(f_bin(raw), -1).astype(np.int32)
 
     with tfe.protocol.SecureNN(
@@ -127,8 +100,9 @@ class TestLSB(unittest.TestCase):
         prime_factory=prime_factory,
     ) as prot:
 
-      x_in = prot.define_private_variable(
-          raw, apply_scaling=False, name='test_lsb_input')
+      x_in = prot.define_private_variable(raw,
+                                          apply_scaling=False,
+                                          name='test_lsb_input')
       x_lsb = prot.lsb(x_in)
 
       with tfe.Session() as sess:
@@ -138,11 +112,7 @@ class TestLSB(unittest.TestCase):
         np.testing.assert_array_equal(actual_lsb, expected_lsb)
 
   def test_lsb_int100(self):
-    self._core_lsb(
-        int100factory,
-        None
-    )
-
+    self._core_lsb(int100factory, None)
 
 
 class TestArgMax(unittest.TestCase):
@@ -180,8 +150,8 @@ class TestArgMax(unittest.TestCase):
       expected = sess.run(out_tf)
 
     with tfe.protocol.SecureNN() as prot:
-      out_tfe = prot.argmax(
-          prot.define_private_variable(tf.constant(t)), axis=0)
+      out_tfe = prot.argmax(prot.define_private_variable(tf.constant(t)),
+                            axis=0)
 
       with tfe.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -200,8 +170,8 @@ class TestArgMax(unittest.TestCase):
       expected = sess.run(out_tf)
 
     with tfe.protocol.SecureNN() as prot:
-      out_tfe = prot.argmax(
-          prot.define_private_variable(tf.constant(t)), axis=1)
+      out_tfe = prot.argmax(prot.define_private_variable(tf.constant(t)),
+                            axis=1)
 
       with tfe.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -220,15 +190,14 @@ class TestArgMax(unittest.TestCase):
       expected = sess.run(out)
 
     with tfe.protocol.SecureNN() as prot:
-      out_tfe = prot.argmax(
-          prot.define_private_variable(tf.constant(t)), axis=0)
+      out_tfe = prot.argmax(prot.define_private_variable(tf.constant(t)),
+                            axis=0)
 
       with tfe.Session() as sess:
         sess.run(tf.global_variables_initializer())
         actual = sess.run(out_tfe.reveal())
 
     np.testing.assert_array_equal(actual, expected)
-
 
 
 if __name__ == '__main__':

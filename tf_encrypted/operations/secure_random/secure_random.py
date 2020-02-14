@@ -10,31 +10,30 @@ import tf_encrypted as tfe
 
 logger = logging.getLogger('tf_encrypted')
 
+SO_PATH = '{dn}/operations/secure_random/secure_random_module_tf_{tfv}.so'
+
+
 def _try_load_secure_random_module():
   """
   Attempt to load and return secure random module; returns None if failed.
   """
-  so_file = '{dn}/operations/secure_random/secure_random_module_tf_{tfv}.so'.format(  # pylint: disable=line-too-long
-      dn=os.path.dirname(tfe.__file__),
-      tfv=tf.__version__,
-  )
-
+  so_file = SO_PATH.format(dn=os.path.dirname(tfe.__file__), tfv=tf.__version__)
   if not os.path.exists(so_file):
     logger.warning(
         ("Falling back to insecure randomness since the required custom op "
-         "could not be found for the installed version of TensorFlow. Fix this "
-         "by compiling custom ops. Missing file was '%s'"), so_file)
+         "could not be found for the installed version of TensorFlow. Fix "
+         "this by compiling custom ops. Missing file was '%s'"), so_file)
     return None
 
   try:
     return tf.load_op_library(so_file)
 
   except NotFoundError as ex:
-    logger.warning(
-        ("Falling back to insecure randomness since the required custom op "
-         "could not be found for the installed version of TensorFlow. Fix this "
-         "by compiling custom ops. "
-         "Missing file was '%s', error was \"%s\"."), so_file, ex)
+    logger.warning((
+        "Falling back to insecure randomness since the required custom op "
+        "could not be found for the installed version of TensorFlow. Fix "
+        "this by compiling custom ops. Missing file was '%s', error was \"%s\"."
+    ), so_file, ex)
 
   except Exception as ex:  # pylint: disable=broad-except
     logger.error(
@@ -43,7 +42,9 @@ def _try_load_secure_random_module():
 
   return None
 
+
 secure_random_module = _try_load_secure_random_module()
+
 
 def supports_secure_randomness():
   return secure_random_module is not None

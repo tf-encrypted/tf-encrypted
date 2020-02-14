@@ -1,10 +1,11 @@
 """Pooling Layer implementation."""
 from abc import abstractmethod
+import math
+
 from tensorflow.python.keras.utils import conv_utils
 
 import tf_encrypted as tfe
 from tf_encrypted.keras.engine import Layer
-
 
 
 class Pooling2D(Layer):
@@ -29,8 +30,12 @@ class Pooling2D(Layer):
       inputs with shape `(batch, channels, height, width)`.
   """
 
-  def __init__(self, _pool_function, pool_size, strides,
-               padding='valid', data_format=None,
+  def __init__(self,
+               _pool_function,
+               pool_size,
+               strides,
+               padding='valid',
+               data_format=None,
                **kwargs):
     super(Pooling2D, self).__init__(**kwargs)
 
@@ -52,9 +57,7 @@ class Pooling2D(Layer):
     if self.data_format != 'channels_first':
       inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
-    outputs = self._pool_function(inputs,
-                                  self.pool_size,
-                                  self.strides,
+    outputs = self._pool_function(inputs, self.pool_size, self.strides,
                                   self.padding)
 
     if self.data_format != 'channels_first':
@@ -118,10 +121,12 @@ class MaxPooling2D(Pooling2D):
                padding='valid',
                data_format=None,
                **kwargs):
-    super(MaxPooling2D, self).__init__(
-        tfe.maxpool2d,
-        pool_size=pool_size, strides=strides,
-        padding=padding, data_format=data_format, **kwargs)
+    super(MaxPooling2D, self).__init__(tfe.maxpool2d,
+                                       pool_size=pool_size,
+                                       strides=strides,
+                                       padding=padding,
+                                       data_format=data_format,
+                                       **kwargs)
 
 
 class AveragePooling2D(Pooling2D):
@@ -165,10 +170,13 @@ class AveragePooling2D(Pooling2D):
                padding='valid',
                data_format=None,
                **kwargs):
-    super(AveragePooling2D, self).__init__(
-        tfe.avgpool2d,
-        pool_size=pool_size, strides=strides,
-        padding=padding, data_format=data_format, **kwargs)
+    super(AveragePooling2D, self).__init__(tfe.avgpool2d,
+                                           pool_size=pool_size,
+                                           strides=strides,
+                                           padding=padding,
+                                           data_format=data_format,
+                                           **kwargs)
+
 
 class GlobalPooling2D(Layer):
   """Abstract class for different global pooling 2D layers.
@@ -189,6 +197,7 @@ class GlobalPooling2D(Layer):
   @abstractmethod
   def call(self, inputs):
     raise NotImplementedError
+
 
 class GlobalAveragePooling2D(GlobalPooling2D):
   """Global average pooling operation for spatial data.
@@ -217,6 +226,7 @@ class GlobalAveragePooling2D(GlobalPooling2D):
       2D tensor with shape:
       `(batch_size, channels)`
   """
+
   def build(self, input_shape):
     if self.data_format == 'channels_last':
       _, h_in, w_in, _ = input_shape

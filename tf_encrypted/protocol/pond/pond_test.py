@@ -1,4 +1,6 @@
 # pylint: disable=missing-docstring
+# pylint: disable=protected-access
+
 import unittest
 
 import numpy as np
@@ -143,8 +145,8 @@ class TestShare(unittest.TestCase):
     with tfe.protocol.Pond() as prot:
 
       with tfe.Session() as sess:
-        shares = prot._share(dtype.tensor(expected))  # pylint: disable=protected-access
-        actual = sess.run(prot._reconstruct(*shares).to_native())  # pylint: disable=protected-access
+        shares = prot._share(dtype.tensor(expected))
+        actual = sess.run(prot._reconstruct(*shares).to_native())
 
     np.testing.assert_array_equal(actual, expected)
 

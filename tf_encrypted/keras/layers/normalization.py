@@ -4,6 +4,7 @@ import tensorflow as tf
 from tensorflow.python.keras import initializers
 
 import tf_encrypted as tfe
+from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
 from tf_encrypted.protocol.pond import PondPublicTensor
@@ -84,31 +85,34 @@ class BatchNormalization(Layer):
       - [Batch Normalization: Accelerating Deep Network Training by Reducing
         Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
   """
-  def __init__(self,
-               axis=3,
-               momentum=0.99,
-               epsilon=1e-3,
-               center=True,
-               scale=True,
-               beta_initializer='zeros',
-               gamma_initializer='ones',
-               moving_mean_initializer='zeros',
-               moving_variance_initializer='ones',
-               beta_regularizer=None,
-               gamma_regularizer=None,
-               beta_constraint=None,
-               gamma_constraint=None,
-               renorm=False,
-               renorm_clipping=None,
-               renorm_momentum=0.99,
-               fused=None, # pylint: disable=unused-argument
-               trainable=False,
-               virtual_batch_size=None,
-               adjustment=None,
-               name=None,
-               **kwargs):
-    super(BatchNormalization, self).__init__(
-        name=name, trainable=trainable, **kwargs)
+
+  def __init__(
+      self,
+      axis=3,
+      momentum=0.99,
+      epsilon=1e-3,
+      center=True,
+      scale=True,
+      beta_initializer='zeros',
+      gamma_initializer='ones',
+      moving_mean_initializer='zeros',
+      moving_variance_initializer='ones',
+      beta_regularizer=None,
+      gamma_regularizer=None,
+      beta_constraint=None,
+      gamma_constraint=None,
+      renorm=False,
+      renorm_clipping=None,
+      renorm_momentum=0.99,
+      fused=None,  # pylint: disable=unused-argument
+      trainable=False,
+      virtual_batch_size=None,
+      adjustment=None,
+      name=None,
+      **kwargs):
+    super(BatchNormalization, self).__init__(name=name,
+                                             trainable=trainable,
+                                             **kwargs)
 
     self.beta_initializer = initializers.get(beta_initializer)
     self.gamma_initializer = initializers.get(gamma_initializer)
@@ -116,30 +120,46 @@ class BatchNormalization(Layer):
     self.moving_variance_initializer = initializers.get(
         moving_variance_initializer)
 
-    default_args_check(beta_regularizer,
-                       "beta_regularizer",
-                       "BatchNormalization")
-    default_args_check(gamma_regularizer,
-                       "gamma_regularizer",
-                       "BatchNormalization")
-    default_args_check(beta_constraint,
-                       "beta_constraint",
-                       "BatchNormalization")
-    default_args_check(gamma_constraint,
-                       "gamma_constraint",
-                       "BatchNormalization")
-    default_args_check(renorm,
-                       "renorm",
-                       "BatchNormalization")
-    default_args_check(renorm_clipping,
-                       "renorm_clipping",
-                       "BatchNormalization")
-    default_args_check(virtual_batch_size,
-                       "virtual_batch_size",
-                       "BatchNormalization")
-    default_args_check(adjustment,
-                       "adjustment",
-                       "BatchNormalization")
+    default_args_check(
+        beta_regularizer,
+        "beta_regularizer",
+        "BatchNormalization",
+    )
+    default_args_check(
+        gamma_regularizer,
+        "gamma_regularizer",
+        "BatchNormalization",
+    )
+    default_args_check(
+        beta_constraint,
+        "beta_constraint",
+        "BatchNormalization",
+    )
+    default_args_check(
+        gamma_constraint,
+        "gamma_constraint",
+        "BatchNormalization",
+    )
+    default_args_check(
+        renorm,
+        "renorm",
+        "BatchNormalization",
+    )
+    default_args_check(
+        renorm_clipping,
+        "renorm_clipping",
+        "BatchNormalization",
+    )
+    default_args_check(
+        virtual_batch_size,
+        "virtual_batch_size",
+        "BatchNormalization",
+    )
+    default_args_check(
+        adjustment,
+        "adjustment",
+        "BatchNormalization",
+    )
 
     # Axis from get_config can be in ListWrapper format even if
     # the layer is expecting an integer for the axis
@@ -209,7 +229,7 @@ class BatchNormalization(Layer):
     return input_shape
 
   def set_weights(self, weights, sess=None):
-    """ Update layer weights from numpy array or Public Tensors
+    """Update layer weights from numpy array or Public Tensors
       including denom.
 
     Arguments:
@@ -240,8 +260,7 @@ class BatchNormalization(Layer):
 
     # Compute denom on public tensors before being lifted to private tensor
     denomtemp = tfe.reciprocal(
-      tfe.sqrt(tfe.add(self.moving_variance, self.epsilon))
-    )
+        tfe.sqrt(tfe.add(self.moving_variance, self.epsilon)))
 
     # Update denom as well when moving variance gets updated
     sess.run(tfe.assign(self.denom, denomtemp))

@@ -19,9 +19,13 @@ class Batchnorm(Layer):
   :param float variance_epsilon: ...
   """
 
-  def __init__(self, input_shape: List[int],
-               mean: np.ndarray, variance: np.ndarray, scale: np.ndarray,
-               offset: np.ndarray, variance_epsilon: float = 1e-8,
+  def __init__(self,
+               input_shape: List[int],
+               mean: np.ndarray,
+               variance: np.ndarray,
+               scale: np.ndarray,
+               offset: np.ndarray,
+               variance_epsilon: float = 1e-8,
                channels_first: bool = True) -> None:
     self.mean = mean
     self.variance = variance
@@ -48,20 +52,19 @@ class Batchnorm(Layer):
     # Batchnorm after Conv2D layer
     elif len(self.input_shape) == 4:
       if self.channels_first:
-        #NCHW format
+        # NCHW format
         _, c, _, _ = self.input_shape
         self.mean = self.mean.reshape(1, c, 1, 1)
         self.variance = self.variance.reshape(1, c, 1, 1)
         self.scale = self.scale.reshape(1, c, 1, 1)
         self.offset = self.offset.reshape(1, c, 1, 1)
       else:
-        #NHWC format
+        # NHWC format
         _, _, _, c = self.input_shape
         self.mean = self.mean.reshape(1, 1, 1, c)
         self.variance = self.variance.reshape(1, 1, 1, c)
         self.scale = self.scale.reshape(1, 1, 1, c)
         self.offset = self.offset.reshape(1, 1, 1, c)
-
 
     denomtemp = 1.0 / np.sqrt(self.variance + self.variance_epsilon)
 

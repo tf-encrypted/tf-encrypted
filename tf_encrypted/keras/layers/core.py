@@ -1,6 +1,9 @@
 """Core layers such as Reshape"""
 
+import numpy as np
+
 from tf_encrypted.keras.engine import Layer
+
 
 class Reshape(Layer):
   """Reshapes an output to a certain shape.

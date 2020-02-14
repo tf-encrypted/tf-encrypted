@@ -1,4 +1,4 @@
-"""Methods for inspecting TF and Keras graphs for """
+"""Methods for inspecting TF and Keras graphs for"""
 import os
 import tempfile
 
@@ -56,13 +56,9 @@ def export(x: tf.Tensor, filename, sess=None):
   pred_node_names = ["output"]
   tf.identity(x, name=pred_node_names[0])
   graph = tf.graph_util.convert_variables_to_constants(
-      sess,
-      sess.graph.as_graph_def(),
-      pred_node_names
-    )
+      sess, sess.graph.as_graph_def(), pred_node_names)
 
   graph = tf.graph_util.remove_training_nodes(graph)
-
   path = tf.io.write_graph(graph, ".", filename, as_text=False)
 
   if should_close:

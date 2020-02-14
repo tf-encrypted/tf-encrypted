@@ -7,7 +7,6 @@ import tf_encrypted as tfe
 from tf_encrypted.keras.engine import Layer
 
 
-
 class Flatten(Layer):
   """Flattens the input. Does not affect the batch size.
   If inputs are shaped `(batch,)` without a channel dimension, then flattening
@@ -57,4 +56,3 @@ class Flatten(Layer):
     else:
       output_shape += [None]
     return output_shape
-  

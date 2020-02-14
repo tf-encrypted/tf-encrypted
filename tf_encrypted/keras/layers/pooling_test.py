@@ -50,7 +50,6 @@ class TestPooling2d(unittest.TestCase):
                kwargs=kwargs,
                batch_input_shape=input_shape)
 
-
   def _core_avgpooling2d(self, **layer_kwargs):
     channel_in = 2
     input_shape = [2, 8, 8, channel_in]  # channels last
@@ -68,6 +67,7 @@ class TestPooling2d(unittest.TestCase):
                kwargs=kwargs,
                batch_input_shape=input_shape)
 
+
 class TestGlobalPooling2d(unittest.TestCase):
 
   def setUp(self):
@@ -78,7 +78,6 @@ class TestGlobalPooling2d(unittest.TestCase):
 
   def test_global_avgpooling2d(self):
     self._core_global_avgpooling2d()
-
 
   def _core_global_maxpooling2d(self, **layer_kwargs):
     channel_in = 2
@@ -94,7 +93,6 @@ class TestGlobalPooling2d(unittest.TestCase):
                kwargs=kwargs,
                batch_input_shape=input_shape)
 
-
   def _core_global_avgpooling2d(self, **layer_kwargs):
     channel_in = 2
     input_shape = [2, 8, 8, channel_in]  # channels last
@@ -108,7 +106,6 @@ class TestGlobalPooling2d(unittest.TestCase):
     layer_test(tfe.keras.layers.GlobalAveragePooling2D,
                kwargs=kwargs,
                batch_input_shape=input_shape)
-
 
 
 if __name__ == '__main__':

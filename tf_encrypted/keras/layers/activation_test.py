@@ -7,6 +7,7 @@ import tensorflow as tf
 import tf_encrypted as tfe
 from tf_encrypted.keras.testing_utils import agreement_test, layer_test
 
+
 class TestActivation(unittest.TestCase):
 
   def setUp(self):

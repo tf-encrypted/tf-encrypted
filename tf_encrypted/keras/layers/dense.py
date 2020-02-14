@@ -6,6 +6,7 @@ from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
 from tf_encrypted.keras.layers.layers_utils import default_args_check
 
+
 class Dense(Layer):
   """Just your regular densely-connected NN layer.
   `Dense` implements the operation:

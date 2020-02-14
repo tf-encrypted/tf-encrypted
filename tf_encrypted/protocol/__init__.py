@@ -6,7 +6,6 @@ import inspect
 from .protocol import (
     Protocol,
     memoize,
-    nodes,
 )
 
 from .aby3 import ABY3

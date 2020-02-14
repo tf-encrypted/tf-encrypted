@@ -53,8 +53,8 @@ class Converter:
       self,
       graph_def: Any,
       input_player: Union[str, Player],
-      inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]] = None
-  ) -> Any:
+      inputter_fn: Optional[Union[TFEInputter,
+                                  List[TFEInputter]]] = None) -> Any:
     """Convert a frozen GraphDef to a TFE Graph."""
     if not graph_def.node:
       raise ValueError("An empty model was passed to the converter.")
@@ -75,19 +75,19 @@ class Converter:
     # e.g. required_space_to_batch_paddings
     # If yes, identify the inputs and outputs of these special ops.
     output_name = graph_def.node[-1].name  # Assume output is last node.
-    specop_dict, specop_inputs, specop_outputs = find_specops(graph_def,
-                                                              output_name)
+    specop_dict, specop_inputs, specop_outputs = find_specops(
+        graph_def, output_name)
 
-    # Create a dictionary excluding all the sub ops related to required_space_to_batch_paddings
-    # Except the sub ops related to the input or output of this special ops.
-    pb_trimmed, graph_def = select_relevant_ops(specop_inputs,
-                                                specop_outputs,
+    # Create a dictionary excluding all the sub ops related to
+    # required_space_to_batch_paddings. Except the sub ops related to the input
+    # or output of this special ops.
+    pb_trimmed, graph_def = select_relevant_ops(specop_inputs, specop_outputs,
                                                 graph_def)
     node_list = pb_trimmed.values()
 
-    # If the ops are not related to the special ops, use the existing approach to register them.
-    # Otherwise for the special ops replace the output from the sub ops by the output from the
-    # high level operation then register.
+    # If the ops are not related to the special ops, use the existing approach
+    # to register them. Otherwise for the special ops replace the output from
+    # the sub ops by the output from the high level operation then register.
     for node in node_list:
       if node.name not in specop_outputs:
         self._register_op(node, inputs_iterable, input_player, graph_def)
@@ -96,7 +96,8 @@ class Converter:
         # Register high level special operations
         for s in specop_dict:
           # If this node is the output of the current specop, register it
-          if match_numbered_scope(s, node.name,
+          if match_numbered_scope(s,
+                                  node.name,
                                   return_group=False,
                                   numbered=False):
             self._register_specop(node, specop_dict[s])
@@ -133,7 +134,6 @@ class Converter:
     else:
       self.outputs[output] = out
 
-
   def _register_specop(self, node, specop_scope_dict):
     """Handle special op registration."""
     input_list = specop_scope_dict['inputs']
@@ -151,6 +151,7 @@ class Converter:
         self.outputs[output_list[i]] = x
     else:
       self.outputs[output_list[0]] = outs
+
 
 def select_relevant_ops(all_specop_inputs, all_specop_outputs, graph_def):
   """
@@ -291,7 +292,8 @@ def find_leaves(scope, subscope_map):
   return input_leaves, output_leaves
 
 
-def match_numbered_scope(specop, search_string,
+def match_numbered_scope(specop,
+                         search_string,
                          return_group=True,
                          numbered=True):
   """
@@ -393,7 +395,7 @@ def find_output_names(graph_def, node_name, num_outputs):
           else:
             output_node[int(x.split(':')[-1])] = x
 
-  #assert if not all output nodes appear in the graph
+  # assert if not all output nodes appear in the graph
   assert None not in output_node
 
   return output_node

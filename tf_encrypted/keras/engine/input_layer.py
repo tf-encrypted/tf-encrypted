@@ -5,6 +5,7 @@ from tensorflow.python.framework import tensor_shape
 import tf_encrypted as tfe
 from tf_encrypted.keras.engine.base_layer import Layer
 
+
 class InputLayer(Layer):
   """Layer to be used as an entry point into a Network (a graph of layers).
   It can either wrap an existing tensor (pass an `input_tensor` argument)
@@ -151,20 +152,18 @@ def Input(  # pylint: disable=invalid-name
     raise NotImplementedError()
 
   if batch_shape:
-    input_layer = InputLayer(
-        batch_input_shape=batch_shape,
-        name=name,
-        dtype=dtype,
-        sparse=sparse,
-        input_tensor=tensor)
+    input_layer = InputLayer(batch_input_shape=batch_shape,
+                             name=name,
+                             dtype=dtype,
+                             sparse=sparse,
+                             input_tensor=tensor)
   else:
-    input_layer = InputLayer(
-        input_shape=shape,
-        batch_size=batch_size,
-        name=name,
-        dtype=dtype,
-        sparse=sparse,
-        input_tensor=tensor)
+    input_layer = InputLayer(input_shape=shape,
+                             batch_size=batch_size,
+                             name=name,
+                             dtype=dtype,
+                             sparse=sparse,
+                             input_tensor=tensor)
 
   # Return tensor including `_keras_history`.
   # Note that in this case train_output and test_output are the same pointer.

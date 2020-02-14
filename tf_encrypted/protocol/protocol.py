@@ -1,10 +1,8 @@
 """Base abstraction for a Protocol."""
-from abc import ABC, abstractmethod
+from abc import ABC
 import functools
 from typing import Optional, Any, Callable
 from types import TracebackType
-
-import tensorflow as tf
 
 import tf_encrypted as tfe
 from ..tensor.factory import AbstractTensor
@@ -29,7 +27,6 @@ class Protocol(ABC):
 
   def __exit__(
       self,
-      # type is `Optional[Type[BaseException]]`, but declaring `Type` breaks readthedocs.
       exception_type,
       exception_value: Optional[Exception],
       traceback: Optional[TracebackType],

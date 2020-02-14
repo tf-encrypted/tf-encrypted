@@ -17,7 +17,10 @@ from .shared import binarize, conv2d, im2col
 from ..operations import secure_random
 
 
-def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=invalid-name
+def native_factory(
+    NATIVE_TYPE,
+    EXPLICIT_MODULUS=None,
+):  # pylint: disable=invalid-name
   """Constructs the native tensor Factory."""
 
   class Factory(AbstractFactory):
@@ -103,12 +106,10 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
         sampler = secure_random.random_uniform
       else:
         sampler = tf.random_uniform
-      value = sampler(
-          shape=shape,
-          minval=minval,
-          maxval=maxval,
-          dtype=NATIVE_TYPE
-      )
+      value = sampler(shape=shape,
+                      minval=minval,
+                      maxval=maxval,
+                      dtype=NATIVE_TYPE)
       return DenseTensor(value)
 
     def sample_seeded_uniform(self,
@@ -131,8 +132,9 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
       maxval = self.max if maxval is None else maxval
 
       if secure_random.supports_seeded_randomness():
-        # Don't use UniformTensor for lazy sampling here, because the `seed` might be something (e.g., key) we
-        # want to protect, and we cannot send it to another party
+        # Don't use UniformTensor for lazy sampling here, because the `seed`
+        # might be something (e.g., key) we want to protect, and we cannot
+        # send it to another party
         value = secure_random.seeded_random_uniform(
             shape=shape,
             dtype=NATIVE_TYPE,
@@ -143,30 +145,21 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
         return DenseTensor(value)
 
       raise NotImplementedError(
-          "Secure seeded randomness implementation is not available."
-      )
+          "Secure seeded randomness implementation is not available.")
 
     def sample_bounded(self, shape, bitlength: int):
-      maxval = 2 ** bitlength
+      maxval = 2**bitlength
       assert maxval <= self.max
 
       if secure_random.supports_seeded_randomness():
         seed = secure_random.secure_seed()
-        return UniformTensor(shape=shape,
-                             seed=seed,
-                             minval=0,
-                             maxval=maxval)
+        return UniformTensor(shape=shape, seed=seed, minval=0, maxval=maxval)
 
       if secure_random.supports_secure_randomness():
         sampler = secure_random.random_uniform
       else:
         sampler = tf.random_uniform
-      value = sampler(
-          shape=shape,
-          minval=0,
-          maxval=maxval,
-          dtype=NATIVE_TYPE
-      )
+      value = sampler(shape=shape, minval=0, maxval=maxval, dtype=NATIVE_TYPE)
       return DenseTensor(value)
 
     def sample_bits(self, shape):
@@ -370,14 +363,14 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
 
     def equal_zero(self, factory=None):
       factory = factory or FACTORY
-      return factory.tensor(tf.cast(tf.equal(self.value, 0),
-                                    dtype=factory.native_type))
+      return factory.tensor(
+          tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
 
     def equal(self, other, factory=None):
       x, y = _lift(self, other)
       factory = factory or FACTORY
-      return factory.tensor(tf.cast(tf.equal(x.value, y.value),
-                                    dtype=factory.native_type))
+      return factory.tensor(
+          tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
 
     def truncate(self, amount, base=2):
       if base == 2:
@@ -438,19 +431,20 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
     def __rshift__(self, bitlength):
       """
       Arithmetic shift.
-      Please refer to `self.logical_rshift` if a logical right shift is desired.
+      Please refer to `self.logical_rshift` for a logical right shift.
       """
       return self.right_shift(bitlength)
 
     def logical_rshift(self, bitlength):
       """Computes a bitshift to the right."""
-      # There is some bug in TF when casting from int to uint: the uint result becomes 0.
+      # There is some bug in TF when casting from int to uint: the uint result
+      # becomes 0 so the following code does not work.
       # Bug report: https://github.com/tensorflow/tensorflow/issues/30215
-      # So the following code does not work.
       #
       # cast_map = {tf.int8: tf.uint8, tf.int16: tf.uint16,
       #             tf.int32: tf.uint32, tf.int64: tf.uint64}
-      # x = tf.bitwise.right_shift(tf.cast(self.value, dtype=cast_map[NATIVE_TYPE]), bitlength)
+      # x = tf.bitwise.right_shift(
+      #     tf.cast(self.value, dtype=cast_map[NATIVE_TYPE]), bitlength)
       # x = tf.cast(x, NATIVE_TYPE)
       #
       # Instead, we have to do the following slightly more sophisticated stuff.
@@ -535,16 +529,15 @@ def native_factory(NATIVE_TYPE, EXPLICIT_MODULUS=None):  # pylint: disable=inval
 
     def feed(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
       assert isinstance(value, np.ndarray), type(value)
-      return {
-          self.placeholder: value
-      }
+      return {self.placeholder: value}
 
   class Variable(DenseTensor, AbstractVariable):
     """Native Variable class."""
 
     def __init__(self, initial_value: Union[tf.Tensor, np.ndarray]) -> None:
-      self.variable = tf.Variable(
-          initial_value, dtype=NATIVE_TYPE, trainable=False)
+      self.variable = tf.Variable(initial_value,
+                                  dtype=NATIVE_TYPE,
+                                  trainable=False)
       self.initializer = self.variable.initializer
       super(Variable, self).__init__(self.variable.read_value())
 

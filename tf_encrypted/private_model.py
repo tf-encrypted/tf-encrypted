@@ -55,8 +55,10 @@ def load_graph(model_file, model_name=None, batch_size=1):
         continue
 
       input_spec.append({
-          'name': node.name,
-          'dtype': node.attr['dtype'].type,
+          'name':
+              node.name,
+          'dtype':
+              node.attr['dtype'].type,
           'shape': [batch_size] +
                    [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
       })

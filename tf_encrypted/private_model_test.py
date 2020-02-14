@@ -74,5 +74,6 @@ class TestSecureModel(unittest.TestCase):
 
       np.testing.assert_array_almost_equal(s_y, y, 3)
 
+
 if __name__ == '__main__':
   unittest.main()

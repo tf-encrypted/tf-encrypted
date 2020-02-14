@@ -1,3 +1,5 @@
+# flake8: noqa
+
 import tensorflow as tf
 import tf_encrypted as tfe
 

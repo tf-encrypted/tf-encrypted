@@ -2,24 +2,30 @@
 """Provide activation functions"""
 import tf_encrypted as tfe
 
+
 def relu(x):
   """Computes relu of x element-wise"""
   return tfe.relu(x)
+
 
 def sigmoid(x):
   """Computes sigmoid of x element-wise"""
   return tfe.sigmoid(x)
 
+
 def sigmoid_deriv(y, d_y):
   """Computes derive sigmoid of y"""
   return d_y * y * (tfe.negative(y) + 1)
+
 
 def tanh(x):
   """Computes tanh of x element-wise"""
   return tfe.tanh(x)
 
+
 def linear(x):
   return x
+
 
 def get(identifier):
   """get the activation function"""
@@ -33,6 +39,7 @@ def get(identifier):
                    "tanh": tanh,
                    "linear": linear}
     return activations[identifier]
+
 
 def get_deriv(identifier):
   """get the activation derivative function"""

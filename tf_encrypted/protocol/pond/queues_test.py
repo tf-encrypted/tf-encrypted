@@ -25,7 +25,8 @@ class TestFIFO(unittest.TestCase):
 
       raw = np.full(shape, 5)
 
-      x = tfe.define_private_input("inputter", lambda: tf.convert_to_tensor(raw))
+      x = tfe.define_private_input("inputter",
+                                   lambda: tf.convert_to_tensor(raw))
       assert isinstance(x, tfe.protocol.pond.PondPrivateTensor)
 
       enqueue_op = q.enqueue(x)
@@ -40,6 +41,7 @@ class TestFIFO(unittest.TestCase):
       res = sess.run(y.reveal())
 
       np.testing.assert_array_equal(res, raw)
+
 
 if __name__ == '__main__':
   unittest.main()

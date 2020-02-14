@@ -41,9 +41,7 @@ class TestDense(unittest.TestCase):
                kwargs=kwargs,
                batch_input_shape=input_shape)
 
-
-  def test_backward(self) -> None:
-
+  def test_backward(self):
     input_shape = [1, 5]
     input_data = np.ones(input_shape)
     weights_second_layer = np.ones(shape=[1, 5])
@@ -55,11 +53,9 @@ class TestDense(unittest.TestCase):
       private_input = prot.define_private_variable(input_data)
       w = prot.define_private_variable(weights_second_layer)
 
-      tfe_layer = tfe.keras.layers.Dense(
-          5,
-          input_shape=input_shape[1:],
-          kernel_initializer=initializer
-      )
+      tfe_layer = tfe.keras.layers.Dense(5,
+                                         input_shape=input_shape[1:],
+                                         kernel_initializer=initializer)
 
       dense_out_pond = tfe_layer(private_input)
 
@@ -83,11 +79,9 @@ class TestDense(unittest.TestCase):
 
       initializer = tf.keras.initializers.Constant(kernel)
 
-      tf_layer = tf.keras.layers.Dense(
-          5,
-          input_shape=input_shape[1:],
-          kernel_initializer=initializer
-      )
+      tf_layer = tf.keras.layers.Dense(5,
+                                       input_shape=input_shape[1:],
+                                       kernel_initializer=initializer)
       x = tf.Variable(input_data, dtype=tf.float32)
       y = tf_layer(x)
 
@@ -105,7 +99,6 @@ class TestDense(unittest.TestCase):
       np.testing.assert_array_almost_equal(tfe_d_k, tf_d_k, decimal=2)
       np.testing.assert_array_almost_equal(tfe_d_b, tf_d_b, decimal=2)
       np.testing.assert_array_almost_equal(tfe_d_x, tf_d_x, decimal=2)
-
 
 
 if __name__ == '__main__':

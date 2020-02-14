@@ -96,8 +96,9 @@ def bool_factory():
       maxval = 2
 
       if crypto.supports_seeded_randomness():
-        # Don't use UniformTensor for lazy sampling here, because the `seed` might be something (e.g., key) we
-        # want to protect, and we cannot send it to another party
+        # Don't use UniformTensor for lazy sampling here, because the `seed`
+        # might be something (e.g., key) we want to protect, and we cannot
+        # send it to another party
         value = crypto.seeded_random_uniform(
             shape=shape,
             dtype=tf.int32,

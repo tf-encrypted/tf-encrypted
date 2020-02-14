@@ -66,8 +66,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
       if NATIVE_TYPE is tf.int64:
         return 2**64 - 1
 
-      raise NotImplementedError(("Incorrect native type ",
-                                 "{}.".format(NATIVE_TYPE)))
+      raise NotImplementedError("Incorrect native type {}.".format(NATIVE_TYPE))
 
     @property
     def native_type(self):
@@ -162,15 +161,14 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
         with tf.name_scope('correct_wrap'):
 
-          # we want to compute whether we wrapped around, ie `pos(x) + pos(y) >= m - 1`,
-          # for correction purposes which, since `m - 1 == 1` for signed integers, can be
-          # rewritten as:
+          # we want to compute whether we wrapped around, ie
+          # `pos(x) + pos(y) >= m - 1`, for correction purposes which,
+          # since `m - 1 == 1` for signed integers, can be rewritten as:
           #  -> `pos(x) >= m - 1 - pos(y)`
           #  -> `m - 1 - pos(y) - 1 < pos(x)`
           #  -> `-1 - pos(y) - 1 < pos(x)`
           #  -> `-2 - pos(y) < pos(x)`
-          wrapped_around = _lessthan_as_unsigned(-2 - y_value,
-                                                 x_value,
+          wrapped_around = _lessthan_as_unsigned(-2 - y_value, x_value,
                                                  bitlength)
           z += wrapped_around
 
@@ -192,9 +190,9 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
         with tf.name_scope('correct-wrap'):
 
-          # we want to compute whether we wrapped around, ie `pos(x) - pos(y) < 0`,
-          # for correction purposes which can be rewritten as
-          #  -> `pos(x) < pos(y)`
+          # we want to compute whether we wrapped around, ie
+          # `pos(x) - pos(y) < 0`, for correction purposes which can be
+          # rewritten as -> `pos(x) < pos(y)`
           wrapped_around = _lessthan_as_unsigned(x_value, y_value, bitlength)
           z -= wrapped_around
 
@@ -292,10 +290,9 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
                               dtype=NATIVE_TYPE,
                               minval=NATIVE_TYPE.min + 1,
                               maxval=NATIVE_TYPE.max)
-    value = tf.where(unshifted_value < 0,
-                     unshifted_value + tf.ones(shape=unshifted_value.shape,
-                                               dtype=unshifted_value.dtype),
-                     unshifted_value)
+    shifted_values = unshifted_value + tf.ones(shape=unshifted_value.shape,
+                                               dtype=unshifted_value.dtype)
+    value = tf.where(unshifted_value < 0, shifted_values, unshifted_value)
     return value
 
   def _lessthan_as_unsigned(x, y, bitlength):
@@ -313,7 +310,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
       return tf.bitwise.bitwise_and(z, tf.ones(shape=z.shape, dtype=z.dtype))
 
   def _map_minusone_to_zero(value, native_type):
-    """ Maps all -1 values to zero. """
+    """Maps all -1 values to zero."""
     zeros = tf.zeros(shape=value.shape, dtype=native_type)
     return tf.where(tf.equal(value, -1), zeros, value)
 

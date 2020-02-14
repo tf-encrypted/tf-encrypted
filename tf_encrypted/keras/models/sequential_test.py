@@ -14,6 +14,7 @@ tf.random.set_random_seed(42)
 
 
 class TestSequential(unittest.TestCase):
+
   def setUp(self):
     tf.reset_default_graph()
 
@@ -31,13 +32,12 @@ class TestSequential(unittest.TestCase):
   def test_model_from_config(self):
     input_shape = (1, 3)
     input_data = np.random.normal(size=input_shape)
-    expected, k_weights, k_config = _model_predict_keras(input_data,
-                                                         input_shape)
+    expected, k_weights, k_config = _model_predict_keras(
+        input_data, input_shape)
 
     with tfe.protocol.SecureNN():
-      x = tfe.define_private_input(
-          "inputter",
-          lambda: tf.convert_to_tensor(input_data))
+      x = tfe.define_private_input("inputter",
+                                   lambda: tf.convert_to_tensor(input_data))
 
       tfe_model = tfe.keras.models.model_from_config(k_config)
       tfe_model.set_weights(k_weights)
@@ -53,13 +53,12 @@ class TestSequential(unittest.TestCase):
   def test_from_config(self):
     input_shape = (1, 3)
     input_data = np.random.normal(size=input_shape)
-    expected, k_weights, k_config = _model_predict_keras(input_data,
-                                                         input_shape)
+    expected, k_weights, k_config = _model_predict_keras(
+        input_data, input_shape)
 
     with tfe.protocol.SecureNN():
-      x = tfe.define_private_input(
-          "inputter",
-          lambda: tf.convert_to_tensor(input_data))
+      x = tfe.define_private_input("inputter",
+                                   lambda: tf.convert_to_tensor(input_data))
 
       tfe_model = Sequential.from_config(k_config)
       tfe_model.set_weights(k_weights)
@@ -82,9 +81,8 @@ class TestSequential(unittest.TestCase):
     expected = model.predict(input_data)
 
     with tfe.protocol.SecureNN():
-      x = tfe.define_private_input(
-          "inputter",
-          lambda: tf.convert_to_tensor(input_data))
+      x = tfe.define_private_input("inputter",
+                                   lambda: tf.convert_to_tensor(input_data))
 
       tfe_model = tfe.keras.models.clone_model(model)
 
@@ -99,13 +97,12 @@ class TestSequential(unittest.TestCase):
   def test_weights_as_private_var(self):
     input_shape = (1, 3)
     input_data = np.random.normal(size=input_shape)
-    expected, k_weights, k_config = _model_predict_keras(input_data,
-                                                         input_shape)
+    expected, k_weights, k_config = _model_predict_keras(
+        input_data, input_shape)
 
     with tfe.protocol.SecureNN():
-      x = tfe.define_private_input(
-          "inputter",
-          lambda: tf.convert_to_tensor(input_data))
+      x = tfe.define_private_input("inputter",
+                                   lambda: tf.convert_to_tensor(input_data))
 
       tfe_model = tfe.keras.models.model_from_config(k_config)
       weights_private_var = [tfe.define_private_variable(w) for w in k_weights]
@@ -121,9 +118,7 @@ class TestSequential(unittest.TestCase):
 
         np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-3)
 
-
   def test_conv_model(self):
-
     num_classes = 10
     input_shape = (1, 28, 28, 1)
     input_data = np.random.normal(size=input_shape)
@@ -131,8 +126,7 @@ class TestSequential(unittest.TestCase):
     with tf.Session():
       model = tf.keras.models.Sequential()
 
-      model.add(tf.keras.layers.Conv2D(2,
-                                       (3, 3),
+      model.add(tf.keras.layers.Conv2D(2, (3, 3),
                                        batch_input_shape=input_shape))
       model.add(tf.keras.layers.ReLU())
       model.add(tf.keras.layers.BatchNormalization())
@@ -149,9 +143,8 @@ class TestSequential(unittest.TestCase):
       k_config = model.get_config()
 
     with tfe.protocol.SecureNN():
-      x = tfe.define_private_input(
-          "inputter",
-          lambda: tf.convert_to_tensor(input_data))
+      x = tfe.define_private_input("inputter",
+                                   lambda: tf.convert_to_tensor(input_data))
 
       tfe_model = tfe.keras.models.model_from_config(k_config)
 
@@ -164,6 +157,7 @@ class TestSequential(unittest.TestCase):
       np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-2)
 
     KE.clear_session()
+
 
 def _model_predict_keras(input_data, input_shape):
   with tf.Session():

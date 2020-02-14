@@ -114,7 +114,7 @@ class Layer(ABC):
     return variable
 
   def set_weights(self, weights, sess=None):
-    """ Sets the weights of the layer.
+    """Sets the weights of the layer.
     Arguments:
       weights: A list of Numpy arrays with shapes and types
           matching the output of layer.get_weights() or a list

@@ -1,9 +1,9 @@
-"""
-TODO
-"""
+# pylint: disable=missing-docstring
+
 import numpy as np
 
 import tf_encrypted as tfe
+
 
 class QueueServer:
   """
@@ -23,17 +23,13 @@ class QueueServer:
     self.input_shape = input_shape
     self.output_shape = output_shape
 
-    # input
-    self.input_queue = tfe.queue.FIFOQueue(
-        capacity=input_queue_capacity,
-        shape=input_shape,
-        shared_name=input_queue_name)
+    self.input_queue = tfe.queue.FIFOQueue(capacity=input_queue_capacity,
+                                           shape=input_shape,
+                                           shared_name=input_queue_name)
 
-    # output
-    self.output_queue = tfe.queue.FIFOQueue(
-        capacity=output_queue_capacity,
-        shape=output_shape,
-        shared_name=output_queue_name)
+    self.output_queue = tfe.queue.FIFOQueue(capacity=output_queue_capacity,
+                                            shape=output_shape,
+                                            shared_name=output_queue_name)
 
     # computation step
     x = self.input_queue.dequeue()
@@ -84,18 +80,16 @@ class QueueClient:
     self.output_shape = output_shape
 
     # input
-    input_queue = tfe.queue.FIFOQueue(
-        capacity=input_queue_capacity,
-        shape=input_shape,
-        shared_name=input_queue_name)
+    input_queue = tfe.queue.FIFOQueue(capacity=input_queue_capacity,
+                                      shape=input_shape,
+                                      shared_name=input_queue_name)
     self.input_placeholder = tfe.define_private_placeholder(shape=input_shape)
     self.input_op = input_queue.enqueue(self.input_placeholder)
 
     # output
-    output_queue = tfe.queue.FIFOQueue(
-        capacity=output_queue_capacity,
-        shape=output_shape,
-        shared_name=output_queue_name)
+    output_queue = tfe.queue.FIFOQueue(capacity=output_queue_capacity,
+                                       shape=output_shape,
+                                       shared_name=output_queue_name)
     output = output_queue.dequeue()
     self.output0 = output.share0
     self.output1 = output.share1

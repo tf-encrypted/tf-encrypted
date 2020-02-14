@@ -1,8 +1,10 @@
 """TFE Keras loss function"""
 import tf_encrypted as tfe
 
+
 class Loss():
   """Loss base class."""
+
   def __init__(self,
                loss_fn,
                **kwargs):
@@ -51,8 +53,9 @@ class BinaryCrossentropy(Loss):
     else:
       grad = y_pred - y_true
     return grad
-def binary_crossentropy(y_true, y_pred):
 
+
+def binary_crossentropy(y_true, y_pred):
   batch_size = y_true.shape.as_list()[0]
   batch_size_inv = 1 / batch_size
   out = y_true * tfe.log(y_pred)
@@ -60,7 +63,6 @@ def binary_crossentropy(y_true, y_pred):
   out = out.negative()
   bce = out.reduce_sum(axis=0) * batch_size_inv
   return bce
-
 
 
 def binary_crossentropy_from_logits(y_true, y_pred):
@@ -81,10 +83,11 @@ class MeanSquaredError(Loss):
     batch_size_inv = 1 / batch_size
     return 2 * (y_pred - y_true) * batch_size_inv
 
+
 def mean_squared_error(y_true, y_pred):
   batch_size = y_true.shape.as_list()[0]
   batch_size_inv = 1 / batch_size
   out = y_true - y_pred
   out = out.square()
   mse_loss = out.reduce_sum(axis=0) * batch_size_inv
-  return  mse_loss
+  return mse_loss

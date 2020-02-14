@@ -310,7 +310,7 @@ class PlaceholderTripleSource(BaseTripleSource):
 
         self.placeholders += [r0, r1]
         return d0, d1
-"""  #pylint: disable=pointless-string-statement
+"""  # pylint: disable=pointless-string-statement
 
 
 """
@@ -425,4 +425,4 @@ class DatasetTripleSource(BaseTripleSource):
                     serialized = tf.io.serialize_tensor(dequeue)
                     triple = sess.run(serialized, tag=tag)
                     writer.write(triple)
-"""  #pylint: disable=pointless-string-statement
+"""  # pylint: disable=pointless-string-statement

@@ -65,9 +65,7 @@ class Session(tf.Session):
     """
     run(fetches, feed_dict, tag, write_trace) -> Any
 
-    See the documentation for
-    `tf.Session.run <https://www.tensorflow.org/api_docs/python/tf/Session#run>`_
-    for more details.
+    See the documentation for `tf.Session.run` for more details.
 
     This method functions just as the one from tensorflow.
 
