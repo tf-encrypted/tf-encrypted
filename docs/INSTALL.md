@@ -218,3 +218,24 @@ install TF Encrypted outside a virtual environment and without dependencies:
 ```
 ./tf-encrypted/ $ pip3 install -e . --no-deps
 ```
+
+## IDE Setup
+
+### VSCode
+
+There are not specific requirements for using VSCode but the following
+[`settings.json`](https://code.visualstudio.com/docs/python/settings-reference)
+works well with our build process, where `<full Python path>` must be
+replaced to match your system configuration.
+
+```json
+{
+    "python.pythonPath": "<full Python path>",
+    "python.formatting.provider": "yapf",
+    "python.linting.enabled": true,
+    "python.linting.mypyEnabled": true,
+    "python.linting.flake8Enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.pydocstyleEnabled": true,
+}
+```
