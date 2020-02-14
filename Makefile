@@ -73,7 +73,7 @@ $(BUILD_CONVERTER_README): $(BUILD_RESERVED_SCOPES) pythoncheck
 	python -m tf_encrypted.convert.gen.generate_reserved_scopes
 
 lint: $(BUILD_CONVERTER_README) pythoncheck
-	flake8 tf_encrypted examples operations
+	flake8 tf_encrypted operations
 	pylint tf_encrypted examples operations
 	pylint bin/run bin/process bin/pull_model bin/serve bin/write
 	yapf --diff --recursive --parallel tf_encrypted
