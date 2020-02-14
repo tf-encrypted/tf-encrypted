@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 """Implementation of the Pond protocol.
 
 Pond is a vectorized two-party secret sharing protocol similar to SPDZ with a
@@ -151,7 +152,6 @@ class Pond(Protocol):
       name: Optional[str] = None,
       factory: Optional[AbstractFactory] = None,
   ):
-    # pylint: disable=line-too-long
     """Define a `public` placeholder to use in computation. This will be known
     to both parties.
 
@@ -167,7 +167,6 @@ class Pond(Protocol):
     :param AbstractFactory factory: Which tensor type to represent this value
         with.
     """
-    # pylint: enable=line-too-long
 
     factory = factory or self.tensor_factory
     suffix = "-" + name if name else ""
@@ -189,7 +188,6 @@ class Pond(Protocol):
       name: Optional[str] = None,
       factory: Optional[AbstractFactory] = None,
   ):
-    # pylint: disable=line-too-long
     """Define a `private` placeholder to use in computation. This will only be
     known by the party that defines it.
 
@@ -205,7 +203,6 @@ class Pond(Protocol):
     :param AbstractFactory factory: Which tensor type to represent this value
         with.
     """
-    # pylint: enable=line-too-long
 
     factory = factory or self.tensor_factory
 
@@ -227,7 +224,6 @@ class Pond(Protocol):
       name: Optional[str] = None,
       factory: Optional[AbstractFactory] = None,
   ):
-    # pylint: disable=line-too-long
     """Define a public variable.
 
     This is like defining a variable in tensorflow except it creates one that
@@ -249,7 +245,6 @@ class Pond(Protocol):
     :param AbstractFactory factory: Which tensor type to represent this value
         with.
     """
-    # pylint: enable=line-too-long
     assert isinstance(
         initial_value,
         (np.ndarray, tf.Tensor, PondPublicTensor)), type(initial_value)
@@ -307,7 +302,6 @@ class Pond(Protocol):
     :param AbstractFactory factory: Which tensor type to represent this value
         with.
     """
-    # pylint: enable=line-too-long
     init_val_types = (np.ndarray, tf.Tensor, PondPublicTensor,
                       PondPrivateTensor)
     assert isinstance(initial_value, init_val_types), type(initial_value)
@@ -370,7 +364,6 @@ class Pond(Protocol):
       apply_scaling: bool = True,
       name: Optional[str] = None,
   ):
-    # pylint: disable=line-too-long
     """Define a public input.
 
     This represents a `public` input owned by the specified player into the
@@ -380,7 +373,6 @@ class Pond(Protocol):
     :param bool apply_scaling: Whether or not to scale the value.
     :param str name: What name to give to this node in the graph.
     """
-    # pylint: enable=line-too-long
     if isinstance(player, str):
       player = get_config().get_player(player)
     assert isinstance(player, Player)
@@ -700,6 +692,7 @@ class Pond(Protocol):
       # pylint: disable=unidiomatic-typecheck
       assert type(rationals) == type(integers), (type(rationals),
                                                  type(integers))
+      # pylint: enable=unidiomatic-typecheck
       return integers
 
   @memoize
@@ -1876,7 +1869,6 @@ class PondPublicTensor(PondTensor):
     return (self.value_on_0, self.value_on_1)
 
   def decode(self) -> Union[np.ndarray, tf.Tensor]:
-    # pylint: disable=protected-access
     return self.prot._decode(self.value_on_0, self.is_scaled)
 
   def to_native(self):
@@ -2029,12 +2021,10 @@ class PondPublicPlaceholder(PondPublicTensor):
   """
 
   def __init__(self, prot, placeholder_on_0, placeholder_on_1, is_scaled):
-    # pylint: disable=line-too-long
     assert isinstance(placeholder_on_0,
                       AbstractPlaceholder), type(placeholder_on_0)
     assert isinstance(placeholder_on_0,
                       AbstractPlaceholder), type(placeholder_on_1)
-    # pylint: enable=line-too-long
     assert placeholder_on_0.shape == placeholder_on_1.shape
 
     super(PondPublicPlaceholder, self).__init__(
@@ -2053,12 +2043,8 @@ class PondPublicPlaceholder(PondPublicTensor):
     """
     Feed `value` to placeholder
     """
-
     assert isinstance(value, np.ndarray), type(value)
-
-    # pylint: disable=protected-access
     enc = self.prot._encode(value, self.is_scaled)
-
     feed0 = self.placeholder_on_0.feed(enc)
     feed1 = self.placeholder_on_1.feed(enc)
     return {**feed0, **feed1}
@@ -2088,8 +2074,6 @@ class PondPrivatePlaceholder(PondPrivateTensor):
     Feed `value` to placeholder
     """
     assert isinstance(value, np.ndarray), type(value)
-
-    # pylint: disable=protected-access
     enc = self.prot._encode(value, self.is_scaled)
     assert isinstance(enc, np.ndarray)
 
@@ -2535,7 +2519,6 @@ def _truncate_private_interactive(prot: Pond,
 
     with tf.device(prot.server_1.device_name):
       c1 = b1
-      # pylint: disable=protected-access
       c_lower = prot._reconstruct(c0, c1) % scaling_factor
 
     # then use the lower part of the masked value to compute lower part
@@ -3081,7 +3064,6 @@ def _reciprocal_public(prot, x):
 
     with tf.device(prot.server_0.device_name):
       # decode value as ordinary tensor locally and compute reciprocal
-      # pylint: disable=protected-access
       x_on_0_decoded = prot._decode(x_on_0, is_scaled)
       y_on_0_decoded = tf.math.reciprocal(x_on_0_decoded)
       # re-encode and re-wrap
@@ -3092,7 +3074,6 @@ def _reciprocal_public(prot, x):
 
     with tf.device(prot.server_1.device_name):
       # decode value as ordinary tensor locally and compute reciprocal
-      # pylint: disable=protected-access
       x_on_1_decoded = prot._decode(x_on_1, is_scaled)
       y_on_1_decoded = tf.math.reciprocal(x_on_1_decoded)
       # re-encode and re-wrap
@@ -4184,11 +4165,9 @@ def _sqrt_public(prot, x):
 
     with tf.device(prot.server_0.device_name):
       # decode value as ordinary tensor locally and compute sqrt
-      # pylint: disable=protected-access
       x_on_0_decoded = prot._decode(x_on_0, is_scaled)
       y_on_0_decoded = tf.math.sqrt(x_on_0_decoded)
       # re-encode and re-wrap
-      # pylint: disable=protected-access
       y_on_0 = backing_dtype.tensor(
           prot._encode(y_on_0_decoded,
                        apply_scaling=is_scaled,
@@ -4196,11 +4175,9 @@ def _sqrt_public(prot, x):
 
     with tf.device(prot.server_1.device_name):
       # decode value as ordinary tensor locally and compute sqrt
-      # pylint: disable=protected-access
       x_on_1_decoded = prot._decode(x_on_1, is_scaled)
       y_on_1_decoded = tf.math.sqrt(x_on_1_decoded)
       # re-encode and re-wrap
-      # pylint: disable=protected-access
       y_on_1 = backing_dtype.tensor(
           prot._encode(y_on_1_decoded,
                        apply_scaling=is_scaled,
@@ -4562,11 +4539,8 @@ def _zeros_private(
 
   with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
 
-    # pylint: disable=protected-access
     v = factory.tensor(prot._encode(zeros_array, apply_scaling))
-    # pylint: disable=protected-access
     v0, v1 = prot._share(v)
-    # pylint: enable=protected-access
 
     with tf.device(prot.server_0.device_name):
       x0 = factory.variable(v0)
@@ -4592,7 +4566,6 @@ def _zeros_public(
 
   with tf.name_scope('private-zeros{}'.format('-' + name if name else '')):
 
-    # pylint: disable=protected-access
     enc = prot._encode(zeros_array, apply_scaling)
     v = factory.tensor(enc)
 
