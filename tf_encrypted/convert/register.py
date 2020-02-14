@@ -530,6 +530,7 @@ def _rsqrt(converter, node: Any, inputs: List[str]) -> Any:
     prot = tfe.get_protocol()
     # pylint: disable=protected-access
     decoded = prot._decode(x_in.value_on_0, True)
+
     # pylint: enable=protected-access
 
     def inputter_fn():

@@ -46,18 +46,20 @@ class TestBatchNormalization(unittest.TestCase):
                          moving_variance_initializer=initializer)
 
   def _core_batchnorm(self, input_shape, **layer_kwargs):
-    base_kwargs = {
-        'fused': False
-    }
+    base_kwargs = {'fused': False}
 
     kwargs = {**base_kwargs, **layer_kwargs}
 
-    agreement_test(tfe.keras.layers.BatchNormalization,
-                   kwargs=kwargs,
-                   input_shape=input_shape)
-    layer_test(tfe.keras.layers.BatchNormalization,
-               kwargs=kwargs,
-               batch_input_shape=input_shape)
+    agreement_test(
+        tfe.keras.layers.BatchNormalization,
+        kwargs=kwargs,
+        input_shape=input_shape,
+    )
+    layer_test(
+        tfe.keras.layers.BatchNormalization,
+        kwargs=kwargs,
+        batch_input_shape=input_shape,
+    )
 
 
 if __name__ == '__main__':

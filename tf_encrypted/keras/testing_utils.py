@@ -6,8 +6,13 @@ import tf_encrypted as tfe
 from tf_encrypted.keras.models import Sequential
 
 
-def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,
-                   input_data=None, rtol=1e-2, atol=1e-8, **tfe_kwargs):
+def agreement_test(tfe_layer_cls,
+                   kwargs=None,
+                   input_shape=None,
+                   input_data=None,
+                   rtol=1e-2,
+                   atol=1e-8,
+                   **tfe_kwargs):
   """Check agreement between a tf.keras layer and a tfe.keras layer.
   Arguments:
     tfe_layer_cls: Layer class object (from tfe.keras).
@@ -47,8 +52,7 @@ def agreement_test(tfe_layer_cls, kwargs=None, input_shape=None,
   np.testing.assert_allclose(actual, expected, rtol=rtol, atol=atol)
 
 
-def layer_test(layer_cls, kwargs=None, batch_input_shape=None,
-               input_data=None):
+def layer_test(layer_cls, kwargs=None, batch_input_shape=None, input_data=None):
   """Test routine for a layer with a single input and single output.
   Arguments:
     layer_cls: Layer class object.
@@ -63,8 +67,8 @@ def layer_test(layer_cls, kwargs=None, batch_input_shape=None,
   Raises:
     ValueError: if `input_data is None and input_shape is None`.
   """
-  input_shape, input_data = _sanitize_testing_args(
-      batch_input_shape, input_data)
+  input_shape, input_data = _sanitize_testing_args(batch_input_shape,
+                                                   input_data)
 
   # instantiation
   kwargs = kwargs or {}

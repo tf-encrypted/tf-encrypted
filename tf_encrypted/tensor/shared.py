@@ -8,8 +8,10 @@ import numpy as np
 from .factory import AbstractTensor
 
 
-def binarize(tensor: tf.Tensor,
-             bitsize: Optional[int] = None) -> tf.Tensor:
+def binarize(
+    tensor: tf.Tensor,
+    bitsize: Optional[int] = None,
+) -> tf.Tensor:
   """Extract bits of values in `tensor`, returning a `tf.Tensor` with same
   dtype."""
 
@@ -27,7 +29,10 @@ def binarize(tensor: tf.Tensor,
     return val
 
 
-def bits(tensor: tf.Tensor, bitsize: Optional[int] = None) -> list:
+def bits(
+    tensor: tf.Tensor,
+    bitsize: Optional[int] = None,
+) -> list:
   """Extract bits of values in `tensor`, returning a list of tensors."""
 
   with tf.name_scope('bits'):
@@ -40,11 +45,13 @@ def bits(tensor: tf.Tensor, bitsize: Optional[int] = None) -> list:
     # return tf.stack(bits, axis=-1)
 
 
-def im2col(x: Union[tf.Tensor, np.ndarray],
-           h_filter: int,
-           w_filter: int,
-           padding: str,
-           stride: int) -> tf.Tensor:
+def im2col(
+    x: Union[tf.Tensor, np.ndarray],
+    h_filter: int,
+    w_filter: int,
+    padding: str,
+    stride: int,
+) -> tf.Tensor:
   """Generic implementation of im2col on tf.Tensors."""
 
   with tf.name_scope('im2col'):
@@ -54,13 +61,11 @@ def im2col(x: Union[tf.Tensor, np.ndarray],
     channels = int(nhwc_tensor.shape[3])
 
     # extract patches
-    patch_tensor = tf.extract_image_patches(
-        nhwc_tensor,
-        ksizes=[1, h_filter, w_filter, 1],
-        strides=[1, stride, stride, 1],
-        rates=[1, 1, 1, 1],
-        padding=padding
-    )
+    patch_tensor = tf.extract_image_patches(nhwc_tensor,
+                                            ksizes=[1, h_filter, w_filter, 1],
+                                            strides=[1, stride, stride, 1],
+                                            rates=[1, 1, 1, 1],
+                                            padding=padding)
 
     # change back to NCHW
     patch_tensor_nchw = tf.reshape(tf.transpose(patch_tensor, [3, 1, 2, 0]),
@@ -73,10 +78,12 @@ def im2col(x: Union[tf.Tensor, np.ndarray],
     return x_col_tensor
 
 
-def conv2d(x: AbstractTensor,
-           y: AbstractTensor,
-           stride,
-           padding) -> AbstractTensor:
+def conv2d(
+    x: AbstractTensor,
+    y: AbstractTensor,
+    stride,
+    padding,
+) -> AbstractTensor:
   """Generic convolution implementation with im2col over AbstractTensors."""
 
   with tf.name_scope('conv2d'):

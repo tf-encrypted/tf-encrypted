@@ -12,6 +12,7 @@ class UnknownLayerArgError(ValueError):
       layer_sign: TensorFlow Keras layer signature (dict)
       tf_layer_name: TensorFlow Keras layer name (string)
   """
+
   def __init__(self, arg_name, layer_sign, layer_name):
     super(UnknownLayerArgError, self).__init__()
     self.arg_name = arg_name
@@ -19,10 +20,8 @@ class UnknownLayerArgError(ValueError):
     self.layer_name = layer_name
 
   def __str__(self):
-    msg = (
-        "Argument '{arg_name}' is not part of the "
-        "signature for '{layer_name}' layers: {layer_sign}"
-    )
+    msg = ("Argument '{arg_name}' is not part of the "
+           "signature for '{layer_name}' layers: {layer_sign}")
     return msg.format(
         arg_name=self.arg_name,
         layer_name=self.layer_name,
@@ -38,6 +37,7 @@ class LayerArgNotImplementedError(NotImplementedError):
       arg_name: TFE layer argument name (string)
       tf_layer_name: Tensorflow keras layer name (string)
   """
+
   def __init__(self, arg_name, tf_layer_name, tf_default_arg):
     super(LayerArgNotImplementedError, self).__init__()
     self.arg_name = arg_name
@@ -47,8 +47,7 @@ class LayerArgNotImplementedError(NotImplementedError):
   def __str__(self):
     arg_not_impl_msg = ("`{}` argument is not implemented for layer {}. "
                         "Please use the default value of {}.")
-    return arg_not_impl_msg.format(self.arg_name,
-                                   self.tf_layer_name,
+    return arg_not_impl_msg.format(self.arg_name, self.tf_layer_name,
                                    self.tf_default_arg)
 
 

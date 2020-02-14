@@ -9,7 +9,6 @@ from tensorflow.python.client import timeline
 from .config import RemoteConfig, get_config
 from .utils import unwrap_fetches
 
-
 # pylint: disable=invalid-name
 __TFE_EVENTS__ = bool(os.getenv('TFE_EVENTS', ""))
 __TFE_TRACE__ = bool(os.getenv('TFE_TRACE', ""))
@@ -59,7 +58,7 @@ class Session(tf.Session):
       feed_dict=None,
       tag=None,
       write_trace=False,
-      output_partition_graphs=False
+      output_partition_graphs=False,
   ):
     # pylint: disable=arguments-differ
     """
@@ -88,7 +87,7 @@ class Session(tf.Session):
     if not __TFE_EVENTS__ or tag is None:
       fetches_out = super(Session, self).run(
           sanitized_fetches,
-          feed_dict=feed_dict
+          feed_dict=feed_dict,
       )
     else:
       session_tag = "{}{}".format(tag, _run_counter[tag])
@@ -98,16 +97,14 @@ class Session(tf.Session):
       writer = tf.summary.FileWriter(run_tag, self.graph)
       run_options = tf.RunOptions(
           trace_level=tf.RunOptions.FULL_TRACE,
-          output_partition_graphs=output_partition_graphs
-      )
-
+          output_partition_graphs=output_partition_graphs)
       run_metadata = tf.RunMetadata()
 
       fetches_out = super(Session, self).run(
           sanitized_fetches,
           feed_dict=feed_dict,
           options=run_options,
-          run_metadata=run_metadata
+          run_metadata=run_metadata,
       )
 
       if output_partition_graphs:

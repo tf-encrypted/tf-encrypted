@@ -75,10 +75,7 @@ def bool_factory():
         sampler = crypto.random_uniform
       else:
         sampler = tf.random_uniform
-      value = sampler(shape=shape,
-                      minval=minval,
-                      maxval=maxval,
-                      dtype=tf.int32)
+      value = sampler(shape=shape, minval=minval, maxval=maxval, dtype=tf.int32)
       value = tf.cast(value, tf.bool)
       return DenseTensor(value)
 
@@ -201,8 +198,8 @@ def bool_factory():
     def equal(self, other, factory=None):
       x, y = _lift(self, other)
       factory = factory or FACTORY
-      return factory.tensor(tf.cast(tf.equal(x.value, y.value),
-                                    dtype=factory.native_type))
+      return factory.tensor(
+          tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
 
     def expand_dims(self, axis: Optional[int] = None):
       return DenseTensor(tf.expand_dims(self.value, axis))

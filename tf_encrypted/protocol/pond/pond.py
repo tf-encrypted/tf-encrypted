@@ -2436,7 +2436,10 @@ def _cache_masked(prot, x):
 #
 
 
-def _truncate_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
+def _truncate_public(
+    prot: Pond,
+    x: PondPublicTensor,
+) -> PondPublicTensor:
   assert isinstance(x, PondPublicTensor)
 
   base = prot.fixedpoint_config.scaling_base
@@ -2454,7 +2457,10 @@ def _truncate_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
   return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
 
-def _truncate_private(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
+def _truncate_private(
+    prot: Pond,
+    x: PondPrivateTensor,
+) -> PondPrivateTensor:
   assert isinstance(x, PondPrivateTensor)
 
   if prot.fixedpoint_config.use_noninteractive_truncation:
@@ -2463,8 +2469,10 @@ def _truncate_private(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
   return _truncate_private_interactive(prot, x)
 
 
-def _truncate_private_noninteractive(prot: Pond,
-                                     x: PondPrivateTensor) -> PondPrivateTensor:
+def _truncate_private_noninteractive(
+    prot: Pond,
+    x: PondPrivateTensor,
+) -> PondPrivateTensor:
   assert isinstance(x, PondPrivateTensor)
 
   base = prot.fixedpoint_config.scaling_base
@@ -2482,8 +2490,10 @@ def _truncate_private_noninteractive(prot: Pond,
   return PondPrivateTensor(prot, y0, y1, x.is_scaled)
 
 
-def _truncate_private_interactive(prot: Pond,
-                                  a: PondPrivateTensor) -> PondPrivateTensor:
+def _truncate_private_interactive(
+    prot: Pond,
+    a: PondPrivateTensor,
+) -> PondPrivateTensor:
   """See protocol TruncPr (3.1) in
   "Secure Computation With Fixed-Point Numbers" by Octavian Catrina and Amitabh
   Saxena, FC'10."""
@@ -2544,7 +2554,10 @@ def _truncate_private_interactive(prot: Pond,
   return PondPrivateTensor(prot, d0, d1, a.is_scaled)
 
 
-def _truncate_masked(prot: Pond, x: PondMaskedTensor) -> PondMaskedTensor:
+def _truncate_masked(
+    prot: Pond,
+    x: PondMaskedTensor,
+) -> PondMaskedTensor:
   assert isinstance(x, PondMaskedTensor)
   return prot.truncate(x.unmasked)
 
@@ -3143,8 +3156,11 @@ def _square_masked(prot, x):
 #
 
 
-def _matmul_public_public(prot, x: PondPublicTensor,
-                          y: PondPublicTensor) -> PondPublicTensor:
+def _matmul_public_public(
+    prot,
+    x: PondPublicTensor,
+    y: PondPublicTensor,
+) -> PondPublicTensor:
 
   x_on_0, x_on_1 = x.unwrapped
   y_on_0, y_on_1 = y.unwrapped

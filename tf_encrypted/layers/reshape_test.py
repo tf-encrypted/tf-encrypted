@@ -8,6 +8,7 @@ from tf_encrypted.layers import Reshape
 
 
 class TestReshape(unittest.TestCase):
+
   def setUp(self):
     tf.reset_default_graph()
 

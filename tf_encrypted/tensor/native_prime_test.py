@@ -8,11 +8,12 @@ from tf_encrypted.tensor import native_factory
 
 
 class TestPrimeTensor(unittest.TestCase):
+
   def setUp(self):
     tf.reset_default_graph()
 
   def set_up_indexing(self):
-    m = 2 ** 31
+    m = 2**31
 
     prime_factory = native_factory(tf.int32, m)
 
@@ -24,10 +25,12 @@ class TestPrimeTensor(unittest.TestCase):
     self.prime_fix2d = prime_factory.tensor(self.np_fix2d)
     self.prime_fix3d = prime_factory.tensor(self.np_fix3d)
     self.prime_fix4d = prime_factory.tensor(self.np_fix4d)
-    self.np_fixtures = [getattr(self, 'np_fix{}d'.format(i))
-                        for i in range(1, 5)]
+    self.np_fixtures = [
+        getattr(self, 'np_fix{}d'.format(i)) for i in range(1, 5)
+    ]
     self.prime_fixtures = [
-        getattr(self, 'prime_fix{}d'.format(i)) for i in range(1, 5)]
+        getattr(self, 'prime_fix{}d'.format(i)) for i in range(1, 5)
+    ]
 
   @unittest.skip
   def test_basic_indexing(self):
@@ -50,12 +53,10 @@ class TestPrimeTensor(unittest.TestCase):
       np.testing.assert_equal(np_fix[:, 1], prime_fix[:, 1].value)
       np.testing.assert_equal(np_fix[:, -1], prime_fix[:, -1].value)
       if ndim > 2:
-        np.testing.assert_equal(
-            np_fix[:, :-1, ...], prime_fix[:, :-1, ...].value)
-        np.testing.assert_equal(
-            np_fix[:, :1, ...], prime_fix[:, :1, ...].value)
-        np.testing.assert_equal(
-            np_fix[:, 1:, ...], prime_fix[:, 1:, ...].value)
+        np.testing.assert_equal(np_fix[:, :-1, ...], prime_fix[:, :-1,
+                                                               ...].value)
+        np.testing.assert_equal(np_fix[:, :1, ...], prime_fix[:, :1, ...].value)
+        np.testing.assert_equal(np_fix[:, 1:, ...], prime_fix[:, 1:, ...].value)
       elif ndim == 2:
         np.testing.assert_equal(np_fix[:, :2], prime_fix[:, :-1].value)
         np.testing.assert_equal(np_fix[:, 1:], prime_fix[:, 1:].value)
@@ -93,11 +94,15 @@ class TestPrimeTensor(unittest.TestCase):
   def test_binarize(self) -> None:
     prime_factory = native_factory(tf.int32, 1001)
 
-    x = prime_factory.tensor(tf.constant([
-        3,  # == 3
-        -1,  # == p-1 == max
-        0  # min
-    ], shape=[3], dtype=np.int32))
+    x = prime_factory.tensor(
+        tf.constant(
+            [
+                3,  # == 3
+                -1,  # == p-1 == max
+                0  # min
+            ],
+            shape=[3],
+            dtype=np.int32))
 
     y = x.bits()
 

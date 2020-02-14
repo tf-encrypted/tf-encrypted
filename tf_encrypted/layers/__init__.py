@@ -9,7 +9,6 @@ from .pooling import AveragePooling2D
 from .batchnorm import Batchnorm
 from .reshape import Reshape
 
-
 __all__ = [
     'AveragePooling2D',
     'MaxPooling2D',
@@ -18,5 +17,5 @@ __all__ = [
     'Sigmoid',
     'Relu',
     'Batchnorm',
-    'Reshape'
+    'Reshape',
 ]

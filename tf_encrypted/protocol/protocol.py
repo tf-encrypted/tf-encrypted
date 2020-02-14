@@ -7,7 +7,6 @@ from types import TracebackType
 import tf_encrypted as tfe
 from ..tensor.factory import AbstractTensor
 
-
 nodes = dict()
 
 
@@ -43,6 +42,7 @@ def memoize(func: Callable) -> Callable:
 
   :param Callable func: The function to memoize
   """
+
   @functools.wraps(func)
   def cache_nodes(self: Protocol, *args: Any, **kwargs: Any) -> AbstractTensor:
     args = tuple(tuple(x) if isinstance(x, list) else x for x in args)

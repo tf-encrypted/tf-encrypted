@@ -66,9 +66,7 @@ class Dense(Layer):
     # Not implemented arguments
     default_args_check(kernel_regularizer, "kernel_regularizer", "Dense")
     default_args_check(bias_regularizer, "bias_regularizer", "Dense")
-    default_args_check(activity_regularizer,
-                       "activity_regularizer",
-                       "Dense")
+    default_args_check(activity_regularizer, "activity_regularizer", "Dense")
     default_args_check(kernel_constraint, "kernel_constraint", "Dense")
     default_args_check(bias_constraint, "bias_constraint", "Dense")
 
@@ -85,8 +83,7 @@ class Dense(Layer):
           "a rank equal to 2 instead of {}.".format(len(input_shape)))
 
     units_in = int(input_shape[1])
-    kernel = self.kernel_initializer([units_in,
-                                      self.units])
+    kernel = self.kernel_initializer([units_in, self.units])
     self.kernel = self.add_weight(kernel)
 
     if self.use_bias:

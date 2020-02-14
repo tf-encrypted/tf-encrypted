@@ -39,7 +39,7 @@ class Layer(ABC):
         'batch_size',
         'weights',
         'activity_regularizer',
-        'dtype'
+        'dtype',
     }
     # Validate optional keyword arguments.
     for kwarg in kwargs:
@@ -148,6 +148,7 @@ class Layer(ABC):
     if not name:
       self._name = unique_object_name(
           generic_utils.to_snake_case(self.__class__.__name__),
-          zero_based=zero_based)
+          zero_based=zero_based,
+      )
     else:
       self._name = name

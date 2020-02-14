@@ -4,7 +4,6 @@ import os
 
 from tf_encrypted.convert.register import REGISTERED_SPECOPS
 
-
 HD = """Reserved Scope | TF Counterpart\n---------------|---------------\n"""
 
 
@@ -17,7 +16,8 @@ def _table_from_registered_specops():
     table_string += """`{scope}`|[{name}]({hyperlink})\n""".format(
         scope=scope,
         name=tf_name,
-        hyperlink=hyperlink)
+        hyperlink=hyperlink,
+    )
 
   return table_string
 
@@ -34,6 +34,5 @@ readme_path = os.path.join(convert_dir, "README.md")
 with open(template_path, "r") as template_file:
   template_str = template_file.read()
   with open(readme_path, "w") as target_readme:
-    with_table = template_str.format(
-        reserved_scopes=reserved_scopes_table)
+    with_table = template_str.format(reserved_scopes=reserved_scopes_table)
     target_readme.write(with_table)

@@ -9,7 +9,6 @@ import tensorflow as tf
 from ...config import get_config
 from ...utils import wrap_in_variables, reachable_nodes, unwrap_fetches
 
-
 logger = logging.getLogger('tf_encrypted')
 
 
@@ -238,12 +237,13 @@ class QueuedOnlineTripleSource(BaseTripleSource):
                      "of the computation.")
 
     unwrapped_fetches = unwrap_fetches(fetches)
-    reachable_operations = [node
-                            for node in reachable_nodes(unwrapped_fetches)
-                            if isinstance(node, tf.Operation)]
-    reachable_triggers = [self.triggers[op]
-                          for op in reachable_operations
-                          if op in self.triggers]
+    reachable_operations = [
+        node for node in reachable_nodes(unwrapped_fetches)
+        if isinstance(node, tf.Operation)
+    ]
+    reachable_triggers = [
+        self.triggers[op] for op in reachable_operations if op in self.triggers
+    ]
     return reachable_triggers
 
   def _build_triple_store(self, mask, player_id):

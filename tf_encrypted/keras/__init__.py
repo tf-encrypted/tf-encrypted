@@ -8,7 +8,6 @@ from tf_encrypted.keras import models
 from tf_encrypted.keras.models import Sequential
 from tf_encrypted.keras import losses
 
-
 __all__ = [
     'backend',
     'engine',

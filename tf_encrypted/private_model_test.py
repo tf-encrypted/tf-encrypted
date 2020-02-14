@@ -13,7 +13,9 @@ from tf_encrypted.convert.convert_test import read_graph, export_matmul
 
 
 class TestPrivateModel(unittest.TestCase):
+
   def test_private_model(self):
+
     def provide_input():
       return tf.placeholder(dtype=tf.float32, shape=[1, 2], name="api/0")
 
@@ -45,9 +47,7 @@ class TestSecureModel(unittest.TestCase):
       tf.random.set_random_seed(42)
 
       d = tf.keras.layers.Dense(1, input_shape=(10,), use_bias=False)
-      model = tf.keras.Sequential([
-          d
-      ])
+      model = tf.keras.Sequential([d])
 
       x = np.ones((1, 10))
       y = model.predict(x)
@@ -62,9 +62,7 @@ class TestSecureModel(unittest.TestCase):
       tf.random.set_random_seed(42)
 
       d = tf.keras.layers.Dense(1, input_shape=(10,), use_bias=False)
-      model = tf.keras.Sequential([
-          d
-      ])
+      model = tf.keras.Sequential([d])
 
       x = np.ones((2, 10))
       y = model.predict(x)

@@ -22,7 +22,6 @@ from . import keras
 from . import serving
 from . import queue
 
-
 __protocol__ = None
 __all_prot_funcs__ = protocol.get_all_funcs()
 
@@ -63,7 +62,8 @@ def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
   if prot is not None:
     methods = inspect.getmembers(prot, predicate=inspect.ismethod)
     public_methods = [
-        method for method in methods if not method[0].startswith('_')]
+        method for method in methods if not method[0].startswith('_')
+    ]
     for name, func in public_methods:
       globals()[name] = func
 
@@ -83,7 +83,6 @@ def global_variables_initializer() -> tf.Operation:
 
 
 set_protocol(Pond())
-
 
 __all__ = [
     "LocalConfig",

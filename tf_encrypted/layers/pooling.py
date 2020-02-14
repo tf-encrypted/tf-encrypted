@@ -18,11 +18,14 @@ class Pooling2D(Layer):
   Do not instantiate.
   """
 
-  def __init__(self,
-               input_shape: List[int],
-               pool_size: IntTuple,
-               strides: Optional[IntTuple] = None,
-               padding: str = "SAME", channels_first: bool = True) -> None:
+  def __init__(
+      self,
+      input_shape: List[int],
+      pool_size: IntTuple,
+      strides: Optional[IntTuple] = None,
+      padding: str = "SAME",
+      channels_first: bool = True,
+  ) -> None:
     if isinstance(pool_size, int):
       pool_size = (pool_size, pool_size)  # type: ignore
     self.pool_size = pool_size
@@ -99,6 +102,7 @@ class MaxPooling2D(Pooling2D):  # pylint: disable=abstract-method
 
   :See: tf.nn.max_pool
   """
+
   # TODO -- throw an error duing init if the protocol is not secureNN
 
   def pool(self, x, pool_size, strides, padding):

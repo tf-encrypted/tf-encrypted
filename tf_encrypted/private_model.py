@@ -65,7 +65,9 @@ def load_graph(model_file, model_name=None, batch_size=1):
 
   inputs = []
   for i, spec in enumerate(input_spec):
+
     def scope(i, spec):
+
       def provide_input() -> tf.Tensor:
         if model_name is None:
           name = "api/{}".format(i)

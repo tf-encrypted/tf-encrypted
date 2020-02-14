@@ -38,8 +38,7 @@ class TestConv2d(unittest.TestCase):
     else:
       kernel_size_in = layer_kwargs['kernel_size']
 
-    kernel = np.random.normal(kernel_size_in +
-                              (filters_in, filters))
+    kernel = np.random.normal(kernel_size_in + (filters_in, filters))
     initializer = tf.keras.initializers.Constant(kernel)
 
     base_kwargs = {
@@ -84,17 +83,17 @@ class TestDepthwiseConv2d(unittest.TestCase):
     with tf.Session():
       model = tf.keras.models.Sequential()
 
-      model.add(tf.keras.layers.DepthwiseConv2D(kernel_size=(2, 2),
-                                                batch_input_shape=input_shape))
+      model.add(
+          tf.keras.layers.DepthwiseConv2D(kernel_size=(2, 2),
+                                          batch_input_shape=input_shape))
 
       expected = model.predict(input_data)
       k_weights = model.get_weights()
       k_config = model.get_config()
 
     with tfe.protocol.SecureNN():
-      x = tfe.define_private_input(
-          "inputter",
-          lambda: tf.convert_to_tensor(input_data))
+      x = tfe.define_private_input("inputter",
+                                   lambda: tf.convert_to_tensor(input_data))
 
       tfe_model = tfe.keras.models.model_from_config(k_config)
       tfe_model.set_weights(k_weights)
@@ -118,8 +117,7 @@ class TestDepthwiseConv2d(unittest.TestCase):
 
     filters_out = layer_kwargs.get('depth_multiplier', 1)
 
-    kernel = np.random.normal(kernel_size_in +
-                              (filters_in, filters_out))
+    kernel = np.random.normal(kernel_size_in + (filters_in, filters_out))
 
     initializer = tf.keras.initializers.Constant(kernel)
 

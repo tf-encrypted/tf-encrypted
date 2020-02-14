@@ -9,6 +9,7 @@ from tf_encrypted.layers.activation import Relu, Sigmoid, Tanh
 
 
 class TestRelu(unittest.TestCase):
+
   def setUp(self):
     tf.reset_default_graph()
 
@@ -40,6 +41,7 @@ class TestRelu(unittest.TestCase):
 
 
 class TestSigmoid(unittest.TestCase):
+
   def setUp(self):
     tf.reset_default_graph()
 
@@ -77,6 +79,7 @@ class TestSigmoid(unittest.TestCase):
 
 
 class TestTanh(unittest.TestCase):
+
   def setUp(self):
     tf.reset_default_graph()
 

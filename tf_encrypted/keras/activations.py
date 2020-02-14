@@ -34,10 +34,12 @@ def get(identifier):
   if callable(identifier):
     return identifier
   if isinstance(identifier, str):
-    activations = {"relu": relu,
-                   "sigmoid": sigmoid,
-                   "tanh": tanh,
-                   "linear": linear}
+    activations = {
+        "relu": relu,
+        "sigmoid": sigmoid,
+        "tanh": tanh,
+        "linear": linear,
+    }
     return activations[identifier]
 
 

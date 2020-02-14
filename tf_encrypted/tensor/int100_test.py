@@ -35,22 +35,22 @@ class TestInt100Tensor(unittest.TestCase):
       expected = np.array([4, 4])
       np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
-  def core_test_binarize(self,
-                         raw,
-                         shape,
-                         modulus,
-                         bitlen,
-                         ensure_positive_interpretation) -> None:
+  def core_test_binarize(
+      self,
+      raw,
+      shape,
+      modulus,
+      bitlen,
+      ensure_positive_interpretation,
+  ) -> None:
 
     def as_bits(x: int, min_bitlength):
       bits = [int(b) for b in '{0:b}'.format(x)]
       bits = [0] * (min_bitlength - len(bits)) + bits
       return list(reversed(bits))
 
-    expected = np.array([
-        as_bits((modulus + x) % modulus, bitlen)
-        for x in raw
-    ]).reshape(shape + (bitlen,))
+    expected = np.array([as_bits((modulus + x) % modulus, bitlen) for x in raw])
+    expected = expected.reshape(shape + (bitlen,))
 
     x = int100factory.tensor(np.array(raw).reshape(shape))
     epi = ensure_positive_interpretation
@@ -66,10 +66,7 @@ class TestInt100Tensor(unittest.TestCase):
     upper = int100factory.modulus // 2
 
     random.seed(1234)
-    raw = [-1, 0, 1] + [
-        random.randint(lower, upper)
-        for _ in range(256 - 3)
-    ]
+    raw = [-1, 0, 1] + [random.randint(lower, upper) for _ in range(256 - 3)]
     shape = (2, 2, 2, -1)
 
     bitlen = math.ceil(math.log2(int100factory.modulus))
@@ -81,10 +78,7 @@ class TestInt100Tensor(unittest.TestCase):
     upper = int100factory.modulus // 2
 
     random.seed(1234)
-    raw = [-1, 0, 1] + [
-        random.randint(lower, upper)
-        for _ in range(256 - 3)
-    ]
+    raw = [-1, 0, 1] + [random.randint(lower, upper) for _ in range(256 - 3)]
     shape = (2, 2, 2, -1)
 
     bitlen = math.ceil(math.log2(int100factory.modulus))
@@ -127,12 +121,10 @@ class TestConv2D(unittest.TestCase):
       # convolution Tensorflow
       filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
-      conv_out_tf = tf.nn.conv2d(
-          x_nhwc,
-          filters_tf,
-          strides=[1, strides, strides, 1],
-          padding="SAME"
-      )
+      conv_out_tf = tf.nn.conv2d(x_nhwc,
+                                 filters_tf,
+                                 strides=[1, strides, strides, 1],
+                                 padding="SAME")
 
       sess.run(tf.global_variables_initializer())
       expected = sess.run(conv_out_tf).transpose(0, 3, 1, 2)
