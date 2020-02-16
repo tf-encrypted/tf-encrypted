@@ -57,6 +57,7 @@ def bool_factory():
     def native_type(self):
       return tf.bool
 
+    @property
     def modulus(self) -> int:
       return 2
 

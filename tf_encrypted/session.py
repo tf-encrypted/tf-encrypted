@@ -20,7 +20,7 @@ _run_counter = defaultdict(int)
 logger = logging.getLogger('tf_encrypted')
 
 
-class Session(tf.Session):
+class Session(tf.compat.v1.Session):
   """
   Wrap a Tensorflow Session.
 

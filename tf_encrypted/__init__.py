@@ -72,7 +72,9 @@ def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
 
 
 def set_config(config: Config) -> None:
+  # pylint: disable=import-outside-toplevel
   from .config import set_config as set_global_config
+  # pylint: enable=import-outside-toplevel
 
   set_global_config(config)
   set_protocol(None)

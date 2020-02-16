@@ -54,12 +54,12 @@ class AbstractFactory(abc.ABC):
   """An abstraction to use when building tensor factories."""
 
   @property
-  @abc.abstractproperty
+  @abc.abstractmethod
   def modulus(self) -> int:
     """The modulus used by this data type."""
 
   @property
-  @abc.abstractproperty
+  @abc.abstractmethod
   def native_type(self):
     """The underlying TensorFlow dtype used by this data type."""
 

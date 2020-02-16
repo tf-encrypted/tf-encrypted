@@ -53,6 +53,7 @@ def _get_docker_cpu_quota():
 class Config(ABC):
   """The main tfe.Config abstraction."""
 
+  @property
   @abstractmethod
   def players(self):
     """Returns the config's list of :class:`Player` objects."""

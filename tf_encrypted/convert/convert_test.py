@@ -85,7 +85,7 @@ class TestConvert(unittest.TestCase):
         output = sess.run([xi.reveal().decode() for xi in x], tag='reveal')
       except AttributeError:
         # assume all xi are all public
-        output = sess.run([xi for xi in x], tag='reveal')
+        output = sess.run(x, tag='reveal')
       for o_i, a_i in zip(output, actual):
         np.testing.assert_array_almost_equal(o_i, a_i, decimal=decimals)
 
