@@ -179,6 +179,30 @@ class TestIdentity(unittest.TestCase):
     assert x is not y
     np.testing.assert_array_equal(actual, expected)
 
+class TestMasked(unittest.TestCase):
+
+  def _setup(self, dtype):
+    prot = tfe.protocol.Pond()
+    plain_tensor = dtype.tensor(np.array([[1, 2, 3], [4, 5, 6]]))
+    unmasked = prot._share_and_wrap(plain_tensor, False)  # pylint: disable=protected-access
+    a0 = dtype.sample_uniform(plain_tensor.shape)
+    a1 = dtype.sample_uniform(plain_tensor.shape)
+    a = a0 + a1
+    alpha = plain_tensor - a
+    x = PondMaskedTensor(self, unmasked, a, a0, a1, alpha, alpha, False)
+    return prot, x
+
+  def test_transpose_masked(self):
+
+    with tf.Graph().as_default():
+
+      prot, x = self._setup(int64factory)
+      transpose = _transpose_masked(prot, x)
+
+      with tfe.Session() as sess:
+        actual = sess.run(transpose.reveal().to_native())
+        expected = np.array([[1, 4], [2, 5], [3, 6]])
+        np.testing.assert_array_equal(actual, expected)
 
 class TestPondAssign(unittest.TestCase):
 
