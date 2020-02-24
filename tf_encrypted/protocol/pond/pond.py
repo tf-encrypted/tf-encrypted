@@ -77,8 +77,8 @@ class Pond(Protocol):
 
     if triple_source is None:
       crypto_producer = config.get_player("server2")
-      crypto_producer = config.get_player(crypto_producer if crypto_producer
-                                          else "crypto-producer")
+      crypto_producer = config.get_player(
+          crypto_producer if crypto_producer else "crypto-producer")
       self.triple_source = OnlineTripleSource(crypto_producer)
     else:
       if isinstance(triple_source, Player):
