@@ -168,13 +168,27 @@ class TestMasked(unittest.TestCase):
   def _setup(self, dtype):
     prot = tfe.protocol.Pond()
     plain_tensor = dtype.tensor(np.array([[1, 2, 3], [4, 5, 6]]))
-    unmasked = prot._share_and_wrap(plain_tensor, False)  # pylint: disable=protected-access
+    # pylint: disable=protected-access
+    unmasked = prot._share_and_wrap(plain_tensor, False)
+    # pylint: enable=protected-access
     a0 = dtype.sample_uniform(plain_tensor.shape)
     a1 = dtype.sample_uniform(plain_tensor.shape)
     a = a0 + a1
     alpha = plain_tensor - a
     x = PondMaskedTensor(self, unmasked, a, a0, a1, alpha, alpha, False)
     return prot, x
+
+  def test_transpose_masked(self):
+
+    with tf.Graph().as_default():
+
+      prot, x = self._setup(int64factory)
+      transpose = prot.transpose(x)
+
+      with tfe.Session() as sess:
+        actual = sess.run(transpose.reveal().to_native())
+        expected = np.array([[1, 4], [2, 5], [3, 6]])
+        np.testing.assert_array_equal(actual, expected)
 
   def test_indexer(self):
 
@@ -235,32 +249,6 @@ class TestIdentity(unittest.TestCase):
     np.testing.assert_array_equal(actual, expected)
 
 
-class TestMasked(unittest.TestCase):
-
-  def _setup(self, dtype):
-    prot = tfe.protocol.Pond()
-    plain_tensor = dtype.tensor(np.array([[1, 2, 3], [4, 5, 6]]))
-    unmasked = prot._share_and_wrap(plain_tensor, False)  # pylint: disable=protected-access
-    a0 = dtype.sample_uniform(plain_tensor.shape)
-    a1 = dtype.sample_uniform(plain_tensor.shape)
-    a = a0 + a1
-    alpha = plain_tensor - a
-    x = PondMaskedTensor(self, unmasked, a, a0, a1, alpha, alpha, False)
-    return prot, x
-
-  def test_transpose_masked(self):
-
-    with tf.Graph().as_default():
-
-      prot, x = self._setup(int64factory)
-      transpose = prot.transpose(x)
-
-      with tfe.Session() as sess:
-        actual = sess.run(transpose.reveal().to_native())
-        expected = np.array([[1, 4], [2, 5], [3, 6]])
-        np.testing.assert_array_equal(actual, expected)
-
-
 class TestPondAssign(unittest.TestCase):
 
   def setUp(self):
@@ -308,10 +296,10 @@ class TestPondAssign(unittest.TestCase):
       x_pl = tfe.define_public_placeholder(shape=(2, 2))
       fd = x_pl.feed(data.reshape((2, 2)))
 
-    with tfe.Session() as sess:
-      sess.run(tfe.assign(x_var, x_pl), feed_dict=fd)
-      result = sess.run(x_var)
-      np.testing.assert_array_equal(result, np.ones([2, 2]))
+      with tfe.Session() as sess:
+        sess.run(tfe.assign(x_var, x_pl), feed_dict=fd)
+        result = sess.run(x_var)
+        np.testing.assert_array_equal(result, np.ones([2, 2]))
 
 
 if __name__ == '__main__':
