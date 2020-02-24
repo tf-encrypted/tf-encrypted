@@ -40,6 +40,7 @@ TFEPublicTensor = NewType("TFEPublicTensor", "PondPublicTensor")
 TFETensor = Union[TFEPublicTensor, "PondPrivateTensor", "PondMaskedTensor"]
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 TF_INT_TYPES = [tf.int8, tf.int16, tf.int32, tf.int64]
+TripleSourceOrPlayer = Union[TripleSource, Player]
 
 _THISMODULE = sys.modules[__name__]
 
@@ -56,22 +57,22 @@ class Pond(Protocol):
 
   :param Player server_0: The "alice" of MPC.
   :param Player server_1: The "bob" of MPC.
-  :param AbstractFactory tensor_factory: Which backing type of tensor you would
-      like to use, e.g. `int100` or `int64`
-  :param Player fixedpoint_config: Parameters for fixed-point precision tensors
   :param Player triple_source: the entity responsible for producing triples in
       `Pond` protocol. The valid values can be of type `TripleSource` or
       `Player`. If a `Player` is passed, it will be the host that is used as an
       `OnlineTripleSource` producer.
+  :param AbstractFactory tensor_factory: Which backing type of tensor you would
+      like to use, e.g. `int100` or `int64`
+  :param Player fixedpoint_config: Parameters for fixed-point precision tensors
   """  # noqa:E501
 
   def __init__(
       self,
       server_0=None,
       server_1=None,
+      triple_source: Optional[TripleSourceOrPlayer] = None,
       tensor_factory: Optional[AbstractFactory] = None,
       fixedpoint_config: Optional[FixedpointConfig] = None,
-      triple_source=None,
   ) -> None:
     config = get_config()
     self.server_0 = config.get_player(server_0 if server_0 else "server0")
