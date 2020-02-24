@@ -59,7 +59,7 @@ class SecureNN(Pond):
 
     super(SecureNN, self).__init__(server_0=server_0,
                                    server_1=server_1,
-                                   crypto_producer=server_2,
+                                   triple_source=server_2,
                                    tensor_factory=tensor_factory,
                                    **kwargs)
     self.server_2 = server_2

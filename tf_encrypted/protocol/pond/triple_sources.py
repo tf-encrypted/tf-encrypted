@@ -103,6 +103,22 @@ class BaseTripleSource(TripleSource):
 
     return a_t
 
+  def gather_mask(self, a, indices, axis):
+
+    with tf.name_scope("mask-transformation"):
+      with tf.device(self.producer.device_name):
+        a_g = a.gather(indices, axis=axis)
+
+    return a_g
+
+  def negative_mask(self, a):
+
+    with tf.name_scope("mask-transformation"):
+      with tf.device(self.producer.device_name):
+        a_negative = a.negative()
+
+    return a_negative
+
   def strided_slice_mask(self, a, args, kwargs):
 
     with tf.name_scope("mask-transformation"):

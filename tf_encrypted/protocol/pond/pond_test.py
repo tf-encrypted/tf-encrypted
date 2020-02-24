@@ -7,9 +7,10 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.protocol.pond import PondPublicTensor
+from tf_encrypted.protocol.pond import PondPublicTensor, PondMaskedTensor
 from tf_encrypted.tensor import int64factory, int100factory, native_factory
 from tf_encrypted.tensor import fixed100, fixed100_ni
+from .pond import _gather_masked, _indexer_masked, _negative_masked
 
 
 class TestPond(unittest.TestCase):
@@ -161,6 +162,54 @@ class TestShare(unittest.TestCase):
   def test_prime(self):
     self._core_test_sharing(native_factory(tf.int32, 67))
 
+class TestMasked(unittest.TestCase):
+
+  def _setup(self, dtype):
+    prot = tfe.protocol.Pond()
+    plain_tensor = dtype.tensor(np.array([[1, 2, 3], [4, 5, 6]]))
+    unmasked = prot._share_and_wrap(plain_tensor, False)  # pylint: disable=protected-access
+    a0 = dtype.sample_uniform(plain_tensor.shape)
+    a1 = dtype.sample_uniform(plain_tensor.shape)
+    a = a0 + a1
+    alpha = plain_tensor - a
+    x = PondMaskedTensor(self, unmasked, a, a0, a1, alpha, alpha, False)
+    return prot, x
+
+  def test_indexer(self):
+
+    with tf.Graph().as_default():
+
+      prot, x = self._setup(int64factory)
+      indexed = _indexer_masked(prot, x, 0)
+
+      with tfe.Session() as sess:
+        actual = sess.run(indexed.reveal().to_native())
+        expected = np.array([1, 2, 3])
+        np.testing.assert_array_equal(actual, expected)
+
+  def test_gather(self):
+
+    with tf.Graph().as_default():
+
+      prot, x = self._setup(int64factory)
+      gathered = _gather_masked(prot, x, [0, 2], axis=1)
+
+      with tfe.Session() as sess:
+        actual = sess.run(gathered.reveal().to_native())
+        expected = np.array([[1, 3], [4, 6]])
+        np.testing.assert_array_equal(actual, expected)
+
+  def test_negative_masked(self):
+
+    with tf.Graph().as_default():
+
+      prot, x = self._setup(int64factory)
+      negative = _negative_masked(prot, x)
+
+      with tfe.Session() as sess:
+        actual = sess.run(negative.reveal().to_native())
+        expected = np.array([[-1, -2, -3], [-4, -5, -6]])
+        np.testing.assert_array_equal(actual, expected)
 
 class TestIdentity(unittest.TestCase):
 
@@ -183,6 +232,30 @@ class TestIdentity(unittest.TestCase):
     assert x is not y
     np.testing.assert_array_equal(actual, expected)
 
+class TestMasked(unittest.TestCase):
+
+  def _setup(self, dtype):
+    prot = tfe.protocol.Pond()
+    plain_tensor = dtype.tensor(np.array([[1, 2, 3], [4, 5, 6]]))
+    unmasked = prot._share_and_wrap(plain_tensor, False)  # pylint: disable=protected-access
+    a0 = dtype.sample_uniform(plain_tensor.shape)
+    a1 = dtype.sample_uniform(plain_tensor.shape)
+    a = a0 + a1
+    alpha = plain_tensor - a
+    x = PondMaskedTensor(self, unmasked, a, a0, a1, alpha, alpha, False)
+    return prot, x
+
+  def test_transpose_masked(self):
+
+    with tf.Graph().as_default():
+
+      prot, x = self._setup(int64factory)
+      transpose = _transpose_masked(prot, x)
+
+      with tfe.Session() as sess:
+        actual = sess.run(transpose.reveal().to_native())
+        expected = np.array([[1, 4], [2, 5], [3, 6]])
+        np.testing.assert_array_equal(actual, expected)
 
 class TestPondAssign(unittest.TestCase):
 

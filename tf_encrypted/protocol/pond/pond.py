@@ -32,7 +32,7 @@ from ...player import Player
 from ...config import get_config, tensorflow_supports_int64
 from ...queue.fifo import AbstractFIFOQueue
 from ..protocol import Protocol, memoize, nodes
-from .triple_sources import OnlineTripleSource
+from .triple_sources import OnlineTripleSource, TripleSource
 
 TFEData = Union[np.ndarray, tf.Tensor]
 TFEVariable = Union["PondPublicVariable", "PondPrivateVariable", tf.Variable]
@@ -40,6 +40,7 @@ TFEPublicTensor = NewType("TFEPublicTensor", "PondPublicTensor")
 TFETensor = Union[TFEPublicTensor, "PondPrivateTensor", "PondMaskedTensor"]
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 TF_INT_TYPES = [tf.int8, tf.int16, tf.int32, tf.int64]
+TripleSourceOrPlayer = Union[TripleSource, Player]
 
 _THISMODULE = sys.modules[__name__]
 
@@ -53,34 +54,38 @@ class Pond(Protocol):
 
   :param Player server_0: The "alice" of MPC.
   :param Player server_1: The "bob" of MPC.
-  :param Player crypto_producer: The host to act as the crypto producer.  In
-      `Pond` this party is responsible for producing triples to aid in
-      computation.
+  :param Player triple_source: the entity responsible for producing triples in
+      `Pond` protocol. The valid values can be of type `TripleSource` or
+      `Player`. If a `Player` is passed, it will be the host that is used as an
+      `OnlineTripleSource` producer.
   :param AbstractFactory tensor_factory: Which backing type of tensor you would
       like to use, e.g. `int100` or `int64`
+  :param Player fixedpoint_config: Parameters for fixed-point precision tensors
   """  # noqa:E501
 
   def __init__(
       self,
       server_0=None,
       server_1=None,
-      crypto_producer=None,
+      triple_source: Optional[TripleSourceOrPlayer] = None,
       tensor_factory: Optional[AbstractFactory] = None,
       fixedpoint_config: Optional[FixedpointConfig] = None,
-      triple_source=None,
   ) -> None:
     config = get_config()
     self.server_0 = config.get_player(server_0 if server_0 else "server0")
     self.server_1 = config.get_player(server_1 if server_1 else "server1")
 
     if triple_source is None:
-      crypto_producer = config.get_player(
-          crypto_producer if crypto_producer else "server2")
-      crypto_producer = config.get_player(
-          crypto_producer if crypto_producer else "crypto-producer")
+      crypto_producer = config.get_player("server2")
+      crypto_producer = config.get_player(crypto_producer if crypto_producer
+                                          else "crypto-producer")
       self.triple_source = OnlineTripleSource(crypto_producer)
     else:
-      self.triple_source = triple_source
+      if isinstance(triple_source, Player):
+        self.triple_source = OnlineTripleSource(triple_source)
+      else:
+        assert isinstance(triple_source, TripleSource)
+        self.triple_source = triple_source
 
     if tensor_factory is None:
       if tensorflow_supports_int64():
@@ -3708,7 +3713,7 @@ def _transpose_masked(prot, x, perm=None):
   a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
   with tf.name_scope("transpose"):
-
+    # TODO(Arash) a is undefined, fix in another commit
     a_t = prot.triple_source.transpose_mask(a, perm=perm)
 
     with tf.device(prot.server_0.device_name):
@@ -3853,8 +3858,7 @@ def _gather_masked(
 
   with tf.name_scope("gather"):
 
-    with tf.device(prot.crypto_producer.device_name):
-      a_g = a.gather(indices, axis=axis)
+    a_g = prot.triple_source.gather_mask(a, indices, axis)
 
     with tf.device(prot.server_0.device_name):
       a0_g = a0.gather(indices, axis=axis)
@@ -4328,8 +4332,7 @@ def _negative_masked(prot: Pond, x: PondMaskedTensor) -> PondMaskedTensor:
 
   with tf.name_scope("negative"):
 
-    with tf.device(prot.crypto_producer.device_name):
-      a_negative = a.negative()
+    a_negative = prot.triple_source.negative_mask(a)
 
     with tf.device(prot.server_0.device_name):
       a0_negative = a0.negative()
