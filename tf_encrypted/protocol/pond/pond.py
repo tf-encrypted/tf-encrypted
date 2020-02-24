@@ -3688,7 +3688,7 @@ def _transpose_private(prot, x, perm=None):
 def _transpose_masked(prot, x, perm=None):
   assert isinstance(x, PondMaskedTensor)
 
-  _, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
+  a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
 
   with tf.name_scope("transpose"):
     # TODO(Arash) a is undefined, fix in another commit
