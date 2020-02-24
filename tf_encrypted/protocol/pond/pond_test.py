@@ -162,6 +162,7 @@ class TestShare(unittest.TestCase):
   def test_prime(self):
     self._core_test_sharing(native_factory(tf.int32, 67))
 
+
 class TestMasked(unittest.TestCase):
 
   def _setup(self, dtype):
@@ -211,6 +212,7 @@ class TestMasked(unittest.TestCase):
         expected = np.array([[-1, -2, -3], [-4, -5, -6]])
         np.testing.assert_array_equal(actual, expected)
 
+
 class TestIdentity(unittest.TestCase):
 
   def setUp(self):
@@ -231,6 +233,7 @@ class TestIdentity(unittest.TestCase):
 
     assert x is not y
     np.testing.assert_array_equal(actual, expected)
+
 
 class TestMasked(unittest.TestCase):
 
@@ -256,6 +259,7 @@ class TestMasked(unittest.TestCase):
         actual = sess.run(transpose.reveal().to_native())
         expected = np.array([[1, 4], [2, 5], [3, 6]])
         np.testing.assert_array_equal(actual, expected)
+
 
 class TestPondAssign(unittest.TestCase):
 
