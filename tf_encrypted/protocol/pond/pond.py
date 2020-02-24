@@ -57,13 +57,13 @@ class Pond(Protocol):
 
   :param Player server_0: The "alice" of MPC.
   :param Player server_1: The "bob" of MPC.
-  :param AbstractFactory tensor_factory: Which backing type of tensor you would
-      like to use, e.g. `int100` or `int64`
-  :param Player fixedpoint_config: Parameters for fixed-point precision tensors
   :param Player triple_source: the entity responsible for producing triples in
       `Pond` protocol. The valid values can be of type `TripleSource` or
       `Player`. If a `Player` is passed, it will be the host that is used as an
       `OnlineTripleSource` producer.
+  :param AbstractFactory tensor_factory: Which backing type of tensor you would
+      like to use, e.g. `int100` or `int64`
+  :param Player fixedpoint_config: Parameters for fixed-point precision tensors
   """  # noqa:E501
 
   def __init__(
