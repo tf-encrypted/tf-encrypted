@@ -78,7 +78,7 @@ lint: $(BUILD_CONVERTER_README) pythoncheck
 	pylint bin/run bin/process bin/pull_model bin/serve bin/write
 	yapf --diff --recursive --parallel tf_encrypted
 
-format: pythoncheck
+fmt: pythoncheck
 	yapf --in-place --recursive --parallel tf_encrypted
 
 typecheck: pythoncheck
