@@ -253,7 +253,7 @@ class TestMasked(unittest.TestCase):
     with tf.Graph().as_default():
 
       prot, x = self._setup(int64factory)
-      transpose = _transpose_masked(prot, x)
+      transpose = prot.transpose(x)
 
       with tfe.Session() as sess:
         actual = sess.run(transpose.reveal().to_native())
