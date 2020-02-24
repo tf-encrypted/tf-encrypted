@@ -10,7 +10,7 @@ def agreement_test(tfe_layer_cls,
                    kwargs=None,
                    input_shape=None,
                    input_data=None,
-                   rtol=1e-2,
+                   rtol=1e-1,
                    atol=1e-8,
                    **tfe_kwargs):
   """Check agreement between a tf.keras layer and a tfe.keras layer.
