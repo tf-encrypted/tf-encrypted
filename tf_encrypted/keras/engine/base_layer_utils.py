@@ -34,7 +34,11 @@ def _get_default_graph_uid_map():
 
 
 def unique_object_name(
-    name, name_uid_map=None, avoid_names=None, namespace='', zero_based=False
+    name,
+    name_uid_map=None,
+    avoid_names=None,
+    namespace='',
+    zero_based=False,
 ):
   """Makes a object name (or arbitrary string) unique within a TensorFlow graph.
   Arguments:

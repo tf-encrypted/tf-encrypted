@@ -68,14 +68,22 @@ def bool_factory():
       if crypto.supports_seeded_randomness():
         seed = crypto.secure_seed()
         return UniformTensor(
-            shape=shape, seed=seed, minval=minval, maxval=maxval
+            shape=shape,
+            seed=seed,
+            minval=minval,
+            maxval=maxval,
         )
 
       if crypto.supports_secure_randomness():
         sampler = crypto.random_uniform
       else:
         sampler = tf.random_uniform
-      value = sampler(shape=shape, minval=minval, maxval=maxval, dtype=tf.int32)
+      value = sampler(
+          shape=shape,
+          minval=minval,
+          maxval=maxval,
+          dtype=tf.int32,
+      )
       value = tf.cast(value, tf.bool)
       return DenseTensor(value)
 

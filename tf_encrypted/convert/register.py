@@ -742,9 +742,13 @@ def _required_space_to_batch_paddings(converter, node, inputs: List[str]):
       )
       return tf.cast(crops, tf.float64)
 
-  pad_private = tfe.define_public_input(converter.model_provider, inputter_pad)
+  pad_private = tfe.define_public_input(
+      converter.model_provider,
+      inputter_pad,
+  )
   crop_private = tfe.define_public_input(
-      converter.model_provider, inputter_crop
+      converter.model_provider,
+      inputter_crop,
   )
 
   return (pad_private, crop_private)

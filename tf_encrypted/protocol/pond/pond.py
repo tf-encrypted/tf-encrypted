@@ -331,7 +331,9 @@ class Pond(Protocol):
       elif isinstance(initial_value, tf.Tensor):
         v = factory.tensor(
             self._encode(
-                initial_value, apply_scaling, tf_int_type=factory.native_type
+                initial_value,
+                apply_scaling,
+                tf_int_type=factory.native_type,
             )
         )
         v0, v1 = self._share(v)
@@ -952,7 +954,11 @@ class Pond(Protocol):
   @memoize
   def cumsum(self, x, axis=0, exclusive=False, reverse=False):
     return self.dispatch(
-        "cumsum", x, axis=axis, exclusive=exclusive, reverse=reverse
+        "cumsum",
+        x,
+        axis=axis,
+        exclusive=exclusive,
+        reverse=reverse,
     )
 
   @memoize
@@ -2646,10 +2652,8 @@ def _reveal_masked(prot, x):
 def _add_public_public(prot, x, y):
   assert isinstance(x, PondPublicTensor), type(x)
   assert isinstance(y, PondPublicTensor), type(y)
-  assert x.is_scaled == y.is_scaled, (
-      "Cannot mix different encodings: "
-      "{} {}"
-  ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
+                                     ).format(x.is_scaled, y.is_scaled)
 
   x_on_0, x_on_1 = x.unwrapped
   y_on_0, y_on_1 = y.unwrapped
@@ -2668,10 +2672,8 @@ def _add_public_public(prot, x, y):
 def _add_public_private(prot, x, y):
   assert isinstance(x, PondPublicTensor), type(x)
   assert isinstance(y, PondPrivateTensor), type(y)
-  assert x.is_scaled == y.is_scaled, (
-      "Cannot mix different encodings: "
-      "{} {}"
-  ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
+                                     ).format(x.is_scaled, y.is_scaled)
 
   x_on_0, _ = x.unwrapped
   y0, y1 = y.unwrapped
@@ -2696,10 +2698,8 @@ def _add_public_masked(prot, x, y):
 def _add_private_public(prot, x, y):
   assert isinstance(x, PondPrivateTensor), type(x)
   assert isinstance(y, PondPublicTensor), type(y)
-  assert x.is_scaled == y.is_scaled, (
-      "Cannot mix different encodings: "
-      "{} {}"
-  ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
+                                     ).format(x.is_scaled, y.is_scaled)
 
   x0, x1 = x.unwrapped
   y_on_0, _ = y.unwrapped
@@ -2886,10 +2886,8 @@ def _cumsum_masked(
 def _sub_public_public(prot, x, y):
   assert isinstance(x, PondPublicTensor), type(x)
   assert isinstance(y, PondPublicTensor), type(y)
-  assert x.is_scaled == y.is_scaled, (
-      "Cannot mix different encodings: "
-      "{} {}"
-  ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
+                                     ).format(x.is_scaled, y.is_scaled)
 
   x_on_0, x_on_1 = x.unwrapped
   y_on_0, y_on_1 = y.unwrapped
@@ -2908,10 +2906,8 @@ def _sub_public_public(prot, x, y):
 def _sub_public_private(prot, x, y):
   assert isinstance(x, PondPublicTensor), type(x)
   assert isinstance(y, PondPrivateTensor), type(y)
-  assert x.is_scaled == y.is_scaled, (
-      "Cannot mix different encodings: "
-      "{} {}"
-  ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
+                                     ).format(x.is_scaled, y.is_scaled)
 
   x_on_0, _ = x.unwrapped
   y0, y1 = y.unwrapped
@@ -2936,10 +2932,8 @@ def _sub_public_masked(prot, x, y):
 def _sub_private_public(prot, x, y):
   assert isinstance(x, PondPrivateTensor), type(x)
   assert isinstance(y, PondPublicTensor), type(y)
-  assert x.is_scaled == y.is_scaled, (
-      "Cannot mix different encodings: "
-      "{} {}"
-  ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
+                                     ).format(x.is_scaled, y.is_scaled)
 
   x0, x1 = x.unwrapped
   y_on_0, _ = y.unwrapped
@@ -2958,10 +2952,8 @@ def _sub_private_public(prot, x, y):
 def _sub_private_private(prot, x, y):
   assert isinstance(x, PondPrivateTensor), type(x)
   assert isinstance(y, PondPrivateTensor), type(y)
-  assert x.is_scaled == y.is_scaled, (
-      "Cannot mix different encodings: "
-      "{} {}"
-  ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
+                                     ).format(x.is_scaled, y.is_scaled)
 
   x0, x1 = x.unwrapped
   y0, y1 = y.unwrapped
@@ -3496,9 +3488,12 @@ def _avgpool2d_im2col_reduce(
   x_split = x.reshape((batch * channels, 1, height, width))
   x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
   x_cols_sum = x_cols.reduce_sum(axis=0)
-  out = x_cols_sum.reshape([out_height, out_width, batch,
-                            channels]).transpose([2, 3, 0, 1],)
-  return out
+  return x_cols_sum.reshape([
+      out_height,
+      out_width,
+      batch,
+      channels,
+  ]).transpose([2, 3, 0, 1])
 
 
 def _avgpool2d_reshape_reduce(x, pool_size: Tuple[int, int], *args):
@@ -3507,10 +3502,16 @@ def _avgpool2d_reshape_reduce(x, pool_size: Tuple[int, int], *args):
   pool_height = tf.Dimension(pool_size[0])
   pool_width = tf.Dimension(pool_size[1])
   n, c, h, w = x.shape
-  x_reshaped = x.reshape(
-      [n, c, h // pool_height, pool_height, w // pool_width, pool_width],
-  )
-  return x_reshaped.reduce_sum(axis=3).reduce_sum(axis=4)
+  return x.reshape(
+      [
+          n,
+          c,
+          h // pool_height,
+          pool_height,
+          w // pool_width,
+          pool_width,
+      ]
+  ).reduce_sum(axis=3).reduce_sum(axis=4)
 
 
 def _avgpool2d_public(
@@ -4025,12 +4026,8 @@ def _split_masked(
 
     return [
         PondMaskedTensor(prot, y, b, b0, b1, beta_on_0, beta_on_1, x.is_scaled)
-        for y,
-        b,
-        b0,
-        b1,
-        beta_on_0,
-        beta_on_1 in zip(ys, bs, bs0, bs1, betas_on_0, betas_on_1)
+        for (y, b, b0, b1, beta_on_0, beta_on_1) in \
+            zip(ys, bs, bs0, bs1, betas_on_0, betas_on_1)
     ]
 
 

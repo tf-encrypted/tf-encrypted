@@ -690,13 +690,14 @@ class TestABY3(unittest.TestCase):
     tfe.set_protocol(prot)
 
     x = tfe.define_private_variable(
-        np.array([[1, 2, 3], [4, 5, 6]]), share_type=ARITHMETIC
+        np.array([[1, 2, 3], [4, 5, 6]]),
+        share_type=ARITHMETIC,
     )
     y = tfe.define_private_variable(
         tf.constant([[1, 0, 0], [0, 1, 0]]),
         apply_scaling=False,
         share_type=BOOLEAN,
-        factory=prot.bool_factory
+        factory=prot.bool_factory,
     )
 
     z = tfe.mul_AB(x, y)
@@ -717,12 +718,13 @@ class TestABY3(unittest.TestCase):
     tfe.set_protocol(prot)
 
     x = tfe.define_private_variable(
-        np.array([[1, -2, 3], [-4, -5, 6]]), share_type=ARITHMETIC
+        np.array([[1, -2, 3], [-4, -5, 6]]),
+        share_type=ARITHMETIC,
     )
     y = tfe.define_private_variable(
         np.array([[1, -2, 3], [-4, -5, 6]]),
         share_type=ARITHMETIC,
-        apply_scaling=False
+        apply_scaling=False,
     )
 
     z = tfe.bit_extract(

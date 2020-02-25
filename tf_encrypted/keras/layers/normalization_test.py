@@ -35,7 +35,10 @@ class TestBatchNormalization(unittest.TestCase):
     const = np.random.normal(input_shape)
     initializer = tf.keras.initializers.Constant(const)
 
-    self._core_batchnorm([1] + input_shape, moving_mean_initializer=initializer)
+    self._core_batchnorm(
+        [1] + input_shape,
+        moving_mean_initializer=initializer,
+    )
 
   def test_batchnorm_non_default_variance_init(self):
     input_shape = [1, 1, 3]
@@ -43,7 +46,8 @@ class TestBatchNormalization(unittest.TestCase):
     initializer = tf.keras.initializers.Constant(const)
 
     self._core_batchnorm(
-        [1] + input_shape, moving_variance_initializer=initializer
+        [1] + input_shape,
+        moving_variance_initializer=initializer,
     )
 
   def _core_batchnorm(self, input_shape, **layer_kwargs):

@@ -889,7 +889,11 @@ def run_flatten(data):
 
 
 def keras_multilayer_builder(
-    input_shape, filters=2, kernel_size=3, pool_size=2, units=2
+    input_shape,
+    filters=2,
+    kernel_size=3,
+    pool_size=2,
+    units=2,
 ):
   init = tf.keras.initializers.RandomNormal(seed=1)
   x = tf.keras.Input(shape=input_shape[1:])

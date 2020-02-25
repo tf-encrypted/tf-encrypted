@@ -25,10 +25,14 @@ class TestReshape(unittest.TestCase):
 
     kwargs = {**layer_kwargs}
     agreement_test(
-        tfe.keras.layers.Reshape, kwargs=kwargs, input_shape=input_shape
+        tfe.keras.layers.Reshape,
+        kwargs=kwargs,
+        input_shape=input_shape,
     )
     layer_test(
-        tfe.keras.layers.Reshape, kwargs=kwargs, batch_input_shape=input_shape
+        tfe.keras.layers.Reshape,
+        kwargs=kwargs,
+        batch_input_shape=input_shape,
     )
 
 

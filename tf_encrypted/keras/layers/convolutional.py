@@ -326,16 +326,30 @@ class DepthwiseConv2D(Conv2D):
 
     # Not implemented arguments
     default_args_check(
-        depthwise_regularizer, "depthwise_regularizer", "DepthwiseConv2D"
-    )
-    default_args_check(bias_regularizer, "bias_regularizer", "DepthwiseConv2D")
-    default_args_check(
-        activity_regularizer, "activity_regularizer", "DepthwiseConv2D"
+        depthwise_regularizer,
+        "depthwise_regularizer",
+        "DepthwiseConv2D",
     )
     default_args_check(
-        depthwise_constraint, "depthwise_constraint", "DepthwiseConv2D"
+        bias_regularizer,
+        "bias_regularizer",
+        "DepthwiseConv2D",
     )
-    default_args_check(bias_constraint, "bias_constraint", "DepthwiseConv2D")
+    default_args_check(
+        activity_regularizer,
+        "activity_regularizer",
+        "DepthwiseConv2D",
+    )
+    default_args_check(
+        depthwise_constraint,
+        "depthwise_constraint",
+        "DepthwiseConv2D",
+    )
+    default_args_check(
+        bias_constraint,
+        "bias_constraint",
+        "DepthwiseConv2D",
+    )
 
   def build(self, input_shape):
     if self.data_format == 'channels_first':

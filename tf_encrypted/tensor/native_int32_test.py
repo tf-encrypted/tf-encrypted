@@ -17,152 +17,22 @@ class TestInt32Tensor(unittest.TestCase):
             2**32 + 3,  # == 3
             2**31 - 1,  # max
             2**31,  # min
-            -3
+            -3,
         ]).reshape(2, 2)
     )
 
     y = x.bits()
 
-    expected = np.array(
-        [
-            [
-                1,
-                1,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0
-            ],
-            [
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                0
-            ],
-            [
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                1
-            ],
-            [
-                1,
-                0,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1,
-                1
-            ],
-        ]
-    ).reshape([2, 2, 32])
+    expected = np.array([
+        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ]).reshape([2, 2, 32])  # yapf: disable
 
     with tf.Session() as sess:
       actual = sess.run(y.to_native())
@@ -171,7 +41,9 @@ class TestInt32Tensor(unittest.TestCase):
 
   def test_random_binarize(self) -> None:
     x_in = np.random.uniform(
-        low=2**31 + 1, high=2**31 - 1, size=2000
+        low=2**31 + 1,
+        high=2**31 - 1,
+        size=2000,
     ).astype('int32')
     x = int32factory.tensor(x_in)
 
@@ -227,7 +99,10 @@ class TestConv2D(unittest.TestCase):
       filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
       conv_out_tf = tf.nn.conv2d(
-          x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME"
+          x_nhwc,
+          filters_tf,
+          strides=[1, strides, strides, 1],
+          padding="SAME",
       )
 
       sess.run(tf.global_variables_initializer())

@@ -334,7 +334,10 @@ class TestConv2D(unittest.TestCase):
       filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
       conv_out_tf = tf.nn.conv2d(
-          x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME"
+          x_nhwc,
+          filters_tf,
+          strides=[1, strides, strides, 1],
+          padding="SAME",
       )
 
       sess.run(tf.global_variables_initializer())
@@ -386,7 +389,10 @@ class TestConv2D(unittest.TestCase):
       filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
       conv_out_tf = tf.nn.conv2d(
-          x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME"
+          x_nhwc,
+          filters_tf,
+          strides=[1, strides, strides, 1],
+          padding="SAME",
       )
 
       sess.run(tf.global_variables_initializer())

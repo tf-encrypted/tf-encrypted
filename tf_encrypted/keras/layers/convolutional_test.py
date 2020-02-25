@@ -85,7 +85,8 @@ class TestDepthwiseConv2d(unittest.TestCase):
 
       model.add(
           tf.keras.layers.DepthwiseConv2D(
-              kernel_size=(2, 2), batch_input_shape=input_shape
+              kernel_size=(2, 2),
+              batch_input_shape=input_shape,
           )
       )
 

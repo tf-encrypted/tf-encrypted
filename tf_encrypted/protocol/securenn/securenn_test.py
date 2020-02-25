@@ -28,13 +28,20 @@ class TestPrivateCompare(unittest.TestCase):
     bit_dtype = prot.prime_factory
     val_dtype = prot.tensor_factory
 
-    x = np.array([21, 21, 21, 21, 21, 21, 21, 21],
-                 dtype=np.int32).reshape((2, 2, 2))
+    x = np.array(
+        [21, 21, 21, 21, 21, 21, 21, 21],
+        dtype=np.int32,
+    ).reshape((2, 2, 2))
 
-    r = np.array([36, 20, 21, 22, 36, 20, 21, 22],
-                 dtype=np.int32).reshape((2, 2, 2))
+    r = np.array(
+        [36, 20, 21, 22, 36, 20, 21, 22],
+        dtype=np.int32,
+    ).reshape((2, 2, 2))
 
-    beta = np.array([0, 0, 0, 0, 1, 1, 1, 1], dtype=np.int32).reshape((2, 2, 2))
+    beta = np.array(
+        [0, 0, 0, 0, 1, 1, 1, 1],
+        dtype=np.int32,
+    ).reshape((2, 2, 2))
 
     expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
     x_native = tf.convert_to_tensor(x, dtype=val_dtype.native_type)

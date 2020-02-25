@@ -823,12 +823,14 @@ class ABY3(Protocol):
       # computationally-dependent shares are updated in different pace
       # (e.g., share0 is computed from share1, and we need to make sure that
       # share1 is NOT already updated).
-      with tf.control_dependencies([val_shares[0][0].value,
-                                    val_shares[0][1].value,
-                                    val_shares[1][0].value,
-                                    val_shares[1][1].value,
-                                    val_shares[2][0].value,
-                                    val_shares[2][1].value]):
+      with tf.control_dependencies([
+          val_shares[0][0].value,
+          val_shares[0][1].value,
+          val_shares[1][0].value,
+          val_shares[1][1].value,
+          val_shares[2][0].value,
+          val_shares[2][1].value,
+      ]):
 
         with tf.device(self.servers[0].device_name):
           op00 = var_shares[0][0].assign_from_same(val_shares[0][0])

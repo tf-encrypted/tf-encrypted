@@ -68,7 +68,12 @@ def supports_seeded_randomness():
 
 
 def seeded_random_uniform(
-    shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=None
+    shape,
+    minval=0,
+    maxval=None,
+    dtype=tf.int32,
+    seed=None,
+    name=None,
 ):
   """
   Returns cryptographically strong random numbers with a seed
@@ -108,7 +113,13 @@ def seeded_random_uniform(
   )
 
 
-def random_uniform(shape, minval=0, maxval=None, dtype=tf.int32, name=None):
+def random_uniform(
+    shape,
+    minval=0,
+    maxval=None,
+    dtype=tf.int32,
+    name=None,
+):
   """
   Returns cryptographically strong random numbers.
 

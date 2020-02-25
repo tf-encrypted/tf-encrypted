@@ -44,12 +44,14 @@ class TestPooling2d(unittest.TestCase):
 
     kwargs = {**base_kwargs, **layer_kwargs}
     agreement_test(
-        tfe.keras.layers.MaxPooling2D, kwargs=kwargs, input_shape=input_shape
+        tfe.keras.layers.MaxPooling2D,
+        kwargs=kwargs,
+        input_shape=input_shape,
     )
     layer_test(
         tfe.keras.layers.MaxPooling2D,
         kwargs=kwargs,
-        batch_input_shape=input_shape
+        batch_input_shape=input_shape,
     )
 
   def _core_avgpooling2d(self, **layer_kwargs):
@@ -65,12 +67,12 @@ class TestPooling2d(unittest.TestCase):
     agreement_test(
         tfe.keras.layers.AveragePooling2D,
         kwargs=kwargs,
-        input_shape=input_shape
+        input_shape=input_shape,
     )
     layer_test(
         tfe.keras.layers.AveragePooling2D,
         kwargs=kwargs,
-        batch_input_shape=input_shape
+        batch_input_shape=input_shape,
     )
 
 
@@ -95,12 +97,12 @@ class TestGlobalPooling2d(unittest.TestCase):
     agreement_test(
         tfe.keras.layers.GlobalMaxPooling2D,
         kwargs=kwargs,
-        input_shape=input_shape
+        input_shape=input_shape,
     )
     layer_test(
         tfe.keras.layers.GlobalMaxPooling2D,
         kwargs=kwargs,
-        batch_input_shape=input_shape
+        batch_input_shape=input_shape,
     )
 
   def _core_global_avgpooling2d(self, **layer_kwargs):
@@ -113,12 +115,12 @@ class TestGlobalPooling2d(unittest.TestCase):
     agreement_test(
         tfe.keras.layers.GlobalAveragePooling2D,
         kwargs=kwargs,
-        input_shape=input_shape
+        input_shape=input_shape,
     )
     layer_test(
         tfe.keras.layers.GlobalAveragePooling2D,
         kwargs=kwargs,
-        batch_input_shape=input_shape
+        batch_input_shape=input_shape,
     )
 
 
