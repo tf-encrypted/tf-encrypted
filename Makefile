@@ -274,7 +274,7 @@ pypi-push: pypi-push-$(PUSHTYPE)
 
 push:
 	@echo "Attempting to build and push $(VERSION) with push type $(PUSHTYPE) - $(EXACT_TAG)"
-	make docker-push
+	# make docker-push
 	make pypi-push
 	@echo "Done building and pushing artifacts for $(VERSION)"
 

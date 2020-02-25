@@ -24,10 +24,10 @@ variables:
         HOMEBREW_NO_AUTO_UPDATE=1 brew install libtool automake
 
         make bootstrap
-  docker-login: &docker-login
-    run:
-      name: Login to Docker
-      command: make docker-login
+  # docker-login: &docker-login
+  #   run:
+  #     name: Login to Docker
+  #     command: make docker-login
   build-release: &build-release
     run:
       name: Build and push release artifacts (e.g. docker containers)
@@ -78,9 +78,9 @@ jobs:
             make lint
             make test
             make docs
-      - run:
-          name: build docker container
-          command: make docker
+      # - run:
+      #     name: build docker container
+      #     command: make docker
 
   build-macos:
     macos:
@@ -108,7 +108,7 @@ jobs:
       - checkout
       - *restore-cache
       - *bootstrap
-      - *docker-login
+      # - *docker-login
       - *build-release
 
   deploy-macos:
