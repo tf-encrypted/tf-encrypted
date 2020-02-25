@@ -475,6 +475,7 @@ class DepthwiseConv2D(Conv2D):
     return [n_x, n_filters, h_out, w_out]
 
   def get_mask(self, in_channels):
+    """TODO"""
     mask = np.zeros(
         (
             self.kernel_size[0],

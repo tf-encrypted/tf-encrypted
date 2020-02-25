@@ -1,3 +1,4 @@
+# pylint: disable=missing-function-docstring
 """High-precision tensors that implement a fixed-point representation with
 an array of backing tensors with lower precision conforming to the Chinese
 remainder theorem.

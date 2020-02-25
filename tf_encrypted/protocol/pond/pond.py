@@ -2652,8 +2652,9 @@ def _reveal_masked(prot, x):
 def _add_public_public(prot, x, y):
   assert isinstance(x, PondPublicTensor), type(x)
   assert isinstance(y, PondPublicTensor), type(y)
-  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
-                                     ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, (
+      "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
+  )
 
   x_on_0, x_on_1 = x.unwrapped
   y_on_0, y_on_1 = y.unwrapped
@@ -2672,8 +2673,9 @@ def _add_public_public(prot, x, y):
 def _add_public_private(prot, x, y):
   assert isinstance(x, PondPublicTensor), type(x)
   assert isinstance(y, PondPrivateTensor), type(y)
-  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
-                                     ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, (
+      "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
+  )
 
   x_on_0, _ = x.unwrapped
   y0, y1 = y.unwrapped
@@ -2698,8 +2700,9 @@ def _add_public_masked(prot, x, y):
 def _add_private_public(prot, x, y):
   assert isinstance(x, PondPrivateTensor), type(x)
   assert isinstance(y, PondPublicTensor), type(y)
-  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
-                                     ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, (
+      "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
+  )
 
   x0, x1 = x.unwrapped
   y_on_0, _ = y.unwrapped
@@ -2886,8 +2889,9 @@ def _cumsum_masked(
 def _sub_public_public(prot, x, y):
   assert isinstance(x, PondPublicTensor), type(x)
   assert isinstance(y, PondPublicTensor), type(y)
-  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
-                                     ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, (
+      "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
+  )
 
   x_on_0, x_on_1 = x.unwrapped
   y_on_0, y_on_1 = y.unwrapped
@@ -2906,8 +2910,9 @@ def _sub_public_public(prot, x, y):
 def _sub_public_private(prot, x, y):
   assert isinstance(x, PondPublicTensor), type(x)
   assert isinstance(y, PondPrivateTensor), type(y)
-  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
-                                     ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, (
+      "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
+  )
 
   x_on_0, _ = x.unwrapped
   y0, y1 = y.unwrapped
@@ -2932,8 +2937,9 @@ def _sub_public_masked(prot, x, y):
 def _sub_private_public(prot, x, y):
   assert isinstance(x, PondPrivateTensor), type(x)
   assert isinstance(y, PondPublicTensor), type(y)
-  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
-                                     ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, (
+      "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
+  )
 
   x0, x1 = x.unwrapped
   y_on_0, _ = y.unwrapped
@@ -2952,8 +2958,9 @@ def _sub_private_public(prot, x, y):
 def _sub_private_private(prot, x, y):
   assert isinstance(x, PondPrivateTensor), type(x)
   assert isinstance(y, PondPrivateTensor), type(y)
-  assert x.is_scaled == y.is_scaled, ("Cannot mix different encodings: {} {}"
-                                     ).format(x.is_scaled, y.is_scaled)
+  assert x.is_scaled == y.is_scaled, (
+      "Cannot mix different encodings: {} {}".format(x.is_scaled, y.is_scaled)
+  )
 
   x0, x1 = x.unwrapped
   y0, y1 = y.unwrapped
@@ -4026,8 +4033,14 @@ def _split_masked(
 
     return [
         PondMaskedTensor(prot, y, b, b0, b1, beta_on_0, beta_on_1, x.is_scaled)
-        for (y, b, b0, b1, beta_on_0, beta_on_1) in \
-            zip(ys, bs, bs0, bs1, betas_on_0, betas_on_1)
+        for (y, b, b0, b1, beta_on_0, beta_on_1) in zip(
+            ys,
+            bs,
+            bs0,
+            bs1,
+            betas_on_0,
+            betas_on_1,
+        )
     ]
 
 
