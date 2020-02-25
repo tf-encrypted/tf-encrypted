@@ -25,12 +25,12 @@ PER_GRAPH_OBJECT_NAME_UIDS = weakref.WeakKeyDictionary()
 
 
 def _get_default_graph_uid_map():
-  graph = tf.get_default_graph()
-  name_uid_map = PER_GRAPH_OBJECT_NAME_UIDS.get(graph, None)
-  if name_uid_map is None:
-    name_uid_map = collections.defaultdict(int)
-    PER_GRAPH_OBJECT_NAME_UIDS[graph] = name_uid_map
-  return name_uid_map
+    graph = tf.get_default_graph()
+    name_uid_map = PER_GRAPH_OBJECT_NAME_UIDS.get(graph, None)
+    if name_uid_map is None:
+        name_uid_map = collections.defaultdict(int)
+        PER_GRAPH_OBJECT_NAME_UIDS[graph] = name_uid_map
+    return name_uid_map
 
 
 def unique_object_name(
@@ -40,7 +40,7 @@ def unique_object_name(
     namespace='',
     zero_based=False,
 ):
-  """Makes a object name (or arbitrary string) unique within a TensorFlow graph.
+    """Makes a object name (or arbitrary string) unique within a TensorFlow graph.
   Arguments:
     name: String name to make unique.
     name_uid_map: An optional defaultdict(int) to use when creating unique
@@ -60,21 +60,21 @@ def unique_object_name(
   _unique_layer_name('dense')  # dense_2
   ```
   """
-  if name_uid_map is None:
-    name_uid_map = _get_default_graph_uid_map()
-  if avoid_names is None:
-    avoid_names = set()
-  proposed_name = None
-  while proposed_name is None or proposed_name in avoid_names:
-    name_key = (namespace, name)
-    if zero_based:
-      number = name_uid_map[name_key]
-      if number:
-        proposed_name = name + '_' + str(number)
-      else:
-        proposed_name = name
-      name_uid_map[name_key] += 1
-    else:
-      name_uid_map[name_key] += 1
-      proposed_name = name + '_' + str(name_uid_map[name_key])
-  return proposed_name
+    if name_uid_map is None:
+        name_uid_map = _get_default_graph_uid_map()
+    if avoid_names is None:
+        avoid_names = set()
+    proposed_name = None
+    while proposed_name is None or proposed_name in avoid_names:
+        name_key = (namespace, name)
+        if zero_based:
+            number = name_uid_map[name_key]
+            if number:
+                proposed_name = name + '_' + str(number)
+            else:
+                proposed_name = name
+            name_uid_map[name_key] += 1
+        else:
+            name_uid_map[name_key] += 1
+            proposed_name = name + '_' + str(name_uid_map[name_key])
+    return proposed_name
