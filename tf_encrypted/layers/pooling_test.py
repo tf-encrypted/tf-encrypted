@@ -100,9 +100,14 @@ class TestMaxPooling2D(unittest.TestCase):
     def test_maxpool2d(self):
         with tfe.protocol.SecureNN() as prot:
 
-            x_in = np.array(
-                [[[[1, 2, 3, 4], [3, 2, 4, 1], [1, 2, 3, 4], [3, 2, 4, 1],]]]
-            )
+            # fmt: off
+            x_in = np.array([[[
+                [1, 2, 3, 4],
+                [3, 2, 4, 1],
+                [1, 2, 3, 4],
+                [3, 2, 4, 1],
+            ]]])
+            # fmt: on
 
             expected = np.array([[[[3, 4], [3, 4]]]], dtype=np.float64)
 
