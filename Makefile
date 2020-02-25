@@ -330,8 +330,8 @@ $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECUR
 build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
 
 build-all:
-	pip install tensorflow==1.13.1
-	$(MAKE) $(SECURE_OUT_PRE)1.13.1.so
+	pip install tensorflow==1.15.2
+	$(MAKE) $(SECURE_OUT_PRE)1.15.2.so
 
 
 .PHONY: build build-all
