@@ -38,15 +38,19 @@ class Sequential(Layer):
         somewhere else (forbidden in `Sequential` models).
     """
     if not isinstance(layer, Layer):
-      raise TypeError('The added layer must be '
-                      'an instance of class Layer. '
-                      'Found: ' + str(layer))
+      raise TypeError(
+          'The added layer must be '
+          'an instance of class Layer. '
+          'Found: ' + str(layer)
+      )
     self.built = False
     set_inputs = False
     if not self._layers:
       if isinstance(layer, InputLayer):
-        raise ValueError("Do not manually define an InputLayer in your "
-                         "tfe.keras.Sequential model.")
+        raise ValueError(
+            "Do not manually define an InputLayer in your "
+            "tfe.keras.Sequential model."
+        )
 
       batch_shape = layer._batch_input_shape  # pylint: disable=protected-access
 
@@ -59,10 +63,12 @@ class Sequential(Layer):
 
       # If an input layer (placeholder) is available.
       if isinstance(y, (tuple, list)):
-        raise ValueError('All layers in a Sequential model '
-                         'should have a single output tensor. '
-                         'For multi-output layers, '
-                         'use the functional API.')
+        raise ValueError(
+            'All layers in a Sequential model '
+            'should have a single output tensor. '
+            'For multi-output layers, '
+            'use the functional API.'
+        )
       self.outputs = [y]
 
     elif self.outputs:
@@ -70,10 +76,12 @@ class Sequential(Layer):
       # refresh its output.
       output_tensor = layer(self.outputs[0])
       if isinstance(output_tensor, list):
-        raise TypeError('All layers in a Sequential model '
-                        'should have a single output tensor. '
-                        'For multi-output layers, '
-                        'use the functional API.')
+        raise TypeError(
+            'All layers in a Sequential model '
+            'should have a single output tensor. '
+            'For multi-output layers, '
+            'use the functional API.'
+        )
       self.outputs = [output_tensor]
     if set_inputs:
       self.built = True
@@ -269,7 +277,9 @@ def _instantiate_tfe_layer(keras_layer_config):
     #       supported layers in a doc somewhere
     raise RuntimeError(
         "TF Encrypted does not yet support the {lcls} layer.".format(
-            lcls=keras_layer_type))
+            lcls=keras_layer_type
+        )
+    )
 
   # get layer config to instiate the tfe layer with the right parameters
   config = keras_layer_config['config']

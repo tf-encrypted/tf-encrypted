@@ -67,10 +67,9 @@ def bool_factory():
 
       if crypto.supports_seeded_randomness():
         seed = crypto.secure_seed()
-        return UniformTensor(shape=shape,
-                             seed=seed,
-                             minval=minval,
-                             maxval=maxval)
+        return UniformTensor(
+            shape=shape, seed=seed, minval=minval, maxval=maxval
+        )
 
       if crypto.supports_secure_randomness():
         sampler = crypto.random_uniform
@@ -108,7 +107,8 @@ def bool_factory():
         return DenseTensor(value)
 
       raise NotImplementedError(
-          "Secure seeded randomness implementation is not available.")
+          "Secure seeded randomness implementation is not available."
+      )
 
     def sample_bounded(self, shape, bitlength: int):
       raise NotImplementedError("No bounded sampling for boolean type.")
@@ -200,7 +200,8 @@ def bool_factory():
       x, y = _lift(self, other)
       factory = factory or FACTORY
       return factory.tensor(
-          tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
+          tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type)
+      )
 
     def expand_dims(self, axis: Optional[int] = None):
       return DenseTensor(tf.expand_dims(self.value, axis))
@@ -280,11 +281,15 @@ def bool_factory():
     def value(self):
       with tf.name_scope('expand-seed'):
         return tf.cast(
-            crypto.seeded_random_uniform(shape=self._shape,
-                                         dtype=tf.int32,
-                                         minval=self._minval,
-                                         maxval=self._maxval,
-                                         seed=self._seed), tf.bool)
+            crypto.seeded_random_uniform(
+                shape=self._shape,
+                dtype=tf.int32,
+                minval=self._minval,
+                maxval=self._maxval,
+                seed=self._seed
+            ),
+            tf.bool
+        )
 
     @property
     def support(self):

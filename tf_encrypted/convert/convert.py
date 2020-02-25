@@ -53,8 +53,8 @@ class Converter:
       self,
       graph_def: Any,
       input_player: Union[str, Player],
-      inputter_fn: Optional[Union[TFEInputter,
-                                  List[TFEInputter]]] = None) -> Any:
+      inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]] = None
+  ) -> Any:
     """Convert a frozen GraphDef to a TFE Graph."""
     if not graph_def.node:
       raise ValueError("An empty model was passed to the converter.")
@@ -76,13 +76,15 @@ class Converter:
     # If yes, identify the inputs and outputs of these special ops.
     output_name = graph_def.node[-1].name  # Assume output is last node.
     specop_dict, specop_inputs, specop_outputs = find_specops(
-        graph_def, output_name)
+        graph_def, output_name
+    )
 
     # Create a dictionary excluding all the sub ops related to
     # required_space_to_batch_paddings. Except the sub ops related to the input
     # or output of this special ops.
-    pb_trimmed, graph_def = select_relevant_ops(specop_inputs, specop_outputs,
-                                                graph_def)
+    pb_trimmed, graph_def = select_relevant_ops(
+        specop_inputs, specop_outputs, graph_def
+    )
     node_list = pb_trimmed.values()
 
     # If the ops are not related to the special ops, use the existing approach
@@ -291,10 +293,9 @@ def find_leaves(scope, subscope_map):
   return input_leaves, output_leaves
 
 
-def match_numbered_scope(specop,
-                         search_string,
-                         return_group=True,
-                         numbered=True):
+def match_numbered_scope(
+    specop, search_string, return_group=True, numbered=True
+):
   """
   Find a numbered scope matching a specop from REGISTERED_SPECOPS,
   and return it if found.

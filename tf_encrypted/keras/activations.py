@@ -48,16 +48,22 @@ def get_deriv(identifier):
   if identifier is None:
     return linear
   if callable(identifier):
-    raise NotImplementedError('During training, please use a string '
-                              '(e.g "relu") to specify the activation '
-                              'function instead of calling directly '
-                              'the activation function.')
+    raise NotImplementedError(
+        'During training, please use a string '
+        '(e.g "relu") to specify the activation '
+        'function instead of calling directly '
+        'the activation function.'
+    )
   if isinstance(identifier, str):
     activations = {"sigmoid": sigmoid_deriv}
     if identifier not in activations.keys():
-      raise NotImplementedError('Activation function {} not yet implemented '
-                                'during training'.format(identifier))
+      raise NotImplementedError(
+          'Activation function {} not yet implemented '
+          'during training'.format(identifier)
+      )
     return activations[identifier]
 
-  raise ValueError('Could not interpret '
-                   'activation function identifier:', identifier)
+  raise ValueError(
+      'Could not interpret '
+      'activation function identifier:', identifier
+  )

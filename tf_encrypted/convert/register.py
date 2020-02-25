@@ -107,10 +107,12 @@ def _matmul(converter, node: Any, inputs: List[str]) -> Any:
   transpose_a = node.attr["transpose_a"].b
   transpose_b = node.attr["transpose_b"].b
 
-  layer = Dense(a.shape.as_list(),
-                b_shape[1],
-                transpose_input=transpose_a,
-                transpose_weight=transpose_b)
+  layer = Dense(
+      a.shape.as_list(),
+      b_shape[1],
+      transpose_input=transpose_a,
+      transpose_weight=transpose_b
+  )
 
   dtype = tensor.dtype
 
@@ -144,11 +146,13 @@ def _conv2d(converter, node, inputs):
 
   fmt = node.attr["data_format"].s.decode('ascii')
 
-  layer = Conv2D(x_in.shape.as_list(),
-                 shape,
-                 strides=int(max(node.attr["strides"].list.i)),
-                 padding=node.attr["padding"].s.decode('ascii'),
-                 channels_first=fmt == "NCHW")
+  layer = Conv2D(
+      x_in.shape.as_list(),
+      shape,
+      strides=int(max(node.attr["strides"].list.i)),
+      padding=node.attr["padding"].s.decode('ascii'),
+      channels_first=fmt == "NCHW"
+  )
 
   layer.initialize(initial_weights=w)
 
@@ -177,11 +181,13 @@ def _keras_conv2d(converter, interiors, inputs):
   strides = int(max(conv_op.attr["strides"].list.i))
   padding = conv_op.attr["padding"].s.decode('ascii')
 
-  layer = Conv2D(input_shape,
-                 shape,
-                 strides=strides,
-                 padding=padding,
-                 channels_first=fmt == "NCHW")
+  layer = Conv2D(
+      input_shape,
+      shape,
+      strides=strides,
+      padding=padding,
+      channels_first=fmt == "NCHW"
+  )
 
   layer.initialize(initial_weights=k, initial_bias=b)
   out = layer.forward(x_in)
@@ -215,14 +221,16 @@ def _keras_depthwise_conv2d(converter, interiors, inputs):
   strides = int(max(conv_op.attr["strides"].list.i))
   padding = conv_op.attr["padding"].s.decode('ascii')
 
-  layer = DepthwiseConv2D(kernel_size=(shape[0], shape[1]),
-                          strides=strides,
-                          padding=padding,
-                          depth_multiplier=1,
-                          data_format=fmt,
-                          use_bias=use_bias,
-                          depthwise_initializer=kernel_init,
-                          bias_initializer=bias_init)
+  layer = DepthwiseConv2D(
+      kernel_size=(shape[0], shape[1]),
+      strides=strides,
+      padding=padding,
+      depth_multiplier=1,
+      data_format=fmt,
+      use_bias=use_bias,
+      depthwise_initializer=kernel_init,
+      bias_initializer=bias_init
+  )
 
   return layer(x_in)
 
@@ -269,12 +277,14 @@ def _keras_batchnorm(converter, interiors, inputs):
 
   input_shape = x_in.shape.as_list()
 
-  layer = BatchNormalization(input_shape=input_shape,
-                             axis=(3 if fmt == "NHWC" else 1),
-                             gamma_initializer=gamma_init,
-                             beta_initializer=beta_init,
-                             moving_mean_initializer=moving_mean_init,
-                             moving_variance_initializer=moving_variance_init)
+  layer = BatchNormalization(
+      input_shape=input_shape,
+      axis=(3 if fmt == "NHWC" else 1),
+      gamma_initializer=gamma_init,
+      beta_initializer=beta_init,
+      moving_mean_initializer=moving_mean_init,
+      moving_variance_initializer=moving_variance_init
+  )
 
   return layer(x_in)
 
@@ -313,15 +323,17 @@ def _strided_slice(converter, node: Any, inputs: List[str]) -> Any:
   end = tf.constant(end.attr["value"].tensor)
   strides = tf.constant(strides.attr["value"].tensor)
 
-  return tfe.strided_slice(input_out,
-                           begin,
-                           end,
-                           strides=strides,
-                           begin_mask=begin_mask,
-                           end_mask=end_mask,
-                           ellipsis_mask=ellipsis_mask,
-                           new_axis_mask=new_axis_mask,
-                           shrink_axis_mask=shrink_axis_mask)
+  return tfe.strided_slice(
+      input_out,
+      begin,
+      end,
+      strides=strides,
+      begin_mask=begin_mask,
+      end_mask=end_mask,
+      ellipsis_mask=ellipsis_mask,
+      new_axis_mask=new_axis_mask,
+      shrink_axis_mask=shrink_axis_mask
+  )
 
 
 def _pack(converter, node: Any, inputs: List[str]) -> Any:
@@ -688,9 +700,13 @@ def _required_space_to_batch_paddings(converter, node, inputs: List[str]):
     pvt_check = isinstance(x_in, PondPrivateTensor)
     msk_check = isinstance(x_in, PondMaskedTensor)
     if pvt_check or msk_check:
-      logging.warning(("Revealing private input: "
-                       "required_space_to_batch_paddings assumes public "
-                       "input."))
+      logging.warning(
+          (
+              "Revealing private input: "
+              "required_space_to_batch_paddings assumes public "
+              "input."
+          )
+      )
       inputs_int32.append(tf.cast(x_in.reveal().decode(), tf.int32))
     elif isinstance(x_in, tf.NodeDef):
       inputs_int32.append(_nodef_to_numpy_array(x_in))
@@ -727,8 +743,9 @@ def _required_space_to_batch_paddings(converter, node, inputs: List[str]):
       return tf.cast(crops, tf.float64)
 
   pad_private = tfe.define_public_input(converter.model_provider, inputter_pad)
-  crop_private = tfe.define_public_input(converter.model_provider,
-                                         inputter_crop)
+  crop_private = tfe.define_public_input(
+      converter.model_provider, inputter_crop
+  )
 
   return (pad_private, crop_private)
 

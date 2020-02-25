@@ -48,12 +48,12 @@ class TestConv2d(unittest.TestCase):
     }
 
     kwargs = {**base_kwargs, **layer_kwargs}
-    agreement_test(tfe.keras.layers.Conv2D,
-                   kwargs=kwargs,
-                   input_shape=input_shape)
-    layer_test(tfe.keras.layers.Conv2D,
-               kwargs=kwargs,
-               batch_input_shape=input_shape)
+    agreement_test(
+        tfe.keras.layers.Conv2D, kwargs=kwargs, input_shape=input_shape
+    )
+    layer_test(
+        tfe.keras.layers.Conv2D, kwargs=kwargs, batch_input_shape=input_shape
+    )
 
 
 class TestDepthwiseConv2d(unittest.TestCase):
@@ -84,16 +84,19 @@ class TestDepthwiseConv2d(unittest.TestCase):
       model = tf.keras.models.Sequential()
 
       model.add(
-          tf.keras.layers.DepthwiseConv2D(kernel_size=(2, 2),
-                                          batch_input_shape=input_shape))
+          tf.keras.layers.DepthwiseConv2D(
+              kernel_size=(2, 2), batch_input_shape=input_shape
+          )
+      )
 
       expected = model.predict(input_data)
       k_weights = model.get_weights()
       k_config = model.get_config()
 
     with tfe.protocol.SecureNN():
-      x = tfe.define_private_input("inputter",
-                                   lambda: tf.convert_to_tensor(input_data))
+      x = tfe.define_private_input(
+          "inputter", lambda: tf.convert_to_tensor(input_data)
+      )
 
       tfe_model = tfe.keras.models.model_from_config(k_config)
       tfe_model.set_weights(k_weights)
@@ -127,13 +130,17 @@ class TestDepthwiseConv2d(unittest.TestCase):
     }
 
     kwargs = {**base_kwargs, **layer_kwargs}
-    agreement_test(tfe.keras.layers.DepthwiseConv2D,
-                   kwargs=kwargs,
-                   input_shape=input_shape,
-                   atol=1e-2)
-    layer_test(tfe.keras.layers.DepthwiseConv2D,
-               kwargs=kwargs,
-               batch_input_shape=input_shape)
+    agreement_test(
+        tfe.keras.layers.DepthwiseConv2D,
+        kwargs=kwargs,
+        input_shape=input_shape,
+        atol=1e-2
+    )
+    layer_test(
+        tfe.keras.layers.DepthwiseConv2D,
+        kwargs=kwargs,
+        batch_input_shape=input_shape
+    )
 
 
 if __name__ == '__main__':

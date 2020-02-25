@@ -196,9 +196,9 @@ class TestSpaceToBatchND(unittest.TestCase):
 
     with tfe.protocol.Pond() as prot:
       b = prot.define_public_variable(t)
-      out = prot.space_to_batch_nd(b,
-                                   block_shape=block_shape,
-                                   paddings=paddings)
+      out = prot.space_to_batch_nd(
+          b, block_shape=block_shape, paddings=paddings
+      )
       with tfe.Session() as sess:
         sess.run(tf.global_variables_initializer())
         final = sess.run(out)
@@ -213,9 +213,9 @@ class TestSpaceToBatchND(unittest.TestCase):
 
     with tfe.protocol.Pond() as prot:
       b = prot.define_private_variable(t)
-      out = prot.space_to_batch_nd(b,
-                                   block_shape=block_shape,
-                                   paddings=paddings)
+      out = prot.space_to_batch_nd(
+          b, block_shape=block_shape, paddings=paddings
+      )
       with tfe.Session() as sess:
         sess.run(tf.global_variables_initializer())
         final = sess.run(out.reveal())
@@ -230,9 +230,9 @@ class TestSpaceToBatchND(unittest.TestCase):
 
     with tfe.protocol.Pond() as prot:
       b = prot.mask(prot.define_private_variable(t))
-      out = prot.space_to_batch_nd(b,
-                                   block_shape=block_shape,
-                                   paddings=paddings)
+      out = prot.space_to_batch_nd(
+          b, block_shape=block_shape, paddings=paddings
+      )
       with tfe.Session() as sess:
         sess.run(tf.global_variables_initializer())
         final = sess.run(out.reveal())
@@ -333,10 +333,9 @@ class TestConv2D(unittest.TestCase):
       # convolution Tensorflow
       filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
-      conv_out_tf = tf.nn.conv2d(x_nhwc,
-                                 filters_tf,
-                                 strides=[1, strides, strides, 1],
-                                 padding="SAME")
+      conv_out_tf = tf.nn.conv2d(
+          x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME"
+      )
 
       sess.run(tf.global_variables_initializer())
       out_tensorflow = sess.run(conv_out_tf).transpose(0, 3, 1, 2)
@@ -386,10 +385,9 @@ class TestConv2D(unittest.TestCase):
       # convolution Tensorflow
       filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
-      conv_out_tf = tf.nn.conv2d(x_nhwc,
-                                 filters_tf,
-                                 strides=[1, strides, strides, 1],
-                                 padding="SAME")
+      conv_out_tf = tf.nn.conv2d(
+          x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME"
+      )
 
       sess.run(tf.global_variables_initializer())
       out_tensorflow = sess.run(conv_out_tf).transpose(0, 3, 1, 2)
@@ -760,11 +758,13 @@ class TestStridedSlice(unittest.TestCase):
   def test_strided_slice(self):
 
     with tf.Session() as sess:
-      t = tf.constant([
-          [[1, 1, 1], [2, 2, 2]],
-          [[3, 3, 3], [4, 4, 4]],
-          [[5, 5, 5], [6, 6, 6]],
-      ])
+      t = tf.constant(
+          [
+              [[1, 1, 1], [2, 2, 2]],
+              [[3, 3, 3], [4, 4, 4]],
+              [[5, 5, 5], [6, 6, 6]],
+          ]
+      )
       out = tf.strided_slice(t, [1, 0, 0], [2, 1, 3], [1, 1, 1])
 
       actual = sess.run(out)
@@ -772,11 +772,13 @@ class TestStridedSlice(unittest.TestCase):
     tf.reset_default_graph()
 
     with tfe.protocol.Pond() as prot:
-      x = np.array([
-          [[1, 1, 1], [2, 2, 2]],
-          [[3, 3, 3], [4, 4, 4]],
-          [[5, 5, 5], [6, 6, 6]],
-      ])
+      x = np.array(
+          [
+              [[1, 1, 1], [2, 2, 2]],
+              [[3, 3, 3], [4, 4, 4]],
+              [[5, 5, 5], [6, 6, 6]],
+          ]
+      )
 
       out = prot.define_private_variable(x)
       out = prot.strided_slice(out, [1, 0, 0], [2, 1, 3], [1, 1, 1])

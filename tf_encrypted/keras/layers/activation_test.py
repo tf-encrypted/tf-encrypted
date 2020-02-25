@@ -17,12 +17,14 @@ class TestActivation(unittest.TestCase):
     self._core_activation(activation="relu")
 
   def _core_activation(self, **layer_kwargs):
-    agreement_test(tfe.keras.layers.Activation,
-                   kwargs=layer_kwargs,
-                   input_shape=[1, 5])
-    layer_test(tfe.keras.layers.Activation,
-               kwargs=layer_kwargs,
-               batch_input_shape=[1, 5])
+    agreement_test(
+        tfe.keras.layers.Activation, kwargs=layer_kwargs, input_shape=[1, 5]
+    )
+    layer_test(
+        tfe.keras.layers.Activation,
+        kwargs=layer_kwargs,
+        batch_input_shape=[1, 5]
+    )
 
   def test_backward_sigmoid(self) -> None:
 

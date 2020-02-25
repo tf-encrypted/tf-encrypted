@@ -16,10 +16,9 @@ class TestActivation(unittest.TestCase):
     self._core_relu()
 
   def _core_relu(self, **layer_kwargs):
-    agreement_test(tfe.keras.layers.ReLU,
-                   kwargs=layer_kwargs,
-                   input_shape=[1, 5],
-                   rtol=.1)
+    agreement_test(
+        tfe.keras.layers.ReLU, kwargs=layer_kwargs, input_shape=[1, 5], rtol=.1
+    )
 
 
 if __name__ == '__main__':

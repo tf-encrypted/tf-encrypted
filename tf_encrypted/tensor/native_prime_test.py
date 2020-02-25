@@ -53,8 +53,9 @@ class TestPrimeTensor(unittest.TestCase):
       np.testing.assert_equal(np_fix[:, 1], prime_fix[:, 1].value)
       np.testing.assert_equal(np_fix[:, -1], prime_fix[:, -1].value)
       if ndim > 2:
-        np.testing.assert_equal(np_fix[:, :-1, ...], prime_fix[:, :-1,
-                                                               ...].value)
+        np.testing.assert_equal(
+            np_fix[:, :-1, ...], prime_fix[:, :-1, ...].value
+        )
         np.testing.assert_equal(np_fix[:, :1, ...], prime_fix[:, :1, ...].value)
         np.testing.assert_equal(np_fix[:, 1:, ...], prime_fix[:, 1:, ...].value)
       elif ndim == 2:
@@ -102,15 +103,19 @@ class TestPrimeTensor(unittest.TestCase):
                 0  # min
             ],
             shape=[3],
-            dtype=np.int32))
+            dtype=np.int32
+        )
+    )
 
     y = x.bits()
 
-    expected = np.array([
-        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 1, 0, 1, 1, 1, 1, 1],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    ]).reshape([3, 10])
+    expected = np.array(
+        [
+            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 1, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ]
+    ).reshape([3, 10])
 
     with tf.Session() as sess:
       actual = sess.run(y.value)

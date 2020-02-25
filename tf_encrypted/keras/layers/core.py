@@ -82,8 +82,9 @@ class Reshape(Layer):
       output_shape += tuple(s if s != -1 else None for s in self.target_shape)
     else:
       output_shape = [input_shape[0]]
-      output_shape += self._fix_unknown_dimension(input_shape[1:],
-                                                  self.target_shape)
+      output_shape += self._fix_unknown_dimension(
+          input_shape[1:], self.target_shape
+      )
     return output_shape
 
   def call(self, inputs):

@@ -32,11 +32,9 @@ class TestAveragePooling2D(unittest.TestCase):
     x = tf.constant(input_pool, dtype=tf.float32)
     x_nhwc = tf.transpose(x, (0, 2, 3, 1))
     ksize = [1, 2, 2, 1]
-    pool_out_tf = tf.nn.avg_pool(x_nhwc,
-                                 ksize=ksize,
-                                 strides=ksize,
-                                 padding="VALID",
-                                 data_format='NHWC')
+    pool_out_tf = tf.nn.avg_pool(
+        x_nhwc, ksize=ksize, strides=ksize, padding="VALID", data_format='NHWC'
+    )
 
     with tf.Session() as sess:
       out_tf = sess.run(pool_out_tf).transpose(0, 3, 1, 2)
@@ -104,12 +102,14 @@ class TestMaxPooling2D(unittest.TestCase):
   def test_maxpool2d(self):
     with tfe.protocol.SecureNN() as prot:
 
-      x_in = np.array([[[
-          [1, 2, 3, 4],
-          [3, 2, 4, 1],
-          [1, 2, 3, 4],
-          [3, 2, 4, 1],
-      ]]])
+      x_in = np.array(
+          [[[
+              [1, 2, 3, 4],
+              [3, 2, 4, 1],
+              [1, 2, 3, 4],
+              [3, 2, 4, 1],
+          ]]]
+      )
 
       expected = np.array([[[[3, 4], [3, 4]]]], dtype=np.float64)
 

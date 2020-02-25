@@ -46,7 +46,8 @@ class TestTruncate(unittest.TestCase):
       expected = np.array([12345.6789])
 
       w = prot.define_private_variable(
-          expected * prot.fixedpoint_config.scaling_factor)  # double precision
+          expected * prot.fixedpoint_config.scaling_factor
+      )  # double precision
       v = prot.truncate(w)  # single precision
 
       with tfe.Session() as sess:
@@ -67,7 +68,8 @@ class TestTruncate(unittest.TestCase):
       expected = np.array([12345.6789])
 
       w = prot.define_private_variable(
-          expected * prot.fixedpoint_config.scaling_factor)  # double precision
+          expected * prot.fixedpoint_config.scaling_factor
+      )  # double precision
       v = prot.truncate(w)  # single precision
 
       sess.run(tf.global_variables_initializer())
@@ -85,10 +87,9 @@ class TestPondPublicEqual(unittest.TestCase):
     with tfe.protocol.Pond() as prot:
 
       x_raw = prot.tensor_factory.constant(np.array([100, 200, 100, 300]))
-      x = PondPublicTensor(prot,
-                           value_on_0=x_raw,
-                           value_on_1=x_raw,
-                           is_scaled=False)
+      x = PondPublicTensor(
+          prot, value_on_0=x_raw, value_on_1=x_raw, is_scaled=False
+      )
 
       res = prot.equal(x, 100)
 
@@ -271,8 +272,9 @@ class TestPondAssign(unittest.TestCase):
         with tf.device(prot.server_1.device_name):
           z_shares[1] = x_shares[0] + y_shares[0]
 
-      return tfe.protocol.pond.PondPrivateTensor(prot, z_shares[0], z_shares[1],
-                                                 x.is_scaled)
+      return tfe.protocol.pond.PondPrivateTensor(
+          prot, z_shares[0], z_shares[1], x.is_scaled
+      )
 
     a = prot.define_private_variable(tf.ones(shape=(1, 1)))
     b = prot.define_private_variable(tf.ones(shape=(1, 1)))

@@ -61,19 +61,25 @@ def im2col(
     channels = int(nhwc_tensor.shape[3])
 
     # extract patches
-    patch_tensor = tf.extract_image_patches(nhwc_tensor,
-                                            ksizes=[1, h_filter, w_filter, 1],
-                                            strides=[1, stride, stride, 1],
-                                            rates=[1, 1, 1, 1],
-                                            padding=padding)
+    patch_tensor = tf.extract_image_patches(
+        nhwc_tensor,
+        ksizes=[1, h_filter, w_filter, 1],
+        strides=[1, stride, stride, 1],
+        rates=[1, 1, 1, 1],
+        padding=padding
+    )
 
     # change back to NCHW
-    patch_tensor_nchw = tf.reshape(tf.transpose(patch_tensor, [3, 1, 2, 0]),
-                                   (h_filter, w_filter, channels, -1))
+    patch_tensor_nchw = tf.reshape(
+        tf.transpose(patch_tensor, [3, 1, 2, 0]),
+        (h_filter, w_filter, channels, -1)
+    )
 
     # reshape to x_col
-    x_col_tensor = tf.reshape(tf.transpose(patch_tensor_nchw, [2, 0, 1, 3]),
-                              (channels * h_filter * w_filter, -1))
+    x_col_tensor = tf.reshape(
+        tf.transpose(patch_tensor_nchw, [2, 0, 1, 3]),
+        (channels * h_filter * w_filter, -1)
+    )
 
     return x_col_tensor
 

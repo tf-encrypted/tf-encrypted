@@ -8,7 +8,8 @@ class LogisticRegression:
 
   def __init__(self, num_features, init_learning_rate=0.01):
     self.w = tfe.define_private_variable(
-        tf.random_uniform([num_features, 1], -0.01, 0.01))
+        tf.random_uniform([num_features, 1], -0.01, 0.01)
+    )
     self.b = tfe.define_private_variable(tf.zeros([1]))
     self.init_learning_rate = init_learning_rate
 
@@ -75,22 +76,30 @@ class LogisticRegression:
       with tf.name_scope("print-accuracy"):
         correct_prediction = tf.equal(tf.round(y_hat), y)
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        print_op = tf.print("Accuracy on {}:".format(data_owner.player_name),
-                            accuracy)
+        print_op = tf.print(
+            "Accuracy on {}:".format(data_owner.player_name), accuracy
+        )
         return print_op
 
     with tf.name_scope("evaluate"):
       y_hat = self.forward(x)
-      print_accuracy_op = tfe.define_output(data_owner.player_name, [y_hat, y],
-                                            print_accuracy)
+      print_accuracy_op = tfe.define_output(
+          data_owner.player_name, [y_hat, y], print_accuracy
+      )
 
     sess.run(print_accuracy_op, tag='evaluate')
 
 
 class FakeDataOwner:
 
-  def __init__(self, player_name, num_features, train_set_size, test_set_size,
-               batch_size):
+  def __init__(
+      self,
+      player_name,
+      num_features,
+      train_set_size,
+      test_set_size,
+      batch_size
+  ):
     self.player_name = player_name
     self.num_features = num_features
     self.train_set_size = train_set_size
@@ -104,12 +113,13 @@ class FakeDataOwner:
     return self.train_initilizer, self.test_initializer
 
   def provide_train_data_fake(self):
-    x_raw = tf.random.uniform(minval=-0.5,
-                              maxval=0.5,
-                              shape=[self.train_set_size, self.num_features])
+    x_raw = tf.random.uniform(
+        minval=-0.5, maxval=0.5, shape=[self.train_set_size, self.num_features]
+    )
     # y_raw is created as a simple linear combination of x_raw's feature values
-    y_raw = tf.cast(tf.reduce_mean(x_raw, axis=1, keepdims=True) > 0,
-                    dtype=tf.float32)
+    y_raw = tf.cast(
+        tf.reduce_mean(x_raw, axis=1, keepdims=True) > 0, dtype=tf.float32
+    )
 
     train_set = tf.data.Dataset.from_tensor_slices((x_raw, y_raw))\
         .repeat()\
@@ -126,9 +136,9 @@ class FakeDataOwner:
     return x, y
 
   def provide_train_features_fake(self):
-    x_raw = tf.random.uniform(minval=-0.5,
-                              maxval=0.5,
-                              shape=[self.train_set_size, self.num_features])
+    x_raw = tf.random.uniform(
+        minval=-0.5, maxval=0.5, shape=[self.train_set_size, self.num_features]
+    )
 
     train_set = tf.data.Dataset.from_tensor_slices(x_raw) \
         .repeat() \
@@ -150,9 +160,9 @@ class FakeDataOwner:
     return y
 
   def provide_test_data_fake(self):
-    x_raw = tf.random.uniform(minval=-.5,
-                              maxval=.5,
-                              shape=[self.test_set_size, self.num_features])
+    x_raw = tf.random.uniform(
+        minval=-.5, maxval=.5, shape=[self.test_set_size, self.num_features]
+    )
 
     y_raw = tf.cast(tf.reduce_mean(x_raw, axis=1) > 0, dtype=tf.float32)
 
@@ -170,9 +180,9 @@ class FakeDataOwner:
     return x, y
 
   def provide_test_features_fake(self):
-    x_raw = tf.random.uniform(minval=-.5,
-                              maxval=.5,
-                              shape=[self.test_set_size, self.num_features])
+    x_raw = tf.random.uniform(
+        minval=-.5, maxval=.5, shape=[self.test_set_size, self.num_features]
+    )
 
     test_set = tf.data.Dataset.from_tensor_slices(x_raw) \
         .repeat() \
@@ -206,15 +216,17 @@ class DataSchema:
 
 class DataOwner:
 
-  def __init__(self,
-               player_name,
-               local_data_file,
-               data_schema,
-               header=False,
-               index=False,
-               field_delim=',',
-               na_values=['nan'],
-               batch_size=128):
+  def __init__(
+      self,
+      player_name,
+      local_data_file,
+      data_schema,
+      header=False,
+      index=False,
+      field_delim=',',
+      na_values=['nan'],
+      batch_size=128
+  ):
     self.player_name = player_name
     self.local_data_file = local_data_file
     self.data_schema = data_schema
@@ -289,10 +301,9 @@ class PredictionClient:
     self.num_features = num_features
 
   def provide_input_fake(self):
-    return tf.random.uniform(minval=-0.5,
-                             maxval=0.5,
-                             dtype=tf.float32,
-                             shape=[1, self.num_features])
+    return tf.random.uniform(
+        minval=-0.5, maxval=0.5, dtype=tf.float32, shape=[1, self.num_features]
+    )
 
   def receive_output(self, result):
     return tf.print("Result on {}:".format(self.player_name), result)
@@ -314,6 +325,7 @@ class LossDebugger:
 
     with tf.name_scope("loss"):
       y_hat = model.forward(x)
-      print_loss_op = tfe.define_output(self.player_name, [y_hat, y],
-                                        print_loss)
+      print_loss_op = tfe.define_output(
+          self.player_name, [y_hat, y], print_loss
+      )
     return print_loss_op

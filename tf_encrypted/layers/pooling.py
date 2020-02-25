@@ -36,7 +36,8 @@ class Pooling2D(Layer):
     self.strides = strides
     if padding not in ['SAME', 'VALID']:
       raise ValueError(
-          "Don't know how to do padding of type {}".format(padding))
+          "Don't know how to do padding of type {}".format(padding)
+      )
     self.padding = padding
     self.channels_first = channels_first
 
@@ -44,9 +45,11 @@ class Pooling2D(Layer):
     self.cache = None
     self.cached_input_shape = None
 
-  def initialize(self,
-                 input_shape: IntTuple,
-                 initializer: Optional[TFEVariable] = None) -> None:
+  def initialize(
+      self,
+      input_shape: IntTuple,
+      initializer: Optional[TFEVariable] = None
+  ) -> None:
     pass
 
   def get_output_shape(self) -> List[int]:

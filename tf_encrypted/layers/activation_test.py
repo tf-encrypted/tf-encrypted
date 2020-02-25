@@ -16,7 +16,8 @@ class TestRelu(unittest.TestCase):
   def test_forward(self):
     input_shape = [2, 2, 2, 50]
     input_relu = np.random.randn(np.prod(input_shape)).astype(
-        np.float32).reshape(input_shape)
+        np.float32
+    ).reshape(input_shape)
 
     with tfe.protocol.SecureNN() as prot:
 

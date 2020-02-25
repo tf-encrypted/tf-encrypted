@@ -25,20 +25,24 @@ class InputLayer(Layer):
       name: Name of the layer (string).
   """
 
-  def __init__(self,
-               input_shape=None,
-               batch_size=None,
-               dtype=None,
-               input_tensor=None,
-               sparse=False,
-               name=None,
-               **kwargs):
+  def __init__(
+      self,
+      input_shape=None,
+      batch_size=None,
+      dtype=None,
+      input_tensor=None,
+      sparse=False,
+      name=None,
+      **kwargs
+  ):
     if 'batch_input_shape' in kwargs:
       batch_input_shape = kwargs.pop('batch_input_shape')
       if input_shape and batch_input_shape:
-        raise ValueError('Only provide the input_shape OR '
-                         'batch_input_shape argument to '
-                         'InputLayer, not both at the same time.')
+        raise ValueError(
+            'Only provide the input_shape OR '
+            'batch_input_shape argument to '
+            'InputLayer, not both at the same time.'
+        )
       batch_size = batch_input_shape[0]
       input_shape = batch_input_shape[1:]
     if kwargs:
@@ -130,19 +134,23 @@ def Input(  # pylint: disable=invalid-name
   if 'batch_shape' in kwargs:
     batch_shape = kwargs.pop('batch_shape')
     if shape and batch_shape:
-      raise ValueError('Only provide the shape OR '
-                       'batch_shape argument to '
-                       'Input, not both at the same time.')
+      raise ValueError(
+          'Only provide the shape OR '
+          'batch_shape argument to '
+          'Input, not both at the same time.'
+      )
     batch_size = batch_shape[0]
     shape = batch_shape[1:]
   if kwargs:
     raise ValueError('Unrecognized keyword arguments:', kwargs.keys())
 
   if shape is None and tensor is None:
-    raise ValueError('Please provide to Input either a `shape`'
-                     ' or a `tensor` argument. Note that '
-                     '`shape` does not include the batch '
-                     'dimension.')
+    raise ValueError(
+        'Please provide to Input either a `shape`'
+        ' or a `tensor` argument. Note that '
+        '`shape` does not include the batch '
+        'dimension.'
+    )
 
   if sparse:
     raise NotImplementedError()
@@ -152,18 +160,22 @@ def Input(  # pylint: disable=invalid-name
     raise NotImplementedError()
 
   if batch_shape:
-    input_layer = InputLayer(batch_input_shape=batch_shape,
-                             name=name,
-                             dtype=dtype,
-                             sparse=sparse,
-                             input_tensor=tensor)
+    input_layer = InputLayer(
+        batch_input_shape=batch_shape,
+        name=name,
+        dtype=dtype,
+        sparse=sparse,
+        input_tensor=tensor
+    )
   else:
-    input_layer = InputLayer(input_shape=shape,
-                             batch_size=batch_size,
-                             name=name,
-                             dtype=dtype,
-                             sparse=sparse,
-                             input_tensor=tensor)
+    input_layer = InputLayer(
+        input_shape=shape,
+        batch_size=batch_size,
+        name=name,
+        dtype=dtype,
+        sparse=sparse,
+        input_tensor=tensor
+    )
 
   # Return tensor including `_keras_history`.
   # Note that in this case train_output and test_output are the same pointer.

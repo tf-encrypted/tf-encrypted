@@ -54,14 +54,17 @@ def load_graph(model_file, model_name=None, batch_size=1):
       if node.op != "Placeholder":
         continue
 
-      input_spec.append({
-          'name':
-              node.name,
-          'dtype':
-              node.attr['dtype'].type,
-          'shape': [batch_size] +
-                   [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
-      })
+      input_spec.append(
+          {
+              'name':
+                  node.name,
+              'dtype':
+                  node.attr['dtype'].type,
+              'shape':
+                  [batch_size] +
+                  [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
+          }
+      )
 
   inputs = []
   for i, spec in enumerate(input_spec):
@@ -88,7 +91,8 @@ def secure_model(model, **kwargs):
   """Secure a plaintext model from the current session."""
   session = K.get_session()
   min_graph = graph_util.convert_variables_to_constants(
-      session, session.graph_def, [node.op.name for node in model.outputs])
+      session, session.graph_def, [node.op.name for node in model.outputs]
+  )
   graph_fname = 'model.pb'
   tf.train.write_graph(min_graph, _TMPDIR, graph_fname, as_text=False)
 
@@ -97,8 +101,9 @@ def secure_model(model, **kwargs):
   else:
     batch_size = 1
 
-  graph_def, inputs = load_graph(os.path.join(_TMPDIR, graph_fname),
-                                 batch_size=batch_size)
+  graph_def, inputs = load_graph(
+      os.path.join(_TMPDIR, graph_fname), batch_size=batch_size
+  )
 
   c = tfe.convert.convert.Converter(tfe.convert.registry(), **kwargs)
   y = c.convert(remove_training_nodes(graph_def), 'input-provider', inputs)

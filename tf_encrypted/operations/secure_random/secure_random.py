@@ -20,25 +20,37 @@ def _try_load_secure_random_module():
   so_file = SO_PATH.format(dn=os.path.dirname(tfe.__file__), tfv=tf.__version__)
   if not os.path.exists(so_file):
     logger.warning(
-        ("Falling back to insecure randomness since the required custom op "
-         "could not be found for the installed version of TensorFlow. Fix "
-         "this by compiling custom ops. Missing file was '%s'"), so_file)
+        (
+            "Falling back to insecure randomness since the required custom op "
+            "could not be found for the installed version of TensorFlow. Fix "
+            "this by compiling custom ops. Missing file was '%s'"
+        ),
+        so_file
+    )
     return None
 
   try:
     return tf.load_op_library(so_file)
 
   except NotFoundError as ex:
-    logger.warning((
-        "Falling back to insecure randomness since the required custom op "
-        "could not be found for the installed version of TensorFlow. Fix "
-        "this by compiling custom ops. Missing file was '%s', error was \"%s\"."
-    ), so_file, ex)
+    logger.warning(
+        (
+            "Falling back to insecure randomness since the required custom op "
+            "could not be found for the installed version of TensorFlow. Fix "
+            "this by compiling custom ops. Missing file was '%s', error was \"%s\"."
+        ),
+        so_file,
+        ex
+    )
 
   except Exception as ex:  # pylint: disable=broad-except
     logger.error(
-        ("Falling back to insecure randomness since an error occurred loading "
-         "the required custom op: \"%s\"."), ex)
+        (
+            "Falling back to insecure randomness since an error occurred loading "
+            "the required custom op: \"%s\"."
+        ),
+        ex
+    )
 
   return None
 
@@ -54,12 +66,9 @@ def supports_seeded_randomness():
   return secure_random_module is not None
 
 
-def seeded_random_uniform(shape,
-                          minval=0,
-                          maxval=None,
-                          dtype=tf.int32,
-                          seed=None,
-                          name=None):
+def seeded_random_uniform(
+    shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=None
+):
   """
   Returns cryptographically strong random numbers with a seed
 

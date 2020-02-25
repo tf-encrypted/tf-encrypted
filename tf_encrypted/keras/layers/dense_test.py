@@ -34,12 +34,12 @@ class TestDense(unittest.TestCase):
         "kernel_initializer": initializer,
     }
     kwargs = {**base_kwargs, **layer_kwargs}
-    agreement_test(tfe.keras.layers.Dense,
-                   kwargs=kwargs,
-                   input_shape=input_shape)
-    layer_test(tfe.keras.layers.Dense,
-               kwargs=kwargs,
-               batch_input_shape=input_shape)
+    agreement_test(
+        tfe.keras.layers.Dense, kwargs=kwargs, input_shape=input_shape
+    )
+    layer_test(
+        tfe.keras.layers.Dense, kwargs=kwargs, batch_input_shape=input_shape
+    )
 
   def test_backward(self):
     input_shape = [1, 5]
@@ -53,9 +53,9 @@ class TestDense(unittest.TestCase):
       private_input = prot.define_private_variable(input_data)
       w = prot.define_private_variable(weights_second_layer)
 
-      tfe_layer = tfe.keras.layers.Dense(5,
-                                         input_shape=input_shape[1:],
-                                         kernel_initializer=initializer)
+      tfe_layer = tfe.keras.layers.Dense(
+          5, input_shape=input_shape[1:], kernel_initializer=initializer
+      )
 
       dense_out_pond = tfe_layer(private_input)
 
@@ -79,9 +79,9 @@ class TestDense(unittest.TestCase):
 
       initializer = tf.keras.initializers.Constant(kernel)
 
-      tf_layer = tf.keras.layers.Dense(5,
-                                       input_shape=input_shape[1:],
-                                       kernel_initializer=initializer)
+      tf_layer = tf.keras.layers.Dense(
+          5, input_shape=input_shape[1:], kernel_initializer=initializer
+      )
       x = tf.Variable(input_data, dtype=tf.float32)
       y = tf_layer(x)
 

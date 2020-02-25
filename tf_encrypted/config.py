@@ -92,7 +92,8 @@ class Config(ABC):
             do_function_inlining=False,
         ),
         rewrite_options=rewriter_config_pb2.RewriterConfig(
-            arithmetic_optimization=rewriter_config_pb2.RewriterConfig.OFF,),
+            arithmetic_optimization=rewriter_config_pb2.RewriterConfig.OFF
+        ),
     )
 
 
@@ -150,7 +151,8 @@ class LocalConfig(Config):
     # we're passed a name
     player = next(
         (player for player in self._players if player.name == name_or_player),
-        None)
+        None
+    )
     if player is None and self._auto_add_unknown_players:
       player = self.add_player(name_or_player)
     return player
@@ -172,7 +174,8 @@ class LocalConfig(Config):
         log_device_placement=log_device_placement,
         allow_soft_placement=False,
         device_count={"CPU": len(self._players)},
-        graph_options=self.build_graph_options(disable_optimizations))
+        graph_options=self.build_graph_options(disable_optimizations)
+    )
     return (target, config)
 
 
@@ -194,17 +197,22 @@ class RemoteConfig(Config):
     if not isinstance(hostmap, OrderedDict):
       logger.warning(
           "Consider passing an ordered dictionary to RemoteConfig instead"
-          "in order to preserve host mapping.")
+          "in order to preserve host mapping."
+      )
 
     self._job_name = job_name
     self._players = OrderedDict(
-        (name,
-         Player(name=name,
+        (
+            name,
+            Player(
+                name=name,
                 index=index,
                 device_name='/job:{job_name}/replica:0/task:{task_id}/cpu:0'.
                 format(job_name=job_name, task_id=index),
-                host=host))
-        for index, (name, host) in enumerate(hostmap.items()))
+                host=host
+            )
+        ) for index, (name, host) in enumerate(hostmap.items())
+    )
 
   @staticmethod
   def load(filename):
@@ -229,7 +237,8 @@ class RemoteConfig(Config):
   @property
   def hostmap(self):
     return OrderedDict(
-        (player.name, player.host) for player in self._players.values())
+        (player.name, player.host) for player in self._players.values()
+    )
 
   @property
   def hosts(self):
@@ -265,18 +274,23 @@ class RemoteConfig(Config):
     assert player is not None, "'{}' not found in configuration".format(name)
     cluster = tf.train.ClusterSpec({self._job_name: self.hosts})
     logger.debug("Creating server for '%s' using %s", name, cluster)
-    server = tf.train.Server(cluster,
-                             job_name=self._job_name,
-                             task_index=player.index,
-                             start=start)
-    logger.info(("Created server for '%s' as device '%s'; "
-                 "own session target is '%s'"), name, player.device_name,
-                server.target)
+    server = tf.train.Server(
+        cluster, job_name=self._job_name, task_index=player.index, start=start
+    )
+    logger.info(
+        (
+            "Created server for '%s' as device '%s'; "
+            "own session target is '%s'"
+        ),
+        name,
+        player.device_name,
+        server.target
+    )
     return server
 
-  def get_tf_config(self,
-                    log_device_placement=False,
-                    disable_optimizations=False):
+  def get_tf_config(
+      self, log_device_placement=False, disable_optimizations=False
+  ):
     # always use the first host as master; change config to match
     target = 'grpc://{}'.format(self.hosts[0])
     cpu_cores = _get_docker_cpu_quota()
@@ -284,14 +298,16 @@ class RemoteConfig(Config):
       config = tf.ConfigProto(
           log_device_placement=log_device_placement,
           allow_soft_placement=False,
-          graph_options=self.build_graph_options(disable_optimizations))
+          graph_options=self.build_graph_options(disable_optimizations)
+      )
     else:
       config = tf.ConfigProto(
           log_device_placement=log_device_placement,
           allow_soft_placement=False,
           inter_op_parallelism_threads=cpu_cores,
           intra_op_parallelism_threads=cpu_cores,
-          graph_options=self.build_graph_options(disable_optimizations))
+          graph_options=self.build_graph_options(disable_optimizations)
+      )
     return (target, config)
 
 

@@ -48,8 +48,11 @@ class Session(tf.compat.v1.Session):
     self.config_proto = config_proto
 
     if isinstance(config, RemoteConfig):
-      logger.info("Starting session on target '%s' using config %s",
-                  self.target, self.config_proto)
+      logger.info(
+          "Starting session on target '%s' using config %s",
+          self.target,
+          self.config_proto
+      )
     super(Session, self).__init__(self.target, graph, self.config_proto)
 
   def run(
@@ -97,7 +100,8 @@ class Session(tf.compat.v1.Session):
       writer = tf.summary.FileWriter(run_tag, self.graph)
       run_options = tf.RunOptions(
           trace_level=tf.RunOptions.FULL_TRACE,
-          output_partition_graphs=output_partition_graphs)
+          output_partition_graphs=output_partition_graphs
+      )
       run_metadata = tf.RunMetadata()
 
       fetches_out = super(Session, self).run(

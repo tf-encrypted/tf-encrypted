@@ -42,8 +42,9 @@ class TestBatchNormalization(unittest.TestCase):
     const = np.random.uniform(input_shape)
     initializer = tf.keras.initializers.Constant(const)
 
-    self._core_batchnorm([1] + input_shape,
-                         moving_variance_initializer=initializer)
+    self._core_batchnorm(
+        [1] + input_shape, moving_variance_initializer=initializer
+    )
 
   def _core_batchnorm(self, input_shape, **layer_kwargs):
     base_kwargs = {'fused': False}

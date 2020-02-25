@@ -121,10 +121,9 @@ class TestConv2D(unittest.TestCase):
       # convolution Tensorflow
       filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
-      conv_out_tf = tf.nn.conv2d(x_nhwc,
-                                 filters_tf,
-                                 strides=[1, strides, strides, 1],
-                                 padding="SAME")
+      conv_out_tf = tf.nn.conv2d(
+          x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME"
+      )
 
       sess.run(tf.global_variables_initializer())
       expected = sess.run(conv_out_tf).transpose(0, 3, 1, 2)

@@ -8,7 +8,9 @@ import tf_encrypted as tfe
 from tf_encrypted.layers.core import Layer
 from tf_encrypted.protocol.pond import PondPublicTensor, PondPrivateTensor
 
-InitialTensor = Optional[Union[np.ndarray, tf.Tensor, PondPublicTensor,
+InitialTensor = Optional[Union[np.ndarray,
+                               tf.Tensor,
+                               PondPublicTensor,
                                PondPrivateTensor]]
 
 

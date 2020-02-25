@@ -10,8 +10,13 @@ import math
 import numpy as np
 import tensorflow as tf
 
-from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
-                      AbstractConstant, AbstractPlaceholder)
+from .factory import (
+    AbstractFactory,
+    AbstractTensor,
+    AbstractVariable,
+    AbstractConstant,
+    AbstractPlaceholder
+)
 from .helpers import inverse
 from .shared import binarize, conv2d, im2col
 from ..operations import secure_random
@@ -87,36 +92,38 @@ def native_factory(
     def nbits(self):
       return NATIVE_TYPE.size * 8
 
-    def sample_uniform(self,
-                       shape,
-                       minval: Optional[int] = None,
-                       maxval: Optional[int] = None):
+    def sample_uniform(
+        self,
+        shape,
+        minval: Optional[int] = None,
+        maxval: Optional[int] = None
+    ):
       minval = self.min if minval is None else minval
       # TODO(Morten) believe this should be native_type.max+1
       maxval = self.max if maxval is None else maxval
 
       if secure_random.supports_seeded_randomness():
         seed = secure_random.secure_seed()
-        return UniformTensor(shape=shape,
-                             seed=seed,
-                             minval=minval,
-                             maxval=maxval)
+        return UniformTensor(
+            shape=shape, seed=seed, minval=minval, maxval=maxval
+        )
 
       if secure_random.supports_secure_randomness():
         sampler = secure_random.random_uniform
       else:
         sampler = tf.random_uniform
-      value = sampler(shape=shape,
-                      minval=minval,
-                      maxval=maxval,
-                      dtype=NATIVE_TYPE)
+      value = sampler(
+          shape=shape, minval=minval, maxval=maxval, dtype=NATIVE_TYPE
+      )
       return DenseTensor(value)
 
-    def sample_seeded_uniform(self,
-                              shape,
-                              seed,
-                              minval: Optional[int] = None,
-                              maxval: Optional[int] = None):
+    def sample_seeded_uniform(
+        self,
+        shape,
+        seed,
+        minval: Optional[int] = None,
+        maxval: Optional[int] = None
+    ):
       """Seeded sample of a random tensor.
 
       Arguments:
@@ -145,7 +152,8 @@ def native_factory(
         return DenseTensor(value)
 
       raise NotImplementedError(
-          "Secure seeded randomness implementation is not available.")
+          "Secure seeded randomness implementation is not available."
+      )
 
     def sample_bounded(self, shape, bitlength: int):
       maxval = 2**bitlength
@@ -353,10 +361,9 @@ def native_factory(
       return DenseTensor(value)
 
     def cumsum(self, axis, exclusive, reverse):
-      value = tf.cumsum(self.value,
-                        axis=axis,
-                        exclusive=exclusive,
-                        reverse=reverse)
+      value = tf.cumsum(
+          self.value, axis=axis, exclusive=exclusive, reverse=reverse
+      )
       if EXPLICIT_MODULUS is not None:
         value %= EXPLICIT_MODULUS
       return DenseTensor(value)
@@ -364,13 +371,15 @@ def native_factory(
     def equal_zero(self, factory=None):
       factory = factory or FACTORY
       return factory.tensor(
-          tf.cast(tf.equal(self.value, 0), dtype=factory.native_type))
+          tf.cast(tf.equal(self.value, 0), dtype=factory.native_type)
+      )
 
     def equal(self, other, factory=None):
       x, y = _lift(self, other)
       factory = factory or FACTORY
       return factory.tensor(
-          tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type))
+          tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type)
+      )
 
     def truncate(self, amount, base=2):
       if base == 2:
@@ -535,9 +544,9 @@ def native_factory(
     """Native Variable class."""
 
     def __init__(self, initial_value: Union[tf.Tensor, np.ndarray]) -> None:
-      self.variable = tf.Variable(initial_value,
-                                  dtype=NATIVE_TYPE,
-                                  trainable=False)
+      self.variable = tf.Variable(
+          initial_value, dtype=NATIVE_TYPE, trainable=False
+      )
       self.initializer = self.variable.initializer
       super(Variable, self).__init__(self.variable.read_value())
 

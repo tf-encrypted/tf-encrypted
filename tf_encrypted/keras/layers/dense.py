@@ -40,18 +40,20 @@ class Dense(Layer):
       2D tensor with shape: `(batch_size, units)`.
   """
 
-  def __init__(self,
-               units,
-               activation=None,
-               use_bias=True,
-               kernel_initializer='glorot_uniform',
-               bias_initializer='zeros',
-               kernel_regularizer=None,
-               bias_regularizer=None,
-               activity_regularizer=None,
-               kernel_constraint=None,
-               bias_constraint=None,
-               **kwargs):
+  def __init__(
+      self,
+      units,
+      activation=None,
+      use_bias=True,
+      kernel_initializer='glorot_uniform',
+      bias_initializer='zeros',
+      kernel_regularizer=None,
+      bias_regularizer=None,
+      activity_regularizer=None,
+      kernel_constraint=None,
+      bias_constraint=None,
+      **kwargs
+  ):
 
     super(Dense, self).__init__(**kwargs)
 
@@ -80,7 +82,8 @@ class Dense(Layer):
     if rank > 2:
       raise NotImplementedError(
           "For dense layer, TF Encrypted currently support only input with "
-          "a rank equal to 2 instead of {}.".format(len(input_shape)))
+          "a rank equal to 2 instead of {}.".format(len(input_shape))
+      )
 
     units_in = int(input_shape[1])
     kernel = self.kernel_initializer([units_in, self.units])

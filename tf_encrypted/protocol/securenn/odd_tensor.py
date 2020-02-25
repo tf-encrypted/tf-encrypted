@@ -72,10 +72,12 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
     def native_type(self):
       return NATIVE_TYPE
 
-    def sample_uniform(self,
-                       shape,
-                       minval: Optional[int] = None,
-                       maxval: Optional[int] = None):
+    def sample_uniform(
+        self,
+        shape,
+        minval: Optional[int] = None,
+        maxval: Optional[int] = None
+    ):
       """Sample a tensor from a uniform distribution."""
       assert minval is None
       assert maxval is None
@@ -168,8 +170,9 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
           #  -> `m - 1 - pos(y) - 1 < pos(x)`
           #  -> `-1 - pos(y) - 1 < pos(x)`
           #  -> `-2 - pos(y) < pos(x)`
-          wrapped_around = _lessthan_as_unsigned(-2 - y_value, x_value,
-                                                 bitlength)
+          wrapped_around = _lessthan_as_unsigned(
+              -2 - y_value, x_value, bitlength
+          )
           z += wrapped_around
 
       return OddDenseTensor(z)
@@ -252,8 +255,9 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
       # TODO(Morten) result should be stored in a (per-device) cache
       with tf.name_scope('expand-seed'):
         sampler = partial(secure_random.seeded_random_uniform, seed=self._seed)
-        value = _construct_value_from_sampler(sampler=sampler,
-                                              shape=self._shape)
+        value = _construct_value_from_sampler(
+            sampler=sampler, shape=self._shape
+        )
         return value
 
     @property
@@ -267,7 +271,8 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
     if isinstance(x, OddTensor) and isinstance(y, OddTensor):
       assert x.factory == y.factory, "Incompatible types: {} and {}".format(
-          x.factory, y.factory)
+          x.factory, y.factory
+      )
       return x, y
 
     if isinstance(x, OddTensor):
@@ -286,12 +291,15 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
     """Sample from sampler and correct for the modified dtype."""
     # to get uniform distribution over [min, max] without -1 we sample
     # [min+1, max] and shift negative values down by one
-    unshifted_value = sampler(shape=shape,
-                              dtype=NATIVE_TYPE,
-                              minval=NATIVE_TYPE.min + 1,
-                              maxval=NATIVE_TYPE.max)
-    shifted_values = unshifted_value + tf.ones(shape=unshifted_value.shape,
-                                               dtype=unshifted_value.dtype)
+    unshifted_value = sampler(
+        shape=shape,
+        dtype=NATIVE_TYPE,
+        minval=NATIVE_TYPE.min + 1,
+        maxval=NATIVE_TYPE.max
+    )
+    shifted_values = unshifted_value + tf.ones(
+        shape=unshifted_value.shape, dtype=unshifted_value.dtype
+    )
     value = tf.where(unshifted_value < 0, shifted_values, unshifted_value)
     return value
 

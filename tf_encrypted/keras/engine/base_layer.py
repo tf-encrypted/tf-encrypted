@@ -47,9 +47,11 @@ class Layer(ABC):
         raise TypeError('Keyword argument not understood:', kwarg)
 
     if 'input_shape' in kwargs:
-      logger.warning("Currently input_shape argument semantics include the "
-                     "batch dimension. Please construct you model "
-                     "accordingly.")
+      logger.warning(
+          "Currently input_shape argument semantics include the "
+          "batch dimension. Please construct you model "
+          "accordingly."
+      )
       self._batch_input_shape = kwargs['input_shape']
     if 'batch_input_shape' in kwargs:
       self._batch_input_shape = kwargs['batch_input_shape']

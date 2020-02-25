@@ -39,14 +39,16 @@ class SecureNN(Pond):
   `Wagh et al <https://eprint.iacr.org/2018/442/>`_.
   """
 
-  def __init__(self,
-               server_0: Optional[Player] = None,
-               server_1: Optional[Player] = None,
-               server_2: Optional[Player] = None,
-               tensor_factory: Optional[AbstractFactory] = None,
-               prime_factory: Optional[AbstractFactory] = None,
-               odd_factory: Optional[AbstractFactory] = None,
-               **kwargs) -> None:
+  def __init__(
+      self,
+      server_0: Optional[Player] = None,
+      server_1: Optional[Player] = None,
+      server_2: Optional[Player] = None,
+      tensor_factory: Optional[AbstractFactory] = None,
+      prime_factory: Optional[AbstractFactory] = None,
+      odd_factory: Optional[AbstractFactory] = None,
+      **kwargs
+  ) -> None:
     server_0 = server_0 or get_config().get_player('server0')
     server_1 = server_1 or get_config().get_player('server1')
     server_2 = server_2 \
@@ -57,11 +59,13 @@ class SecureNN(Pond):
     assert server_1 is not None
     assert server_2 is not None
 
-    super(SecureNN, self).__init__(server_0=server_0,
-                                   server_1=server_1,
-                                   triple_source=server_2,
-                                   tensor_factory=tensor_factory,
-                                   **kwargs)
+    super(SecureNN, self).__init__(
+        server_0=server_0,
+        server_1=server_1,
+        triple_source=server_2,
+        tensor_factory=tensor_factory,
+        **kwargs
+    )
     self.server_2 = server_2
 
     if odd_factory is None:
@@ -164,9 +168,11 @@ class SecureNN(Pond):
     return self.dispatch('lsb', x, container=_thismodule)
 
   @memoize
-  def bits(self,
-           x: PondPublicTensor,
-           factory: Optional[AbstractFactory] = None) -> 'PondPublicTensor':
+  def bits(
+      self,
+      x: PondPublicTensor,
+      factory: Optional[AbstractFactory] = None
+  ) -> 'PondPublicTensor':
     """
     bits(x, factory) -> PondPublicTensor
 
@@ -511,9 +517,11 @@ class SecureNN(Pond):
         indices_left, indices_right = indices[:halfway], indices[halfway:]
 
         maximum_left, argmax_left = build_comparison_tree(
-            tensors_left, indices_left)
+            tensors_left, indices_left
+        )
         maximum_right, argmax_right = build_comparison_tree(
-            tensors_right, indices_right)
+            tensors_right, indices_right
+        )
 
         # compute binary tensor indicating which side is greater
         greater = self.greater(maximum_left, maximum_right)
@@ -538,10 +546,9 @@ class SecureNN(Pond):
 
   @memoize
   def cast_backing(self, x, backing_dtype):
-    return self.dispatch("cast_backing",
-                         x,
-                         backing_dtype,
-                         container=_thismodule)
+    return self.dispatch(
+        "cast_backing", x, backing_dtype, container=_thismodule
+    )
 
 
 def _bits_public(prot, x: PondPublicTensor, factory=None) -> PondPublicTensor:
@@ -623,8 +630,9 @@ def _lsb_private(prot, x: PondPrivateTensor):
       clsb = prot.lsb(c)
 
     with tf.name_scope('unblind'):
-      gamma = prot.bitwise_xor(greater_xor_beta,
-                               prot.cast_backing(beta, out_dtype))
+      gamma = prot.bitwise_xor(
+          greater_xor_beta, prot.cast_backing(beta, out_dtype)
+      )
       delta = prot.bitwise_xor(rlsb, clsb)
       alpha = prot.bitwise_xor(gamma, delta)
 
@@ -696,9 +704,9 @@ def _private_compare(
 
       # tensor for edge cases: one zero and the rest ones
       c_edge_vals = [0] + [1] * (bit_length - 1)
-      c_const = tf.constant(c_edge_vals,
-                            dtype=prime_dtype.native_type,
-                            shape=(1, bit_length))
+      c_const = tf.constant(
+          c_edge_vals, dtype=prime_dtype.native_type, shape=(1, bit_length)
+      )
       c_edge_case_raw = prime_dtype.tensor(c_const)
       c_edge_case = prot._share_and_wrap(c_edge_case_raw, False)
 

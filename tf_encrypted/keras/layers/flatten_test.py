@@ -27,10 +27,12 @@ class TestFlatten(unittest.TestCase):
   def _core_flatten(self, **layer_kwargs):
     input_shape = layer_kwargs['input_shape']
 
-    agreement_test(tfe.keras.layers.Flatten,
-                   kwargs=layer_kwargs,
-                   input_shape=input_shape,
-                   atol=.1)
+    agreement_test(
+        tfe.keras.layers.Flatten,
+        kwargs=layer_kwargs,
+        input_shape=input_shape,
+        atol=.1
+    )
 
 
 if __name__ == '__main__':

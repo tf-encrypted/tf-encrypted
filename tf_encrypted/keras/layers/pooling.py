@@ -30,13 +30,15 @@ class Pooling2D(Layer):
       inputs with shape `(batch, channels, height, width)`.
   """
 
-  def __init__(self,
-               _pool_function,
-               pool_size,
-               strides,
-               padding='valid',
-               data_format=None,
-               **kwargs):
+  def __init__(
+      self,
+      _pool_function,
+      pool_size,
+      strides,
+      padding='valid',
+      data_format=None,
+      **kwargs
+  ):
     super(Pooling2D, self).__init__(**kwargs)
 
     if data_format is None:
@@ -57,8 +59,9 @@ class Pooling2D(Layer):
     if self.data_format != 'channels_first':
       inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
-    outputs = self._pool_function(inputs, self.pool_size, self.strides,
-                                  self.padding)
+    outputs = self._pool_function(
+        inputs, self.pool_size, self.strides, self.padding
+    )
 
     if self.data_format != 'channels_first':
       outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
@@ -115,18 +118,22 @@ class MaxPooling2D(Pooling2D):
           `(batch_size, channels, pooled_rows, pooled_cols)`
   """
 
-  def __init__(self,
-               pool_size=(2, 2),
-               strides=None,
-               padding='valid',
-               data_format=None,
-               **kwargs):
-    super(MaxPooling2D, self).__init__(tfe.maxpool2d,
-                                       pool_size=pool_size,
-                                       strides=strides,
-                                       padding=padding,
-                                       data_format=data_format,
-                                       **kwargs)
+  def __init__(
+      self,
+      pool_size=(2, 2),
+      strides=None,
+      padding='valid',
+      data_format=None,
+      **kwargs
+  ):
+    super(MaxPooling2D, self).__init__(
+        tfe.maxpool2d,
+        pool_size=pool_size,
+        strides=strides,
+        padding=padding,
+        data_format=data_format,
+        **kwargs
+    )
 
 
 class AveragePooling2D(Pooling2D):
@@ -164,18 +171,22 @@ class AveragePooling2D(Pooling2D):
           `(batch_size, channels, pooled_rows, pooled_cols)`
   """
 
-  def __init__(self,
-               pool_size=(2, 2),
-               strides=None,
-               padding='valid',
-               data_format=None,
-               **kwargs):
-    super(AveragePooling2D, self).__init__(tfe.avgpool2d,
-                                           pool_size=pool_size,
-                                           strides=strides,
-                                           padding=padding,
-                                           data_format=data_format,
-                                           **kwargs)
+  def __init__(
+      self,
+      pool_size=(2, 2),
+      strides=None,
+      padding='valid',
+      data_format=None,
+      **kwargs
+  ):
+    super(AveragePooling2D, self).__init__(
+        tfe.avgpool2d,
+        pool_size=pool_size,
+        strides=strides,
+        padding=padding,
+        data_format=data_format,
+        **kwargs
+    )
 
 
 class GlobalPooling2D(Layer):

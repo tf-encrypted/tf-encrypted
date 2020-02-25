@@ -109,16 +109,18 @@ class BatchNormalization(Layer):
       virtual_batch_size=None,
       adjustment=None,
       name=None,
-      **kwargs):
-    super(BatchNormalization, self).__init__(name=name,
-                                             trainable=trainable,
-                                             **kwargs)
+      **kwargs
+  ):
+    super(BatchNormalization, self).__init__(
+        name=name, trainable=trainable, **kwargs
+    )
 
     self.beta_initializer = initializers.get(beta_initializer)
     self.gamma_initializer = initializers.get(gamma_initializer)
     self.moving_mean_initializer = initializers.get(moving_mean_initializer)
     self.moving_variance_initializer = initializers.get(
-        moving_variance_initializer)
+        moving_variance_initializer
+    )
 
     default_args_check(
         beta_regularizer,
@@ -203,8 +205,9 @@ class BatchNormalization(Layer):
     self.moving_mean = self.add_weight(moving_mean, make_private=False)
 
     moving_variance_init = self.moving_variance_initializer(param_shape)
-    self.moving_variance = self.add_weight(moving_variance_init,
-                                           make_private=False)
+    self.moving_variance = self.add_weight(
+        moving_variance_init, make_private=False
+    )
 
     denomtemp = 1.0 / tf.sqrt(moving_variance_init + self.epsilon)
 
@@ -249,9 +252,13 @@ class BatchNormalization(Layer):
           fd = tfe_weights_pl.feed(weights[i].reshape(shape))
           sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
         else:
-          raise TypeError(("Don't know how to handle weights "
-                           "of type {}. Batchnorm expects public tensors"
-                           "as weights").format(type(w)))
+          raise TypeError(
+              (
+                  "Don't know how to handle weights "
+                  "of type {}. Batchnorm expects public tensors"
+                  "as weights"
+              ).format(type(w))
+          )
 
     elif isinstance(weights[0], PondPublicTensor):
       for i, w in enumerate(self.weights):
@@ -260,7 +267,8 @@ class BatchNormalization(Layer):
 
     # Compute denom on public tensors before being lifted to private tensor
     denomtemp = tfe.reciprocal(
-        tfe.sqrt(tfe.add(self.moving_variance, self.epsilon)))
+        tfe.sqrt(tfe.add(self.moving_variance, self.epsilon))
+    )
 
     # Update denom as well when moving variance gets updated
     sess.run(tfe.assign(self.denom, denomtemp))

@@ -88,8 +88,9 @@ fixed64_ni = FixedpointConfig(
 )
 
 
-def _validate_fixedpoint_config(config: FixedpointConfig,
-                                tensor_factory: AbstractFactory) -> bool:
+def _validate_fixedpoint_config(
+    config: FixedpointConfig, tensor_factory: AbstractFactory
+) -> bool:
   """
   Ensure the given FixedpointConfig is compatible with the current
   tensor_factory, preventing silent errors.
@@ -98,8 +99,10 @@ def _validate_fixedpoint_config(config: FixedpointConfig,
 
   check_32bit = ceil(log2(config.bound_single_precision)) > 31
   check_64bit = ceil(log2(config.bound_single_precision)) > 63
-  trunc_over_mod = (ceil(log2(config.bound_double_precision)) +
-                    config.truncation_gap >= log2(tensor_factory.modulus))
+  trunc_over_mod = (
+      ceil(log2(config.bound_double_precision)) + config.truncation_gap >=
+      log2(tensor_factory.modulus)
+  )
 
   if check_32bit:
     print("WARNING: Plaintext values won't fit in 32bit tensors")

@@ -28,11 +28,11 @@ class TestPrivateCompare(unittest.TestCase):
     bit_dtype = prot.prime_factory
     val_dtype = prot.tensor_factory
 
-    x = np.array([21, 21, 21, 21, 21, 21, 21, 21], dtype=np.int32).reshape(
-        (2, 2, 2))
+    x = np.array([21, 21, 21, 21, 21, 21, 21, 21],
+                 dtype=np.int32).reshape((2, 2, 2))
 
-    r = np.array([36, 20, 21, 22, 36, 20, 21, 22], dtype=np.int32).reshape(
-        (2, 2, 2))
+    r = np.array([36, 20, 21, 22, 36, 20, 21, 22],
+                 dtype=np.int32).reshape((2, 2, 2))
 
     beta = np.array([0, 0, 0, 0, 1, 1, 1, 1], dtype=np.int32).reshape((2, 2, 2))
 
@@ -47,10 +47,12 @@ class TestPrivateCompare(unittest.TestCase):
     beta_native = tf.convert_to_tensor(beta, dtype=bit_dtype.native_type)
     beta0 = beta1 = bit_dtype.tensor(beta_native)
 
-    res = _private_compare(prot,
-                           x_bits=PondPrivateTensor(prot, *x_bits, False),
-                           r=PondPublicTensor(prot, r0, r1, False),
-                           beta=PondPublicTensor(prot, beta0, beta1, False))
+    res = _private_compare(
+        prot,
+        x_bits=PondPrivateTensor(prot, *x_bits, False),
+        r=PondPublicTensor(prot, r0, r1, False),
+        beta=PondPublicTensor(prot, beta0, beta1, False)
+    )
 
     with tfe.Session() as sess:
       actual = sess.run(res.reveal().value_on_0.to_native())
@@ -100,9 +102,9 @@ class TestLSB(unittest.TestCase):
         prime_factory=prime_factory,
     ) as prot:
 
-      x_in = prot.define_private_variable(raw,
-                                          apply_scaling=False,
-                                          name='test_lsb_input')
+      x_in = prot.define_private_variable(
+          raw, apply_scaling=False, name='test_lsb_input'
+      )
       x_lsb = prot.lsb(x_in)
 
       with tfe.Session() as sess:
@@ -120,8 +122,9 @@ class TestArgMax(unittest.TestCase):
   def setUp(self):
     tf.reset_default_graph()
 
-  @unittest.skipUnless(tfe.config.tensorflow_supports_int64(),
-                       "Too slow on Circle CI otherwise")
+  @unittest.skipUnless(
+      tfe.config.tensorflow_supports_int64(), "Too slow on Circle CI otherwise"
+  )
   def test_argmax_1d(self):
 
     t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).astype(float)
@@ -139,8 +142,9 @@ class TestArgMax(unittest.TestCase):
 
     np.testing.assert_array_equal(actual, expected)
 
-  @unittest.skipUnless(tfe.config.tensorflow_supports_int64(),
-                       "Too slow on Circle CI otherwise")
+  @unittest.skipUnless(
+      tfe.config.tensorflow_supports_int64(), "Too slow on Circle CI otherwise"
+  )
   def test_argmax_2d_axis0(self):
 
     t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape(2, 4).astype(float)
@@ -150,8 +154,9 @@ class TestArgMax(unittest.TestCase):
       expected = sess.run(out_tf)
 
     with tfe.protocol.SecureNN() as prot:
-      out_tfe = prot.argmax(prot.define_private_variable(tf.constant(t)),
-                            axis=0)
+      out_tfe = prot.argmax(
+          prot.define_private_variable(tf.constant(t)), axis=0
+      )
 
       with tfe.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -159,8 +164,9 @@ class TestArgMax(unittest.TestCase):
 
     np.testing.assert_array_equal(actual, expected)
 
-  @unittest.skipUnless(tfe.config.tensorflow_supports_int64(),
-                       "Too slow on Circle CI otherwise")
+  @unittest.skipUnless(
+      tfe.config.tensorflow_supports_int64(), "Too slow on Circle CI otherwise"
+  )
   def test_argmax_2d_axis1(self):
 
     t = np.array([1, 2, 3, 4, 5, 6, 7, 8]).reshape(2, 4).astype(float)
@@ -170,8 +176,9 @@ class TestArgMax(unittest.TestCase):
       expected = sess.run(out_tf)
 
     with tfe.protocol.SecureNN() as prot:
-      out_tfe = prot.argmax(prot.define_private_variable(tf.constant(t)),
-                            axis=1)
+      out_tfe = prot.argmax(
+          prot.define_private_variable(tf.constant(t)), axis=1
+      )
 
       with tfe.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -179,8 +186,9 @@ class TestArgMax(unittest.TestCase):
 
     np.testing.assert_array_equal(actual, expected)
 
-  @unittest.skipUnless(tfe.config.tensorflow_supports_int64(),
-                       "Too slow on Circle CI otherwise")
+  @unittest.skipUnless(
+      tfe.config.tensorflow_supports_int64(), "Too slow on Circle CI otherwise"
+  )
   def test_argmax_3d_axis0(self):
 
     t = np.array(np.arange(128)).reshape((8, 2, 2, 2, 2))
@@ -190,8 +198,9 @@ class TestArgMax(unittest.TestCase):
       expected = sess.run(out)
 
     with tfe.protocol.SecureNN() as prot:
-      out_tfe = prot.argmax(prot.define_private_variable(tf.constant(t)),
-                            axis=0)
+      out_tfe = prot.argmax(
+          prot.define_private_variable(tf.constant(t)), axis=0
+      )
 
       with tfe.Session() as sess:
         sess.run(tf.global_variables_initializer())

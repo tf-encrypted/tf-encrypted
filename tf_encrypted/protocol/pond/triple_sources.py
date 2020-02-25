@@ -247,10 +247,12 @@ class QueuedOnlineTripleSource(BaseTripleSource):
 
   def generate_triples(self, fetches):
     if isinstance(fetches, (list, tuple)) and len(fetches) > 1:
-      logger.warning("Generating triples for a run involving more than "
-                     "one fetch may introduce non-determinism that can "
-                     "break the correspondence between the two phases "
-                     "of the computation.")
+      logger.warning(
+          "Generating triples for a run involving more than "
+          "one fetch may introduce non-determinism that can "
+          "break the correspondence between the two phases "
+          "of the computation."
+      )
 
     unwrapped_fetches = unwrap_fetches(fetches)
     reachable_operations = [

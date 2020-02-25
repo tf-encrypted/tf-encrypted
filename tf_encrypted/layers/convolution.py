@@ -25,14 +25,16 @@ class Conv2D(Layer):
                       np.random.normal(scale=0.01, size=shp))
   """
 
-  def __init__(self,
-               input_shape,
-               filter_shape,
-               strides=1,
-               padding="SAME",
-               filter_init=lambda shp: np.random.normal(scale=0.1, size=shp),
-               l2reg_lambda=0.0,
-               channels_first=True):
+  def __init__(
+      self,
+      input_shape,
+      filter_shape,
+      strides=1,
+      padding="SAME",
+      filter_init=lambda shp: np.random.normal(scale=0.1, size=shp),
+      l2reg_lambda=0.0,
+      channels_first=True
+  ):
     self.fshape = filter_shape
     self.strides = strides
     self.padding = padding
@@ -121,7 +123,8 @@ class Conv2D(Layer):
           field_height=h_filter,
           field_width=w_filter,
           padding=self.padding,
-          stride=self.strides)
+          stride=self.strides
+      )
 
     d_w = tfe.conv2d_bw(x, d_y, self.weights.shape, self.strides, self.padding)
     d_bias = d_y.reduce_sum(axis=0)

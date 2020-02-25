@@ -24,12 +24,12 @@ class TestReshape(unittest.TestCase):
   def _core_reshape(self, input_shape, **layer_kwargs):
 
     kwargs = {**layer_kwargs}
-    agreement_test(tfe.keras.layers.Reshape,
-                   kwargs=kwargs,
-                   input_shape=input_shape)
-    layer_test(tfe.keras.layers.Reshape,
-               kwargs=kwargs,
-               batch_input_shape=input_shape)
+    agreement_test(
+        tfe.keras.layers.Reshape, kwargs=kwargs, input_shape=input_shape
+    )
+    layer_test(
+        tfe.keras.layers.Reshape, kwargs=kwargs, batch_input_shape=input_shape
+    )
 
 
 if __name__ == '__main__':
