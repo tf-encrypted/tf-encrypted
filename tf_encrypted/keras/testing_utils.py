@@ -13,7 +13,7 @@ def agreement_test(
     input_data=None,
     rtol=1e-1,
     atol=1e-8,
-    **tfe_kwargs
+    **tfe_kwargs,
 ):
     """Check agreement between a tf.keras layer and a tfe.keras layer.
   Arguments:
@@ -69,9 +69,7 @@ def layer_test(layer_cls, kwargs=None, batch_input_shape=None, input_data=None):
   Raises:
     ValueError: if `input_data is None and input_shape is None`.
   """
-    input_shape, input_data = _sanitize_testing_args(
-        batch_input_shape, input_data
-    )
+    input_shape, input_data = _sanitize_testing_args(batch_input_shape, input_data)
 
     # instantiation
     kwargs = kwargs or {}
@@ -90,7 +88,7 @@ def _sanitize_testing_args(input_shape, input_data):
   is missing."""
     if input_data is None:
         if input_shape is None:
-            raise ValueError('input_shape is None')
+            raise ValueError("input_shape is None")
         input_data_shape = list(input_shape)
         for i, e in enumerate(input_data_shape):
             if e is None:

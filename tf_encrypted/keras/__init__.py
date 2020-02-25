@@ -9,10 +9,10 @@ from tf_encrypted.keras.models import Sequential
 from tf_encrypted.keras import losses
 
 __all__ = [
-    'backend',
-    'engine',
-    'layers',
-    'losses',
-    'models',
-    'Sequential',
+    "backend",
+    "engine",
+    "layers",
+    "losses",
+    "models",
+    "Sequential",
 ]

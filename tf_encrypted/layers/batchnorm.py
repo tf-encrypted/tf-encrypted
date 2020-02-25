@@ -20,14 +20,14 @@ class Batchnorm(Layer):
   """
 
     def __init__(
-            self,
-            input_shape: List[int],
-            mean: np.ndarray,
-            variance: np.ndarray,
-            scale: np.ndarray,
-            offset: np.ndarray,
-            variance_epsilon: float = 1e-8,
-            channels_first: bool = True
+        self,
+        input_shape: List[int],
+        mean: np.ndarray,
+        variance: np.ndarray,
+        scale: np.ndarray,
+        offset: np.ndarray,
+        variance_epsilon: float = 1e-8,
+        channels_first: bool = True,
     ) -> None:
         self.mean = mean
         self.variance = variance

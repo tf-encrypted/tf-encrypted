@@ -19,12 +19,12 @@ class Pooling2D(Layer):
   """
 
     def __init__(
-            self,
-            input_shape: List[int],
-            pool_size: IntTuple,
-            strides: Optional[IntTuple] = None,
-            padding: str = "SAME",
-            channels_first: bool = True,
+        self,
+        input_shape: List[int],
+        pool_size: IntTuple,
+        strides: Optional[IntTuple] = None,
+        padding: str = "SAME",
+        channels_first: bool = True,
     ) -> None:
         if isinstance(pool_size, int):
             pool_size = (pool_size, pool_size)  # type: ignore
@@ -34,10 +34,8 @@ class Pooling2D(Layer):
         elif isinstance(strides, int):
             strides = (strides, strides)  # type: ignore
         self.strides = strides
-        if padding not in ['SAME', 'VALID']:
-            raise ValueError(
-                "Don't know how to do padding of type {}".format(padding)
-            )
+        if padding not in ["SAME", "VALID"]:
+            raise ValueError("Don't know how to do padding of type {}".format(padding))
         self.padding = padding
         self.channels_first = channels_first
 
@@ -46,9 +44,7 @@ class Pooling2D(Layer):
         self.cached_input_shape = None
 
     def initialize(
-            self,
-            input_shape: IntTuple,
-            initializer: Optional[TFEVariable] = None
+        self, input_shape: IntTuple, initializer: Optional[TFEVariable] = None
     ) -> None:
         pass
 
@@ -85,9 +81,7 @@ class Pooling2D(Layer):
         return out
 
     def backward(self, d_y, learning_rate):
-        raise NotImplementedError(
-            "`backward` not yet supported for pooling layers"
-        )
+        raise NotImplementedError("`backward` not yet supported for pooling layers")
 
 
 class AveragePooling2D(Pooling2D):  # pylint: disable=abstract-method

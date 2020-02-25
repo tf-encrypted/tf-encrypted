@@ -8,10 +8,9 @@ import tf_encrypted as tfe
 from tf_encrypted.layers.core import Layer
 from tf_encrypted.protocol.pond import PondPublicTensor, PondPrivateTensor
 
-InitialTensor = Optional[Union[np.ndarray,
-                               tf.Tensor,
-                               PondPublicTensor,
-                               PondPrivateTensor]]
+InitialTensor = Optional[
+    Union[np.ndarray, tf.Tensor, PondPublicTensor, PondPrivateTensor]
+]
 
 
 class Dense(Layer):
@@ -22,11 +21,7 @@ class Dense(Layer):
   """
 
     def __init__(
-        self,
-        input_shape,
-        out_features,
-        transpose_input=False,
-        transpose_weight=False,
+        self, input_shape, out_features, transpose_input=False, transpose_weight=False,
     ):
         self.in_features = input_shape[-1]
         self.out_features = out_features
@@ -44,9 +39,7 @@ class Dense(Layer):
         return [self.input_shape[0] + self.out_features]
 
     def initialize(
-            self,
-            initial_weights: InitialTensor = None,
-            initial_bias: InitialTensor = None,
+        self, initial_weights: InitialTensor = None, initial_bias: InitialTensor = None,
     ) -> None:
         if initial_weights is None:
             initial_size = (self.in_features, self.out_features)
@@ -83,6 +76,6 @@ class Dense(Layer):
 
         if self.bias:
             d_bias = d_y.reduce_sum(axis=0)
-            self.bias -= (d_bias * learning_rate)
+            self.bias -= d_bias * learning_rate
 
         return d_x

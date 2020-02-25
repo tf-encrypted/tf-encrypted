@@ -21,7 +21,7 @@ class SGD:
 
 
 _known_optimizers = {
-    'sgd': SGD,
+    "sgd": SGD,
 }
 
 

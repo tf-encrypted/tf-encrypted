@@ -31,17 +31,17 @@ class Converter:
   """
 
     def __init__(
-            self,
-            registry,
-            config: Optional[Config] = None,
-            protocol: Optional[Protocol] = None,
-            model_provider: Optional[Union[str, Player]] = None,
+        self,
+        registry,
+        config: Optional[Config] = None,
+        protocol: Optional[Protocol] = None,
+        model_provider: Optional[Union[str, Player]] = None,
     ) -> None:
         self.config = config if config is not None else get_config()
         if protocol is not None:
             tfe.set_protocol(protocol)
         if model_provider is None:
-            self.model_provider = self.config.get_player('model-provider')
+            self.model_provider = self.config.get_player("model-provider")
         elif isinstance(model_provider, str):
             self.model_provider = self.config.get_player(model_provider)
         else:
@@ -53,14 +53,14 @@ class Converter:
         self,
         graph_def: Any,
         input_player: Union[str, Player],
-        inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]] = None
+        inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]] = None,
     ) -> Any:
         """Convert a frozen GraphDef to a TFE Graph."""
         if not graph_def.node:
             raise ValueError("An empty model was passed to the converter.")
 
         if isinstance(input_player, str):
-            input_player = get_config().get_player('input-provider')
+            input_player = get_config().get_player("input-provider")
         assert isinstance(input_player, Player)
 
         if inputter_fn is None:
@@ -92,18 +92,15 @@ class Converter:
         # the sub ops by the output from the high level operation then register.
         for node in node_list:
             if node.name not in specop_outputs:
-                self._register_op(
-                    node, inputs_iterable, input_player, graph_def
-                )
+                self._register_op(node, inputs_iterable, input_player, graph_def)
 
             else:
                 # Register high level special operations
                 for s in specop_dict:
                     # If this node is the output of the current specop, register it
-                    if match_numbered_scope(s,
-                                            node.name,
-                                            return_group=False,
-                                            numbered=False):
+                    if match_numbered_scope(
+                        s, node.name, return_group=False, numbered=False
+                    ):
                         self._register_specop(node, specop_dict[s])
 
         return self.outputs[output_name]
@@ -139,13 +136,13 @@ class Converter:
 
     def _register_specop(self, node, specop_scope_dict):
         """Handle special op registration."""
-        input_list = specop_scope_dict['inputs']
-        output_list = specop_scope_dict['outputs']
+        input_list = specop_scope_dict["inputs"]
+        output_list = specop_scope_dict["outputs"]
 
         # Handle edge cases if the ops return multiple outputs
-        op_handler = self.registry[specop_scope_dict['op']]
+        op_handler = self.registry[specop_scope_dict["op"]]
 
-        nodes = specop_scope_dict['interiors']
+        nodes = specop_scope_dict["interiors"]
         if not nodes:
             nodes = node
         outs = op_handler(self, nodes, input_list)
@@ -200,16 +197,16 @@ def find_specops(graph_def, output_name):
 
     for scope, subscope_map in namespace.items():
         specops_dict[scope] = {}
-        specops_dict[scope]['op'] = specop_from_numberedscope(scope)
-        specops_dict[scope]['interiors'] = get_interiors(scope, namespace)
+        specops_dict[scope]["op"] = specop_from_numberedscope(scope)
+        specops_dict[scope]["interiors"] = get_interiors(scope, namespace)
         inputs, outputs = find_leaves(scope, subscope_map)
 
-        specops_dict[scope]['inputs'] = inputs
+        specops_dict[scope]["inputs"] = inputs
         all_specop_inputs += inputs
         # if no outputs found assume output to model is the special op output
         if not outputs:
             outputs = [output_name]
-        specops_dict[scope]['outputs'] = outputs
+        specops_dict[scope]["outputs"] = outputs
         all_specop_outputs += outputs
 
     return specops_dict, all_specop_inputs, all_specop_outputs
@@ -276,14 +273,16 @@ def find_leaves(scope, subscope_map):
     for _, node in subscope_map.items():
         for inp in node.input:
 
-            if match_numbered_scope(scope, inp) is None \
-                    and re.search('(.*/)*keras_learning_phase$', inp) is None:
+            if (
+                match_numbered_scope(scope, inp) is None
+                and re.search("(.*/)*keras_learning_phase$", inp) is None
+            ):
                 # edge case - the keras_learning_phase node is an input to other
                 # batchnorm nodes, but is irrelevent to the converter
                 # and therefore can be ignored
                 input_leaves.append(inp)
 
-            if re.search(r':\d+$', inp) is not None:
+            if re.search(r":\d+$", inp) is not None:
                 inp = inp.split(":")[0]
             if inp in output_leaves:
                 output_leaves.remove(inp)
@@ -295,9 +294,7 @@ def find_leaves(scope, subscope_map):
     return input_leaves, output_leaves
 
 
-def match_numbered_scope(
-    specop, search_string, return_group=True, numbered=True
-):
+def match_numbered_scope(specop, search_string, return_group=True, numbered=True):
     """
   Find a numbered scope matching a specop from REGISTERED_SPECOPS,
   and return it if found.
@@ -313,9 +310,9 @@ def match_numbered_scope(
 
   """
     if numbered:
-        expr = '^(.*/)*({0})/|(^(.*/)*({0}_[0-9]+))/'.format(specop)
+        expr = "^(.*/)*({0})/|(^(.*/)*({0}_[0-9]+))/".format(specop)
     else:
-        expr = '^(.*/)*({0})/'.format(specop)
+        expr = "^(.*/)*({0})/".format(specop)
 
     match = re.search(expr, search_string)
     if match is not None:
@@ -333,7 +330,7 @@ def match_numbered_leaf(leaf_to_match, search_string):
 
   Example: 'Conv2D' will match '.../Conv2D_5' and return 'Conv2D_5'
   """
-    expr = '/({0}$)|/({0}_[0-9]+$)'.format(leaf_to_match)
+    expr = "/({0}$)|/({0}_[0-9]+$)".format(leaf_to_match)
     match = re.search(expr, search_string)
     if match is not None:
         return match.group(1)
@@ -346,7 +343,7 @@ def specop_from_numberedscope(scope):
 
   Example: 'conv2d_4' will produce 'conv2d'.
   """
-    expr = '[_a-zA-Z0-9]+(?=_[0-9]+)'
+    expr = "[_a-zA-Z0-9]+(?=_[0-9]+)"
     match = re.search(expr, scope)
     if match is not None:
         return match.group(0)
@@ -385,17 +382,17 @@ def find_output_names(graph_def, node_name, num_outputs):
     node_name_list = list(graph_def.keys())
     n_i = node_name_list.index(node_name)
     # Forward lookahead from the node we want register
-    for n in node_name_list[n_i + 1:]:
+    for n in node_name_list[n_i + 1 :]:
         if not n.startswith(node_name):
             gdf = graph_def[n]
             for x in gdf.input:
                 # we insert the names by their index,
                 # and not by the order of appearance in the graph
                 if x.startswith(node_name):
-                    if ':' not in x:
+                    if ":" not in x:
                         output_node[0] = x
                     else:
-                        output_node[int(x.split(':')[-1])] = x
+                        output_node[int(x.split(":")[-1])] = x
 
     # assert if not all output nodes appear in the graph
     assert None not in output_node

@@ -31,8 +31,4 @@ class AbstractFIFOQueue(abc.ABC):
 
 
 def FIFOQueue(capacity, shape, shared_name=None):
-    return tfe.fifo_queue(
-        capacity=capacity,
-        shape=shape,
-        shared_name=shared_name,
-    )
+    return tfe.fifo_queue(capacity=capacity, shape=shape, shared_name=shared_name,)

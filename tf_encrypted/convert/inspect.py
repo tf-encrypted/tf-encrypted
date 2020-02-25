@@ -24,7 +24,7 @@ def _gen_graph_def(subgraph, input_shape, sess):
 
 
 def _read_graph(path):
-    with tf.io.gfile.GFile(path, 'rb') as f:
+    with tf.io.gfile.GFile(path, "rb") as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
 

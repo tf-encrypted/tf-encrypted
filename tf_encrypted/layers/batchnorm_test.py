@@ -9,7 +9,6 @@ from tf_encrypted.layers import Batchnorm
 
 
 class TestBatchnorm(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -26,22 +25,20 @@ class TestBatchnorm(unittest.TestCase):
 
         # I reshaped the input because tf.nn.batch_normalization doesn't reshape it
         # automatically However tf encrypted will reshape automatically the input
-        mean = np.array([2.0, 1.5,
-                         20.8]).reshape((1, channels_in, 1, 1)).astype(
-                             np.float32
-                         )
-        variance = np.array([0.5, 0.3,
-                             0.1]).reshape((1, channels_in, 1, 1)).astype(
-                                 np.float32
-                             )
-        scale = np.array([0.3, 0.5,
-                          0.8]).reshape((1, channels_in, 1, 1)).astype(
-                              np.float32
-                          )
-        offset = np.array([1.5, 1.2,
-                           1.4]).reshape((1, channels_in, 1, 1)).astype(
-                               np.float32
-                           )
+        mean = (
+            np.array([2.0, 1.5, 20.8])
+            .reshape((1, channels_in, 1, 1))
+            .astype(np.float32)
+        )
+        variance = (
+            np.array([0.5, 0.3, 0.1]).reshape((1, channels_in, 1, 1)).astype(np.float32)
+        )
+        scale = (
+            np.array([0.3, 0.5, 0.8]).reshape((1, channels_in, 1, 1)).astype(np.float32)
+        )
+        offset = (
+            np.array([1.5, 1.2, 1.4]).reshape((1, channels_in, 1, 1)).astype(np.float32)
+        )
         variance_epsilon = 1e-8
 
         with tfe.protocol.Pond() as prot:
@@ -53,7 +50,7 @@ class TestBatchnorm(unittest.TestCase):
                 variance,
                 scale,
                 offset,
-                channels_first=channels_first
+                channels_first=channels_first,
             )
             batchnorm_layer.initialize()
             batchnorm_out_pond = batchnorm_layer.forward(batchnorm_input)
@@ -93,26 +90,26 @@ class TestBatchnorm(unittest.TestCase):
 
         # I reshaped the input because tf.nn.batch_normalization doesn't reshape it
         # automatically However tf encrypted will reshape automatically the input
-        mean = np.array([
-            2.0,
-            1.5,
-            20.8,
-        ]).reshape((1, 1, 1, channels_in)).astype(np.float32)
-        variance = np.array([
-            0.5,
-            0.3,
-            0.1,
-        ]).reshape((1, 1, 1, channels_in)).astype(np.float32)
-        scale = np.array([
-            0.3,
-            0.5,
-            0.8,
-        ]).reshape((1, 1, 1, channels_in)).astype(np.float32)
-        offset = np.array([
-            1.5,
-            1.2,
-            1.4,
-        ]).reshape((1, 1, 1, channels_in)).astype(np.float32)
+        mean = (
+            np.array([2.0, 1.5, 20.8,])
+            .reshape((1, 1, 1, channels_in))
+            .astype(np.float32)
+        )
+        variance = (
+            np.array([0.5, 0.3, 0.1,])
+            .reshape((1, 1, 1, channels_in))
+            .astype(np.float32)
+        )
+        scale = (
+            np.array([0.3, 0.5, 0.8,])
+            .reshape((1, 1, 1, channels_in))
+            .astype(np.float32)
+        )
+        offset = (
+            np.array([1.5, 1.2, 1.4,])
+            .reshape((1, 1, 1, channels_in))
+            .astype(np.float32)
+        )
         variance_epsilon = 1e-8
 
         with tfe.protocol.Pond() as prot:
@@ -140,12 +137,7 @@ class TestBatchnorm(unittest.TestCase):
                 x = tf.Variable(input_batchnorm, dtype=tf.float32)
 
                 batchnorm_out_tf = tf.nn.batch_normalization(
-                    x,
-                    mean,
-                    variance,
-                    offset,
-                    scale,
-                    variance_epsilon,
+                    x, mean, variance, offset, scale, variance_epsilon,
                 )
 
                 sess.run(tf.global_variables_initializer())
@@ -157,5 +149,5 @@ class TestBatchnorm(unittest.TestCase):
                 )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

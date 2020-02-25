@@ -45,14 +45,14 @@ class Dense(Layer):
         units,
         activation=None,
         use_bias=True,
-        kernel_initializer='glorot_uniform',
-        bias_initializer='zeros',
+        kernel_initializer="glorot_uniform",
+        bias_initializer="zeros",
         kernel_regularizer=None,
         bias_regularizer=None,
         activity_regularizer=None,
         kernel_constraint=None,
         bias_constraint=None,
-        **kwargs
+        **kwargs,
     ):
 
         super(Dense, self).__init__(**kwargs)
@@ -68,9 +68,7 @@ class Dense(Layer):
         # Not implemented arguments
         default_args_check(kernel_regularizer, "kernel_regularizer", "Dense")
         default_args_check(bias_regularizer, "bias_regularizer", "Dense")
-        default_args_check(
-            activity_regularizer, "activity_regularizer", "Dense"
-        )
+        default_args_check(activity_regularizer, "activity_regularizer", "Dense")
         default_args_check(kernel_constraint, "kernel_constraint", "Dense")
         default_args_check(bias_constraint, "bias_constraint", "Dense")
 
@@ -123,9 +121,7 @@ class Dense(Layer):
         grad_weights = []
 
         if self.activation_identifier is not None:
-            self._activation_deriv = activations.get_deriv(
-                self.activation_identifier
-            )
+            self._activation_deriv = activations.get_deriv(self.activation_identifier)
             d_y = self._activation_deriv(y, d_y)
 
         d_x = d_y.matmul(kernel.transpose())

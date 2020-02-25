@@ -14,7 +14,6 @@ tf.random.set_random_seed(42)
 
 
 class TestSequential(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -32,9 +31,7 @@ class TestSequential(unittest.TestCase):
     def test_model_from_config(self):
         input_shape = (1, 3)
         input_data = np.random.normal(size=input_shape)
-        expected, k_weights, k_config = _model_predict_keras(
-            input_data, input_shape
-        )
+        expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
 
         with tfe.protocol.SecureNN():
             x = tfe.define_private_input(
@@ -55,9 +52,7 @@ class TestSequential(unittest.TestCase):
     def test_from_config(self):
         input_shape = (1, 3)
         input_data = np.random.normal(size=input_shape)
-        expected, k_weights, k_config = _model_predict_keras(
-            input_data, input_shape
-        )
+        expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
 
         with tfe.protocol.SecureNN():
             x = tfe.define_private_input(
@@ -102,9 +97,7 @@ class TestSequential(unittest.TestCase):
     def test_weights_as_private_var(self):
         input_shape = (1, 3)
         input_data = np.random.normal(size=input_shape)
-        expected, k_weights, k_config = _model_predict_keras(
-            input_data, input_shape
-        )
+        expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
 
         with tfe.protocol.SecureNN():
             x = tfe.define_private_input(
@@ -112,9 +105,7 @@ class TestSequential(unittest.TestCase):
             )
 
             tfe_model = tfe.keras.models.model_from_config(k_config)
-            weights_private_var = [
-                tfe.define_private_variable(w) for w in k_weights
-            ]
+            weights_private_var = [tfe.define_private_variable(w) for w in k_weights]
 
             with tfe.Session() as sess:
                 for w in weights_private_var:
@@ -125,9 +116,7 @@ class TestSequential(unittest.TestCase):
 
                 actual = sess.run(y.reveal())
 
-                np.testing.assert_allclose(
-                    actual, expected, rtol=1e-2, atol=1e-3
-                )
+                np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-3)
 
     def test_conv_model(self):
         num_classes = 10
@@ -137,11 +126,7 @@ class TestSequential(unittest.TestCase):
         with tf.Session():
             model = tf.keras.models.Sequential()
 
-            model.add(
-                tf.keras.layers.Conv2D(
-                    2, (3, 3), batch_input_shape=input_shape
-                )
-            )
+            model.add(tf.keras.layers.Conv2D(2, (3, 3), batch_input_shape=input_shape))
             model.add(tf.keras.layers.ReLU())
             model.add(tf.keras.layers.BatchNormalization())
             model.add(tf.keras.layers.AveragePooling2D((2, 2)))
@@ -187,5 +172,5 @@ def _model_predict_keras(input_data, input_shape):
     return out, weights, config
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

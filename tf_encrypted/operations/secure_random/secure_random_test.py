@@ -22,7 +22,6 @@ dontskip = secure_random.supports_seeded_randomness()
 
 @unittest.skipUnless(dontskip, disabled_msg)
 class TestSeededRandom(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -38,9 +37,7 @@ class TestSeededRandom(unittest.TestCase):
 
         with tf.Session():
             output = secure_random.seeded_random_uniform(
-                [3, 3],
-                seed=SEED,
-                maxval=10000,
+                [3, 3], seed=SEED, maxval=10000,
             ).eval()
 
             np.testing.assert_array_equal(output, expected)
@@ -54,10 +51,7 @@ class TestSeededRandom(unittest.TestCase):
 
         with tf.Session():
             output = secure_random.seeded_random_uniform(
-                [3, 3],
-                seed=SEED,
-                minval=-10000,
-                maxval=10000,
+                [3, 3], seed=SEED, minval=-10000, maxval=10000,
             ).eval()
 
             np.testing.assert_array_equal(output, expected)
@@ -67,9 +61,7 @@ class TestSeededRandom(unittest.TestCase):
             # invalid seed
             with np.testing.assert_raises(ValueError):
                 secure_random.seeded_random_uniform(
-                    [3, 3],
-                    maxval=10000,
-                    seed=[1],
+                    [3, 3], maxval=10000, seed=[1],
                 ).eval()
 
             # invalid maxval
@@ -79,10 +71,7 @@ class TestSeededRandom(unittest.TestCase):
             # invalid dtype
             with np.testing.assert_raises(ValueError):
                 secure_random.seeded_random_uniform(
-                    [3, 3],
-                    seed=SEED,
-                    maxval=10000,
-                    dtype=tf.float32,
+                    [3, 3], seed=SEED, maxval=10000, dtype=tf.float32,
                 ).eval()
 
     def test_rejection(self):
@@ -96,21 +85,15 @@ class TestSeededRandom(unittest.TestCase):
             -1502583120,
             1663373136,
             2144760032,
-            -1591917499
+            -1591917499,
         ]
 
         with tf.Session():
             out0 = secure_random.seeded_random_uniform(
-                [64, 4500],
-                seed=seed0,
-                maxval=m,
-                dtype=tf.int32,
+                [64, 4500], seed=seed0, maxval=m, dtype=tf.int32,
             ).eval()
             out1 = secure_random.seeded_random_uniform(
-                [64, 4500],
-                seed=seed0,
-                maxval=m,
-                dtype=tf.int32,
+                [64, 4500], seed=seed0, maxval=m, dtype=tf.int32,
             ).eval()
 
             np.testing.assert_array_equal(out0, out1)
@@ -118,7 +101,6 @@ class TestSeededRandom(unittest.TestCase):
 
 @unittest.skipUnless(dontskip, disabled_msg)
 class TestRandomUniform(unittest.TestCase):
-
     def test_wrapper(self):
         with tf.Session():
             output = secure_random.random_uniform([3, 3], maxval=10000).eval()
@@ -127,8 +109,7 @@ class TestRandomUniform(unittest.TestCase):
 
     def test_min_val(self):
         with tf.Session():
-            output = secure_random.random_uniform([6], minval=-10000,
-                                                  maxval=0).eval()
+            output = secure_random.random_uniform([6], minval=-10000, maxval=0).eval()
 
             for out in output:
                 assert out < 0
@@ -142,15 +123,12 @@ class TestRandomUniform(unittest.TestCase):
             # invalid dtype
             with np.testing.assert_raises(ValueError):
                 secure_random.random_uniform(
-                    [3, 3],
-                    maxval=10000,
-                    dtype=tf.float32,
+                    [3, 3], maxval=10000, dtype=tf.float32,
                 ).eval()
 
 
 @unittest.skipUnless(dontskip, disabled_msg)
 class TestSeed(unittest.TestCase):
-
     def test_seed_generation(self):
         with tf.Session():
             s = secure_random.secure_seed()
@@ -161,14 +139,11 @@ class TestSeed(unittest.TestCase):
             shape = [2, 3]
 
             output = secure_random.seeded_random_uniform(
-                shape,
-                seed=s,
-                minval=minval,
-                maxval=maxval,
+                shape, seed=s, minval=minval, maxval=maxval,
             ).eval()
 
             np.testing.assert_array_equal(output.shape, shape)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

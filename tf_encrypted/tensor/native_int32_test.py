@@ -7,32 +7,160 @@ from tf_encrypted.tensor import int32factory
 
 
 class TestInt32Tensor(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
     def test_binarize(self) -> None:
         x = int32factory.tensor(
-            np.array([
-                2**32 + 3,  # == 3
-                2**31 - 1,  # max
-                2**31,  # min
-                -3,
-            ]).reshape(2, 2)
+            np.array(
+                [2 ** 32 + 3, 2 ** 31 - 1, 2 ** 31, -3,]  # == 3  # max  # min
+            ).reshape(2, 2)
         )
 
         y = x.bits()
 
-        expected = np.array([
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        ]).reshape([2, 2, 32])  # yapf: disable
+        expected = np.array(
+            [
+                [
+                    1,
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                ],
+                [
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    0,
+                ],
+                [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    1,
+                ],
+                [
+                    1,
+                    0,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                ],
+            ]
+        ).reshape(
+            [2, 2, 32]
+        )  # yapf: disable
 
         with tf.Session() as sess:
             actual = sess.run(y.to_native())
@@ -40,11 +168,9 @@ class TestInt32Tensor(unittest.TestCase):
         np.testing.assert_array_equal(actual, expected)
 
     def test_random_binarize(self) -> None:
-        x_in = np.random.uniform(
-            low=2**31 + 1,
-            high=2**31 - 1,
-            size=2000,
-        ).astype('int32')
+        x_in = np.random.uniform(low=2 ** 31 + 1, high=2 ** 31 - 1, size=2000,).astype(
+            "int32"
+        )
         x = int32factory.tensor(x_in)
 
         y = x.bits()
@@ -65,7 +191,6 @@ class TestInt32Tensor(unittest.TestCase):
 
 
 class TestConv2D(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -99,10 +224,7 @@ class TestConv2D(unittest.TestCase):
             filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
             conv_out_tf = tf.nn.conv2d(
-                x_nhwc,
-                filters_tf,
-                strides=[1, strides, strides, 1],
-                padding="SAME",
+                x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME",
             )
 
             sess.run(tf.global_variables_initializer())
@@ -111,5 +233,5 @@ class TestConv2D(unittest.TestCase):
         np.testing.assert_array_almost_equal(actual, out_tensorflow, decimal=3)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

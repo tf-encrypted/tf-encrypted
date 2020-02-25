@@ -33,7 +33,7 @@ class Conv2D(Layer):
         padding="SAME",
         filter_init=lambda shp: np.random.normal(scale=0.1, size=shp),
         l2reg_lambda=0.0,
-        channels_first=True
+        channels_first=True,
     ):
         self.fshape = filter_shape
         self.strides = strides
@@ -64,12 +64,8 @@ class Conv2D(Layer):
             h_out = int(np.ceil(float(h_x) / float(self.strides)))
             w_out = int(np.ceil(float(w_x) / float(self.strides)))
         if self.padding == "VALID":
-            h_out = int(
-                np.ceil(float(h_x - h_filter + 1) / float(self.strides))
-            )
-            w_out = int(
-                np.ceil(float(w_x - w_filter + 1) / float(self.strides))
-            )
+            h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides)))
+            w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides)))
 
         return [n_x, n_filters, h_out, w_out]
 
@@ -127,12 +123,10 @@ class Conv2D(Layer):
                 field_height=h_filter,
                 field_width=w_filter,
                 padding=self.padding,
-                stride=self.strides
+                stride=self.strides,
             )
 
-        d_w = tfe.conv2d_bw(
-            x, d_y, self.weights.shape, self.strides, self.padding
-        )
+        d_w = tfe.conv2d_bw(x, d_y, self.weights.shape, self.strides, self.padding)
         d_bias = d_y.reduce_sum(axis=0)
 
         self.weights.assign((d_w * learning_rate).neg() + self.weights)

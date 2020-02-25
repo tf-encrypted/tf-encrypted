@@ -8,7 +8,6 @@ from tf_encrypted.layers import Reshape
 
 
 class TestReshape(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -46,5 +45,5 @@ class TestReshape(unittest.TestCase):
         assert np.isclose(out_pond, out_tensorflow, atol=0.6).all()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

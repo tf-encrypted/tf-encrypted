@@ -61,24 +61,19 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
         def modulus(self):
 
             if NATIVE_TYPE is tf.int32:
-                return 2**32 - 1
+                return 2 ** 32 - 1
 
             if NATIVE_TYPE is tf.int64:
-                return 2**64 - 1
+                return 2 ** 64 - 1
 
-            raise NotImplementedError(
-                "Incorrect native type {}.".format(NATIVE_TYPE)
-            )
+            raise NotImplementedError("Incorrect native type {}.".format(NATIVE_TYPE))
 
         @property
         def native_type(self):
             return NATIVE_TYPE
 
         def sample_uniform(
-            self,
-            shape,
-            minval: Optional[int] = None,
-            maxval: Optional[int] = None
+            self, shape, minval: Optional[int] = None, maxval: Optional[int] = None
         ):
             """Sample a tensor from a uniform distribution."""
             assert minval is None
@@ -134,10 +129,8 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
             return OddDenseTensor(value)
 
         def __repr__(self) -> str:
-            return '{}(shape={}, NATIVE_TYPE={})'.format(
-                type(self),
-                self.shape,
-                NATIVE_TYPE,
+            return "{}(shape={}, NATIVE_TYPE={})".format(
+                type(self), self.shape, NATIVE_TYPE,
             )
 
         def __getitem__(self, slc):
@@ -154,7 +147,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
             x, y = _lift(self, other)
             bitlength = math.ceil(math.log2(master_factory.modulus))
 
-            with tf.name_scope('add'):
+            with tf.name_scope("add"):
 
                 # the below avoids redundant seed expansion; can be removed once
                 # we have a (per-device) caching mechanism in place
@@ -163,7 +156,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
                 z = x_value + y_value
 
-                with tf.name_scope('correct_wrap'):
+                with tf.name_scope("correct_wrap"):
 
                     # we want to compute whether we wrapped around, ie
                     # `pos(x) + pos(y) >= m - 1`, for correction purposes which,
@@ -184,7 +177,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
             x, y = _lift(self, other)
             bitlength = math.ceil(math.log2(master_factory.modulus))
 
-            with tf.name_scope('sub'):
+            with tf.name_scope("sub"):
 
                 # the below avoids redundant seed expansion; can be removed once
                 # we have a (per-device) caching mechanism in place
@@ -193,14 +186,12 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
                 z = x_value - y_value
 
-                with tf.name_scope('correct-wrap'):
+                with tf.name_scope("correct-wrap"):
 
                     # we want to compute whether we wrapped around, ie
                     # `pos(x) - pos(y) < 0`, for correction purposes which can be
                     # rewritten as -> `pos(x) < pos(y)`
-                    wrapped_around = _lessthan_as_unsigned(
-                        x_value, y_value, bitlength
-                    )
+                    wrapped_around = _lessthan_as_unsigned(x_value, y_value, bitlength)
                     z -= wrapped_around
 
             return OddDenseTensor(z)
@@ -257,10 +248,8 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
         @property
         def value(self) -> tf.Tensor:
             # TODO(Morten) result should be stored in a (per-device) cache
-            with tf.name_scope('expand-seed'):
-                sampler = partial(
-                    secure_random.seeded_random_uniform, seed=self._seed
-                )
+            with tf.name_scope("expand-seed"):
+                sampler = partial(secure_random.seeded_random_uniform, seed=self._seed)
                 value = _construct_value_from_sampler(
                     sampler=sampler, shape=self._shape
                 )
@@ -301,7 +290,7 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
             shape=shape,
             dtype=NATIVE_TYPE,
             minval=NATIVE_TYPE.min + 1,
-            maxval=NATIVE_TYPE.max
+            maxval=NATIVE_TYPE.max,
         )
         shifted_values = unshifted_value + tf.ones(
             shape=unshifted_value.shape, dtype=unshifted_value.dtype
@@ -315,17 +304,13 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
     e.g. `1 < -1`. Taken from Section 2-12, page 23, of
     [Hacker's Delight](https://www.hackersdelight.org/).
     """
-        with tf.name_scope('unsigned-compare'):
+        with tf.name_scope("unsigned-compare"):
             not_x = tf.bitwise.invert(x)
             lhs = tf.bitwise.bitwise_and(not_x, y)
             rhs = tf.bitwise.bitwise_and(tf.bitwise.bitwise_or(not_x, y), x - y)
-            z = tf.bitwise.right_shift(
-                tf.bitwise.bitwise_or(lhs, rhs), bitlength - 1
-            )
+            z = tf.bitwise.right_shift(tf.bitwise.bitwise_or(lhs, rhs), bitlength - 1)
             # turn 0/-1 into 0/1 before returning
-            return tf.bitwise.bitwise_and(
-                z, tf.ones(shape=z.shape, dtype=z.dtype)
-            )
+            return tf.bitwise.bitwise_and(z, tf.ones(shape=z.shape, dtype=z.dtype))
 
     def _map_minusone_to_zero(value, native_type):
         """Maps all -1 values to zero."""

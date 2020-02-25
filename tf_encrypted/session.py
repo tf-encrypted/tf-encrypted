@@ -10,14 +10,14 @@ from .config import RemoteConfig, get_config
 from .utils import unwrap_fetches
 
 # pylint: disable=invalid-name
-__TFE_EVENTS__ = bool(os.getenv('TFE_EVENTS', ""))
-__TFE_TRACE__ = bool(os.getenv('TFE_TRACE', ""))
-__TENSORBOARD_DIR__ = str(os.getenv('TFE_EVENTS_DIR', '/tmp/tensorboard'))
+__TFE_EVENTS__ = bool(os.getenv("TFE_EVENTS", ""))
+__TFE_TRACE__ = bool(os.getenv("TFE_TRACE", ""))
+__TENSORBOARD_DIR__ = str(os.getenv("TFE_EVENTS_DIR", "/tmp/tensorboard"))
 # pylint: enable=invalid-name
 
 _run_counter = defaultdict(int)
 
-logger = logging.getLogger('tf_encrypted')
+logger = logging.getLogger("tf_encrypted")
 
 
 class Session(tf.compat.v1.Session):
@@ -37,9 +37,7 @@ class Session(tf.compat.v1.Session):
     when executing the graph.
   """
 
-    def __init__(
-        self, graph=None, config=None, target=None, **tf_config_kwargs
-    ):
+    def __init__(self, graph=None, config=None, target=None, **tf_config_kwargs):
         if config is None:
             config = get_config()
 
@@ -53,7 +51,7 @@ class Session(tf.compat.v1.Session):
             logger.info(
                 "Starting session on target '%s' using config %s",
                 self.target,
-                self.config_proto
+                self.config_proto,
             )
         super(Session, self).__init__(self.target, graph, self.config_proto)
 
@@ -91,8 +89,7 @@ class Session(tf.compat.v1.Session):
 
         if not __TFE_EVENTS__ or tag is None:
             fetches_out = super(Session, self).run(
-                sanitized_fetches,
-                feed_dict=feed_dict,
+                sanitized_fetches, feed_dict=feed_dict,
             )
         else:
             session_tag = "{}{}".format(tag, _run_counter[tag])
@@ -102,7 +99,7 @@ class Session(tf.compat.v1.Session):
             writer = tf.summary.FileWriter(run_tag, self.graph)
             run_options = tf.RunOptions(
                 trace_level=tf.RunOptions.FULL_TRACE,
-                output_partition_graphs=output_partition_graphs
+                output_partition_graphs=output_partition_graphs,
             )
             run_metadata = tf.RunMetadata()
 
@@ -118,7 +115,7 @@ class Session(tf.compat.v1.Session):
                     tf.io.write_graph(
                         g,
                         logdir=os.path.join(__TENSORBOARD_DIR__, session_tag),
-                        name='partition{}.pbtxt'.format(i),
+                        name="partition{}.pbtxt".format(i),
                     )
 
             writer.add_run_metadata(run_metadata, session_tag)
@@ -127,10 +124,8 @@ class Session(tf.compat.v1.Session):
             if __TFE_TRACE__ or write_trace:
                 tracer = timeline.Timeline(run_metadata.step_stats)
                 chrome_trace = tracer.generate_chrome_trace_format()
-                trace_fname = '{}/{}.ctr'.format(
-                    __TENSORBOARD_DIR__, session_tag
-                )
-                with open(trace_fname, 'w') as f:
+                trace_fname = "{}/{}.ctr".format(__TENSORBOARD_DIR__, session_tag)
+                with open(trace_fname, "w") as f:
                     f.write(chrome_trace)
 
         return fetches_out

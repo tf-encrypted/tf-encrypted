@@ -9,15 +9,16 @@ from tf_encrypted.layers.activation import Relu, Sigmoid, Tanh
 
 
 class TestRelu(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
     def test_forward(self):
         input_shape = [2, 2, 2, 50]
-        input_relu = np.random.randn(np.prod(input_shape)).astype(
-            np.float32
-        ).reshape(input_shape)
+        input_relu = (
+            np.random.randn(np.prod(input_shape))
+            .astype(np.float32)
+            .reshape(input_shape)
+        )
 
         with tfe.protocol.SecureNN() as prot:
 
@@ -28,7 +29,7 @@ class TestRelu(unittest.TestCase):
             relu_out_pond = relu_layer.forward(relu_input)
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                out_pond = sess.run(relu_out_pond.reveal(), tag='tfe')
+                out_pond = sess.run(relu_out_pond.reveal(), tag="tfe")
 
             tf.reset_default_graph()
 
@@ -38,11 +39,10 @@ class TestRelu(unittest.TestCase):
                 sess.run(tf.global_variables_initializer())
                 out_tensorflow = sess.run(relu_out_tf)
 
-            np.testing.assert_allclose(out_pond, out_tensorflow, atol=.01)
+            np.testing.assert_allclose(out_pond, out_tensorflow, atol=0.01)
 
 
 class TestSigmoid(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -80,7 +80,6 @@ class TestSigmoid(unittest.TestCase):
 
 
 class TestTanh(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -117,5 +116,5 @@ class TestTanh(unittest.TestCase):
         assert np.isclose(out_pond, out_tensorflow, atol=0.2).all()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

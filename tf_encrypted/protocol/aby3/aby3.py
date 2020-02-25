@@ -71,8 +71,7 @@ class ABY3(Protocol):
         self.bool_factory = b_factory
 
         self.pairwise_keys, self.pairwise_nonces = self.setup_pairwise_randomness()
-        self.b2a_keys_1, self.b2a_keys_2, self.b2a_nonce = \
-            self.setup_b2a_generator()
+        self.b2a_keys_1, self.b2a_keys_2, self.b2a_nonce = self.setup_b2a_generator()
 
     @property
     def nbits(self):
@@ -130,9 +129,7 @@ class ABY3(Protocol):
             )
 
         # Type 1: Server 0 and 1 hold three keys, while server 2 holds two
-        b2a_keys_1 = [
-            [None, None, None], [None, None, None], [None, None, None]
-        ]
+        b2a_keys_1 = [[None, None, None], [None, None, None], [None, None, None]]
         with tf.device(self.servers[0].device_name):
             seed_0 = crypto.secure_seed()
         with tf.device(self.servers[1].device_name):
@@ -153,9 +150,7 @@ class ABY3(Protocol):
             b2a_keys_1[2][2] = seed_2
 
         # Type 2: Server 1 and 2 hold three keys, while server 0 holds two
-        b2a_keys_2 = [
-            [None, None, None], [None, None, None], [None, None, None]
-        ]
+        b2a_keys_2 = [[None, None, None], [None, None, None], [None, None, None]]
         with tf.device(self.servers[0].device_name):
             seed_0 = crypto.secure_seed()
         with tf.device(self.servers[1].device_name):
@@ -217,9 +212,7 @@ class ABY3(Protocol):
             with tf.device(self.servers[2].device_name):
                 x_on_2 = factory.constant(value)
 
-        return ABY3Constant(
-            self, [x_on_0, x_on_1, x_on_2], apply_scaling, share_type
-        )
+        return ABY3Constant(self, [x_on_0, x_on_1, x_on_2], apply_scaling, share_type)
 
     def define_private_variable(
         self,
@@ -268,8 +261,9 @@ class ABY3(Protocol):
 
             else:
                 raise TypeError(
-                    ("Don't know how to turn {} "
-                     "into private variable").format(type(initial_value))
+                    ("Don't know how to turn {} " "into private variable").format(
+                        type(initial_value)
+                    )
                 )
 
             # The backing factory for the shares might have changed after the sharing step
@@ -316,11 +310,10 @@ class ABY3(Protocol):
         assert isinstance(player, Player)
 
         def share_output(v: tf.Tensor):
-            assert v.shape.is_fully_defined(), (
-                "Shape of return value '{}' on '{}' not fully defined".format(
-                    name if name else "",
-                    player.name,
-                )
+            assert (
+                v.shape.is_fully_defined()
+            ), "Shape of return value '{}' on '{}' not fully defined".format(
+                name if name else "", player.name,
             )
 
             v = self._encode(v, apply_scaling)
@@ -346,8 +339,9 @@ class ABY3(Protocol):
                 return v
 
             raise TypeError(
-                ("Don't know how to process input argument "
-                 "of type {}").format(type(x))
+                ("Don't know how to process input argument " "of type {}").format(
+                    type(x)
+                )
             )
 
         with tf.name_scope(name if name else "local-computation"):
@@ -406,7 +400,7 @@ class ABY3(Protocol):
             apply_scaling=apply_scaling,
             share_type=share_type,
             name="private-input{}".format(suffix),
-            factory=factory
+            factory=factory,
         )
 
     def define_public_input(
@@ -436,11 +430,10 @@ class ABY3(Protocol):
         suffix = "-" + name if name else ""
 
         def helper(v: tf.Tensor) -> "ABY3PublicTensor":
-            assert v.shape.is_fully_defined(), (
-                "Shape of input '{}' on '{}' is not fully defined".format(
-                    name if name else "",
-                    player.name,
-                )
+            assert (
+                v.shape.is_fully_defined()
+            ), "Shape of input '{}' on '{}' is not fully defined".format(
+                name if name else "", player.name,
             )
             v = self._encode(v, apply_scaling)
             w = factory.tensor(v)
@@ -462,9 +455,7 @@ class ABY3(Protocol):
                     return [helper(v) for v in inputs]
 
                 raise TypeError(
-                    ("Don't know how to handle inputs of type {}").format(
-                        type(inputs)
-                    )
+                    ("Don't know how to handle inputs of type {}").format(type(inputs))
                 )
 
     def define_public_tensor(
@@ -479,10 +470,9 @@ class ABY3(Protocol):
     Convert a tf.Tensor to an ABY3PublicTensor.
     """
         assert isinstance(tensor, tf.Tensor)
-        assert tensor.shape.is_fully_defined(), (
-            "Shape of input '{}' is not fully defined".
-            format(name if name else "")
-        )
+        assert (
+            tensor.shape.is_fully_defined()
+        ), "Shape of input '{}' is not fully defined".format(name if name else "")
 
         factory = factory or self.int_factory
 
@@ -492,11 +482,7 @@ class ABY3(Protocol):
             return ABY3PublicTensor(self, [w, w, w], apply_scaling, share_type)
 
     def define_output(
-        self,
-        player,
-        arguments,
-        outputter_fn,
-        name=None,
+        self, player, arguments, outputter_fn, name=None,
     ):
         """
     Define an output for this graph.
@@ -518,10 +504,10 @@ class ABY3(Protocol):
         )
 
     def _encode(
-            self,
-            rationals: Union[tf.Tensor, np.ndarray],
-            apply_scaling: bool,
-            factory=None,
+        self,
+        rationals: Union[tf.Tensor, np.ndarray],
+        apply_scaling: bool,
+        factory=None,
     ) -> Union[tf.Tensor, np.ndarray]:
         """
     Encode tensor of rational numbers into tensor of ring elements. Output is
@@ -548,9 +534,7 @@ class ABY3(Protocol):
                 integers = tf.cast(scaled, dtype=tf_native_type)
 
             else:
-                raise TypeError(
-                    "Don't know how to encode {}".format(type(rationals))
-                )
+                raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
             assert type(rationals) == type(integers)
             return integers
@@ -591,11 +575,7 @@ class ABY3(Protocol):
                 raise NotImplementedError("Unknown share type.")
 
     def _share_and_wrap(
-            self,
-            secret: AbstractTensor,
-            is_scaled: bool,
-            share_type: str,
-            player=None,
+        self, secret: AbstractTensor, is_scaled: bool, share_type: str, player=None,
     ) -> "ABY3PrivateTensor":
         shares = self._share(secret, share_type, player)
         return ABY3PrivateTensor(self, shares, is_scaled, share_type)
@@ -640,7 +620,6 @@ class ABY3(Protocol):
                 raise NotImplementedError("Unknown share type.")
 
     def _gen_zero_sharing(self, shape, share_type=ARITHMETIC, factory=None):
-
         def helper(f0, f1):
             if share_type == ARITHMETIC:
                 return f0 - f1
@@ -655,27 +634,27 @@ class ABY3(Protocol):
         with tf.name_scope("zero-sharing"):
             with tf.device(self.servers[0].device_name):
                 f00 = factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=self.pairwise_keys[0][0] + self.pairwise_nonces[2])  # yapf: disable
+                    shape=shape, seed=self.pairwise_keys[0][0] + self.pairwise_nonces[2]
+                )  # yapf: disable
                 f01 = factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=self.pairwise_keys[0][1] + self.pairwise_nonces[0])  # yapf: disable
+                    shape=shape, seed=self.pairwise_keys[0][1] + self.pairwise_nonces[0]
+                )  # yapf: disable
                 a0 = helper(f00, f01)
             with tf.device(self.servers[1].device_name):
                 f10 = factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=self.pairwise_keys[1][0] + self.pairwise_nonces[0])  # yapf: disable
+                    shape=shape, seed=self.pairwise_keys[1][0] + self.pairwise_nonces[0]
+                )  # yapf: disable
                 f11 = factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=self.pairwise_keys[1][1] + self.pairwise_nonces[1])  # yapf: disable
+                    shape=shape, seed=self.pairwise_keys[1][1] + self.pairwise_nonces[1]
+                )  # yapf: disable
                 a1 = helper(f10, f11)
             with tf.device(self.servers[2].device_name):
                 f20 = factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=self.pairwise_keys[2][0] + self.pairwise_nonces[1])  # yapf: disable
+                    shape=shape, seed=self.pairwise_keys[2][0] + self.pairwise_nonces[1]
+                )  # yapf: disable
                 f21 = factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=self.pairwise_keys[2][1] + self.pairwise_nonces[2])  # yapf: disable
+                    shape=shape, seed=self.pairwise_keys[2][1] + self.pairwise_nonces[2]
+                )  # yapf: disable
                 a2 = helper(f20, f21)
 
         self.pairwise_nonces = self.pairwise_nonces + 1
@@ -688,25 +667,25 @@ class ABY3(Protocol):
         with tf.name_scope("random-sharing"):
             with tf.device(self.servers[0].device_name):
                 r[0][0] = factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=self.pairwise_keys[0][0] + self.pairwise_nonces[2])  # yapf: disable
+                    shape=shape, seed=self.pairwise_keys[0][0] + self.pairwise_nonces[2]
+                )  # yapf: disable
                 r[0][1] = factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=self.pairwise_keys[0][1] + self.pairwise_nonces[0])  # yapf: disable
+                    shape=shape, seed=self.pairwise_keys[0][1] + self.pairwise_nonces[0]
+                )  # yapf: disable
             with tf.device(self.servers[1].device_name):
                 r[1][0] = factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=self.pairwise_keys[1][0] + self.pairwise_nonces[0])  # yapf: disable
+                    shape=shape, seed=self.pairwise_keys[1][0] + self.pairwise_nonces[0]
+                )  # yapf: disable
                 r[1][1] = factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=self.pairwise_keys[1][1] + self.pairwise_nonces[1])  # yapf: disable
+                    shape=shape, seed=self.pairwise_keys[1][1] + self.pairwise_nonces[1]
+                )  # yapf: disable
             with tf.device(self.servers[2].device_name):
                 r[2][0] = factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=self.pairwise_keys[2][0] + self.pairwise_nonces[1])  # yapf: disable
+                    shape=shape, seed=self.pairwise_keys[2][0] + self.pairwise_nonces[1]
+                )  # yapf: disable
                 r[2][1] = factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=self.pairwise_keys[2][1] + self.pairwise_nonces[2])  # yapf: disable
+                    shape=shape, seed=self.pairwise_keys[2][1] + self.pairwise_nonces[2]
+                )  # yapf: disable
 
         self.pairwise_nonces = self.pairwise_nonces + 1
 
@@ -716,44 +695,44 @@ class ABY3(Protocol):
         shares = [[None, None], [None, None], [None, None]]
         with tf.device(self.servers[0].device_name):
             shares[0][0] = self.int_factory.sample_seeded_uniform(
-                shape=shape,
-                seed=b2a_keys[0][0] + self.b2a_nonce)  # yapf: disable
+                shape=shape, seed=b2a_keys[0][0] + self.b2a_nonce
+            )  # yapf: disable
             shares[0][1] = self.int_factory.sample_seeded_uniform(
-                shape=shape,
-                seed=b2a_keys[0][1] + self.b2a_nonce)  # yapf: disable
+                shape=shape, seed=b2a_keys[0][1] + self.b2a_nonce
+            )  # yapf: disable
             x_on_0 = None
             if b2a_keys[0][2] is not None:
                 share_2 = self.int_factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=b2a_keys[0][2] + self.b2a_nonce)  # yapf: disable
+                    shape=shape, seed=b2a_keys[0][2] + self.b2a_nonce
+                )  # yapf: disable
                 x_on_0 = shares[0][0] ^ shares[0][1] ^ share_2
 
         with tf.device(self.servers[1].device_name):
             shares[1][0] = self.int_factory.sample_seeded_uniform(
-                shape=shape,
-                seed=b2a_keys[1][1] + self.b2a_nonce)  # yapf: disable
+                shape=shape, seed=b2a_keys[1][1] + self.b2a_nonce
+            )  # yapf: disable
             shares[1][1] = self.int_factory.sample_seeded_uniform(
-                shape=shape,
-                seed=b2a_keys[1][2] + self.b2a_nonce)  # yapf: disable
+                shape=shape, seed=b2a_keys[1][2] + self.b2a_nonce
+            )  # yapf: disable
             x_on_1 = None
             if b2a_keys[1][0] is not None:
                 share_0 = self.int_factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=b2a_keys[1][0] + self.b2a_nonce)  # yapf: disable
+                    shape=shape, seed=b2a_keys[1][0] + self.b2a_nonce
+                )  # yapf: disable
                 x_on_1 = share_0 ^ shares[1][0] ^ shares[1][1]
 
         with tf.device(self.servers[2].device_name):
             shares[2][0] = self.int_factory.sample_seeded_uniform(
-                  shape=shape,
-                  seed=b2a_keys[2][2] + self.b2a_nonce)  # yapf: disable
+                shape=shape, seed=b2a_keys[2][2] + self.b2a_nonce
+            )  # yapf: disable
             shares[2][1] = self.int_factory.sample_seeded_uniform(
-                  shape=shape,
-                  seed=b2a_keys[2][0] + self.b2a_nonce)  # yapf: disable
+                shape=shape, seed=b2a_keys[2][0] + self.b2a_nonce
+            )  # yapf: disable
             x_on_2 = None
             if b2a_keys[2][1] is not None:
                 share_1 = self.int_factory.sample_seeded_uniform(
-                    shape=shape,
-                    seed=b2a_keys[2][1] + self.b2a_nonce)  # yapf: disable
+                    shape=shape, seed=b2a_keys[2][1] + self.b2a_nonce
+                )  # yapf: disable
                 x_on_2 = share_1 ^ shares[2][0] ^ shares[2][1]
 
         self.b2a_nonce = self.b2a_nonce + 1
@@ -816,12 +795,9 @@ class ABY3(Protocol):
         """See tf.assign."""
         assert isinstance(variable, ABY3PrivateVariable), type(variable)
         assert isinstance(value, ABY3PrivateTensor), type(value)
-        assert variable.is_scaled == value.is_scaled, (
-            "Scaling must match: {}, {}".format(
-                variable.is_scaled,
-                value.is_scaled,
-            )
-        )
+        assert (
+            variable.is_scaled == value.is_scaled
+        ), "Scaling must match: {}, {}".format(variable.is_scaled, value.is_scaled,)
 
         var_shares = variable.unwrapped
         val_shares = value.unwrapped
@@ -832,14 +808,16 @@ class ABY3(Protocol):
             # computationally-dependent shares are updated in different pace
             # (e.g., share0 is computed from share1, and we need to make sure that
             # share1 is NOT already updated).
-            with tf.control_dependencies([
+            with tf.control_dependencies(
+                [
                     val_shares[0][0].value,
                     val_shares[0][1].value,
                     val_shares[1][0].value,
                     val_shares[1][1].value,
                     val_shares[2][0].value,
                     val_shares[2][1].value,
-            ]):
+                ]
+            ):
 
                 with tf.device(self.servers[0].device_name):
                     op00 = var_shares[0][0].assign_from_same(val_shares[0][0])
@@ -913,8 +891,7 @@ class ABY3(Protocol):
                 return x, y
 
             raise TypeError(
-                ("Don't know how to lift "
-                 "{}, {}").format(type(x), type(y))
+                ("Don't know how to lift " "{}, {}").format(type(x), type(y))
             )
 
         if isinstance(x, tf.Tensor):
@@ -939,8 +916,7 @@ class ABY3(Protocol):
                 return x, y
 
             raise TypeError(
-                ("Don't know how to lift "
-                 "{}, {}").format(type(x), type(y))
+                ("Don't know how to lift " "{}, {}").format(type(x), type(y))
             )
 
         if isinstance(x, ABY3Tensor):
@@ -966,10 +942,7 @@ class ABY3(Protocol):
             if isinstance(y, ABY3Tensor):
                 return x, y
 
-        raise TypeError(
-            ("Don't know how to lift "
-             "{}, {}").format(type(x), type(y))
-        )
+        raise TypeError(("Don't know how to lift " "{}, {}").format(type(x), type(y)))
 
     @memoize
     def add_n(self, tensors):
@@ -1009,15 +982,13 @@ class ABY3(Protocol):
         assert isinstance(x, ABY3Tensor)
 
         if isinstance(y, float):
-            y_inverse = 1. / y
+            y_inverse = 1.0 / y
         elif isinstance(y, int):
-            y_inverse = 1. / float(y)
+            y_inverse = 1.0 / float(y)
         elif isinstance(y, ABY3PublicTensor):
-            y_inverse = 1. / y.decode()
+            y_inverse = 1.0 / y.decode()
         else:
-            raise TypeError(
-                "Don't know how to divide by type {}".format(type(y))
-            )
+            raise TypeError("Don't know how to divide by type {}".format(type(y)))
 
         return self.mul(x, y_inverse)
 
@@ -1163,9 +1134,7 @@ class ABY3(Protocol):
 
     @memoize
     def gather(self, x, indices, axis):
-        raise NotImplementedError(
-            "Unsupported share type: {}".format(x.share_type)
-        )
+        raise NotImplementedError("Unsupported share type: {}".format(x.share_type))
 
     @memoize
     def stack(self, xs, axis):
@@ -1189,9 +1158,7 @@ class ABY3(Protocol):
     ):
         if not isinstance(tensor, ABY3PrivateTensor):
             raise TypeError("Only support iterating ABY3PrivateTensor.")
-        return self.dispatch(
-            "iterate", tensor, batch_size, repeat, shuffle, seed
-        )
+        return self.dispatch("iterate", tensor, batch_size, repeat, shuffle, seed)
 
     def blinded_shuffle(self, tensor: "ABY3PrivateTensor"):
         """
@@ -1224,8 +1191,7 @@ class ABY3(Protocol):
         if func is not None:
             return func(self, *args, **kwargs)  # pylint: disable=not-callable
         raise TypeError(
-            ("Don't know how to {}: {}"
-            ).format(base_name, [type(arg) for arg in args])
+            ("Don't know how to {}: {}").format(base_name, [type(arg) for arg in args])
         )
 
 
@@ -1543,11 +1509,7 @@ class ABY3PublicTensor(ABY3Tensor):
     dispatch_id = "public"
 
     def __init__(
-            self,
-            prot: ABY3,
-            values: List[AbstractTensor],
-            is_scaled: bool,
-            share_type
+        self, prot: ABY3, values: List[AbstractTensor], is_scaled: bool, share_type
     ) -> None:
         assert all(isinstance(v, AbstractTensor) for v in values)
         assert all((v.shape == values[0].shape) for v in values)
@@ -1606,7 +1568,9 @@ class ABY3PublicTensor(ABY3Tensor):
         return self.values
 
     def decode(self) -> Union[np.ndarray, tf.Tensor]:
-        return self.prot._decode(self.values[0], self.is_scaled)  # pylint: disable=protected-access
+        return self.prot._decode(
+            self.values[0], self.is_scaled
+        )  # pylint: disable=protected-access
 
     def to_native(self):
         return self.decode()
@@ -1622,8 +1586,7 @@ class ABY3Constant(ABY3PublicTensor):
         assert all(isinstance(c, AbstractConstant) for c in constants)
         assert all((c.shape == constants[0].shape) for c in constants)
 
-        super(ABY3Constant,
-              self).__init__(prot, constants, is_scaled, share_type)
+        super(ABY3Constant, self).__init__(prot, constants, is_scaled, share_type)
         self.constants = constants
 
     def __repr__(self) -> str:
@@ -1677,8 +1640,7 @@ class ABY3PrivateVariable(ABY3PrivateTensor):
   """
 
     def __init__(self, prot, shares, is_scaled, share_type):
-        super(ABY3PrivateVariable,
-              self).__init__(prot, shares, is_scaled, share_type)
+        super(ABY3PrivateVariable, self).__init__(prot, shares, is_scaled, share_type)
         self.shares = shares
         self.initializer = tf.group(
             *[var.initializer for share in shares for var in share]
@@ -1711,9 +1673,7 @@ def _reveal_private(prot, x):
         with tf.device(prot.servers[2].device_name):
             z_on_2 = prot._reconstruct(shares, prot.servers[2], x.share_type)
 
-    return ABY3PublicTensor(
-        prot, [z_on_0, z_on_1, z_on_2], x.is_scaled, x.share_type
-    )
+    return ABY3PublicTensor(prot, [z_on_0, z_on_1, z_on_2], x.is_scaled, x.share_type)
 
 
 #
@@ -1739,8 +1699,7 @@ def _add_private_public(prot, x, y):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PublicTensor), type(y)
     assert x.is_scaled == y.is_scaled, (
-        "Cannot mix different encodings: "
-        "{} {}"
+        "Cannot mix different encodings: " "{} {}"
     ).format(x.is_scaled, y.is_scaled)
 
     shares = x.unwrapped
@@ -1767,8 +1726,7 @@ def _add_public_private(prot, x, y):
     assert isinstance(x, ABY3PublicTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(y)
     assert x.is_scaled == y.is_scaled, (
-        "Cannot mix different encodings: "
-        "{} {}"
+        "Cannot mix different encodings: " "{} {}"
     ).format(x.is_scaled, y.is_scaled)
 
     x_on_0, _, x_on_2 = x.unwrapped
@@ -1915,9 +1873,7 @@ def _negative_public(prot, x):
         with tf.device(prot.servers[2].device_name):
             x_on_2_neg = -x_on_2
         x_neg = ABY3PublicTensor(
-            prot, [x_on_0_neg, x_on_1_neg, x_on_2_neg],
-            x.is_scaled,
-            x.share_type
+            prot, [x_on_0_neg, x_on_1_neg, x_on_2_neg], x.is_scaled, x.share_type
         )
     return x_neg
 
@@ -1992,22 +1948,28 @@ def _mul_private_private(prot, x, y):
     with tf.name_scope("mul"):
         a0, a1, a2 = prot._gen_zero_sharing(x.shape)
         with tf.device(prot.servers[0].device_name):
-            z0 = x_shares[0][0] * y_shares[0][0] \
-                 + x_shares[0][0] * y_shares[0][1] \
-                 + x_shares[0][1] * y_shares[0][0] \
-                 + a0
+            z0 = (
+                x_shares[0][0] * y_shares[0][0]
+                + x_shares[0][0] * y_shares[0][1]
+                + x_shares[0][1] * y_shares[0][0]
+                + a0
+            )
 
         with tf.device(prot.servers[1].device_name):
-            z1 = x_shares[1][0] * y_shares[1][0] \
-                 + x_shares[1][0] * y_shares[1][1] \
-                 + x_shares[1][1] * y_shares[1][0] \
-                 + a1
+            z1 = (
+                x_shares[1][0] * y_shares[1][0]
+                + x_shares[1][0] * y_shares[1][1]
+                + x_shares[1][1] * y_shares[1][0]
+                + a1
+            )
 
         with tf.device(prot.servers[2].device_name):
-            z2 = x_shares[2][0] * y_shares[2][0] \
-                 + x_shares[2][0] * y_shares[2][1] \
-                 + x_shares[2][1] * y_shares[2][0] \
-                 + a2
+            z2 = (
+                x_shares[2][0] * y_shares[2][0]
+                + x_shares[2][0] * y_shares[2][1]
+                + x_shares[2][1] * y_shares[2][0]
+                + a2
+            )
         # Re-sharing
         with tf.device(prot.servers[0].device_name):
             z[0][0] = z0
@@ -2054,22 +2016,31 @@ def _mul_trunc2_private_private(prot, x, y):
         # Step 2: Compute 3-out-of-3 sharing of (x*y - r)
         a0, a1, a2 = prot._gen_zero_sharing(x.shape)
         with tf.device(prot.servers[0].device_name):
-            z0 = x_shares[0][0] * y_shares[0][0] \
-                 + x_shares[0][0] * y_shares[0][1] \
-                 + x_shares[0][1] * y_shares[0][0] \
-                 + a0 - r.shares[0][0]
+            z0 = (
+                x_shares[0][0] * y_shares[0][0]
+                + x_shares[0][0] * y_shares[0][1]
+                + x_shares[0][1] * y_shares[0][0]
+                + a0
+                - r.shares[0][0]
+            )
 
         with tf.device(prot.servers[1].device_name):
-            z1 = x_shares[1][0] * y_shares[1][0] \
-                 + x_shares[1][0] * y_shares[1][1] \
-                 + x_shares[1][1] * y_shares[1][0] \
-                 + a1 - r.shares[1][0]
+            z1 = (
+                x_shares[1][0] * y_shares[1][0]
+                + x_shares[1][0] * y_shares[1][1]
+                + x_shares[1][1] * y_shares[1][0]
+                + a1
+                - r.shares[1][0]
+            )
 
         with tf.device(prot.servers[2].device_name):
-            z2 = x_shares[2][0] * y_shares[2][0] \
-                 + x_shares[2][0] * y_shares[2][1] \
-                 + x_shares[2][1] * y_shares[2][0] \
-                 + a2 - r.shares[2][0]
+            z2 = (
+                x_shares[2][0] * y_shares[2][0]
+                + x_shares[2][0] * y_shares[2][1]
+                + x_shares[2][1] * y_shares[2][0]
+                + a2
+                - r.shares[2][0]
+            )
 
         # Step 3: Reveal (x*y - r) / 2^d
         # xy_minus_r = z0 + z1 + z2
@@ -2158,22 +2129,28 @@ def _matmul_private_private(prot, x, y):
         a0, a1, a2 = prot._gen_zero_sharing(result_shape)
 
         with tf.device(prot.servers[0].device_name):
-            z0 = x_shares[0][0].matmul(y_shares[0][0]) \
-                 + x_shares[0][0].matmul(y_shares[0][1]) \
-                 + x_shares[0][1].matmul(y_shares[0][0]) \
-                 + a0
+            z0 = (
+                x_shares[0][0].matmul(y_shares[0][0])
+                + x_shares[0][0].matmul(y_shares[0][1])
+                + x_shares[0][1].matmul(y_shares[0][0])
+                + a0
+            )
 
         with tf.device(prot.servers[1].device_name):
-            z1 = x_shares[1][0].matmul(y_shares[1][0]) \
-                 + x_shares[1][0].matmul(y_shares[1][1]) \
-                 + x_shares[1][1].matmul(y_shares[1][0]) \
-                 + a1
+            z1 = (
+                x_shares[1][0].matmul(y_shares[1][0])
+                + x_shares[1][0].matmul(y_shares[1][1])
+                + x_shares[1][1].matmul(y_shares[1][0])
+                + a1
+            )
 
         with tf.device(prot.servers[2].device_name):
-            z2 = x_shares[2][0].matmul(y_shares[2][0]) \
-                 + x_shares[2][0].matmul(y_shares[2][1]) \
-                 + x_shares[2][1].matmul(y_shares[2][0]) \
-                 + a2
+            z2 = (
+                x_shares[2][0].matmul(y_shares[2][0])
+                + x_shares[2][0].matmul(y_shares[2][1])
+                + x_shares[2][1].matmul(y_shares[2][0])
+                + a2
+            )
         # Re-sharing
         with tf.device(prot.servers[0].device_name):
             z[0][0] = z0
@@ -2200,8 +2177,7 @@ def _truncate_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3PrivateTensor:
 
 
 def _truncate_private_noninteractive(
-        prot: ABY3,
-        x: ABY3PrivateTensor,
+    prot: ABY3, x: ABY3PrivateTensor,
 ) -> ABY3PrivateTensor:
     assert isinstance(x, ABY3PrivateTensor), type(x)
 
@@ -2216,8 +2192,7 @@ def _truncate_private_noninteractive(
 
         with tf.device(prot.servers[2].device_name):
             r_on_2 = prot.int_factory.sample_seeded_uniform(
-                shares[2][0].shape,
-                prot.pairwise_keys[2][0] + prot.pairwise_nonces[1]
+                shares[2][0].shape, prot.pairwise_keys[2][0] + prot.pairwise_nonces[1]
             )
 
         with tf.device(prot.servers[0].device_name):
@@ -2225,8 +2200,7 @@ def _truncate_private_noninteractive(
 
         with tf.device(prot.servers[1].device_name):
             r_on_1 = prot.int_factory.sample_seeded_uniform(
-                shares[1][0].shape,
-                prot.pairwise_keys[1][1] + prot.pairwise_nonces[1]
+                shares[1][0].shape, prot.pairwise_keys[1][1] + prot.pairwise_nonces[1]
             )
             t = shares[1][0] + shares[1][1]
             # tmp = 0 - (0 - t).truncate(amount, base)
@@ -2251,7 +2225,7 @@ def _truncate_private_noninteractive(
 
 
 def _truncate_private_interactive(
-        prot: ABY3, a: ABY3PrivateTensor
+    prot: ABY3, a: ABY3PrivateTensor
 ) -> ABY3PrivateTensor:
     """
   See protocol TruncPr (3.1) in
@@ -2306,12 +2280,12 @@ def _truncate_private_interactive(
             r0_on_0 = prot.int_factory.sample_seeded_bounded(
                 shape,
                 prot.pairwise_keys[0][0] + prot.pairwise_nonces[2],
-                mask_bitlength
+                mask_bitlength,
             )
             r1_on_0 = prot.int_factory.sample_seeded_bounded(
                 shape,
                 prot.pairwise_keys[0][1] + prot.pairwise_nonces[0],
-                mask_bitlength
+                mask_bitlength,
             )
             c0_on_0 = b_shares[0][0] + r0_on_0
             c1_on_0 = b_shares[0][1] + r1_on_0
@@ -2329,7 +2303,7 @@ def _truncate_private_interactive(
             r1_on_1 = prot.int_factory.sample_seeded_bounded(
                 shape,
                 prot.pairwise_keys[1][0] + prot.pairwise_nonces[0],
-                mask_bitlength
+                mask_bitlength,
             )
             c1_on_1 = b_shares[1][0] + r1_on_1
             c2_on_1 = b_shares[1][1]
@@ -2349,7 +2323,7 @@ def _truncate_private_interactive(
             r0_on_2 = prot.int_factory.sample_seeded_bounded(
                 shape,
                 prot.pairwise_keys[2][1] + prot.pairwise_nonces[2],
-                mask_bitlength
+                mask_bitlength,
             )
             c0_on_2 = b_shares[2][1] + r0_on_2
             c2_on_2 = b_shares[2][0]
@@ -2371,9 +2345,7 @@ def _truncate_private_interactive(
     return ABY3PrivateTensor(prot, d, a.is_scaled, a.share_type)
 
 
-def _B_xor_private_private(
-    prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor
-):
+def _B_xor_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(y)
     assert x.backing_dtype == y.backing_dtype
@@ -2396,9 +2368,7 @@ def _B_xor_private_private(
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 
 
-def _B_xor_private_public(
-    prot: ABY3, x: ABY3PrivateTensor, y: ABY3PublicTensor
-):
+def _B_xor_private_public(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PublicTensor):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PublicTensor), type(y)
     assert x.backing_dtype == y.backing_dtype
@@ -2421,9 +2391,7 @@ def _B_xor_private_public(
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 
 
-def _B_and_private_private(
-    prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor
-):
+def _B_and_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(y)
     assert x.backing_dtype == y.backing_dtype
@@ -2656,14 +2624,20 @@ def _B_ppa_sklansky_private_private(prot, x, y, n_bits):
 
     with tf.name_scope("B_ppa"):
         keep_masks = [
-            0x5555555555555555, 0x3333333333333333,
-            0x0f0f0f0f0f0f0f0f, 0x00ff00ff00ff00ff,
-            0x0000ffff0000ffff, 0x00000000ffffffff
+            0x5555555555555555,
+            0x3333333333333333,
+            0x0F0F0F0F0F0F0F0F,
+            0x00FF00FF00FF00FF,
+            0x0000FFFF0000FFFF,
+            0x00000000FFFFFFFF,
         ]  # yapf: disable
         copy_masks = [
-            0x5555555555555555, 0x2222222222222222,
-            0x0808080808080808, 0x0080008000800080,
-            0x0000800000008000, 0x0000000080000000
+            0x5555555555555555,
+            0x2222222222222222,
+            0x0808080808080808,
+            0x0080008000800080,
+            0x0000800000008000,
+            0x0000000080000000,
         ]  # yapf: disable
 
         G = x & y
@@ -2676,20 +2650,20 @@ def _B_ppa_sklansky_private_private(prot, x, y, n_bits):
             c_mask = prot.define_constant(
                 np.ones(x.shape, dtype=np.object) * copy_masks[i],
                 apply_scaling=False,
-                share_type=BOOLEAN
+                share_type=BOOLEAN,
             )
             k_mask = prot.define_constant(
                 np.ones(x.shape, dtype=np.object) * keep_masks[i],
                 apply_scaling=False,
-                share_type=BOOLEAN
+                share_type=BOOLEAN,
             )
             # Copy the selected bit to 2^i positions:
             # For example, when i=2, the 4-th bit is copied to the (5, 6, 7, 8)-th bits
             G1 = (G & c_mask) << 1
             P1 = (P & c_mask) << 1
             for j in range(i):
-                G1 = (G1 << (2**j)) ^ G1
-                P1 = (P1 << (2**j)) ^ P1
+                G1 = (G1 << (2 ** j)) ^ G1
+                P1 = (P1 << (2 ** j)) ^ P1
             """
       Two-round impl. using algo. that assume using OR gate is free, but in fact,
       here using OR gate cost one round.
@@ -2748,7 +2722,7 @@ def _B_ppa_kogge_stone_private_private(prot, x, y, n_bits):
     with tf.name_scope("B_ppa"):
         keep_masks = []
         for i in range(ceil(log2(prot.nbits))):
-            keep_masks.append((1 << (2**i)) - 1)
+            keep_masks.append((1 << (2 ** i)) - 1)
         """
     For example, if prot.nbits = 64, then keep_masks is:
     keep_masks = [0x0000000000000001, 0x0000000000000003, 0x000000000000000f,
@@ -2762,11 +2736,11 @@ def _B_ppa_kogge_stone_private_private(prot, x, y, n_bits):
             k_mask = prot.define_constant(
                 np.ones(x.shape, dtype=np.object) * keep_masks[i],
                 apply_scaling=False,
-                share_type=BOOLEAN
+                share_type=BOOLEAN,
             )
 
-            G1 = G << (2**i)
-            P1 = P << (2**i)
+            G1 = G << (2 ** i)
+            P1 = P << (2 ** i)
             """
       One-round impl. by modifying the PPA operator 'o' as:
       (G, P) o (G1, P1) = (G ^ (P*G1), P*P1), where '^' is XOR, '*' is AND
@@ -2801,9 +2775,7 @@ def _A2B_private(prot, x, nbits):
 
     x_shares = x.unwrapped
     zero = prot.define_constant(
-        np.zeros(x.shape, dtype=np.int64),
-        apply_scaling=False,
-        share_type=BOOLEAN
+        np.zeros(x.shape, dtype=np.int64), apply_scaling=False, share_type=BOOLEAN
     )
     zero_on_0, zero_on_1, zero_on_2 = zero.unwrapped
     a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=BOOLEAN)
@@ -2861,7 +2833,7 @@ def _bit_extract_private(prot, x, i):
                 zero = prot.define_constant(
                     np.zeros(x.shape, dtype=np.int64),
                     apply_scaling=False,
-                    share_type=BOOLEAN
+                    share_type=BOOLEAN,
                 )
                 zero_on_0, zero_on_1, zero_on_2 = zero.unwrapped
                 a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=BOOLEAN)
@@ -2894,12 +2866,8 @@ def _bit_extract_private(prot, x, i):
                     operand2[2][0] = x_shares[2][0]
                     operand2[2][1] = zero_on_2
 
-                operand1 = ABY3PrivateTensor(
-                    prot, operand1, x.is_scaled, BOOLEAN
-                )
-                operand2 = ABY3PrivateTensor(
-                    prot, operand2, x.is_scaled, BOOLEAN
-                )
+                operand1 = ABY3PrivateTensor(prot, operand1, x.is_scaled, BOOLEAN)
+                operand2 = ABY3PrivateTensor(prot, operand2, x.is_scaled, BOOLEAN)
 
                 # Step 2: Parallel prefix adder that requires log(i+1) rounds of communication
                 x = prot.B_ppa(operand1, operand2, i + 1)
@@ -2938,11 +2906,11 @@ def _B2A_private(prot, x, nbits):
     x1_on_0, x1_on_1, x1_on_2, x1_shares = prot._gen_b2a_sharing(
         x.shape, prot.b2a_keys_1
     )
-    assert (x1_on_2 is None)
+    assert x1_on_2 is None
     x2_on_0, x2_on_1, x2_on_2, x2_shares = prot._gen_b2a_sharing(
         x.shape, prot.b2a_keys_2
     )
-    assert (x2_on_0 is None)
+    assert x2_on_0 is None
 
     a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=BOOLEAN)
 
@@ -2959,9 +2927,7 @@ def _B2A_private(prot, x, nbits):
         with tf.device(prot.servers[2].device_name):
             neg_x1_neg_x2[2][0] = a2
             neg_x1_neg_x2[2][1] = a0
-        neg_x1_neg_x2 = ABY3PrivateTensor(
-            prot, neg_x1_neg_x2, x.is_scaled, BOOLEAN
-        )
+        neg_x1_neg_x2 = ABY3PrivateTensor(prot, neg_x1_neg_x2, x.is_scaled, BOOLEAN)
 
         # Compute x0 = x + (-x1-x2) using the parallel prefix adder
         x0 = prot.B_ppa(x, neg_x1_neg_x2, nbits)
@@ -3095,7 +3061,7 @@ def _pow_private(prot, x, p):
         result = 1
         tmp = x
         while p > 0:
-            bit = (p & 0x1)
+            bit = p & 0x1
             if bit > 0:
                 result = result * tmp
             p >>= 1
@@ -3109,9 +3075,7 @@ def _polynomial_private(prot, x, coeffs):
     assert x.share_type == ARITHMETIC
 
     with tf.name_scope("polynomial"):
-        result = prot.define_constant(
-            np.zeros(x.shape), apply_scaling=x.is_scaled
-        )
+        result = prot.define_constant(np.zeros(x.shape), apply_scaling=x.is_scaled)
         for i in range(len(coeffs)):
             if i == 0:
                 result = result + coeffs[i]
@@ -3120,13 +3084,11 @@ def _polynomial_private(prot, x, coeffs):
             elif (coeffs[i] - int(coeffs[i])) == 0:
                 # Optimization when coefficient is integer: mulitplication can be performed
                 # locally without interactive truncation
-                tmp = prot.define_constant(
-                    np.array([coeffs[i]]), apply_scaling=False
-                )
-                tmp = tmp * (x**i)
+                tmp = prot.define_constant(np.array([coeffs[i]]), apply_scaling=False)
+                tmp = tmp * (x ** i)
                 result = result + tmp
             else:
-                tmp = coeffs[i] * (x**i)
+                tmp = coeffs[i] * (x ** i)
                 result = result + tmp
     return result
 
@@ -3239,9 +3201,7 @@ def _reduce_sum_public(prot, x, axis=None, keepdims=False):
         with tf.device(prot.servers[2].device_name):
             y_on_2 = x_on_2.reduce_sum(axis, keepdims)
 
-    return ABY3PublicTensor(
-        prot, [y_on_0, y_on_1, y_on_2], x.is_scaled, x.share_type
-    )
+    return ABY3PublicTensor(prot, [y_on_0, y_on_1, y_on_2], x.is_scaled, x.share_type)
 
 
 def _reduce_sum_private(prot, x, axis=None, keepdims=False):
@@ -3281,9 +3241,10 @@ def _concat_public(prot, xs, axis):
             x_on_2_concat = factory.concat(xs_on_2, axis=axis)
 
         return ABY3PublicTensor(
-            prot, [x_on_0_concat, x_on_1_concat, x_on_2_concat],
+            prot,
+            [x_on_0_concat, x_on_1_concat, x_on_2_concat],
             is_scaled,
-            xs[0].share_type
+            xs[0].share_type,
         )
 
 
@@ -3326,8 +3287,9 @@ def _write_private(prot, x, filename_prefix):
     for i in range(3):
         with tf.device(prot.servers[i].device_name):
             for j in range(2):
-                data = tf.data.Dataset.from_tensor_slices(x_shares[i][j].value) \
-                        .map(encode)
+                data = tf.data.Dataset.from_tensor_slices(x_shares[i][j].value).map(
+                    encode
+                )
                 writer = tf.data.experimental.TFRecordWriter(
                     "{}_share{}{}".format(filename_prefix, i, j)
                 )
@@ -3350,10 +3312,14 @@ def _read_(prot, filename_prefix, batch_size, n_columns):
     for i in range(3):
         with tf.device(prot.servers[i].device_name):
             for j in range(2):
-                data = tf.data.TFRecordDataset(["{}_share{}{}".format(filename_prefix, i, j)]) \
-                        .map(decode) \
-                        .repeat() \
-                        .batch(batch_size=batch_size)
+                data = (
+                    tf.data.TFRecordDataset(
+                        ["{}_share{}{}".format(filename_prefix, i, j)]
+                    )
+                    .map(decode)
+                    .repeat()
+                    .batch(batch_size=batch_size)
+                )
                 it = data.make_one_shot_iterator()
                 batch[i][j] = it.get_next()
                 batch[i][j] = tf.reshape(batch[i][j], [batch_size] + row_shape)
@@ -3385,9 +3351,7 @@ def _iterate_private(
             out_shape = shares[idx][0].value.shape.as_list()
             out_shape[0] = batch_size
             for i in range(2):
-                dataset = tf.data.Dataset.from_tensor_slices(
-                    shares[idx][i].value
-                )
+                dataset = tf.data.Dataset.from_tensor_slices(shares[idx][i].value)
 
                 if repeat:
                     dataset = dataset.repeat()
@@ -3398,19 +3362,15 @@ def _iterate_private(
                 dataset = dataset.batch(batch_size)
 
                 # NOTE: initializable_iterator needs to run initializer.
-                iterators[idx][
-                    i] = tf.compat.v1.data.make_initializable_iterator(dataset)
+                iterators[idx][i] = tf.compat.v1.data.make_initializable_iterator(
+                    dataset
+                )
                 batch = iterators[idx][i].get_next()
                 # Wrap the tf.tensor as a dense tensor (no extra encoding is needed)
-                results[idx][i] = prot.int_factory.tensor(
-                    tf.reshape(batch, out_shape)
-                )
+                results[idx][i] = prot.int_factory.tensor(tf.reshape(batch, out_shape))
 
             prot._initializers.append(
-                tf.group(
-                    iterators[idx][0].initializer,
-                    iterators[idx][1].initializer
-                )
+                tf.group(iterators[idx][0].initializer, iterators[idx][1].initializer)
             )
 
     for idx in range(3):
@@ -3418,7 +3378,8 @@ def _iterate_private(
 
     # Synchronize the reading of all 6 dataset iterators
     with tf.control_dependencies(
-        [share.value for result in results for share in result]):
+        [share.value for result in results for share in result]
+    ):
         for i in range(3):
             results[i][0] = results[i][0].identity()
             results[i][1] = results[i][1].identity()
@@ -3426,9 +3387,7 @@ def _iterate_private(
     return ABY3PrivateTensor(prot, results, tensor.is_scaled, tensor.share_type)
 
 
-def _indexer_private(
-        prot: ABY3, tensor: ABY3PrivateTensor, slc
-) -> "ABY3PrivateTensor":
+def _indexer_private(prot: ABY3, tensor: ABY3PrivateTensor, slc) -> "ABY3PrivateTensor":
     shares = tensor.unwrapped
     results = [[None] * 2 for _ in range(3)]
     with tf.name_scope("index"):

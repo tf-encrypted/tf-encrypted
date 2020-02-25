@@ -11,7 +11,7 @@ from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
 from tf_encrypted.protocol.pond import PondPrivateTensor
 from tf_encrypted.protocol.pond import PondMaskedTensor
 
-logger = logging.getLogger('tf_encrypted')
+logger = logging.getLogger("tf_encrypted")
 
 
 class Layer(ABC):
@@ -34,27 +34,27 @@ class Layer(ABC):
     def __init__(self, trainable=True, name=None, **kwargs):
 
         allowed_kwargs = {
-            'input_shape',
-            'batch_input_shape',
-            'batch_size',
-            'weights',
-            'activity_regularizer',
-            'dtype',
+            "input_shape",
+            "batch_input_shape",
+            "batch_size",
+            "weights",
+            "activity_regularizer",
+            "dtype",
         }
         # Validate optional keyword arguments.
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
-                raise TypeError('Keyword argument not understood:', kwarg)
+                raise TypeError("Keyword argument not understood:", kwarg)
 
-        if 'input_shape' in kwargs:
+        if "input_shape" in kwargs:
             logger.warning(
                 "Currently input_shape argument semantics include the "
                 "batch dimension. Please construct you model "
                 "accordingly."
             )
-            self._batch_input_shape = kwargs['input_shape']
-        if 'batch_input_shape' in kwargs:
-            self._batch_input_shape = kwargs['batch_input_shape']
+            self._batch_input_shape = kwargs["input_shape"]
+        if "batch_input_shape" in kwargs:
+            self._batch_input_shape = kwargs["batch_input_shape"]
 
         self.trainable = trainable
         self._init_set_name(name)

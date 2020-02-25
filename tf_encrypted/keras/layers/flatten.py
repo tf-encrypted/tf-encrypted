@@ -32,7 +32,7 @@ class Flatten(Layer):
         input_shape = inputs.shape.as_list()
         rank = len(input_shape)
 
-        if self.data_format == 'channels_first' and rank > 1:
+        if self.data_format == "channels_first" and rank > 1:
             permutation = [0]
             permutation.extend(i for i in range(2, rank))
             permutation.append(1)

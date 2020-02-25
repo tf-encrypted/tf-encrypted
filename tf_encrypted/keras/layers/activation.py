@@ -33,9 +33,7 @@ class Activation(Layer):
         return input_shape
 
     def backward(self, d_y):
-        self._activation_deriv = activations.get_deriv(
-            self.activation_identifier
-        )
+        self._activation_deriv = activations.get_deriv(self.activation_identifier)
         y = self._layer_output
         grad_weights = []
         d_x = self._activation_deriv(y, d_y)

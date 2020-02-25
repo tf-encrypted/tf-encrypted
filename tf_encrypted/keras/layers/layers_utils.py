@@ -73,6 +73,4 @@ def default_args_check(arg, arg_name, tf_layer_name):
         raise UnknownLayerArgError(arg_name, layer_sign, tf_layer_name)
     tf_default_arg = layer_sign[arg_name].default
     if arg != tf_default_arg:
-        raise LayerArgNotImplementedError(
-            arg_name, tf_layer_name, tf_default_arg
-        )
+        raise LayerArgNotImplementedError(arg_name, tf_layer_name, tf_default_arg)

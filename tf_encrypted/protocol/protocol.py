@@ -25,10 +25,10 @@ class Protocol(ABC):
         return self
 
     def __exit__(
-            self,
-            exception_type,
-            exception_value: Optional[Exception],
-            traceback: Optional[TracebackType],
+        self,
+        exception_type,
+        exception_value: Optional[Exception],
+        traceback: Optional[TracebackType],
     ) -> Optional[bool]:
         tfe.set_protocol(self.last_protocol)
 
@@ -44,9 +44,7 @@ def memoize(func: Callable) -> Callable:
   """
 
     @functools.wraps(func)
-    def cache_nodes(
-            self: Protocol, *args: Any, **kwargs: Any
-    ) -> AbstractTensor:
+    def cache_nodes(self: Protocol, *args: Any, **kwargs: Any) -> AbstractTensor:
         args = tuple(tuple(x) if isinstance(x, list) else x for x in args)
         node_key = (func.__name__, args, tuple(sorted(kwargs.items())))
 

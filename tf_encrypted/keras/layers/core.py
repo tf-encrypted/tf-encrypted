@@ -54,7 +54,7 @@ class Reshape(Layer):
       is specified.
     """
         output_shape = list(output_shape)
-        msg = 'total size of new array must be unchanged'
+        msg = "total size of new array must be unchanged"
 
         known, unknown = 1, None
         for index, dim in enumerate(output_shape):
@@ -62,7 +62,7 @@ class Reshape(Layer):
                 if unknown is None:
                     unknown = index
                 else:
-                    raise ValueError('Can only specify one unknown dimension.')
+                    raise ValueError("Can only specify one unknown dimension.")
             else:
                 known *= dim
 
@@ -79,9 +79,7 @@ class Reshape(Layer):
         if None in input_shape[1:]:
             output_shape = [input_shape[0]]
             # input shape (partially) unknown? replace -1's with None's
-            output_shape += tuple(
-                s if s != -1 else None for s in self.target_shape
-            )
+            output_shape += tuple(s if s != -1 else None for s in self.target_shape)
         else:
             output_shape = [input_shape[0]]
             output_shape += self._fix_unknown_dimension(

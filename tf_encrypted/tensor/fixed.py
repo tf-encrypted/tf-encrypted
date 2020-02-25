@@ -15,13 +15,13 @@ class FixedpointConfig:
   """
 
     def __init__(
-            self,
-            scaling_base: int,
-            precision_integral: int,
-            precision_fractional: int,
-            matmul_threshold: int,
-            truncation_gap: int,
-            use_noninteractive_truncation: bool,
+        self,
+        scaling_base: int,
+        precision_integral: int,
+        precision_fractional: int,
+        matmul_threshold: int,
+        truncation_gap: int,
+        use_noninteractive_truncation: bool,
     ) -> None:
         self.scaling_base = scaling_base
         self.precision_integral = precision_integral
@@ -33,12 +33,12 @@ class FixedpointConfig:
     @property
     def bound_single_precision(self) -> int:
         total_precision = self.precision_integral + self.precision_fractional
-        return self.scaling_base**(total_precision)
+        return self.scaling_base ** (total_precision)
 
     @property
     def bound_double_precision(self) -> int:
         total_precision = self.precision_integral + 2 * self.precision_fractional
-        return self.scaling_base**(total_precision)
+        return self.scaling_base ** (total_precision)
 
     @property
     def bound_intermediate_results(self) -> int:
@@ -46,7 +46,7 @@ class FixedpointConfig:
 
     @property
     def scaling_factor(self) -> int:
-        return self.scaling_base**self.precision_fractional
+        return self.scaling_base ** self.precision_fractional
 
 
 fixed100 = FixedpointConfig(
@@ -89,7 +89,7 @@ fixed64_ni = FixedpointConfig(
 
 
 def _validate_fixedpoint_config(
-        config: FixedpointConfig, tensor_factory: AbstractFactory
+    config: FixedpointConfig, tensor_factory: AbstractFactory
 ) -> bool:
     """
   Ensure the given FixedpointConfig is compatible with the current
@@ -99,10 +99,9 @@ def _validate_fixedpoint_config(
 
     check_32bit = ceil(log2(config.bound_single_precision)) > 31
     check_64bit = ceil(log2(config.bound_single_precision)) > 63
-    trunc_over_mod = (
-        ceil(log2(config.bound_double_precision)) + config.truncation_gap >=
-        log2(tensor_factory.modulus)
-    )
+    trunc_over_mod = ceil(
+        log2(config.bound_double_precision)
+    ) + config.truncation_gap >= log2(tensor_factory.modulus)
 
     if check_32bit:
         print("WARNING: Plaintext values won't fit in 32bit tensors")

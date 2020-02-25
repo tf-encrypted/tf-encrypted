@@ -76,15 +76,19 @@ lint: $(BUILD_CONVERTER_README) pythoncheck
 	flake8 tf_encrypted operations
 	pylint tf_encrypted examples operations
 	pylint bin/run bin/process bin/pull_model bin/serve bin/write
-	yapf --diff --recursive --parallel tf_encrypted
 
 fmt: pythoncheck
-	yapf --in-place --recursive --parallel tf_encrypted
+	# yapf --in-place --recursive --parallel tf_encrypted
+	black -t py36 tf_encrypted
+
+fmtcheck: pythoncheck
+	# yapf --diff --recursive --parallel tf_encrypted
+	black -t py36 --check tf_encrypted
 
 typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
 
-.PHONY: lint test typecheck
+.PHONY: lint fmt fmtcheck test typecheck
 
 # ##############################################
 # Documentation

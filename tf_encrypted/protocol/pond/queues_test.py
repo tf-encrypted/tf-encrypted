@@ -7,7 +7,6 @@ import tf_encrypted as tfe
 
 
 class TestFIFO(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -17,17 +16,12 @@ class TestFIFO(unittest.TestCase):
 
         with tfe.protocol.Pond():
 
-            q = tfe.queue.FIFOQueue(
-                capacity=10,
-                shape=shape,
-            )
+            q = tfe.queue.FIFOQueue(capacity=10, shape=shape,)
             assert isinstance(q, tfe.protocol.pond.AdditiveFIFOQueue)
 
             raw = np.full(shape, 5)
 
-            x = tfe.define_private_input(
-                "inputter", lambda: tf.convert_to_tensor(raw)
-            )
+            x = tfe.define_private_input("inputter", lambda: tf.convert_to_tensor(raw))
             assert isinstance(x, tfe.protocol.pond.PondPrivateTensor)
 
             enqueue_op = q.enqueue(x)
@@ -44,5 +38,5 @@ class TestFIFO(unittest.TestCase):
             np.testing.assert_array_equal(res, raw)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

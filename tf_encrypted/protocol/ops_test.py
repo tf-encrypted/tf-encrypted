@@ -9,7 +9,6 @@ import tf_encrypted as tfe
 
 
 class TestBatchToSpaceND(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
         tf.set_random_seed(4224)
@@ -86,9 +85,7 @@ class TestBatchToSpaceND(unittest.TestCase):
 
         with tfe.protocol.Pond() as prot:
             b = prot.define_public_variable(t)
-            out = prot.batch_to_space_nd(
-                b, block_shape=block_shape, crops=crops
-            )
+            out = prot.batch_to_space_nd(b, block_shape=block_shape, crops=crops)
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 final = sess.run(out)
@@ -103,9 +100,7 @@ class TestBatchToSpaceND(unittest.TestCase):
 
         with tfe.protocol.Pond() as prot:
             b = prot.define_private_variable(t)
-            out = prot.batch_to_space_nd(
-                b, block_shape=block_shape, crops=crops
-            )
+            out = prot.batch_to_space_nd(b, block_shape=block_shape, crops=crops)
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 final = sess.run(out.reveal())
@@ -120,9 +115,7 @@ class TestBatchToSpaceND(unittest.TestCase):
 
         with tfe.protocol.Pond() as prot:
             b = prot.mask(prot.define_private_variable(t))
-            out = prot.batch_to_space_nd(
-                b, block_shape=block_shape, crops=crops
-            )
+            out = prot.batch_to_space_nd(b, block_shape=block_shape, crops=crops)
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 final = sess.run(out.reveal())
@@ -131,7 +124,6 @@ class TestBatchToSpaceND(unittest.TestCase):
 
 
 class TestSpaceToBatchND(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
         tf.set_random_seed(4224)
@@ -197,16 +189,12 @@ class TestSpaceToBatchND(unittest.TestCase):
     @staticmethod
     def _generic_public_test(t, block_shape, paddings):
         with tf.Session() as sess:
-            out = tf.space_to_batch_nd(
-                t, block_shape=block_shape, paddings=paddings
-            )
+            out = tf.space_to_batch_nd(t, block_shape=block_shape, paddings=paddings)
             actual = sess.run(out)
 
         with tfe.protocol.Pond() as prot:
             b = prot.define_public_variable(t)
-            out = prot.space_to_batch_nd(
-                b, block_shape=block_shape, paddings=paddings
-            )
+            out = prot.space_to_batch_nd(b, block_shape=block_shape, paddings=paddings)
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 final = sess.run(out)
@@ -216,16 +204,12 @@ class TestSpaceToBatchND(unittest.TestCase):
     @staticmethod
     def _generic_private_test(t, block_shape, paddings):
         with tf.Session() as sess:
-            out = tf.space_to_batch_nd(
-                t, block_shape=block_shape, paddings=paddings
-            )
+            out = tf.space_to_batch_nd(t, block_shape=block_shape, paddings=paddings)
             actual = sess.run(out)
 
         with tfe.protocol.Pond() as prot:
             b = prot.define_private_variable(t)
-            out = prot.space_to_batch_nd(
-                b, block_shape=block_shape, paddings=paddings
-            )
+            out = prot.space_to_batch_nd(b, block_shape=block_shape, paddings=paddings)
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 final = sess.run(out.reveal())
@@ -235,16 +219,12 @@ class TestSpaceToBatchND(unittest.TestCase):
     @staticmethod
     def _generic_masked_test(t, block_shape, paddings):
         with tf.Session() as sess:
-            out = tf.space_to_batch_nd(
-                t, block_shape=block_shape, paddings=paddings
-            )
+            out = tf.space_to_batch_nd(t, block_shape=block_shape, paddings=paddings)
             actual = sess.run(out)
 
         with tfe.protocol.Pond() as prot:
             b = prot.mask(prot.define_private_variable(t))
-            out = prot.space_to_batch_nd(
-                b, block_shape=block_shape, paddings=paddings
-            )
+            out = prot.space_to_batch_nd(b, block_shape=block_shape, paddings=paddings)
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 final = sess.run(out.reveal())
@@ -253,7 +233,6 @@ class TestSpaceToBatchND(unittest.TestCase):
 
 
 class Testconcat(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -303,7 +282,6 @@ class Testconcat(unittest.TestCase):
 
 
 class TestConv2D(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -346,10 +324,7 @@ class TestConv2D(unittest.TestCase):
             filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
             conv_out_tf = tf.nn.conv2d(
-                x_nhwc,
-                filters_tf,
-                strides=[1, strides, strides, 1],
-                padding="SAME",
+                x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME",
             )
 
             sess.run(tf.global_variables_initializer())
@@ -379,9 +354,7 @@ class TestConv2D(unittest.TestCase):
 
             bias = np.random.uniform(size=output_shape[1:])
 
-            conv_layer.initialize(
-                initial_weights=filter_values, initial_bias=bias
-            )
+            conv_layer.initialize(initial_weights=filter_values, initial_bias=bias)
             conv_out_pond = conv_layer.forward(conv_input)
 
             with tfe.Session() as sess:
@@ -403,10 +376,7 @@ class TestConv2D(unittest.TestCase):
             filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
             conv_out_tf = tf.nn.conv2d(
-                x_nhwc,
-                filters_tf,
-                strides=[1, strides, strides, 1],
-                padding="SAME",
+                x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME",
             )
 
             sess.run(tf.global_variables_initializer())
@@ -420,7 +390,6 @@ class TestConv2D(unittest.TestCase):
 
 
 class TestMatMul(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -456,9 +425,7 @@ class TestMatMul(unittest.TestCase):
             sess.run(tf.global_variables_initializer())
             out_tensorflow = sess.run(out)
 
-        np.testing.assert_array_almost_equal(
-            out_pond, out_tensorflow, decimal=2
-        )
+        np.testing.assert_array_almost_equal(out_pond, out_tensorflow, decimal=2)
 
     def test_big_middle_matmul(self) -> None:
         with tfe.protocol.Pond() as prot:
@@ -491,11 +458,10 @@ class TestMatMul(unittest.TestCase):
             sess.run(tf.global_variables_initializer())
             out_tensorflow = sess.run(out)
 
-        np.testing.assert_allclose(out_pond, out_tensorflow, atol=.1)
+        np.testing.assert_allclose(out_pond, out_tensorflow, atol=0.1)
 
 
 class TestNegative(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -532,7 +498,6 @@ class TestNegative(unittest.TestCase):
 
 
 class TestSqrt(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -569,7 +534,6 @@ class TestSqrt(unittest.TestCase):
 
 
 class TestPad(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -595,12 +559,11 @@ class TestPad(unittest.TestCase):
             # TODO this is a bit weird
             out_tensorflow = tfe.convert.convert_test.run_pad(x_in)
 
-            np.testing.assert_allclose(out_tfe, out_tensorflow, atol=.01)
+            np.testing.assert_allclose(out_tfe, out_tensorflow, atol=0.01)
 
 
 @pytest.mark.slow
 class TestReduceMax(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -622,7 +585,7 @@ class TestReduceMax(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 for _ in range(2):
-                    actual = sess.run(out_tfe.reveal(), tag='test_1d')
+                    actual = sess.run(out_tfe.reveal(), tag="test_1d")
 
         np.testing.assert_array_equal(actual, expected)
 
@@ -641,7 +604,7 @@ class TestReduceMax(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 for _ in range(2):
-                    actual = sess.run(out_tfe.reveal(), tag='test_2d_axis0')
+                    actual = sess.run(out_tfe.reveal(), tag="test_2d_axis0")
 
         np.testing.assert_array_equal(actual, expected)
 
@@ -660,7 +623,7 @@ class TestReduceMax(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 for _ in range(2):
-                    actual = sess.run(out_tfe.reveal(), tag='test_2d_axis1')
+                    actual = sess.run(out_tfe.reveal(), tag="test_2d_axis1")
 
         np.testing.assert_array_equal(actual, expected)
 
@@ -679,13 +642,12 @@ class TestReduceMax(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 for _ in range(2):
-                    actual = sess.run(out_tfe.reveal(), tag='test_3d_axis0')
+                    actual = sess.run(out_tfe.reveal(), tag="test_3d_axis0")
 
         np.testing.assert_array_equal(actual, expected)
 
 
 class TestReduceSum(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -725,7 +687,7 @@ class TestReduceSum(unittest.TestCase):
 
     def test_reduce_sum_huge_vector(self):
 
-        t = [1] * 2**13
+        t = [1] * 2 ** 13
         with tf.Session() as sess:
             out = tf.reduce_sum(t)
             actual = sess.run(out)
@@ -742,7 +704,6 @@ class TestReduceSum(unittest.TestCase):
 
 
 class TestStack(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -773,7 +734,6 @@ class TestStack(unittest.TestCase):
 
 
 class TestStridedSlice(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -812,5 +772,5 @@ class TestStridedSlice(unittest.TestCase):
         np.testing.assert_array_equal(final, actual)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

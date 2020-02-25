@@ -61,9 +61,7 @@ def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
     # add global names according to new protocol
     if prot is not None:
         methods = inspect.getmembers(prot, predicate=inspect.ismethod)
-        public_methods = [
-            method for method in methods if not method[0].startswith('_')
-        ]
+        public_methods = [method for method in methods if not method[0].startswith("_")]
         for name, func in public_methods:
             globals()[name] = func
 
@@ -74,6 +72,7 @@ def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
 def set_config(config: Config) -> None:
     # pylint: disable=import-outside-toplevel
     from .config import set_config as set_global_config
+
     # pylint: enable=import-outside-toplevel
 
     set_global_config(config)

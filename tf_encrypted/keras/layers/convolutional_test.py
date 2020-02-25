@@ -12,7 +12,6 @@ np.random.seed(42)
 
 
 class TestConv2d(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -23,7 +22,7 @@ class TestConv2d(unittest.TestCase):
         self._core_conv2d(kernel_size=2, use_bias=False)
 
     def test_conv2d_same_padding(self):
-        self._core_conv2d(kernel_size=2, padding='same')
+        self._core_conv2d(kernel_size=2, padding="same")
 
     def test_conv2d_kernelsize_tuple(self):
         self._core_conv2d(kernel_size=(2, 2))
@@ -33,10 +32,10 @@ class TestConv2d(unittest.TestCase):
         input_shape = [2, 6, 6, filters_in]  # channels last
         filters = 5
 
-        if isinstance(layer_kwargs['kernel_size'], int):
-            kernel_size_in = (layer_kwargs['kernel_size'],) * 2
+        if isinstance(layer_kwargs["kernel_size"], int):
+            kernel_size_in = (layer_kwargs["kernel_size"],) * 2
         else:
-            kernel_size_in = layer_kwargs['kernel_size']
+            kernel_size_in = layer_kwargs["kernel_size"]
 
         kernel = np.random.normal(kernel_size_in + (filters_in, filters))
         initializer = tf.keras.initializers.Constant(kernel)
@@ -48,18 +47,13 @@ class TestConv2d(unittest.TestCase):
         }
 
         kwargs = {**base_kwargs, **layer_kwargs}
-        agreement_test(
-            tfe.keras.layers.Conv2D, kwargs=kwargs, input_shape=input_shape
-        )
+        agreement_test(tfe.keras.layers.Conv2D, kwargs=kwargs, input_shape=input_shape)
         layer_test(
-            tfe.keras.layers.Conv2D,
-            kwargs=kwargs,
-            batch_input_shape=input_shape
+            tfe.keras.layers.Conv2D, kwargs=kwargs, batch_input_shape=input_shape
         )
 
 
 class TestDepthwiseConv2d(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -70,7 +64,7 @@ class TestDepthwiseConv2d(unittest.TestCase):
         self._core_depthwise_conv2d(kernel_size=2, use_bias=False)
 
     def test_depthwise_conv2d_same_padding(self):
-        self._core_depthwise_conv2d(kernel_size=2, padding='same')
+        self._core_depthwise_conv2d(kernel_size=2, padding="same")
 
     def test_depthwise_conv2d_kernelsize_tuple(self):
         self._core_depthwise_conv2d(kernel_size=(2, 2))
@@ -87,8 +81,7 @@ class TestDepthwiseConv2d(unittest.TestCase):
 
             model.add(
                 tf.keras.layers.DepthwiseConv2D(
-                    kernel_size=(2, 2),
-                    batch_input_shape=input_shape,
+                    kernel_size=(2, 2), batch_input_shape=input_shape,
                 )
             )
 
@@ -116,12 +109,12 @@ class TestDepthwiseConv2d(unittest.TestCase):
         filters_in = 3
         input_shape = [2, 6, 6, filters_in]  # channels last
 
-        if isinstance(layer_kwargs['kernel_size'], int):
-            kernel_size_in = (layer_kwargs['kernel_size'],) * 2
+        if isinstance(layer_kwargs["kernel_size"], int):
+            kernel_size_in = (layer_kwargs["kernel_size"],) * 2
         else:
-            kernel_size_in = layer_kwargs['kernel_size']
+            kernel_size_in = layer_kwargs["kernel_size"]
 
-        filters_out = layer_kwargs.get('depth_multiplier', 1)
+        filters_out = layer_kwargs.get("depth_multiplier", 1)
 
         kernel = np.random.normal(kernel_size_in + (filters_in, filters_out))
 
@@ -137,14 +130,14 @@ class TestDepthwiseConv2d(unittest.TestCase):
             tfe.keras.layers.DepthwiseConv2D,
             kwargs=kwargs,
             input_shape=input_shape,
-            atol=1e-2
+            atol=1e-2,
         )
         layer_test(
             tfe.keras.layers.DepthwiseConv2D,
             kwargs=kwargs,
-            batch_input_shape=input_shape
+            batch_input_shape=input_shape,
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

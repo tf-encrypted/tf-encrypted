@@ -13,7 +13,7 @@ from tf_encrypted.keras.layers.layers_utils import default_args_check
 from tf_encrypted.keras import backend as KE
 from tf_encrypted.protocol.pond import PondPrivateTensor
 
-logger = logging.getLogger('tf_encrypted')
+logger = logging.getLogger("tf_encrypted")
 
 
 class Conv2D(Layer):
@@ -89,19 +89,19 @@ class Conv2D(Layer):
         filters,
         kernel_size,
         strides=(1, 1),
-        padding='valid',
+        padding="valid",
         data_format=None,
         dilation_rate=(1, 1),
         activation=None,
         use_bias=True,
-        kernel_initializer='glorot_uniform',
-        bias_initializer='zeros',
+        kernel_initializer="glorot_uniform",
+        bias_initializer="zeros",
         kernel_regularizer=None,
         bias_regularizer=None,
         activity_regularizer=None,
         kernel_constraint=None,
         bias_constraint=None,
-        **kwargs
+        **kwargs,
     ):
 
         super(Conv2D, self).__init__(**kwargs)
@@ -109,7 +109,7 @@ class Conv2D(Layer):
         self.rank = 2
         self.filters = filters
         self.kernel_size = conv_utils.normalize_tuple(
-            kernel_size, self.rank, 'kernel_size'
+            kernel_size, self.rank, "kernel_size"
         )
         if self.kernel_size[0] != self.kernel_size[1]:
             raise NotImplementedError(
@@ -117,7 +117,7 @@ class Conv2D(Layer):
                 "stride along the height and the width."
                 "You gave: {}".format(self.kernel_size)
             )
-        self.strides = conv_utils.normalize_tuple(strides, self.rank, 'strides')
+        self.strides = conv_utils.normalize_tuple(strides, self.rank, "strides")
         self.padding = conv_utils.normalize_padding(padding).upper()
         self.data_format = conv_utils.normalize_data_format(data_format)
         if activation is not None:
@@ -135,21 +135,19 @@ class Conv2D(Layer):
         default_args_check(dilation_rate, "dilation_rate", "Conv2D")
         default_args_check(kernel_regularizer, "kernel_regularizer", "Conv2D")
         default_args_check(bias_regularizer, "bias_regularizer", "Conv2D")
-        default_args_check(
-            activity_regularizer, "activity_regularizer", "Conv2D"
-        )
+        default_args_check(activity_regularizer, "activity_regularizer", "Conv2D")
         default_args_check(kernel_constraint, "kernel_constraint", "Conv2D")
         default_args_check(bias_constraint, "bias_constraint", "Conv2D")
 
     def build(self, input_shape):
-        if self.data_format == 'channels_first':
+        if self.data_format == "channels_first":
             channel_axis = 1
         else:
             channel_axis = -1
         if input_shape[channel_axis] is None:
             raise ValueError(
-                'The channel dimension of the inputs '
-                'should be defined. Found `None`.'
+                "The channel dimension of the inputs "
+                "should be defined. Found `None`."
             )
         input_dim = int(input_shape[channel_axis])
         self.kernel_shape = self.kernel_size + (input_dim, self.filters)
@@ -170,7 +168,7 @@ class Conv2D(Layer):
 
     def call(self, inputs):
 
-        if self.data_format != 'channels_first':
+        if self.data_format != "channels_first":
             inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
         outputs = tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
@@ -178,7 +176,7 @@ class Conv2D(Layer):
         if self.use_bias:
             outputs = outputs + self.bias
 
-        if self.data_format != 'channels_first':
+        if self.data_format != "channels_first":
             outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
 
         if self.activation is not None:
@@ -189,7 +187,7 @@ class Conv2D(Layer):
         """Compute output_shape for the layer."""
         h_filter, w_filter, _, n_filters = self.kernel_shape
 
-        if self.data_format == 'channels_first':
+        if self.data_format == "channels_first":
             n_x, _, h_x, w_x = input_shape.as_list()
         else:
             n_x, h_x, w_x, _ = input_shape.as_list()
@@ -198,12 +196,8 @@ class Conv2D(Layer):
             h_out = int(np.ceil(float(h_x) / float(self.strides[0])))
             w_out = int(np.ceil(float(w_x) / float(self.strides[0])))
         if self.padding == "VALID":
-            h_out = int(
-                np.ceil(float(h_x - h_filter + 1) / float(self.strides[0]))
-            )
-            w_out = int(
-                np.ceil(float(w_x - w_filter + 1) / float(self.strides[0]))
-            )
+            h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides[0])))
+            w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))
 
         return [n_x, n_filters, h_out, w_out]
 
@@ -276,19 +270,19 @@ class DepthwiseConv2D(Conv2D):
         self,
         kernel_size,
         strides=(1, 1),
-        padding='valid',
+        padding="valid",
         depth_multiplier=1,
         data_format=None,
         activation=None,
         use_bias=True,
-        depthwise_initializer='glorot_uniform',
-        bias_initializer='zeros',
+        depthwise_initializer="glorot_uniform",
+        bias_initializer="zeros",
         depthwise_regularizer=None,
         bias_regularizer=None,
         activity_regularizer=None,
         depthwise_constraint=None,
         bias_constraint=None,
-        **kwargs
+        **kwargs,
     ):
 
         super(DepthwiseConv2D, self).__init__(
@@ -302,12 +296,12 @@ class DepthwiseConv2D(Conv2D):
             bias_regularizer=bias_regularizer,
             activity_regularizer=activity_regularizer,
             bias_constraint=bias_constraint,
-            **kwargs
+            **kwargs,
         )
 
         self.rank = 2
         self.kernel_size = conv_utils.normalize_tuple(
-            kernel_size, self.rank, 'kernel_size'
+            kernel_size, self.rank, "kernel_size"
         )
         if self.kernel_size[0] != self.kernel_size[1]:
             raise NotImplementedError(
@@ -315,7 +309,7 @@ class DepthwiseConv2D(Conv2D):
                 "stride along the height and the width."
                 "You gave: {}".format(self.kernel_size)
             )
-        self.strides = conv_utils.normalize_tuple(strides, self.rank, 'strides')
+        self.strides = conv_utils.normalize_tuple(strides, self.rank, "strides")
         self.padding = conv_utils.normalize_padding(padding).upper()
         self.depth_multiplier = depth_multiplier
         self.data_format = conv_utils.normalize_data_format(data_format)
@@ -332,45 +326,33 @@ class DepthwiseConv2D(Conv2D):
 
         # Not implemented arguments
         default_args_check(
-            depthwise_regularizer,
-            "depthwise_regularizer",
-            "DepthwiseConv2D",
+            depthwise_regularizer, "depthwise_regularizer", "DepthwiseConv2D",
         )
         default_args_check(
-            bias_regularizer,
-            "bias_regularizer",
-            "DepthwiseConv2D",
+            bias_regularizer, "bias_regularizer", "DepthwiseConv2D",
         )
         default_args_check(
-            activity_regularizer,
-            "activity_regularizer",
-            "DepthwiseConv2D",
+            activity_regularizer, "activity_regularizer", "DepthwiseConv2D",
         )
         default_args_check(
-            depthwise_constraint,
-            "depthwise_constraint",
-            "DepthwiseConv2D",
+            depthwise_constraint, "depthwise_constraint", "DepthwiseConv2D",
         )
         default_args_check(
-            bias_constraint,
-            "bias_constraint",
-            "DepthwiseConv2D",
+            bias_constraint, "bias_constraint", "DepthwiseConv2D",
         )
 
     def build(self, input_shape):
-        if self.data_format == 'channels_first':
+        if self.data_format == "channels_first":
             channel_axis = 1
         else:
             channel_axis = -1
         if input_shape[channel_axis] is None:
             raise ValueError(
-                'The channel dimension of the inputs '
-                'should be defined. Found `None`.'
+                "The channel dimension of the inputs "
+                "should be defined. Found `None`."
             )
         self.input_dim = int(input_shape[channel_axis])
-        self.kernel_shape = self.kernel_size + (
-            self.input_dim, self.depth_multiplier
-        )
+        self.kernel_shape = self.kernel_size + (self.input_dim, self.depth_multiplier)
 
         kernel = self.depthwise_initializer(self.kernel_shape)
         kernel = self.rearrange_kernel(kernel)
@@ -403,8 +385,8 @@ class DepthwiseConv2D(Conv2D):
                     self.kernel_size[0],
                     self.kernel_size[1],
                     self.input_dim * self.depth_multiplier,
-                    self.input_dim
-                )
+                    self.input_dim,
+                ),
             )
 
             if self.depth_multiplier > 1:
@@ -412,8 +394,8 @@ class DepthwiseConv2D(Conv2D):
                 kernel = tf.transpose(kernel, [0, 1, 3, 2])
                 kernel = tf.reshape(
                     kernel,
-                    shape=self.kernel_size +
-                    (self.input_dim * self.depth_multiplier, 1)
+                    shape=self.kernel_size
+                    + (self.input_dim * self.depth_multiplier, 1),
                 )
 
             kernel = tf.multiply(kernel, mask)
@@ -424,8 +406,8 @@ class DepthwiseConv2D(Conv2D):
                 kernel = np.transpose(kernel, [0, 1, 3, 2])
                 kernel = np.reshape(
                     kernel,
-                    newshape=self.kernel_size +
-                    (self.input_dim * self.depth_multiplier, 1)
+                    newshape=self.kernel_size
+                    + (self.input_dim * self.depth_multiplier, 1),
                 )
 
             kernel = np.multiply(kernel, mask)
@@ -437,8 +419,8 @@ class DepthwiseConv2D(Conv2D):
                 kernel = tfe.transpose(kernel, [0, 1, 3, 2])
                 kernel = tfe.reshape(
                     kernel,
-                    shape=self.kernel_size +
-                    (self.input_dim * self.depth_multiplier, 1)
+                    shape=self.kernel_size
+                    + (self.input_dim * self.depth_multiplier, 1),
                 )
 
             kernel = tfe.mul(kernel, mask)
@@ -447,7 +429,7 @@ class DepthwiseConv2D(Conv2D):
 
     def call(self, inputs):
 
-        if self.data_format != 'channels_first':
+        if self.data_format != "channels_first":
             inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
         outputs = tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
@@ -455,7 +437,7 @@ class DepthwiseConv2D(Conv2D):
         if self.use_bias:
             outputs = outputs + self.bias
 
-        if self.data_format != 'channels_first':
+        if self.data_format != "channels_first":
             outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
 
         if self.activation is not None:
@@ -466,7 +448,7 @@ class DepthwiseConv2D(Conv2D):
         """Compute output_shape for the layer."""
         h_filter, w_filter, _, n_filters = self.kernel_shape
 
-        if self.data_format == 'channels_first':
+        if self.data_format == "channels_first":
             n_x, _, h_x, w_x = input_shape.as_list()
         else:
             n_x, h_x, w_x, _ = input_shape.as_list()
@@ -475,12 +457,8 @@ class DepthwiseConv2D(Conv2D):
             h_out = int(np.ceil(float(h_x) / float(self.strides[0])))
             w_out = int(np.ceil(float(w_x) / float(self.strides[0])))
         if self.padding == "VALID":
-            h_out = int(
-                np.ceil(float(h_x - h_filter + 1) / float(self.strides[0]))
-            )
-            w_out = int(
-                np.ceil(float(w_x - w_filter + 1) / float(self.strides[0]))
-            )
+            h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides[0])))
+            w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))
 
         return [n_x, n_filters, h_out, w_out]
 
@@ -491,12 +469,12 @@ class DepthwiseConv2D(Conv2D):
                 self.kernel_size[0],
                 self.kernel_size[1],
                 in_channels,
-                in_channels * self.depth_multiplier
+                in_channels * self.depth_multiplier,
             )
         )
         for d in range(self.depth_multiplier):
             for i in range(in_channels):
-                mask[:, :, i, i + (d * in_channels)] = 1.
+                mask[:, :, i, i + (d * in_channels)] = 1.0
         return np.transpose(mask, [0, 1, 3, 2])
 
     def set_weights(self, weights, sess=None):

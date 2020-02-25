@@ -39,9 +39,9 @@ class Sequential(Layer):
     """
         if not isinstance(layer, Layer):
             raise TypeError(
-                'The added layer must be '
-                'an instance of class Layer. '
-                'Found: ' + str(layer)
+                "The added layer must be "
+                "an instance of class Layer. "
+                "Found: " + str(layer)
             )
         self.built = False
         set_inputs = False
@@ -55,7 +55,7 @@ class Sequential(Layer):
             batch_shape = layer._batch_input_shape  # pylint: disable=protected-access
 
             # Instantiate an input layer.
-            x = Input(batch_shape=batch_shape, name=layer.name + '_input')
+            x = Input(batch_shape=batch_shape, name=layer.name + "_input")
             # This will build the current layer
             # and create the node connecting the current layer
             # to the input layer we just created.
@@ -64,10 +64,10 @@ class Sequential(Layer):
             # If an input layer (placeholder) is available.
             if isinstance(y, (tuple, list)):
                 raise ValueError(
-                    'All layers in a Sequential model '
-                    'should have a single output tensor. '
-                    'For multi-output layers, '
-                    'use the functional API.'
+                    "All layers in a Sequential model "
+                    "should have a single output tensor. "
+                    "For multi-output layers, "
+                    "use the functional API."
                 )
             self.outputs = [y]
 
@@ -77,10 +77,10 @@ class Sequential(Layer):
             output_tensor = layer(self.outputs[0])
             if isinstance(output_tensor, list):
                 raise TypeError(
-                    'All layers in a Sequential model '
-                    'should have a single output tensor. '
-                    'For multi-output layers, '
-                    'use the functional API.'
+                    "All layers in a Sequential model "
+                    "should have a single output tensor. "
+                    "For multi-output layers, "
+                    "use the functional API."
                 )
             self.outputs = [output_tensor]
         if set_inputs:
@@ -89,10 +89,7 @@ class Sequential(Layer):
             self._layers.append(layer)
 
     def call(
-        self,
-        inputs,
-        training=None,
-        mask=None,
+        self, inputs, training=None, mask=None,
     ):  # pylint: disable=arguments-differ
         if training is not None:
             raise NotImplementedError()
@@ -171,7 +168,7 @@ class Sequential(Layer):
         sess.run(tf.global_variables_initializer())
 
         for e in range(epochs):
-            print('Epoch {}/{}'.format(e + 1, epochs))
+            print("Epoch {}/{}".format(e + 1, epochs))
             batch_size = x.shape.as_list()[0]
             progbar = utils.Progbar(batch_size * steps_per_epoch)
             for _ in range(steps_per_epoch):
@@ -230,7 +227,7 @@ def model_from_config(config):
 
     tfe_model = tfe.keras.Sequential([])
 
-    for k_l_c in config['layers']:
+    for k_l_c in config["layers"]:
         tfe_layer = _instantiate_tfe_layer(k_l_c)
         tfe_model.add(tfe_layer)
 
@@ -269,7 +266,7 @@ def _instantiate_tfe_layer(keras_layer_config):
   """
 
     # Identify tf.keras layer type, and grab the corresponding tfe.keras layer
-    keras_layer_type = keras_layer_config['class_name']
+    keras_layer_type = keras_layer_config["class_name"]
     try:
         tfe_layer_cls = getattr(tfe.keras.layers, keras_layer_type)
     except AttributeError:
@@ -282,6 +279,6 @@ def _instantiate_tfe_layer(keras_layer_config):
         )
 
     # get layer config to instiate the tfe layer with the right parameters
-    config = keras_layer_config['config']
+    config = keras_layer_config["config"]
 
     return tfe_layer_cls(**config)

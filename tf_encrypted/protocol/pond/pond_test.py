@@ -14,7 +14,6 @@ from .pond import _gather_masked, _indexer_masked, _negative_masked
 
 
 class TestPond(unittest.TestCase):
-
     def test_encode(self):
 
         with tf.Graph().as_default():
@@ -25,21 +24,17 @@ class TestPond(unittest.TestCase):
 
             with tfe.Session() as sess:
                 actual = sess.run(x)
-                np.testing.assert_array_almost_equal(
-                    actual, expected, decimal=3
-                )
+                np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
 
 class TestTruncate(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
     def test_interactive_truncate(self):
 
         prot = tfe.protocol.Pond(
-            tensor_factory=int100factory,
-            fixedpoint_config=fixed100,
+            tensor_factory=int100factory, fixedpoint_config=fixed100,
         )
 
         # TODO[Morten] remove this condition
@@ -61,8 +56,7 @@ class TestTruncate(unittest.TestCase):
     def test_noninteractive_truncate(self):
 
         prot = tfe.protocol.Pond(
-            tensor_factory=int100factory,
-            fixedpoint_config=fixed100_ni,
+            tensor_factory=int100factory, fixedpoint_config=fixed100_ni,
         )
 
         with tfe.Session() as sess:
@@ -81,7 +75,6 @@ class TestTruncate(unittest.TestCase):
 
 
 class TestPondPublicEqual(unittest.TestCase):
-
     def test_public_compare(self):
 
         expected = np.array([1, 0, 1, 0])
@@ -103,11 +96,10 @@ class TestPondPublicEqual(unittest.TestCase):
 
 
 class TestPondPublicDivision(unittest.TestCase):
-
     def test_public_division(self):
 
-        x_raw = np.array([10., 20., 30., 40.])
-        y_raw = np.array([1., 2., 3., 4.])
+        x_raw = np.array([10.0, 20.0, 30.0, 40.0])
+        y_raw = np.array([1.0, 2.0, 3.0, 4.0])
         expected = x_raw / y_raw
 
         with tfe.protocol.Pond() as prot:
@@ -124,8 +116,8 @@ class TestPondPublicDivision(unittest.TestCase):
 
     def test_public_reciprocal(self):
 
-        x_raw = np.array([10., 20., 30., 40.])
-        expected = 1. / x_raw
+        x_raw = np.array([10.0, 20.0, 30.0, 40.0])
+        expected = 1.0 / x_raw
 
         with tfe.protocol.Pond() as prot:
 
@@ -140,7 +132,6 @@ class TestPondPublicDivision(unittest.TestCase):
 
 
 class TestShare(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -167,7 +158,6 @@ class TestShare(unittest.TestCase):
 
 
 class TestMasked(unittest.TestCase):
-
     def _setup(self, dtype):
         prot = tfe.protocol.Pond()
         plain_tensor = dtype.tensor(np.array([[1, 2, 3], [4, 5, 6]]))
@@ -231,7 +221,6 @@ class TestMasked(unittest.TestCase):
 
 
 class TestIdentity(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -253,7 +242,6 @@ class TestIdentity(unittest.TestCase):
 
 
 class TestPondAssign(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -290,7 +278,7 @@ class TestPondAssign(unittest.TestCase):
                 sess.run(op)
 
             result = sess.run(a.reveal())
-            assert result == np.array([101.])
+            assert result == np.array([101.0])
 
     def test_public_assign(self):
 
@@ -306,5 +294,5 @@ class TestPondAssign(unittest.TestCase):
                 np.testing.assert_array_equal(result, np.ones([2, 2]))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

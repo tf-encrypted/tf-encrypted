@@ -11,7 +11,7 @@ from tensorflow.core.protobuf import rewriter_config_pb2
 
 from .player import Player
 
-logger = logging.getLogger('tf_encrypted')
+logger = logging.getLogger("tf_encrypted")
 
 
 def tensorflow_supports_int64():
@@ -39,7 +39,7 @@ def _get_docker_cpu_quota():
     cfs_quota = Path("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
 
     if cfs_period.exists() and cfs_quota.exists():
-        with cfs_period.open('rb') as p, cfs_quota.open('rb') as q:
+        with cfs_period.open("rb") as p, cfs_quota.open("rb") as q:
             p_int, q_int = int(p.read()), int(q.read())
 
             # get the cores allocated by dividing the quota
@@ -69,9 +69,7 @@ class Config(ABC):
 
     @abstractmethod
     def get_tf_config(
-        self,
-        log_device_placement=False,
-        disable_optimizations=False,
+        self, log_device_placement=False, disable_optimizations=False,
     ):
         """
     get_tf_config(log_device_placement=False) -> tf.ConfigProto, or str
@@ -114,10 +112,7 @@ class LocalConfig(Config):
   """
 
     def __init__(
-            self,
-            player_names=None,
-            job_name='localhost',
-            auto_add_unknown_players=True,
+        self, player_names=None, job_name="localhost", auto_add_unknown_players=True,
     ) -> None:
         self._job_name = job_name
         self._auto_add_unknown_players = auto_add_unknown_players
@@ -129,7 +124,7 @@ class LocalConfig(Config):
 
     def add_player(self, name):
         index = len(self._players)
-        dv_str = '/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'
+        dv_str = "/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}"
         player = Player(
             name=name,
             index=index,
@@ -150,11 +145,7 @@ class LocalConfig(Config):
 
         # we're passed a name
         player = next(
-            (
-                player for player in self._players
-                if player.name == name_or_player
-            ),
-            None
+            (player for player in self._players if player.name == name_or_player), None
         )
         if player is None and self._auto_add_unknown_players:
             player = self.add_player(name_or_player)
@@ -162,22 +153,20 @@ class LocalConfig(Config):
 
     def get_players(self, names):
         if isinstance(names, str):
-            names = [name.strip() for name in names.split(',')]
+            names = [name.strip() for name in names.split(",")]
         assert isinstance(names, list)
         return [player for player in self._players if player.name in names]
 
     def get_tf_config(
-        self,
-        log_device_placement=False,
-        disable_optimizations=False,
+        self, log_device_placement=False, disable_optimizations=False,
     ):
         logger.info("Players: %s", [player.name for player in self.players])
-        target = ''
+        target = ""
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
             allow_soft_placement=False,
             device_count={"CPU": len(self._players)},
-            graph_options=self.build_graph_options(disable_optimizations)
+            graph_options=self.build_graph_options(disable_optimizations),
         )
         return (target, config)
 
@@ -192,9 +181,7 @@ class RemoteConfig(Config):
   """
 
     def __init__(
-        self,
-        hostmap,
-        job_name='tfe',
+        self, hostmap, job_name="tfe",
     ):
         assert isinstance(hostmap, dict)
         if not isinstance(hostmap, OrderedDict):
@@ -210,11 +197,13 @@ class RemoteConfig(Config):
                 Player(
                     name=name,
                     index=index,
-                    device_name='/job:{job_name}/replica:0/task:{task_id}/cpu:0'
-                    .format(job_name=job_name, task_id=index),
-                    host=host
-                )
-            ) for index, (name, host) in enumerate(hostmap.items())
+                    device_name="/job:{job_name}/replica:0/task:{task_id}/cpu:0".format(
+                        job_name=job_name, task_id=index
+                    ),
+                    host=host,
+                ),
+            )
+            for index, (name, host) in enumerate(hostmap.items())
         )
 
     @staticmethod
@@ -224,7 +213,7 @@ class RemoteConfig(Config):
 
     :param str filename: Name of file to load from.
     """
-        with open(filename, 'r') as f:
+        with open(filename, "r") as f:
             hostmap = json.load(f, object_pairs_hook=OrderedDict)
         return RemoteConfig(hostmap)
 
@@ -234,7 +223,7 @@ class RemoteConfig(Config):
 
     :param str filename: Name of file to save to.
     """
-        with open(filename, 'w') as f:
+        with open(filename, "w") as f:
             json.dump(self.hostmap, f)
 
     @property
@@ -262,11 +251,9 @@ class RemoteConfig(Config):
 
     def get_players(self, names):
         if isinstance(names, str):
-            names = [name.strip() for name in names.split(',')]
+            names = [name.strip() for name in names.split(",")]
         assert isinstance(names, list)
-        return [
-            player for name, player in self._players.items() if name in names
-        ]
+        return [player for name, player in self._players.items() if name in names]
 
     def server(self, name, start=True):
         """
@@ -280,33 +267,25 @@ class RemoteConfig(Config):
         cluster = tf.train.ClusterSpec({self._job_name: self.hosts})
         logger.debug("Creating server for '%s' using %s", name, cluster)
         server = tf.train.Server(
-            cluster,
-            job_name=self._job_name,
-            task_index=player.index,
-            start=start
+            cluster, job_name=self._job_name, task_index=player.index, start=start
         )
         logger.info(
-            (
-                "Created server for '%s' as device '%s'; "
-                "own session target is '%s'"
-            ),
+            ("Created server for '%s' as device '%s'; " "own session target is '%s'"),
             name,
             player.device_name,
-            server.target
+            server.target,
         )
         return server
 
-    def get_tf_config(
-        self, log_device_placement=False, disable_optimizations=False
-    ):
+    def get_tf_config(self, log_device_placement=False, disable_optimizations=False):
         # always use the first host as master; change config to match
-        target = 'grpc://{}'.format(self.hosts[0])
+        target = "grpc://{}".format(self.hosts[0])
         cpu_cores = _get_docker_cpu_quota()
         if cpu_cores is None:
             config = tf.ConfigProto(
                 log_device_placement=log_device_placement,
                 allow_soft_placement=False,
-                graph_options=self.build_graph_options(disable_optimizations)
+                graph_options=self.build_graph_options(disable_optimizations),
             )
         else:
             config = tf.ConfigProto(
@@ -314,7 +293,7 @@ class RemoteConfig(Config):
                 allow_soft_placement=False,
                 inter_op_parallelism_threads=cpu_cores,
                 intra_op_parallelism_threads=cpu_cores,
-                graph_options=self.build_graph_options(disable_optimizations)
+                graph_options=self.build_graph_options(disable_optimizations),
             )
         return (target, config)
 

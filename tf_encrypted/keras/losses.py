@@ -2,7 +2,7 @@
 import tf_encrypted as tfe
 
 
-class Loss():
+class Loss:
     """Loss base class."""
 
     def __init__(self, loss_fn, **kwargs):
@@ -42,8 +42,7 @@ class BinaryCrossentropy(Loss):
     def __init__(self, from_logits=False):
         self.from_logits = from_logits
         if from_logits:
-            super(BinaryCrossentropy,
-                  self).__init__(binary_crossentropy_from_logits)
+            super(BinaryCrossentropy, self).__init__(binary_crossentropy_from_logits)
         else:
             super(BinaryCrossentropy, self).__init__(binary_crossentropy)
 

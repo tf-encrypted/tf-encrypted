@@ -8,7 +8,6 @@ from tf_encrypted.protocol.securenn.odd_tensor import oddint64_factory
 
 
 class TestOddImplicitTensor(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -53,5 +52,5 @@ class TestOddImplicitTensor(unittest.TestCase):
         np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

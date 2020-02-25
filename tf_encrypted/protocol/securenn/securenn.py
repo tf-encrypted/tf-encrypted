@@ -40,20 +40,22 @@ class SecureNN(Pond):
   """
 
     def __init__(
-            self,
-            server_0: Optional[Player] = None,
-            server_1: Optional[Player] = None,
-            server_2: Optional[Player] = None,
-            tensor_factory: Optional[AbstractFactory] = None,
-            prime_factory: Optional[AbstractFactory] = None,
-            odd_factory: Optional[AbstractFactory] = None,
-            **kwargs
+        self,
+        server_0: Optional[Player] = None,
+        server_1: Optional[Player] = None,
+        server_2: Optional[Player] = None,
+        tensor_factory: Optional[AbstractFactory] = None,
+        prime_factory: Optional[AbstractFactory] = None,
+        odd_factory: Optional[AbstractFactory] = None,
+        **kwargs,
     ) -> None:
-        server_0 = server_0 or get_config().get_player('server0')
-        server_1 = server_1 or get_config().get_player('server1')
-        server_2 = server_2 \
-            or get_config().get_player('server2') \
-            or get_config().get_player('crypto-producer')
+        server_0 = server_0 or get_config().get_player("server0")
+        server_1 = server_1 or get_config().get_player("server1")
+        server_2 = (
+            server_2
+            or get_config().get_player("server2")
+            or get_config().get_player("crypto-producer")
+        )
 
         assert server_0 is not None
         assert server_1 is not None
@@ -64,7 +66,7 @@ class SecureNN(Pond):
             server_1=server_1,
             triple_source=server_2,
             tensor_factory=tensor_factory,
-            **kwargs
+            **kwargs,
         )
         self.server_2 = server_2
 
@@ -77,9 +79,7 @@ class SecureNN(Pond):
         if prime_factory is None:
             prime = 107
             assert prime > math.ceil(math.log2(self.tensor_factory.modulus))
-            prime_factory = native_factory(
-                self.tensor_factory.native_type, prime
-            )
+            prime_factory = native_factory(self.tensor_factory.native_type, prime)
 
         self.prime_factory = prime_factory
         self.odd_factory = odd_factory
@@ -96,11 +96,11 @@ class SecureNN(Pond):
     :param PondTensor x: Input tensor.
     """
         assert not x.is_scaled, "Input is not supposed to be scaled"
-        with tf.name_scope('bitwise_not'):
+        with tf.name_scope("bitwise_not"):
             return self.sub(1, x)
 
     @memoize
-    def bitwise_and(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
+    def bitwise_and(self, x: "PondTensor", y: "PondTensor") -> "PondTensor":
         """
     bitwise_and(x, y) -> PondTensor
 
@@ -111,11 +111,11 @@ class SecureNN(Pond):
     """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
-        with tf.name_scope('bitwise_and'):
+        with tf.name_scope("bitwise_and"):
             return x * y
 
     @memoize
-    def bitwise_or(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
+    def bitwise_or(self, x: "PondTensor", y: "PondTensor") -> "PondTensor":
         """
     bitwise_or(x, y) -> PondTensor
 
@@ -126,11 +126,11 @@ class SecureNN(Pond):
     """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
-        with tf.name_scope('bitwise_or'):
+        with tf.name_scope("bitwise_or"):
             return x + y - self.bitwise_and(x, y)
 
     @memoize
-    def bitwise_xor(self, x: 'PondTensor', y: 'PondTensor') -> 'PondTensor':
+    def bitwise_xor(self, x: "PondTensor", y: "PondTensor") -> "PondTensor":
         """
     bitwise_xor(x, y) -> PondTensor
 
@@ -141,11 +141,11 @@ class SecureNN(Pond):
     """
         assert not x.is_scaled, "Input is not supposed to be scaled"
         assert not y.is_scaled, "Input is not supposed to be scaled"
-        with tf.name_scope('bitwise_xor'):
+        with tf.name_scope("bitwise_xor"):
             return x + y - self.bitwise_and(x, y) * 2
 
     @memoize
-    def msb(self, x: 'PondTensor') -> 'PondTensor':
+    def msb(self, x: "PondTensor") -> "PondTensor":
         """
     msb(x) -> PondTensor
 
@@ -153,7 +153,7 @@ class SecureNN(Pond):
 
     :param PondTensor x: The tensor to take the most significant bit of
     """
-        with tf.name_scope('msb'):
+        with tf.name_scope("msb"):
             # when the modulus is odd msb reduces to lsb via x -> 2*x
             x = self.cast_backing(x, self.odd_factory)
             return self.lsb(x + x)
@@ -167,14 +167,12 @@ class SecureNN(Pond):
 
     :param PondTensor x: The tensor to take the least significant bit of.
     """
-        return self.dispatch('lsb', x, container=_thismodule)
+        return self.dispatch("lsb", x, container=_thismodule)
 
     @memoize
     def bits(
-            self,
-            x: PondPublicTensor,
-            factory: Optional[AbstractFactory] = None
-    ) -> 'PondPublicTensor':
+        self, x: PondPublicTensor, factory: Optional[AbstractFactory] = None
+    ) -> "PondPublicTensor":
         """
     bits(x, factory) -> PondPublicTensor
 
@@ -183,7 +181,7 @@ class SecureNN(Pond):
     :param PondPublicTensor x: A fixed-point tensor to extract into a bitwise
       representation.
     """
-        return self.dispatch('bits', x, container=_thismodule, factory=factory)
+        return self.dispatch("bits", x, container=_thismodule, factory=factory)
 
     @memoize
     def is_negative(self, x: PondTensor) -> PondTensor:
@@ -197,7 +195,7 @@ class SecureNN(Pond):
 
     :param PondTensor x: The tensor to check.
     """
-        with tf.name_scope('is_negative'):
+        with tf.name_scope("is_negative"):
             # NOTE MSB is 1 iff xi < 0
             return self.msb(x)
 
@@ -217,7 +215,7 @@ class SecureNN(Pond):
 
     :param PondTensor x: The tensor to check.
     """
-        with tf.name_scope('non_negative'):
+        with tf.name_scope("non_negative"):
             return self.bitwise_not(self.msb(x))
 
     @memoize
@@ -235,7 +233,7 @@ class SecureNN(Pond):
     :param PondTensor x: The tensor to check.
     :param PondTensor y: The tensor to check against.
     """
-        with tf.name_scope('less'):
+        with tf.name_scope("less"):
             return self.is_negative(x - y)
 
     @memoize
@@ -253,7 +251,7 @@ class SecureNN(Pond):
     :param PondTensor x: The tensor to check.
     :param PondTensor y: The tensor to check against.
     """
-        with tf.name_scope('less_equal'):
+        with tf.name_scope("less_equal"):
             return self.bitwise_not(self.greater(x, y))
 
     @memoize
@@ -271,7 +269,7 @@ class SecureNN(Pond):
     :param PondTensor x: The tensor to check.
     :param PondTensor y: The tensor to check against.
     """
-        with tf.name_scope('greater'):
+        with tf.name_scope("greater"):
             return self.is_negative(y - x)
 
     @memoize
@@ -289,7 +287,7 @@ class SecureNN(Pond):
     :param PondTensor x: The tensor to check.
     :param PondTensor y: The tensor to check against.
     """
-        with tf.name_scope('greater_equal'):
+        with tf.name_scope("greater_equal"):
             return self.bitwise_not(self.less(x, y))
 
     @memoize
@@ -329,7 +327,7 @@ class SecureNN(Pond):
         # assert x.is_scaled == y.is_scaled
         # assert not choice_bit.is_scaled
 
-        with tf.name_scope('select'):
+        with tf.name_scope("select"):
             return (y - x) * choice_bit + x
 
     @memoize
@@ -348,9 +346,7 @@ class SecureNN(Pond):
     :param AbstractFactory dtype: An optional tensor factory.
       Defaults to dtype of `x`.
     """
-        return self.dispatch(
-            'equal_zero', x, container=_thismodule, dtype=dtype
-        )
+        return self.dispatch("equal_zero", x, container=_thismodule, dtype=dtype)
 
     @memoize
     def relu(self, x, **kwargs):
@@ -376,9 +372,9 @@ class SecureNN(Pond):
 
         total_size = np.prod(shape)
 
-        max_size = kwargs.get('max_size', 2500000)
+        max_size = kwargs.get("max_size", 2500000)
         if not max_size or total_size <= max_size:
-            return actual_relu(x, 'relu')
+            return actual_relu(x, "relu")
 
         # tensor is too big and might raise OOM; split it along the last
         # dimension and process subtensors individually, using sizes as
@@ -394,11 +390,11 @@ class SecureNN(Pond):
         split_vector += [leftover] if leftover > 0 else []
         assert np.sum(split_vector) == last_dimension
 
-        with tf.name_scope('relu'):
+        with tf.name_scope("relu"):
             xs = self.split(x, split_vector, axis=-1)
 
             for i, _ in enumerate(xs):
-                xs[i] = actual_relu(xs[i], 'subrelu')
+                xs[i] = actual_relu(xs[i], "subrelu")
 
             return self.concat(xs, axis=-1)
 
@@ -414,7 +410,7 @@ class SecureNN(Pond):
       convolution.
     :param str padding: Which type of padding to use ("SAME" or "VALID").
     """
-        node_key = ('maxpool2d', x, tuple(pool_size), tuple(strides), padding)
+        node_key = ("maxpool2d", x, tuple(pool_size), tuple(strides), padding)
         z = nodes.get(node_key, None)
 
         if z is not None:
@@ -452,7 +448,7 @@ class SecureNN(Pond):
     :param PondTensor x: Input tensor.
     :param PondTensor y: Input tensor.
     """
-        with tf.name_scope('maximum'):
+        with tf.name_scope("maximum"):
             indices_of_maximum = self.greater(x, y)
             return self.select(indices_of_maximum, y, x)
 
@@ -475,7 +471,7 @@ class SecureNN(Pond):
     :returns: A new tensor with the specified axis reduced to the max value in
       that axis.
     """
-        with tf.name_scope('reduce_max'):
+        with tf.name_scope("reduce_max"):
 
             def build_comparison_tree(ts):
                 if len(ts) == 1:
@@ -509,7 +505,7 @@ class SecureNN(Pond):
     :returns: A new tensor with the indices of the max values along specified
       axis.
     """
-        with tf.name_scope('argmax'):
+        with tf.name_scope("argmax"):
 
             def build_comparison_tree(tensors, indices):
                 assert len(tensors) == len(indices)
@@ -538,11 +534,10 @@ class SecureNN(Pond):
 
             tensors = self.split(x, int(x.shape[axis]), axis=axis)
             indices = [
-                self.define_constant(np.array([i])) for i,
-                _ in enumerate(tensors)
+                self.define_constant(np.array([i])) for i, _ in enumerate(tensors)
             ]
 
-            with tf.name_scope('comparison-tree'):
+            with tf.name_scope("comparison-tree"):
                 maximum, argmax = build_comparison_tree(tensors, indices)
 
             maximum = self.squeeze(maximum, axis=(axis,))
@@ -551,9 +546,7 @@ class SecureNN(Pond):
 
     @memoize
     def cast_backing(self, x, backing_dtype):
-        return self.dispatch(
-            "cast_backing", x, backing_dtype, container=_thismodule
-        )
+        return self.dispatch("cast_backing", x, backing_dtype, container=_thismodule)
 
 
 def _bits_public(prot, x: PondPublicTensor, factory=None) -> PondPublicTensor:
@@ -561,7 +554,7 @@ def _bits_public(prot, x: PondPublicTensor, factory=None) -> PondPublicTensor:
 
     factory = factory or prot.tensor_factory
 
-    with tf.name_scope('bits'):
+    with tf.name_scope("bits"):
 
         x_on_0, x_on_1 = x.unwrapped
 
@@ -600,9 +593,9 @@ def _lsb_private(prot, x: PondPrivateTensor):
     # needed for security because of `r` masking
     assert x.backing_dtype.native_type == odd_dtype.native_type
 
-    with tf.name_scope('lsb'):
+    with tf.name_scope("lsb"):
 
-        with tf.name_scope('blind'):
+        with tf.name_scope("blind"):
 
             # ask server2 to generate r mask and its bits
             with tf.device(prot.server_2.device_name):
@@ -623,20 +616,18 @@ def _lsb_private(prot, x: PondPrivateTensor):
             c = prot.cast_backing(c, out_dtype)
             c.is_scaled = False
 
-        with tf.name_scope('compare'):
+        with tf.name_scope("compare"):
 
             # ask either server0 and server1 to generate beta (distributing load)
             server = random.choice([prot.server_0, prot.server_1])
             with tf.device(server.device_name):
                 beta_raw = prime_dtype.sample_bits(x.shape)
-                beta = PondPublicTensor(
-                    prot, beta_raw, beta_raw, is_scaled=False
-                )
+                beta = PondPublicTensor(prot, beta_raw, beta_raw, is_scaled=False)
 
             greater_xor_beta = _private_compare(prot, rbits, c, beta)
             clsb = prot.lsb(c)
 
-        with tf.name_scope('unblind'):
+        with tf.name_scope("unblind"):
             gamma = prot.bitwise_xor(
                 greater_xor_beta, prot.cast_backing(beta, out_dtype)
             )
@@ -652,10 +643,7 @@ def _lsb_masked(prot, x: PondMaskedTensor):
 
 
 def _private_compare(
-    prot,
-    x_bits: PondPrivateTensor,
-    r: PondPublicTensor,
-    beta: PondPublicTensor,
+    prot, x_bits: PondPrivateTensor, r: PondPublicTensor, beta: PondPublicTensor,
 ):
     """Logic for private comparison."""
     # TODO[Morten] no need to check this (should be free)
@@ -679,9 +667,9 @@ def _private_compare(
     assert beta.backing_dtype == prime_dtype
     assert not beta.is_scaled
 
-    with tf.name_scope('private_compare'):
+    with tf.name_scope("private_compare"):
 
-        with tf.name_scope('bit_comparisons'):
+        with tf.name_scope("bit_comparisons"):
 
             # use either r or t = r + 1 according to beta
             s = prot.select(prot.cast_backing(beta, out_dtype), r, r + 1)
@@ -700,7 +688,7 @@ def _private_compare(
 
             assert c_except_edge_case.backing_dtype == prime_dtype
 
-        with tf.name_scope('edge_cases'):
+        with tf.name_scope("edge_cases"):
 
             # adjust for edge cases, i.e. where beta is 1 and s is zero
             # (meaning r was -1)
@@ -712,9 +700,7 @@ def _private_compare(
             # tensor for edge cases: one zero and the rest ones
             c_edge_vals = [0] + [1] * (bit_length - 1)
             c_const = tf.constant(
-                c_edge_vals,
-                dtype=prime_dtype.native_type,
-                shape=(1, bit_length)
+                c_edge_vals, dtype=prime_dtype.native_type, shape=(1, bit_length)
             )
             c_edge_case_raw = prime_dtype.tensor(c_const)
             c_edge_case = prot._share_and_wrap(c_edge_case_raw, False)
@@ -722,7 +708,7 @@ def _private_compare(
             c = prot.select(edge_cases, c_except_edge_case, c_edge_case)
             assert c.backing_dtype == prime_dtype
 
-        with tf.name_scope('zero_search'):
+        with tf.name_scope("zero_search"):
 
             # generate multiplicative mask to hide non-zero values
             with tf.device(prot.server_0.device_name):
@@ -753,7 +739,7 @@ def _private_compare(
 def _equal_zero_public(prot, x: PondPublicTensor, dtype=None):
     """Check if a public tensor's values equal zero."""
 
-    with tf.name_scope('equal_zero'):
+    with tf.name_scope("equal_zero"):
 
         x_on_0, x_on_1 = x.unwrapped
 
@@ -772,11 +758,11 @@ def _equal_zero_public(prot, x: PondPublicTensor, dtype=None):
 
 
 def _im2col(
-        prot: Pond,
-        x: PondTensor,
-        pool_size: Tuple[int, int],
-        strides: Tuple[int, int],
-        padding: str,
+    prot: Pond,
+    x: PondTensor,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: str,
 ) -> Tuple[AbstractTensor, AbstractTensor]:
     """Compute im2col on a tensor."""
 
@@ -805,14 +791,14 @@ def _im2col(
 
 
 def _maxpool2d_public(
-        prot: Pond,
-        x: PondPublicTensor,
-        pool_size: Tuple[int, int],
-        strides: Tuple[int, int],
-        padding: str,
+    prot: Pond,
+    x: PondPublicTensor,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: str,
 ) -> PondPublicTensor:
     """Logic for performing maxpool2d on public input."""
-    with tf.name_scope('maxpool2d'):
+    with tf.name_scope("maxpool2d"):
         y_on_0, y_on_1, reshape_to = _im2col(prot, x, pool_size, strides, padding)
         im2col = PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
         i2c_max = im2col.reduce_max(axis=0)
@@ -821,14 +807,14 @@ def _maxpool2d_public(
 
 
 def _maxpool2d_private(
-        prot: Pond,
-        x: PondPrivateTensor,
-        pool_size: Tuple[int, int],
-        strides: Tuple[int, int],
-        padding: str,
+    prot: Pond,
+    x: PondPrivateTensor,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: str,
 ) -> PondPrivateTensor:
     """Logic for performing maxpool2d on private input."""
-    with tf.name_scope('maxpool2d'):
+    with tf.name_scope("maxpool2d"):
         y_on_0, y_on_1, reshape_to = _im2col(prot, x, pool_size, strides, padding)
         im2col = PondPrivateTensor(prot, y_on_0, y_on_1, x.is_scaled)
         i2c_max = im2col.reduce_max(axis=0)
@@ -837,13 +823,13 @@ def _maxpool2d_private(
 
 
 def _maxpool2d_masked(
-        prot: Pond,
-        x: PondMaskedTensor,
-        pool_size: Tuple[int, int],
-        strides: Tuple[int, int],
-        padding: str,
+    prot: Pond,
+    x: PondMaskedTensor,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: str,
 ) -> PondPrivateTensor:
-    with tf.name_scope('maxpool2d'):
+    with tf.name_scope("maxpool2d"):
         return prot.maxpool2d(x.unwrapped, pool_size, strides, padding)
 
 
