@@ -37,7 +37,8 @@ def _try_load_secure_random_module():
         (
             "Falling back to insecure randomness since the required custom op "
             "could not be found for the installed version of TensorFlow. Fix "
-            "this by compiling custom ops. Missing file was '%s', error was \"%s\"."
+            "this by compiling custom ops. "
+            "Missing file was '%s', error was \"%s\"."
         ),
         so_file,
         ex
@@ -46,8 +47,8 @@ def _try_load_secure_random_module():
   except Exception as ex:  # pylint: disable=broad-except
     logger.error(
         (
-            "Falling back to insecure randomness since an error occurred loading "
-            "the required custom op: \"%s\"."
+            "Falling back to insecure randomness since an error occurred "
+            "loading the required custom op: \"%s\"."
         ),
         ex
     )

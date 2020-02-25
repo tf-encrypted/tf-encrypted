@@ -720,8 +720,8 @@ class Pond(Protocol):
         raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
       # pylint: disable=unidiomatic-typecheck
-      assert type(rationals) == type(integers
-                                    ), (type(rationals), type(integers))
+      assert type(rationals) == type(integers), \
+          (type(rationals), type(integers))
       # pylint: enable=unidiomatic-typecheck
       return integers
 
