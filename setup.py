@@ -12,7 +12,7 @@ setuptools.setup(
         'operations/secure_random/*.so',
         'convert/*.yaml',
     ]},
-    python_requires=">=3.5",
+    python_requires=">=3.6",
     install_requires=[
         "tensorflow >=1.12.0, <2",
         "numpy >=1.14.0",
