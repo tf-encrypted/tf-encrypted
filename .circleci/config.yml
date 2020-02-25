@@ -69,11 +69,19 @@ jobs:
       - *bootstrap
       - *save-cache
       - run:
-          name: run tests and build the docs
+          name: Run linting
           command: |
             . venv/bin/activate
             make lint
+      - run:
+          name: Run tests
+          command: |
+            . venv/bin/activate
             make test
+      - run:
+          name: Build the docs
+          command: |
+            . venv/bin/activate
             make docs
       # - run:
       #     name: build docker container
@@ -89,11 +97,19 @@ jobs:
       - *bootstrap-mac
       - *save-cache-mac
       - run:
-          name: run tests and build the docs
+          name: Run linting
           command: |
             . venv/bin/activate
             make lint
+      - run:
+          name: Run tests
+          command: |
+            . venv/bin/activate
             make test
+      - run:
+          name: Build the docs
+          command: |
+            . venv/bin/activate
             make docs
 
   deploy:
