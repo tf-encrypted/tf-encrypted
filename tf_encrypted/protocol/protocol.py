@@ -1,10 +1,13 @@
 """Base abstraction for a Protocol."""
-from abc import ABC
 import functools
-from typing import Optional, Any, Callable
+from abc import ABC
 from types import TracebackType
+from typing import Any
+from typing import Callable
+from typing import Optional
 
 import tf_encrypted as tfe
+
 from ..tensor.factory import AbstractTensor
 
 nodes = dict()

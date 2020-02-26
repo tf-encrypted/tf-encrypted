@@ -1,6 +1,6 @@
 """Pooling Layer implementation."""
-from abc import abstractmethod
 import math
+from abc import abstractmethod
 
 from tensorflow.python.keras.utils import conv_utils
 

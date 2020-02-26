@@ -1,9 +1,11 @@
 # pylint: disable=arguments-differ
 """Reshape Layer object."""
 from typing import List
+
 import numpy as np
 
 import tf_encrypted as tfe
+
 from .core import Layer
 
 

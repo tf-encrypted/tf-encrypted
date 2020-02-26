@@ -5,8 +5,8 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras import Sequential
+from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.layers import Dense
 
 np.random.seed(42)

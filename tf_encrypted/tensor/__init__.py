@@ -3,15 +3,13 @@ from __future__ import absolute_import
 
 import tensorflow as tf
 
-from .native import native_factory
+from .fixed import _validate_fixedpoint_config
+from .fixed import fixed64
+from .fixed import fixed64_ni
+from .fixed import fixed100
+from .fixed import fixed100_ni
 from .int100 import int100factory
-from .fixed import (
-    _validate_fixedpoint_config,
-    fixed100,
-    fixed100_ni,
-    fixed64,
-    fixed64_ni,
-)
+from .native import native_factory
 
 int32factory = native_factory(tf.int32)
 int64factory = native_factory(tf.int64)

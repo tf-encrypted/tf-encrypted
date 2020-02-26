@@ -4,29 +4,36 @@
 Implementation of the ABY3 framework.
 """
 from __future__ import absolute_import
-from typing import Tuple, List, Union, Optional, Callable
+
 import abc
 import sys
-from math import log2, ceil
 from functools import reduce
+from math import ceil
+from math import log2
+from typing import Callable
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import numpy as np
 import tensorflow as tf
 
-from ...tensor.factory import (
-    AbstractFactory,
-    AbstractTensor,
-    AbstractConstant,
-)
-from ...tensor.helpers import inverse
-from ...tensor.fixed import FixedpointConfig, _validate_fixedpoint_config
-from ...tensor import fixed64, fixed64_ni
-from ...tensor.native import native_factory
-from ...tensor.boolfactory import bool_factory
-from ...player import Player
 from ...config import get_config
-from ..protocol import Protocol, memoize
 from ...operations import secure_random as crypto
+from ...player import Player
+from ...tensor import fixed64
+from ...tensor import fixed64_ni
+from ...tensor.boolfactory import bool_factory
+from ...tensor.factory import AbstractConstant
+from ...tensor.factory import AbstractFactory
+from ...tensor.factory import AbstractTensor
+from ...tensor.fixed import FixedpointConfig
+from ...tensor.fixed import _validate_fixedpoint_config
+from ...tensor.helpers import inverse
+from ...tensor.native import native_factory
+from ..protocol import Protocol
+from ..protocol import memoize
 
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 TF_NATIVE_TYPES = [tf.bool, tf.int8, tf.int16, tf.int32, tf.int64]

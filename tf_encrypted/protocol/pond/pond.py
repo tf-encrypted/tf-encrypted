@@ -5,34 +5,48 @@ Pond is a vectorized two-party secret sharing protocol similar to SPDZ with a
 generalized implementation of Beaver triples that are produced by a third-party
 helper."""
 from __future__ import absolute_import
-from typing import Tuple, List, Union, Optional, Any, NewType, Callable
+
 import abc
-from functools import reduce, wraps
 import logging
-from math import log2, ceil
 import random
 import sys
+from functools import reduce
+from functools import wraps
+from math import ceil
+from math import log2
+from typing import Any
+from typing import Callable
+from typing import List
+from typing import NewType
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import numpy as np
 import tensorflow as tf
 
-from ...utils import wrap_in_variables
-from ...tensor.helpers import inverse
-from ...tensor.factory import (
-    AbstractFactory,
-    AbstractTensor,
-    AbstractConstant,
-    AbstractVariable,
-    AbstractPlaceholder,
-)
-from ...tensor.fixed import FixedpointConfig, _validate_fixedpoint_config
-from ...tensor import int100factory, fixed100
-from ...tensor import int64factory, fixed64
+from ...config import get_config
+from ...config import tensorflow_supports_int64
 from ...player import Player
-from ...config import get_config, tensorflow_supports_int64
 from ...queue.fifo import AbstractFIFOQueue
-from ..protocol import Protocol, memoize, nodes
-from .triple_sources import OnlineTripleSource, TripleSource
+from ...tensor import fixed64
+from ...tensor import fixed100
+from ...tensor import int64factory
+from ...tensor import int100factory
+from ...tensor.factory import AbstractConstant
+from ...tensor.factory import AbstractFactory
+from ...tensor.factory import AbstractPlaceholder
+from ...tensor.factory import AbstractTensor
+from ...tensor.factory import AbstractVariable
+from ...tensor.fixed import FixedpointConfig
+from ...tensor.fixed import _validate_fixedpoint_config
+from ...tensor.helpers import inverse
+from ...utils import wrap_in_variables
+from ..protocol import Protocol
+from ..protocol import memoize
+from ..protocol import nodes
+from .triple_sources import OnlineTripleSource
+from .triple_sources import TripleSource
 
 TFEData = Union[np.ndarray, tf.Tensor]
 TFEVariable = Union["PondPublicVariable", "PondPrivateVariable", tf.Variable]

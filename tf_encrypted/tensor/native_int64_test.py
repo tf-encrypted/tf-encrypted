@@ -3,9 +3,10 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
-import tf_encrypted as tfe
 
-from tf_encrypted.tensor import int64factory, fixed64
+import tf_encrypted as tfe
+from tf_encrypted.tensor import fixed64
+from tf_encrypted.tensor import int64factory
 
 
 class TestInt64Tensor(unittest.TestCase):

@@ -5,8 +5,8 @@ import tempfile
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.python.framework import graph_util
-from tensorflow.python.platform import gfile
 from tensorflow.python.framework.graph_util_impl import remove_training_nodes
+from tensorflow.python.platform import gfile
 
 import tf_encrypted as tfe
 

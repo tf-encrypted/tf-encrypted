@@ -3,6 +3,7 @@ FIFO queue data structure.
 """
 
 from __future__ import absolute_import
+
 import abc
 
 import tf_encrypted as tfe

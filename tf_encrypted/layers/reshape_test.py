@@ -3,6 +3,7 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
+
 import tf_encrypted as tfe
 from tf_encrypted.layers import Reshape
 

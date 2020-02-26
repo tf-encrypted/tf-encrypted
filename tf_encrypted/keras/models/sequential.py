@@ -6,7 +6,8 @@ import tf_encrypted as tfe
 from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras import optimizers
 from tf_encrypted.keras.engine.base_layer import Layer
-from tf_encrypted.keras.engine.input_layer import InputLayer, Input
+from tf_encrypted.keras.engine.input_layer import Input
+from tf_encrypted.keras.engine.input_layer import InputLayer
 from tf_encrypted.protocol.pond import PondPrivateTensor
 
 

@@ -1,6 +1,7 @@
 # pylint: disable=arguments-differ
 """Layer implementaiton for batch normalization."""
 from typing import List
+
 import numpy as np
 
 import tf_encrypted as tfe

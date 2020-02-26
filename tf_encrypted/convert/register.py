@@ -2,26 +2,28 @@
 import array
 import logging
 import os
-from typing import Any, List
 from collections import OrderedDict
+from typing import Any
+from typing import List
 
-import yaml
 import numpy as np
 import tensorflow as tf
+import yaml
 
 import tf_encrypted as tfe
-from ..layers import AveragePooling2D
-from ..layers import MaxPooling2D
-from ..layers import Conv2D
-from ..layers import Dense
-from ..layers import Relu
-from ..layers import Sigmoid
+
 from ..keras.layers import BatchNormalization
 from ..keras.layers import DepthwiseConv2D
 from ..keras.layers import GlobalAveragePooling2D
 from ..keras.layers import GlobalMaxPooling2D
-from ..protocol.pond import PondPrivateTensor
+from ..layers import AveragePooling2D
+from ..layers import Conv2D
+from ..layers import Dense
+from ..layers import MaxPooling2D
+from ..layers import Relu
+from ..layers import Sigmoid
 from ..protocol.pond import PondMaskedTensor
+from ..protocol.pond import PondPrivateTensor
 
 
 def registry():

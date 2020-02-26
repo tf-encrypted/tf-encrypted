@@ -1,12 +1,13 @@
 """TF Encrypted extension of tf.Session."""
+import logging
 import os
 from collections import defaultdict
-import logging
 
 import tensorflow as tf
 from tensorflow.python.client import timeline
 
-from .config import RemoteConfig, get_config
+from .config import RemoteConfig
+from .config import get_config
 from .utils import unwrap_fetches
 
 # pylint: disable=invalid-name

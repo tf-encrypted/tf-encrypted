@@ -1,7 +1,6 @@
 """TFE Keras optimizers"""
-from tf_encrypted.keras import backend as KE
-
 import tf_encrypted as tfe
+from tf_encrypted.keras import backend as KE
 
 
 class SGD:

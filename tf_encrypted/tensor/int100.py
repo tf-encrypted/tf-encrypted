@@ -6,25 +6,30 @@ remainder theorem.
 Currently, we only use the CRT for an int100 tensor, although other
 high-precision tensor types are possible."""
 from __future__ import absolute_import
-from typing import Union, Optional, List, Tuple
-from functools import reduce, partial
+
 import abc
 import math
+from functools import partial
+from functools import reduce
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import numpy as np
 import tensorflow as tf
 
-from .helpers import inverse
-from .helpers import prod
+from ..operations import secure_random
 from .factory import AbstractConstant
 from .factory import AbstractFactory
 from .factory import AbstractPlaceholder
 from .factory import AbstractTensor
 from .factory import AbstractVariable
+from .helpers import inverse
+from .helpers import prod
 from .shared import binarize
 from .shared import conv2d
 from .shared import im2col
-from ..operations import secure_random
 
 
 def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name

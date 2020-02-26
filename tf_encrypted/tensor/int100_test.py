@@ -1,13 +1,14 @@
 # pylint: disable=missing-docstring
-import unittest
 import math
 import random
+import unittest
 
 import numpy as np
 import tensorflow as tf
-import tf_encrypted as tfe
 
-from tf_encrypted.tensor import int100factory, fixed100_ni
+import tf_encrypted as tfe
+from tf_encrypted.tensor import fixed100_ni
+from tf_encrypted.tensor import int100factory
 
 
 class TestInt100Tensor(unittest.TestCase):

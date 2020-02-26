@@ -3,9 +3,10 @@ import logging
 import os
 
 import tensorflow as tf
-from tensorflow.python.framework import ops
 from tensorflow.python.framework import dtypes
+from tensorflow.python.framework import ops
 from tensorflow.python.framework.errors import NotFoundError
+
 import tf_encrypted as tfe
 
 logger = logging.getLogger('tf_encrypted')

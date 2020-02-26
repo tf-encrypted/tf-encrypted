@@ -1,7 +1,9 @@
 """Includes base classes used by all layer types."""
 
-from typing import List, Optional
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
+from typing import List
+from typing import Optional
 
 from tf_encrypted.protocol.pond import TFEVariable
 

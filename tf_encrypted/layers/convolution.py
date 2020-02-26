@@ -3,8 +3,10 @@
 import numpy as np
 
 import tf_encrypted as tfe
+
+from ..protocol.pond import PondMaskedTensor
+from ..protocol.pond import PondPrivateTensor
 from .core import Layer
-from ..protocol.pond import PondPrivateTensor, PondMaskedTensor
 
 
 class Conv2D(Layer):

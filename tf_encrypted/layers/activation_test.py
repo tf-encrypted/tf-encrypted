@@ -5,7 +5,9 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.layers.activation import Relu, Sigmoid, Tanh
+from tf_encrypted.layers.activation import Relu
+from tf_encrypted.layers.activation import Sigmoid
+from tf_encrypted.layers.activation import Tanh
 
 
 class TestRelu(unittest.TestCase):

@@ -1,23 +1,24 @@
 # pylint: disable=missing-docstring
 import logging
-from typing import List, Tuple
 import os
 import unittest
-import pytest
+from typing import List
+from typing import Tuple
 
 import numpy as np
+import pytest
 import tensorflow as tf
-from tensorflow.python.platform import gfile
-from tensorflow.python.framework import graph_util
-from tensorflow.python.framework import graph_io
 from tensorflow.keras import backend as K
-from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import DepthwiseConv2D
+from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import GlobalAveragePooling2D
 from tensorflow.keras.layers import GlobalMaxPooling2D
 from tensorflow.keras.models import Sequential
+from tensorflow.python.framework import graph_io
+from tensorflow.python.framework import graph_util
+from tensorflow.python.platform import gfile
 
 import tf_encrypted as tfe
 from tf_encrypted.convert import Converter

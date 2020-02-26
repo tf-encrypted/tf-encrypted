@@ -1,6 +1,7 @@
 """Abstract classes for factories and their components."""
 import abc
-from typing import Optional, Union
+from typing import Optional
+from typing import Union
 
 import numpy as np
 import tensorflow as tf

@@ -7,10 +7,10 @@ from tensorflow.python.keras import initializers
 from tensorflow.python.keras.utils import conv_utils
 
 import tf_encrypted as tfe
-from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
-from tf_encrypted.keras.layers.layers_utils import default_args_check
 from tf_encrypted.keras import backend as KE
+from tf_encrypted.keras.engine import Layer
+from tf_encrypted.keras.layers.layers_utils import default_args_check
 from tf_encrypted.protocol.pond import PondPrivateTensor
 
 logger = logging.getLogger('tf_encrypted')

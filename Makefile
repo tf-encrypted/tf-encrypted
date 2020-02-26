@@ -79,12 +79,13 @@ lint: $(BUILD_CONVERTER_README) pythoncheck
 	yapf --diff --recursive --parallel tf_encrypted
 
 fmt: pythoncheck
+	isort --atomic --recursive tf_encrypted
 	yapf --in-place --recursive --parallel tf_encrypted
 
 typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
 
-.PHONY: lint test typecheck
+.PHONY: lint fmt test typecheck
 
 # ##############################################
 # Documentation

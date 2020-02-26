@@ -6,10 +6,11 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 
 import tf_encrypted as tfe
+# TODO this is a bit weird
+from tf_encrypted.convert.convert_test import export_matmul
+from tf_encrypted.convert.convert_test import read_graph
 from tf_encrypted.private_model import PrivateModel
 from tf_encrypted.private_model import secure_model
-# TODO this is a bit weird
-from tf_encrypted.convert.convert_test import read_graph, export_matmul
 
 
 class TestPrivateModel(unittest.TestCase):

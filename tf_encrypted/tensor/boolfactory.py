@@ -2,18 +2,23 @@
 Use TensorFlow's native bool type.
 """
 from __future__ import absolute_import
-from typing import Union, List, Dict, Tuple, Optional
+
 import abc
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import numpy as np
 import tensorflow as tf
 
+from ..operations import secure_random as crypto
+from .factory import AbstractConstant
 from .factory import AbstractFactory
+from .factory import AbstractPlaceholder
 from .factory import AbstractTensor
 from .factory import AbstractVariable
-from .factory import AbstractConstant
-from .factory import AbstractPlaceholder
-from ..operations import secure_random as crypto
 
 
 def bool_factory():

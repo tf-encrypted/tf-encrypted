@@ -10,7 +10,9 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.protocol.aby3 import ABY3, ARITHMETIC, BOOLEAN
+from tf_encrypted.protocol.aby3 import ABY3
+from tf_encrypted.protocol.aby3 import ARITHMETIC
+from tf_encrypted.protocol.aby3 import BOOLEAN
 
 
 class TestABY3(unittest.TestCase):

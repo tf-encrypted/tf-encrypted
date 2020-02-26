@@ -1,15 +1,15 @@
 """Module containing implementations of secure protocols."""
 
 from __future__ import absolute_import
+
 import inspect
 
-from .protocol import (
-    Protocol,
-    memoize,
-)
-
 from .aby3 import ABY3
-from .pond import Pond, TFEVariable, TFETensor
+from .pond import Pond
+from .pond import TFETensor
+from .pond import TFEVariable
+from .protocol import Protocol
+from .protocol import memoize
 from .securenn import SecureNN
 
 

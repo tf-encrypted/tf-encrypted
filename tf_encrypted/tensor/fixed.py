@@ -1,7 +1,8 @@
 """A fixed-point configuration to support various tensor types."""
 from __future__ import absolute_import
 
-from math import ceil, log2
+from math import ceil
+from math import log2
 
 from .factory import AbstractFactory
 

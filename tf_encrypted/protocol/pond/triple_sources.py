@@ -7,7 +7,9 @@ import random
 import tensorflow as tf
 
 from ...config import get_config
-from ...utils import wrap_in_variables, reachable_nodes, unwrap_fetches
+from ...utils import reachable_nodes
+from ...utils import unwrap_fetches
+from ...utils import wrap_in_variables
 
 logger = logging.getLogger('tf_encrypted')
 

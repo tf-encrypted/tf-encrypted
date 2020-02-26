@@ -1,11 +1,15 @@
 # pylint: disable=arguments-differ
 """Pooling Layer implementations."""
-from abc import abstractmethod
-from typing import Optional, Union, Tuple, List
 import math
+from abc import abstractmethod
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import tf_encrypted as tfe
 from tf_encrypted.layers.core import Layer
+
 from ..protocol.pond import TFEVariable
 
 IntTuple = Union[int, Tuple[int, int], List[int]]

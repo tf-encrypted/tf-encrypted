@@ -2,12 +2,16 @@
 their corresponding TF GraphDefs.
 
 See README.md for details on usage and extension."""
-from collections import OrderedDict
 import re
-from typing import List, Any, Union, Optional
+from collections import OrderedDict
+from typing import Any
+from typing import List
+from typing import Optional
+from typing import Union
 
 import tf_encrypted as tfe
-from tf_encrypted.config import Config, get_config
+from tf_encrypted.config import Config
+from tf_encrypted.config import get_config
 from tf_encrypted.convert.register import REGISTERED_SPECOPS
 from tf_encrypted.player import Player
 from tf_encrypted.protocol import Protocol

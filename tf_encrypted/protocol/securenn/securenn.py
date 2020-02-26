@@ -6,10 +6,11 @@ See https://eprint.iacr.org/2018/442/ for more.
 """
 from __future__ import absolute_import
 
-from typing import Optional, Tuple
 import math
 import random
 import sys
+from typing import Optional
+from typing import Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -17,16 +18,18 @@ import tensorflow as tf
 from tf_encrypted.config import get_config
 from tf_encrypted.player import Player
 from tf_encrypted.protocol import memoize
+from tf_encrypted.protocol.pond import Pond
+from tf_encrypted.protocol.pond import PondMaskedTensor
+from tf_encrypted.protocol.pond import PondPrivateTensor
+from tf_encrypted.protocol.pond import PondPublicTensor
+from tf_encrypted.protocol.pond import PondTensor
+from tf_encrypted.protocol.pond import _type
 from tf_encrypted.protocol.protocol import nodes
 from tf_encrypted.protocol.securenn.odd_tensor import oddint64_factory
-from tf_encrypted.protocol.pond import Pond
-from tf_encrypted.protocol.pond import PondTensor
-from tf_encrypted.protocol.pond import PondPublicTensor
-from tf_encrypted.protocol.pond import PondPrivateTensor
-from tf_encrypted.protocol.pond import PondMaskedTensor
-from tf_encrypted.protocol.pond import _type
-from tf_encrypted.tensor import native_factory, int64factory
-from tf_encrypted.tensor.factory import AbstractFactory, AbstractTensor
+from tf_encrypted.tensor import int64factory
+from tf_encrypted.tensor import native_factory
+from tf_encrypted.tensor.factory import AbstractFactory
+from tf_encrypted.tensor.factory import AbstractTensor
 
 _thismodule = sys.modules[__name__]
 

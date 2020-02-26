@@ -1,9 +1,10 @@
 """The TF Encrypted Config abstraction and its implementations."""
-from abc import ABC, abstractmethod
-from collections import OrderedDict
 import json
 import logging
 import math
+from abc import ABC
+from abc import abstractmethod
+from collections import OrderedDict
 from pathlib import Path
 
 import tensorflow as tf

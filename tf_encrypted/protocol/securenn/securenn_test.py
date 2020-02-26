@@ -4,8 +4,10 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
+
 import tf_encrypted as tfe
-from tf_encrypted.protocol.pond import PondPrivateTensor, PondPublicTensor
+from tf_encrypted.protocol.pond import PondPrivateTensor
+from tf_encrypted.protocol.pond import PondPublicTensor
 from tf_encrypted.protocol.securenn.securenn import _private_compare
 from tf_encrypted.tensor import int100factory
 

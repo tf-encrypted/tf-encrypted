@@ -1,9 +1,19 @@
 """TF Encrypted namespace."""
 from __future__ import absolute_import
-from typing import Optional, Any
+
 import inspect
+from typing import Any
+from typing import Optional
+
 import tensorflow as tf
 
+from . import convert
+from . import keras
+from . import layers
+from . import operations
+from . import protocol
+from . import queue
+from . import serving
 from .config import Config
 from .config import LocalConfig
 from .config import RemoteConfig
@@ -11,16 +21,9 @@ from .config import get_config
 from .player import player
 from .protocol import Pond
 from .session import Session
+from .session import set_log_directory
 from .session import set_tfe_events_flag
 from .session import set_tfe_trace_flag
-from .session import set_log_directory
-from . import convert
-from . import layers
-from . import operations
-from . import protocol
-from . import keras
-from . import serving
-from . import queue
 
 __protocol__ = None
 __all_prot_funcs__ = protocol.get_all_funcs()

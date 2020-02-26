@@ -3,23 +3,28 @@
 These use TensorFlow's native dtypes tf.int32 and tf.int64 for the given float
 encoding being used (fixed-point, etc.)."""
 from __future__ import absolute_import
-from typing import Union, List, Dict, Tuple, Optional
+
 import abc
 import math
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import numpy as np
 import tensorflow as tf
 
-from .factory import (
-    AbstractFactory,
-    AbstractTensor,
-    AbstractVariable,
-    AbstractConstant,
-    AbstractPlaceholder
-)
-from .helpers import inverse
-from .shared import binarize, conv2d, im2col
 from ..operations import secure_random
+from .factory import AbstractConstant
+from .factory import AbstractFactory
+from .factory import AbstractPlaceholder
+from .factory import AbstractTensor
+from .factory import AbstractVariable
+from .helpers import inverse
+from .shared import binarize
+from .shared import conv2d
+from .shared import im2col
 
 
 def native_factory(

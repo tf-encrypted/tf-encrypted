@@ -1,12 +1,13 @@
 # pylint: disable=missing-docstring
 import unittest
-import pytest
 
 import numpy as np
+import pytest
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.layers import AveragePooling2D, MaxPooling2D
+from tf_encrypted.layers import AveragePooling2D
+from tf_encrypted.layers import MaxPooling2D
 
 
 class TestAveragePooling2D(unittest.TestCase):

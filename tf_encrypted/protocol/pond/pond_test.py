@@ -7,10 +7,17 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.protocol.pond import PondPublicTensor, PondMaskedTensor
-from tf_encrypted.tensor import int64factory, int100factory, native_factory
-from tf_encrypted.tensor import fixed100, fixed100_ni
-from .pond import _gather_masked, _indexer_masked, _negative_masked
+from tf_encrypted.protocol.pond import PondMaskedTensor
+from tf_encrypted.protocol.pond import PondPublicTensor
+from tf_encrypted.tensor import fixed100
+from tf_encrypted.tensor import fixed100_ni
+from tf_encrypted.tensor import int64factory
+from tf_encrypted.tensor import int100factory
+from tf_encrypted.tensor import native_factory
+
+from .pond import _gather_masked
+from .pond import _indexer_masked
+from .pond import _negative_masked
 
 
 class TestPond(unittest.TestCase):

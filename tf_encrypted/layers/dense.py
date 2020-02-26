@@ -1,12 +1,15 @@
 # pylint: disable=arguments-differ
 """Dense (i.e. fully connected) Layer implementation."""
-from typing import Union, Optional
+from typing import Optional
+from typing import Union
+
 import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
 from tf_encrypted.layers.core import Layer
-from tf_encrypted.protocol.pond import PondPublicTensor, PondPrivateTensor
+from tf_encrypted.protocol.pond import PondPrivateTensor
+from tf_encrypted.protocol.pond import PondPublicTensor
 
 InitialTensor = Optional[Union[np.ndarray,
                                tf.Tensor,

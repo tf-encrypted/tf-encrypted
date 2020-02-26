@@ -1,9 +1,10 @@
 """Commonly used tensor functions."""
 import math
-from typing import Union, Optional
+from typing import Optional
+from typing import Union
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
 from .factory import AbstractTensor
 

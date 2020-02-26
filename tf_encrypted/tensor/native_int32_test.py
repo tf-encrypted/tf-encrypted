@@ -3,6 +3,7 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
+
 from tf_encrypted.tensor import int32factory
 
 

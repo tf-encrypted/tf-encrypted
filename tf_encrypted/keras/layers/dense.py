@@ -2,8 +2,8 @@
 """Dense (i.e. fully connected) Layer implementation."""
 from tensorflow.python.keras import initializers
 
-from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras import activations
+from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
 
 
