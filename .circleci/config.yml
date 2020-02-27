@@ -74,6 +74,11 @@ jobs:
             . venv/bin/activate
             make lint
       - run:
+          name: Check formatting
+          command: |
+            . venv/bin/activate
+            make fmtcheck
+      - run:
           name: Run tests
           command: |
             . venv/bin/activate
@@ -101,6 +106,11 @@ jobs:
           command: |
             . venv/bin/activate
             make lint
+      - run:
+          name: Check formatting
+          command: |
+            . venv/bin/activate
+            make fmtcheck
       - run:
           name: Run tests
           command: |

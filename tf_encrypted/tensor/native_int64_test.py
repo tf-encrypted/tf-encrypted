@@ -40,6 +40,7 @@ class TestInt64Tensor(unittest.TestCase):
 
         y = x.bits()
 
+        # fmt: off
         expected = np.array([
             [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -57,7 +58,8 @@ class TestInt64Tensor(unittest.TestCase):
              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
              1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        ]).reshape([2, 2, 64])  # yapf: disable
+        ]).reshape([2, 2, 64])
+        # fmt: on
 
         with tf.Session() as sess:
             actual = sess.run(y.to_native())

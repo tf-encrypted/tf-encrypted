@@ -177,7 +177,7 @@ docstring-min-length=10
 [FORMAT]
 
 # Maximum number of characters on a single line.
-max-line-length=80
+max-line-length=88
 
 # Regexp for a line that is allowed to be longer than the limit.
 ignore-long-lines=(?x)
@@ -204,7 +204,7 @@ max-module-lines=99999
 
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).
-indent-string='  '
+indent-string="    "
 
 
 [SIMILARITIES]

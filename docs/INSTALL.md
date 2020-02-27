@@ -231,7 +231,7 @@ replaced to match your system configuration.
 ```json
 {
     "python.pythonPath": "<full Python path>",
-    "python.formatting.provider": "yapf",
+    "python.formatting.provider": "black",
     "python.linting.enabled": true,
     "python.linting.mypyEnabled": true,
     "python.linting.flake8Enabled": true,
