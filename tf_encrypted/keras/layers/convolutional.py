@@ -17,7 +17,7 @@ logger = logging.getLogger('tf_encrypted')
 
 
 class Conv2D(Layer):
-  """2D convolution layer (e.g. spatial convolution over images).
+    """2D convolution layer (e.g. spatial convolution over images).
   This layer creates a convolution kernel that is convolved
   with the layer input to produce a tensor of
   outputs. If `use_bias` is True,
@@ -84,126 +84,126 @@ class Conv2D(Layer):
       `rows` and `cols` values might have changed due to padding.
   """
 
-  def __init__(
-      self,
-      filters,
-      kernel_size,
-      strides=(1, 1),
-      padding='valid',
-      data_format=None,
-      dilation_rate=(1, 1),
-      activation=None,
-      use_bias=True,
-      kernel_initializer='glorot_uniform',
-      bias_initializer='zeros',
-      kernel_regularizer=None,
-      bias_regularizer=None,
-      activity_regularizer=None,
-      kernel_constraint=None,
-      bias_constraint=None,
-      **kwargs
-  ):
+    def __init__(
+        self,
+        filters,
+        kernel_size,
+        strides=(1, 1),
+        padding='valid',
+        data_format=None,
+        dilation_rate=(1, 1),
+        activation=None,
+        use_bias=True,
+        kernel_initializer='glorot_uniform',
+        bias_initializer='zeros',
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        activity_regularizer=None,
+        kernel_constraint=None,
+        bias_constraint=None,
+        **kwargs
+    ):
 
-    super(Conv2D, self).__init__(**kwargs)
+        super(Conv2D, self).__init__(**kwargs)
 
-    self.rank = 2
-    self.filters = filters
-    self.kernel_size = conv_utils.normalize_tuple(
-        kernel_size, self.rank, 'kernel_size'
-    )
-    if self.kernel_size[0] != self.kernel_size[1]:
-      raise NotImplementedError(
-          "TF Encrypted currently only supports same "
-          "stride along the height and the width."
-          "You gave: {}".format(self.kernel_size)
-      )
-    self.strides = conv_utils.normalize_tuple(strides, self.rank, 'strides')
-    self.padding = conv_utils.normalize_padding(padding).upper()
-    self.data_format = conv_utils.normalize_data_format(data_format)
-    if activation is not None:
-      logger.info(
-          "Performing an activation before a pooling layer can result "
-          "in unnecessary performance loss. Check model definition in "
-          "case of missed optimization."
-      )
-    self.activation = activations.get(activation)
-    self.use_bias = use_bias
-    self.kernel_initializer = initializers.get(kernel_initializer)
-    self.bias_initializer = initializers.get(bias_initializer)
+        self.rank = 2
+        self.filters = filters
+        self.kernel_size = conv_utils.normalize_tuple(
+            kernel_size, self.rank, 'kernel_size'
+        )
+        if self.kernel_size[0] != self.kernel_size[1]:
+            raise NotImplementedError(
+                "TF Encrypted currently only supports same "
+                "stride along the height and the width."
+                "You gave: {}".format(self.kernel_size)
+            )
+        self.strides = conv_utils.normalize_tuple(strides, self.rank, 'strides')
+        self.padding = conv_utils.normalize_padding(padding).upper()
+        self.data_format = conv_utils.normalize_data_format(data_format)
+        if activation is not None:
+            logger.info(
+                "Performing an activation before a pooling layer can result "
+                "in unnecessary performance loss. Check model definition in "
+                "case of missed optimization."
+            )
+        self.activation = activations.get(activation)
+        self.use_bias = use_bias
+        self.kernel_initializer = initializers.get(kernel_initializer)
+        self.bias_initializer = initializers.get(bias_initializer)
 
-    # Not implemented arguments
-    default_args_check(dilation_rate, "dilation_rate", "Conv2D")
-    default_args_check(kernel_regularizer, "kernel_regularizer", "Conv2D")
-    default_args_check(bias_regularizer, "bias_regularizer", "Conv2D")
-    default_args_check(activity_regularizer, "activity_regularizer", "Conv2D")
-    default_args_check(kernel_constraint, "kernel_constraint", "Conv2D")
-    default_args_check(bias_constraint, "bias_constraint", "Conv2D")
+        # Not implemented arguments
+        default_args_check(dilation_rate, "dilation_rate", "Conv2D")
+        default_args_check(kernel_regularizer, "kernel_regularizer", "Conv2D")
+        default_args_check(bias_regularizer, "bias_regularizer", "Conv2D")
+        default_args_check(activity_regularizer, "activity_regularizer", "Conv2D")
+        default_args_check(kernel_constraint, "kernel_constraint", "Conv2D")
+        default_args_check(bias_constraint, "bias_constraint", "Conv2D")
 
-  def build(self, input_shape):
-    if self.data_format == 'channels_first':
-      channel_axis = 1
-    else:
-      channel_axis = -1
-    if input_shape[channel_axis] is None:
-      raise ValueError(
-          'The channel dimension of the inputs '
-          'should be defined. Found `None`.'
-      )
-    input_dim = int(input_shape[channel_axis])
-    self.kernel_shape = self.kernel_size + (input_dim, self.filters)
+    def build(self, input_shape):
+        if self.data_format == 'channels_first':
+            channel_axis = 1
+        else:
+            channel_axis = -1
+        if input_shape[channel_axis] is None:
+            raise ValueError(
+                'The channel dimension of the inputs '
+                'should be defined. Found `None`.'
+            )
+        input_dim = int(input_shape[channel_axis])
+        self.kernel_shape = self.kernel_size + (input_dim, self.filters)
 
-    kernel = self.kernel_initializer(self.kernel_shape)
-    self.kernel = self.add_weight(kernel)
+        kernel = self.kernel_initializer(self.kernel_shape)
+        self.kernel = self.add_weight(kernel)
 
-    if self.use_bias:
-      # Expand bias shape dimensions. Bias needs to have
-      # a rank of 3 to be added to the output
-      bias_shape = [self.filters, 1, 1]
-      bias = self.bias_initializer(bias_shape)
-      self.bias = self.add_weight(bias)
-    else:
-      self.bias = None
+        if self.use_bias:
+            # Expand bias shape dimensions. Bias needs to have
+            # a rank of 3 to be added to the output
+            bias_shape = [self.filters, 1, 1]
+            bias = self.bias_initializer(bias_shape)
+            self.bias = self.add_weight(bias)
+        else:
+            self.bias = None
 
-    self.built = True
+        self.built = True
 
-  def call(self, inputs):
+    def call(self, inputs):
 
-    if self.data_format != 'channels_first':
-      inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
+        if self.data_format != 'channels_first':
+            inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
-    outputs = tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
+        outputs = tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
 
-    if self.use_bias:
-      outputs = outputs + self.bias
+        if self.use_bias:
+            outputs = outputs + self.bias
 
-    if self.data_format != 'channels_first':
-      outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
+        if self.data_format != 'channels_first':
+            outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
 
-    if self.activation is not None:
-      return self.activation(outputs)
-    return outputs
+        if self.activation is not None:
+            return self.activation(outputs)
+        return outputs
 
-  def compute_output_shape(self, input_shape):
-    """Compute output_shape for the layer."""
-    h_filter, w_filter, _, n_filters = self.kernel_shape
+    def compute_output_shape(self, input_shape):
+        """Compute output_shape for the layer."""
+        h_filter, w_filter, _, n_filters = self.kernel_shape
 
-    if self.data_format == 'channels_first':
-      n_x, _, h_x, w_x = input_shape.as_list()
-    else:
-      n_x, h_x, w_x, _ = input_shape.as_list()
+        if self.data_format == 'channels_first':
+            n_x, _, h_x, w_x = input_shape.as_list()
+        else:
+            n_x, h_x, w_x, _ = input_shape.as_list()
 
-    if self.padding == "SAME":
-      h_out = int(np.ceil(float(h_x) / float(self.strides[0])))
-      w_out = int(np.ceil(float(w_x) / float(self.strides[0])))
-    if self.padding == "VALID":
-      h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides[0])))
-      w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))
+        if self.padding == "SAME":
+            h_out = int(np.ceil(float(h_x) / float(self.strides[0])))
+            w_out = int(np.ceil(float(w_x) / float(self.strides[0])))
+        if self.padding == "VALID":
+            h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides[0])))
+            w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))
 
-    return [n_x, n_filters, h_out, w_out]
+        return [n_x, n_filters, h_out, w_out]
 
 
 class DepthwiseConv2D(Conv2D):
-  """Depthwise separable 2D convolution.
+    """Depthwise separable 2D convolution.
 
   Depthwise Separable convolutions consists in performing
   just the first step in a depthwise spatial convolution
@@ -266,231 +266,229 @@ class DepthwiseConv2D(Conv2D):
     `rows` and `cols` values might have changed due to padding.
   """
 
-  def __init__(
-      self,
-      kernel_size,
-      strides=(1, 1),
-      padding='valid',
-      depth_multiplier=1,
-      data_format=None,
-      activation=None,
-      use_bias=True,
-      depthwise_initializer='glorot_uniform',
-      bias_initializer='zeros',
-      depthwise_regularizer=None,
-      bias_regularizer=None,
-      activity_regularizer=None,
-      depthwise_constraint=None,
-      bias_constraint=None,
-      **kwargs
-  ):
-
-    super(DepthwiseConv2D, self).__init__(
-        filters=None,
-        kernel_size=kernel_size,
-        strides=strides,
-        padding=padding,
-        data_format=data_format,
-        activation=activation,
-        use_bias=use_bias,
-        bias_regularizer=bias_regularizer,
-        activity_regularizer=activity_regularizer,
-        bias_constraint=bias_constraint,
+    def __init__(
+        self,
+        kernel_size,
+        strides=(1, 1),
+        padding='valid',
+        depth_multiplier=1,
+        data_format=None,
+        activation=None,
+        use_bias=True,
+        depthwise_initializer='glorot_uniform',
+        bias_initializer='zeros',
+        depthwise_regularizer=None,
+        bias_regularizer=None,
+        activity_regularizer=None,
+        depthwise_constraint=None,
+        bias_constraint=None,
         **kwargs
-    )
+    ):
 
-    self.rank = 2
-    self.kernel_size = conv_utils.normalize_tuple(
-        kernel_size, self.rank, 'kernel_size'
-    )
-    if self.kernel_size[0] != self.kernel_size[1]:
-      raise NotImplementedError(
-          "TF Encrypted currently only supports same "
-          "stride along the height and the width."
-          "You gave: {}".format(self.kernel_size)
-      )
-    self.strides = conv_utils.normalize_tuple(strides, self.rank, 'strides')
-    self.padding = conv_utils.normalize_padding(padding).upper()
-    self.depth_multiplier = depth_multiplier
-    self.data_format = conv_utils.normalize_data_format(data_format)
-    if activation is not None:
-      logger.info(
-          "Performing an activation before a pooling layer can result "
-          "in unnecessary performance loss. Check model definition in "
-          "case of missed optimization."
-      )
-    self.activation = activations.get(activation)
-    self.use_bias = use_bias
-    self.depthwise_initializer = initializers.get(depthwise_initializer)
-    self.bias_initializer = initializers.get(bias_initializer)
+        super(DepthwiseConv2D, self).__init__(
+            filters=None,
+            kernel_size=kernel_size,
+            strides=strides,
+            padding=padding,
+            data_format=data_format,
+            activation=activation,
+            use_bias=use_bias,
+            bias_regularizer=bias_regularizer,
+            activity_regularizer=activity_regularizer,
+            bias_constraint=bias_constraint,
+            **kwargs
+        )
 
-    # Not implemented arguments
-    default_args_check(
-        depthwise_regularizer,
-        "depthwise_regularizer",
-        "DepthwiseConv2D",
-    )
-    default_args_check(
-        bias_regularizer,
-        "bias_regularizer",
-        "DepthwiseConv2D",
-    )
-    default_args_check(
-        activity_regularizer,
-        "activity_regularizer",
-        "DepthwiseConv2D",
-    )
-    default_args_check(
-        depthwise_constraint,
-        "depthwise_constraint",
-        "DepthwiseConv2D",
-    )
-    default_args_check(
-        bias_constraint,
-        "bias_constraint",
-        "DepthwiseConv2D",
-    )
+        self.rank = 2
+        self.kernel_size = conv_utils.normalize_tuple(
+            kernel_size, self.rank, 'kernel_size'
+        )
+        if self.kernel_size[0] != self.kernel_size[1]:
+            raise NotImplementedError(
+                "TF Encrypted currently only supports same "
+                "stride along the height and the width."
+                "You gave: {}".format(self.kernel_size)
+            )
+        self.strides = conv_utils.normalize_tuple(strides, self.rank, 'strides')
+        self.padding = conv_utils.normalize_padding(padding).upper()
+        self.depth_multiplier = depth_multiplier
+        self.data_format = conv_utils.normalize_data_format(data_format)
+        if activation is not None:
+            logger.info(
+                "Performing an activation before a pooling layer can result "
+                "in unnecessary performance loss. Check model definition in "
+                "case of missed optimization."
+            )
+        self.activation = activations.get(activation)
+        self.use_bias = use_bias
+        self.depthwise_initializer = initializers.get(depthwise_initializer)
+        self.bias_initializer = initializers.get(bias_initializer)
 
-  def build(self, input_shape):
-    if self.data_format == 'channels_first':
-      channel_axis = 1
-    else:
-      channel_axis = -1
-    if input_shape[channel_axis] is None:
-      raise ValueError(
-          'The channel dimension of the inputs '
-          'should be defined. Found `None`.'
-      )
-    self.input_dim = int(input_shape[channel_axis])
-    self.kernel_shape = self.kernel_size + (
-        self.input_dim, self.depth_multiplier
-    )
+        # Not implemented arguments
+        default_args_check(
+            depthwise_regularizer,
+            "depthwise_regularizer",
+            "DepthwiseConv2D",
+        )
+        default_args_check(
+            bias_regularizer,
+            "bias_regularizer",
+            "DepthwiseConv2D",
+        )
+        default_args_check(
+            activity_regularizer,
+            "activity_regularizer",
+            "DepthwiseConv2D",
+        )
+        default_args_check(
+            depthwise_constraint,
+            "depthwise_constraint",
+            "DepthwiseConv2D",
+        )
+        default_args_check(
+            bias_constraint,
+            "bias_constraint",
+            "DepthwiseConv2D",
+        )
 
-    kernel = self.depthwise_initializer(self.kernel_shape)
-    kernel = self.rearrange_kernel(kernel)
-    self.kernel = self.add_weight(kernel)
+    def build(self, input_shape):
+        if self.data_format == 'channels_first':
+            channel_axis = 1
+        else:
+            channel_axis = -1
+        if input_shape[channel_axis] is None:
+            raise ValueError(
+                'The channel dimension of the inputs '
+                'should be defined. Found `None`.'
+            )
+        self.input_dim = int(input_shape[channel_axis])
+        self.kernel_shape = self.kernel_size + (self.input_dim, self.depth_multiplier)
 
-    if self.use_bias:
-      # Expand bias shape dimensions. Bias needs to have
-      # a rank of 3 to be added to the output
-      bias_shape = [self.input_dim * self.depth_multiplier, 1, 1]
-      bias = self.bias_initializer(bias_shape)
-      self.bias = self.add_weight(bias)
-    else:
-      self.bias = None
+        kernel = self.depthwise_initializer(self.kernel_shape)
+        kernel = self.rearrange_kernel(kernel)
+        self.kernel = self.add_weight(kernel)
 
-    self.built = True
+        if self.use_bias:
+            # Expand bias shape dimensions. Bias needs to have
+            # a rank of 3 to be added to the output
+            bias_shape = [self.input_dim * self.depth_multiplier, 1, 1]
+            bias = self.bias_initializer(bias_shape)
+            self.bias = self.add_weight(bias)
+        else:
+            self.bias = None
 
-  def rearrange_kernel(self, kernel):
-    """Rearrange kernel to match normal convolution kernels
+        self.built = True
+
+    def rearrange_kernel(self, kernel):
+        """Rearrange kernel to match normal convolution kernels
 
     Arguments:
       kernel: kernel to be rearranged
     """
-    mask = self.get_mask(self.input_dim)
+        mask = self.get_mask(self.input_dim)
 
-    if isinstance(kernel, tf.Tensor):
-      mask = tf.constant(
-          mask.tolist(),
-          dtype=tf.float32,
-          shape=(
-              self.kernel_size[0],
-              self.kernel_size[1],
-              self.input_dim * self.depth_multiplier,
-              self.input_dim
-          )
-      )
+        if isinstance(kernel, tf.Tensor):
+            mask = tf.constant(
+                mask.tolist(),
+                dtype=tf.float32,
+                shape=(
+                    self.kernel_size[0],
+                    self.kernel_size[1],
+                    self.input_dim * self.depth_multiplier,
+                    self.input_dim
+                )
+            )
 
-      if self.depth_multiplier > 1:
-        # rearrange kernel
-        kernel = tf.transpose(kernel, [0, 1, 3, 2])
-        kernel = tf.reshape(
-            kernel,
-            shape=self.kernel_size +
-            (self.input_dim * self.depth_multiplier, 1)
+            if self.depth_multiplier > 1:
+                # rearrange kernel
+                kernel = tf.transpose(kernel, [0, 1, 3, 2])
+                kernel = tf.reshape(
+                    kernel,
+                    shape=self.kernel_size +
+                    (self.input_dim * self.depth_multiplier, 1)
+                )
+
+            kernel = tf.multiply(kernel, mask)
+
+        elif isinstance(kernel, np.ndarray):
+            if self.depth_multiplier > 1:
+                # rearrange kernel
+                kernel = np.transpose(kernel, [0, 1, 3, 2])
+                kernel = np.reshape(
+                    kernel,
+                    newshape=self.kernel_size +
+                    (self.input_dim * self.depth_multiplier, 1)
+                )
+
+            kernel = np.multiply(kernel, mask)
+
+        elif isinstance(kernel, PondPrivateTensor):
+            mask = tfe.define_public_variable(mask)
+            if self.depth_multiplier > 1:
+                # rearrange kernel
+                kernel = tfe.transpose(kernel, [0, 1, 3, 2])
+                kernel = tfe.reshape(
+                    kernel,
+                    shape=self.kernel_size +
+                    (self.input_dim * self.depth_multiplier, 1)
+                )
+
+            kernel = tfe.mul(kernel, mask)
+
+        return kernel
+
+    def call(self, inputs):
+
+        if self.data_format != 'channels_first':
+            inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
+
+        outputs = tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
+
+        if self.use_bias:
+            outputs = outputs + self.bias
+
+        if self.data_format != 'channels_first':
+            outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
+
+        if self.activation is not None:
+            return self.activation(outputs)
+        return outputs
+
+    def compute_output_shape(self, input_shape):
+        """Compute output_shape for the layer."""
+        h_filter, w_filter, _, n_filters = self.kernel_shape
+
+        if self.data_format == 'channels_first':
+            n_x, _, h_x, w_x = input_shape.as_list()
+        else:
+            n_x, h_x, w_x, _ = input_shape.as_list()
+
+        if self.padding == "SAME":
+            h_out = int(np.ceil(float(h_x) / float(self.strides[0])))
+            w_out = int(np.ceil(float(w_x) / float(self.strides[0])))
+        if self.padding == "VALID":
+            h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides[0])))
+            w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))
+
+        return [n_x, n_filters, h_out, w_out]
+
+    def get_mask(self, in_channels):
+        """TODO"""
+        mask = np.zeros(
+            (
+                self.kernel_size[0],
+                self.kernel_size[1],
+                in_channels,
+                in_channels * self.depth_multiplier
+            )
         )
+        for d in range(self.depth_multiplier):
+            for i in range(in_channels):
+                mask[:, :, i, i + (d * in_channels)] = 1.
+        return np.transpose(mask, [0, 1, 3, 2])
 
-      kernel = tf.multiply(kernel, mask)
-
-    elif isinstance(kernel, np.ndarray):
-      if self.depth_multiplier > 1:
-        # rearrange kernel
-        kernel = np.transpose(kernel, [0, 1, 3, 2])
-        kernel = np.reshape(
-            kernel,
-            newshape=self.kernel_size +
-            (self.input_dim * self.depth_multiplier, 1)
-        )
-
-      kernel = np.multiply(kernel, mask)
-
-    elif isinstance(kernel, PondPrivateTensor):
-      mask = tfe.define_public_variable(mask)
-      if self.depth_multiplier > 1:
-        # rearrange kernel
-        kernel = tfe.transpose(kernel, [0, 1, 3, 2])
-        kernel = tfe.reshape(
-            kernel,
-            shape=self.kernel_size +
-            (self.input_dim * self.depth_multiplier, 1)
-        )
-
-      kernel = tfe.mul(kernel, mask)
-
-    return kernel
-
-  def call(self, inputs):
-
-    if self.data_format != 'channels_first':
-      inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
-
-    outputs = tfe.conv2d(inputs, self.kernel, self.strides[0], self.padding)
-
-    if self.use_bias:
-      outputs = outputs + self.bias
-
-    if self.data_format != 'channels_first':
-      outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
-
-    if self.activation is not None:
-      return self.activation(outputs)
-    return outputs
-
-  def compute_output_shape(self, input_shape):
-    """Compute output_shape for the layer."""
-    h_filter, w_filter, _, n_filters = self.kernel_shape
-
-    if self.data_format == 'channels_first':
-      n_x, _, h_x, w_x = input_shape.as_list()
-    else:
-      n_x, h_x, w_x, _ = input_shape.as_list()
-
-    if self.padding == "SAME":
-      h_out = int(np.ceil(float(h_x) / float(self.strides[0])))
-      w_out = int(np.ceil(float(w_x) / float(self.strides[0])))
-    if self.padding == "VALID":
-      h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides[0])))
-      w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))
-
-    return [n_x, n_filters, h_out, w_out]
-
-  def get_mask(self, in_channels):
-    """TODO"""
-    mask = np.zeros(
-        (
-            self.kernel_size[0],
-            self.kernel_size[1],
-            in_channels,
-            in_channels * self.depth_multiplier
-        )
-    )
-    for d in range(self.depth_multiplier):
-      for i in range(in_channels):
-        mask[:, :, i, i + (d * in_channels)] = 1.
-    return np.transpose(mask, [0, 1, 3, 2])
-
-  def set_weights(self, weights, sess=None):
-    """
+    def set_weights(self, weights, sess=None):
+        """
     Sets the weights of the layer.
 
     Arguments:
@@ -499,40 +497,40 @@ class DepthwiseConv2D(Conv2D):
           of private variables
       sess: tfe session"""
 
-    weights_types = (np.ndarray, PondPrivateTensor)
-    assert isinstance(weights[0], weights_types), type(weights[0])
+        weights_types = (np.ndarray, PondPrivateTensor)
+        assert isinstance(weights[0], weights_types), type(weights[0])
 
-    # Assign new keras weights to existing weights defined by
-    # default when tfe layer was instantiated
-    if not sess:
-      sess = KE.get_session()
+        # Assign new keras weights to existing weights defined by
+        # default when tfe layer was instantiated
+        if not sess:
+            sess = KE.get_session()
 
-    if isinstance(weights[0], np.ndarray):
-      for i, w in enumerate(self.weights):
-        shape = w.shape.as_list()
-        tfe_weights_pl = tfe.define_private_placeholder(shape)
+        if isinstance(weights[0], np.ndarray):
+            for i, w in enumerate(self.weights):
+                shape = w.shape.as_list()
+                tfe_weights_pl = tfe.define_private_placeholder(shape)
 
-        new_weight = weights[i]
-        if i == 0:
-          # kernel
-          new_weight = self.rearrange_kernel(new_weight)
-        else:
-          # bias
-          new_weight = new_weight.reshape(shape)
+                new_weight = weights[i]
+                if i == 0:
+                    # kernel
+                    new_weight = self.rearrange_kernel(new_weight)
+                else:
+                    # bias
+                    new_weight = new_weight.reshape(shape)
 
-        fd = tfe_weights_pl.feed(new_weight)
-        sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
+                fd = tfe_weights_pl.feed(new_weight)
+                sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
 
-    elif isinstance(weights[0], PondPrivateTensor):
-      for i, w in enumerate(self.weights):
-        shape = w.shape.as_list()
+        elif isinstance(weights[0], PondPrivateTensor):
+            for i, w in enumerate(self.weights):
+                shape = w.shape.as_list()
 
-        new_weight = weights[i]
-        if i == 0:
-          # kernel
-          new_weight = self.rearrange_kernel(new_weight)
-        else:
-          # bias
-          new_weight = new_weight.reshape(shape)
+                new_weight = weights[i]
+                if i == 0:
+                    # kernel
+                    new_weight = self.rearrange_kernel(new_weight)
+                else:
+                    # bias
+                    new_weight = new_weight.reshape(shape)
 
-        sess.run(tfe.assign(w, new_weight))
+                sess.run(tfe.assign(w, new_weight))

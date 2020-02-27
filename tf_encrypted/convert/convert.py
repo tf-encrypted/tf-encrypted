@@ -19,7 +19,7 @@ from tf_encrypted.protocol.pond import TFEInputter
 
 
 class Converter:
-  """The TFE Converter.
+    """The TFE Converter.
 
   Args:
     registry: An OrderedDict mapping from scope names to TFE conversion
@@ -34,191 +34,191 @@ class Converter:
         identifier for the Player.
   """
 
-  def __init__(
-      self,
-      registry,
-      config: Optional[Config] = None,
-      protocol: Optional[Protocol] = None,
-      model_provider: Optional[Union[str, Player]] = None,
-  ) -> None:
-    self.config = config if config is not None else get_config()
-    if protocol is not None:
-      tfe.set_protocol(protocol)
-    if model_provider is None:
-      self.model_provider = self.config.get_player('model-provider')
-    elif isinstance(model_provider, str):
-      self.model_provider = self.config.get_player(model_provider)
-    else:
-      self.model_provider = model_provider
-    self.registry = registry
-    self.outputs = {}
+    def __init__(
+            self,
+            registry,
+            config: Optional[Config] = None,
+            protocol: Optional[Protocol] = None,
+            model_provider: Optional[Union[str, Player]] = None,
+    ) -> None:
+        self.config = config if config is not None else get_config()
+        if protocol is not None:
+            tfe.set_protocol(protocol)
+        if model_provider is None:
+            self.model_provider = self.config.get_player('model-provider')
+        elif isinstance(model_provider, str):
+            self.model_provider = self.config.get_player(model_provider)
+        else:
+            self.model_provider = model_provider
+        self.registry = registry
+        self.outputs = {}
 
-  def convert(
-      self,
-      graph_def: Any,
-      input_player: Union[str, Player],
-      inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]] = None
-  ) -> Any:
-    """Convert a frozen GraphDef to a TFE Graph."""
-    if not graph_def.node:
-      raise ValueError("An empty model was passed to the converter.")
+    def convert(
+            self,
+            graph_def: Any,
+            input_player: Union[str, Player],
+            inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]] = None
+    ) -> Any:
+        """Convert a frozen GraphDef to a TFE Graph."""
+        if not graph_def.node:
+            raise ValueError("An empty model was passed to the converter.")
 
-    if isinstance(input_player, str):
-      input_player = get_config().get_player('input-provider')
-    assert isinstance(input_player, Player)
+        if isinstance(input_player, str):
+            input_player = get_config().get_player('input-provider')
+        assert isinstance(input_player, Player)
 
-    if inputter_fn is None:
-      inputs = []
-    elif isinstance(inputter_fn, (list, tuple)):
-      inputs = inputter_fn
-    else:
-      inputs = [inputter_fn]
-    inputs_iterable = enumerate(inputs)
+        if inputter_fn is None:
+            inputs = []
+        elif isinstance(inputter_fn, (list, tuple)):
+            inputs = inputter_fn
+        else:
+            inputs = [inputter_fn]
+        inputs_iterable = enumerate(inputs)
 
-    # Identify if there are special ops in pb file,
-    # e.g. required_space_to_batch_paddings
-    # If yes, identify the inputs and outputs of these special ops.
-    output_name = graph_def.node[-1].name  # Assume output is last node.
-    specop_dict, specop_inputs, specop_outputs = find_specops(
-        graph_def, output_name
-    )
+        # Identify if there are special ops in pb file,
+        # e.g. required_space_to_batch_paddings
+        # If yes, identify the inputs and outputs of these special ops.
+        output_name = graph_def.node[-1].name  # Assume output is last node.
+        specop_dict, specop_inputs, specop_outputs = find_specops(
+            graph_def, output_name
+        )
 
-    # Create a dictionary excluding all the sub ops related to
-    # required_space_to_batch_paddings. Except the sub ops related to the input
-    # or output of this special ops.
-    pb_trimmed, graph_def = select_relevant_ops(
-        specop_inputs, specop_outputs, graph_def
-    )
-    node_list = pb_trimmed.values()
+        # Create a dictionary excluding all the sub ops related to
+        # required_space_to_batch_paddings. Except the sub ops related to the input
+        # or output of this special ops.
+        pb_trimmed, graph_def = select_relevant_ops(
+            specop_inputs, specop_outputs, graph_def
+        )
+        node_list = pb_trimmed.values()
 
-    # If the ops are not related to the special ops, use the existing approach
-    # to register them. Otherwise for the special ops replace the output from
-    # the sub ops by the output from the high level operation then register.
-    for node in node_list:
-      if node.name not in specop_outputs:
-        self._register_op(node, inputs_iterable, input_player, graph_def)
+        # If the ops are not related to the special ops, use the existing approach
+        # to register them. Otherwise for the special ops replace the output from
+        # the sub ops by the output from the high level operation then register.
+        for node in node_list:
+            if node.name not in specop_outputs:
+                self._register_op(node, inputs_iterable, input_player, graph_def)
 
-      else:
-        # Register high level special operations
-        for s in specop_dict:
-          # If this node is the output of the current specop, register it
-          if match_numbered_scope(s,
-                                  node.name,
-                                  return_group=False,
-                                  numbered=False):
-            self._register_specop(node, specop_dict[s])
+            else:
+                # Register high level special operations
+                for s in specop_dict:
+                    # If this node is the output of the current specop, register it
+                    if match_numbered_scope(s,
+                                            node.name,
+                                            return_group=False,
+                                            numbered=False):
+                        self._register_specop(node, specop_dict[s])
 
-    return self.outputs[output_name]
+        return self.outputs[output_name]
 
-  def _register_op(self, node, inputs_iterable, input_player, graph_def):
-    """Register single ops."""
-    output = strip_tensor_info(node.name)
-    if node.op == "Placeholder":
-      try:
-        _, item = inputs_iterable.__next__()
-      except StopIteration:
-        raise InvalidArgumentError("Not enough placeholders supplied")
+    def _register_op(self, node, inputs_iterable, input_player, graph_def):
+        """Register single ops."""
+        output = strip_tensor_info(node.name)
+        if node.op == "Placeholder":
+            try:
+                _, item = inputs_iterable.__next__()
+            except StopIteration:
+                raise InvalidArgumentError("Not enough placeholders supplied")
 
-      x = tfe.define_private_input(input_player, item)
-      self.outputs[output] = x
-      return
+            x = tfe.define_private_input(input_player, item)
+            self.outputs[output] = x
+            return
 
-    out = self.registry[node.op](self, node, node.input)
+        out = self.registry[node.op](self, node, node.input)
 
-    # if the operation returns a list or tuple with several ouputs,
-    # identify the outputs node name
-    if isinstance(out, (list, tuple)):
-      output_name = find_output_names(graph_def, node.name, len(out))
-      # If output_name is empty, it means this node
-      # is the last one in the graph
-      if not output_name:
-        self.outputs[output] = out
-      else:
-        for i, _ in enumerate(out):
-          self.outputs[output_name[i]] = out[i]
-    else:
-      self.outputs[output] = out
+        # if the operation returns a list or tuple with several ouputs,
+        # identify the outputs node name
+        if isinstance(out, (list, tuple)):
+            output_name = find_output_names(graph_def, node.name, len(out))
+            # If output_name is empty, it means this node
+            # is the last one in the graph
+            if not output_name:
+                self.outputs[output] = out
+            else:
+                for i, _ in enumerate(out):
+                    self.outputs[output_name[i]] = out[i]
+        else:
+            self.outputs[output] = out
 
-  def _register_specop(self, node, specop_scope_dict):
-    """Handle special op registration."""
-    input_list = specop_scope_dict['inputs']
-    output_list = specop_scope_dict['outputs']
+    def _register_specop(self, node, specop_scope_dict):
+        """Handle special op registration."""
+        input_list = specop_scope_dict['inputs']
+        output_list = specop_scope_dict['outputs']
 
-    # Handle edge cases if the ops return multiple outputs
-    op_handler = self.registry[specop_scope_dict['op']]
+        # Handle edge cases if the ops return multiple outputs
+        op_handler = self.registry[specop_scope_dict['op']]
 
-    nodes = specop_scope_dict['interiors']
-    if not nodes:
-      nodes = node
-    outs = op_handler(self, nodes, input_list)
-    if isinstance(outs, (list, tuple)):
-      for i, x in enumerate(outs):
-        self.outputs[output_list[i]] = x
-    else:
-      self.outputs[output_list[0]] = outs
+        nodes = specop_scope_dict['interiors']
+        if not nodes:
+            nodes = node
+        outs = op_handler(self, nodes, input_list)
+        if isinstance(outs, (list, tuple)):
+            for i, x in enumerate(outs):
+                self.outputs[output_list[i]] = x
+        else:
+            self.outputs[output_list[0]] = outs
 
 
 def select_relevant_ops(all_specop_inputs, all_specop_outputs, graph_def):
-  """
+    """
   Prune out subgraphs that have been identified as special ops from the
   graph_def, and return the pruned graph_def.
   """
 
-  trimmed_graph = OrderedDict()
-  ordered_graph = OrderedDict()
+    trimmed_graph = OrderedDict()
+    ordered_graph = OrderedDict()
 
-  for n in graph_def.node:
-    ordered_graph[n.name] = n
-    for op in REGISTERED_SPECOPS:
+    for n in graph_def.node:
+        ordered_graph[n.name] = n
+        for op in REGISTERED_SPECOPS:
 
-      matched = False
-      # If the node falls under a specop scope,
-      # only add if it's an input or output to the specop.
-      if match_numbered_scope(op, n.name, return_group=False):
-        matched = True
-        is_input = n.name in all_specop_inputs
-        is_output = n.name in all_specop_outputs
-        if is_input or is_output:
-          trimmed_graph[n.name] = n
-        break
-    # Otherwise, just add it
-    if not matched:
-      trimmed_graph[n.name] = n
+            matched = False
+            # If the node falls under a specop scope,
+            # only add if it's an input or output to the specop.
+            if match_numbered_scope(op, n.name, return_group=False):
+                matched = True
+                is_input = n.name in all_specop_inputs
+                is_output = n.name in all_specop_outputs
+                if is_input or is_output:
+                    trimmed_graph[n.name] = n
+                break
+        # Otherwise, just add it
+        if not matched:
+            trimmed_graph[n.name] = n
 
-  return trimmed_graph, ordered_graph
+    return trimmed_graph, ordered_graph
 
 
 def find_specops(graph_def, output_name):
-  """
+    """
   For special ops defined in REGISTERED_SPECOPS, assemble necessary info to
   convert them and place into the specops_dict. Also returns these ops'
   collective inputs and outputs together in separate arrays.
   """
 
-  specops_dict = OrderedDict()
-  all_specop_inputs = []
-  all_specop_outputs = []
-  namespace = specop_namespace(graph_def)
+    specops_dict = OrderedDict()
+    all_specop_inputs = []
+    all_specop_outputs = []
+    namespace = specop_namespace(graph_def)
 
-  for scope, subscope_map in namespace.items():
-    specops_dict[scope] = {}
-    specops_dict[scope]['op'] = specop_from_numberedscope(scope)
-    specops_dict[scope]['interiors'] = get_interiors(scope, namespace)
-    inputs, outputs = find_leaves(scope, subscope_map)
+    for scope, subscope_map in namespace.items():
+        specops_dict[scope] = {}
+        specops_dict[scope]['op'] = specop_from_numberedscope(scope)
+        specops_dict[scope]['interiors'] = get_interiors(scope, namespace)
+        inputs, outputs = find_leaves(scope, subscope_map)
 
-    specops_dict[scope]['inputs'] = inputs
-    all_specop_inputs += inputs
-    # if no outputs found assume output to model is the special op output
-    if not outputs:
-      outputs = [output_name]
-    specops_dict[scope]['outputs'] = outputs
-    all_specop_outputs += outputs
+        specops_dict[scope]['inputs'] = inputs
+        all_specop_inputs += inputs
+        # if no outputs found assume output to model is the special op output
+        if not outputs:
+            outputs = [output_name]
+        specops_dict[scope]['outputs'] = outputs
+        all_specop_outputs += outputs
 
-  return specops_dict, all_specop_inputs, all_specop_outputs
+    return specops_dict, all_specop_inputs, all_specop_outputs
 
 
 def specop_namespace(graph_def):
-  """
+    """
   Gathers all subgraphs corresponding to registered special ops.
 
   For each specop scope matching `{specop}_[0-9]+/`, assemble all ops
@@ -229,22 +229,22 @@ def specop_namespace(graph_def):
   where ops_map is an OrderedDict[NodeDef.name --> NodeDef].
   """
 
-  namespace = OrderedDict()
-  for node in graph_def.node:
-    for specop in REGISTERED_SPECOPS:
-      node_name = node.name
-      this_scope = match_numbered_scope(specop, node_name)
-      if this_scope is None:
-        continue
-      if this_scope not in namespace:
-        namespace[this_scope] = OrderedDict()
-      namespace[this_scope][node_name] = node
+    namespace = OrderedDict()
+    for node in graph_def.node:
+        for specop in REGISTERED_SPECOPS:
+            node_name = node.name
+            this_scope = match_numbered_scope(specop, node_name)
+            if this_scope is None:
+                continue
+            if this_scope not in namespace:
+                namespace[this_scope] = OrderedDict()
+            namespace[this_scope][node_name] = node
 
-  return namespace
+    return namespace
 
 
 def get_interiors(specop_scope, subscope_map):
-  """
+    """
   An interior (op/node) of a subgraph is an op that is neither
   an input or an output for all ops outside of that subgraph.
 
@@ -252,55 +252,53 @@ def get_interiors(specop_scope, subscope_map):
   corresponding value of subscope_map and collect their NodeDefs
   into an OrderedDict keyed by the registered interior op name.
   """
-  specop = specop_from_numberedscope(specop_scope)
-  if specop is None:
-    return None
-  interior_names = REGISTERED_SPECOPS[specop]["interiors"]
-  interiors = OrderedDict()
-  if interior_names is None:
+    specop = specop_from_numberedscope(specop_scope)
+    if specop is None:
+        return None
+    interior_names = REGISTERED_SPECOPS[specop]["interiors"]
+    interiors = OrderedDict()
+    if interior_names is None:
+        return interiors
+    subscope_ops_map = subscope_map[specop_scope]
+    for op in interior_names:
+        for node_name in subscope_ops_map:
+            if match_numbered_leaf(op, node_name) is not None:
+                interiors[op] = subscope_ops_map[node_name]
+                break
     return interiors
-  subscope_ops_map = subscope_map[specop_scope]
-  for op in interior_names:
-    for node_name in subscope_ops_map:
-      if match_numbered_leaf(op, node_name) is not None:
-        interiors[op] = subscope_ops_map[node_name]
-        break
-  return interiors
 
 
 def find_leaves(scope, subscope_map):
-  """Assemble input and output leaf nodes of the subgraph represented by
+    """Assemble input and output leaf nodes of the subgraph represented by
   subscope_map.
   """
 
-  input_leaves = []
-  output_leaves = list(subscope_map.keys())
-  for _, node in subscope_map.items():
-    for inp in node.input:
+    input_leaves = []
+    output_leaves = list(subscope_map.keys())
+    for _, node in subscope_map.items():
+        for inp in node.input:
 
-      if match_numbered_scope(scope, inp) is None \
-              and re.search('(.*/)*keras_learning_phase$', inp) is None:
-        # edge case - the keras_learning_phase node is an input to other
-        # batchnorm nodes, but is irrelevent to the converter
-        # and therefore can be ignored
-        input_leaves.append(inp)
+            if match_numbered_scope(scope, inp) is None \
+                    and re.search('(.*/)*keras_learning_phase$', inp) is None:
+                # edge case - the keras_learning_phase node is an input to other
+                # batchnorm nodes, but is irrelevent to the converter
+                # and therefore can be ignored
+                input_leaves.append(inp)
 
-      if re.search(r':\d+$', inp) is not None:
-        inp = inp.split(":")[0]
-      if inp in output_leaves:
-        output_leaves.remove(inp)
+            if re.search(r':\d+$', inp) is not None:
+                inp = inp.split(":")[0]
+            if inp in output_leaves:
+                output_leaves.remove(inp)
 
-  seen = set()
-  adder = seen.add
-  input_leaves = [x for x in input_leaves if not (x in seen or adder(x))]
+    seen = set()
+    adder = seen.add
+    input_leaves = [x for x in input_leaves if not (x in seen or adder(x))]
 
-  return input_leaves, output_leaves
+    return input_leaves, output_leaves
 
 
-def match_numbered_scope(
-    specop, search_string, return_group=True, numbered=True
-):
-  """
+def match_numbered_scope(specop, search_string, return_group=True, numbered=True):
+    """
   Find a numbered scope matching a specop from REGISTERED_SPECOPS,
   and return it if found.
     Example: 'conv2d' will match '...conv2d_345/...' and return 'conv2d_345'.
@@ -314,59 +312,59 @@ def match_numbered_scope(
         i.e. conv2d_1 will only match conv2d_1 and not conv2d etc.
 
   """
-  if numbered:
-    expr = '^(.*/)*({0})/|(^(.*/)*({0}_[0-9]+))/'.format(specop)
-  else:
-    expr = '^(.*/)*({0})/'.format(specop)
+    if numbered:
+        expr = '^(.*/)*({0})/|(^(.*/)*({0}_[0-9]+))/'.format(specop)
+    else:
+        expr = '^(.*/)*({0})/'.format(specop)
 
-  match = re.search(expr, search_string)
-  if match is not None:
-    if not return_group:
-      return match
-    for grp in reversed(match.groups()):
-      if grp is not None:
-        return grp
-  return match
+    match = re.search(expr, search_string)
+    if match is not None:
+        if not return_group:
+            return match
+        for grp in reversed(match.groups()):
+            if grp is not None:
+                return grp
+    return match
 
 
 def match_numbered_leaf(leaf_to_match, search_string):
-  """
+    """
   Find a numbered leaf matching a tf.Operation and return it if found.
 
   Example: 'Conv2D' will match '.../Conv2D_5' and return 'Conv2D_5'
   """
-  expr = '/({0}$)|/({0}_[0-9]+$)'.format(leaf_to_match)
-  match = re.search(expr, search_string)
-  if match is not None:
-    return match.group(1)
-  return match
+    expr = '/({0}$)|/({0}_[0-9]+$)'.format(leaf_to_match)
+    match = re.search(expr, search_string)
+    if match is not None:
+        return match.group(1)
+    return match
 
 
 def specop_from_numberedscope(scope):
-  """
+    """
   An inverse for `match_numbered_scope`.
 
   Example: 'conv2d_4' will produce 'conv2d'.
   """
-  expr = '[_a-zA-Z0-9]+(?=_[0-9]+)'
-  match = re.search(expr, scope)
-  if match is not None:
-    return match.group(0)
-  return scope
+    expr = '[_a-zA-Z0-9]+(?=_[0-9]+)'
+    match = re.search(expr, scope)
+    if match is not None:
+        return match.group(0)
+    return scope
 
 
 def strip_tensor_info(node_name: str) -> str:
-  if node_name.startswith("^"):
-    return node_name[1:]
-  return node_name.split(":")[0]
+    if node_name.startswith("^"):
+        return node_name[1:]
+    return node_name.split(":")[0]
 
 
 class InvalidArgumentError(Exception):
-  pass
+    pass
 
 
 def find_output_names(graph_def, node_name, num_outputs):
-  """
+    """
   List ouput names for a specific node.
 
   Add to the output name list if the input name starts with the
@@ -383,23 +381,23 @@ def find_output_names(graph_def, node_name, num_outputs):
     input: "split:1"
     }
   """
-  output_node = [None] * num_outputs
-  node_name_list = list(graph_def.keys())
-  n_i = node_name_list.index(node_name)
-  # Forward lookahead from the node we want register
-  for n in node_name_list[n_i + 1:]:
-    if not n.startswith(node_name):
-      gdf = graph_def[n]
-      for x in gdf.input:
-        # we insert the names by their index,
-        # and not by the order of appearance in the graph
-        if x.startswith(node_name):
-          if ':' not in x:
-            output_node[0] = x
-          else:
-            output_node[int(x.split(':')[-1])] = x
+    output_node = [None] * num_outputs
+    node_name_list = list(graph_def.keys())
+    n_i = node_name_list.index(node_name)
+    # Forward lookahead from the node we want register
+    for n in node_name_list[n_i + 1:]:
+        if not n.startswith(node_name):
+            gdf = graph_def[n]
+            for x in gdf.input:
+                # we insert the names by their index,
+                # and not by the order of appearance in the graph
+                if x.startswith(node_name):
+                    if ':' not in x:
+                        output_node[0] = x
+                    else:
+                        output_node[int(x.split(':')[-1])] = x
 
-  # assert if not all output nodes appear in the graph
-  assert None not in output_node
+    # assert if not all output nodes appear in the graph
+    assert None not in output_node
 
-  return output_node
+    return output_node

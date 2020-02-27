@@ -30,61 +30,59 @@ __all_prot_funcs__ = protocol.get_all_funcs()
 
 
 def _prot_func_not_implemented(*args: Any, **kwargs: Any) -> None:
-  msg = "This function is not implemented in protocol {}"
-  raise Exception(msg.format(inspect.stack()[1][3]))
+    msg = "This function is not implemented in protocol {}"
+    raise Exception(msg.format(inspect.stack()[1][3]))
 
 
 def _update_protocol(prot):
-  """Update current protocol in scope."""
-  global __protocol__
-  __protocol__ = prot
+    """Update current protocol in scope."""
+    global __protocol__
+    __protocol__ = prot
 
 
 def get_protocol():
-  """Return the current protocol in scope.
+    """Return the current protocol in scope.
 
   Note this should not be used for accessing public protocol methods, use
   tfe.<public_protocol_method> instead.
   """
-  return __protocol__
+    return __protocol__
 
 
 def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
-  """
+    """
   Sets the global protocol. See
   :class:`~tf_encrypted.protocol.protocol.Protocol` for more info.
 
   :param ~tf_encrypted.protocol.protocol.Protocol prot: A protocol instance.
   """
 
-  # reset all names
-  for func_name in __all_prot_funcs__:
-    globals()[func_name] = _prot_func_not_implemented
+    # reset all names
+    for func_name in __all_prot_funcs__:
+        globals()[func_name] = _prot_func_not_implemented
 
-  # add global names according to new protocol
-  if prot is not None:
-    methods = inspect.getmembers(prot, predicate=inspect.ismethod)
-    public_methods = [
-        method for method in methods if not method[0].startswith('_')
-    ]
-    for name, func in public_methods:
-      globals()[name] = func
+    # add global names according to new protocol
+    if prot is not None:
+        methods = inspect.getmembers(prot, predicate=inspect.ismethod)
+        public_methods = [method for method in methods if not method[0].startswith('_')]
+        for name, func in public_methods:
+            globals()[name] = func
 
-  # record new protocol
-  _update_protocol(prot)
+    # record new protocol
+    _update_protocol(prot)
 
 
 def set_config(config: Config) -> None:
-  # pylint: disable=import-outside-toplevel
-  from .config import set_config as set_global_config
-  # pylint: enable=import-outside-toplevel
+    # pylint: disable=import-outside-toplevel
+    from .config import set_config as set_global_config
+    # pylint: enable=import-outside-toplevel
 
-  set_global_config(config)
-  set_protocol(None)
+    set_global_config(config)
+    set_protocol(None)
 
 
 def global_variables_initializer() -> tf.Operation:
-  return tf.global_variables_initializer()
+    return tf.global_variables_initializer()
 
 
 set_protocol(Pond())

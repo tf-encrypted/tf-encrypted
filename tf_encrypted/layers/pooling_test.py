@@ -12,118 +12,118 @@ from tf_encrypted.layers import MaxPooling2D
 
 class TestAveragePooling2D(unittest.TestCase):
 
-  def setUp(self):
-    tf.reset_default_graph()
+    def setUp(self):
+        tf.reset_default_graph()
 
-  def _get_fixtures(self, even=True):
-    if even:
-      batch_size, channels_in = 2, 2
-      img_height, img_width = 8, 8
-    else:
-      batch_size, channels_in = 1, 1
-      img_height, img_width = 5, 11
-    input_shape = (batch_size, channels_in, img_height, img_width)
-
-    n_elements = batch_size * channels_in * img_height * img_width
-    input_pool = np.ones(n_elements, dtype=np.float32).reshape(input_shape)
-
-    return input_pool, input_shape
-
-  def _tf_tiled_forward(self, input_pool: np.ndarray) -> np.ndarray:
-    x = tf.constant(input_pool, dtype=tf.float32)
-    x_nhwc = tf.transpose(x, (0, 2, 3, 1))
-    ksize = [1, 2, 2, 1]
-    pool_out_tf = tf.nn.avg_pool(
-        x_nhwc, ksize=ksize, strides=ksize, padding="VALID", data_format='NHWC'
-    )
-
-    with tf.Session() as sess:
-      out_tf = sess.run(pool_out_tf).transpose(0, 3, 1, 2)
-
-    return out_tf
-
-  def _generic_tiled_forward(self, t_type: str, even: bool = True) -> None:
-    assert t_type in ['public', 'private', 'masked']
-    input_pool, input_shape = self._get_fixtures(even)
-
-    # pooling in pond
-    with tfe.protocol.Pond() as prot:
-      if t_type == 'public':
-        x_in = prot.define_public_variable(input_pool)
-      elif t_type in ['private', 'masked']:
-        x_in = prot.define_private_variable(input_pool)
-      if t_type == 'masked':
-        x_in = prot.mask(x_in)
-      pool = AveragePooling2D(list(input_shape), pool_size=2, padding="VALID")
-      pool_out_pond = pool.forward(x_in)
-
-      with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        if t_type in ['private', 'masked']:
-          out_pond = sess.run(pool_out_pond.reveal())
+    def _get_fixtures(self, even=True):
+        if even:
+            batch_size, channels_in = 2, 2
+            img_height, img_width = 8, 8
         else:
-          out_pond = sess.run(pool_out_pond)
+            batch_size, channels_in = 1, 1
+            img_height, img_width = 5, 11
+        input_shape = (batch_size, channels_in, img_height, img_width)
 
-    # reset tf graph
-    tf.reset_default_graph()
+        n_elements = batch_size * channels_in * img_height * img_width
+        input_pool = np.ones(n_elements, dtype=np.float32).reshape(input_shape)
 
-    # pooling in tf
-    out_tf = self._tf_tiled_forward(input_pool)
+        return input_pool, input_shape
 
-    np.testing.assert_array_almost_equal(out_pond, out_tf, decimal=3)
+    def _tf_tiled_forward(self, input_pool: np.ndarray) -> np.ndarray:
+        x = tf.constant(input_pool, dtype=tf.float32)
+        x_nhwc = tf.transpose(x, (0, 2, 3, 1))
+        ksize = [1, 2, 2, 1]
+        pool_out_tf = tf.nn.avg_pool(
+            x_nhwc, ksize=ksize, strides=ksize, padding="VALID", data_format='NHWC'
+        )
 
-  def test_public_tiled_forward(self):
-    self._generic_tiled_forward('public', True)
+        with tf.Session() as sess:
+            out_tf = sess.run(pool_out_tf).transpose(0, 3, 1, 2)
 
-  def test_public_forward(self):
-    self._generic_tiled_forward('public', False)
+        return out_tf
 
-  def test_private_tiled_forward(self):
-    self._generic_tiled_forward('private')
+    def _generic_tiled_forward(self, t_type: str, even: bool = True) -> None:
+        assert t_type in ['public', 'private', 'masked']
+        input_pool, input_shape = self._get_fixtures(even)
 
-  def test_private_forward(self):
-    self._generic_tiled_forward('private', False)
+        # pooling in pond
+        with tfe.protocol.Pond() as prot:
+            if t_type == 'public':
+                x_in = prot.define_public_variable(input_pool)
+            elif t_type in ['private', 'masked']:
+                x_in = prot.define_private_variable(input_pool)
+            if t_type == 'masked':
+                x_in = prot.mask(x_in)
+            pool = AveragePooling2D(list(input_shape), pool_size=2, padding="VALID")
+            pool_out_pond = pool.forward(x_in)
 
-  def test_masked_tiled_forward(self):
-    self._generic_tiled_forward('masked')
+            with tfe.Session() as sess:
+                sess.run(tf.global_variables_initializer())
+                if t_type in ['private', 'masked']:
+                    out_pond = sess.run(pool_out_pond.reveal())
+                else:
+                    out_pond = sess.run(pool_out_pond)
 
-  def test_masked_forward(self):
-    self._generic_tiled_forward('masked', False)
+        # reset tf graph
+        tf.reset_default_graph()
+
+        # pooling in tf
+        out_tf = self._tf_tiled_forward(input_pool)
+
+        np.testing.assert_array_almost_equal(out_pond, out_tf, decimal=3)
+
+    def test_public_tiled_forward(self):
+        self._generic_tiled_forward('public', True)
+
+    def test_public_forward(self):
+        self._generic_tiled_forward('public', False)
+
+    def test_private_tiled_forward(self):
+        self._generic_tiled_forward('private')
+
+    def test_private_forward(self):
+        self._generic_tiled_forward('private', False)
+
+    def test_masked_tiled_forward(self):
+        self._generic_tiled_forward('masked')
+
+    def test_masked_forward(self):
+        self._generic_tiled_forward('masked', False)
 
 
 @pytest.mark.slow
 class TestMaxPooling2D(unittest.TestCase):
 
-  def setUp(self):
-    tf.reset_default_graph()
+    def setUp(self):
+        tf.reset_default_graph()
 
-  def tearDown(self):
-    tf.reset_default_graph()
+    def tearDown(self):
+        tf.reset_default_graph()
 
-  def test_maxpool2d(self):
-    with tfe.protocol.SecureNN() as prot:
+    def test_maxpool2d(self):
+        with tfe.protocol.SecureNN() as prot:
 
-      x_in = np.array(
-          [[[
-              [1, 2, 3, 4],
-              [3, 2, 4, 1],
-              [1, 2, 3, 4],
-              [3, 2, 4, 1],
-          ]]]
-      )
+            x_in = np.array(
+                [[[
+                    [1, 2, 3, 4],
+                    [3, 2, 4, 1],
+                    [1, 2, 3, 4],
+                    [3, 2, 4, 1],
+                ]]]
+            )
 
-      expected = np.array([[[[3, 4], [3, 4]]]], dtype=np.float64)
+            expected = np.array([[[[3, 4], [3, 4]]]], dtype=np.float64)
 
-      x = prot.define_private_variable(x_in)
-      pool = MaxPooling2D([0, 1, 4, 4], pool_size=2, padding="VALID")
-      result = pool.forward(x)
+            x = prot.define_private_variable(x_in)
+            pool = MaxPooling2D([0, 1, 4, 4], pool_size=2, padding="VALID")
+            result = pool.forward(x)
 
-      with tfe.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        answer = sess.run(result.reveal())
+            with tfe.Session() as sess:
+                sess.run(tf.global_variables_initializer())
+                answer = sess.run(result.reveal())
 
-    assert np.array_equal(answer, expected)
+        assert np.array_equal(answer, expected)
 
 
 if __name__ == '__main__':
-  unittest.main()
+    unittest.main()
