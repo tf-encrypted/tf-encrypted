@@ -1,5 +1,5 @@
 """Generates the Reserved Scopes table in tf_encrypted/convert/README.md
-from proprly formatted key-values in `specops.yaml`."""
+from properly formatted key-values in `specops.yaml`."""
 import os
 
 from tf_encrypted.convert.register import REGISTERED_SPECOPS

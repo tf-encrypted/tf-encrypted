@@ -63,16 +63,7 @@ test: pythoncheck
 	pytest -n 8 -x -m slow
 	pytest -n 8 -x -m convert_maxpool
 
-CONVERT_DIR=tf_encrypted/convert
-BUILD_RESERVED_SCOPES=$(CONVERT_DIR)/specops.yaml
-$(BUILD_RESERVED_SCOPES): pythoncheck
-	python -m tf_encrypted.convert.gen.generate_reserved_scopes
-
-BUILD_CONVERTER_README=$(CONVERT_DIR)/gen/readme_template.md
-$(BUILD_CONVERTER_README): $(BUILD_RESERVED_SCOPES) pythoncheck
-	python -m tf_encrypted.convert.gen.generate_reserved_scopes
-
-lint: $(BUILD_CONVERTER_README) pythoncheck
+lint: pythoncheck
 	flake8 tf_encrypted operations examples
 
 fmt: pythoncheck
@@ -101,10 +92,19 @@ SPHINX_BUILD_GOOGLE_DOCSTRINGS = sphinx-apidoc
 SPHINX_NAPOLEAN_BUILD_DIR = docs/source/gen
 SPHINX_PROJECT_DIR = tf_encrypted
 
+CONVERT_DIR=tf_encrypted/convert
+BUILD_RESERVED_SCOPES=$(CONVERT_DIR)/specops.yaml
+$(BUILD_RESERVED_SCOPES): pythoncheck
+	python -m tf_encrypted.convert.gen.generate_reserved_scopes
+
+BUILD_CONVERTER_README=$(CONVERT_DIR)/gen/readme_template.md
+$(BUILD_CONVERTER_README): $(BUILD_RESERVED_SCOPES) pythoncheck
+	python -m tf_encrypted.convert.gen.generate_reserved_scopes
+
 google-docstrings:
 	@$(SPHINX_BUILD_GOOGLE_DOCSTRINGS) -fMeET "$(SPHINX_PROJECT_DIR)" -o "$(SPHINX_NAPOLEAN_BUILD_DIR)"
 
-docs: google-docstrings
+docs: $(BUILD_CONVERTER_README) google-docstrings
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 .PHONY: docs
