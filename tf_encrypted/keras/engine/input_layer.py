@@ -33,24 +33,24 @@ class InputLayer(Layer):
         input_tensor=None,
         sparse=False,
         name=None,
-        **kwargs
+        **kwargs,
     ):
-        if 'batch_input_shape' in kwargs:
-            batch_input_shape = kwargs.pop('batch_input_shape')
+        if "batch_input_shape" in kwargs:
+            batch_input_shape = kwargs.pop("batch_input_shape")
             if input_shape and batch_input_shape:
                 raise ValueError(
-                    'Only provide the input_shape OR '
-                    'batch_input_shape argument to '
-                    'InputLayer, not both at the same time.'
+                    "Only provide the input_shape OR "
+                    "batch_input_shape argument to "
+                    "InputLayer, not both at the same time."
                 )
             batch_size = batch_input_shape[0]
             input_shape = batch_input_shape[1:]
         if kwargs:
-            raise ValueError('Unrecognized keyword arguments:', kwargs.keys())
+            raise ValueError("Unrecognized keyword arguments:", kwargs.keys())
 
         if not name:
-            prefix = 'input'
-            name = prefix + '_' + str(backend.get_uid(prefix))
+            prefix = "input"
+            name = prefix + "_" + str(backend.get_uid(prefix))
 
         if batch_size is None:
             raise NotImplementedError()
@@ -86,7 +86,8 @@ def Input(  # pylint: disable=invalid-name
     dtype=None,
     sparse=False,
     tensor=None,
-    **kwargs):
+    **kwargs,
+):
     """`Input()` is used to instantiate a Keras tensor.
   A Keras tensor is a tensor object from the underlying backend
   (TF Encrypted), which we augment with certain
@@ -131,25 +132,25 @@ def Input(  # pylint: disable=invalid-name
     ValueError: in case of invalid arguments.
   """
     batch_shape = None
-    if 'batch_shape' in kwargs:
-        batch_shape = kwargs.pop('batch_shape')
+    if "batch_shape" in kwargs:
+        batch_shape = kwargs.pop("batch_shape")
         if shape and batch_shape:
             raise ValueError(
-                'Only provide the shape OR '
-                'batch_shape argument to '
-                'Input, not both at the same time.'
+                "Only provide the shape OR "
+                "batch_shape argument to "
+                "Input, not both at the same time."
             )
         batch_size = batch_shape[0]
         shape = batch_shape[1:]
     if kwargs:
-        raise ValueError('Unrecognized keyword arguments:', kwargs.keys())
+        raise ValueError("Unrecognized keyword arguments:", kwargs.keys())
 
     if shape is None and tensor is None:
         raise ValueError(
-            'Please provide to Input either a `shape`'
-            ' or a `tensor` argument. Note that '
-            '`shape` does not include the batch '
-            'dimension.'
+            "Please provide to Input either a `shape`"
+            " or a `tensor` argument. Note that "
+            "`shape` does not include the batch "
+            "dimension."
         )
 
     if sparse:
@@ -165,7 +166,7 @@ def Input(  # pylint: disable=invalid-name
             name=name,
             dtype=dtype,
             sparse=sparse,
-            input_tensor=tensor
+            input_tensor=tensor,
         )
     else:
         input_layer = InputLayer(
@@ -174,7 +175,7 @@ def Input(  # pylint: disable=invalid-name
             name=name,
             dtype=dtype,
             sparse=sparse,
-            input_tensor=tensor
+            input_tensor=tensor,
         )
 
     # Return tensor including `_keras_history`.

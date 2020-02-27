@@ -35,19 +35,19 @@ class Pooling2D(Layer):
         _pool_function,
         pool_size,
         strides,
-        padding='valid',
+        padding="valid",
         data_format=None,
-        **kwargs
+        **kwargs,
     ):
         super(Pooling2D, self).__init__(**kwargs)
 
         if data_format is None:
-            data_format = 'channels_last'
+            data_format = "channels_last"
         if strides is None:
             strides = pool_size
         self._pool_function = _pool_function
-        self.pool_size = conv_utils.normalize_tuple(pool_size, 2, 'pool_size')
-        self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
+        self.pool_size = conv_utils.normalize_tuple(pool_size, 2, "pool_size")
+        self.strides = conv_utils.normalize_tuple(strides, 2, "strides")
         self.padding = conv_utils.normalize_padding(padding).upper()
         self.data_format = conv_utils.normalize_data_format(data_format)
 
@@ -56,14 +56,14 @@ class Pooling2D(Layer):
 
     def call(self, inputs):
 
-        if self.data_format != 'channels_first':
+        if self.data_format != "channels_first":
             inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
         outputs = self._pool_function(
             inputs, self.pool_size, self.strides, self.padding
         )
 
-        if self.data_format != 'channels_first':
+        if self.data_format != "channels_first":
             outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
 
         return outputs
@@ -122,9 +122,9 @@ class MaxPooling2D(Pooling2D):
         self,
         pool_size=(2, 2),
         strides=None,
-        padding='valid',
+        padding="valid",
         data_format=None,
-        **kwargs
+        **kwargs,
     ):
         super(MaxPooling2D, self).__init__(
             tfe.maxpool2d,
@@ -132,7 +132,7 @@ class MaxPooling2D(Pooling2D):
             strides=strides,
             padding=padding,
             data_format=data_format,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -175,9 +175,9 @@ class AveragePooling2D(Pooling2D):
         self,
         pool_size=(2, 2),
         strides=None,
-        padding='valid',
+        padding="valid",
         data_format=None,
-        **kwargs
+        **kwargs,
     ):
         super(AveragePooling2D, self).__init__(
             tfe.avgpool2d,
@@ -185,7 +185,7 @@ class AveragePooling2D(Pooling2D):
             strides=strides,
             padding=padding,
             data_format=data_format,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -198,7 +198,7 @@ class GlobalPooling2D(Layer):
         self.data_format = conv_utils.normalize_data_format(data_format)
 
     def compute_output_shape(self, input_shape):
-        if self.data_format == 'channels_last':
+        if self.data_format == "channels_last":
             output_shape = [input_shape[0], input_shape[3]]
         else:
             output_shape = [input_shape[0], input_shape[1]]
@@ -239,7 +239,7 @@ class GlobalAveragePooling2D(GlobalPooling2D):
   """
 
     def build(self, input_shape):
-        if self.data_format == 'channels_last':
+        if self.data_format == "channels_last":
             _, h_in, w_in, _ = input_shape
         else:
             _, _, h_in, w_in = input_shape
@@ -247,7 +247,7 @@ class GlobalAveragePooling2D(GlobalPooling2D):
         self.scalar = 1 / int(h_in * w_in)
 
     def call(self, inputs):
-        if self.data_format == 'channels_last':
+        if self.data_format == "channels_last":
             x_reduced = inputs.reduce_sum(axis=2).reduce_sum(axis=1)
         else:
             x_reduced = inputs.reduce_sum(axis=3).reduce_sum(axis=2)
@@ -284,7 +284,7 @@ class GlobalMaxPooling2D(GlobalPooling2D):
   """
 
     def call(self, inputs):
-        if self.data_format == 'channels_last':
+        if self.data_format == "channels_last":
             x_reduced = tfe.reduce_max(inputs, axis=2)
             x_reduced = tfe.reduce_max(x_reduced, axis=1)
         else:

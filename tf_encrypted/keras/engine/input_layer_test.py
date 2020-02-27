@@ -11,7 +11,6 @@ np.random.seed(42)
 
 
 class TestInput(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -23,5 +22,5 @@ class TestInput(unittest.TestCase):
             sess.run(x.reveal(), feed_dict=fd)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

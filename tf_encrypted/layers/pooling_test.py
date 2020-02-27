@@ -11,7 +11,6 @@ from tf_encrypted.layers import MaxPooling2D
 
 
 class TestAveragePooling2D(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -34,7 +33,7 @@ class TestAveragePooling2D(unittest.TestCase):
         x_nhwc = tf.transpose(x, (0, 2, 3, 1))
         ksize = [1, 2, 2, 1]
         pool_out_tf = tf.nn.avg_pool(
-            x_nhwc, ksize=ksize, strides=ksize, padding="VALID", data_format='NHWC'
+            x_nhwc, ksize=ksize, strides=ksize, padding="VALID", data_format="NHWC"
         )
 
         with tf.Session() as sess:
@@ -43,23 +42,23 @@ class TestAveragePooling2D(unittest.TestCase):
         return out_tf
 
     def _generic_tiled_forward(self, t_type: str, even: bool = True) -> None:
-        assert t_type in ['public', 'private', 'masked']
+        assert t_type in ["public", "private", "masked"]
         input_pool, input_shape = self._get_fixtures(even)
 
         # pooling in pond
         with tfe.protocol.Pond() as prot:
-            if t_type == 'public':
+            if t_type == "public":
                 x_in = prot.define_public_variable(input_pool)
-            elif t_type in ['private', 'masked']:
+            elif t_type in ["private", "masked"]:
                 x_in = prot.define_private_variable(input_pool)
-            if t_type == 'masked':
+            if t_type == "masked":
                 x_in = prot.mask(x_in)
             pool = AveragePooling2D(list(input_shape), pool_size=2, padding="VALID")
             pool_out_pond = pool.forward(x_in)
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                if t_type in ['private', 'masked']:
+                if t_type in ["private", "masked"]:
                     out_pond = sess.run(pool_out_pond.reveal())
                 else:
                     out_pond = sess.run(pool_out_pond)
@@ -73,27 +72,26 @@ class TestAveragePooling2D(unittest.TestCase):
         np.testing.assert_array_almost_equal(out_pond, out_tf, decimal=3)
 
     def test_public_tiled_forward(self):
-        self._generic_tiled_forward('public', True)
+        self._generic_tiled_forward("public", True)
 
     def test_public_forward(self):
-        self._generic_tiled_forward('public', False)
+        self._generic_tiled_forward("public", False)
 
     def test_private_tiled_forward(self):
-        self._generic_tiled_forward('private')
+        self._generic_tiled_forward("private")
 
     def test_private_forward(self):
-        self._generic_tiled_forward('private', False)
+        self._generic_tiled_forward("private", False)
 
     def test_masked_tiled_forward(self):
-        self._generic_tiled_forward('masked')
+        self._generic_tiled_forward("masked")
 
     def test_masked_forward(self):
-        self._generic_tiled_forward('masked', False)
+        self._generic_tiled_forward("masked", False)
 
 
 @pytest.mark.slow
 class TestMaxPooling2D(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -127,5 +125,5 @@ class TestMaxPooling2D(unittest.TestCase):
         assert np.array_equal(answer, expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

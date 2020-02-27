@@ -10,15 +10,13 @@ from tf_encrypted.tensor import int64factory
 
 
 class TestInt64Tensor(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
     def test_pond(self) -> None:
 
         with tfe.protocol.Pond(
-                tensor_factory=int64factory,
-                fixedpoint_config=fixed64,
+            tensor_factory=int64factory, fixedpoint_config=fixed64,
         ) as prot:
 
             x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
@@ -34,7 +32,9 @@ class TestInt64Tensor(unittest.TestCase):
     def test_binarize(self) -> None:
         x = int64factory.tensor(
             tf.constant(
-                [2**62 + 3, 2**63 - 1, 2**63 - 2, -3], shape=[2, 2], dtype=tf.int64
+                [2 ** 62 + 3, 2 ** 63 - 1, 2 ** 63 - 2, -3],
+                shape=[2, 2],
+                dtype=tf.int64,
             )
         )
 
@@ -67,11 +67,11 @@ class TestInt64Tensor(unittest.TestCase):
         np.testing.assert_array_equal(actual, expected)
 
     def test_random_binarize(self) -> None:
-        x_in = np.random.uniform(
-            low=2**63 + 1,
-            high=2**63 - 1,
-            size=2000,
-        ).astype(np.int64).tolist()
+        x_in = (
+            np.random.uniform(low=2 ** 63 + 1, high=2 ** 63 - 1, size=2000,)
+            .astype(np.int64)
+            .tolist()
+        )
         x = int64factory.tensor(tf.constant(x_in, dtype=tf.int64))
 
         y = x.bits()
@@ -92,7 +92,6 @@ class TestInt64Tensor(unittest.TestCase):
 
 
 class TestConv2D(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -126,10 +125,7 @@ class TestConv2D(unittest.TestCase):
             filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
             conv_out_tf = tf.nn.conv2d(
-                x_nhwc,
-                filters_tf,
-                strides=[1, strides, strides, 1],
-                padding="SAME",
+                x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME",
             )
 
             sess.run(tf.global_variables_initializer())
@@ -138,5 +134,5 @@ class TestConv2D(unittest.TestCase):
         np.testing.assert_array_almost_equal(actual, out_tensorflow, decimal=3)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

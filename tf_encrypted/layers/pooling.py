@@ -17,18 +17,18 @@ IntTuple = Union[int, Tuple[int, int], List[int]]
 
 class Pooling2D(Layer):
     """
-  Base class for AveragePooling and MaxPooling layers
+    Base class for AveragePooling and MaxPooling layers
 
-  Do not instantiate.
-  """
+    Do not instantiate.
+    """
 
     def __init__(
-            self,
-            input_shape: List[int],
-            pool_size: IntTuple,
-            strides: Optional[IntTuple] = None,
-            padding: str = "SAME",
-            channels_first: bool = True,
+        self,
+        input_shape: List[int],
+        pool_size: IntTuple,
+        strides: Optional[IntTuple] = None,
+        padding: str = "SAME",
+        channels_first: bool = True,
     ) -> None:
         if isinstance(pool_size, int):
             pool_size = (pool_size, pool_size)  # type: ignore
@@ -38,7 +38,7 @@ class Pooling2D(Layer):
         elif isinstance(strides, int):
             strides = (strides, strides)  # type: ignore
         self.strides = strides
-        if padding not in ['SAME', 'VALID']:
+        if padding not in ["SAME", "VALID"]:
             raise ValueError("Don't know how to do padding of type {}".format(padding))
         self.padding = padding
         self.channels_first = channels_first
@@ -48,9 +48,7 @@ class Pooling2D(Layer):
         self.cached_input_shape = None
 
     def initialize(
-            self,
-            input_shape: IntTuple,
-            initializer: Optional[TFEVariable] = None
+        self, input_shape: IntTuple, initializer: Optional[TFEVariable] = None
     ) -> None:
         pass
 
@@ -92,10 +90,10 @@ class Pooling2D(Layer):
 
 class AveragePooling2D(Pooling2D):  # pylint: disable=abstract-method
     """
-  AveragePooling2D
+    AveragePooling2D
 
-  :See: tf.nn.avg_pool
-  """
+    :See: tf.nn.avg_pool
+    """
 
     def pool(self, x, pool_size, strides, padding):
         return tfe.avgpool2d(x, pool_size, strides, padding)
@@ -103,10 +101,10 @@ class AveragePooling2D(Pooling2D):  # pylint: disable=abstract-method
 
 class MaxPooling2D(Pooling2D):  # pylint: disable=abstract-method
     """
-  MaxPooling2D
+    MaxPooling2D
 
-  :See: tf.nn.max_pool
-  """
+    :See: tf.nn.max_pool
+    """
 
     # TODO -- throw an error duing init if the protocol is not secureNN
 

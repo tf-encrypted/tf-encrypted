@@ -20,8 +20,8 @@ assert _validate_fixedpoint_config(fixed64, int64factory)
 assert _validate_fixedpoint_config(fixed64_ni, int64factory)
 
 __all__ = [
-    'native_factory',
-    'int32factory',
-    'int64factory',
-    'int100factory',
+    "native_factory",
+    "int32factory",
+    "int64factory",
+    "int100factory",
 ]

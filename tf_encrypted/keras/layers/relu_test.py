@@ -8,7 +8,6 @@ from tf_encrypted.keras.testing_utils import agreement_test
 
 
 class TestActivation(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -17,12 +16,9 @@ class TestActivation(unittest.TestCase):
 
     def _core_relu(self, **layer_kwargs):
         agreement_test(
-            tfe.keras.layers.ReLU,
-            kwargs=layer_kwargs,
-            input_shape=[1, 5],
-            rtol=.1,
+            tfe.keras.layers.ReLU, kwargs=layer_kwargs, input_shape=[1, 5], rtol=0.1,
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

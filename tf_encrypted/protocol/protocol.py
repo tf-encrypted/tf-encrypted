@@ -28,10 +28,10 @@ class Protocol(ABC):
         return self
 
     def __exit__(
-            self,
-            exception_type,
-            exception_value: Optional[Exception],
-            traceback: Optional[TracebackType],
+        self,
+        exception_type,
+        exception_value: Optional[Exception],
+        traceback: Optional[TracebackType],
     ) -> Optional[bool]:
         tfe.set_protocol(self.last_protocol)
 

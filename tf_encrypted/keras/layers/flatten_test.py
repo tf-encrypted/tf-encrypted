@@ -11,7 +11,6 @@ np.random.seed(42)
 
 
 class TestFlatten(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -22,18 +21,18 @@ class TestFlatten(unittest.TestCase):
         self._core_flatten(input_shape=[4])
 
     def test_flatten_channels_first(self):
-        self._core_flatten(input_shape=[4, 5, 2, 2], data_format='channels_first')
+        self._core_flatten(input_shape=[4, 5, 2, 2], data_format="channels_first")
 
     def _core_flatten(self, **layer_kwargs):
-        input_shape = layer_kwargs['input_shape']
+        input_shape = layer_kwargs["input_shape"]
 
         agreement_test(
             tfe.keras.layers.Flatten,
             kwargs=layer_kwargs,
             input_shape=input_shape,
-            atol=.1
+            atol=0.1,
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -12,7 +12,6 @@ np.random.seed(42)
 
 
 class TestBatchNormalization(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -37,8 +36,7 @@ class TestBatchNormalization(unittest.TestCase):
         initializer = tf.keras.initializers.Constant(const)
 
         self._core_batchnorm(
-            [1] + input_shape,
-            moving_mean_initializer=initializer,
+            [1] + input_shape, moving_mean_initializer=initializer,
         )
 
     def test_batchnorm_non_default_variance_init(self):
@@ -47,19 +45,16 @@ class TestBatchNormalization(unittest.TestCase):
         initializer = tf.keras.initializers.Constant(const)
 
         self._core_batchnorm(
-            [1] + input_shape,
-            moving_variance_initializer=initializer,
+            [1] + input_shape, moving_variance_initializer=initializer,
         )
 
     def _core_batchnorm(self, input_shape, **layer_kwargs):
-        base_kwargs = {'fused': False}
+        base_kwargs = {"fused": False}
 
         kwargs = {**base_kwargs, **layer_kwargs}
 
         agreement_test(
-            tfe.keras.layers.BatchNormalization,
-            kwargs=kwargs,
-            input_shape=input_shape,
+            tfe.keras.layers.BatchNormalization, kwargs=kwargs, input_shape=input_shape,
         )
         layer_test(
             tfe.keras.layers.BatchNormalization,
@@ -68,5 +63,5 @@ class TestBatchNormalization(unittest.TestCase):
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

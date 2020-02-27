@@ -21,7 +21,7 @@ def get_all_funcs():
     for protocol in protocols:
         members = inspect.getmembers(protocol, predicate=inspect.isfunction)
         all_prot_method_names |= set(
-            func_name for func_name, _ in members if not func_name.startswith('_')
+            func_name for func_name, _ in members if not func_name.startswith("_")
         )
 
     return all_prot_method_names

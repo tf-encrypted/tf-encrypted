@@ -9,9 +9,9 @@ from tensorflow.python.framework.errors import NotFoundError
 
 import tf_encrypted as tfe
 
-logger = logging.getLogger('tf_encrypted')
+logger = logging.getLogger("tf_encrypted")
 
-SO_PATH = '{dn}/operations/secure_random/secure_random_module_tf_{tfv}.so'
+SO_PATH = "{dn}/operations/secure_random/secure_random_module_tf_{tfv}.so"
 
 
 def _try_load_secure_random_module():
@@ -26,7 +26,7 @@ def _try_load_secure_random_module():
                 "could not be found for the installed version of TensorFlow. Fix "
                 "this by compiling custom ops. Missing file was '%s'"
             ),
-            so_file
+            so_file,
         )
         return None
 
@@ -42,16 +42,16 @@ def _try_load_secure_random_module():
                 "Missing file was '%s', error was \"%s\"."
             ),
             so_file,
-            ex
+            ex,
         )
 
     except Exception as ex:  # pylint: disable=broad-except
         logger.error(
             (
                 "Falling back to insecure randomness since an error occurred "
-                "loading the required custom op: \"%s\"."
+                'loading the required custom op: "%s".'
             ),
-            ex
+            ex,
         )
 
     return None
@@ -69,12 +69,7 @@ def supports_seeded_randomness():
 
 
 def seeded_random_uniform(
-    shape,
-    minval=0,
-    maxval=None,
-    dtype=tf.int32,
-    seed=None,
-    name=None,
+    shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=None,
 ):
     """
   Returns cryptographically strong random numbers with a seed
@@ -106,20 +101,12 @@ def seeded_random_uniform(
     maxval = ops.convert_to_tensor(maxval, dtype=dtype, name="max")
 
     return secure_random_module.secure_seeded_random_uniform(
-        shape,
-        seed,
-        minval,
-        maxval,
-        name=name,
+        shape, seed, minval, maxval, name=name,
     )
 
 
 def random_uniform(
-    shape,
-    minval=0,
-    maxval=None,
-    dtype=tf.int32,
-    name=None,
+    shape, minval=0, maxval=None, dtype=tf.int32, name=None,
 ):
     """
   Returns cryptographically strong random numbers.
@@ -148,12 +135,7 @@ def random_uniform(
     minval = ops.convert_to_tensor(minval, dtype=dtype, name="min")
     maxval = ops.convert_to_tensor(maxval, dtype=dtype, name="max")
 
-    return secure_random_module.secure_random_uniform(
-        shape,
-        minval,
-        maxval,
-        name=name,
-    )
+    return secure_random_module.secure_random_uniform(shape, minval, maxval, name=name,)
 
 
 def secure_seed():

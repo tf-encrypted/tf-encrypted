@@ -11,7 +11,7 @@ from ...utils import reachable_nodes
 from ...utils import unwrap_fetches
 from ...utils import wrap_in_variables
 
-logger = logging.getLogger('tf_encrypted')
+logger = logging.getLogger("tf_encrypted")
 
 
 class TripleSource(abc.ABC):
@@ -258,7 +258,8 @@ class QueuedOnlineTripleSource(BaseTripleSource):
 
         unwrapped_fetches = unwrap_fetches(fetches)
         reachable_operations = [
-            node for node in reachable_nodes(unwrapped_fetches)
+            node
+            for node in reachable_nodes(unwrapped_fetches)
             if isinstance(node, tf.Operation)
         ]
         reachable_triggers = [
@@ -280,9 +281,7 @@ class QueuedOnlineTripleSource(BaseTripleSource):
         with tf.name_scope("triple-store-{}".format(player_id)):
 
             q = tf.queue.FIFOQueue(
-                capacity=self.capacity,
-                dtypes=[dtype],
-                shapes=[shape],
+                capacity=self.capacity, dtypes=[dtype], shapes=[shape],
             )
             e = q.enqueue(raw_mask)
             d = q.dequeue()

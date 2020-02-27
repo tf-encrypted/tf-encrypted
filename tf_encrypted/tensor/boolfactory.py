@@ -73,35 +73,27 @@ def bool_factory():
             if crypto.supports_seeded_randomness():
                 seed = crypto.secure_seed()
                 return UniformTensor(
-                    shape=shape,
-                    seed=seed,
-                    minval=minval,
-                    maxval=maxval,
+                    shape=shape, seed=seed, minval=minval, maxval=maxval,
                 )
 
             if crypto.supports_secure_randomness():
                 sampler = crypto.random_uniform
             else:
                 sampler = tf.random_uniform
-            value = sampler(
-                shape=shape,
-                minval=minval,
-                maxval=maxval,
-                dtype=tf.int32,
-            )
+            value = sampler(shape=shape, minval=minval, maxval=maxval, dtype=tf.int32,)
             value = tf.cast(value, tf.bool)
             return DenseTensor(value)
 
         def sample_seeded_uniform(self, shape, seed):
             """Seeded sample of a random tensor.
 
-      Arguments:
-        shape (tuple of ints), shape of the tensor to sample
-        seed (int), seed for the sampler to use
+            Arguments:
+                shape (tuple of ints), shape of the tensor to sample
+                seed (int), seed for the sampler to use
 
-      Returns a tensor of shape `shape` drawn from a uniform distribution over
-      the interval [0,2].
-      """
+            Returns a tensor of shape `shape` drawn from a uniform distribution over
+            the interval [0,2].
+            """
             minval = 0
             maxval = 2
 
@@ -146,7 +138,7 @@ def bool_factory():
                 value = tf.where_v2(condition, x.value, y.value)
             return DenseTensor(value)
 
-    def _lift(x, y) -> Tuple['Tensor', 'Tensor']:
+    def _lift(x, y) -> Tuple["Tensor", "Tensor"]:
 
         if isinstance(x, Tensor) and isinstance(y, Tensor):
             return x, y
@@ -180,7 +172,7 @@ def bool_factory():
             return self.value
 
         def __repr__(self) -> str:
-            return '{}(shape={})'.format(type(self), self.shape)
+            return "{}(shape={})".format(type(self), self.shape)
 
         @property
         def factory(self):
@@ -292,16 +284,16 @@ def bool_factory():
 
         @property
         def value(self):
-            with tf.name_scope('expand-seed'):
+            with tf.name_scope("expand-seed"):
                 return tf.cast(
                     crypto.seeded_random_uniform(
                         shape=self._shape,
                         dtype=tf.int32,
                         minval=self._minval,
                         maxval=self._maxval,
-                        seed=self._seed
+                        seed=self._seed,
                     ),
-                    tf.bool
+                    tf.bool,
                 )
 
         @property
@@ -316,7 +308,7 @@ def bool_factory():
             super(Constant, self).__init__(constant)
 
         def __repr__(self) -> str:
-            return 'Constant(shape={})'.format(self.shape)
+            return "Constant(shape={})".format(self.shape)
 
     class Placeholder(DenseTensor, AbstractPlaceholder):
         """Native Placeholder class."""
@@ -326,7 +318,7 @@ def bool_factory():
             super(Placeholder, self).__init__(self.placeholder)
 
         def __repr__(self) -> str:
-            return 'Placeholder(shape={})'.format(self.shape)
+            return "Placeholder(shape={})".format(self.shape)
 
         def feed(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
             assert isinstance(value, np.ndarray), type(value)
@@ -341,7 +333,7 @@ def bool_factory():
             super(Variable, self).__init__(self.variable.read_value())
 
         def __repr__(self) -> str:
-            return 'Variable(shape={})'.format(self.shape)
+            return "Variable(shape={})".format(self.shape)
 
         def assign_from_native(self, value: np.ndarray) -> tf.Operation:
             assert isinstance(value, np.ndarray), type(value)

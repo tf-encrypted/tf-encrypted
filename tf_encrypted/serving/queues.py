@@ -26,13 +26,13 @@ class QueueServer:
         self.input_queue = tfe.queue.FIFOQueue(
             capacity=input_queue_capacity,
             shape=input_shape,
-            shared_name=input_queue_name
+            shared_name=input_queue_name,
         )
 
         self.output_queue = tfe.queue.FIFOQueue(
             capacity=output_queue_capacity,
             shape=output_shape,
-            shared_name=output_queue_name
+            shared_name=output_queue_name,
         )
 
         # computation step
@@ -40,7 +40,7 @@ class QueueServer:
         y = computation_fn(x)
         self.step_op = self.output_queue.enqueue(y)
 
-    def run_step(self, sess, tag='step'):
+    def run_step(self, sess, tag="step"):
         """
     Serve single computation.
     """
@@ -87,7 +87,7 @@ class QueueClient:
         input_queue = tfe.queue.FIFOQueue(
             capacity=input_queue_capacity,
             shape=input_shape,
-            shared_name=input_queue_name
+            shared_name=input_queue_name,
         )
         self.input_placeholder = tfe.define_private_placeholder(shape=input_shape)
         self.input_op = input_queue.enqueue(self.input_placeholder)
@@ -96,7 +96,7 @@ class QueueClient:
         output_queue = tfe.queue.FIFOQueue(
             capacity=output_queue_capacity,
             shape=output_shape,
-            shared_name=output_queue_name
+            shared_name=output_queue_name,
         )
         output = output_queue.dequeue()
         self.output0 = output.share0
@@ -109,7 +109,7 @@ class QueueClient:
         self.bound = tfe.get_protocol().fixedpoint_config.bound_single_precision
         self.scaling_factor = tfe.get_protocol().fixedpoint_config.scaling_factor
 
-    def send_input(self, sess, x, tag='input'):
+    def send_input(self, sess, x, tag="input"):
         """
     Send `x` to servers for processing.
     """
@@ -124,14 +124,12 @@ class QueueClient:
             feed_dict=self.input_placeholder.feed(x),
         )
 
-    def receive_output(self, sess, tag='output'):
+    def receive_output(self, sess, tag="output"):
         """
     Receive result from servers, blocking until available.
     """
         res0, res1 = sess.run(
-            [self.output0, self.output1],
-            tag=tag,
-            output_partition_graphs=True,
+            [self.output0, self.output1], tag=tag, output_partition_graphs=True,
         )
 
         res = (res0 + res1) % self.modulus

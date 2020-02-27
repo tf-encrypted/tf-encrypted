@@ -8,12 +8,11 @@ from tf_encrypted.tensor import native_factory
 
 
 class TestPrimeTensor(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
     def set_up_indexing(self):
-        m = 2**31
+        m = 2 ** 31
 
         prime_factory = native_factory(tf.int32, m)
 
@@ -25,9 +24,9 @@ class TestPrimeTensor(unittest.TestCase):
         self.prime_fix2d = prime_factory.tensor(self.np_fix2d)
         self.prime_fix3d = prime_factory.tensor(self.np_fix3d)
         self.prime_fix4d = prime_factory.tensor(self.np_fix4d)
-        self.np_fixtures = [getattr(self, 'np_fix{}d'.format(i)) for i in range(1, 5)]
+        self.np_fixtures = [getattr(self, "np_fix{}d".format(i)) for i in range(1, 5)]
         self.prime_fixtures = [
-            getattr(self, 'prime_fix{}d'.format(i)) for i in range(1, 5)
+            getattr(self, "prime_fix{}d".format(i)) for i in range(1, 5)
         ]
 
     @unittest.skip
@@ -46,43 +45,34 @@ class TestPrimeTensor(unittest.TestCase):
             ndim = len(np_fix.shape)
             if ndim == 1:
                 np.testing.assert_equal(
-                    np_fix[2:5],
-                    prime_fix[2:5].value,
+                    np_fix[2:5], prime_fix[2:5].value,
                 )
                 continue
             np.testing.assert_equal(
-                np_fix[:, 0],
-                prime_fix[:, 0].value,
+                np_fix[:, 0], prime_fix[:, 0].value,
             )
             np.testing.assert_equal(
-                np_fix[:, 1],
-                prime_fix[:, 1].value,
+                np_fix[:, 1], prime_fix[:, 1].value,
             )
             np.testing.assert_equal(
-                np_fix[:, -1],
-                prime_fix[:, -1].value,
+                np_fix[:, -1], prime_fix[:, -1].value,
             )
             if ndim > 2:
                 np.testing.assert_equal(
-                    np_fix[:, :-1, ...],
-                    prime_fix[:, :-1, ...].value,
+                    np_fix[:, :-1, ...], prime_fix[:, :-1, ...].value,
                 )
                 np.testing.assert_equal(
-                    np_fix[:, :1, ...],
-                    prime_fix[:, :1, ...].value,
+                    np_fix[:, :1, ...], prime_fix[:, :1, ...].value,
                 )
                 np.testing.assert_equal(
-                    np_fix[:, 1:, ...],
-                    prime_fix[:, 1:, ...].value,
+                    np_fix[:, 1:, ...], prime_fix[:, 1:, ...].value,
                 )
             elif ndim == 2:
                 np.testing.assert_equal(
-                    np_fix[:, :2],
-                    prime_fix[:, :-1].value,
+                    np_fix[:, :2], prime_fix[:, :-1].value,
                 )
                 np.testing.assert_equal(
-                    np_fix[:, 1:],
-                    prime_fix[:, 1:].value,
+                    np_fix[:, 1:], prime_fix[:, 1:].value,
                 )
 
     @unittest.skip
@@ -90,23 +80,20 @@ class TestPrimeTensor(unittest.TestCase):
         self.set_up_indexing()
         for np_fix, prime_fix in zip(self.np_fixtures, self.prime_fixtures):
             np.testing.assert_equal(
-                np_fix[0, ...],
-                prime_fix[0, ...].value,
+                np_fix[0, ...], prime_fix[0, ...].value,
             )
             np.testing.assert_equal(
-                np_fix[1, ...],
-                prime_fix[1, ...].value,
+                np_fix[1, ...], prime_fix[1, ...].value,
             )
             np.testing.assert_equal(
-                np_fix[..., -1],
-                prime_fix[..., -1].value,
+                np_fix[..., -1], prime_fix[..., -1].value,
             )
 
     def test_arithmetic(self) -> None:
-        prime_factory = native_factory(tf.int32, 2**16)
+        prime_factory = native_factory(tf.int32, 2 ** 16)
 
-        x = prime_factory.tensor(tf.constant([2**16, 2**16 + 1]))
-        y = prime_factory.tensor(tf.constant([2**16 + 2, 2]))
+        x = prime_factory.tensor(tf.constant([2 ** 16, 2 ** 16 + 1]))
+        y = prime_factory.tensor(tf.constant([2 ** 16 + 2, 2]))
 
         with tf.Session() as sess:
             z = (x * y).value
@@ -129,13 +116,7 @@ class TestPrimeTensor(unittest.TestCase):
 
         x = prime_factory.tensor(
             tf.constant(
-                [
-                    3,  # == 3
-                    -1,  # == p-1 == max
-                    0  # min
-                ],
-                shape=[3],
-                dtype=np.int32
+                [3, -1, 0], shape=[3], dtype=np.int32  # == 3  # == p-1 == max  # min
             )
         )
 
@@ -155,5 +136,5 @@ class TestPrimeTensor(unittest.TestCase):
         np.testing.assert_array_equal(actual, expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

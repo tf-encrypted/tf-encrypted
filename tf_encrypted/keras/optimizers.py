@@ -6,9 +6,9 @@ from tf_encrypted.keras import backend as KE
 class SGD:
     """Stochastic gradient descent optimizer.
 
-  Arguments:
-    lr: float >= 0. Learning rate.
-  """
+    Arguments:
+        lr: float >= 0. Learning rate.
+    """
 
     def __init__(self, lr=0.01):
         self.lr = lr
@@ -20,7 +20,7 @@ class SGD:
 
 
 _known_optimizers = {
-    'sgd': SGD,
+    "sgd": SGD,
 }
 
 

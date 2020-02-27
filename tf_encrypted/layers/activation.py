@@ -10,10 +10,10 @@ backward_msg = "`backward` is not implemented for layer {}"
 
 class Sigmoid(Layer):
     """
-  Sigmoid Layer
+    Sigmoid Layer
 
-  :See: tf.nn.Sigmoid
-  """
+    :See: tf.nn.Sigmoid
+    """
 
     def get_output_shape(self) -> List[int]:
         return self.input_shape
@@ -34,10 +34,10 @@ class Sigmoid(Layer):
 
 class Relu(Layer):
     """
-  Relu Layer
+    Relu Layer
 
-  :See: tf.nn.relu
-  """
+    :See: tf.nn.relu
+    """
 
     def get_output_shape(self) -> List[int]:
         return self.input_shape
@@ -47,10 +47,10 @@ class Relu(Layer):
 
     def forward(self, x):
         """
-    :param ~tf_encrypted.protocol.pond.PondTensor x: The input tensor
-    :rtype: ~tf_encrypted.protocol.pond.PondTensor
-    :returns: A pond tensor with the same backing type as the input tensor.
-    """
+        :param ~tf_encrypted.protocol.pond.PondTensor x: The input tensor
+        :rtype: ~tf_encrypted.protocol.pond.PondTensor
+        :returns: A pond tensor with the same backing type as the input tensor.
+        """
         y = tfe.relu(x)
         self.layer_output = y
         return y
@@ -58,19 +58,19 @@ class Relu(Layer):
     # TODO Approximate Relu derivate to implement backward
     def backward(self, d_y, *args):
         """
-    `backward` is not implemented for `Relu`
+        `backward` is not implemented for `Relu`
 
-    :raises: NotImplementedError
-    """
+        :raises: NotImplementedError
+        """
         raise NotImplementedError(backward_msg.format("Relu"))
 
 
 class Tanh(Layer):
     """
-  Tanh Layer
+    Tanh Layer
 
-  :See: tf.nn.tanh
-  """
+    :See: tf.nn.tanh
+    """
 
     def get_output_shape(self) -> List[int]:
         return self.input_shape
@@ -86,8 +86,8 @@ class Tanh(Layer):
     # TODO Approximate Relu derivate to implement backward
     def backward(self, d_y, *args):
         """
-    `backward` is not implemented for `Tanh`
+        `backward` is not implemented for `Tanh`
 
-    :raises: NotImplementedError
-    """
+        :raises: NotImplementedError
+        """
         raise NotImplementedError(backward_msg.format("Tanh"))

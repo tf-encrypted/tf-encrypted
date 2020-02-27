@@ -11,7 +11,6 @@ tf.random.set_random_seed(42)
 
 
 class TestLosses(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -106,5 +105,5 @@ class TestLosses(unittest.TestCase):
         np.testing.assert_allclose(actual, expected, rtol=1e-1, atol=1e-1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

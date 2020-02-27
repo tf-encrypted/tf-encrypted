@@ -14,7 +14,6 @@ tf.random.set_random_seed(42)
 
 
 class TestSequential(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -173,5 +172,5 @@ def _model_predict_keras(input_data, input_shape):
     return out, weights, config
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

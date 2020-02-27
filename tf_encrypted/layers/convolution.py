@@ -11,13 +11,13 @@ from .core import Layer
 
 class Conv2D(Layer):
     """
-  2 Dimensional convolutional layer, expects NCHW data format
+    2 Dimensional convolutional layer, expects NCHW data format
 
-  :param List[int] input_shape: The shape of the convolution input. Rank 4.
-  :param List[int] filter_shape: The shape of the convolution filter. Rank 4.
-  :param int strides: The size of the stride
-  :param padding str: The type of padding ("SAME" or "VALID")
-  :param lambda filter_init: lambda function with shape parameter
+    :param List[int] input_shape: The shape of the convolution input. Rank 4.
+    :param List[int] filter_shape: The shape of the convolution filter. Rank 4.
+    :param int strides: The size of the stride
+    :param padding str: The type of padding ("SAME" or "VALID")
+    :param lambda filter_init: lambda function with shape parameter
 
       `Example`
 
@@ -25,7 +25,7 @@ class Conv2D(Layer):
 
               Conv2D((4, 4, 1, 20), strides=2, filter_init=lambda shp:
                       np.random.normal(scale=0.01, size=shp))
-  """
+    """
 
     def __init__(
         self,
@@ -35,7 +35,7 @@ class Conv2D(Layer):
         padding="SAME",
         filter_init=lambda shp: np.random.normal(scale=0.1, size=shp),
         l2reg_lambda=0.0,
-        channels_first=True
+        channels_first=True,
     ):
         self.fshape = filter_shape
         self.strides = strides
@@ -125,7 +125,7 @@ class Conv2D(Layer):
                 field_height=h_filter,
                 field_width=w_filter,
                 padding=self.padding,
-                stride=self.strides
+                stride=self.strides,
             )
 
         d_w = tfe.conv2d_bw(x, d_y, self.weights.shape, self.strides, self.padding)

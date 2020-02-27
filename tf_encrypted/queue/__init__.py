@@ -8,6 +8,6 @@ from .fifo import AbstractFIFOQueue
 from .fifo import FIFOQueue
 
 __all__ = [
-    'FIFOQueue',
-    'AbstractFIFOQueue',
+    "FIFOQueue",
+    "AbstractFIFOQueue",
 ]

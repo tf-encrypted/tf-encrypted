@@ -2,7 +2,7 @@
 import tf_encrypted as tfe
 
 
-class Loss():
+class Loss:
     """Loss base class."""
 
     def __init__(self, loss_fn, **kwargs):
@@ -12,12 +12,12 @@ class Loss():
 
     def call(self, y_true, y_pred):
         """Invokes the `LossFunctionWrapper` instance.
-    Args:
-      y_true: Ground truth values.
-      y_pred: The predicted values.
-    Returns:
-      Loss values per sample.
-    """
+        Args:
+            y_true: Ground truth values.
+            y_pred: The predicted values.
+        Returns:
+            Loss values per sample.
+        """
         return self.loss_fn(y_true, y_pred, **self._fn_kwargs)
 
     def __call__(self, y_true, y_pred):
@@ -31,13 +31,13 @@ class Loss():
 
 
 class BinaryCrossentropy(Loss):
-    """Computes the cross-entropy loss between true
-  labels and predicted labels.
-  Args:
-    from_logits: Whether to interpret `y_pred` as a tensor of
-      [logit](https://en.wikipedia.org/wiki/Logit) values. By default we assume
-        that `y_pred` contains probabilities (i.e., values in [0, 1]).
-  """
+    """Computes the cross-entropy loss between true labels and predicted labels.
+
+    Args:
+        from_logits: Whether to interpret `y_pred` as a tensor of
+        [logit](https://en.wikipedia.org/wiki/Logit) values. By default we assume
+            that `y_pred` contains probabilities (i.e., values in [0, 1]).
+    """
 
     def __init__(self, from_logits=False):
         self.from_logits = from_logits
@@ -70,9 +70,7 @@ def binary_crossentropy_from_logits(y_true, y_pred):
 
 
 class MeanSquaredError(Loss):
-    """Computes the MSE loss between true
-  labels and predicted labels.
-  """
+    """Computes the MSE loss between true labels and predicted labels."""
 
     def __init__(self):
         super(MeanSquaredError, self).__init__(mean_squared_error)

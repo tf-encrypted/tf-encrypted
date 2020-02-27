@@ -12,7 +12,6 @@ np.random.seed(42)
 
 
 class TestReshape(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -26,16 +25,12 @@ class TestReshape(unittest.TestCase):
 
         kwargs = {**layer_kwargs}
         agreement_test(
-            tfe.keras.layers.Reshape,
-            kwargs=kwargs,
-            input_shape=input_shape,
+            tfe.keras.layers.Reshape, kwargs=kwargs, input_shape=input_shape,
         )
         layer_test(
-            tfe.keras.layers.Reshape,
-            kwargs=kwargs,
-            batch_input_shape=input_shape,
+            tfe.keras.layers.Reshape, kwargs=kwargs, batch_input_shape=input_shape,
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

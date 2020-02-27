@@ -12,7 +12,7 @@ from tensorflow.core.protobuf import rewriter_config_pb2
 
 from .player import Player
 
-logger = logging.getLogger('tf_encrypted')
+logger = logging.getLogger("tf_encrypted")
 
 
 def tensorflow_supports_int64():
@@ -27,12 +27,11 @@ def tensorflow_supports_int64():
 
 
 def _get_docker_cpu_quota():
-    """
-  Checks for available cpu cores in a containerized environment.
+    """Checks for available cpu cores in a containerized environment.
 
-  If you witness memory leaks while doing multiple predictions using docker
-  see https://github.com/tensorflow/tensorflow/issues/22098.
-  """
+    If you witness memory leaks while doing multiple predictions using docker
+    see https://github.com/tensorflow/tensorflow/issues/22098.
+    """
     cpu_cores = None
 
     # Check for quotas if we are in a linux container
@@ -40,7 +39,7 @@ def _get_docker_cpu_quota():
     cfs_quota = Path("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
 
     if cfs_period.exists() and cfs_quota.exists():
-        with cfs_period.open('rb') as p, cfs_quota.open('rb') as q:
+        with cfs_period.open("rb") as p, cfs_quota.open("rb") as q:
             p_int, q_int = int(p.read()), int(q.read())
 
             # get the cores allocated by dividing the quota
@@ -61,24 +60,17 @@ class Config(ABC):
 
     @abstractmethod
     def get_player(self, name_or_player):
-        """
-    Retrieve a specific :class:`Player` object by name.
+        """Retrieve a specific :class:`Player` object by name.
 
-    For convenience it is also possible to pass in an existing Player object,
-    which will simply be returned as-is if the player is known already.
-    """
+        For convenience it is also possible to pass in an existing Player object,
+        which will simply be returned as-is if the player is known already.
+        """
 
     @abstractmethod
     def get_tf_config(
-        self,
-        log_device_placement=False,
-        disable_optimizations=False,
+        self, log_device_placement=False, disable_optimizations=False,
     ):
-        """
-    get_tf_config(log_device_placement=False) -> tf.ConfigProto, or str
-
-    Extract the underlying :class:`tf.ConfigProto`.
-    """
+        """Extract the underlying :class:`tf.ConfigProto`."""
 
     @classmethod
     def build_graph_options(cls, disable_optimizations):
@@ -99,26 +91,22 @@ class Config(ABC):
 
 
 class LocalConfig(Config):
+    """Configure TF Encrypted to use threads on the local CPU.
+
+    Each thread instantiates a different Player to simulate secure computations
+    without requiring networking. Mostly intended for development/debugging use.
+
+    By default new players will be added when looked up for the first time;
+    this is useful for  instance to get a complete list of players involved
+    in a particular computation (see `auto_add_unknown_players`).
+
+    :param (str) player_names: List of players to be used in the session.
+    :param str job_name: The name of the job.
+    :param bool auto_add_unknown_players: Auto-add player on first lookup.
     """
-  Configure TF Encrypted to use threads on the local CPU.
-
-  Each thread instantiates a different Player to simulate secure computations
-  without requiring networking. Mostly intended for development/debugging use.
-
-  By default new players will be added when looked up for the first time;
-  this is useful for  instance to get a complete list of players involved
-  in a particular computation (see `auto_add_unknown_players`).
-
-  :param (str) player_names: List of players to be used in the session.
-  :param str job_name: The name of the job.
-  :param bool auto_add_unknown_players: Auto-add player on first lookup.
-  """
 
     def __init__(
-            self,
-            player_names=None,
-            job_name='localhost',
-            auto_add_unknown_players=True,
+        self, player_names=None, job_name="localhost", auto_add_unknown_players=True,
     ) -> None:
         self._job_name = job_name
         self._auto_add_unknown_players = auto_add_unknown_players
@@ -130,7 +118,7 @@ class LocalConfig(Config):
 
     def add_player(self, name):
         index = len(self._players)
-        dv_str = '/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}'
+        dv_str = "/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}"
         player = Player(
             name=name,
             index=index,
@@ -159,39 +147,34 @@ class LocalConfig(Config):
 
     def get_players(self, names):
         if isinstance(names, str):
-            names = [name.strip() for name in names.split(',')]
+            names = [name.strip() for name in names.split(",")]
         assert isinstance(names, list)
         return [player for player in self._players if player.name in names]
 
     def get_tf_config(
-        self,
-        log_device_placement=False,
-        disable_optimizations=False,
+        self, log_device_placement=False, disable_optimizations=False,
     ):
         logger.info("Players: %s", [player.name for player in self.players])
-        target = ''
+        target = ""
         config = tf.ConfigProto(
             log_device_placement=log_device_placement,
             allow_soft_placement=False,
             device_count={"CPU": len(self._players)},
-            graph_options=self.build_graph_options(disable_optimizations)
+            graph_options=self.build_graph_options(disable_optimizations),
         )
         return (target, config)
 
 
 class RemoteConfig(Config):
-    """
-  Configure TF Encrypted to use network hosts for the different players.
+    """Configure TF Encrypted to use network hosts for the different players.
 
-  :param (str,str),str->str hostmap: A mapping of hostnames to
-      their IP / domain.
-  :param str job_name: The name of the job.
-  """
+    :param (str,str),str->str hostmap: A mapping of hostnames to
+        their IP / domain.
+    :param str job_name: The name of the job.
+    """
 
     def __init__(
-        self,
-        hostmap,
-        job_name='tfe',
+        self, hostmap, job_name="tfe",
     ):
         assert isinstance(hostmap, dict)
         if not isinstance(hostmap, OrderedDict):
@@ -207,31 +190,31 @@ class RemoteConfig(Config):
                 Player(
                     name=name,
                     index=index,
-                    device_name='/job:{job_name}/replica:0/task:{task_id}/cpu:0'.
-                    format(job_name=job_name, task_id=index),
-                    host=host
-                )
-            ) for index, (name, host) in enumerate(hostmap.items())
+                    device_name="/job:{job_name}/replica:0/task:{task_id}/cpu:0".format(
+                        job_name=job_name, task_id=index
+                    ),
+                    host=host,
+                ),
+            )
+            for index, (name, host) in enumerate(hostmap.items())
         )
 
     @staticmethod
     def load(filename):
-        """
-    Constructs a RemoteConfig object from a JSON hostmap file.
+        """Constructs a RemoteConfig object from a JSON hostmap file.
 
-    :param str filename: Name of file to load from.
-    """
-        with open(filename, 'r') as f:
+        :param str filename: Name of file to load from.
+        """
+        with open(filename, "r") as f:
             hostmap = json.load(f, object_pairs_hook=OrderedDict)
         return RemoteConfig(hostmap)
 
     def save(self, filename):
-        """
-    Saves the configuration as a JSON hostmap file.
+        """Saves the configuration as a JSON hostmap file.
 
-    :param str filename: Name of file to save to.
-    """
-        with open(filename, 'w') as f:
+        :param str filename: Name of file to save to.
+        """
+        with open(filename, "w") as f:
             json.dump(self.hostmap, f)
 
     @property
@@ -259,17 +242,16 @@ class RemoteConfig(Config):
 
     def get_players(self, names):
         if isinstance(names, str):
-            names = [name.strip() for name in names.split(',')]
+            names = [name.strip() for name in names.split(",")]
         assert isinstance(names, list)
         return [player for name, player in self._players.items() if name in names]
 
     def server(self, name, start=True):
-        """
-    Construct a :class:`tf.train.Server` object for the corresponding
-    :class:`Player`.
+        """Construct a :class:`tf.train.Server` object for the corresponding
+        :class:`Player`.
 
-    :param str name: Name of player.
-    """
+        :param str name: Name of player.
+        """
         player = self.get_player(name)
         assert player is not None, "'{}' not found in configuration".format(name)
         cluster = tf.train.ClusterSpec({self._job_name: self.hosts})
@@ -278,23 +260,22 @@ class RemoteConfig(Config):
             cluster, job_name=self._job_name, task_index=player.index, start=start
         )
         logger.info(
-            ("Created server for '%s' as device '%s'; "
-             "own session target is '%s'"),
+            "Created server for '%s' as device '%s'; own session target is '%s'",
             name,
             player.device_name,
-            server.target
+            server.target,
         )
         return server
 
     def get_tf_config(self, log_device_placement=False, disable_optimizations=False):
         # always use the first host as master; change config to match
-        target = 'grpc://{}'.format(self.hosts[0])
+        target = "grpc://{}".format(self.hosts[0])
         cpu_cores = _get_docker_cpu_quota()
         if cpu_cores is None:
             config = tf.ConfigProto(
                 log_device_placement=log_device_placement,
                 allow_soft_placement=False,
-                graph_options=self.build_graph_options(disable_optimizations)
+                graph_options=self.build_graph_options(disable_optimizations),
             )
         else:
             config = tf.ConfigProto(
@@ -302,7 +283,7 @@ class RemoteConfig(Config):
                 allow_soft_placement=False,
                 inter_op_parallelism_threads=cpu_cores,
                 intra_op_parallelism_threads=cpu_cores,
-                graph_options=self.build_graph_options(disable_optimizations)
+                graph_options=self.build_graph_options(disable_optimizations),
             )
         return (target, config)
 
@@ -316,10 +297,9 @@ def get_config():
 
 
 def set_config(config) -> None:
-    """
-  Sets the current config.
+    """Sets the current config.
 
-  :param Config config: Intended configuration.
-  """
+    :param Config config: Intended configuration.
+    """
     global __config__
     __config__ = config

@@ -9,14 +9,11 @@ import tensorflow as tf
 from .factory import AbstractTensor
 
 
-def binarize(
-        tensor: tf.Tensor,
-        bitsize: Optional[int] = None,
-) -> tf.Tensor:
+def binarize(tensor: tf.Tensor, bitsize: Optional[int] = None,) -> tf.Tensor:
     """Extract bits of values in `tensor`, returning a `tf.Tensor` with same
   dtype."""
 
-    with tf.name_scope('binarize'):
+    with tf.name_scope("binarize"):
         bitsize = bitsize or (tensor.dtype.size * 8)
 
         bit_indices_shape = [1] * len(tensor.shape) + [bitsize]
@@ -30,13 +27,10 @@ def binarize(
         return val
 
 
-def bits(
-        tensor: tf.Tensor,
-        bitsize: Optional[int] = None,
-) -> list:
+def bits(tensor: tf.Tensor, bitsize: Optional[int] = None,) -> list:
     """Extract bits of values in `tensor`, returning a list of tensors."""
 
-    with tf.name_scope('bits'):
+    with tf.name_scope("bits"):
         bitsize = bitsize or (tensor.dtype.size * 8)
         the_bits = [
             tf.bitwise.bitwise_and(tf.bitwise.right_shift(tensor, i), 1)
@@ -47,15 +41,15 @@ def bits(
 
 
 def im2col(
-        x: Union[tf.Tensor, np.ndarray],
-        h_filter: int,
-        w_filter: int,
-        padding: str,
-        stride: int,
+    x: Union[tf.Tensor, np.ndarray],
+    h_filter: int,
+    w_filter: int,
+    padding: str,
+    stride: int,
 ) -> tf.Tensor:
     """Generic implementation of im2col on tf.Tensors."""
 
-    with tf.name_scope('im2col'):
+    with tf.name_scope("im2col"):
 
         # we need NHWC because tf.extract_image_patches expects this
         nhwc_tensor = tf.transpose(x, [0, 2, 3, 1])
@@ -67,33 +61,27 @@ def im2col(
             ksizes=[1, h_filter, w_filter, 1],
             strides=[1, stride, stride, 1],
             rates=[1, 1, 1, 1],
-            padding=padding
+            padding=padding,
         )
 
         # change back to NCHW
         patch_tensor_nchw = tf.reshape(
-            tf.transpose(patch_tensor, [3, 1, 2, 0]),
-            (h_filter, w_filter, channels, -1)
+            tf.transpose(patch_tensor, [3, 1, 2, 0]), (h_filter, w_filter, channels, -1)
         )
 
         # reshape to x_col
         x_col_tensor = tf.reshape(
             tf.transpose(patch_tensor_nchw, [2, 0, 1, 3]),
-            (channels * h_filter * w_filter, -1)
+            (channels * h_filter * w_filter, -1),
         )
 
         return x_col_tensor
 
 
-def conv2d(
-        x: AbstractTensor,
-        y: AbstractTensor,
-        stride,
-        padding,
-) -> AbstractTensor:
+def conv2d(x: AbstractTensor, y: AbstractTensor, stride, padding,) -> AbstractTensor:
     """Generic convolution implementation with im2col over AbstractTensors."""
 
-    with tf.name_scope('conv2d'):
+    with tf.name_scope("conv2d"):
 
         h_filter, w_filter, in_filters, out_filters = map(int, y.shape)
         n_x, c_x, h_x, w_x = map(int, x.shape)
@@ -102,10 +90,10 @@ def conv2d(
             # in depthwise conv the filter's in and out dimensions are reversed
             out_filters = in_filters
 
-        if padding == 'SAME':
+        if padding == "SAME":
             h_out = int(math.ceil(float(h_x) / float(stride)))
             w_out = int(math.ceil(float(w_x) / float(stride)))
-        elif padding == 'VALID':
+        elif padding == "VALID":
             h_out = int(math.ceil(float(h_x - h_filter + 1) / float(stride)))
             w_out = int(math.ceil(float(w_x - w_filter + 1) / float(stride)))
         else:

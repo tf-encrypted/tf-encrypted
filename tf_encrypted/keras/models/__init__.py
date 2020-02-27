@@ -6,7 +6,7 @@ from .sequential import clone_model
 from .sequential import model_from_config
 
 __all__ = [
-    'Sequential',
-    'model_from_config',
-    'clone_model',
+    "Sequential",
+    "model_from_config",
+    "clone_model",
 ]

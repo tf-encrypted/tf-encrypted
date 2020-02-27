@@ -13,7 +13,6 @@ from tf_encrypted.tensor import int100factory
 
 
 class TestPrivateCompare(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -30,20 +29,15 @@ class TestPrivateCompare(unittest.TestCase):
         bit_dtype = prot.prime_factory
         val_dtype = prot.tensor_factory
 
-        x = np.array(
-            [21, 21, 21, 21, 21, 21, 21, 21],
-            dtype=np.int32,
-        ).reshape((2, 2, 2))
+        x = np.array([21, 21, 21, 21, 21, 21, 21, 21], dtype=np.int32,).reshape(
+            (2, 2, 2)
+        )
 
-        r = np.array(
-            [36, 20, 21, 22, 36, 20, 21, 22],
-            dtype=np.int32,
-        ).reshape((2, 2, 2))
+        r = np.array([36, 20, 21, 22, 36, 20, 21, 22], dtype=np.int32,).reshape(
+            (2, 2, 2)
+        )
 
-        beta = np.array(
-            [0, 0, 0, 0, 1, 1, 1, 1],
-            dtype=np.int32,
-        ).reshape((2, 2, 2))
+        beta = np.array([0, 0, 0, 0, 1, 1, 1, 1], dtype=np.int32,).reshape((2, 2, 2))
 
         expected = np.bitwise_xor(x > r, beta.astype(bool)).astype(np.int32)
         x_native = tf.convert_to_tensor(x, dtype=val_dtype.native_type)
@@ -60,7 +54,7 @@ class TestPrivateCompare(unittest.TestCase):
             prot,
             x_bits=PondPrivateTensor(prot, *x_bits, False),
             r=PondPublicTensor(prot, r0, r1, False),
-            beta=PondPublicTensor(prot, beta0, beta1, False)
+            beta=PondPublicTensor(prot, beta0, beta1, False),
         )
 
         with tfe.Session() as sess:
@@ -69,7 +63,6 @@ class TestPrivateCompare(unittest.TestCase):
 
 
 class TestSelectShare(unittest.TestCase):
-
     def test_select_share(self):
 
         alice = np.array([1, 1, 1, 1]).astype(np.float32)
@@ -93,7 +86,6 @@ class TestSelectShare(unittest.TestCase):
 
 
 class TestLSB(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -107,18 +99,17 @@ class TestLSB(unittest.TestCase):
         expected_lsb = f_get(f_bin(raw), -1).astype(np.int32)
 
         with tfe.protocol.SecureNN(
-                tensor_factory=tensor_factory,
-                prime_factory=prime_factory,
+            tensor_factory=tensor_factory, prime_factory=prime_factory,
         ) as prot:
 
             x_in = prot.define_private_variable(
-                raw, apply_scaling=False, name='test_lsb_input'
+                raw, apply_scaling=False, name="test_lsb_input"
             )
             x_lsb = prot.lsb(x_in)
 
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                actual_lsb = sess.run(x_lsb.reveal(), tag='lsb')
+                actual_lsb = sess.run(x_lsb.reveal(), tag="lsb")
 
                 np.testing.assert_array_equal(actual_lsb, expected_lsb)
 
@@ -127,7 +118,6 @@ class TestLSB(unittest.TestCase):
 
 
 class TestArgMax(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -212,5 +202,5 @@ class TestArgMax(unittest.TestCase):
         np.testing.assert_array_equal(actual, expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

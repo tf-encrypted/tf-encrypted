@@ -29,40 +29,40 @@ from ..protocol.pond import PondPrivateTensor
 def registry():
     """Map reserved names and scopes to their conversion functions."""
     reg = {
-        'Placeholder': _placeholder,
-        'Const': _constant,
-        'Conv2D': _conv2d,
-        'Relu': _relu,
-        'Sigmoid': _sigmoid,
-        'MatMul': _matmul,
-        'Shape': _shape,
-        'StridedSlice': _strided_slice,
-        'Add': _add,
-        'AddV2': _add,
-        'Sub': _sub,
-        'Transpose': _transpose,
-        'Reshape': _reshape,
-        'Pack': _pack,
-        'Rsqrt': _rsqrt,
-        'Mul': _mul,
-        'ExpandDims': _expand_dims,
-        'AvgPool': _avgpool,
-        'Squeeze': _squeeze,
-        'ConcatV2': _concat,
-        'BiasAdd': _bias_add,
-        'MaxPool': _maxpool,
-        'Pad': _pad,
-        'BatchToSpaceND': _batch_to_space_nd,
-        'SpaceToBatchND': _space_to_batch_nd,
-        'ArgMax': _argmax,
-        'required_space_to_batch_paddings': _required_space_to_batch_paddings,
-        'flatten': _flatten,
-        'conv2d': _keras_conv2d,
-        'Slice': _slice,
-        'Neg': _negative,
-        'Split': _split,
-        'SplitV': _split,
-        'Identity': _identity,
+        "Placeholder": _placeholder,
+        "Const": _constant,
+        "Conv2D": _conv2d,
+        "Relu": _relu,
+        "Sigmoid": _sigmoid,
+        "MatMul": _matmul,
+        "Shape": _shape,
+        "StridedSlice": _strided_slice,
+        "Add": _add,
+        "AddV2": _add,
+        "Sub": _sub,
+        "Transpose": _transpose,
+        "Reshape": _reshape,
+        "Pack": _pack,
+        "Rsqrt": _rsqrt,
+        "Mul": _mul,
+        "ExpandDims": _expand_dims,
+        "AvgPool": _avgpool,
+        "Squeeze": _squeeze,
+        "ConcatV2": _concat,
+        "BiasAdd": _bias_add,
+        "MaxPool": _maxpool,
+        "Pad": _pad,
+        "BatchToSpaceND": _batch_to_space_nd,
+        "SpaceToBatchND": _space_to_batch_nd,
+        "ArgMax": _argmax,
+        "required_space_to_batch_paddings": _required_space_to_batch_paddings,
+        "flatten": _flatten,
+        "conv2d": _keras_conv2d,
+        "Slice": _slice,
+        "Neg": _negative,
+        "Split": _split,
+        "SplitV": _split,
+        "Identity": _identity,
         "GatherV2": _gather,
         "dense": _keras_dense,
         "batch_normalization_v1": _keras_batchnorm,
@@ -113,15 +113,15 @@ def _matmul(converter, node: Any, inputs: List[str]) -> Any:
         a.shape.as_list(),
         b_shape[1],
         transpose_input=transpose_a,
-        transpose_weight=transpose_b
+        transpose_weight=transpose_b,
     )
 
     dtype = tensor.dtype
 
     if dtype == tf.float32:
-        nums = array.array('f', tensor.tensor_content)
+        nums = array.array("f", tensor.tensor_content)
     elif dtype == tf.float64:
-        nums = array.array('d', tensor.tensor_content)
+        nums = array.array("d", tensor.tensor_content)
     else:
         raise TypeError("Unsupported dtype for weights")
 
@@ -146,14 +146,14 @@ def _conv2d(converter, node, inputs):
         shape = kernel.shape.as_list()
         w = kernel
 
-    fmt = node.attr["data_format"].s.decode('ascii')
+    fmt = node.attr["data_format"].s.decode("ascii")
 
     layer = Conv2D(
         x_in.shape.as_list(),
         shape,
         strides=int(max(node.attr["strides"].list.i)),
-        padding=node.attr["padding"].s.decode('ascii'),
-        channels_first=fmt == "NCHW"
+        padding=node.attr["padding"].s.decode("ascii"),
+        channels_first=fmt == "NCHW",
     )
 
     layer.initialize(initial_weights=w)
@@ -179,16 +179,16 @@ def _keras_conv2d(converter, interiors, inputs):
 
     input_shape = x_in.shape.as_list()
     shape = [i.size for i in kernel.attr["value"].tensor.tensor_shape.dim]
-    fmt = conv_op.attr["data_format"].s.decode('ascii')
+    fmt = conv_op.attr["data_format"].s.decode("ascii")
     strides = int(max(conv_op.attr["strides"].list.i))
-    padding = conv_op.attr["padding"].s.decode('ascii')
+    padding = conv_op.attr["padding"].s.decode("ascii")
 
     layer = Conv2D(
         input_shape,
         shape,
         strides=strides,
         padding=padding,
-        channels_first=fmt == "NCHW"
+        channels_first=fmt == "NCHW",
     )
 
     layer.initialize(initial_weights=k, initial_bias=b)
@@ -213,15 +213,15 @@ def _keras_depthwise_conv2d(converter, interiors, inputs):
         use_bias = True
     except KeyError:
         use_bias = False
-        bias_init = 'zeros'
+        bias_init = "zeros"
 
     shape = [i.size for i in kernel.attr["value"].tensor.tensor_shape.dim]
 
-    fmt = conv_op.attr["data_format"].s.decode('ascii')
+    fmt = conv_op.attr["data_format"].s.decode("ascii")
     fmt = "channels_last" if fmt == "NHWC" else "channels_first"
 
     strides = int(max(conv_op.attr["strides"].list.i))
-    padding = conv_op.attr["padding"].s.decode('ascii')
+    padding = conv_op.attr["padding"].s.decode("ascii")
 
     layer = DepthwiseConv2D(
         kernel_size=(shape[0], shape[1]),
@@ -231,7 +231,7 @@ def _keras_depthwise_conv2d(converter, interiors, inputs):
         data_format=fmt,
         use_bias=use_bias,
         depthwise_initializer=kernel_init,
-        bias_initializer=bias_init
+        bias_initializer=bias_init,
     )
 
     return layer(x_in)
@@ -263,7 +263,7 @@ def _keras_batchnorm(converter, interiors, inputs):
     x_in = converter.outputs[inputs[0]]
 
     bn_op = interiors["FusedBatchNorm"]
-    fmt = bn_op.attr["data_format"].s.decode('ascii')
+    fmt = bn_op.attr["data_format"].s.decode("ascii")
 
     gamma = _nodef_to_numpy_array(interiors["gamma"])
     gamma_init = tf.keras.initializers.Constant(gamma)
@@ -285,7 +285,7 @@ def _keras_batchnorm(converter, interiors, inputs):
         gamma_initializer=gamma_init,
         beta_initializer=beta_init,
         moving_mean_initializer=moving_mean_init,
-        moving_variance_initializer=moving_variance_init
+        moving_variance_initializer=moving_variance_init,
     )
 
     return layer(x_in)
@@ -334,7 +334,7 @@ def _strided_slice(converter, node: Any, inputs: List[str]) -> Any:
         end_mask=end_mask,
         ellipsis_mask=ellipsis_mask,
         new_axis_mask=new_axis_mask,
-        shrink_axis_mask=shrink_axis_mask
+        shrink_axis_mask=shrink_axis_mask,
     )
 
 
@@ -374,13 +374,13 @@ def _maxpool(converter, node: Any, inputs: List[str]) -> Any:
     ksize = node.attr["ksize"].list.i
     s = node.attr["strides"].list.i
 
-    padding = node.attr["padding"].s.decode('ascii')
+    padding = node.attr["padding"].s.decode("ascii")
     pool_size = [ksize[1], ksize[2]]
     strides = [s[1], s[2]]
 
     shape = [int(i) for i in x_in.shape]
 
-    channels_first = node.attr["data_format"].s.decode('ascii') == "NCHW"
+    channels_first = node.attr["data_format"].s.decode("ascii") == "NCHW"
 
     pooler = MaxPooling2D(shape, pool_size, strides, padding, channels_first)
 
@@ -402,9 +402,9 @@ def _reshape(converter, node: Any, inputs: List[str]) -> Any:
     tensor = shape.attr["value"].tensor
     dtype = shape.attr["dtype"].type
     if dtype == tf.int32:
-        nums = array.array('i', tensor.tensor_content)
+        nums = array.array("i", tensor.tensor_content)
     elif dtype == tf.int64:
-        nums = array.array('l', tensor.tensor_content)
+        nums = array.array("l", tensor.tensor_content)
     else:
         raise TypeError("Unsupported dtype for reshape shape")
 
@@ -420,9 +420,9 @@ def _transpose(converter, node: Any, inputs: List[str]) -> Any:
 
     dtype = perm.attr["dtype"].type
     if dtype == tf.int32:
-        nums = array.array('i', tensor.tensor_content)
+        nums = array.array("i", tensor.tensor_content)
     elif dtype == tf.int64:
-        nums = array.array('l', tensor.tensor_content)
+        nums = array.array("l", tensor.tensor_content)
     else:
         raise TypeError("Unsupported dtype for transpose perm")
 
@@ -439,7 +439,7 @@ def _expand_dims(converter, node: Any, inputs: List[str]) -> Any:
 
     input_axis = converter.outputs[inputs[1]]
     axis_attr = input_axis.attr["value"].tensor.int_val
-    axis_val = array.array('i', axis_attr)[0]
+    axis_val = array.array("i", axis_attr)[0]
 
     return tfe.expand_dims(input_out, axis_val)
 
@@ -488,7 +488,7 @@ def _split(converter, node: Any, inputs: List[str]) -> Any:
         axis = converter.outputs[inputs[2]]
 
         size_splits = size_splits.attr["value"].tensor
-        num_or_size_splits = list(array.array('I', size_splits.tensor_content))
+        num_or_size_splits = list(array.array("I", size_splits.tensor_content))
 
     else:
         # node.op is Split when num_or_size_splits is an integer
@@ -509,12 +509,12 @@ def _split(converter, node: Any, inputs: List[str]) -> Any:
 
 def _pad(converter, node: Any, inputs: List[str]) -> Any:
     x_in = converter.outputs[inputs[0]]
-    p = (converter.outputs[inputs[1]])
+    p = converter.outputs[inputs[1]]
 
     paddings_t = p.attr["value"].tensor
 
-    paddings_arr = list(array.array('I', paddings_t.tensor_content))
-    paddings_lst = [paddings_arr[i:i + 2] for i in range(0, len(paddings_arr), 2)]
+    paddings_arr = list(array.array("I", paddings_t.tensor_content))
+    paddings_lst = [paddings_arr[i : i + 2] for i in range(0, len(paddings_arr), 2)]
 
     return tfe.pad(x_in, paddings_lst)
 
@@ -528,9 +528,9 @@ def _rsqrt(converter, node: Any, inputs: List[str]) -> Any:
 
         dtype = x_in.attr["dtype"].type
         if dtype == tf.float32:
-            nums = array.array('f', tensor.tensor_content)
+            nums = array.array("f", tensor.tensor_content)
         elif dtype == tf.float64:
-            nums = array.array('d', tensor.tensor_content)
+            nums = array.array("d", tensor.tensor_content)
 
         else:
             raise TypeError("Unsupported dtype for rsqrt")
@@ -612,13 +612,13 @@ def _avgpool(converter, node: Any, inputs: List[str]) -> Any:
     ksize = node.attr["ksize"].list.i
     s = node.attr["strides"].list.i
 
-    padding = node.attr["padding"].s.decode('ascii')
+    padding = node.attr["padding"].s.decode("ascii")
     pool_size = [ksize[1], ksize[2]]
     strides = [s[1], s[2]]
 
     shape = [int(i) for i in x_in.shape]
 
-    channels_first = node.attr["data_format"].s.decode('ascii') == "NCHW"
+    channels_first = node.attr["data_format"].s.decode("ascii") == "NCHW"
 
     avg = AveragePooling2D(shape, pool_size, strides, padding, channels_first)
 
@@ -631,12 +631,12 @@ def _keras_global_avgpool(converter, node: Any, inputs: List[str]) -> Any:
     x_in = converter.outputs[inputs[0]]
 
     content = converter.outputs[inputs[1]].attr["value"].tensor.tensor_content
-    reduction_indices = array.array('i', content)
+    reduction_indices = array.array("i", content)
 
-    if reduction_indices == array.array('i', [1, 2]):
-        data_format = 'channels_last'
+    if reduction_indices == array.array("i", [1, 2]):
+        data_format = "channels_last"
     else:
-        data_format = 'channels_first'
+        data_format = "channels_first"
 
     layer = GlobalAveragePooling2D(data_format=data_format)
 
@@ -647,12 +647,12 @@ def _keras_global_maxpool(converter, node: Any, inputs: List[str]) -> Any:
     x_in = converter.outputs[inputs[0]]
 
     content = converter.outputs[inputs[1]].attr["value"].tensor.tensor_content
-    reduction_indices = array.array('i', content)
+    reduction_indices = array.array("i", content)
 
-    if reduction_indices == array.array('i', [1, 2]):
-        data_format = 'channels_last'
+    if reduction_indices == array.array("i", [1, 2]):
+        data_format = "channels_last"
     else:
-        data_format = 'channels_first'
+        data_format = "channels_first"
 
     layer = GlobalMaxPooling2D(data_format=data_format)
 
@@ -725,33 +725,24 @@ def _required_space_to_batch_paddings(converter, node, inputs: List[str]):
         def inputter_crop():
             _, crops = tf.required_space_to_batch_paddings(input_shape, block_shape)
             return tf.cast(crops, tf.float64)
+
     else:
         base_paddings, input_shape, block_shape = inputs_int32
 
         def inputter_pad():
             pads, _ = tf.required_space_to_batch_paddings(
-                input_shape,
-                block_shape,
-                base_paddings=base_paddings,
+                input_shape, block_shape, base_paddings=base_paddings,
             )
             return tf.cast(pads, tf.float64)
 
         def inputter_crop():
             _, crops = tf.required_space_to_batch_paddings(
-                input_shape,
-                block_shape,
-                base_paddings=base_paddings,
+                input_shape, block_shape, base_paddings=base_paddings,
             )
             return tf.cast(crops, tf.float64)
 
-    pad_private = tfe.define_public_input(
-        converter.model_provider,
-        inputter_pad,
-    )
-    crop_private = tfe.define_public_input(
-        converter.model_provider,
-        inputter_crop,
-    )
+    pad_private = tfe.define_public_input(converter.model_provider, inputter_pad,)
+    crop_private = tfe.define_public_input(converter.model_provider, inputter_crop,)
 
     return (pad_private, crop_private)
 
@@ -815,11 +806,11 @@ def _nodef_to_public_pond(converter, x):
 
     else:
         if dtype == tf.float32:
-            nums = array.array('f', x.attr["value"].tensor.tensor_content)
+            nums = array.array("f", x.attr["value"].tensor.tensor_content)
         elif dtype == tf.float64:
-            nums = array.array('d', x.attr["value"].tensor.tensor_content)
+            nums = array.array("d", x.attr["value"].tensor.tensor_content)
         elif dtype == tf.int32:
-            nums = array.array('i', x.attr["value"].tensor.tensor_content)
+            nums = array.array("i", x.attr["value"].tensor.tensor_content)
         else:
             raise TypeError("Unsupported dtype")
 
@@ -855,12 +846,12 @@ def _nodef_to_private_pond(converter, x):
 
     else:
         if dtype == tf.float32:
-            nums = array.array('f', x.attr["value"].tensor.tensor_content)
+            nums = array.array("f", x.attr["value"].tensor.tensor_content)
         elif dtype == tf.float64:
-            nums = array.array('d', x.attr["value"].tensor.tensor_content)
+            nums = array.array("d", x.attr["value"].tensor.tensor_content)
         elif dtype == tf.int32:
             logging.warning(warn_msg, dtype, x.name)
-            nums = array.array('i', x.attr["value"].tensor.tensor_content)
+            nums = array.array("i", x.attr["value"].tensor.tensor_content)
         else:
             raise TypeError(err_msg.format(dtype, x.name))
 
@@ -880,15 +871,15 @@ def _nodef_to_numpy_array(x):
     content = x.attr["value"].tensor.tensor_content
 
     if dtype == tf.float32:
-        type_code = 'f'
+        type_code = "f"
         if not content:
             content = x.attr["value"].tensor.float_val
     elif dtype == tf.float64:
-        type_code = 'd'
+        type_code = "d"
         if not content:
             content = x.attr["value"].tensor.double_val
     elif dtype == tf.int32:
-        type_code = 'i'
+        type_code = "i"
         if not content:
             content = x.attr["value"].tensor.int_val
     else:

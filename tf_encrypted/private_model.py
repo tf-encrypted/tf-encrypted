@@ -46,7 +46,7 @@ def load_graph(model_file, model_name=None, batch_size=1):
     """Load a plaintext model from protobuf."""
 
     input_spec = []
-    with gfile.GFile(model_file, 'rb') as f:
+    with gfile.GFile(model_file, "rb") as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
 
@@ -56,13 +56,10 @@ def load_graph(model_file, model_name=None, batch_size=1):
 
             input_spec.append(
                 {
-                    'name':
-                        node.name,
-                    'dtype':
-                        node.attr['dtype'].type,
-                    'shape':
-                        [batch_size] +
-                        [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
+                    "name": node.name,
+                    "dtype": node.attr["dtype"].type,
+                    "shape": [batch_size]
+                    + [int(d.size) for d in node.attr["shape"].shape.dim[1:]],
                 }
             )
 
@@ -70,14 +67,13 @@ def load_graph(model_file, model_name=None, batch_size=1):
     for i, spec in enumerate(input_spec):
 
         def scope(i, spec):
-
             def provide_input() -> tf.Tensor:
                 if model_name is None:
                     name = "api/{}".format(i)
                 else:
                     name = "api/{}/{}".format(model_name, i)
 
-                pl = tf.placeholder(tf.float32, shape=spec['shape'], name=name)
+                pl = tf.placeholder(tf.float32, shape=spec["shape"], name=name)
                 return pl
 
             return provide_input
@@ -93,11 +89,11 @@ def secure_model(model, **kwargs):
     min_graph = graph_util.convert_variables_to_constants(
         session, session.graph_def, [node.op.name for node in model.outputs]
     )
-    graph_fname = 'model.pb'
+    graph_fname = "model.pb"
     tf.train.write_graph(min_graph, _TMPDIR, graph_fname, as_text=False)
 
-    if 'batch_size' in kwargs:
-        batch_size = kwargs.pop('batch_size')
+    if "batch_size" in kwargs:
+        batch_size = kwargs.pop("batch_size")
     else:
         batch_size = 1
 
@@ -106,6 +102,6 @@ def secure_model(model, **kwargs):
     )
 
     c = tfe.convert.convert.Converter(tfe.convert.registry(), **kwargs)
-    y = c.convert(remove_training_nodes(graph_def), 'input-provider', inputs)
+    y = c.convert(remove_training_nodes(graph_def), "input-provider", inputs)
 
     return PrivateModel(y)

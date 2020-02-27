@@ -12,16 +12,13 @@ from tf_encrypted.tensor import int100factory
 
 
 class TestInt100Tensor(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
     def test_pond(self) -> None:
 
         with tfe.protocol.Pond(
-                None,
-                tensor_factory=int100factory,
-                fixedpoint_config=fixed100_ni,
+            None, tensor_factory=int100factory, fixedpoint_config=fixed100_ni,
         ) as prot:
 
             x = prot.define_private_variable(np.array([2, 2]), apply_scaling=False)
@@ -37,16 +34,10 @@ class TestInt100Tensor(unittest.TestCase):
             np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
     def core_test_binarize(
-            self,
-            raw,
-            shape,
-            modulus,
-            bitlen,
-            ensure_positive_interpretation,
+        self, raw, shape, modulus, bitlen, ensure_positive_interpretation,
     ) -> None:
-
         def as_bits(x: int, min_bitlength):
-            bits = [int(b) for b in '{0:b}'.format(x)]
+            bits = [int(b) for b in "{0:b}".format(x)]
             bits = [0] * (min_bitlength - len(bits)) + bits
             return list(reversed(bits))
 
@@ -83,12 +74,11 @@ class TestInt100Tensor(unittest.TestCase):
         shape = (2, 2, 2, -1)
 
         bitlen = math.ceil(math.log2(int100factory.modulus))
-        modulus = 2**bitlen
+        modulus = 2 ** bitlen
         self.core_test_binarize(raw, shape, modulus, bitlen, False)
 
 
 class TestConv2D(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -132,5 +122,5 @@ class TestConv2D(unittest.TestCase):
         np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

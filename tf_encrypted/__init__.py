@@ -43,19 +43,19 @@ def _update_protocol(prot):
 def get_protocol():
     """Return the current protocol in scope.
 
-  Note this should not be used for accessing public protocol methods, use
-  tfe.<public_protocol_method> instead.
-  """
+    Note this should not be used for accessing public protocol methods, use
+    tfe.<public_protocol_method> instead.
+    """
     return __protocol__
 
 
 def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
-    """
-  Sets the global protocol. See
-  :class:`~tf_encrypted.protocol.protocol.Protocol` for more info.
+    """Sets the global protocol.
 
-  :param ~tf_encrypted.protocol.protocol.Protocol prot: A protocol instance.
-  """
+    See :class:`~tf_encrypted.protocol.protocol.Protocol` for more info.
+
+    :param ~tf_encrypted.protocol.protocol.Protocol prot: A protocol instance.
+    """
 
     # reset all names
     for func_name in __all_prot_funcs__:
@@ -64,7 +64,7 @@ def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
     # add global names according to new protocol
     if prot is not None:
         methods = inspect.getmembers(prot, predicate=inspect.ismethod)
-        public_methods = [method for method in methods if not method[0].startswith('_')]
+        public_methods = [method for method in methods if not method[0].startswith("_")]
         for name, func in public_methods:
             globals()[name] = func
 
@@ -75,6 +75,7 @@ def set_protocol(prot: Optional[protocol.Protocol] = None) -> None:
 def set_config(config: Config) -> None:
     # pylint: disable=import-outside-toplevel
     from .config import set_config as set_global_config
+
     # pylint: enable=import-outside-toplevel
 
     set_global_config(config)

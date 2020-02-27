@@ -24,7 +24,7 @@ def _gen_graph_def(subgraph, input_shape, sess):
 
 
 def _read_graph(path):
-    with tf.io.gfile.GFile(path, 'rb') as f:
+    with tf.io.gfile.GFile(path, "rb") as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
 
@@ -39,15 +39,15 @@ def print_from_graphdef(graphdef):
 def export(x: tf.Tensor, filename, sess=None):
     """Export a GraphDef for the subgraph connected to x.
 
-  Args:
-    x: The tensor whose parent Graph we want to export.
-    filename: The filename to use for the exported GraphDef.
-    sess: An optional Session object; useful if already operating within a
-        Session context.
+    Args:
+        x: The tensor whose parent Graph we want to export.
+        filename: The filename to use for the exported GraphDef.
+        sess: An optional Session object; useful if already operating within a
+            Session context.
 
-  Returns:
-    A filepath pointing to the exported GraphDef.
-  """
+    Returns:
+        A filepath pointing to the exported GraphDef.
+    """
     should_close = False
     if sess is None:
         should_close = True

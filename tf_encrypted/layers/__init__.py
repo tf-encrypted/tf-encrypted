@@ -11,12 +11,12 @@ from .pooling import MaxPooling2D
 from .reshape import Reshape
 
 __all__ = [
-    'AveragePooling2D',
-    'MaxPooling2D',
-    'Conv2D',
-    'Dense',
-    'Sigmoid',
-    'Relu',
-    'Batchnorm',
-    'Reshape',
+    "AveragePooling2D",
+    "MaxPooling2D",
+    "Conv2D",
+    "Dense",
+    "Sigmoid",
+    "Relu",
+    "Batchnorm",
+    "Reshape",
 ]

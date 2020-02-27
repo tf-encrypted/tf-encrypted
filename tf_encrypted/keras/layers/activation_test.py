@@ -10,7 +10,6 @@ from tf_encrypted.keras.testing_utils import layer_test
 
 
 class TestActivation(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -19,14 +18,10 @@ class TestActivation(unittest.TestCase):
 
     def _core_activation(self, **layer_kwargs):
         agreement_test(
-            tfe.keras.layers.Activation,
-            kwargs=layer_kwargs,
-            input_shape=[1, 5],
+            tfe.keras.layers.Activation, kwargs=layer_kwargs, input_shape=[1, 5],
         )
         layer_test(
-            tfe.keras.layers.Activation,
-            kwargs=layer_kwargs,
-            batch_input_shape=[1, 5],
+            tfe.keras.layers.Activation, kwargs=layer_kwargs, batch_input_shape=[1, 5],
         )
 
     def test_backward_sigmoid(self) -> None:
@@ -77,5 +72,5 @@ class TestActivation(unittest.TestCase):
             np.testing.assert_array_almost_equal(tfe_d_x, tf_d_x[0], decimal=2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

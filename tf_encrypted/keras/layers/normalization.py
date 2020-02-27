@@ -93,10 +93,10 @@ class BatchNormalization(Layer):
         epsilon=1e-3,
         center=True,
         scale=True,
-        beta_initializer='zeros',
-        gamma_initializer='ones',
-        moving_mean_initializer='zeros',
-        moving_variance_initializer='ones',
+        beta_initializer="zeros",
+        gamma_initializer="ones",
+        moving_mean_initializer="zeros",
+        moving_variance_initializer="ones",
         beta_regularizer=None,
         gamma_regularizer=None,
         beta_constraint=None,
@@ -109,7 +109,7 @@ class BatchNormalization(Layer):
         virtual_batch_size=None,
         adjustment=None,
         name=None,
-        **kwargs
+        **kwargs,
     ):
         super(BatchNormalization, self).__init__(
             name=name, trainable=trainable, **kwargs
@@ -121,44 +121,28 @@ class BatchNormalization(Layer):
         self.moving_variance_initializer = initializers.get(moving_variance_initializer)
 
         default_args_check(
-            beta_regularizer,
-            "beta_regularizer",
-            "BatchNormalization",
+            beta_regularizer, "beta_regularizer", "BatchNormalization",
         )
         default_args_check(
-            gamma_regularizer,
-            "gamma_regularizer",
-            "BatchNormalization",
+            gamma_regularizer, "gamma_regularizer", "BatchNormalization",
         )
         default_args_check(
-            beta_constraint,
-            "beta_constraint",
-            "BatchNormalization",
+            beta_constraint, "beta_constraint", "BatchNormalization",
         )
         default_args_check(
-            gamma_constraint,
-            "gamma_constraint",
-            "BatchNormalization",
+            gamma_constraint, "gamma_constraint", "BatchNormalization",
         )
         default_args_check(
-            renorm,
-            "renorm",
-            "BatchNormalization",
+            renorm, "renorm", "BatchNormalization",
         )
         default_args_check(
-            renorm_clipping,
-            "renorm_clipping",
-            "BatchNormalization",
+            renorm_clipping, "renorm_clipping", "BatchNormalization",
         )
         default_args_check(
-            virtual_batch_size,
-            "virtual_batch_size",
-            "BatchNormalization",
+            virtual_batch_size, "virtual_batch_size", "BatchNormalization",
         )
         default_args_check(
-            adjustment,
-            "adjustment",
-            "BatchNormalization",
+            adjustment, "adjustment", "BatchNormalization",
         )
 
         # Axis from get_config can be in ListWrapper format even if

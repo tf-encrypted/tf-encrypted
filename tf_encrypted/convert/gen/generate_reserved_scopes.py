@@ -14,9 +14,7 @@ def _table_from_registered_specops():
         tf_name = attr_dict["tf-name"]
         hyperlink = attr_dict["hyperlink"]
         table_string += """`{scope}`|[{name}]({hyperlink})\n""".format(
-            scope=scope,
-            name=tf_name,
-            hyperlink=hyperlink,
+            scope=scope, name=tf_name, hyperlink=hyperlink,
         )
 
     return table_string

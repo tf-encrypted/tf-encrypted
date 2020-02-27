@@ -27,10 +27,10 @@ def get_session(op_input_list=()):
         return True
 
     if ops.inside_function():
-        raise RuntimeError('Cannot get session inside Tensorflow graph function.')
+        raise RuntimeError("Cannot get session inside Tensorflow graph function.")
 
     # return any suitable session already specified
-    session = getattr(_SESSION, 'session', None)
+    session = getattr(_SESSION, "session", None)
     if valid_session(session):
         return session
 
@@ -53,9 +53,9 @@ def _current_graph(op_input_list):
 
 def set_session(session):
     """Sets the global TFE session.
-  Arguments:
-      session: A TFE Session.
-  """
+    Arguments:
+        session: A TFE Session.
+    """
     global _SESSION
     _SESSION.session = session
 

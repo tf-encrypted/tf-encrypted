@@ -28,8 +28,7 @@ from .shared import im2col
 
 
 def native_factory(
-    NATIVE_TYPE,
-    EXPLICIT_MODULUS=None,
+    NATIVE_TYPE, EXPLICIT_MODULUS=None,
 ):  # pylint: disable=invalid-name
     """Constructs the native tensor Factory."""
 
@@ -124,19 +123,19 @@ def native_factory(
             shape,
             seed,
             minval: Optional[int] = None,
-            maxval: Optional[int] = None
+            maxval: Optional[int] = None,
         ):
             """Seeded sample of a random tensor.
 
-      Arguments:
-        shape (tuple of ints), shape of the tensor to sample
-        seed (int), seed for the sampler to use
-        minval (int), the a in the interval [a,b]
-        maxval (int), the b in the interval [a,b]
+            Arguments:
+                shape (tuple of ints), shape of the tensor to sample
+                seed (int), seed for the sampler to use
+                minval (int), the a in the interval [a,b]
+                maxval (int), the b in the interval [a,b]
 
-      Returns a tensor of shape `shape` drawn from a uniform distribution over
-      the interval [minval,maxval].
-      """
+            Returns a tensor of shape `shape` drawn from a uniform distribution over
+            the interval [minval,maxval].
+            """
             minval = self.min if minval is None else minval
             maxval = self.max if maxval is None else maxval
 
@@ -158,7 +157,7 @@ def native_factory(
             )
 
         def sample_bounded(self, shape, bitlength: int):
-            maxval = 2**bitlength
+            maxval = 2 ** bitlength
             assert maxval <= self.max
 
             if secure_random.supports_seeded_randomness():
@@ -197,7 +196,7 @@ def native_factory(
 
     FACTORY = Factory()  # pylint: disable=invalid-name
 
-    def _lift(x, y) -> Tuple['Tensor', 'Tensor']:
+    def _lift(x, y) -> Tuple["Tensor", "Tensor"]:
 
         if isinstance(x, Tensor) and isinstance(y, Tensor):
             return x, y
@@ -242,7 +241,7 @@ def native_factory(
             return factory.tensor(binarize(self.value % EXPLICIT_MODULUS, bitsize))
 
         def __repr__(self) -> str:
-            return '{}(shape={})'.format(type(self), self.shape)
+            return "{}(shape={})".format(type(self), self.shape)
 
         @property
         def factory(self):
@@ -313,7 +312,7 @@ def native_factory(
             i2c = im2col(self.value, h_filter, w_filter, padding, stride)
             return DenseTensor(i2c)
 
-        def conv2d(self, other, stride: int, padding: str = 'SAME'):
+        def conv2d(self, other, stride: int, padding: str = "SAME"):
             if EXPLICIT_MODULUS is not None:
                 # TODO(Morten) any good reason this wasn't implemented for PrimeTensor?
                 raise NotImplementedError()
@@ -386,7 +385,7 @@ def native_factory(
         def truncate(self, amount, base=2):
             if base == 2:
                 return self.right_shift(amount)
-            factor = base**amount
+            factor = base ** amount
             factor_inverse = inverse(factor, self.factory.modulus)
             return (self - (self % factor)) * factor_inverse
 
@@ -505,7 +504,7 @@ def native_factory(
 
         @property
         def value(self):
-            with tf.name_scope('expand-seed'):
+            with tf.name_scope("expand-seed"):
                 return secure_random.seeded_random_uniform(
                     shape=self._shape,
                     dtype=NATIVE_TYPE,
@@ -526,7 +525,7 @@ def native_factory(
             super(Constant, self).__init__(constant)
 
         def __repr__(self) -> str:
-            return 'Constant(shape={})'.format(self.shape)
+            return "Constant(shape={})".format(self.shape)
 
     class Placeholder(DenseTensor, AbstractPlaceholder):
         """Native Placeholder class."""
@@ -536,7 +535,7 @@ def native_factory(
             super(Placeholder, self).__init__(self.placeholder)
 
         def __repr__(self) -> str:
-            return 'Placeholder(shape={})'.format(self.shape)
+            return "Placeholder(shape={})".format(self.shape)
 
         def feed(self, value: np.ndarray) -> Dict[tf.Tensor, np.ndarray]:
             assert isinstance(value, np.ndarray), type(value)
@@ -553,7 +552,7 @@ def native_factory(
             super(Variable, self).__init__(self.variable.read_value())
 
         def __repr__(self) -> str:
-            return 'Variable(shape={})'.format(self.shape)
+            return "Variable(shape={})".format(self.shape)
 
         def assign_from_native(self, value: np.ndarray) -> tf.Operation:
             assert isinstance(value, np.ndarray), type(value)

@@ -9,7 +9,6 @@ import tf_encrypted as tfe
 
 
 class TestBatchToSpaceND(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
         tf.set_random_seed(4224)
@@ -125,7 +124,6 @@ class TestBatchToSpaceND(unittest.TestCase):
 
 
 class TestSpaceToBatchND(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
         tf.set_random_seed(4224)
@@ -235,7 +233,6 @@ class TestSpaceToBatchND(unittest.TestCase):
 
 
 class Testconcat(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -285,7 +282,6 @@ class Testconcat(unittest.TestCase):
 
 
 class TestConv2D(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -328,10 +324,7 @@ class TestConv2D(unittest.TestCase):
             filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
             conv_out_tf = tf.nn.conv2d(
-                x_nhwc,
-                filters_tf,
-                strides=[1, strides, strides, 1],
-                padding="SAME",
+                x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME",
             )
 
             sess.run(tf.global_variables_initializer())
@@ -383,10 +376,7 @@ class TestConv2D(unittest.TestCase):
             filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
             conv_out_tf = tf.nn.conv2d(
-                x_nhwc,
-                filters_tf,
-                strides=[1, strides, strides, 1],
-                padding="SAME",
+                x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME",
             )
 
             sess.run(tf.global_variables_initializer())
@@ -400,7 +390,6 @@ class TestConv2D(unittest.TestCase):
 
 
 class TestMatMul(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -469,11 +458,10 @@ class TestMatMul(unittest.TestCase):
             sess.run(tf.global_variables_initializer())
             out_tensorflow = sess.run(out)
 
-        np.testing.assert_allclose(out_pond, out_tensorflow, atol=.1)
+        np.testing.assert_allclose(out_pond, out_tensorflow, atol=0.1)
 
 
 class TestNegative(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -510,7 +498,6 @@ class TestNegative(unittest.TestCase):
 
 
 class TestSqrt(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -547,7 +534,6 @@ class TestSqrt(unittest.TestCase):
 
 
 class TestPad(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -573,12 +559,11 @@ class TestPad(unittest.TestCase):
             # TODO this is a bit weird
             out_tensorflow = tfe.convert.convert_test.run_pad(x_in)
 
-            np.testing.assert_allclose(out_tfe, out_tensorflow, atol=.01)
+            np.testing.assert_allclose(out_tfe, out_tensorflow, atol=0.01)
 
 
 @pytest.mark.slow
 class TestReduceMax(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -600,7 +585,7 @@ class TestReduceMax(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 for _ in range(2):
-                    actual = sess.run(out_tfe.reveal(), tag='test_1d')
+                    actual = sess.run(out_tfe.reveal(), tag="test_1d")
 
         np.testing.assert_array_equal(actual, expected)
 
@@ -619,7 +604,7 @@ class TestReduceMax(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 for _ in range(2):
-                    actual = sess.run(out_tfe.reveal(), tag='test_2d_axis0')
+                    actual = sess.run(out_tfe.reveal(), tag="test_2d_axis0")
 
         np.testing.assert_array_equal(actual, expected)
 
@@ -638,7 +623,7 @@ class TestReduceMax(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 for _ in range(2):
-                    actual = sess.run(out_tfe.reveal(), tag='test_2d_axis1')
+                    actual = sess.run(out_tfe.reveal(), tag="test_2d_axis1")
 
         np.testing.assert_array_equal(actual, expected)
 
@@ -657,13 +642,12 @@ class TestReduceMax(unittest.TestCase):
             with tfe.Session() as sess:
                 sess.run(tf.global_variables_initializer())
                 for _ in range(2):
-                    actual = sess.run(out_tfe.reveal(), tag='test_3d_axis0')
+                    actual = sess.run(out_tfe.reveal(), tag="test_3d_axis0")
 
         np.testing.assert_array_equal(actual, expected)
 
 
 class TestReduceSum(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -703,7 +687,7 @@ class TestReduceSum(unittest.TestCase):
 
     def test_reduce_sum_huge_vector(self):
 
-        t = [1] * 2**13
+        t = [1] * 2 ** 13
         with tf.Session() as sess:
             out = tf.reduce_sum(t)
             actual = sess.run(out)
@@ -720,7 +704,6 @@ class TestReduceSum(unittest.TestCase):
 
 
 class TestStack(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -751,7 +734,6 @@ class TestStack(unittest.TestCase):
 
 
 class TestStridedSlice(unittest.TestCase):
-
     def setUp(self):
         tf.reset_default_graph()
 
@@ -790,5 +772,5 @@ class TestStridedSlice(unittest.TestCase):
         np.testing.assert_array_equal(final, actual)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

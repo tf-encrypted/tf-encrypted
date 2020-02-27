@@ -13,21 +13,21 @@ def agreement_test(
     input_data=None,
     rtol=1e-1,
     atol=1e-8,
-    **tfe_kwargs
+    **tfe_kwargs,
 ):
     """Check agreement between a tf.keras layer and a tfe.keras layer.
-  Arguments:
-    tfe_layer_cls: Layer class object (from tfe.keras).
-    kwargs: Optional dictionary of keyword arguments for instantiating the
-      layers.
-    input_shape: Input shape tuple.
-    input_data: Numpy array of input data.
-    expected_output: Shape tuple for the expected shape of the output.
-    tfe_kwargs: Additional kwargs to supply the tfe.keras Layer not included in
-      the argspec of the original tf.keras Layer object.
-  Raises:
-    ValueError: if `input_data is None and input_shape is None`.
-  """
+    Arguments:
+      tfe_layer_cls: Layer class object (from tfe.keras).
+      kwargs: Optional dictionary of keyword arguments for instantiating the
+          layers.
+      input_shape: Input shape tuple.
+      input_data: Numpy array of input data.
+      expected_output: Shape tuple for the expected shape of the output.
+      tfe_kwargs: Additional kwargs to supply the tfe.keras Layer not included in
+          the argspec of the original tf.keras Layer object.
+    Raises:
+        ValueError: if `input_data is None and input_shape is None`.
+    """
     input_shape, input_data = _sanitize_testing_args(input_shape, input_data)
 
     tf_layer_cls = getattr(tf.keras.layers, tfe_layer_cls.__name__)
@@ -56,19 +56,19 @@ def agreement_test(
 
 def layer_test(layer_cls, kwargs=None, batch_input_shape=None, input_data=None):
     """Test routine for a layer with a single input and single output.
-  Arguments:
-    layer_cls: Layer class object.
-    kwargs: Optional dictionary of keyword arguments for instantiating the
-      layer.
-    input_shape: Input shape tuple.
-    input_dtype: Data type of the input data.
-    input_data: Numpy array of input data.
-  Returns:
-    The output data (Numpy array) returned by the layer, for additional
-    checks to be done by the calling code.
-  Raises:
-    ValueError: if `input_data is None and input_shape is None`.
-  """
+    Arguments:
+      layer_cls: Layer class object.
+      kwargs: Optional dictionary of keyword arguments for instantiating the
+        layer.
+      input_shape: Input shape tuple.
+      input_dtype: Data type of the input data.
+      input_data: Numpy array of input data.
+    Returns:
+      The output data (Numpy array) returned by the layer, for additional
+      checks to be done by the calling code.
+    Raises:
+      ValueError: if `input_data is None and input_shape is None`.
+    """
     input_shape, input_data = _sanitize_testing_args(batch_input_shape, input_data)
 
     # instantiation
@@ -85,10 +85,10 @@ def layer_test(layer_cls, kwargs=None, batch_input_shape=None, input_data=None):
 
 def _sanitize_testing_args(input_shape, input_data):
     """Construct appropriate values for input_shape and input_data whenever one
-  is missing."""
+    is missing."""
     if input_data is None:
         if input_shape is None:
-            raise ValueError('input_shape is None')
+            raise ValueError("input_shape is None")
         input_data_shape = list(input_shape)
         for i, e in enumerate(input_data_shape):
             if e is None:
