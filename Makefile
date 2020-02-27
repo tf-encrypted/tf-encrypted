@@ -70,13 +70,10 @@ fmt: pythoncheck
 	isort --atomic --recursive tf_encrypted operations examples
 	black tf_encrypted operations examples
 
-fmtcheck: pythoncheck
-	black --check tf_encrypted
-
 typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
 
-.PHONY: lint fmt fmtcheck test typecheck
+.PHONY: lint fmt test typecheck
 
 # ##############################################
 # Documentation
