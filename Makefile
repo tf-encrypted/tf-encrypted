@@ -74,8 +74,6 @@ $(BUILD_CONVERTER_README): $(BUILD_RESERVED_SCOPES) pythoncheck
 
 lint: $(BUILD_CONVERTER_README) pythoncheck
 	flake8 tf_encrypted operations examples
-	pylint tf_encrypted examples operations
-	pylint bin/run bin/process bin/pull_model bin/serve bin/write
 
 fmt: pythoncheck
 	isort --atomic --recursive tf_encrypted operations examples

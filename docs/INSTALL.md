@@ -235,7 +235,6 @@ replaced to match your system configuration.
     "python.linting.enabled": true,
     "python.linting.mypyEnabled": true,
     "python.linting.flake8Enabled": true,
-    "python.linting.pylintEnabled": true,
     "python.linting.pydocstyleEnabled": true,
 }
 ```
