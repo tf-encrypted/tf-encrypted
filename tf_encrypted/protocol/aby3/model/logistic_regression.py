@@ -1,11 +1,15 @@
+# flake8: noqa
+
 import tensorflow as tf
+
 import tf_encrypted as tfe
 
 
 class LogisticRegression:
     def __init__(self, num_features, init_learning_rate=0.01):
         self.w = tfe.define_private_variable(
-            tf.random_uniform([num_features, 1], -0.01, 0.01))
+            tf.random_uniform([num_features, 1], -0.01, 0.01)
+        )
         self.b = tfe.define_private_variable(tf.zeros([1]))
         self.init_learning_rate = init_learning_rate
 
@@ -26,7 +30,7 @@ class LogisticRegression:
             db = tfe.reduce_sum(dy, axis=0) / batch_size
             assign_ops = [
                 tfe.assign(self.w, self.w - dw * learning_rate),
-                tfe.assign(self.b, self.b - db * learning_rate)
+                tfe.assign(self.b, self.b - db * learning_rate),
             ]
             return assign_ops
 
@@ -51,42 +55,44 @@ class LogisticRegression:
     Revealing and printing loss in the middle of training should only be used for debugging.
     It might leak information in a normal run.
     """
+
     def loss(self, sess, x, y, player_name):
         def print_loss(y_hat, y):
             with tf.name_scope("print-loss"):
-                loss = -y * tf.log(y_hat) - (1-y) * tf.log(1-y_hat)
-                print_op = tf.print("Loss on {}:".format(player_name),
-                                    loss)
+                loss = -y * tf.log(y_hat) - (1 - y) * tf.log(1 - y_hat)
+                print_op = tf.print("Loss on {}:".format(player_name), loss)
                 return print_op
 
         with tf.name_scope("loss"):
             y_hat = self.forward(x)
-            print_loss_op = tfe.define_output(player_name,
-                                              [y_hat, y],
-                                              print_loss)
+            print_loss_op = tfe.define_output(player_name, [y_hat, y], print_loss)
         sess.run(print_loss_op, tag="loss")
 
     def evaluate(self, sess, x, y, data_owner):
         """Return the accuracy"""
+
         def print_accuracy(y_hat, y) -> tf.Operation:
             with tf.name_scope("print-accuracy"):
                 correct_prediction = tf.equal(tf.round(y_hat), y)
                 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-                print_op = tf.print("Accuracy on {}:".format(data_owner.player_name),
-                                    accuracy)
+                print_op = tf.print(
+                    "Accuracy on {}:".format(data_owner.player_name), accuracy
+                )
                 return print_op
 
         with tf.name_scope("evaluate"):
             y_hat = self.forward(x)
-            print_accuracy_op = tfe.define_output(data_owner.player_name,
-                                                  [y_hat, y],
-                                                  print_accuracy)
+            print_accuracy_op = tfe.define_output(
+                data_owner.player_name, [y_hat, y], print_accuracy
+            )
 
-        sess.run(print_accuracy_op, tag='evaluate')
+        sess.run(print_accuracy_op, tag="evaluate")
 
 
 class FakeDataOwner:
-    def __init__(self, player_name, num_features, train_set_size, test_set_size, batch_size):
+    def __init__(
+        self, player_name, num_features, train_set_size, test_set_size, batch_size
+    ):
         self.player_name = player_name
         self.num_features = num_features
         self.train_set_size = train_set_size
@@ -100,15 +106,20 @@ class FakeDataOwner:
         return self.train_initilizer, self.test_initializer
 
     def provide_train_data_fake(self):
-        x_raw = tf.random.uniform(minval=-0.5, maxval=0.5,
-                                  shape=[self.train_set_size, self.num_features])
+        x_raw = tf.random.uniform(
+            minval=-0.5, maxval=0.5, shape=[self.train_set_size, self.num_features]
+        )
         # y_raw is created as a simple linear combination of x_raw's feature values
-        y_raw = tf.cast(tf.reduce_mean(x_raw, axis=1, keepdims=True) > 0, dtype=tf.float32)
+        y_raw = tf.cast(
+            tf.reduce_mean(x_raw, axis=1, keepdims=True) > 0, dtype=tf.float32
+        )
 
-        train_set = tf.data.Dataset.from_tensor_slices((x_raw, y_raw))\
-            .repeat()\
-            .shuffle(buffer_size=self.batch_size)\
+        train_set = (
+            tf.data.Dataset.from_tensor_slices((x_raw, y_raw))
+            .repeat()
+            .shuffle(buffer_size=self.batch_size)
             .batch(self.batch_size)
+        )
 
         train_set_iterator = train_set.make_initializable_iterator()
         self.train_initilizer = train_set_iterator.initializer
@@ -120,13 +131,16 @@ class FakeDataOwner:
         return x, y
 
     def provide_train_features_fake(self):
-        x_raw = tf.random.uniform(minval=-0.5, maxval=0.5,
-                                  shape=[self.train_set_size, self.num_features])
+        x_raw = tf.random.uniform(
+            minval=-0.5, maxval=0.5, shape=[self.train_set_size, self.num_features]
+        )
 
-        train_set = tf.data.Dataset.from_tensor_slices(x_raw) \
-            .repeat() \
-            .shuffle(buffer_size=self.batch_size) \
+        train_set = (
+            tf.data.Dataset.from_tensor_slices(x_raw)
+            .repeat()
+            .shuffle(buffer_size=self.batch_size)
             .batch(self.batch_size)
+        )
 
         train_set_iterator = train_set.make_initializable_iterator()
         self.train_initilizer = train_set_iterator.initializer
@@ -137,22 +151,23 @@ class FakeDataOwner:
         return x
 
     def provide_train_targets_fake(self, *train_feature_sets):
-        x = tf.concat(train_feature_sets, axis = 1)
+        x = tf.concat(train_feature_sets, axis=1)
         y = tf.cast(tf.reduce_mean(x, axis=1, keepdims=True) > 0, dtype=tf.float32)
         y = tf.reshape(y, [self.batch_size, 1])
         return y
 
     def provide_test_data_fake(self):
         x_raw = tf.random.uniform(
-            minval=-.5,
-            maxval=.5,
-            shape=[self.test_set_size, self.num_features])
+            minval=-0.5, maxval=0.5, shape=[self.test_set_size, self.num_features]
+        )
 
         y_raw = tf.cast(tf.reduce_mean(x_raw, axis=1) > 0, dtype=tf.float32)
 
-        test_set = tf.data.Dataset.from_tensor_slices((x_raw, y_raw)) \
-            .repeat() \
+        test_set = (
+            tf.data.Dataset.from_tensor_slices((x_raw, y_raw))
+            .repeat()
             .batch(self.test_set_size)
+        )
 
         test_set_iterator = test_set.make_initializable_iterator()
         self.test_initializer = test_set_iterator.initializer
@@ -165,13 +180,12 @@ class FakeDataOwner:
 
     def provide_test_features_fake(self):
         x_raw = tf.random.uniform(
-            minval=-.5,
-            maxval=.5,
-            shape=[self.test_set_size, self.num_features])
+            minval=-0.5, maxval=0.5, shape=[self.test_set_size, self.num_features]
+        )
 
-        test_set = tf.data.Dataset.from_tensor_slices(x_raw) \
-            .repeat() \
-            .batch(self.test_set_size)
+        test_set = (
+            tf.data.Dataset.from_tensor_slices(x_raw).repeat().batch(self.test_set_size)
+        )
 
         test_set_iterator = test_set.make_initializable_iterator()
         self.test_initializer = test_set_iterator.initializer
@@ -182,7 +196,7 @@ class FakeDataOwner:
         return x
 
     def provide_test_targets_fake(self, *test_feature_sets):
-        x = tf.concat(test_feature_sets, axis = 1)
+        x = tf.concat(test_feature_sets, axis=1)
         y = tf.cast(tf.reduce_mean(x, axis=1, keepdims=True) > 0, dtype=tf.float32)
         y = tf.reshape(y, [self.test_set_size, 1])
         return y
@@ -199,8 +213,17 @@ class DataSchema:
 
 
 class DataOwner:
-    def __init__(self, player_name, local_data_file, data_schema,
-                 header=False, index=False, field_delim=',', na_values=['nan'], batch_size=128):
+    def __init__(
+        self,
+        player_name,
+        local_data_file,
+        data_schema,
+        header=False,
+        index=False,
+        field_delim=",",
+        na_values=["nan"],
+        batch_size=128,
+    ):
         self.player_name = player_name
         self.local_data_file = local_data_file
         self.data_schema = data_schema
@@ -215,28 +238,36 @@ class DataOwner:
         Use TF's CsvDataset to load local data, but it is too slow.
         Please use `self.provide_data` instead.
         """
-        dataset = tf.data.experimental.CsvDataset(
-            self.local_data_file,
-            [tf.constant([self.data_schema.field_defaults[i]], dtype=self.data_schema.field_types[i])
-             for i in range(self.data_schema.field_num)],
-            header=self.header,
-            field_delim=self.field_delim,
-            select_cols=list(range(self.data_schema.field_num)) if not self.index else list(range(1, self.data_schema.field_num+1))
-        )  \
-            .repeat() \
+        dataset = (
+            tf.data.experimental.CsvDataset(
+                self.local_data_file,
+                [
+                    tf.constant(
+                        [self.data_schema.field_defaults[i]],
+                        dtype=self.data_schema.field_types[i],
+                    )
+                    for i in range(self.data_schema.field_num)
+                ],
+                header=self.header,
+                field_delim=self.field_delim,
+                select_cols=list(range(self.data_schema.field_num))
+                if not self.index
+                else list(range(1, self.data_schema.field_num + 1)),
+            )
+            .repeat()
             .batch(self.batch_size)
+        )
         iterator = dataset.make_one_shot_iterator()
         batch = iterator.get_next()
         batch = tf.transpose(tf.stack(batch, axis=0))
         return batch
 
     def provide_data(self):
-
         def decode(line):
             fields = tf.string_split([line], self.field_delim).values
-            if self.index: # Skip index
+            if self.index:  # Skip index
                 fields = fields[1:]
-            fields = tf.regex_replace(fields, '|'.join(self.na_values), 'nan')
+            fields = tf.regex_replace(fields, "|".join(self.na_values), "nan")
             fields = tf.string_to_number(fields, tf.float32)
             return fields
 
@@ -245,13 +276,14 @@ class DataOwner:
             return fields
 
         dataset = tf.data.TextLineDataset(self.local_data_file)
-        if self.header: # Skip header
+        if self.header:  # Skip header
             dataset = dataset.skip(1)
-        dataset = dataset\
-            .map(decode)\
-            .map(lambda x: fill_na(x, self.data_schema.field_defaults))\
-            .repeat()\
+        dataset = (
+            dataset.map(decode)
+            .map(lambda x: fill_na(x, self.data_schema.field_defaults))
+            .repeat()
             .batch(self.batch_size)
+        )
 
         iterator = dataset.make_one_shot_iterator()
         batch = iterator.get_next()
@@ -273,8 +305,9 @@ class PredictionClient:
         self.num_features = num_features
 
     def provide_input_fake(self):
-        return tf.random.uniform(minval=-0.5, maxval=0.5, dtype=tf.float32,
-                                 shape=[1, self.num_features])
+        return tf.random.uniform(
+            minval=-0.5, maxval=0.5, dtype=tf.float32, shape=[1, self.num_features]
+        )
 
     def receive_output(self, result):
         return tf.print("Result on {}:".format(self.player_name), result)
@@ -287,15 +320,12 @@ class LossDebugger:
     def loss(self, model, x, y):
         def print_loss(y_hat, y):
             with tf.name_scope("print-loss"):
-                loss = -y * tf.log(y_hat) - (1-y) * tf.log(1-y_hat)
+                loss = -y * tf.log(y_hat) - (1 - y) * tf.log(1 - y_hat)
                 loss = tf.reduce_mean(loss)
-                print_op = tf.print("Loss on {}:".format(self.player_name),
-                                    loss)
+                print_op = tf.print("Loss on {}:".format(self.player_name), loss)
                 return print_op
 
         with tf.name_scope("loss"):
             y_hat = model.forward(x)
-            print_loss_op = tfe.define_output(self.player_name,
-                                              [y_hat, y],
-                                              print_loss)
+            print_loss_op = tfe.define_output(self.player_name, [y_hat, y], print_loss)
         return print_loss_op

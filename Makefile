@@ -10,7 +10,7 @@ all: test
 # Rules for bootstrapping the Makefile such as checking for docker, python versions, etc.
 # ###############################################
 DOCKER_REQUIRED_VERSION=18.
-PYTHON_REQUIRED_VERSION=3.5.
+PYTHON_REQUIRED_VERSION=3.6.
 SHELL := /bin/bash
 
 CURRENT_DIR=$(shell pwd)
@@ -63,28 +63,17 @@ test: pythoncheck
 	pytest -n 8 -x -m slow
 	pytest -n 8 -x -m convert_maxpool
 
-CONVERT_DIR=tf_encrypted/convert
-BUILD_RESERVED_SCOPES=$(CONVERT_DIR)/specops.yaml
-$(BUILD_RESERVED_SCOPES): pythoncheck
-	python -m tf_encrypted.convert.gen.generate_reserved_scopes
+lint: pythoncheck
+	flake8 tf_encrypted operations examples
 
-BUILD_CONVERTER_README=$(CONVERT_DIR)/gen/readme_template.md
-$(BUILD_CONVERTER_README): $(BUILD_RESERVED_SCOPES) pythoncheck
-	python -m tf_encrypted.convert.gen.generate_reserved_scopes
-
-lint: $(BUILD_CONVERTER_README) pythoncheck
-	pylint tf_encrypted examples operations
-	pylint bin/run bin/process bin/pull_model bin/serve bin/write
-	flake8 tf_encrypted
-	yapf --diff --recursive --parallel tf_encrypted
-
-format: pythoncheck
-	yapf --in-place --recursive --parallel tf_encrypted
+fmt: pythoncheck
+	isort --atomic --recursive tf_encrypted operations examples
+	black tf_encrypted operations examples
 
 typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
 
-.PHONY: lint test typecheck
+.PHONY: lint fmt test typecheck
 
 # ##############################################
 # Documentation
@@ -100,10 +89,19 @@ SPHINX_BUILD_GOOGLE_DOCSTRINGS = sphinx-apidoc
 SPHINX_NAPOLEAN_BUILD_DIR = docs/source/gen
 SPHINX_PROJECT_DIR = tf_encrypted
 
+CONVERT_DIR=tf_encrypted/convert
+BUILD_RESERVED_SCOPES=$(CONVERT_DIR)/specops.yaml
+$(BUILD_RESERVED_SCOPES): pythoncheck
+	python -m tf_encrypted.convert.gen.generate_reserved_scopes
+
+BUILD_CONVERTER_README=$(CONVERT_DIR)/gen/readme_template.md
+$(BUILD_CONVERTER_README): $(BUILD_RESERVED_SCOPES) pythoncheck
+	python -m tf_encrypted.convert.gen.generate_reserved_scopes
+
 google-docstrings:
 	@$(SPHINX_BUILD_GOOGLE_DOCSTRINGS) -fMeET "$(SPHINX_PROJECT_DIR)" -o "$(SPHINX_NAPOLEAN_BUILD_DIR)"
 
-docs: google-docstrings
+docs: $(BUILD_CONVERTER_README) google-docstrings
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 .PHONY: docs
@@ -274,7 +272,7 @@ pypi-push: pypi-push-$(PUSHTYPE)
 
 push:
 	@echo "Attempting to build and push $(VERSION) with push type $(PUSHTYPE) - $(EXACT_TAG)"
-	make docker-push
+	# make docker-push
 	make pypi-push
 	@echo "Done building and pushing artifacts for $(VERSION)"
 
@@ -330,8 +328,8 @@ $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECUR
 build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
 
 build-all:
-	pip install tensorflow==1.13.1
-	$(MAKE) $(SECURE_OUT_PRE)1.13.1.so
+	pip install tensorflow==1.15.2
+	$(MAKE) $(SECURE_OUT_PRE)1.15.2.so
 
 
 .PHONY: build build-all

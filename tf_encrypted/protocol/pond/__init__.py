@@ -1,16 +1,19 @@
 """The Pond protocol."""
 from __future__ import absolute_import
 
-from .pond import Pond
-from .pond import PondTensor
-from .pond import PondPublicTensor
-from .pond import PondPrivateTensor
-from .pond import PondMaskedTensor
-from .pond import PondPrivateVariable
-from .pond import TFEVariable, TFETensor, TFEInputter
-from .pond import _type
 from .pond import AdditiveFIFOQueue
-from .triple_sources import OnlineTripleSource, QueuedOnlineTripleSource
+from .pond import Pond
+from .pond import PondMaskedTensor
+from .pond import PondPrivateTensor
+from .pond import PondPrivateVariable
+from .pond import PondPublicTensor
+from .pond import PondTensor
+from .pond import TFEInputter
+from .pond import TFETensor
+from .pond import TFEVariable
+from .pond import _type
+from .triple_sources import OnlineTripleSource
+from .triple_sources import QueuedOnlineTripleSource
 
 __all__ = [
     "Pond",

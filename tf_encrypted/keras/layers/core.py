@@ -1,9 +1,12 @@
 """Core layers such as Reshape"""
 
+import numpy as np
+
 from tf_encrypted.keras.engine import Layer
 
+
 class Reshape(Layer):
-  """Reshapes an output to a certain shape.
+    """Reshapes an output to a certain shape.
   Arguments:
     target_shape: Target shape. Tuple of integers,
       does not include the samples dimension (batch size).
@@ -30,12 +33,12 @@ class Reshape(Layer):
   ```
   """
 
-  def __init__(self, target_shape, **kwargs):
-    super(Reshape, self).__init__(**kwargs)
-    self.target_shape = tuple(target_shape)
+    def __init__(self, target_shape, **kwargs):
+        super(Reshape, self).__init__(**kwargs)
+        self.target_shape = tuple(target_shape)
 
-  def _fix_unknown_dimension(self, input_shape, output_shape):
-    """Find and replace a missing dimension in an output shape.
+    def _fix_unknown_dimension(self, input_shape, output_shape):
+        """Find and replace a missing dimension in an output shape.
     This is a near direct port of the internal Numpy function
     `_fix_unknown_dimension` in `numpy/core/src/multiarray/shape.c`
     Arguments:
@@ -50,38 +53,39 @@ class Reshape(Layer):
       different than the input_shape, or more than one unknown dimension
       is specified.
     """
-    output_shape = list(output_shape)
-    msg = 'total size of new array must be unchanged'
+        output_shape = list(output_shape)
+        msg = "total size of new array must be unchanged"
 
-    known, unknown = 1, None
-    for index, dim in enumerate(output_shape):
-      if dim < 0:
-        if unknown is None:
-          unknown = index
+        known, unknown = 1, None
+        for index, dim in enumerate(output_shape):
+            if dim < 0:
+                if unknown is None:
+                    unknown = index
+                else:
+                    raise ValueError("Can only specify one unknown dimension.")
+            else:
+                known *= dim
+
+        original = np.prod(input_shape, dtype=int)
+        if unknown is not None:
+            if known == 0 or original % known != 0:
+                raise ValueError(msg)
+            output_shape[unknown] = original // known
+        elif original != known:
+            raise ValueError(msg)
+        return output_shape
+
+    def compute_output_shape(self, input_shape):
+        if None in input_shape[1:]:
+            output_shape = [input_shape[0]]
+            # input shape (partially) unknown? replace -1's with None's
+            output_shape += tuple(s if s != -1 else None for s in self.target_shape)
         else:
-          raise ValueError('Can only specify one unknown dimension.')
-      else:
-        known *= dim
+            output_shape = [input_shape[0]]
+            output_shape += self._fix_unknown_dimension(
+                input_shape[1:], self.target_shape
+            )
+        return output_shape
 
-    original = np.prod(input_shape, dtype=int)
-    if unknown is not None:
-      if known == 0 or original % known != 0:
-        raise ValueError(msg)
-      output_shape[unknown] = original // known
-    elif original != known:
-      raise ValueError(msg)
-    return output_shape
-
-  def compute_output_shape(self, input_shape):
-    if None in input_shape[1:]:
-      output_shape = [input_shape[0]]
-      # input shape (partially) unknown? replace -1's with None's
-      output_shape += tuple(s if s != -1 else None for s in self.target_shape)
-    else:
-      output_shape = [input_shape[0]]
-      output_shape += self._fix_unknown_dimension(input_shape[1:],
-                                                  self.target_shape)
-    return output_shape
-
-  def call(self, inputs):
-    return inputs.reshape((int(inputs.shape[0]),) + self.target_shape)
+    def call(self, inputs):
+        return inputs.reshape((int(inputs.shape[0]),) + self.target_shape)

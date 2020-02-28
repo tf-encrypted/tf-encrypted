@@ -1,11 +1,11 @@
 """Activation Layer implementation."""
-from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.activations import relu
+from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
 
 
 class ReLU(Layer):
-  """Rectified Linear Unit activation function.
+    """Rectified Linear Unit activation function.
   With default values, it returns element-wise `max(x, 0)`.
   Otherwise, it follows:
   `f(x) = max_value` for `x >= max_value`,
@@ -23,19 +23,19 @@ class ReLU(Layer):
       threshold: float. Threshold value for thresholded activation.
   """
 
-  def __init__(self, max_value=None, negative_slope=0, threshold=0, **kwargs):
-    super(ReLU, self).__init__(**kwargs)
+    def __init__(self, max_value=None, negative_slope=0, threshold=0, **kwargs):
+        super(ReLU, self).__init__(**kwargs)
 
-    # Not implemented arguments
-    default_args_check(max_value, "max_value", "ReLU")
-    default_args_check(negative_slope, "negative_slope", "ReLU")
-    default_args_check(threshold, "threshold", "ReLU")
+        # Not implemented arguments
+        default_args_check(max_value, "max_value", "ReLU")
+        default_args_check(negative_slope, "negative_slope", "ReLU")
+        default_args_check(threshold, "threshold", "ReLU")
 
-  def build(self, input_shape):
-    self.built = True
+    def build(self, input_shape):
+        self.built = True
 
-  def call(self, inputs):
-    return relu(inputs)
+    def call(self, inputs):
+        return relu(inputs)
 
-  def compute_output_shape(self, input_shape):
-    return input_shape
+    def compute_output_shape(self, input_shape):
+        return input_shape

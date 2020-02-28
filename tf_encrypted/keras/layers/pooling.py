@@ -1,14 +1,15 @@
 """Pooling Layer implementation."""
+import math
 from abc import abstractmethod
+
 from tensorflow.python.keras.utils import conv_utils
 
 import tf_encrypted as tfe
 from tf_encrypted.keras.engine import Layer
 
 
-
 class Pooling2D(Layer):
-  """Pooling layer for arbitrary pooling functions, for 2D inputs (e.g. images).
+    """Pooling layer for arbitrary pooling functions, for 2D inputs (e.g. images).
   This class only exists for code reuse. It will never be an exposed API.
   Arguments:
     _pool_function: The pooling function to apply, e.g. `prot.max_pool2d`.
@@ -29,56 +30,61 @@ class Pooling2D(Layer):
       inputs with shape `(batch, channels, height, width)`.
   """
 
-  def __init__(self, _pool_function, pool_size, strides,
-               padding='valid', data_format=None,
-               **kwargs):
-    super(Pooling2D, self).__init__(**kwargs)
+    def __init__(
+        self,
+        _pool_function,
+        pool_size,
+        strides,
+        padding="valid",
+        data_format=None,
+        **kwargs,
+    ):
+        super(Pooling2D, self).__init__(**kwargs)
 
-    if data_format is None:
-      data_format = 'channels_last'
-    if strides is None:
-      strides = pool_size
-    self._pool_function = _pool_function
-    self.pool_size = conv_utils.normalize_tuple(pool_size, 2, 'pool_size')
-    self.strides = conv_utils.normalize_tuple(strides, 2, 'strides')
-    self.padding = conv_utils.normalize_padding(padding).upper()
-    self.data_format = conv_utils.normalize_data_format(data_format)
+        if data_format is None:
+            data_format = "channels_last"
+        if strides is None:
+            strides = pool_size
+        self._pool_function = _pool_function
+        self.pool_size = conv_utils.normalize_tuple(pool_size, 2, "pool_size")
+        self.strides = conv_utils.normalize_tuple(strides, 2, "strides")
+        self.padding = conv_utils.normalize_padding(padding).upper()
+        self.data_format = conv_utils.normalize_data_format(data_format)
 
-  def build(self, input_shape):
-    self.built = True
+    def build(self, input_shape):
+        self.built = True
 
-  def call(self, inputs):
+    def call(self, inputs):
 
-    if self.data_format != 'channels_first':
-      inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
+        if self.data_format != "channels_first":
+            inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
-    outputs = self._pool_function(inputs,
-                                  self.pool_size,
-                                  self.strides,
-                                  self.padding)
+        outputs = self._pool_function(
+            inputs, self.pool_size, self.strides, self.padding
+        )
 
-    if self.data_format != 'channels_first':
-      outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
+        if self.data_format != "channels_first":
+            outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
 
-    return outputs
+        return outputs
 
-  def compute_output_shape(self, input_shape):
-    if self.channels_first:
-      _, _, h_in, w_in = input_shape
-    else:
-      _, h_in, w_in, _ = input_shape
+    def compute_output_shape(self, input_shape):
+        if self.channels_first:
+            _, _, h_in, w_in = input_shape
+        else:
+            _, h_in, w_in, _ = input_shape
 
-    if self.padding == "SAME":
-      h_out = math.ceil(h_in / self.strides[0])
-      w_out = math.ceil(w_in / self.strides[1])
-    else:
-      h_out = math.ceil((h_in - self.pool_size[0] + 1) / self.strides[0])
-      w_out = math.ceil((w_in - self.pool_size[1] + 1) / self.strides[1])
-    return [input_shape[0], input_shape[1], h_out, w_out]
+        if self.padding == "SAME":
+            h_out = math.ceil(h_in / self.strides[0])
+            w_out = math.ceil(w_in / self.strides[1])
+        else:
+            h_out = math.ceil((h_in - self.pool_size[0] + 1) / self.strides[0])
+            w_out = math.ceil((w_in - self.pool_size[1] + 1) / self.strides[1])
+        return [input_shape[0], input_shape[1], h_out, w_out]
 
 
 class MaxPooling2D(Pooling2D):
-  """Max pooling operation for spatial data.
+    """Max pooling operation for spatial data.
   Arguments:
       pool_size: integer or tuple of 2 integers,
           factors by which to downscale (vertical, horizontal).
@@ -112,20 +118,26 @@ class MaxPooling2D(Pooling2D):
           `(batch_size, channels, pooled_rows, pooled_cols)`
   """
 
-  def __init__(self,
-               pool_size=(2, 2),
-               strides=None,
-               padding='valid',
-               data_format=None,
-               **kwargs):
-    super(MaxPooling2D, self).__init__(
-        tfe.maxpool2d,
-        pool_size=pool_size, strides=strides,
-        padding=padding, data_format=data_format, **kwargs)
+    def __init__(
+        self,
+        pool_size=(2, 2),
+        strides=None,
+        padding="valid",
+        data_format=None,
+        **kwargs,
+    ):
+        super(MaxPooling2D, self).__init__(
+            tfe.maxpool2d,
+            pool_size=pool_size,
+            strides=strides,
+            padding=padding,
+            data_format=data_format,
+            **kwargs,
+        )
 
 
 class AveragePooling2D(Pooling2D):
-  """Average pooling operation for spatial data.
+    """Average pooling operation for spatial data.
   Arguments:
       pool_size: integer or tuple of 2 integers,
           factors by which to downscale (vertical, horizontal).
@@ -159,39 +171,47 @@ class AveragePooling2D(Pooling2D):
           `(batch_size, channels, pooled_rows, pooled_cols)`
   """
 
-  def __init__(self,
-               pool_size=(2, 2),
-               strides=None,
-               padding='valid',
-               data_format=None,
-               **kwargs):
-    super(AveragePooling2D, self).__init__(
-        tfe.avgpool2d,
-        pool_size=pool_size, strides=strides,
-        padding=padding, data_format=data_format, **kwargs)
+    def __init__(
+        self,
+        pool_size=(2, 2),
+        strides=None,
+        padding="valid",
+        data_format=None,
+        **kwargs,
+    ):
+        super(AveragePooling2D, self).__init__(
+            tfe.avgpool2d,
+            pool_size=pool_size,
+            strides=strides,
+            padding=padding,
+            data_format=data_format,
+            **kwargs,
+        )
+
 
 class GlobalPooling2D(Layer):
-  """Abstract class for different global pooling 2D layers.
+    """Abstract class for different global pooling 2D layers.
   """
 
-  def __init__(self, data_format=None, **kwargs):
-    super(GlobalPooling2D, self).__init__(**kwargs)
-    self.data_format = conv_utils.normalize_data_format(data_format)
+    def __init__(self, data_format=None, **kwargs):
+        super(GlobalPooling2D, self).__init__(**kwargs)
+        self.data_format = conv_utils.normalize_data_format(data_format)
 
-  def compute_output_shape(self, input_shape):
-    if self.data_format == 'channels_last':
-      output_shape = [input_shape[0], input_shape[3]]
-    else:
-      output_shape = [input_shape[0], input_shape[1]]
+    def compute_output_shape(self, input_shape):
+        if self.data_format == "channels_last":
+            output_shape = [input_shape[0], input_shape[3]]
+        else:
+            output_shape = [input_shape[0], input_shape[1]]
 
-    return output_shape
+        return output_shape
 
-  @abstractmethod
-  def call(self, inputs):
-    raise NotImplementedError
+    @abstractmethod
+    def call(self, inputs):
+        raise NotImplementedError
+
 
 class GlobalAveragePooling2D(GlobalPooling2D):
-  """Global average pooling operation for spatial data.
+    """Global average pooling operation for spatial data.
 
   Arguments:
       data_format: A string,
@@ -217,25 +237,26 @@ class GlobalAveragePooling2D(GlobalPooling2D):
       2D tensor with shape:
       `(batch_size, channels)`
   """
-  def build(self, input_shape):
-    if self.data_format == 'channels_last':
-      _, h_in, w_in, _ = input_shape
-    else:
-      _, _, h_in, w_in = input_shape
 
-    self.scalar = 1 / int(h_in * w_in)
+    def build(self, input_shape):
+        if self.data_format == "channels_last":
+            _, h_in, w_in, _ = input_shape
+        else:
+            _, _, h_in, w_in = input_shape
 
-  def call(self, inputs):
-    if self.data_format == 'channels_last':
-      x_reduced = inputs.reduce_sum(axis=2).reduce_sum(axis=1)
-    else:
-      x_reduced = inputs.reduce_sum(axis=3).reduce_sum(axis=2)
+        self.scalar = 1 / int(h_in * w_in)
 
-    return x_reduced * self.scalar
+    def call(self, inputs):
+        if self.data_format == "channels_last":
+            x_reduced = inputs.reduce_sum(axis=2).reduce_sum(axis=1)
+        else:
+            x_reduced = inputs.reduce_sum(axis=3).reduce_sum(axis=2)
+
+        return x_reduced * self.scalar
 
 
 class GlobalMaxPooling2D(GlobalPooling2D):
-  """Global max pooling operation for spatial data.
+    """Global max pooling operation for spatial data.
 
   Arguments:
       data_format: A string,
@@ -262,12 +283,12 @@ class GlobalMaxPooling2D(GlobalPooling2D):
       `(batch_size, channels)`
   """
 
-  def call(self, inputs):
-    if self.data_format == 'channels_last':
-      x_reduced = tfe.reduce_max(inputs, axis=2)
-      x_reduced = tfe.reduce_max(x_reduced, axis=1)
-    else:
-      x_reduced = tfe.reduce_max(inputs, axis=3)
-      x_reduced = tfe.reduce_max(x_reduced, axis=2)
+    def call(self, inputs):
+        if self.data_format == "channels_last":
+            x_reduced = tfe.reduce_max(inputs, axis=2)
+            x_reduced = tfe.reduce_max(x_reduced, axis=1)
+        else:
+            x_reduced = tfe.reduce_max(inputs, axis=3)
+            x_reduced = tfe.reduce_max(x_reduced, axis=2)
 
-    return x_reduced
+        return x_reduced

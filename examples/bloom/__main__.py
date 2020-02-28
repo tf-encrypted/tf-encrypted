@@ -3,7 +3,8 @@ import logging
 
 import tensorflow as tf
 
-from regressor import BloomRegressor, DataOwner
+from regressor import BloomRegressor
+from regressor import DataOwner
 
 NUM_FEATURES = 100
 TRAINING_SET_SIZE = 10000
@@ -25,5 +26,5 @@ model.fit(genebanks)
 
 # report results of training
 with tf.Graph().as_default() as g:
-  output = model.coefficients
-  print(tf.Session(graph=g).run(output))
+    output = model.coefficients
+    print(tf.Session(graph=g).run(output))

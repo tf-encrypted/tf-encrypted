@@ -17,17 +17,17 @@ variables:
         fi
 
         bash Miniconda3-latest-MacOSX-x86_64.sh -b -f
-        ../miniconda3/bin/conda create -n py35 python=3.5 --yes 2> /dev/null || true
-        ../miniconda3/envs/py35/bin/python -m venv venv
+        ../miniconda3/bin/conda create -n py36 python=3.6 --yes 2> /dev/null || true
+        ../miniconda3/envs/py36/bin/python -m venv venv
         . venv/bin/activate
 
         HOMEBREW_NO_AUTO_UPDATE=1 brew install libtool automake
 
         make bootstrap
-  docker-login: &docker-login
-    run:
-      name: Login to Docker
-      command: make docker-login
+  # docker-login: &docker-login
+  #   run:
+  #     name: Login to Docker
+  #     command: make docker-login
   build-release: &build-release
     run:
       name: Build and push release artifacts (e.g. docker containers)
@@ -38,8 +38,6 @@ variables:
     restore_cache:
       keys:
         - v3-dependencies-{{ checksum "requirements.txt" }}
-        # fallback to using the latest cache if no exact match is found
-        - v3-dependencies-
   save-cache: &save-cache
     save_cache:
       paths:
@@ -49,7 +47,6 @@ variables:
     restore_cache:
       keys:
         - v3-mac-dependencies-{{ checksum "requirements.txt" }}
-        - v3-mac-dependencies-
   save-cache-mac: &save-cache-mac
     save_cache:
       paths:
@@ -58,10 +55,12 @@ variables:
         - ./Miniconda3-latest-MacOSX-x86_64.sh
       key: v3-mac-dependencies-{{ checksum "requirements.txt" }}
 
+
 jobs:
+
   build:
     docker:
-      - image: circleci/python:3.5-jessie
+      - image: tensorflow/tensorflow:custom-op-ubuntu16
     working_directory: ~/repo
     steps:
       - setup_remote_docker
@@ -70,15 +69,23 @@ jobs:
       - *bootstrap
       - *save-cache
       - run:
-          name: run tests and build the docs
+          name: Run linting
           command: |
             . venv/bin/activate
             make lint
-            make test
-            make docs
       - run:
-          name: build docker container
-          command: make docker
+          name: Run tests
+          command: |
+            . venv/bin/activate
+            make test
+      - run:
+          name: Build the docs
+          command: |
+            . venv/bin/activate
+            make docs
+      # - run:
+      #     name: build docker container
+      #     command: make docker
 
   build-macos:
     macos:
@@ -90,23 +97,31 @@ jobs:
       - *bootstrap-mac
       - *save-cache-mac
       - run:
-          name: run tests and build the docs
+          name: Run linting
           command: |
             . venv/bin/activate
             make lint
+      - run:
+          name: Run tests
+          command: |
+            . venv/bin/activate
             make test
+      - run:
+          name: Build the docs
+          command: |
+            . venv/bin/activate
             make docs
 
   deploy:
     docker:
-      - image: circleci/python:3.5
+      - image: circleci/python:3.6
     working_directory: ~/repo
     steps:
       - setup_remote_docker
       - checkout
       - *restore-cache
       - *bootstrap
-      - *docker-login
+      # - *docker-login
       - *build-release
 
   deploy-macos:
@@ -124,8 +139,10 @@ jobs:
             RELEASE_CONFIRM=yes PYPI_PLATFORM=macosx_10_11_x86_64 make pypi-push
       - *save-cache-mac
 
+
 workflows:
   version: 2
+
   build-and-deploy:
     jobs:
       - build:
