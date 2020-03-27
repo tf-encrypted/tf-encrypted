@@ -11,6 +11,7 @@ from . import convert
 from . import keras
 from . import layers
 from . import operations
+from . import primitives
 from . import protocol
 from . import queue
 from . import serving

@@ -297,19 +297,11 @@ $(LIBSODIUM_OUT):
 	$(MAKE) -C $(LIBSODIUM_DIR) install
 
 # ###############################################
-# Secure Random Shared Object
-#
-# Rules for building libsodium and the shared object for secure random.
+# Common TensorFlow flags for custom ops
 # ###############################################
 
 TF_CFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))' 2>/dev/null)
 TF_LFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))' 2>/dev/null)
-PACKAGE_DIR=tf_encrypted/operations
-
-SECURE_OUT_PRE = $(PACKAGE_DIR)/secure_random/secure_random_module_tf_
-
-SECURE_IN = operations/secure_random/secure_random.cc
-SECURE_IN_H = operations/secure_random/generators.h
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
@@ -319,17 +311,41 @@ ifeq ($(UNAME_S),Darwin)
 	FINAL_TF_LFLAGS = $(word 1,$(TF_LFLAGS)) -ltensorflow_framework
 endif
 
+# ###############################################
+# Secure Random Shared Object
+#
+# Rules for the shared object for secure random.
+# ###############################################
+
+SECURE_OUT_PRE = tf_encrypted/operations/secure_random/secure_random_module_tf_
+SECURE_IN = operations/secure_random/secure_random.cc
+SECURE_IN_H = operations/secure_random/generators.h
+
 $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECURE_IN_H)
-	mkdir -p $(PACKAGE_DIR)/secure_random
+	mkdir -p tf_encrypted/operations/secure_random
 
 	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
 		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
 
 # ###############################################
+# Sodium Primitives Shared Object
+#
+# Rules for the shared object for sodium primitives.
+# ###############################################
+
+SODIUM_OPS_PRE = tf_encrypted/primitives/sodium/sodium_module_tf_
+SODIUM_OPS_IN = operations/sodium/ops.cc operations/sodium/easy_box_kernels.cc
+
+$(SODIUM_OPS_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SODIUM_OPS_IN)
+	g++ -std=c++11 -shared $(SODIUM_OPS_IN) -o $(SODIUM_OPS_PRE)$(CURRENT_TF_VERSION).so \
+		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
+
+
+# ###############################################
 # Build
 # ###############################################
 
-build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
+build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so $(SODIUM_OPS_PRE)$(CURRENT_TF_VERSION).so
 
 build-all:
 	pip install tensorflow==1.15.2
