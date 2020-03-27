@@ -59,9 +59,9 @@ bootstrap: pythoncheck pipcheck
 # Rules for running our tests and for running various different linters
 # ###############################################
 test: pythoncheck
-	pytest -n 8 -x -m "not slow and not convert_maxpool"
-	pytest -n 8 -x -m slow
-	pytest -n 8 -x -m convert_maxpool
+	pytest -n 8 -x -m "not slow and not convert_maxpool" tf_encrypted
+	pytest -n 8 -x -m "slow" tf_encrypted
+	pytest -n 8 -x -m "convert_maxpool" tf_encrypted
 
 lint: pythoncheck
 	flake8 tf_encrypted operations examples
@@ -279,22 +279,22 @@ push:
 .PHONY: push
 
 # ###############################################
-# libsodium and secure random custom op defines
+# libsodium
 # ###############################################
+
 LIBSODIUM_VER_TAG=1.0.17
 LIBSODIUM_DIR=build/libsodium-$(LIBSODIUM_VER_TAG)
+LIBSODIUM_INSTALL = $(shell pwd)/build
+LIBSODIUM_OUT = $(LIBSODIUM_INSTALL)/lib/libsodium.a
 
-TF_CFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))' 2>/dev/null)
-TF_LFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))' 2>/dev/null)
-PACKAGE_DIR=tf_encrypted/operations
-
-SODIUM_INSTALL = $(shell pwd)/build
-
-SECURE_OUT_PRE = $(PACKAGE_DIR)/secure_random/secure_random_module_tf_
-
-SECURE_IN = operations/secure_random/secure_random.cc
-SECURE_IN_H = operations/secure_random/generators.h
-LIBSODIUM_OUT = $(SODIUM_INSTALL)/lib/libsodium.a
+$(LIBSODIUM_OUT):
+	curl -OL https://github.com/jedisct1/libsodium/archive/$(LIBSODIUM_VER_TAG).tar.gz
+	mkdir -p build
+	tar -xvf $(LIBSODIUM_VER_TAG).tar.gz -C build
+	cd $(LIBSODIUM_DIR) && ./autogen.sh && ./configure --disable-shared --enable-static \
+		--disable-debug --disable-dependency-tracking --with-pic --prefix=$(LIBSODIUM_INSTALL)
+	$(MAKE) -C $(LIBSODIUM_DIR)
+	$(MAKE) -C $(LIBSODIUM_DIR) install
 
 # ###############################################
 # Secure Random Shared Object
@@ -302,14 +302,14 @@ LIBSODIUM_OUT = $(SODIUM_INSTALL)/lib/libsodium.a
 # Rules for building libsodium and the shared object for secure random.
 # ###############################################
 
-$(LIBSODIUM_OUT):
-	curl -OL https://github.com/jedisct1/libsodium/archive/$(LIBSODIUM_VER_TAG).tar.gz
-	mkdir -p build
-	tar -xvf $(LIBSODIUM_VER_TAG).tar.gz -C build
-	cd $(LIBSODIUM_DIR) && ./autogen.sh && ./configure --disable-shared --enable-static \
-		--disable-debug --disable-dependency-tracking --with-pic --prefix=$(SODIUM_INSTALL)
-	$(MAKE) -C $(LIBSODIUM_DIR)
-	$(MAKE) -C $(LIBSODIUM_DIR) install
+TF_CFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))' 2>/dev/null)
+TF_LFLAGS=$(shell python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))' 2>/dev/null)
+PACKAGE_DIR=tf_encrypted/operations
+
+SECURE_OUT_PRE = $(PACKAGE_DIR)/secure_random/secure_random_module_tf_
+
+SECURE_IN = operations/secure_random/secure_random.cc
+SECURE_IN_H = operations/secure_random/generators.h
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
@@ -323,14 +323,17 @@ $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECUR
 	mkdir -p $(PACKAGE_DIR)/secure_random
 
 	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
-		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(SODIUM_INSTALL)/include -L$(SODIUM_INSTALL)/lib -lsodium
+		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
+
+# ###############################################
+# Build
+# ###############################################
 
 build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
 
 build-all:
 	pip install tensorflow==1.15.2
 	$(MAKE) $(SECURE_OUT_PRE)1.15.2.so
-
 
 .PHONY: build build-all
 
