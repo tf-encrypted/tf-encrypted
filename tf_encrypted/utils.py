@@ -18,13 +18,13 @@ def wrap_in_variables(*tensors):
 
 def flatten(xs):
     """
-  Flatten any recursive list or tuple into a single list.
+    Flatten any recursive list or tuple into a single list.
 
-  For instance:
-  - `flatten(x) => [x]`
-  - `flatten([x]) => [x]`
-  - `flatten([x, [y], [[z]]]) => `[x, y, z]`
-  """
+    For instance:
+    - `flatten(x) => [x]`
+    - `flatten([x]) => [x]`
+    - `flatten([x, [y], [[z]]]) => `[x, y, z]`
+    """
     if isinstance(xs, (list, tuple)):
         return [y for ys in [flatten(x) for x in xs] for y in ys]
     return [xs]
@@ -32,11 +32,11 @@ def flatten(xs):
 
 def reachable_nodes(*nodes):
     """
-  Find all nodes reachable from `nodes` in the implicit tf.Graph
-  to which they belong.
+    Find all nodes reachable from `nodes` in the implicit tf.Graph
+    to which they belong.
 
-  Both tensors and their underlying operation is returned.
-  """
+    Both tensors and their underlying operation is returned.
+    """
 
     nodes = flatten(nodes)
     reachable = set(nodes)
@@ -68,8 +68,8 @@ def reachable_nodes(*nodes):
 
 def unwrap_fetches(fetches):
     """
-  Unwraps TF Encrypted fetches into TensorFlow-compatible fetches.
-  """
+    Unwraps TF Encrypted fetches into TensorFlow-compatible fetches.
+    """
 
     if isinstance(fetches, (list, tuple)):
         return [unwrap_fetches(fetch) for fetch in fetches]
