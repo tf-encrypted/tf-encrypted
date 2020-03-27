@@ -40,7 +40,8 @@ public:
     // Computation
     //
 
-    crypto_box_keypair(pk, sk);
+    auto res = crypto_box_keypair(pk, sk);
+    OP_REQUIRES(context, res == 0, errors::Internal("libsodium keypair operation failed"));
   }
 };
 
