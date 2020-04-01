@@ -4,8 +4,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from tf_encrypted.primitives.sodium import easy_box
-
+from tf_encrypted.primitives.sodium.python import easy_box
 
 class TestEasyBox(unittest.TestCase):
     def setUp(self):

@@ -3,10 +3,11 @@ from typing import Tuple
 
 import tensorflow as tf
 
-import tf_encrypted as tfe
-
-SO_FILE = "{tfe_root}/primitives/sodium/sodium_module_tf_{tf_version}.so".format(
-    tfe_root=os.path.dirname(tfe.__file__), tf_version=tf.__version__,
+# SO_FILE = "{current_dir}/sodium_module_tf_{tf_version}.so".format(
+#     current_dir=os.path.dirname(__file__), tf_version=tf.__version__,
+# )
+SO_FILE = "{current_dir}/_sodium_module.so".format(
+    current_dir=os.path.dirname(__file__),
 )
 assert os.path.exists(SO_FILE), (
     "Could not find required 'sodium' module, '{so_file}'"
