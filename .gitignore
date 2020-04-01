@@ -9,6 +9,8 @@ data/
 *.gz
 **/.ipynb_checkpoints/
 docs/source/gen
+bazel-*
+.bazelrc
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -22,6 +24,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+artifacts/
 develop-eggs/
 dist/
 downloads/

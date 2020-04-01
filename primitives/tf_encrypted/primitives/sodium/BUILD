@@ -1,3 +1,5 @@
+package(default_visibility = ["//visibility:public"])
+
 cc_binary(
     name = "python/_sodium_module.so",
     srcs = [
@@ -11,12 +13,13 @@ cc_binary(
         "@sodium//:lib",
     ],
     # copts = ["-pthread", "-std=c++11", "-D_GLIBCXX_USE_CXX11_ABI=0", "-fPIC"],
-    visibility = ["//visibility:public"],
 )
 
 py_library(
     name = "sodium_py",
     srcs = ([
+        "__init__.py",
+        "python/__init__.py",
         "python/easy_box.py",
     ]),
     data = [

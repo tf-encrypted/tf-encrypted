@@ -44,49 +44,19 @@ function is_ppc64le() {
 # Remove .bazelrc if it already exist
 [ -e .bazelrc ] && rm .bazelrc
 
-# Check if we are building GPU or CPU ops, default CPU
-while [[ "$TF_NEED_CUDA" == "" ]]; do
-  read -p "Do you want to build ops again TensorFlow CPU pip package?"\
-" Y or enter for CPU (tensorflow), N for GPU (tensorflow-gpu). [Y/n] " INPUT
-  case $INPUT in
-    [Yy]* ) echo "Build with CPU pip package."; TF_NEED_CUDA=0;;
-    [Nn]* ) echo "Build with GPU pip package."; TF_NEED_CUDA=1;;
-    "" ) echo "Build with CPU pip package."; TF_NEED_CUDA=0;;
-    * ) echo "Invalid selection: " $INPUT;;
-  esac
-done
+TF_NEED_CUDA=0
 
-# Check if we are building against manylinux1 or manylinux2010 pip package,
-# default manylinux2010
 if is_windows; then
-  echo "On windows, skipping toolchain flags.."
   PIP_MANYLINUX2010=0
 else
-  while [[ "$PIP_MANYLINUX2010" == "" ]]; do
-    read -p "Does the pip package have tag manylinux2010 (usually the case for nightly release after Aug 1, 2019, or official releases past 1.14.0)?. Y or enter for manylinux2010, N for manylinux1. [Y/n] " INPUT
-    case $INPUT in
-      [Yy]* ) PIP_MANYLINUX2010=1;;
-      [Nn]* ) PIP_MANYLINUX2010=0;;
-      "" ) PIP_MANYLINUX2010=1;;
-      * ) echo "Invalid selection: " $INPUT;;
-    esac
-  done
+  PIP_MANYLINUX2010=1
 fi
 
-while [[ "$TF_CUDA_VERSION" == "" ]]; do
-  read -p "Are you building against TensorFlow 2.1(including RCs) or newer?[Y/n] " INPUT
-  case $INPUT in
-    [Yy]* ) echo "Build against TensorFlow 2.1 or newer."; TF_CUDA_VERSION=10.1;;
-    [Nn]* ) echo "Build against TensorFlow <2.1."; TF_CUDA_VERSION=10.0;;
-    "" ) echo "Build against TensorFlow 2.1 or newer."; TF_CUDA_VERSION=10.1;;
-    * ) echo "Invalid selection: " $INPUT;;
-  esac
-done
+TF_CUDA_VERSION=10.1
 
 
 # CPU
 if [[ "$TF_NEED_CUDA" == "0" ]]; then
-
   # Check if it's installed
   if [[ $(pip show tensorflow) == *tensorflow* ]] || [[ $(pip show tf-nightly) == *tf-nightly* ]] ; then
     echo 'Using installed tensorflow'
@@ -103,40 +73,21 @@ if [[ "$TF_NEED_CUDA" == "0" ]]; then
     echo 'Installing tensorflow......\n'
     pip install tensorflow
   fi
-
-else
-
-  # Check if it's installed
-   if [[ $(pip show tensorflow-gpu) == *tensorflow-gpu* ]] || [[ $(pip show tf-nightly-gpu) == *tf-nightly-gpu* ]]; then
-    echo 'Using installed tensorflow-gpu'
-  else
-    # Uninstall CPU version if it is installed.
-    if [[ $(pip show tensorflow) == *tensorflow* ]]; then
-      echo 'Already have tensorflow non-gpu installed. Uninstalling......\n'
-      pip uninstall tensorflow
-    elif [[ $(pip show tf-nightly) == *tf-nightly* ]]; then
-      echo 'Already have tensorflow non-gpu installed. Uninstalling......\n'
-      pip uninstall tf-nightly
-    fi
-    # Install CPU version
-    echo 'Installing tensorflow-gpu .....\n'
-    pip install tensorflow-gpu
-  fi
 fi
 
 
 TF_CFLAGS=( $(python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))') )
 TF_LFLAGS="$(python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))')"
 
-write_to_bazelrc "build:cuda --define=using_cuda=true --define=using_cuda_nvcc=true"
-if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
-  write_to_bazelrc "build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain"
-fi
-# Add Ubuntu toolchain flags
-if is_linux; then
-  write_to_bazelrc "build:manylinux2010cuda100 --crosstool_top=//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain"
-  write_to_bazelrc "build:manylinux2010cuda101 --crosstool_top=//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.1:toolchain"
-fi
+# write_to_bazelrc "build:cuda --define=using_cuda=true --define=using_cuda_nvcc=true"
+# if [[ "$PIP_MANYLINUX2010" == "0" ]]; then
+#   write_to_bazelrc "build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain"
+# fi
+# # Add Ubuntu toolchain flags
+# if is_linux; then
+#   write_to_bazelrc "build:manylinux2010cuda100 --crosstool_top=//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.0:toolchain"
+#   write_to_bazelrc "build:manylinux2010cuda101 --crosstool_top=//third_party/toolchains/preconfig/ubuntu16.04/gcc7_manylinux2010-nvcc-cuda10.1:toolchain"
+# fi
 write_to_bazelrc "build --spawn_strategy=standalone"
 write_to_bazelrc "build --strategy=Genrule=standalone"
 write_to_bazelrc "build -c opt"
@@ -171,26 +122,8 @@ write_action_env_to_bazelrc "TF_SHARED_LIBRARY_DIR" ${SHARED_LIBRARY_DIR}
 write_action_env_to_bazelrc "TF_SHARED_LIBRARY_NAME" ${SHARED_LIBRARY_NAME}
 write_action_env_to_bazelrc "TF_NEED_CUDA" ${TF_NEED_CUDA}
 
-# TODO(yifeif): do not hardcode path
-if [[ "$TF_NEED_CUDA" == "1" ]]; then
-  write_action_env_to_bazelrc "TF_CUDA_VERSION" ${TF_CUDA_VERSION}
-  write_action_env_to_bazelrc "TF_CUDNN_VERSION" "7"
-  if is_windows; then
-    write_action_env_to_bazelrc "CUDNN_INSTALL_PATH" "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${TF_CUDA_VERSION}"
-    write_action_env_to_bazelrc "CUDA_TOOLKIT_PATH" "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${TF_CUDA_VERSION}"
-  else
-    write_action_env_to_bazelrc "CUDNN_INSTALL_PATH" "/usr/lib/x86_64-linux-gnu"
-    write_action_env_to_bazelrc "CUDA_TOOLKIT_PATH" "/usr/local/cuda"
-  fi
-  write_to_bazelrc "build --config=cuda"
-  write_to_bazelrc "test --config=cuda"
-fi
-
-if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
-  if [[ "$TF_CUDA_VERSION" == "10.0" ]]; then
-    write_to_bazelrc "build --config=manylinux2010cuda100"
-    write_to_bazelrc "test --config=manylinux2010cuda100"
-  else
+if is_linux; then
+  if [[ "$PIP_MANYLINUX2010" == "1" ]]; then
     write_to_bazelrc "build --config=manylinux2010cuda101"
     write_to_bazelrc "test --config=manylinux2010cuda101"
   fi
