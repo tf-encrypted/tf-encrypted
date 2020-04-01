@@ -6,8 +6,8 @@ import tensorflow as tf
 
 from tf_encrypted.primitives.sodium.python import easy_box
 
-class TestEasyBox(unittest.TestCase):
 
+class TestEasyBox(unittest.TestCase):
     def test_gen_keypair(self):
         pk, sk = easy_box.gen_keypair()
         assert isinstance(pk, easy_box.PublicKey), type(pk)

@@ -5,14 +5,9 @@ setuptools.setup(
     name="tf-encrypted-primitives",
     version="0.0.1",
     packages=setuptools.find_packages(),
-    package_data={
-        '': ['*.so'],
-    },
+    package_data={"": ["*.so"],},
     python_requires=">=3.6",
-    install_requires=[
-        "tensorflow ==2.1.0",
-        "numpy >=1.14.0",
-    ],
+    install_requires=["tensorflow ==2.1.0", "numpy >=1.14.0",],
     license="Apache License 2.0",
     url="https://github.com/tf-encrypted/tf-encrypted",
     description="A Framework for Machine Learning on Encrypted Data.",
@@ -27,5 +22,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Security :: Cryptography",
-    ]
+    ],
 )

@@ -1,5 +1,3 @@
 from . import primitives
 
-__all__ = [
-    "primitives"
-]
+__all__ = ["primitives"]

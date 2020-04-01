@@ -328,24 +328,10 @@ $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECUR
 		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
 
 # ###############################################
-# Sodium Primitives Shared Object
-#
-# Rules for the shared object for sodium primitives.
-# ###############################################
-
-SODIUM_OPS_PRE = tf_encrypted/primitives/sodium/sodium_module_tf_
-SODIUM_OPS_IN = operations/sodium/ops.cc operations/sodium/easy_box_kernels.cc
-
-$(SODIUM_OPS_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SODIUM_OPS_IN)
-	g++ -std=c++11 -shared $(SODIUM_OPS_IN) -o $(SODIUM_OPS_PRE)$(CURRENT_TF_VERSION).so \
-		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
-
-
-# ###############################################
 # Build
 # ###############################################
 
-build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so $(SODIUM_OPS_PRE)$(CURRENT_TF_VERSION).so
+build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
 
 build-all:
 	pip install tensorflow==1.15.2
