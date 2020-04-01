@@ -3,9 +3,6 @@ from typing import Tuple
 
 import tensorflow as tf
 
-# SO_FILE = "{current_dir}/sodium_module_tf_{tf_version}.so".format(
-#     current_dir=os.path.dirname(__file__), tf_version=tf.__version__,
-# )
 SO_FILE = "{current_dir}/_sodium_module.so".format(
     current_dir=os.path.dirname(__file__),
 )

@@ -10,7 +10,20 @@ load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependen
 
 rules_foreign_cc_dependencies([])
 
+load("//external/tf:tf_configure.bzl", "tf_configure")
+
+tf_configure(name = "local_config_tf")
+
+http_archive(
+    name = "sodium",
+    build_file = "sodium/BUILD",
+    patch_cmds = ["./autogen.sh"],
+    url = "https://github.com/jedisct1/libsodium/archive/1.0.17.tar.gz",
+    strip_prefix = "libsodium-1.0.17",
+    sha256 = "602e07029c780e154347fb95495b13ce48709ae705c6cff927ecb0c485b95672",
+)
+
 local_repository(
-    name = "foo",
-    path = "primitives",
+    name = "primitives",
+    path = "primitives/",
 )

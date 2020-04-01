@@ -33,19 +33,15 @@ def _execute(
         error_details = None,
         empty_stdout_fine = False):
     """Executes an arbitrary shell command.
-
-    Helper for executes an arbitrary shell command.
-
     Args:
-      repository_ctx: the repository_ctx object.
-      cmdline: list of strings, the command to execute.
-      error_msg: string, a summary of the error if the command fails.
-      error_details: string, details about the error or steps to fix it.
+      repository_ctx: the repository_ctx object
+      cmdline: list of strings, the command to execute
+      error_msg: string, a summary of the error if the command fails
+      error_details: string, details about the error or steps to fix it
       empty_stdout_fine: bool, if True, an empty stdout result is fine, otherwise
-        it's an error.
-
-    Returns:
-      The result of repository_ctx.execute(cmdline).
+        it's an error
+    Return:
+      the result of repository_ctx.execute(cmdline)
     """
     result = repository_ctx.execute(cmdline)
     if result.stderr or not (empty_stdout_fine or result.stdout):
@@ -58,17 +54,9 @@ def _execute(
 
 def _read_dir(repository_ctx, src_dir):
     """Returns a string with all files in a directory.
-
     Finds all files inside a directory, traversing subfolders and following
     symlinks. The returned string contains the full path of all files
     separated by line breaks.
-
-    Args:
-        repository_ctx: the repository_ctx object.
-        src_dir: directory to find files from.
-
-    Returns:
-        A string of all files inside the given dir.
     """
     if _is_windows(repository_ctx):
         src_dir = src_dir.replace("/", "\\")
@@ -129,7 +117,8 @@ def _symlink_genrule_for_dir(
         dest_dir,
         genrule_name,
         src_files = [],
-        dest_files = []):
+        dest_files = [],
+        tf_pip_dir_rename_pair = []):
     """Returns a genrule to symlink(or copy if on Windows) a set of files.
 
     If src_dir is passed, files will be read from the given directory; otherwise
@@ -142,20 +131,33 @@ def _symlink_genrule_for_dir(
         genrule_name: genrule name.
         src_files: list of source files instead of src_dir.
         dest_files: list of corresonding destination files.
+        tf_pip_dir_rename_pair: list of the pair of tf pip parent directory to
+          replace. For example, in TF pip package, the source code is under
+          "tensorflow_core", and we might want to replace it with
+          "tensorflow" to match the header includes.
 
     Returns:
         genrule target that creates the symlinks.
     """
+    # Check that tf_pip_dir_rename_pair has the right length
+    tf_pip_dir_rename_pair_len = len(tf_pip_dir_rename_pair)
+    if tf_pip_dir_rename_pair_len != 0 and tf_pip_dir_rename_pair_len !=2:
+      _fail("The size of argument tf_pip_dir_rename_pair should be either 0 or 2, but %d is given." % tf_pip_dir_rename_pair_len)
+    
     if src_dir != None:
         src_dir = _norm_path(src_dir)
         dest_dir = _norm_path(dest_dir)
         files = "\n".join(sorted(_read_dir(repository_ctx, src_dir).splitlines()))
 
         # Create a list with the src_dir stripped to use for outputs.
-        dest_files = files.replace(src_dir, "").splitlines()
+        if tf_pip_dir_rename_pair_len:
+          dest_files = files.replace(src_dir, "").replace(tf_pip_dir_rename_pair[0], tf_pip_dir_rename_pair[1]).splitlines()
+        else:
+          dest_files = files.replace(src_dir, "").splitlines()
         src_files = files.splitlines()
     command = []
     outs = []
+    
     for i in range(len(dest_files)):
         if dest_files[i] != "":
             # If we have only one file to link we do not want to use the dest_dir, as
@@ -166,6 +168,7 @@ def _symlink_genrule_for_dir(
             cmd = "cp -f"
             command.append(cmd + ' "%s" "%s"' % (src_files[i], dest))
             outs.append('        "' + dest_dir + dest_files[i] + '",')
+    dest_dir = "abc"
     genrule = _genrule(
         genrule_name,
         " && ".join(command),
@@ -180,6 +183,7 @@ def _tf_pip_impl(repository_ctx):
         tf_header_dir,
         "include",
         "tf_header_include",
+        tf_pip_dir_rename_pair = ["tensorflow_core", "tensorflow"]
     )
 
     tf_shared_library_dir = repository_ctx.os.environ[_TF_SHARED_LIBRARY_DIR]
@@ -192,7 +196,7 @@ def _tf_pip_impl(repository_ctx):
         "",
         "libtensorflow_framework.so",
         [tf_shared_library_path],
-        [tf_shared_library_name],
+        ["_pywrap_tensorflow_internal.lib"  if _is_windows(repository_ctx) else "libtensorflow_framework.so"],
     )
 
     _tpl(repository_ctx, "BUILD", {
