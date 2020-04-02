@@ -10,7 +10,6 @@
 #include "tensorflow/core/framework/variant_tensor_data.h"
 
 #include "sodium.h"
-#include <iostream>
 
 using namespace tensorflow;
 
@@ -106,6 +105,9 @@ public:
     Tensor* ciphertext_t;
     auto ciphertext_shape = plaintext_t.shape();
     ciphertext_shape.AddDim(sizeof(float));
+    int last_dim = ciphertext_shape.dims() - 1;
+    OP_REQUIRES(context, ciphertext_shape.dim_size(last_dim) == sizeof(float),
+        errors::Internal("Last dim of ciphertext_shape should match sizeof(float)"));
     OP_REQUIRES_OK(context, context->allocate_output(0, ciphertext_shape, &ciphertext_t));
     auto ciphertext_data = ciphertext_t->flat<tensorflow::uint8>().data();
     unsigned char* ciphertext = reinterpret_cast<unsigned char*>(ciphertext_data);
@@ -171,7 +173,7 @@ public:
     // Computation
     //
 
-    auto res = crypto_box_open_detached(plaintext, ciphertext, mac, 16, nonce, pk_sender, sk_receiver);
+    auto res = crypto_box_open_detached(plaintext, ciphertext, mac, ciphertext_t.shape().num_elements(), nonce, pk_sender, sk_receiver);
     OP_REQUIRES(context, res == 0, errors::Internal("libsodium open operation failed"));
   }
 };

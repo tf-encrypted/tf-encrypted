@@ -16,7 +16,8 @@ REGISTER_OP("SodiumEasyBoxGenNonce")
     .SetIsStateful();
 
 REGISTER_OP("SodiumEasyBoxSealDetached")
-    .Input("plaintext: float32")
+    .Attr("plaintext_type: {uint8, float32}")
+    .Input("plaintext: plaintext_type")
     .Input("nonce: uint8")
     .Input("pk_receiver: uint8")
     .Input("sk_sender: uint8")
