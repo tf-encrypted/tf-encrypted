@@ -85,11 +85,7 @@ public:
 
     const Tensor& plaintext_t = context->input(0);
     auto plaintext_data = plaintext_t.flat<float>().data();
-    // auto plaintext_data = plaintext_t.flat<tensorflow::uint8>().data();
     const unsigned char* plaintext = reinterpret_cast<const unsigned char*>(plaintext_data);
-    // const float* plaintext =  reinterpret_cast<const unsigned char*>(plaintext_data);
-
-    std::cout << "This is my plaintext data " << &plaintext <<"\n";
 
     const Tensor& nonce_t = context-> input(1);
     auto nonce_data = nonce_t.flat<tensorflow::uint8>().data();
@@ -108,10 +104,8 @@ public:
     //
 
     Tensor* ciphertext_t;
-    TensorShape ciphertext_shape = plaintext_t.shape();
-    // auto ciphertext_shape = TensorShape{2, 2, 4};
-    // TensorShape ciphertext_shape = (3, 2, 4);
-    // std::cout << "This is shape: " << typeid(plaintext_t.shape()).name();
+    auto ciphertext_shape = plaintext_t.shape();
+    ciphertext_shape.AddDim(sizeof(float));
     OP_REQUIRES_OK(context, context->allocate_output(0, ciphertext_shape, &ciphertext_t));
     auto ciphertext_data = ciphertext_t->flat<tensorflow::uint8>().data();
     unsigned char* ciphertext = reinterpret_cast<unsigned char*>(ciphertext_data);
@@ -126,7 +120,7 @@ public:
     // Computation
     //
 
-    auto res = crypto_box_detached(ciphertext, mac, plaintext, plaintext_t.shape().num_elements(), nonce, pk_receiver, sk_sender);
+    auto res = crypto_box_detached(ciphertext, mac, plaintext, ciphertext_shape.num_elements(), nonce, pk_receiver, sk_sender);
     OP_REQUIRES(context, res == 0, errors::Internal("libsodium seal operation failed"));
   }
 };
@@ -168,6 +162,7 @@ public:
 
     Tensor* plaintext_t;
     TensorShape plaintext_shape = ciphertext_t.shape();
+    plaintext_shape.RemoveLastDims(1);
     OP_REQUIRES_OK(context, context->allocate_output(0, plaintext_shape, &plaintext_t));
     auto plaintext_data = plaintext_t->flat<float>().data();
     unsigned char* plaintext = reinterpret_cast<unsigned char*>(plaintext_data);
@@ -176,8 +171,7 @@ public:
     // Computation
     //
 
-    auto res = crypto_box_open_detached(plaintext, ciphertext, mac, ciphertext_t.shape().num_elements(), nonce, pk_sender, sk_receiver);
-    // const float* res_f = reinterpret_cast<const float*>(res);
+    auto res = crypto_box_open_detached(plaintext, ciphertext, mac, 16, nonce, pk_sender, sk_receiver);
     OP_REQUIRES(context, res == 0, errors::Internal("libsodium open operation failed"));
   }
 };
