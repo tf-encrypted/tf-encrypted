@@ -71,6 +71,7 @@ public:
   }
 };
 
+template <typename T>
 class SodiumEasyBoxSealDetached : public OpKernel {
 public:
   explicit SodiumEasyBoxSealDetached(OpKernelConstruction* context) : OpKernel(context) {}
@@ -83,7 +84,7 @@ public:
     //
 
     const Tensor& plaintext_t = context->input(0);
-    auto plaintext_data = plaintext_t.flat<float>().data();
+    auto plaintext_data = plaintext_t.flat<T>().data();
     const unsigned char* plaintext = reinterpret_cast<const unsigned char*>(plaintext_data);
 
     const Tensor& nonce_t = context-> input(1);
@@ -127,6 +128,7 @@ public:
   }
 };
 
+template <typename T>
 class SodiumEasyBoxOpenDetached : public OpKernel {
 public:
   explicit SodiumEasyBoxOpenDetached(OpKernelConstruction* context) : OpKernel(context) {}
@@ -166,7 +168,7 @@ public:
     TensorShape plaintext_shape = ciphertext_t.shape();
     plaintext_shape.RemoveLastDims(1);
     OP_REQUIRES_OK(context, context->allocate_output(0, plaintext_shape, &plaintext_t));
-    auto plaintext_data = plaintext_t->flat<float>().data();
+    auto plaintext_data = plaintext_t->flat<T>().data();
     unsigned char* plaintext = reinterpret_cast<unsigned char*>(plaintext_data);
 
     //
@@ -178,7 +180,9 @@ public:
   }
 };
 
+
 REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxGenKeypair").Device(DEVICE_CPU), SodiumEasyBoxGenKeypair);
 REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxGenNonce").Device(DEVICE_CPU), SodiumEasyBoxGenNonce);
-REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU), SodiumEasyBoxSealDetached);
-REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU), SodiumEasyBoxOpenDetached);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<float>("plaintext_type"), 
+    SodiumEasyBoxSealDetached<float>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU), SodiumEasyBoxOpenDetached<float>);
