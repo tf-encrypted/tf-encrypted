@@ -5,7 +5,8 @@ These commands must be run *in the root directory*, i.e. the parent of this one.
 To set up TensorFlow (one time requirement):
 
 ```
-./configure
+pip install -U tensorflow==2.1
+./configure.sh
 ```
 
 To build the pip package:
