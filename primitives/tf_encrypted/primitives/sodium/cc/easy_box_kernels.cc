@@ -10,9 +10,11 @@
 #include "tensorflow/core/framework/variant_tensor_data.h"
 
 #include "sodium.h"
+#include "utils.h"
 
 using namespace tensorflow;
 
+// TensorShape makeShape<T>(const Tensor& t);
 
 class SodiumEasyBoxGenKeypair : public OpKernel {
 public:
@@ -104,11 +106,12 @@ public:
     //
 
     Tensor* ciphertext_t;
-    auto ciphertext_shape = plaintext_t.shape();
-    ciphertext_shape.AddDim(sizeof(float));
-    int last_dim = ciphertext_shape.dims() - 1;
-    OP_REQUIRES(context, ciphertext_shape.dim_size(last_dim) == sizeof(float),
-        errors::Internal("Last dim of ciphertext_shape should match sizeof(float)"));
+
+    TensorShape ciphertext_shape;
+    ciphertext_shape =  makeShape<T>(plaintext_t);
+    // int last_dim = ciphertext_shape.dims() - 1;
+    // OP_REQUIRES(context, ciphertext_shape.dim_size(last_dim) == sizeof(float),
+    //     errors::Internal("Last dim of ciphertext_shape should match sizeof(float)"));
     OP_REQUIRES_OK(context, context->allocate_output(0, ciphertext_shape, &ciphertext_t));
     auto ciphertext_data = ciphertext_t->flat<tensorflow::uint8>().data();
     unsigned char* ciphertext = reinterpret_cast<unsigned char*>(ciphertext_data);
@@ -185,4 +188,6 @@ REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxGenKeypair").Device(DEVICE_CPU), Sodi
 REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxGenNonce").Device(DEVICE_CPU), SodiumEasyBoxGenNonce);
 REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<float>("plaintext_type"), 
     SodiumEasyBoxSealDetached<float>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<uint8>("plaintext_type"), 
+    SodiumEasyBoxSealDetached<uint8>);
 REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU), SodiumEasyBoxOpenDetached<float>);

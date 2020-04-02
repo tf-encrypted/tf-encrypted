@@ -18,7 +18,18 @@ class TestEasyBox(unittest.TestCase):
         assert isinstance(nonce, easy_box.Nonce), type(nonce)
         assert isinstance(nonce.raw, tf.Tensor)
 
-    def test_seal(self):
+    def test_seal_uint8(self):
+        _, sk_s = easy_box.gen_keypair()
+        pk_r, _ = easy_box.gen_keypair()
+
+        plaintext = tf.constant([1, 2, 3, 4], shape=(2, 2), dtype=tf.uint8)
+
+        nonce = easy_box.gen_nonce()
+        ciphertext, mac = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
+
+        assert ciphertext.raw.shape == plaintext.shape
+
+    def test_seal_float(self):
         _, sk_s = easy_box.gen_keypair()
         pk_r, _ = easy_box.gen_keypair()
 
