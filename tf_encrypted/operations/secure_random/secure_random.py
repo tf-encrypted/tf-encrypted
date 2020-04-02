@@ -16,8 +16,8 @@ SO_PATH = "{dn}/operations/secure_random/secure_random_module_tf_{tfv}.so"
 
 def _try_load_secure_random_module():
     """
-  Attempt to load and return secure random module; returns None if failed.
-  """
+    Attempt to load and return secure random module; returns None if failed.
+    """
     so_file = SO_PATH.format(dn=os.path.dirname(tfe.__file__), tfv=tf.__version__)
     if not os.path.exists(so_file):
         logger.warning(
@@ -72,21 +72,21 @@ def seeded_random_uniform(
     shape, minval=0, maxval=None, dtype=tf.int32, seed=None, name=None,
 ):
     """
-  Returns cryptographically strong random numbers with a seed
+    Returns cryptographically strong random numbers with a seed
 
-  .. code-block:: python
+    .. code-block:: python
 
-      x = secure_random([2, 2], minval=-1000, maxval=1000)
+        x = secure_random([2, 2], minval=-1000, maxval=1000)
 
-  :param list shape: Shape of the random tensor.
-  :param int minval: Minimum value to return, inclusive.
-  :param int maxval: Maximum value to return, exclusive.
-  :param dtype: Data type of the return random values. Either int32 or int64.
-  :param tf.Tensor seed: The seed to be used when generating the random numbers.
-  :param str name:
+    :param list shape: Shape of the random tensor.
+    :param int minval: Minimum value to return, inclusive.
+    :param int maxval: Maximum value to return, exclusive.
+    :param dtype: Data type of the return random values. Either int32 or int64.
+    :param tf.Tensor seed: The seed to be used when generating the random numbers.
+    :param str name:
 
-  :rtype: tf.Tensor
-  """
+    :rtype: tf.Tensor
+    """
     dtype = dtypes.as_dtype(dtype)
     if dtype not in (dtypes.int32, dtypes.int64):
         raise ValueError("Invalid dtype %r" % dtype)
@@ -109,21 +109,21 @@ def random_uniform(
     shape, minval=0, maxval=None, dtype=tf.int32, name=None,
 ):
     """
-  Returns cryptographically strong random numbers.
+    Returns cryptographically strong random numbers.
 
-  .. code-block:: python
+    .. code-block:: python
 
-      x = secure_random([2, 2], minval=-1000, maxval=1000)
+        x = secure_random([2, 2], minval=-1000, maxval=1000)
 
-  :param list shape: Shape of the random tensor.
-  :param int minval: Minimum value to return, inclusive.
-  :param int maxval: Maximum value to return, exclusive.
-  :param dtype: Data type of the return random values. Either int32 or int64.
-  :param tf.Tensor seed: A seed for generating the random numbers.
-  :param str name:
+    :param list shape: Shape of the random tensor.
+    :param int minval: Minimum value to return, inclusive.
+    :param int maxval: Maximum value to return, exclusive.
+    :param dtype: Data type of the return random values. Either int32 or int64.
+    :param tf.Tensor seed: A seed for generating the random numbers.
+    :param str name:
 
-  :rtype: tf.Tensor
-  """
+    :rtype: tf.Tensor
+    """
 
     dtype = dtypes.as_dtype(dtype)
     if dtype not in (dtypes.int32, dtypes.int64):

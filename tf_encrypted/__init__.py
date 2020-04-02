@@ -99,6 +99,7 @@ __all__ = [
     "set_protocol",
     "Session",
     "player",
+    "primitives",
     "protocol",
     "layers",
     "convert",
