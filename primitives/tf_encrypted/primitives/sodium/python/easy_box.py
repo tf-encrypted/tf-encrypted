@@ -67,9 +67,9 @@ def open_detached(
     nonce: Nonce,
     public_sender: PublicKey,
     secretkey_receiver: SecretKey,
-    plaintext_type: tf.dtypes, 
+    plaintext_dtype: tf.dtypes, 
 ) -> tf.Tensor:
     plaintext = sodium_module.sodium_easy_box_open_detached(
-        ciphertext.raw, mac.raw, nonce.raw, public_sender.raw, secretkey_receiver.raw, plaintext_type
+        ciphertext.raw, mac.raw, nonce.raw, public_sender.raw, secretkey_receiver.raw, plaintext_dtype
     )
     return plaintext
