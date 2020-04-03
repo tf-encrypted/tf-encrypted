@@ -14,8 +14,6 @@
 
 using namespace tensorflow;
 
-// TensorShape makeShape<T>(const Tensor& t);
-
 class SodiumEasyBoxGenKeypair : public OpKernel {
 public:
   explicit SodiumEasyBoxGenKeypair(OpKernelConstruction* context) : OpKernel(context) {}
@@ -108,10 +106,7 @@ public:
     Tensor* ciphertext_t;
 
     TensorShape ciphertext_shape;
-    ciphertext_shape =  makeShape<T>(plaintext_t);
-    // int last_dim = ciphertext_shape.dims() - 1;
-    // OP_REQUIRES(context, ciphertext_shape.dim_size(last_dim) == sizeof(float),
-    //     errors::Internal("Last dim of ciphertext_shape should match sizeof(float)"));
+    ciphertext_shape =  makeShapeSeal<T>(plaintext_t);
     OP_REQUIRES_OK(context, context->allocate_output(0, ciphertext_shape, &ciphertext_t));
     auto ciphertext_data = ciphertext_t->flat<tensorflow::uint8>().data();
     unsigned char* ciphertext = reinterpret_cast<unsigned char*>(ciphertext_data);
@@ -168,8 +163,7 @@ public:
     //
 
     Tensor* plaintext_t;
-    TensorShape plaintext_shape = ciphertext_t.shape();
-    plaintext_shape.RemoveLastDims(1);
+    TensorShape plaintext_shape = makeShapeOpen<T>(ciphertext_t);
     OP_REQUIRES_OK(context, context->allocate_output(0, plaintext_shape, &plaintext_t));
     auto plaintext_data = plaintext_t->flat<T>().data();
     unsigned char* plaintext = reinterpret_cast<unsigned char*>(plaintext_data);
