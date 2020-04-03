@@ -14,39 +14,35 @@ using namespace tensorflow;
 
 
 template <typename T>
-TensorShape makeShapeSeal(const Tensor& ciphertext){
-  auto ciphertext_shape = ciphertext.shape();
-  return ciphertext_shape;
-}
+TensorShape makeShapeSeal(const TensorShape& plaintext_shape);
 
 template <>
-inline TensorShape makeShapeSeal<float>(const Tensor& ciphertext){
-  auto ciphertext_shape = ciphertext.shape();
+inline TensorShape makeShapeSeal<float>(const TensorShape& plaintext_shape){
+  auto ciphertext_shape = plaintext_shape;
   ciphertext_shape.AddDim(sizeof(float));
   return ciphertext_shape;
 }
 
 template <>
-TensorShape makeShapeSeal<uint8>(const Tensor& ciphertext){
-  auto ciphertext_shape = ciphertext.shape();
+inline TensorShape makeShapeSeal<uint8>(const TensorShape& plaintext_shape){
+  auto ciphertext_shape = plaintext_shape;
+  ciphertext_shape.AddDim(sizeof(uint8));
   return ciphertext_shape;
 }
 
 template <typename T>
-TensorShape makeShapeOpen(const Tensor& plaintext){
-  TensorShape plaintext_shape = plaintext.shape();
-  return plaintext_shape;
-}
+TensorShape makeShapeOpen(const TensorShape& ciphertext);
 
 template <>
-TensorShape makeShapeOpen<float>(const Tensor& plaintext){
-	TensorShape plaintext_shape = plaintext.shape();
+inline TensorShape makeShapeOpen<float>(const TensorShape& ciphertext_shape){
+  TensorShape plaintext_shape = ciphertext_shape;
   plaintext_shape.RemoveLastDims(1);
   return plaintext_shape;
 }
 
 template <>
-TensorShape makeShapeOpen<uint8>(const Tensor& plaintext){
-  TensorShape plaintext_shape = plaintext.shape();
+inline TensorShape makeShapeOpen<uint8>(const TensorShape& ciphertext_shape){
+  TensorShape plaintext_shape = ciphertext_shape;
+  plaintext_shape.RemoveLastDims(1);
   return plaintext_shape;
 }

@@ -27,7 +27,7 @@ class TestEasyBox(unittest.TestCase):
         nonce = easy_box.gen_nonce()
         ciphertext, mac = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
 
-        assert ciphertext.raw.shape == plaintext.shape
+        assert ciphertext.raw.shape == plaintext.shape + (1,)
 
     def test_seal_floats(self):
         _, sk_s = easy_box.gen_keypair()
