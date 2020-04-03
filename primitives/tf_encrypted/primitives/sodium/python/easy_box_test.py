@@ -18,18 +18,29 @@ class TestEasyBox(unittest.TestCase):
         assert isinstance(nonce, easy_box.Nonce), type(nonce)
         assert isinstance(nonce.raw, tf.Tensor)
 
-    def test_seal(self):
+    def test_seal_uint8(self):
         _, sk_s = easy_box.gen_keypair()
         pk_r, _ = easy_box.gen_keypair()
 
         plaintext = tf.constant([1, 2, 3, 4], shape=(2, 2), dtype=tf.uint8)
 
         nonce = easy_box.gen_nonce()
-        ciphertext, mac = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
+        ciphertext, _ = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
 
-        assert ciphertext.raw.shape == plaintext.shape
+        assert ciphertext.raw.shape == plaintext.shape + (1,)
 
-    def test_open(self):
+    def test_seal_floats(self):
+        _, sk_s = easy_box.gen_keypair()
+        pk_r, _ = easy_box.gen_keypair()
+
+        plaintext = tf.constant([1, 2, 3, 4], shape=(2, 2), dtype=tf.float32)
+
+        nonce = easy_box.gen_nonce()
+        ciphertext, _ = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
+
+        assert ciphertext.raw.shape == plaintext.shape + (4,)
+
+    def test_open_uint8(self):
         pk_s, sk_s = easy_box.gen_keypair()
         pk_r, sk_r = easy_box.gen_keypair()
 
@@ -37,7 +48,24 @@ class TestEasyBox(unittest.TestCase):
 
         nonce = easy_box.gen_nonce()
         ciphertext, mac = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
-        plaintext_recovered = easy_box.open_detached(ciphertext, mac, nonce, pk_s, sk_r)
+        plaintext_recovered = easy_box.open_detached(
+            ciphertext, mac, nonce, pk_s, sk_r, plaintext.dtype
+        )
+
+        assert plaintext_recovered.shape == plaintext.shape
+        np.testing.assert_equal(plaintext_recovered, np.array([[1, 2], [3, 4]]))
+
+    def test_open_float(self):
+        pk_s, sk_s = easy_box.gen_keypair()
+        pk_r, sk_r = easy_box.gen_keypair()
+
+        plaintext = tf.constant([1, 2, 3, 4], shape=(2, 2), dtype=tf.float32)
+
+        nonce = easy_box.gen_nonce()
+        ciphertext, mac = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
+        plaintext_recovered = easy_box.open_detached(
+            ciphertext, mac, nonce, pk_s, sk_r, plaintext.dtype
+        )
 
         assert plaintext_recovered.shape == plaintext.shape
         np.testing.assert_equal(plaintext_recovered, np.array([[1, 2], [3, 4]]))

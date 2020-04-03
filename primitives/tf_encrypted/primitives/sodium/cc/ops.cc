@@ -16,7 +16,8 @@ REGISTER_OP("SodiumEasyBoxGenNonce")
     .SetIsStateful();
 
 REGISTER_OP("SodiumEasyBoxSealDetached")
-    .Input("plaintext: uint8")
+    .Attr("plaintext_dtype: {uint8, float32}")
+    .Input("plaintext: plaintext_dtype")
     .Input("nonce: uint8")
     .Input("pk_receiver: uint8")
     .Input("sk_sender: uint8")
@@ -25,10 +26,11 @@ REGISTER_OP("SodiumEasyBoxSealDetached")
     .SetIsStateful();
 
 REGISTER_OP("SodiumEasyBoxOpenDetached")
+    .Attr("plaintext_dtype: {uint8, float32}")
     .Input("ciphertext: uint8")
     .Input("mac: uint8")
     .Input("nonce: uint8")
     .Input("pk_sender: uint8")
     .Input("sk_receiver: uint8")
-    .Output("plaintext: uint8")
+    .Output("plaintext: plaintext_dtype")
     .SetIsStateful();
