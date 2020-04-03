@@ -10,7 +10,7 @@
 #include "tensorflow/core/framework/variant_tensor_data.h"
 
 #include "sodium.h"
-#include "utils.h"
+#include "easy_box_kernels_utils.h"
 
 using namespace tensorflow;
 
