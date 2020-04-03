@@ -10,7 +10,6 @@
 #include "tensorflow/core/framework/variant_tensor_data.h"
 
 #include "sodium.h"
-#include "easy_box_kernels_utils.h"
 
 using namespace tensorflow;
 
@@ -104,9 +103,8 @@ public:
     //
 
     Tensor* ciphertext_t;
-
-    TensorShape ciphertext_shape;
-    ciphertext_shape =  makeShapeSeal<T>(plaintext_t.shape());
+    TensorShape ciphertext_shape = plaintext_t.shape();
+    ciphertext_shape.AddDim(sizeof(T));
     OP_REQUIRES_OK(context, context->allocate_output(0, ciphertext_shape, &ciphertext_t));
     auto ciphertext_data = ciphertext_t->flat<tensorflow::uint8>().data();
     unsigned char* ciphertext = reinterpret_cast<unsigned char*>(ciphertext_data);
@@ -162,14 +160,14 @@ public:
     // Allocate outputs
     //
 
+    Tensor* plaintext_t;
     auto ciphertext_shape = ciphertext_t.shape();
     auto last_dim_index = ciphertext_shape.dims() - 1;
     auto last_dim = ciphertext_shape.dim_size(last_dim_index);
     OP_REQUIRES(context, last_dim == sizeof(T),
         errors::Internal("Last dim of ciphertext_shape should equal ", sizeof(T)));
-
-    Tensor* plaintext_t;
-    TensorShape plaintext_shape = makeShapeOpen<T>(ciphertext_shape);
+    TensorShape plaintext_shape = ciphertext_shape;
+    plaintext_shape.RemoveLastDims(1);
     OP_REQUIRES_OK(context, context->allocate_output(0, plaintext_shape, &plaintext_t));
     auto plaintext_data = plaintext_t->flat<T>().data();
     unsigned char* plaintext = reinterpret_cast<unsigned char*>(plaintext_data);

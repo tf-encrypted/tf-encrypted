@@ -25,7 +25,7 @@ class TestEasyBox(unittest.TestCase):
         plaintext = tf.constant([1, 2, 3, 4], shape=(2, 2), dtype=tf.uint8)
 
         nonce = easy_box.gen_nonce()
-        ciphertext, mac = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
+        ciphertext, _ = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
 
         assert ciphertext.raw.shape == plaintext.shape + (1,)
 
@@ -36,7 +36,7 @@ class TestEasyBox(unittest.TestCase):
         plaintext = tf.constant([1, 2, 3, 4], shape=(2, 2), dtype=tf.float32)
 
         nonce = easy_box.gen_nonce()
-        ciphertext, mac = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
+        ciphertext, _ = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
 
         assert ciphertext.raw.shape == plaintext.shape + (4,)
 
@@ -48,7 +48,9 @@ class TestEasyBox(unittest.TestCase):
 
         nonce = easy_box.gen_nonce()
         ciphertext, mac = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
-        plaintext_recovered = easy_box.open_detached(ciphertext, mac, nonce, pk_s, sk_r, plaintext.dtype)
+        plaintext_recovered = easy_box.open_detached(
+            ciphertext, mac, nonce, pk_s, sk_r, plaintext.dtype
+        )
 
         assert plaintext_recovered.shape == plaintext.shape
         np.testing.assert_equal(plaintext_recovered, np.array([[1, 2], [3, 4]]))
@@ -61,7 +63,9 @@ class TestEasyBox(unittest.TestCase):
 
         nonce = easy_box.gen_nonce()
         ciphertext, mac = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
-        plaintext_recovered = easy_box.open_detached(ciphertext, mac, nonce, pk_s, sk_r, plaintext.dtype)
+        plaintext_recovered = easy_box.open_detached(
+            ciphertext, mac, nonce, pk_s, sk_r, plaintext.dtype
+        )
 
         assert plaintext_recovered.shape == plaintext.shape
         np.testing.assert_equal(plaintext_recovered, np.array([[1, 2], [3, 4]]))

@@ -5,7 +5,6 @@ cc_binary(
     srcs = [
         "cc/ops.cc",
         "cc/easy_box_kernels.cc",
-        "cc/easy_box_kernels_utils.h",
     ],
     linkshared = 1,
     deps = [
