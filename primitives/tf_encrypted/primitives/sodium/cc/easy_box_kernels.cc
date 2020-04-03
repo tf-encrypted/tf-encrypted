@@ -184,4 +184,7 @@ REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).Typ
     SodiumEasyBoxSealDetached<float>);
 REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<uint8>("plaintext_type"), 
     SodiumEasyBoxSealDetached<uint8>);
-REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU), SodiumEasyBoxOpenDetached<float>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<float>("plaintext_type"), 
+    SodiumEasyBoxOpenDetached<float>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<uint8>("plaintext_type"), 
+    SodiumEasyBoxOpenDetached<uint8>);
