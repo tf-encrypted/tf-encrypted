@@ -8,13 +8,43 @@ from tf_encrypted.primitives.sodium.python import easy_box
 
 
 class TestEasyBox(unittest.TestCase):
-    def test_gen_keypair(self):
+    def test_gen_keypair_eager(self):
         pk, sk = easy_box.gen_keypair()
-        assert isinstance(pk, easy_box.PublicKey), type(pk)
-        assert isinstance(sk, easy_box.SecretKey), type(sk)
 
-    def test_gen_nonce(self):
+        assert isinstance(pk, easy_box.PublicKey), type(pk)
+        assert pk.raw.dtype == tf.uint8
+        assert pk.raw.shape == (32,)
+
+        assert isinstance(sk, easy_box.SecretKey), type(sk)
+        assert sk.raw.dtype == tf.uint8
+        assert sk.raw.shape == (32,)
+
+    def test_gen_keypair_graph(self):
+        with tf.Graph().as_default():
+            pk, sk = easy_box.gen_keypair()
+
+        assert isinstance(pk, easy_box.PublicKey), type(pk)
+        assert pk.raw.dtype == tf.uint8
+        assert pk.raw.shape == (32,)
+
+        assert isinstance(sk, easy_box.SecretKey), type(sk)
+        assert sk.raw.dtype == tf.uint8
+        assert sk.raw.shape == (32,)
+
+    def test_gen_nonce_eager(self):
         nonce = easy_box.gen_nonce()
+
+        assert nonce.raw.dtype == tf.uint8
+        assert nonce.raw.shape == (24,)
+        assert isinstance(nonce, easy_box.Nonce), type(nonce)
+        assert isinstance(nonce.raw, tf.Tensor)
+
+    def test_gen_nonce_graph(self):
+        with tf.Graph().as_default():
+            nonce = easy_box.gen_nonce()
+
+        assert nonce.raw.dtype == tf.uint8
+        assert nonce.raw.shape == (24,)
         assert isinstance(nonce, easy_box.Nonce), type(nonce)
         assert isinstance(nonce.raw, tf.Tensor)
 
