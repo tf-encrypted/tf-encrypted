@@ -25,7 +25,7 @@ and install it as a pip package. The simplest way of doing this is by running:
 (venv) ./tf-encrypted/ $ pip install -e .
 ```
 
-which will automatically install all needed dependencies, most notably [TensorFlow](https://www.tensorflow.org/install/) version 1.12 or above; if for some reason this is not desired then use:
+which will automatically install all needed dependencies, most notably [TensorFlow](https://www.tensorflow.org/install/); if for some reason this is not desired then use:
 
 ```
 (venv) ./tf-encrypted/ $ pip install -e . --no-deps
@@ -35,12 +35,7 @@ instead and check that you have all dependencies installed if you encounter any 
 
 That's it - you should now have a working copy ready for development!
 
-Running code at this point may however generate warnings related to sub-optimal performance and security. The reason for this is twofold:
-
-- some features rely on [custom ops](https://www.tensorflow.org/guide/extend/op) that first needs to be compiled;
-- some features have not yet shipped as part of the official TensorFlow distribution.
-
-We address both below but stress that they can be skipped for initial experiments.
+Running code at this point may however generate warnings related to sub-optimal performance and security. The reason for this is that some features rely on [custom ops](https://www.tensorflow.org/guide/extend/op) that first needs to be compiled. We address this below but stress that they can be skipped for initial experiments.
 
 ## Custom Ops
 
@@ -97,25 +92,6 @@ after making sure flake8 is installed:
 ```
 (venv) ./tf-encrypted/ $ pip install flake8
 ```
-
-## Custom TensorFlow
-
-TF Encrypted officially supports TensorFlow 1.13.1 but if you have a need to run on 1.12.0 and want to take advantage of the int64 tensor speed improvements you'll have to make use of a custom build.
-
-We provide such builds as a temporary solution and no guarantees are made about them and they should be treated as experimental:
-
-- [macOS](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-macosx_10_7_x86_64.whl) <small>(sha256: <tt>734b7c1efd0afa09da1ac22c45be04c89ced3edf203b42dead8fa842b38c278e</tt>)</small>
-- [Linux](https://storage.googleapis.com/dropoutlabs-tensorflow-builds/tensorflow-1.12.0-cp35-cp35m-linux_x86_64.whl) <small>(sha256: <tt>5cd9d36f7fdee0b8d8367aa4aa95a1244c09c8dba87ebb4ccff9631058f57c1f</tt>)</small>
-
-Alternatively you can build TensorFlow on your own by e.g. following the [official instructions](https://www.tensorflow.org/install/source).
-
-In both cases should you end up with a wheel file that you can install using pip:
-
-```
-(venv) ./ $ pip install tensorflow-1.13.0-XXX.whl
-```
-
-TF Encrypted auto-detects which features are available so no further actions are needed.
 
 ## Complete Instructions
 
