@@ -64,11 +64,11 @@ test: pythoncheck
 	pytest -n 8 -x -m "convert_maxpool" tf_encrypted
 
 lint: pythoncheck
-	flake8 tf_encrypted operations examples
+	flake8 tf_encrypted primitives operations examples
 
 fmt: pythoncheck
-	isort --atomic --recursive tf_encrypted operations examples
-	black tf_encrypted operations examples
+	isort --atomic --recursive tf_encrypted primitives operations examples
+	black tf_encrypted primitives operations examples
 
 typecheck: pythoncheck
 	MYPYPATH=$(CURRENT_DIR):$(CURRENT_DIR)/stubs mypy tf_encrypted
