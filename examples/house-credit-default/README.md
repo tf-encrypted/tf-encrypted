@@ -114,7 +114,7 @@ Where 0.41815186 is the prediction.
 
 ## Predicting in Trusted Execution Environment
 
-Next up is predicting inside of Trusted Execution Environment. To do this we'll have to clone [tf-trusted](https://github.com/dropoutlabs/tf-trusted) and follow the instructions in the README to build the necessary binaries. tf-trusted is an interface for running models inside of a TEE. tft uses TensorFlow [custom operations](https://www.tensorflow.org/guide/extend/op) to send [gRPC](https://grpc.io/) messages into the TEE device. tft uses [Asylo](https://asylo.dev/) to build the executable that runs inside of the TEE. Depending on the configuration of tft the TEE is either an Intel SGX Simulator or a real hardware Intel SGX device.
+Next up is predicting inside of Trusted Execution Environment. To do this we'll have to clone [tf-trusted](https://github.com/capeprivacy/tf-trusted) and follow the instructions in the README to build the necessary binaries. tf-trusted is an interface for running models inside of a TEE. tft uses TensorFlow [custom operations](https://www.tensorflow.org/guide/extend/op) to send [gRPC](https://grpc.io/) messages into the TEE device. tft uses [Asylo](https://asylo.dev/) to build the executable that runs inside of the TEE. Depending on the configuration of tft the TEE is either an Intel SGX Simulator or a real hardware Intel SGX device.
 
 Running the model can be done similarly to how we ran the model in TF Encrypted but we need to make sure the gRPC server is running inside of the TEE. If not already done so open a new terminal and run the following command from with the tf-trusted repo:
 
