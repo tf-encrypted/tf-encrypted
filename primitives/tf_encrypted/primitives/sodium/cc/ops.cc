@@ -44,6 +44,9 @@ REGISTER_OP("SodiumEasyBoxSealDetached")
     .Output("mac: uint8")
     .SetIsStateful()
     .SetShapeFn([](shape_inference::InferenceContext* c){
+        shape_inference::ShapeHandle mac_shape = c->MakeShape({crypto_box_MACBYTES});
+        c->set_output(1, mac_shape);
+
         tensorflow::DataType plaintext_dtype;
         TF_RETURN_IF_ERROR(c->GetAttr("plaintext_dtype", &plaintext_dtype));
         int plaintext_dtype_size = tensorflow::DataTypeSize(plaintext_dtype);

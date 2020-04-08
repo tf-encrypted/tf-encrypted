@@ -69,6 +69,7 @@ class TestEasyBox(parameterized.TestCase):
             )
 
         assert ciphertext.raw.shape == plaintext.shape + (4,)
+        assert mac.raw.shape == (16,)
         assert plaintext_recovered.shape == plaintext.shape
 
     @parameterized.parameters(
