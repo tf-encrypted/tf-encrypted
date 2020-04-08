@@ -1,6 +1,7 @@
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/common_shape_fns.h"
 #include "tensorflow/core/framework/shape_inference.h"
+#include "tensorflow/core/framework/types.h"
 
 #include "sodium.h"
 
@@ -43,8 +44,12 @@ REGISTER_OP("SodiumEasyBoxSealDetached")
     .Output("mac: uint8")
     .SetIsStateful()
     .SetShapeFn([](shape_inference::InferenceContext* c){
+        tensorflow::DataType plaintext_dtype;
+        TF_RETURN_IF_ERROR(c->GetAttr("plaintext_dtype", &plaintext_dtype));
+        int plaintext_dtype_size = tensorflow::DataTypeSize(plaintext_dtype);
+
         shape_inference::ShapeHandle plaintext_shape = c->input(0);
-        shape_inference::ShapeHandle dtype_shape = c->MakeShape({sizeof(float)});
+        shape_inference::ShapeHandle dtype_shape = c->MakeShape({plaintext_dtype_size});
         shape_inference::ShapeHandle ciphertext_shape;
         TF_RETURN_IF_ERROR(c->Concatenate(plaintext_shape, dtype_shape, &ciphertext_shape));
         c->set_output(0, ciphertext_shape);
