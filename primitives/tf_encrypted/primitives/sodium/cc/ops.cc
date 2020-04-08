@@ -3,7 +3,6 @@
 #include "tensorflow/core/framework/shape_inference.h"
 
 #include "sodium.h"
-#include <iostream>
 
 using namespace tensorflow;
 
