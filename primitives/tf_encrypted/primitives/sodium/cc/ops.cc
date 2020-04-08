@@ -3,6 +3,7 @@
 #include "tensorflow/core/framework/shape_inference.h"
 
 #include "sodium.h"
+#include <iostream>
 
 using namespace tensorflow;
 
@@ -41,7 +42,15 @@ REGISTER_OP("SodiumEasyBoxSealDetached")
     .Input("sk_sender: uint8")
     .Output("ciphertext: uint8")
     .Output("mac: uint8")
-    .SetIsStateful();
+    .SetIsStateful()
+    .SetShapeFn([](shape_inference::InferenceContext* c){
+        shape_inference::ShapeHandle plaintext_shape = c->input(0);
+        shape_inference::ShapeHandle dtype_shape = c->MakeShape({sizeof(float)});
+        shape_inference::ShapeHandle ciphertext_shape;
+        TF_RETURN_IF_ERROR(c->Concatenate(plaintext_shape, dtype_shape, &ciphertext_shape));
+        c->set_output(0, ciphertext_shape);
+        return Status::OK();
+    });
 
 REGISTER_OP("SodiumEasyBoxOpenDetached")
     .Attr("plaintext_dtype: {uint8, float32}")
@@ -51,4 +60,12 @@ REGISTER_OP("SodiumEasyBoxOpenDetached")
     .Input("pk_sender: uint8")
     .Input("sk_receiver: uint8")
     .Output("plaintext: plaintext_dtype")
-    .SetIsStateful();
+    .SetIsStateful()
+    .SetShapeFn([](shape_inference::InferenceContext* c){
+        shape_inference::ShapeHandle ciphertext_shape = c->input(0);
+        shape_inference::ShapeHandle plaintext_shape;
+        auto shape = c->Rank(ciphertext_shape);
+        TF_RETURN_IF_ERROR(c->Subshape(ciphertext_shape, 0, shape-1, &plaintext_shape));
+        c->set_output(0, plaintext_shape);
+        return Status::OK();
+    });

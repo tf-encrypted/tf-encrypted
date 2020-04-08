@@ -48,6 +48,22 @@ class TestEasyBox(unittest.TestCase):
         assert isinstance(nonce, easy_box.Nonce), type(nonce)
         assert isinstance(nonce.raw, tf.Tensor)
 
+    def test_gen_seal_open_graph(self):
+        with tf.Graph().as_default():
+            pk_s, sk_s = easy_box.gen_keypair()
+            pk_r, sk_r = easy_box.gen_keypair()
+
+            plaintext = tf.constant([1, 2, 3, 4], shape=(2, 2), dtype=tf.float32)
+
+            nonce = easy_box.gen_nonce()
+            ciphertext, mac = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
+            plaintext_recovered = easy_box.open_detached(
+                ciphertext, mac, nonce, pk_s, sk_r, plaintext.dtype
+            )
+
+        assert ciphertext.raw.shape == plaintext.shape + (4,)
+        assert plaintext_recovered.shape == plaintext.shape
+
     def test_seal_uint8(self):
         _, sk_s = easy_box.gen_keypair()
         pk_r, _ = easy_box.gen_keypair()
