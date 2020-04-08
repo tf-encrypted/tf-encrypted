@@ -71,8 +71,11 @@ REGISTER_OP("SodiumEasyBoxOpenDetached")
     .SetShapeFn([](shape_inference::InferenceContext* c){
         shape_inference::ShapeHandle ciphertext_shape = c->input(0);
         shape_inference::ShapeHandle plaintext_shape;
-        auto shape = c->Rank(ciphertext_shape);
-        TF_RETURN_IF_ERROR(c->Subshape(ciphertext_shape, 0, shape-1, &plaintext_shape));
+        auto rank = c->Rank(ciphertext_shape);
+        if (rank == 0)
+            plaintext_shape = c->MakeShape({});
+        else
+            TF_RETURN_IF_ERROR(c->Subshape(ciphertext_shape, 0, rank-1, &plaintext_shape));
         c->set_output(0, plaintext_shape);
         return Status::OK();
     });
