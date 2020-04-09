@@ -83,26 +83,26 @@ public:
     //
 
     const Tensor& plaintext_t = context->input(0);
-    const unsigned char* plaintext = reinterpret_cast<const unsigned char*>(plaintext_t.flat<T>().data());
+    const unsigned char* plaintext_data = reinterpret_cast<const unsigned char*>(plaintext_t.flat<T>().data());
 
     const Tensor& nonce_t = context->input(1);
     const auto nonce_flat = nonce_t.flat<tensorflow::uint8>();
     OP_REQUIRES(context, nonce_flat.size() == crypto_box_NONCEBYTES,
         errors::Internal("Nonce is not of required size ", crypto_box_NONCEBYTES));
-    const unsigned char* nonce = reinterpret_cast<const unsigned char*>(nonce_flat.data());
+    const unsigned char* nonce_data = reinterpret_cast<const unsigned char*>(nonce_flat.data());
 
     const Tensor& pk_receiver_t = context->input(2);
     const auto pk_receiver_flat = pk_receiver_t.flat<tensorflow::uint8>();
     OP_REQUIRES(context, pk_receiver_flat.size() == crypto_box_PUBLICKEYBYTES,
         errors::Internal("Public key is not of required size ", crypto_box_PUBLICKEYBYTES));
-    const unsigned char* pk_receiver = reinterpret_cast<const unsigned char*>(pk_receiver_flat.data());
+    const unsigned char* pk_receiver_data = reinterpret_cast<const unsigned char*>(pk_receiver_flat.data());
 
     const Tensor& sk_sender_t = context->input(3);
     const auto sk_receiver_flat = sk_sender_t.flat<tensorflow::uint8>();
     OP_REQUIRES(context, sk_receiver_flat.size() == crypto_box_SECRETKEYBYTES,
         errors::Internal("Secret key is not of required size ", crypto_box_SECRETKEYBYTES));
-    const unsigned char* sk_sender = reinterpret_cast<const unsigned char*>(sk_receiver_flat.data());
-    
+    const unsigned char* sk_sender_data = reinterpret_cast<const unsigned char*>(sk_receiver_flat.data());
+
     //
     // Allocate outputs
     //
@@ -112,20 +112,21 @@ public:
     ciphertext_shape.AddDim(sizeof(T));
     OP_REQUIRES_OK(context, context->allocate_output(0, ciphertext_shape, &ciphertext_t));
     auto ciphertext_flat = ciphertext_t->flat<tensorflow::uint8>();
-    unsigned char* ciphertext = reinterpret_cast<unsigned char*>(ciphertext_flat.data());
+    unsigned char* ciphertext_data = reinterpret_cast<unsigned char*>(ciphertext_flat.data());
 
     Tensor* mac_t;
     TensorShape mac_shape({crypto_box_MACBYTES});
     OP_REQUIRES_OK(context, context->allocate_output(1, mac_shape, &mac_t));
     auto mac_flat = mac_t->flat<tensorflow::uint8>();
-    unsigned char* mac = reinterpret_cast<unsigned char*>(mac_flat.data());
+    unsigned char* mac_data = reinterpret_cast<unsigned char*>(mac_flat.data());
 
     //
     // Computation
     //
 
     auto plaintext_size = ciphertext_flat.size();
-    auto res = crypto_box_detached(ciphertext, mac, plaintext, plaintext_size, nonce, pk_receiver, sk_sender);
+    auto res = crypto_box_detached(ciphertext_data, mac_data, plaintext_data, plaintext_size,
+        nonce_data, pk_receiver_data, sk_sender_data);
     OP_REQUIRES(context, res == 0, errors::Internal("libsodium seal operation failed"));
   }
 };
@@ -147,32 +148,32 @@ public:
     OP_REQUIRES(context, ciphertext_shape.dim_size(ciphertext_shape.dims() - 1) == sizeof(T),
         errors::Internal("Last dim of ciphertext should equal ", sizeof(T)));
     const auto ciphertext_flat = ciphertext_t.flat<tensorflow::uint8>();
-    const unsigned char* ciphertext = reinterpret_cast<const unsigned char*>(ciphertext_flat.data());
+    const unsigned char* ciphertext_data = reinterpret_cast<const unsigned char*>(ciphertext_flat.data());
 
-    const Tensor& mac_t = context-> input(1);
+    const Tensor& mac_t = context->input(1);
     auto mac_flat = mac_t.flat<tensorflow::uint8>();
     OP_REQUIRES(context, mac_flat.size() == crypto_box_MACBYTES,
         errors::Internal("Mac is not of required size ", crypto_box_MACBYTES));
-    const unsigned char* mac = reinterpret_cast<const unsigned char*>(mac_flat.data());
+    const unsigned char* mac_data = reinterpret_cast<const unsigned char*>(mac_flat.data());
 
-    const Tensor& nonce_t = context-> input(2);
+    const Tensor& nonce_t = context->input(2);
     const auto nonce_flat = nonce_t.flat<tensorflow::uint8>();
     OP_REQUIRES(context, nonce_flat.size() == crypto_box_NONCEBYTES,
         errors::Internal("Nonce is not of required size ", crypto_box_NONCEBYTES));
-    const unsigned char* nonce = reinterpret_cast<const unsigned char*>(nonce_flat.data());
+    const unsigned char* nonce_data = reinterpret_cast<const unsigned char*>(nonce_flat.data());
 
     const Tensor& pk_sender_t = context->input(3);
     const auto pk_sender_flat = pk_sender_t.flat<tensorflow::uint8>();
     OP_REQUIRES(context, pk_sender_flat.size() == crypto_box_PUBLICKEYBYTES,
         errors::Internal("Public key is not of required size ", crypto_box_PUBLICKEYBYTES));
-    const unsigned char* pk_sender = reinterpret_cast<const unsigned char*>(pk_sender_flat.data());
+    const unsigned char* pk_sender_data = reinterpret_cast<const unsigned char*>(pk_sender_flat.data());
 
     const Tensor& sk_receiver_t = context->input(4);
     const auto sk_receiver_flat = sk_receiver_t.flat<tensorflow::uint8>();
     OP_REQUIRES(context, sk_receiver_flat.size() == crypto_box_SECRETKEYBYTES,
         errors::Internal("Secret key is not of required size ", crypto_box_SECRETKEYBYTES));
-    const unsigned char* sk_receiver = reinterpret_cast<const unsigned char*>(sk_receiver_flat.data());
-    
+    const unsigned char* sk_receiver_data = reinterpret_cast<const unsigned char*>(sk_receiver_flat.data());
+
     //
     // Allocate outputs
     //
@@ -182,14 +183,14 @@ public:
     plaintext_shape.RemoveLastDims(1);
     OP_REQUIRES_OK(context, context->allocate_output(0, plaintext_shape, &plaintext_t));
     auto plaintext_flat = plaintext_t->flat<T>();
-    unsigned char* plaintext = reinterpret_cast<unsigned char*>(plaintext_flat.data());
+    unsigned char* plaintext_data = reinterpret_cast<unsigned char*>(plaintext_flat.data());
 
     //
     // Computation
     //
 
     const auto ciphertext_size = ciphertext_flat.size();
-    auto res = crypto_box_open_detached(plaintext, ciphertext, mac, ciphertext_size, nonce, pk_sender, sk_receiver);
+    auto res = crypto_box_open_detached(plaintext_data, ciphertext_data, mac_data, ciphertext_size, nonce_data, pk_sender_data, sk_receiver_data);
     OP_REQUIRES(context, res == 0, errors::Internal("libsodium open operation failed"));
   }
 };
