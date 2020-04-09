@@ -1,3 +1,4 @@
+absl-py==0.9.0
 black==19.10b
 flake8-black==0.1.1
 flake8-docstrings==1.5.0
