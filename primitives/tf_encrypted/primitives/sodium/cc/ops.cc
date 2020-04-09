@@ -44,18 +44,18 @@ REGISTER_OP("SodiumEasyBoxSealDetached")
     .Output("mac: uint8")
     .SetIsStateful()
     .SetShapeFn([](shape_inference::InferenceContext* c){
-        shape_inference::ShapeHandle mac_shape = c->MakeShape({crypto_box_MACBYTES});
-        c->set_output(1, mac_shape);
-
         tensorflow::DataType plaintext_dtype;
         TF_RETURN_IF_ERROR(c->GetAttr("plaintext_dtype", &plaintext_dtype));
         int plaintext_dtype_size = tensorflow::DataTypeSize(plaintext_dtype);
-
         shape_inference::ShapeHandle plaintext_shape = c->input(0);
         shape_inference::ShapeHandle dtype_shape = c->MakeShape({plaintext_dtype_size});
         shape_inference::ShapeHandle ciphertext_shape;
         TF_RETURN_IF_ERROR(c->Concatenate(plaintext_shape, dtype_shape, &ciphertext_shape));
         c->set_output(0, ciphertext_shape);
+
+        shape_inference::ShapeHandle mac_shape = c->MakeShape({crypto_box_MACBYTES});
+        c->set_output(1, mac_shape);
+
         return Status::OK();
     });
 
@@ -71,11 +71,12 @@ REGISTER_OP("SodiumEasyBoxOpenDetached")
     .SetShapeFn([](shape_inference::InferenceContext* c){
         shape_inference::ShapeHandle ciphertext_shape = c->input(0);
         shape_inference::ShapeHandle plaintext_shape;
-        auto rank = c->Rank(ciphertext_shape);
-        if (rank == 0)
-            plaintext_shape = c->MakeShape({});
-        else
+        int32 rank = c->Rank(ciphertext_shape);
+        if (rank >= 1) {
             TF_RETURN_IF_ERROR(c->Subshape(ciphertext_shape, 0, rank-1, &plaintext_shape));
+        } else {
+            plaintext_shape = c->MakeShape({});
+        }
         c->set_output(0, plaintext_shape);
         return Status::OK();
     });
