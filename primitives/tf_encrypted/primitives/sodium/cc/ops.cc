@@ -44,6 +44,20 @@ REGISTER_OP("SodiumEasyBoxSealDetached")
     .Output("mac: uint8")
     .SetIsStateful()
     .SetShapeFn([](shape_inference::InferenceContext* c){
+
+        //
+        // Try to patch input shapes; however, some may not be known
+        // yet so only enforce match in kernel
+        //
+
+        c->MergeInput(1, c->MakeShape({crypto_box_NONCEBYTES}));
+        c->MergeInput(2, c->MakeShape({crypto_box_PUBLICKEYBYTES}));
+        c->MergeInput(3, c->MakeShape({crypto_box_SECRETKEYBYTES}));
+
+        //
+        // Compute output shapes
+        //
+
         tensorflow::DataType plaintext_dtype;
         TF_RETURN_IF_ERROR(c->GetAttr("plaintext_dtype", &plaintext_dtype));
         int plaintext_dtype_size = tensorflow::DataTypeSize(plaintext_dtype);
@@ -69,6 +83,21 @@ REGISTER_OP("SodiumEasyBoxOpenDetached")
     .Output("plaintext: plaintext_dtype")
     .SetIsStateful()
     .SetShapeFn([](shape_inference::InferenceContext* c){
+
+        //
+        // Try to patch input shapes; however, some may not be known
+        // yet so only enforce match in kernel
+        //
+
+        c->MergeInput(1, c->MakeShape({crypto_box_MACBYTES}));
+        c->MergeInput(2, c->MakeShape({crypto_box_NONCEBYTES}));
+        c->MergeInput(3, c->MakeShape({crypto_box_PUBLICKEYBYTES}));
+        c->MergeInput(4, c->MakeShape({crypto_box_SECRETKEYBYTES}));
+
+        //
+        // Compute output shape
+        //
+
         shape_inference::ShapeHandle ciphertext_shape = c->input(0);
         shape_inference::ShapeHandle plaintext_shape;
         int32 rank = c->Rank(ciphertext_shape);
@@ -78,5 +107,6 @@ REGISTER_OP("SodiumEasyBoxOpenDetached")
             plaintext_shape = c->MakeShape({});
         }
         c->set_output(0, plaintext_shape);
+
         return Status::OK();
     });
