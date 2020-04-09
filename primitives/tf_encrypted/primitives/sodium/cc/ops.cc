@@ -46,13 +46,18 @@ REGISTER_OP("SodiumEasyBoxSealDetached")
     .SetShapeFn([](shape_inference::InferenceContext* c){
 
         //
-        // Try to patch input shapes; however, some may not be known
-        // yet so only enforce match in kernel
+        // Check input shapes; also done in kernel
         //
-
-        c->MergeInput(1, c->MakeShape({crypto_box_NONCEBYTES}));
-        c->MergeInput(2, c->MakeShape({crypto_box_PUBLICKEYBYTES}));
-        c->MergeInput(3, c->MakeShape({crypto_box_SECRETKEYBYTES}));
+        
+        if (!c->MergeInput(1, c->MakeShape({crypto_box_NONCEBYTES}))){
+            return errors::Internal("Nonce not of the required shape");
+        }
+        if (!c->MergeInput(2, c->MakeShape({crypto_box_PUBLICKEYBYTES}))){
+            return errors::Internal("Public key not of the required shape");
+        }
+        if (!c->MergeInput(3, c->MakeShape({crypto_box_SECRETKEYBYTES}))){
+            return errors::Internal("Secret key not of the required shape");
+        }
 
         //
         // Compute output shapes
@@ -60,11 +65,11 @@ REGISTER_OP("SodiumEasyBoxSealDetached")
 
         tensorflow::DataType plaintext_dtype;
         TF_RETURN_IF_ERROR(c->GetAttr("plaintext_dtype", &plaintext_dtype));
-        int plaintext_dtype_size = tensorflow::DataTypeSize(plaintext_dtype);
+        int ciphertext_expansion = tensorflow::DataTypeSize(plaintext_dtype);
+
         shape_inference::ShapeHandle plaintext_shape = c->input(0);
-        shape_inference::ShapeHandle dtype_shape = c->MakeShape({plaintext_dtype_size});
         shape_inference::ShapeHandle ciphertext_shape;
-        TF_RETURN_IF_ERROR(c->Concatenate(plaintext_shape, dtype_shape, &ciphertext_shape));
+        TF_RETURN_IF_ERROR(c->Concatenate(plaintext_shape, c->MakeShape({ciphertext_expansion}), &ciphertext_shape));
         c->set_output(0, ciphertext_shape);
 
         shape_inference::ShapeHandle mac_shape = c->MakeShape({crypto_box_MACBYTES});
@@ -85,27 +90,37 @@ REGISTER_OP("SodiumEasyBoxOpenDetached")
     .SetShapeFn([](shape_inference::InferenceContext* c){
 
         //
-        // Try to patch input shapes; however, some may not be known
-        // yet so only enforce match in kernel
+        // Check input shapes; also done in kernel
         //
 
-        c->MergeInput(1, c->MakeShape({crypto_box_MACBYTES}));
-        c->MergeInput(2, c->MakeShape({crypto_box_NONCEBYTES}));
-        c->MergeInput(3, c->MakeShape({crypto_box_PUBLICKEYBYTES}));
-        c->MergeInput(4, c->MakeShape({crypto_box_SECRETKEYBYTES}));
+        tensorflow::DataType plaintext_dtype;
+        TF_RETURN_IF_ERROR(c->GetAttr("plaintext_dtype", &plaintext_dtype));
+        int ciphertext_expansion = tensorflow::DataTypeSize(plaintext_dtype);
+
+        shape_inference::ShapeHandle ciphertext_shape = c->input(0);
+        TF_RETURN_IF_ERROR(c->WithRankAtLeast(ciphertext_shape, 1, &ciphertext_shape));
+        shape_inference::DimensionHandle last_dim = c->DimKnownRank(ciphertext_shape, -1);
+        TF_RETURN_IF_ERROR(c->WithValue(last_dim, ciphertext_expansion, &last_dim));
+
+        if (!c->MergeInput(1, c->MakeShape({crypto_box_MACBYTES}))){
+            return errors::Internal("Mac not of the required shape");
+        }
+        if (!c->MergeInput(2, c->MakeShape({crypto_box_NONCEBYTES}))){
+            return errors::Internal("Nonce not of the required shape");
+        }
+        if (!c->MergeInput(3, c->MakeShape({crypto_box_PUBLICKEYBYTES}))){
+            return errors::Internal("Public key not of the required shape");
+        }
+        if (!c->MergeInput(4, c->MakeShape({crypto_box_SECRETKEYBYTES}))){
+            return errors::Internal("Secret key not of the required shape");
+        }
 
         //
         // Compute output shape
         //
 
-        shape_inference::ShapeHandle ciphertext_shape = c->input(0);
         shape_inference::ShapeHandle plaintext_shape;
-        int32 rank = c->Rank(ciphertext_shape);
-        if (rank >= 1) {
-            TF_RETURN_IF_ERROR(c->Subshape(ciphertext_shape, 0, rank-1, &plaintext_shape));
-        } else {
-            plaintext_shape = c->MakeShape({});
-        }
+        TF_RETURN_IF_ERROR(c->Subshape(ciphertext_shape, 0, -1, &plaintext_shape));
         c->set_output(0, plaintext_shape);
 
         return Status::OK();

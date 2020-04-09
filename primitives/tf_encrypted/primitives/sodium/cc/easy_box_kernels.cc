@@ -111,20 +111,21 @@ public:
     TensorShape ciphertext_shape = plaintext_t.shape();
     ciphertext_shape.AddDim(sizeof(T));
     OP_REQUIRES_OK(context, context->allocate_output(0, ciphertext_shape, &ciphertext_t));
-    auto ciphertext_data = ciphertext_t->flat<tensorflow::uint8>().data();
-    unsigned char* ciphertext = reinterpret_cast<unsigned char*>(ciphertext_data);
+    auto ciphertext_flat = ciphertext_t->flat<tensorflow::uint8>();
+    unsigned char* ciphertext = reinterpret_cast<unsigned char*>(ciphertext_flat.data());
 
     Tensor* mac_t;
     TensorShape mac_shape({crypto_box_MACBYTES});
     OP_REQUIRES_OK(context, context->allocate_output(1, mac_shape, &mac_t));
-    auto mac_data = mac_t->flat<tensorflow::uint8>().data();
-    unsigned char* mac = reinterpret_cast<unsigned char*>(mac_data);
+    auto mac_flat = mac_t->flat<tensorflow::uint8>();
+    unsigned char* mac = reinterpret_cast<unsigned char*>(mac_flat.data());
 
     //
     // Computation
     //
 
-    auto res = crypto_box_detached(ciphertext, mac, plaintext, ciphertext_shape.num_elements(), nonce, pk_receiver, sk_sender);
+    auto plaintext_size = ciphertext_flat.size();
+    auto res = crypto_box_detached(ciphertext, mac, plaintext, plaintext_size, nonce, pk_receiver, sk_sender);
     OP_REQUIRES(context, res == 0, errors::Internal("libsodium seal operation failed"));
   }
 };
@@ -142,11 +143,17 @@ public:
     //
 
     const Tensor& ciphertext_t = context->input(0);
-    const unsigned char* ciphertext = reinterpret_cast<const unsigned char*>(ciphertext_t.flat<tensorflow::uint8>().data());
+    TensorShape ciphertext_shape = ciphertext_t.shape();
+    OP_REQUIRES(context, ciphertext_shape.dim_size(ciphertext_shape.dims() - 1) == sizeof(T),
+        errors::Internal("Last dim of ciphertext should equal ", sizeof(T)));
+    const auto ciphertext_flat = ciphertext_t.flat<tensorflow::uint8>();
+    const unsigned char* ciphertext = reinterpret_cast<const unsigned char*>(ciphertext_flat.data());
 
     const Tensor& mac_t = context-> input(1);
-    auto mac_data = mac_t.flat<tensorflow::uint8>().data();
-    const unsigned char* mac = reinterpret_cast<const unsigned char*>(mac_data);
+    auto mac_flat = mac_t.flat<tensorflow::uint8>();
+    OP_REQUIRES(context, mac_flat.size() == crypto_box_MACBYTES,
+        errors::Internal("Mac is not of required size ", crypto_box_MACBYTES));
+    const unsigned char* mac = reinterpret_cast<const unsigned char*>(mac_flat.data());
 
     const Tensor& nonce_t = context-> input(2);
     const auto nonce_flat = nonce_t.flat<tensorflow::uint8>();
@@ -171,22 +178,18 @@ public:
     //
 
     Tensor* plaintext_t;
-    auto ciphertext_shape = ciphertext_t.shape();
-    auto last_dim_index = ciphertext_shape.dims() - 1;
-    auto last_dim = ciphertext_shape.dim_size(last_dim_index);
-    OP_REQUIRES(context, last_dim == sizeof(T),
-        errors::Internal("Last dim of ciphertext should equal ", sizeof(T)));
     TensorShape plaintext_shape = ciphertext_shape;
     plaintext_shape.RemoveLastDims(1);
     OP_REQUIRES_OK(context, context->allocate_output(0, plaintext_shape, &plaintext_t));
-    auto plaintext_data = plaintext_t->flat<T>().data();
-    unsigned char* plaintext = reinterpret_cast<unsigned char*>(plaintext_data);
+    auto plaintext_flat = plaintext_t->flat<T>();
+    unsigned char* plaintext = reinterpret_cast<unsigned char*>(plaintext_flat.data());
 
     //
     // Computation
     //
 
-    auto res = crypto_box_open_detached(plaintext, ciphertext, mac, ciphertext_t.shape().num_elements(), nonce, pk_sender, sk_receiver);
+    const auto ciphertext_size = ciphertext_flat.size();
+    auto res = crypto_box_open_detached(plaintext, ciphertext, mac, ciphertext_size, nonce, pk_sender, sk_receiver);
     OP_REQUIRES(context, res == 0, errors::Internal("libsodium open operation failed"));
   }
 };
