@@ -99,8 +99,10 @@ REGISTER_OP("SodiumEasyBoxOpenDetached")
 
         shape_inference::ShapeHandle ciphertext_shape = c->input(0);
         TF_RETURN_IF_ERROR(c->WithRankAtLeast(ciphertext_shape, 1, &ciphertext_shape));
-        shape_inference::DimensionHandle last_dim = c->DimKnownRank(ciphertext_shape, -1);
-        TF_RETURN_IF_ERROR(c->WithValue(last_dim, ciphertext_expansion, &last_dim));
+        int64 last_dim = c->Value(c->Dim(ciphertext_shape, -1));
+        if (last_dim != ciphertext_expansion) {
+            return errors::Internal("Last dimension of ciphertext does not match plaintext_dtype ", last_dim);
+        }
 
         if (!c->MergeInput(1, c->MakeShape({crypto_box_MACBYTES}))){
             return errors::Internal("Mac not of the required shape");
