@@ -52,7 +52,19 @@ class TestEasyBox(parameterized.TestCase):
         {"eager": eager, "m": m, "dtype": dtype, "dtype_size": dtype_size}
         for eager in (True, False)
         for m in (5, [5], [[1, 2], [3, 4]])
-        for dtype, dtype_size in [(tf.uint8, 1), (tf.float32, 4)]
+        for dtype, dtype_size in [
+            (tf.uint8, 1),
+            (tf.uint16, 2),
+            (tf.uint32, 4),
+            (tf.uint64, 8),
+            (tf.int8, 1),
+            (tf.int16, 2),
+            (tf.int32, 4),
+            (tf.int64, 8),
+            (tf.bfloat16, 2),
+            (tf.float32, 4),
+            (tf.float64, 8),
+        ]
     )
     def test_seal_and_open(self, eager, m, dtype, dtype_size):
         with tf_execution_mode(eager):
@@ -82,7 +94,7 @@ class TestEasyBox(parameterized.TestCase):
         assert plaintext_recovered.dtype == plaintext.dtype
         assert plaintext_recovered.shape == plaintext.shape
         if eager:
-            np.testing.assert_equal(plaintext_recovered, np.array(m))
+            np.testing.assert_equal(plaintext_recovered.numpy(), np.array(m))
 
 
 if __name__ == "__main__":

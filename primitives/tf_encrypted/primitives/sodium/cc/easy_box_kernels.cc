@@ -198,11 +198,47 @@ public:
 
 REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxGenKeypair").Device(DEVICE_CPU), SodiumEasyBoxGenKeypair);
 REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxGenNonce").Device(DEVICE_CPU), SodiumEasyBoxGenNonce);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<bfloat16>("plaintext_dtype"), 
+    SodiumEasyBoxSealDetached<bfloat16>);
 REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<float>("plaintext_dtype"), 
     SodiumEasyBoxSealDetached<float>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<double>("plaintext_dtype"), 
+    SodiumEasyBoxSealDetached<double>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<int8>("plaintext_dtype"), 
+    SodiumEasyBoxSealDetached<int8>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<int16>("plaintext_dtype"), 
+    SodiumEasyBoxSealDetached<int16>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<int32>("plaintext_dtype"), 
+    SodiumEasyBoxSealDetached<int32>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<int64>("plaintext_dtype"), 
+    SodiumEasyBoxSealDetached<int64>);
 REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<uint8>("plaintext_dtype"), 
     SodiumEasyBoxSealDetached<uint8>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<uint16>("plaintext_dtype"), 
+    SodiumEasyBoxSealDetached<uint16>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<uint32>("plaintext_dtype"), 
+    SodiumEasyBoxSealDetached<uint32>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxSealDetached").Device(DEVICE_CPU).TypeConstraint<uint64>("plaintext_dtype"), 
+    SodiumEasyBoxSealDetached<uint64>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<bfloat16>("plaintext_dtype"), 
+    SodiumEasyBoxOpenDetached<bfloat16>);
 REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<float>("plaintext_dtype"), 
     SodiumEasyBoxOpenDetached<float>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<double>("plaintext_dtype"), 
+    SodiumEasyBoxOpenDetached<double>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<int8>("plaintext_dtype"), 
+    SodiumEasyBoxOpenDetached<int8>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<int16>("plaintext_dtype"), 
+    SodiumEasyBoxOpenDetached<int16>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<int32>("plaintext_dtype"), 
+    SodiumEasyBoxOpenDetached<int32>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<int64>("plaintext_dtype"), 
+    SodiumEasyBoxOpenDetached<int64>);
 REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<uint8>("plaintext_dtype"), 
     SodiumEasyBoxOpenDetached<uint8>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<uint16>("plaintext_dtype"), 
+    SodiumEasyBoxOpenDetached<uint16>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<uint32>("plaintext_dtype"), 
+    SodiumEasyBoxOpenDetached<uint32>);
+REGISTER_KERNEL_BUILDER(Name("SodiumEasyBoxOpenDetached").Device(DEVICE_CPU).TypeConstraint<uint64>("plaintext_dtype"), 
+    SodiumEasyBoxOpenDetached<uint64>);
