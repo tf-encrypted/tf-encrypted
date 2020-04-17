@@ -35,5 +35,6 @@ py_test(
     main = "python/easy_box_test.py",
     deps = [
         ":sodium_py",
+        "//tf_encrypted/test:test_py",
     ],
 )
