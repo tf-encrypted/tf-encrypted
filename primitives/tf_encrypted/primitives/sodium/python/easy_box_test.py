@@ -1,12 +1,12 @@
 # pylint: disable=missing-docstring
 import unittest
-from absl.testing import parameterized
 
 import numpy as np
 import tensorflow as tf
+from absl.testing import parameterized
 
-from tf_encrypted.test import tf_execution_context
 from tf_encrypted.primitives.sodium.python import easy_box
+from tf_encrypted.test import tf_execution_context
 
 
 class TestEasyBox(parameterized.TestCase):
