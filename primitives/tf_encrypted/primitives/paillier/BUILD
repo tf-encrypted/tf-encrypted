@@ -4,15 +4,16 @@ py_library(
     name = "paillier_py",
     srcs = ([
         "__init__.py",
+        "primitives.py",
     ]),
 )
 
 py_test(
     name = "paillier_py_test",
     srcs = [
-        "python/easy_box_test.py",
+        "primitives_test.py",
     ],
-    main = "python/easy_box_test.py",
+    main = "primitives_test.py",
     deps = [
         ":paillier_py",
     ],

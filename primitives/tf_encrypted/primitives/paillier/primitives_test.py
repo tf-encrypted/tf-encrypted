@@ -6,83 +6,61 @@ import numpy as np
 import tensorflow as tf
 from absl.testing import parameterized
 
-from tf_encrypted.primitives.sodium.python import easy_box
+from tf_encrypted.primitives import paillier
+from tf_encrypted.test import tf_execution_context
 
 
-def tf_execution_mode(eager):
-    if not eager:
-        return tf.Graph().as_default()
-    return contextlib.suppress()
-
-
-class TestExecutionMode(parameterized.TestCase):
-    @parameterized.parameters(True, False)
-    def test_tf_execution_mode(self, eager: bool):
-        with tf_execution_mode(eager):
-            assert tf.executing_eagerly() == eager
-
-
-class TestEasyBox(parameterized.TestCase):
+class EncryptionTest(parameterized.TestCase):
     @parameterized.parameters(
-        {"eager": True}, {"eager": False},
+        {"run_eagerly": run_eagerly} for run_eagerly in (True, False)
     )
-    def test_gen_keypair(self, eager):
-        with tf_execution_mode(eager):
-            pk, sk = easy_box.gen_keypair()
+    def test_encrypt_decrypt(self, run_eagerly):
+        p = np.array([["200000005627"]])
+        q = np.array([["200000005339"]])
+        n = np.array([["40000002193200030042553"]])
 
-        assert isinstance(pk, easy_box.PublicKey), type(pk)
-        assert pk.raw.dtype == tf.uint8
-        assert pk.raw.shape == (32,)
+        x = np.array([[12345]]).astype(np.int32)
 
-        assert isinstance(sk, easy_box.SecretKey), type(sk)
-        assert sk.raw.dtype == tf.uint8
-        assert sk.raw.shape == (32,)
+        context = tf_execution_context(run_eagerly)
+        with context.scope():
+            dk = paillier.DecryptionKey(p, q)
+            ek = paillier.EncryptionKey(n)
 
-    @parameterized.parameters(True, False)
-    def test_gen_nonce(self, eager):
-        with tf_execution_mode(eager):
-            nonce = easy_box.gen_nonce()
+            r = paillier.gen_nonce(ek)
+            c = paillier.encrypt(ek, x, r)
+            y = paillier.decrypt(dk, c, dtype=tf.int32)
 
-        assert nonce.raw.dtype == tf.uint8
-        assert nonce.raw.shape == (24,)
-        assert isinstance(nonce, easy_box.Nonce), type(nonce)
-        assert isinstance(nonce.raw, tf.Tensor)
+        np.testing.assert_equal(context.evaluate(y).astype(np.int32), x)
 
     @parameterized.parameters(
-        {"eager": eager, "m": m, "dtype": dtype, "dtype_size": dtype_size}
-        for eager in (True, False)
-        for m in (5, [5], [[1, 2], [3, 4]])
-        for dtype, dtype_size in [(tf.uint8, 1), (tf.float32, 4)]
+        {"run_eagerly": run_eagerly} for run_eagerly in (True, False)
     )
-    def test_seal_and_open(self, eager, m, dtype, dtype_size):
-        with tf_execution_mode(eager):
-            pk_s, sk_s = easy_box.gen_keypair()
-            pk_r, sk_r = easy_box.gen_keypair()
+    def test_add(self, run_eagerly):
+        p = np.array([["200000005627"]])
+        q = np.array([["200000005339"]])
+        n = np.array([["40000002193200030042553"]])
 
-            plaintext = tf.constant(m, dtype=dtype)
+        x0 = np.array([[12345]])
+        x1 = np.array([[12345]])
+        expected = x0 + x1
 
-            nonce = easy_box.gen_nonce()
-            ciphertext, mac = easy_box.seal_detached(plaintext, nonce, pk_r, sk_s)
+        context = tf_execution_context(run_eagerly)
+        with context.scope():
+            dk = paillier.DecryptionKey(p, q)
+            ek = paillier.EncryptionKey(n)
 
-            plaintext_recovered = easy_box.open_detached(
-                ciphertext, mac, nonce, pk_s, sk_r, plaintext.dtype
-            )
+            r0 = paillier.gen_nonce(ek)
+            c0 = paillier.encrypt(ek, x0, r0)
 
-        assert isinstance(ciphertext, easy_box.Ciphertext)
-        assert isinstance(ciphertext.raw, tf.Tensor)
-        assert ciphertext.raw.dtype == tf.uint8
-        assert ciphertext.raw.shape == plaintext.shape + (dtype_size,)
+            r1 = paillier.gen_nonce(ek)
+            c1 = paillier.encrypt(ek, x1, r1)
 
-        assert isinstance(mac, easy_box.Mac)
-        assert isinstance(mac.raw, tf.Tensor)
-        assert mac.raw.dtype == tf.uint8
-        assert mac.raw.shape == (16,)
+            c = paillier.add(ek, c0, c1)
+            y = paillier.decrypt(dk, c, dtype=tf.int32)
 
-        assert isinstance(plaintext_recovered, tf.Tensor)
-        assert plaintext_recovered.dtype == plaintext.dtype
-        assert plaintext_recovered.shape == plaintext.shape
-        if eager:
-            np.testing.assert_equal(plaintext_recovered, np.array(m))
+        np.testing.assert_equal(
+            context.evaluate(y).astype(np.int32), expected.astype(np.int32)
+        )
 
 
 if __name__ == "__main__":
