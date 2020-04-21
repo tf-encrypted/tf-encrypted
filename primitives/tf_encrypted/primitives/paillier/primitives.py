@@ -41,32 +41,37 @@ def gen_keypair(dtype: tf.DType = tf.uint8):
     return EncryptionKey(n), DecryptionKey(p, q)
 
 
-class Nonce:
-    def __init__(self, raw_nonce):
-        self.raw = tf_big.convert_to_tensor(raw_nonce)
+class Randomness:
+    def __init__(self, raw_randomness):
+        self.raw = tf_big.convert_to_tensor(raw_randomness)
 
 
-def gen_nonce(ek, shape, dtype: tf.DType = tf.uint8):
-    return Nonce(tf_big.random_uniform(shape=shape, maxval=ek.n))
+def gen_randomness(ek, shape, dtype: tf.DType = tf.uint8):
+    return Randomness(tf_big.random_uniform(shape=shape, maxval=ek.n))
 
 
 class Ciphertext:
-    def __init__(self, raw_ciphertext, ek: Optional[EncryptionKey] = None):
-        self.raw = tf_big.convert_to_tensor(raw_ciphertext)
+    def __init__(self, ek: EncryptionKey, raw_ciphertext):
         self.ek = ek
+        self.raw = tf_big.convert_to_tensor(raw_ciphertext)
 
     def __add__(self, other):
-        assert (
-            self.ek is not None
-        ), "Please provide encryption key before performing this operation"
         assert self.ek == other.ek
         return add(self.ek, self, other)
 
 
-def encrypt(ek, plaintext: tf.Tensor, nonce: Nonce, dtype: tf.DType = tf.uint8):
+def encrypt(
+    ek,
+    plaintext: tf.Tensor,
+    randomness: Optional[Randomness] = None,
+    dtype: tf.DType = tf.uint8,
+):
     x = tf_big.convert_to_tensor(plaintext)
-    r = nonce.raw
+
+    randomness = randomness or gen_randomness(ek=ek, shape=x.shape, dtype=tf.variant)
+    r = randomness.raw
     assert r.shape == x.shape
+
     gx = tf_big.pow(ek.g, x, ek.nn)
     rn = tf_big.pow(r, ek.n, ek.nn)
     c = gx * rn % ek.nn
@@ -78,7 +83,7 @@ def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.DType):
     gxd = tf_big.pow(c, dk.d1, dk.nn)
     xd = (gxd - 1) // dk.n
     x = (xd * dk.d2) % dk.n
-    assert x.dtype == tf.variant
+    assert x.dtype == tf.variant, (c.dtype, x.dtype)
     if dtype == tf.variant:
         return x
     return tf_big.convert_from_tensor(x, dtype=dtype)
@@ -89,7 +94,7 @@ def refresh(
 ):
     dtype = dtype or ciphertext.raw.dtype
     c = ciphertext.raw
-    s = gen_nonce(ek, c.shape).raw
+    s = gen_randomness(ek=ek, shape=c.shape, dtype=tf.variant).raw
     sn = tf_big.pow(s, ek.n, ek.nn)
     d = (c * sn) % ek.nn
     return Ciphertext(ek, d)

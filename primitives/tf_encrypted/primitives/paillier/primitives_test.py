@@ -25,7 +25,7 @@ class EncryptionTest(parameterized.TestCase):
             dk = paillier.DecryptionKey(p, q)
             ek = paillier.EncryptionKey(n)
 
-            r = paillier.gen_nonce(ek)
+            r = paillier.gen_randomness(ek, shape=x.shape)
             c = paillier.encrypt(ek, x, r)
             y = paillier.decrypt(dk, c, dtype=tf.int32)
 
@@ -48,10 +48,10 @@ class EncryptionTest(parameterized.TestCase):
             dk = paillier.DecryptionKey(p, q)
             ek = paillier.EncryptionKey(n)
 
-            r0 = paillier.gen_nonce(ek)
+            r0 = paillier.gen_randomness(ek, shape=x0.shape)
             c0 = paillier.encrypt(ek, x0, r0)
 
-            r1 = paillier.gen_nonce(ek)
+            r1 = paillier.gen_randomness(ek, shape=x1.shape)
             c1 = paillier.encrypt(ek, x1, r1)
 
             c = paillier.add(ek, c0, c1)

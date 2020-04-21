@@ -16,5 +16,6 @@ py_test(
     main = "primitives_test.py",
     deps = [
         ":paillier_py",
+        "//tf_encrypted/test:test_py",
     ],
 )
