@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import tensorflow as tf
 
@@ -31,7 +33,7 @@ class DecryptionKey:
         self.e = tf_big.inv(n, order_of_n)
 
 
-def gen_keypair():
+def gen_keypair(dtype: tf.DType = tf.uint8):
     # TODO
     p = tf_big.convert_to_tensor(np.array([[200000005627]]))
     q = tf_big.convert_to_tensor(np.array([[200000005339]]))
@@ -44,52 +46,80 @@ class Nonce:
         self.raw = tf_big.convert_to_tensor(raw_nonce)
 
 
-def gen_nonce(ek, shape):
+def gen_nonce(ek, shape, dtype: tf.DType = tf.uint8):
     return Nonce(tf_big.random_uniform(shape=shape, maxval=ek.n))
 
 
 class Ciphertext:
-    def __init__(self, raw_ciphertext):
+    def __init__(self, raw_ciphertext, ek: Optional[EncryptionKey] = None):
         self.raw = tf_big.convert_to_tensor(raw_ciphertext)
+        self.ek = ek
+
+    def __add__(self, other):
+        assert (
+            self.ek is not None
+        ), "Please provide encryption key before performing this operation"
+        assert self.ek == other.ek
+        return add(self.ek, self, other)
 
 
-def encrypt(ek, plaintext, nonce):
+def encrypt(ek, plaintext: tf.Tensor, nonce: Nonce, dtype: tf.DType = tf.uint8):
     x = tf_big.convert_to_tensor(plaintext)
     r = nonce.raw
     assert r.shape == x.shape
     gx = tf_big.pow(ek.g, x, ek.nn)
     rn = tf_big.pow(r, ek.n, ek.nn)
     c = gx * rn % ek.nn
-    return Ciphertext(c)
+    return Ciphertext(ek, c)
 
 
-def decrypt(dk, ciphertext, dtype=tf.int32):
+def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.DType):
     c = ciphertext.raw
     gxd = tf_big.pow(c, dk.d1, dk.nn)
     xd = (gxd - 1) // dk.n
     x = (xd * dk.d2) % dk.n
-    return tf_big.convert_from_tensor(x, dtype=dtype) if dtype else x
+    assert x.dtype == tf.variant
+    if dtype == tf.variant:
+        return x
+    return tf_big.convert_from_tensor(x, dtype=dtype)
 
 
-def refresh(ek, ciphertext):
+def refresh(
+    ek: EncryptionKey, ciphertext: Ciphertext, dtype: Optional[tf.DType] = None
+):
+    dtype = dtype or ciphertext.raw.dtype
     c = ciphertext.raw
     s = gen_nonce(ek, c.shape).raw
     sn = tf_big.pow(s, ek.n, ek.nn)
     d = (c * sn) % ek.nn
-    return Ciphertext(d)
+    return Ciphertext(ek, d)
 
 
-def add(ek, ciphertext_lhs, ciphertext_rhs, do_refresh=True):
-    c0 = ciphertext_lhs.raw
-    c1 = ciphertext_rhs.raw
+def add(
+    ek: EncryptionKey,
+    lhs: Ciphertext,
+    rhs: Ciphertext,
+    do_refresh: bool = True,
+    dtype: Optional[tf.DType] = None,
+):
+    dtype = dtype or lhs.raw.dtype or rhs.raw.dtype
+    c0 = lhs.raw
+    c1 = rhs.raw
     c = (c0 * c1) % ek.nn
-    c = Ciphertext(c)
-    return refresh(ek, c) if do_refresh else c
+    c = Ciphertext(ek, c)
+    return refresh(ek, c, dtype=dtype) if do_refresh else c
 
 
-def mul(ek, ciphertext, plaintext, do_refresh=True):
-    c = ciphertext.raw
-    k = tf_big.convert_to_tensor(plaintext)
+def mul(
+    ek: EncryptionKey,
+    lhs: Ciphertext,
+    rhs: tf.Tensor,
+    do_refresh: bool = True,
+    dtype: Optional[tf.DType] = None,
+):
+    dtype = dtype or lhs.raw.dtype
+    c = lhs.raw
+    k = tf_big.convert_to_tensor(rhs)
     d = tf_big.pow(c, k) % ek.nn
-    d = Ciphertext(d)
-    return refresh(ek, d) if do_refresh else d
+    d = Ciphertext(ek, d)
+    return refresh(ek, d, dtype=dtype) if do_refresh else d
