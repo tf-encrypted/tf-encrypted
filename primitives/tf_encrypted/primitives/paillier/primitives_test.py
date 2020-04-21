@@ -1,5 +1,4 @@
 # pylint: disable=missing-docstring
-import contextlib
 import unittest
 
 import numpy as np
