@@ -33,11 +33,8 @@ class DecryptionKey:
         self.e = tf_big.inv(n, order_of_n)
 
 
-def gen_keypair(dtype: tf.DType = tf.uint8):
-    # TODO
-    p = tf_big.convert_to_tensor(np.array([[200000005627]]))
-    q = tf_big.convert_to_tensor(np.array([[200000005339]]))
-    n = p * q
+def gen_keypair():
+    p, q, n = tf_big.random_rsa_modulus(bitlength=1024)
     return EncryptionKey(n), DecryptionKey(p, q)
 
 
@@ -83,7 +80,8 @@ def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.DType):
     gxd = tf_big.pow(c, dk.d1, dk.nn)
     xd = (gxd - 1) // dk.n
     x = (xd * dk.d2) % dk.n
-    assert x.dtype == tf.variant, (c.dtype, x.dtype)
+
+    assert x._raw.dtype == tf.variant, (c.dtype, x.dtype)
     if dtype == tf.variant:
         return x
     return tf_big.convert_from_tensor(x, dtype=dtype)

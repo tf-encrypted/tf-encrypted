@@ -14,16 +14,12 @@ class EncryptionTest(parameterized.TestCase):
         {"run_eagerly": run_eagerly} for run_eagerly in (True, False)
     )
     def test_encrypt_decrypt(self, run_eagerly):
-        p = np.array([["200000005627"]])
-        q = np.array([["200000005339"]])
-        n = np.array([["40000002193200030042553"]])
 
         x = np.array([[12345]]).astype(np.int32)
 
         context = tf_execution_context(run_eagerly)
         with context.scope():
-            dk = paillier.DecryptionKey(p, q)
-            ek = paillier.EncryptionKey(n)
+            ek, dk = paillier.gen_keypair()
 
             r = paillier.gen_randomness(ek, shape=x.shape)
             c = paillier.encrypt(ek, x, r)
@@ -35,9 +31,6 @@ class EncryptionTest(parameterized.TestCase):
         {"run_eagerly": run_eagerly} for run_eagerly in (True, False)
     )
     def test_add(self, run_eagerly):
-        p = np.array([["200000005627"]])
-        q = np.array([["200000005339"]])
-        n = np.array([["40000002193200030042553"]])
 
         x0 = np.array([[12345]])
         x1 = np.array([[12345]])
@@ -45,8 +38,7 @@ class EncryptionTest(parameterized.TestCase):
 
         context = tf_execution_context(run_eagerly)
         with context.scope():
-            dk = paillier.DecryptionKey(p, q)
-            ek = paillier.EncryptionKey(n)
+            ek, dk = paillier.gen_keypair()
 
             r0 = paillier.gen_randomness(ek, shape=x0.shape)
             c0 = paillier.encrypt(ek, x0, r0)
