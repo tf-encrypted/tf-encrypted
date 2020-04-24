@@ -28,9 +28,11 @@ class EncryptionTest(parameterized.TestCase):
         np.testing.assert_equal(context.evaluate(y).astype(np.int32), x)
 
     @parameterized.parameters(
-        {"run_eagerly": run_eagerly} for run_eagerly in (True, False)
+        {"run_eagerly": run_eagerly, "dtype": dtype} 
+        for run_eagerly in (True, False)
+        for dtype in (tf.variant, tf.string)
     )
-    def test_add(self, run_eagerly):
+    def test_add(self, run_eagerly, dtype):
 
         x0 = np.array([[12345]])
         x1 = np.array([[12345]])
@@ -41,10 +43,10 @@ class EncryptionTest(parameterized.TestCase):
             ek, dk = paillier.gen_keypair()
 
             r0 = paillier.gen_randomness(ek, shape=x0.shape)
-            c0 = paillier.encrypt(ek, x0, r0)
+            c0 = paillier.encrypt(ek, x0, r0, dtype)
 
             r1 = paillier.gen_randomness(ek, shape=x1.shape)
-            c1 = paillier.encrypt(ek, x1, r1)
+            c1 = paillier.encrypt(ek, x1, r1, dtype)
 
             c = paillier.add(ek, c0, c1)
             y = paillier.decrypt(dk, c, dtype=tf.int32)

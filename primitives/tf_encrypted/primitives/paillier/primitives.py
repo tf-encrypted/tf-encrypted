@@ -50,7 +50,7 @@ def gen_randomness(ek, shape, dtype: tf.DType = tf.uint8):
 class Ciphertext:
     def __init__(self, ek: EncryptionKey, raw_ciphertext):
         self.ek = ek
-        self.raw = tf_big.convert_to_tensor(raw_ciphertext)
+        self.raw = raw_ciphertext
 
     def __add__(self, other):
         assert self.ek == other.ek
@@ -61,7 +61,7 @@ def encrypt(
     ek,
     plaintext: tf.Tensor,
     randomness: Optional[Randomness] = None,
-    dtype: tf.DType = tf.uint8,
+    dtype: tf.DType = tf.variant,
 ):
     x = tf_big.convert_to_tensor(plaintext)
 
@@ -72,11 +72,16 @@ def encrypt(
     gx = tf_big.pow(ek.g, x, ek.nn)
     rn = tf_big.pow(r, ek.n, ek.nn)
     c = gx * rn % ek.nn
+
+    if dtype != tf.variant:
+        c = tf_big.convert_from_tensor(c, dtype=dtype)
+
     return Ciphertext(ek, c)
 
 
 def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.DType):
-    c = ciphertext.raw
+    c = tf_big.convert_to_tensor(ciphertext.raw)
+
     gxd = tf_big.pow(c, dk.d1, dk.nn)
     xd = (gxd - 1) // dk.n
     x = (xd * dk.d2) % dk.n
@@ -106,8 +111,8 @@ def add(
     dtype: Optional[tf.DType] = None,
 ):
     dtype = dtype or lhs.raw.dtype or rhs.raw.dtype
-    c0 = lhs.raw
-    c1 = rhs.raw
+    c0 = tf_big.convert_to_tensor(lhs.raw)
+    c1 = tf_big.convert_to_tensor(rhs.raw)
     c = (c0 * c1) % ek.nn
     c = Ciphertext(ek, c)
     return refresh(ek, c, dtype=dtype) if do_refresh else c
