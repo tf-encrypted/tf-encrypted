@@ -33,8 +33,8 @@ class DecryptionKey:
         self.e = tf_big.inv(n, order_of_n)
 
 
-def gen_keypair():
-    p, q, n = tf_big.random_rsa_modulus(bitlength=1024)
+def gen_keypair(bitlength=2048):
+    p, q, n = tf_big.random_rsa_modulus(bitlength=bitlength)
     return EncryptionKey(n), DecryptionKey(p, q)
 
 
