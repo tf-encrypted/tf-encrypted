@@ -11,7 +11,7 @@ tf_big.set_secure_default(True)
 class EncryptionKey:
     def __init__(self, n):
         n = tf_big.convert_to_tensor(n)
-        print("N Tensor", n._raw)
+
         self.n = n
         self.nn = n * n
         self.g = 1 + n
