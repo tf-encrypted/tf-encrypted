@@ -15,7 +15,7 @@ class EncryptionTest(parameterized.TestCase):
     )
     def test_encrypt_decrypt(self, run_eagerly):
 
-        x = np.array([[12345]]).astype(np.int32)
+        x = np.array([[12345, 13243]]).astype(np.int32)
 
         context = tf_execution_context(run_eagerly)
         with context.scope():
@@ -34,8 +34,8 @@ class EncryptionTest(parameterized.TestCase):
     )
     def test_add(self, run_eagerly, dtype):
 
-        x0 = np.array([[12345]])
-        x1 = np.array([[12345]])
+        x0 = np.array([[12345, 123243]])
+        x1 = np.array([[12345, 434234]])
         expected = x0 + x1
 
         context = tf_execution_context(run_eagerly)
