@@ -16,6 +16,19 @@ class EncryptionKey:
         self.nn = n * n
         self.g = 1 + n
 
+    def convert_to_tensor(self):
+        if not isinstance(self.n, tf_big.Tensor):
+            self.n = tf_big.convert_to_tensor(self.n)
+        if not isinstance(self.nn, tf_big.Tensor):
+            self.nn = tf_big.convert_to_tensor(self.nn)
+        if not isinstance(self.g, tf_big.Tensor):
+            self.g = tf_big.convert_to_tensor(self.g)
+
+    def convert_from_tensor(self, dtype=tf.variant):
+        if dtype != tf.variant:
+            self.n = tf_big.convert_from_tensor(self.n, dtype)
+            self.nn = tf_big.convert_from_tensor(self.nn, dtype)
+            self.g = tf_big.convert_from_tensor(self.g, dtype)
 
 class DecryptionKey:
     def __init__(self, p, q):
@@ -32,10 +45,37 @@ class DecryptionKey:
         self.d2 = tf_big.inv(order_of_n, n)
         self.e = tf_big.inv(n, order_of_n)
 
+    def convert_to_tensor(self):
+        if not isinstance(self.n, tf_big.Tensor):
+            self.n = tf_big.convert_to_tensor(self.n)
+        if not isinstance(self.nn, tf_big.Tensor):
+            self.nn = tf_big.convert_to_tensor(self.nn)
+        if not isinstance(self.g, tf_big.Tensor):
+            self.g = tf_big.convert_to_tensor(self.g)
+        if not isinstance(self.n, tf_big.Tensor):
+            self.d1 = tf_big.convert_to_tensor(self.d1)
+        if not isinstance(self.d2, tf_big.Tensor):
+            self.d2 = tf_big.convert_to_tensor(self.d2)
+        if not isinstance(self.e, tf_big.Tensor):
+            self.e = tf_big.convert_to_tensor(self.e)
 
-def gen_keypair(bitlength=2048):
+    def convert_from_tensor(self, dtype=tf.variant):
+        if dtype != tf.variant:
+            self.n = tf_big.convert_from_tensor(self.n, dtype)
+            self.nn = tf_big.convert_from_tensor(self.nn, dtype)
+            self.g = tf_big.convert_from_tensor(self.g, dtype)
+            self.d1 = tf_big.convert_from_tensor(self.d1, dtype)
+            self.d2 = tf_big.convert_from_tensor(self.d2, dtype)
+            self.e = tf_big.convert_from_tensor(self.e, dtype)
+
+
+def gen_keypair(bitlength=2048, dtype=tf.variant):
     p, q, n = tf_big.random_rsa_modulus(bitlength=bitlength)
-    return EncryptionKey(n), DecryptionKey(p, q)
+    ek = EncryptionKey(n)
+    dk = DecryptionKey(p, q)
+    ek.convert_from_tensor(dtype=dtype)
+    dk.convert_from_tensor(dtype=dtype)
+    return ek, dk
 
 
 class Randomness:
@@ -64,6 +104,7 @@ def encrypt(
     dtype: tf.DType = tf.variant,
 ):
     x = tf_big.convert_to_tensor(plaintext)
+    ek.convert_to_tensor()
 
     randomness = randomness or gen_randomness(ek=ek, shape=x.shape, dtype=tf.variant)
     r = randomness.raw
@@ -79,8 +120,9 @@ def encrypt(
     return Ciphertext(ek, c)
 
 
-def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.DType):
+def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.variant):
     c = tf_big.convert_to_tensor(ciphertext.raw)
+    dk.convert_to_tensor()
 
     gxd = tf_big.pow(c, dk.d1, dk.nn)
     xd = (gxd - 1) // dk.n
