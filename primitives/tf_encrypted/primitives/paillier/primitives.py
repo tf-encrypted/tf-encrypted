@@ -80,11 +80,14 @@ def gen_keypair(bitlength=2048, dtype=tf.variant):
 
 class Randomness:
     def __init__(self, raw_randomness):
-        self.raw = tf_big.convert_to_tensor(raw_randomness)
+        self.raw = raw_randomness
 
 
-def gen_randomness(ek, shape, dtype: tf.DType = tf.uint8):
-    return Randomness(tf_big.random_uniform(shape=shape, maxval=ek.n))
+def gen_randomness(ek, shape, dtype: tf.DType = tf.variant):
+    ru = tf_big.random_uniform(shape=shape, maxval=ek.n)
+    if dtype != tf.variant:
+        ru = tf_big.convert_from_tensor(ru, dtype=dtype)
+    return Randomness(ru)
 
 
 class Ciphertext:
@@ -135,13 +138,19 @@ def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.variant):
 
 
 def refresh(
-    ek: EncryptionKey, ciphertext: Ciphertext, dtype: Optional[tf.DType] = None
+    ek: EncryptionKey, ciphertext: Ciphertext, dtype: Optional[tf.DType] = tf.variant
 ):
     dtype = dtype or ciphertext.raw.dtype
     c = ciphertext.raw
     s = gen_randomness(ek=ek, shape=c.shape, dtype=tf.variant).raw
     sn = tf_big.pow(s, ek.n, ek.nn)
     d = (c * sn) % ek.nn
+
+    if dtype == tf.variant:
+        return Ciphertext(ek, d)
+
+    d = tf_big.convert_from_tensor(d, dtype)
+    ek.convert_from_tensor()
     return Ciphertext(ek, d)
 
 
@@ -150,9 +159,10 @@ def add(
     lhs: Ciphertext,
     rhs: Ciphertext,
     do_refresh: bool = True,
-    dtype: Optional[tf.DType] = None,
+    dtype: Optional[tf.DType] = tf.variant,
 ):
     dtype = dtype or lhs.raw.dtype or rhs.raw.dtype
+    ek.convert_to_tensor()
     c0 = tf_big.convert_to_tensor(lhs.raw)
     c1 = tf_big.convert_to_tensor(rhs.raw)
     c = (c0 * c1) % ek.nn
@@ -165,9 +175,10 @@ def mul(
     lhs: Ciphertext,
     rhs: tf.Tensor,
     do_refresh: bool = True,
-    dtype: Optional[tf.DType] = None,
+    dtype: Optional[tf.DType] = tf.variant,
 ):
     dtype = dtype or lhs.raw.dtype
+    ek.convert_to_tensor()
     c = lhs.raw
     k = tf_big.convert_to_tensor(rhs)
     d = tf_big.pow(c, k) % ek.nn

@@ -43,7 +43,7 @@ class EncryptionTest(parameterized.TestCase):
 
         context = tf_execution_context(run_eagerly)
         with context.scope():
-            ek, dk = paillier.gen_keypair()
+            ek, dk = paillier.gen_keypair(dtype=dtype)
 
             r0 = paillier.gen_randomness(ek, shape=x0.shape)
             c0 = paillier.encrypt(ek, x0, r0, dtype)
