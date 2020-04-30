@@ -24,7 +24,7 @@ class EncryptionTest(parameterized.TestCase):
         context = tf_execution_context(run_eagerly)
         with context.scope():
             ek, dk = paillier.gen_keypair(dtype=dtype)
-            r = paillier.gen_randomness(ek, shape=x.shape)
+            r = paillier.gen_randomness(ek, shape=x.shape, dtype=dtype)
             c = paillier.encrypt(ek, x, r, dtype=dtype)
             y = paillier.decrypt(dk, c, dtype=tf.int32)
             
@@ -45,10 +45,10 @@ class EncryptionTest(parameterized.TestCase):
         with context.scope():
             ek, dk = paillier.gen_keypair(dtype=dtype)
 
-            r0 = paillier.gen_randomness(ek, shape=x0.shape)
+            r0 = paillier.gen_randomness(ek, shape=x0.shape, dtype=dtype)
             c0 = paillier.encrypt(ek, x0, r0, dtype)
 
-            r1 = paillier.gen_randomness(ek, shape=x1.shape)
+            r1 = paillier.gen_randomness(ek, shape=x1.shape, dtype=dtype)
             c1 = paillier.encrypt(ek, x1, r1, dtype)
 
             c = paillier.add(ek, c0, c1)

@@ -82,6 +82,10 @@ class Randomness:
     def __init__(self, raw_randomness):
         self.raw = raw_randomness
 
+    def convert_to_tensor(self):
+        if not isinstance(self.raw, tf_big.Tensor):
+            self.raw = tf_big.convert_to_tensor(self.raw)
+
 
 def gen_randomness(ek, shape, dtype: tf.DType = tf.variant):
     ru = tf_big.random_uniform(shape=shape, maxval=ek.n)
@@ -108,8 +112,9 @@ def encrypt(
 ):
     x = tf_big.convert_to_tensor(plaintext)
     ek.convert_to_tensor()
+    randomness.convert_to_tensor()
 
-    randomness = randomness or gen_randomness(ek=ek, shape=x.shape, dtype=tf.variant)
+    randomness = randomness or gen_randomness(ek=ek, shape=x.shape, dtype=dtype)
     r = randomness.raw
     assert r.shape == x.shape
 
@@ -119,11 +124,16 @@ def encrypt(
 
     if dtype != tf.variant:
         c = tf_big.convert_from_tensor(c, dtype=dtype)
+        ek.convert_from_tensor()
 
     return Ciphertext(ek, c)
 
 
-def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.variant):
+def decrypt(
+    dk: DecryptionKey, 
+    ciphertext: Ciphertext, 
+    dtype: Optional[tf.DType] = tf.variant
+):
     c = tf_big.convert_to_tensor(ciphertext.raw)
     dk.convert_to_tensor()
 
@@ -132,25 +142,29 @@ def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.variant):
     x = (xd * dk.d2) % dk.n
 
     assert x._raw.dtype == tf.variant, (c.dtype, x.dtype)
-    if dtype == tf.variant:
-        return x
-    return tf_big.convert_from_tensor(x, dtype=dtype)
+    if dtype != tf.variant:
+        dk.convert_to_tensor()
+        return tf_big.convert_from_tensor(x, dtype=dtype)
+    
+    return x
 
 
 def refresh(
-    ek: EncryptionKey, ciphertext: Ciphertext, dtype: Optional[tf.DType] = tf.variant
+    ek: EncryptionKey, 
+    ciphertext: Ciphertext, 
+    dtype: Optional[tf.DType] = tf.variant
 ):
     dtype = dtype or ciphertext.raw.dtype
     c = ciphertext.raw
-    s = gen_randomness(ek=ek, shape=c.shape, dtype=tf.variant).raw
+    s = gen_randomness(ek=ek, shape=c.shape, dtype=dtype).raw
     sn = tf_big.pow(s, ek.n, ek.nn)
     d = (c * sn) % ek.nn
 
-    if dtype == tf.variant:
+    if dtype != tf.variant:
+        d = tf_big.convert_from_tensor(d, dtype)
+        ek.convert_from_tensor()
         return Ciphertext(ek, d)
 
-    d = tf_big.convert_from_tensor(d, dtype)
-    ek.convert_from_tensor()
     return Ciphertext(ek, d)
 
 
