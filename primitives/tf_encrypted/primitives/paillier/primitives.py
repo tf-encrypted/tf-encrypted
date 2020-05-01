@@ -1,8 +1,6 @@
 from typing import Optional
 
-import numpy as np
 import tensorflow as tf
-
 import tf_big
 
 tf_big.set_secure_default(True)
@@ -29,6 +27,7 @@ class EncryptionKey:
             self.n = tf_big.convert_from_tensor(self.n, dtype)
             self.nn = tf_big.convert_from_tensor(self.nn, dtype)
             self.g = tf_big.convert_from_tensor(self.g, dtype)
+
 
 class DecryptionKey:
     def __init__(self, p, q):
@@ -130,9 +129,7 @@ def encrypt(
 
 
 def decrypt(
-    dk: DecryptionKey, 
-    ciphertext: Ciphertext, 
-    dtype: Optional[tf.DType] = tf.variant
+    dk: DecryptionKey, ciphertext: Ciphertext, dtype: Optional[tf.DType] = tf.variant
 ):
     c = tf_big.convert_to_tensor(ciphertext.raw)
     dk.convert_to_tensor()
@@ -145,14 +142,12 @@ def decrypt(
     if dtype != tf.variant:
         dk.convert_to_tensor()
         return tf_big.convert_from_tensor(x, dtype=dtype)
-    
+
     return x
 
 
 def refresh(
-    ek: EncryptionKey, 
-    ciphertext: Ciphertext, 
-    dtype: Optional[tf.DType] = tf.variant
+    ek: EncryptionKey, ciphertext: Ciphertext, dtype: Optional[tf.DType] = tf.variant
 ):
     dtype = dtype or ciphertext.raw.dtype
     c = ciphertext.raw
