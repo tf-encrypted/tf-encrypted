@@ -7,12 +7,16 @@ tf_big.set_secure_default(True)
 
 
 class EncryptionKey:
+    """Paillier encryption key.
+
+    Note that the generator `g` has been fixed to `1 + n`.
+    """
+
     def __init__(self, n):
         n = tf_big.convert_to_tensor(n)
 
         self.n = n
         self.nn = n * n
-        self.g = 1 + n
 
     def export(self, dtype: tf.DType = tf.string):
         return tf_big.convert_from_tensor(self.n, dtype=dtype)
@@ -25,7 +29,6 @@ class DecryptionKey:
 
         self.n = self.p * self.q
         self.nn = self.n * self.n
-        self.g = 1 + self.n
 
         order_of_n = (self.p - 1) * (self.q - 1)
         self.d1 = order_of_n
@@ -80,7 +83,7 @@ def encrypt(
     r = randomness.raw
     assert r.shape == x.shape
 
-    gx = tf_big.pow(ek.g, x, ek.nn)
+    gx = 1 + (ek.n * x) % ek.nn
     rn = tf_big.pow(r, ek.n, ek.nn)
     c = gx * rn % ek.nn
     return Ciphertext(ek, c)
