@@ -1,6 +1,7 @@
 from .primitives import Ciphertext
 from .primitives import DecryptionKey
 from .primitives import EncryptionKey
+from .primitives import Randomness
 from .primitives import add
 from .primitives import decrypt
 from .primitives import encrypt
@@ -13,6 +14,7 @@ __all__ = [
     "Ciphertext",
     "DecryptionKey",
     "EncryptionKey",
+    "Randomness",
     "add",
     "decrypt",
     "encrypt",
