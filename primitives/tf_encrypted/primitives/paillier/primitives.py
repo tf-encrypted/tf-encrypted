@@ -64,7 +64,7 @@ def gen_randomness(ek, shape):
 class Ciphertext:
     def __init__(self, ek: EncryptionKey, raw_ciphertext):
         self.ek = ek
-        self.raw = raw_ciphertext
+        self.raw = tf_big.convert_to_tensor(raw_ciphertext)
 
     def export(self, dtype: tf.DType = tf.string):
         return tf_big.convert_from_tensor(self.raw, dtype=dtype)
