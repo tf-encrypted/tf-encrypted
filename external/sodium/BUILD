@@ -12,4 +12,12 @@ configure_make(
     lib_source = "@sodium//:.",
     static_libraries = ["libsodium.a"],
     visibility = ["//visibility:public"],
+    # libsodium script uses its own linker, so explicitly unset the default
+    # libtool from rules_foreign_cc
+    # (otherwise, if the libtool from bazel's toolchain is supplied,
+    # the build script has problems with passing output file to libtool)
+    # see bazelbuild/rules_foreign_cc#315
+    configure_env_vars = {
+        "AR": "",
+    },
 )
