@@ -18,8 +18,8 @@ class EncryptionKey:
         self.n = n
         self.nn = n * n
 
-    def export(self, dtype: tf.DType = tf.string):
-        return tf_big.convert_from_tensor(self.n, dtype=dtype)
+    def export(self, dtype: tf.DType = tf.string, **kwargs):
+        return tf_big.convert_from_tensor(self.n, dtype=dtype, **kwargs)
 
 
 class DecryptionKey:
@@ -35,10 +35,10 @@ class DecryptionKey:
         self.d2 = tf_big.inv(order_of_n, self.n)
         self.e = tf_big.inv(self.n, order_of_n)
 
-    def export(self, dtype: tf.DType = tf.string):
+    def export(self, dtype: tf.DType = tf.string, **kwargs):
         return (
-            tf_big.convert_from_tensor(self.p, dtype=dtype),
-            tf_big.convert_from_tensor(self.q, dtype=dtype),
+            tf_big.convert_from_tensor(self.p, dtype=dtype, **kwargs),
+            tf_big.convert_from_tensor(self.q, dtype=dtype, **kwargs),
         )
 
 
@@ -53,8 +53,8 @@ class Randomness:
     def __init__(self, raw_randomness):
         self.raw = tf_big.convert_to_tensor(raw_randomness)
 
-    def export(self, dtype: tf.DType = tf.string):
-        return tf_big.convert_from_tensor(self.raw, dtype=dtype)
+    def export(self, dtype: tf.DType = tf.string, **kwargs):
+        return tf_big.convert_from_tensor(self.raw, dtype=dtype, **kwargs)
 
 
 def gen_randomness(ek, shape):
@@ -66,8 +66,8 @@ class Ciphertext:
         self.ek = ek
         self.raw = tf_big.convert_to_tensor(raw_ciphertext)
 
-    def export(self, dtype: tf.DType = tf.string):
-        return tf_big.convert_from_tensor(self.raw, dtype=dtype)
+    def export(self, dtype: tf.DType = tf.string, **kwargs):
+        return tf_big.convert_from_tensor(self.raw, dtype=dtype, **kwargs)
 
     def __add__(self, other):
         assert self.ek == other.ek
@@ -89,7 +89,9 @@ def encrypt(
     return Ciphertext(ek, c)
 
 
-def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.DType = tf.int32):
+def decrypt(
+    dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.DType = tf.int32, **kwargs
+):
     c = ciphertext.raw
 
     gxd = tf_big.pow(c, dk.d1, dk.nn)
@@ -99,7 +101,7 @@ def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.DType = tf.int3
     if dtype == tf.variant:
         return x
 
-    return tf_big.convert_from_tensor(x, dtype=dtype)
+    return tf_big.convert_from_tensor(x, dtype=dtype, **kwargs)
 
 
 def refresh(ek: EncryptionKey, ciphertext: Ciphertext):

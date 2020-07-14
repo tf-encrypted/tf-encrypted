@@ -8,31 +8,49 @@ from absl.testing import parameterized
 from tf_encrypted.primitives import paillier
 from tf_encrypted.test import tf_execution_context
 
+_BITLENGTH = 2048
+
 
 class EncryptionTest(parameterized.TestCase):
     @parameterized.parameters(
-        {
-            "run_eagerly": run_eagerly,
-            "export_dtype": export_dtype,
-            "export_expansion": export_expansion,
-        }
-        for run_eagerly in [True, False]
-        for export_dtype, export_expansion in [(tf.string, ())]
+        [
+            {
+                "run_eagerly": run_eagerly,
+                "export_dtype": export_dtype,
+                "export_expansion": export_expansion,
+                "limb_format": limb_format,
+            }
+            for run_eagerly in [True, False]
+            for export_dtype, export_expansion in [
+                (tf.string, ()),
+                (tf.int32, (_BITLENGTH / 32 + 4)),
+                (tf.uint8, (_BITLENGTH / 8 + 4)),
+            ]
+            for limb_format in [True, False]
+        ]
     )
-    def test_export(self, run_eagerly, export_dtype, export_expansion):
+    def test_export(self, run_eagerly, export_dtype, export_expansion, limb_format):
         x = np.array([[12345, 34342]])
+        if limb_format:
+            max_bitlen = _BITLENGTH
+        else:
+            max_bitlen = None
 
         context = tf_execution_context(run_eagerly)
         with context.scope():
 
-            ek, dk = paillier.gen_keypair()
+            ek, dk = paillier.gen_keypair(bitlength=max_bitlen)
             assert isinstance(ek, paillier.EncryptionKey)
             assert isinstance(dk, paillier.DecryptionKey)
-            n_exported = ek.export(export_dtype)
+            n_exported = ek.export(
+                export_dtype, limb_format=limb_format, max_bitlen=max_bitlen,
+            )
             assert isinstance(n_exported, tf.Tensor)
             assert n_exported.dtype == export_dtype
             assert n_exported.shape == ()
-            p_exported, q_exported = dk.export(export_dtype)
+            p_exported, q_exported = dk.export(
+                export_dtype, limb_format=limb_format, max_bitlen=max_bitlen,
+            )
             assert isinstance(p_exported, tf.Tensor)
             assert p_exported.dtype == export_dtype
             assert p_exported.shape == ()
@@ -42,20 +60,24 @@ class EncryptionTest(parameterized.TestCase):
 
             r = paillier.gen_randomness(ek, shape=x.shape)
             assert isinstance(r, paillier.Randomness)
-            r_exported = r.export(export_dtype)
+            r_exported = r.export(
+                export_dtype, limb_format=limb_format, max_bitlen=max_bitlen,
+            )
             assert isinstance(r_exported, tf.Tensor)
             assert r_exported.dtype == export_dtype
             assert r_exported.shape == x.shape + export_expansion
 
             c = paillier.encrypt(ek, x, r)
             assert isinstance(c, paillier.Ciphertext)
-            c_exported = c.export(export_dtype)
+            c_exported = c.export(
+                export_dtype, limb_format=limb_format, max_bitlen=max_bitlen,
+            )
             assert isinstance(c_exported, tf.Tensor)
             assert c_exported.dtype == export_dtype
             assert c_exported.shape == x.shape + export_expansion
 
     @parameterized.parameters(
-        {"run_eagerly": run_eagerly} for run_eagerly in (True, False)
+        [{"run_eagerly": run_eagerly} for run_eagerly in (True, False)]
     )
     def test_correctness(self, run_eagerly):
 
@@ -81,7 +103,7 @@ class EncryptionTest(parameterized.TestCase):
 
         np.testing.assert_equal(context.evaluate(actual).astype(str), expected)
 
-    @parameterized.parameters(
+    @parameterized.parameters([
         {"run_eagerly": run_eagerly, "x": x, "dtype": dtype}
         for run_eagerly in [True, False]
         for x, dtype in [
@@ -99,7 +121,7 @@ class EncryptionTest(parameterized.TestCase):
                 tf.string,
             ),
         ]
-    )
+    ])
     def test_encrypt_decrypt(self, run_eagerly, x, dtype):
         context = tf_execution_context(run_eagerly)
         with context.scope():
@@ -113,13 +135,13 @@ class EncryptionTest(parameterized.TestCase):
 
         np.testing.assert_equal(context.evaluate(y).astype(x.dtype), x)
 
-    @parameterized.parameters(
+    @parameterized.parameters([
         {"run_eagerly": run_eagerly, "dtype": dtype, "x0": x0, "x1": x1}
         for run_eagerly in (True, False)
         for dtype in (tf.int32, tf.string)
         for x0 in (np.array([[12345, 123243]]), np.array([[12345]]))
         for x1 in (np.array([[12656, 434234]]),)
-    )
+    ])
     def test_add(self, run_eagerly, dtype, x0, x1):
 
         expected = x0 + x1
