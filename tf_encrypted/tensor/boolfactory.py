@@ -110,10 +110,15 @@ def bool_factory():
                 )
                 value = tf.cast(value, tf.bool)
                 return DenseTensor(value)
-
-            raise NotImplementedError(
-                "Secure seeded randomness implementation is not available."
-            )
+            else:
+                value = tf.random.stateless_uniform(
+                    shape,
+                    seed,
+                    minval=minval,
+                    maxval=maxval,
+                    dtype=tf.int32)
+                value = tf.cast(value, tf.bool)
+                return DenseTensor(value)
 
         def sample_bounded(self, shape, bitlength: int):
             raise NotImplementedError("No bounded sampling for boolean type.")
