@@ -1099,4 +1099,8 @@ class TestABY3(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    """
+    Run these tests with:
+    python -m unittest aby3_test.TestABY3
+    """
     unittest.main()

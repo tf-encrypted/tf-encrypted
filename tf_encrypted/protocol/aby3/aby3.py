@@ -88,18 +88,24 @@ class ABY3(Protocol):
         """
     Initial setup for pairwise randomness: Every two parties hold a shared key.
     """
-        if not crypto.supports_seeded_randomness():
-            raise NotImplementedError(
-                "Secure randomness implementation is not available."
-            )
 
         keys = [[None, None], [None, None], [None, None]]
-        with tf.device(self.servers[0].device_name):
-            seed_0 = crypto.secure_seed()
-        with tf.device(self.servers[1].device_name):
-            seed_1 = crypto.secure_seed()
-        with tf.device(self.servers[2].device_name):
-            seed_2 = crypto.secure_seed()
+
+        if crypto.supports_seeded_randomness():
+            with tf.device(self.servers[0].device_name):
+                seed_0 = crypto.secure_seed()
+            with tf.device(self.servers[1].device_name):
+                seed_1 = crypto.secure_seed()
+            with tf.device(self.servers[2].device_name):
+                seed_2 = crypto.secure_seed()
+        else:
+            # Shape and Type are kept consistent with the 'secure_seed' version
+            with tf.device(self.servers[0].device_name):
+                seed_0 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+            with tf.device(self.servers[1].device_name):
+                seed_1 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+            with tf.device(self.servers[2].device_name):
+                seed_2 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
 
         # Replicated keys
         # NOTE: The following `with` contexts do NOT have any impact for the Python-only operations.
@@ -130,19 +136,24 @@ class ABY3(Protocol):
     from boolean sharing to arithmetic sharing
     """
 
-        if not crypto.supports_seeded_randomness():
-            raise NotImplementedError(
-                "Secure randomness implementation is not available."
-            )
-
         # Type 1: Server 0 and 1 hold three keys, while server 2 holds two
         b2a_keys_1 = [[None, None, None], [None, None, None], [None, None, None]]
-        with tf.device(self.servers[0].device_name):
-            seed_0 = crypto.secure_seed()
-        with tf.device(self.servers[1].device_name):
-            seed_1 = crypto.secure_seed()
-        with tf.device(self.servers[2].device_name):
-            seed_2 = crypto.secure_seed()
+
+        if crypto.supports_seeded_randomness():
+            with tf.device(self.servers[0].device_name):
+                seed_0 = crypto.secure_seed()
+            with tf.device(self.servers[1].device_name):
+                seed_1 = crypto.secure_seed()
+            with tf.device(self.servers[2].device_name):
+                seed_2 = crypto.secure_seed()
+        else:
+            # Shape and Type are kept consistent with the 'secure_seed' version
+            with tf.device(self.servers[0].device_name):
+                seed_0 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+            with tf.device(self.servers[1].device_name):
+                seed_1 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+            with tf.device(self.servers[2].device_name):
+                seed_2 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
 
         with tf.device(self.servers[0].device_name):
             b2a_keys_1[0][0] = seed_0
@@ -158,12 +169,22 @@ class ABY3(Protocol):
 
         # Type 2: Server 1 and 2 hold three keys, while server 0 holds two
         b2a_keys_2 = [[None, None, None], [None, None, None], [None, None, None]]
-        with tf.device(self.servers[0].device_name):
-            seed_0 = crypto.secure_seed()
-        with tf.device(self.servers[1].device_name):
-            seed_1 = crypto.secure_seed()
-        with tf.device(self.servers[2].device_name):
-            seed_2 = crypto.secure_seed()
+
+        if crypto.supports_seeded_randomness():
+            with tf.device(self.servers[0].device_name):
+                seed_0 = crypto.secure_seed()
+            with tf.device(self.servers[1].device_name):
+                seed_1 = crypto.secure_seed()
+            with tf.device(self.servers[2].device_name):
+                seed_2 = crypto.secure_seed()
+        else:
+            # Shape and Type are kept consistent with the 'secure_seed' version
+            with tf.device(self.servers[0].device_name):
+                seed_0 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+            with tf.device(self.servers[1].device_name):
+                seed_1 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+            with tf.device(self.servers[2].device_name):
+                seed_2 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
 
         with tf.device(self.servers[0].device_name):
             b2a_keys_2[0][0] = seed_0
