@@ -10,12 +10,21 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
+from tf_encrypted.operations.secure_random import secure_random
 from tf_encrypted.protocol.aby3 import ABY3
 from tf_encrypted.protocol.aby3 import ARITHMETIC
 from tf_encrypted.protocol.aby3 import BOOLEAN
 
 
+@unittest.skipIf(
+    secure_random.secure_random_module is None,
+    "Tests will be run in TestABY3InsecureRandomness",
+)
 class TestABY3(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        print_banner("ABY3 Unit Tests with Secure Randomness")
+
     def test_add_private_private(self):
         tf.reset_default_graph()
 
@@ -1098,9 +1107,28 @@ class TestABY3(unittest.TestCase):
         os.remove(tmp_filename)
 
 
+class TestABY3InsecureRandomness(TestABY3):
+    @classmethod
+    def setUpClass(cls):
+        secure_random.secure_random_module = None
+        print_banner("ABY3 Unit Tests With Insecure Randomness")
+
+
+def print_banner(title):
+    title_length = len(title)
+    banner_length = title_length + 2 * 10
+    banner_top = "+" + ("-" * (banner_length - 2)) + "+"
+    banner_middle = "|" + " " * 9 + title + " " * 9 + "|"
+
+    print()
+    print(banner_top)
+    print(banner_middle)
+    print(banner_top)
+
+
 if __name__ == "__main__":
     """
     Run these tests with:
-    python -m unittest aby3_test.TestABY3
+    python aby3_test.py
     """
     unittest.main()

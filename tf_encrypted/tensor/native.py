@@ -153,11 +153,8 @@ def native_factory(
                 return DenseTensor(value)
             else:
                 value = tf.random.stateless_uniform(
-                    shape,
-                    seed,
-                    minval=minval,
-                    maxval=maxval,
-                    dtype=NATIVE_TYPE)
+                    shape, seed, minval=minval, maxval=maxval, dtype=NATIVE_TYPE
+                )
                 return DenseTensor(value)
 
         def sample_bounded(self, shape, bitlength: int):

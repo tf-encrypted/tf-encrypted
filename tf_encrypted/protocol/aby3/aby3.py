@@ -101,11 +101,17 @@ class ABY3(Protocol):
         else:
             # Shape and Type are kept consistent with the 'secure_seed' version
             with tf.device(self.servers[0].device_name):
-                seed_0 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+                seed_0 = tf.random.uniform(
+                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                )
             with tf.device(self.servers[1].device_name):
-                seed_1 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+                seed_1 = tf.random.uniform(
+                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                )
             with tf.device(self.servers[2].device_name):
-                seed_2 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+                seed_2 = tf.random.uniform(
+                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                )
 
         # Replicated keys
         # NOTE: The following `with` contexts do NOT have any impact for the Python-only operations.
@@ -149,11 +155,17 @@ class ABY3(Protocol):
         else:
             # Shape and Type are kept consistent with the 'secure_seed' version
             with tf.device(self.servers[0].device_name):
-                seed_0 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+                seed_0 = tf.random.uniform(
+                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                )
             with tf.device(self.servers[1].device_name):
-                seed_1 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+                seed_1 = tf.random.uniform(
+                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                )
             with tf.device(self.servers[2].device_name):
-                seed_2 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+                seed_2 = tf.random.uniform(
+                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                )
 
         with tf.device(self.servers[0].device_name):
             b2a_keys_1[0][0] = seed_0
@@ -180,11 +192,17 @@ class ABY3(Protocol):
         else:
             # Shape and Type are kept consistent with the 'secure_seed' version
             with tf.device(self.servers[0].device_name):
-                seed_0 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+                seed_0 = tf.random.uniform(
+                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                )
             with tf.device(self.servers[1].device_name):
-                seed_1 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+                seed_1 = tf.random.uniform(
+                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                )
             with tf.device(self.servers[2].device_name):
-                seed_2 = tf.random.uniform([2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64)
+                seed_2 = tf.random.uniform(
+                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                )
 
         with tf.device(self.servers[0].device_name):
             b2a_keys_2[0][0] = seed_0

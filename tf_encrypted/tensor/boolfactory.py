@@ -112,11 +112,8 @@ def bool_factory():
                 return DenseTensor(value)
             else:
                 value = tf.random.stateless_uniform(
-                    shape,
-                    seed,
-                    minval=minval,
-                    maxval=maxval,
-                    dtype=tf.int32)
+                    shape, seed, minval=minval, maxval=maxval, dtype=tf.int32
+                )
                 value = tf.cast(value, tf.bool)
                 return DenseTensor(value)
 
