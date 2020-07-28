@@ -21,11 +21,13 @@ class EncryptionTest(parameterized.TestCase):
         for run_eagerly in [True, False]
         for export_dtype, export_expansion, c_expansion, bitlength in [
             (tf.string, (), (), None),
-            (tf.int32, (3,), (5,), 64),
-            (tf.uint8, (12,), (20,), 64)
+            (tf.int32, (65,), (129,), 2048),
+            (tf.uint8, (260,), (516,), 2048),
         ]
     )
-    def test_export(self, run_eagerly, export_dtype, export_expansion, c_expansion, bitlength):
+    def test_export(
+        self, run_eagerly, export_dtype, export_expansion, c_expansion, bitlength
+    ):
         x = np.array([[12345, 34342]])
 
         context = tf_execution_context(run_eagerly)

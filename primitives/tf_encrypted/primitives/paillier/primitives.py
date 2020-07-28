@@ -12,8 +12,9 @@ class EncryptionKey:
     Note that the generator `g` has been fixed to `1 + n`.
     """
 
-    def __init__(self, n):
-        n = tf_big.convert_to_tensor(n)
+    def __init__(self, n, bitlength=None):
+        limb_format = bitlength is not None
+        n = tf_big.convert_to_tensor(n, limb_format=limb_format, bitlength=bitlength)
 
         self.n = n
         self.nn = n * n
@@ -26,9 +27,14 @@ class EncryptionKey:
 
 
 class DecryptionKey:
-    def __init__(self, p, q):
-        self.p = tf_big.convert_to_tensor(p)
-        self.q = tf_big.convert_to_tensor(q)
+    def __init__(self, p, q, bitlength=None):
+        limb_format = bitlength is not None
+        self.p = tf_big.convert_to_tensor(
+            p, limb_format=limb_format, bitlength=bitlength
+        )
+        self.q = tf_big.convert_to_tensor(
+            q, limb_format=limb_format, bitlength=bitlength
+        )
 
         self.n = self.p * self.q
         self.nn = self.n * self.n
@@ -58,8 +64,11 @@ def gen_keypair(bitlength=2048):
 
 
 class Randomness:
-    def __init__(self, raw_randomness):
-        self.raw = tf_big.convert_to_tensor(raw_randomness)
+    def __init__(self, raw_randomness, bitlength=None):
+        limb_format = bitlength is not None
+        self.raw = tf_big.convert_to_tensor(
+            raw_randomness, limb_format=limb_format, bitlength=bitlength
+        )
 
     def export(self, dtype: tf.DType = tf.string, bitlength: Optional[int] = None):
         limb_format = bitlength is not None
@@ -73,9 +82,12 @@ def gen_randomness(ek, shape):
 
 
 class Ciphertext:
-    def __init__(self, ek: EncryptionKey, raw_ciphertext):
+    def __init__(self, ek: EncryptionKey, raw_ciphertext, bitlength=None):
+        limb_format = bitlength is not None
         self.ek = ek
-        self.raw = tf_big.convert_to_tensor(raw_ciphertext)
+        self.raw = tf_big.convert_to_tensor(
+            raw_ciphertext, limb_format=limb_format, bitlength=bitlength
+        )
 
     def export(self, dtype: tf.DType = tf.string, bitlength: Optional[int] = None):
         limb_format = bitlength is not None
@@ -89,9 +101,7 @@ class Ciphertext:
 
 
 def encrypt(
-    ek: EncryptionKey,
-    plaintext: tf.Tensor,
-    randomness: Optional[Randomness] = None,
+    ek: EncryptionKey, plaintext: tf.Tensor, randomness: Optional[Randomness] = None,
 ):
     x = tf_big.convert_to_tensor(plaintext)
 
