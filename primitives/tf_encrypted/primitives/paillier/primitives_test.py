@@ -15,44 +15,56 @@ class EncryptionTest(parameterized.TestCase):
             "run_eagerly": run_eagerly,
             "export_dtype": export_dtype,
             "export_expansion": export_expansion,
+            "c_expansion": c_expansion,
+            "bitlength": bitlength,
         }
         for run_eagerly in [True, False]
-        for export_dtype, export_expansion in [(tf.string, ())]
+        for export_dtype, export_expansion, c_expansion, bitlength in [
+            (tf.string, (), (), None),
+            (tf.int32, (3,), (5,), 64),
+            (tf.uint8, (12,), (20,), 64)
+        ]
     )
-    def test_export(self, run_eagerly, export_dtype, export_expansion):
+    def test_export(self, run_eagerly, export_dtype, export_expansion, c_expansion, bitlength):
         x = np.array([[12345, 34342]])
 
         context = tf_execution_context(run_eagerly)
         with context.scope():
 
-            ek, dk = paillier.gen_keypair()
+            ek, dk = paillier.gen_keypair(bitlength or 64)
             assert isinstance(ek, paillier.EncryptionKey)
             assert isinstance(dk, paillier.DecryptionKey)
-            n_exported = ek.export(export_dtype)
+            n_exported = ek.export(export_dtype, bitlength=bitlength)
             assert isinstance(n_exported, tf.Tensor)
             assert n_exported.dtype == export_dtype
-            assert n_exported.shape == ()
-            p_exported, q_exported = dk.export(export_dtype)
+            n_realized = context.evaluate(n_exported)
+            assert n_realized.shape == (1, 1) + export_expansion
+            p_exported, q_exported = dk.export(export_dtype, bitlength=bitlength)
             assert isinstance(p_exported, tf.Tensor)
             assert p_exported.dtype == export_dtype
-            assert p_exported.shape == ()
+            p_realized = context.evaluate(p_exported)
+            assert p_realized.shape == (1, 1) + export_expansion
             assert isinstance(q_exported, tf.Tensor)
             assert q_exported.dtype == export_dtype
-            assert q_exported.shape == ()
+            q_realized = context.evaluate(q_exported)
+            assert q_realized.shape == (1, 1) + export_expansion
 
             r = paillier.gen_randomness(ek, shape=x.shape)
             assert isinstance(r, paillier.Randomness)
-            r_exported = r.export(export_dtype)
+            r_exported = r.export(export_dtype, bitlength=bitlength)
             assert isinstance(r_exported, tf.Tensor)
             assert r_exported.dtype == export_dtype
-            assert r_exported.shape == x.shape + export_expansion
+            r_realized = context.evaluate(r_exported)
+            assert r_realized.shape == x.shape + export_expansion
 
+            bl = 2 * bitlength if bitlength is not None else None
             c = paillier.encrypt(ek, x, r)
             assert isinstance(c, paillier.Ciphertext)
-            c_exported = c.export(export_dtype)
+            c_exported = c.export(export_dtype, bitlength=bl)
             assert isinstance(c_exported, tf.Tensor)
             assert c_exported.dtype == export_dtype
-            assert c_exported.shape == x.shape + export_expansion
+            c_realized = context.evaluate(c_exported)
+            assert c_realized.shape == x.shape + c_expansion
 
     @parameterized.parameters(
         {"run_eagerly": run_eagerly} for run_eagerly in (True, False)

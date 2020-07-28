@@ -18,8 +18,11 @@ class EncryptionKey:
         self.n = n
         self.nn = n * n
 
-    def export(self, dtype: tf.DType = tf.string):
-        return tf_big.convert_from_tensor(self.n, dtype=dtype)
+    def export(self, dtype: tf.DType = tf.string, bitlength: Optional[int] = None):
+        limb_format = bitlength is not None
+        return tf_big.convert_from_tensor(
+            self.n, dtype=dtype, limb_format=limb_format, bitlength=bitlength
+        )
 
 
 class DecryptionKey:
@@ -35,10 +38,15 @@ class DecryptionKey:
         self.d2 = tf_big.inv(order_of_n, self.n)
         self.e = tf_big.inv(self.n, order_of_n)
 
-    def export(self, dtype: tf.DType = tf.string):
+    def export(self, dtype: tf.DType = tf.string, bitlength: Optional[int] = None):
+        limb_format = bitlength is not None
         return (
-            tf_big.convert_from_tensor(self.p, dtype=dtype),
-            tf_big.convert_from_tensor(self.q, dtype=dtype),
+            tf_big.convert_from_tensor(
+                self.p, dtype=dtype, limb_format=limb_format, bitlength=bitlength
+            ),
+            tf_big.convert_from_tensor(
+                self.q, dtype=dtype, limb_format=limb_format, bitlength=bitlength
+            ),
         )
 
 
@@ -53,8 +61,11 @@ class Randomness:
     def __init__(self, raw_randomness):
         self.raw = tf_big.convert_to_tensor(raw_randomness)
 
-    def export(self, dtype: tf.DType = tf.string):
-        return tf_big.convert_from_tensor(self.raw, dtype=dtype)
+    def export(self, dtype: tf.DType = tf.string, bitlength: Optional[int] = None):
+        limb_format = bitlength is not None
+        return tf_big.convert_from_tensor(
+            self.raw, dtype=dtype, limb_format=limb_format, bitlength=bitlength
+        )
 
 
 def gen_randomness(ek, shape):
@@ -66,8 +77,11 @@ class Ciphertext:
         self.ek = ek
         self.raw = tf_big.convert_to_tensor(raw_ciphertext)
 
-    def export(self, dtype: tf.DType = tf.string):
-        return tf_big.convert_from_tensor(self.raw, dtype=dtype)
+    def export(self, dtype: tf.DType = tf.string, bitlength: Optional[int] = None):
+        limb_format = bitlength is not None
+        return tf_big.convert_from_tensor(
+            self.raw, dtype=dtype, limb_format=limb_format, bitlength=bitlength
+        )
 
     def __add__(self, other):
         assert self.ek == other.ek
@@ -75,7 +89,9 @@ class Ciphertext:
 
 
 def encrypt(
-    ek: EncryptionKey, plaintext: tf.Tensor, randomness: Optional[Randomness] = None,
+    ek: EncryptionKey,
+    plaintext: tf.Tensor,
+    randomness: Optional[Randomness] = None,
 ):
     x = tf_big.convert_to_tensor(plaintext)
 
@@ -89,7 +105,13 @@ def encrypt(
     return Ciphertext(ek, c)
 
 
-def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.DType = tf.int32):
+def decrypt(
+    dk: DecryptionKey,
+    ciphertext: Ciphertext,
+    dtype: tf.DType = tf.int32,
+    bitlength: Optional[int] = None,
+):
+    limb_format = bitlength is not None
     c = ciphertext.raw
 
     gxd = tf_big.pow(c, dk.d1, dk.nn)
@@ -99,7 +121,9 @@ def decrypt(dk: DecryptionKey, ciphertext: Ciphertext, dtype: tf.DType = tf.int3
     if dtype == tf.variant:
         return x
 
-    return tf_big.convert_from_tensor(x, dtype=dtype)
+    return tf_big.convert_from_tensor(
+        x, dtype=dtype, limb_format=limb_format, bitlength=bitlength,
+    )
 
 
 def refresh(ek: EncryptionKey, ciphertext: Ciphertext):

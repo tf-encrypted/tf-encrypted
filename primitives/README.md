@@ -19,7 +19,7 @@ bazel-bin/external/primitives/build_pip_package artifacts
 This will deliver the pip package in the `artifacts` directory. To install it
 
 ```
-pip install -U artifacts/tf_encrypted_primitives-0.0.1-py3-none-any.whl
+pip install -U "artifacts/tf_encrypted_primitives-"*"-py3-none-any.whl"
 ```
 
 Note that package can be used on its own but does *not* currently work with core TF Encrypted due to difference in TensorFlow version.
