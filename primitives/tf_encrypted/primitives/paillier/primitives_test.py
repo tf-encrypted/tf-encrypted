@@ -71,9 +71,9 @@ class EncryptionTest(parameterized.TestCase):
         context = tf_execution_context(run_eagerly)
         with context.scope():
 
-            ek = paillier.EncryptionKey(str(n))
+            ek = paillier.EncryptionKey(tf.constant([[str(n)]]))
             plaintext = np.array([[x]]).astype(str)
-            randomness = paillier.Randomness(np.array([[r]]).astype(str))
+            randomness = paillier.Randomness(tf.constant([[str(r)]]))
             ciphertext = paillier.encrypt(ek, plaintext, randomness)
 
             expected = np.array([[c]]).astype(str)
