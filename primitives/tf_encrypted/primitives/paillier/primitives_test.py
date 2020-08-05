@@ -31,14 +31,14 @@ class EncryptionTest(parameterized.TestCase):
             n_exported = ek.export(export_dtype)
             assert isinstance(n_exported, tf.Tensor)
             assert n_exported.dtype == export_dtype
-            assert n_exported.shape == ()
+            assert n_exported.shape == (1, 1), n_exported.shape
             p_exported, q_exported = dk.export(export_dtype)
             assert isinstance(p_exported, tf.Tensor)
             assert p_exported.dtype == export_dtype
-            assert p_exported.shape == ()
+            assert p_exported.shape == (1, 1), p_exported.shape
             assert isinstance(q_exported, tf.Tensor)
             assert q_exported.dtype == export_dtype
-            assert q_exported.shape == ()
+            assert q_exported.shape == (1, 1), q_exported.shape
 
             r = paillier.gen_randomness(ek, shape=x.shape)
             assert isinstance(r, paillier.Randomness)
@@ -71,9 +71,9 @@ class EncryptionTest(parameterized.TestCase):
         context = tf_execution_context(run_eagerly)
         with context.scope():
 
-            ek = paillier.EncryptionKey(str(n))
+            ek = paillier.EncryptionKey(tf.constant([[str(n)]]))
             plaintext = np.array([[x]]).astype(str)
-            randomness = paillier.Randomness(np.array([[r]]).astype(str))
+            randomness = paillier.Randomness(tf.constant([[str(r)]]))
             ciphertext = paillier.encrypt(ek, plaintext, randomness)
 
             expected = np.array([[c]]).astype(str)
