@@ -68,7 +68,7 @@ class Randomness:
     def __init__(self, raw_randomness: tf.Tensor):
         self.raw = _import_maybe_limbs(raw_randomness)
 
-    def export(self, dtype: tf.DType = tf.string) -> tf.Tensor:
+    def export(self, dtype: tf.DType = tf.uint8) -> tf.Tensor:
         return _export_maybe_limbs(self.raw, dtype=dtype)
 
 
@@ -81,7 +81,7 @@ class Ciphertext:
         self.ek = ek
         self.raw = _import_maybe_limbs(raw_ciphertext)
 
-    def export(self, dtype: tf.DType = tf.string) -> tf.Tensor:
+    def export(self, dtype: tf.DType = tf.uint8) -> tf.Tensor:
         return _export_maybe_limbs(self.raw, dtype=dtype)
 
     def __add__(self, other):
