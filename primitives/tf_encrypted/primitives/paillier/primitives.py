@@ -10,12 +10,15 @@ tf_big.set_secure_default(True)
 def _import_maybe_limbs(tensor):
     if isinstance(tensor, tf_big.Tensor):
         return tensor
-    if tensor.dtype == tf.string:
-        return tf_big.import_tensor(tensor)
-    return tf_big.import_limbs_tensor(tensor)
+    if isinstance(tensor, tf.Tensor):
+        if tensor.dtype == tf.string:
+            return tf_big.import_tensor(tensor)
+        return tf_big.import_limbs_tensor(tensor)
+    raise ValueError("Don't know how to import tensors of type {}".format(type(tensor)))
 
 
 def _export_maybe_limbs(tensor, dtype):
+    assert isinstance(tensor, tf_big.Tensor), type(tensor)
     if dtype == tf.string:
         return tf_big.export_tensor(tensor, dtype=dtype)
     return tf_big.export_limbs_tensor(tensor, dtype=dtype)
