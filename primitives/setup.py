@@ -3,7 +3,7 @@ import setuptools
 
 setuptools.setup(
     name="tf-encrypted-primitives",
-    version="0.0.1",
+    version="0.1.0",
     packages=setuptools.find_namespace_packages(include=["tf_encrypted.*"]),
     package_data={"": ["*.so"]},
     python_requires=">=3.6",
