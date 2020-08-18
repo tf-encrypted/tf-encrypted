@@ -7,7 +7,7 @@ setuptools.setup(
     packages=setuptools.find_namespace_packages(include=["tf_encrypted.*"]),
     package_data={"": ["*.so"]},
     python_requires=">=3.6",
-    install_requires=["tensorflow ==2.1.0", "numpy >=1.14.0", "tf-big ~=0.2.0"],
+    install_requires=["numpy >=1.14.0", "tensorflow>=2.2.0", "tf-big >=0.2.1"],
     license="Apache License 2.0",
     url="https://github.com/tf-encrypted/tf-encrypted",
     description="A Framework for Machine Learning on Encrypted Data.",
