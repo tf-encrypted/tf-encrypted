@@ -127,7 +127,7 @@ We are very grateful for the significant contributions made by the following org
 
 <table>
     <tr>
-        <td><a href="https://capeprivacy.com/"><img src="https://raw.githubusercontent.com/tf-encrypted/assets/master/other/capeprivacy-logo.png" alt="Cape Privacy" width="150"/></a></td>
+        <td><a href="https://capeprivacy.com/"><img src="https://user-images.githubusercontent.com/13240942/115423986-df2e9a00-a1c3-11eb-9eda-6573434c6bb8.png" alt="Cape Privacy" width="150"/></a></td>
         <td><a href="https://www.alibabagroup.com/"><img src="https://raw.githubusercontent.com/tf-encrypted/assets/master/other/alibaba-logo.png" alt="Alibaba Security Group" width="150"/></a></td>
         <td><a href="https://openmined.org/"><img src="https://raw.githubusercontent.com/tf-encrypted/assets/master/other/openmined-logo.png" alt="OpenMined" width="150"/></a></td>
     </tr>
