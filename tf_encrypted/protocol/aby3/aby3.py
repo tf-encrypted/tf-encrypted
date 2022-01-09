@@ -2637,7 +2637,7 @@ def _B_sub_private_private(prot, x, y):
 
 
 def _B_ppa_private_private(prot, x, y, n_bits, topology="kogge_stone"):
-    """
+  """
   Parallel prefix adder (PPA). This adder can be used for addition of boolean sharings.
 
   `n_bits` can be passed as an optimization to constrain the computation for least significant
@@ -2656,7 +2656,7 @@ def _B_ppa_private_private(prot, x, y, n_bits, topology="kogge_stone"):
 
 
 def _B_ppa_sklansky_private_private(prot, x, y, n_bits):
-    """
+  """
   Parallel prefix adder (PPA), using the Sklansky adder topology.
   """
 
