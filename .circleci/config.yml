@@ -60,7 +60,7 @@ jobs:
 
   build:
     docker:
-      - image: tensorflow/tensorflow:custom-op-ubuntu16
+      - image: circleci/python:3.6
     working_directory: ~/repo
     steps:
       - setup_remote_docker
