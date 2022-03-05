@@ -101,6 +101,12 @@ class TestSeededRandom(unittest.TestCase):
 
 @unittest.skipUnless(dontskip, disabled_msg)
 class TestRandomUniform(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
+    def tearDown(self):
+        tf.reset_default_graph()
+
     def test_wrapper(self):
         with tf.Session():
             output = secure_random.random_uniform([3, 3], maxval=10000).eval()
@@ -130,6 +136,7 @@ class TestRandomUniform(unittest.TestCase):
 @unittest.skipUnless(dontskip, disabled_msg)
 class TestSeed(unittest.TestCase):
     def test_seed_generation(self):
+        tf.reset_default_graph()
         with tf.Session():
             s = secure_random.secure_seed()
 
