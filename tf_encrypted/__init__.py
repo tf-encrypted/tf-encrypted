@@ -2,10 +2,13 @@
 from __future__ import absolute_import
 
 import inspect
+import os.path
 from typing import Any
 from typing import Optional
 
 import tensorflow as tf
+from pkg_resources import DistributionNotFound
+from pkg_resources import get_distribution
 
 from . import convert
 from . import keras
@@ -24,6 +27,19 @@ from .session import Session
 from .session import set_log_directory
 from .session import set_tfe_events_flag
 from .session import set_tfe_trace_flag
+
+try:
+    _dist = get_distribution("tf_encrypted")
+    # Normalize case for Windows systems
+    dist_loc = os.path.normcase(_dist.location)
+    here = os.path.normcase(__file__)
+    if not here.startswith(os.path.join(dist_loc, "tf_encrypted")):
+        # not installed, but there is another version that *is*
+        raise DistributionNotFound
+except DistributionNotFound:
+    __version__ = "Please install this project with setup.py"
+else:
+    __version__ = _dist.version
 
 __protocol__ = None
 __all_prot_funcs__ = protocol.get_all_funcs()

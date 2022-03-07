@@ -5,10 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+
+## [0.7.0]
 **Fixed**
 
 - Fix a buggy CI workflow that fails to use cache in 'deploy' step (because of a different image from 'build step')
 - Remove skipping conditions in aby3 test
+
+**Added**
+- ABY3 available on pypi
+
 
 ## [0.5.9]
 
