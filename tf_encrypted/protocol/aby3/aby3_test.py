@@ -16,7 +16,6 @@ from tf_encrypted.protocol.aby3 import BOOLEAN
 
 
 class TestABY3(unittest.TestCase):
-
     def test_add_private_private(self):
         tf.reset_default_graph()
 
