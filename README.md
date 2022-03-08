@@ -2,7 +2,7 @@
 
 TF Encrypted is a framework for encrypted machine learning in TensorFlow. It looks and feels like TensorFlow, taking advantage of the ease-of-use of the Keras API while enabling training and prediction over encrypted data via secure multi-party computation and homomorphic encryption. TF Encrypted aims to make privacy-preserving machine learning readily available, without requiring expertise in cryptography, distributed systems, or high performance computing.
 
-See below for more [background material](#background--further-reading), explore the [examples](./examples/), or visit the [documentation](./docs/) to learn more about how to use the library. You are also more than welcome to join our [Slack channel](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLWM4MTVjOGVmNGFkMWU2MGEzM2Q5ZWFjMTdmZjdmMTM2ZTU4YjJmNTVjYmE1NDAwMDIzMjllZjJjMWNiMTlmZTQ) for all questions around use and development.
+See below for more [background material](#background--further-reading), explore the [examples](./examples/), or visit the [documentation](./docs/) to learn more about how to use the library. 
 
 [![Website](https://img.shields.io/website/https/tf-encrypted.io.svg)](https://tf-encrypted.io) [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://tf-encrypted.readthedocs.io/en/latest/) [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/tf-encrypted/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/tf-encrypted/tf-encrypted/tree/master)
 
@@ -111,9 +111,9 @@ Other:
 
 # Development and Contribution
 
-TF Encrypted is open source community project developed under the Apache 2 license and maintained by a set of core developers. We welcome contributions from all individuals and organizations, with further information available in our [contribution guide](./docs/CONTRIBUTING.md). We invite any organizations interested in [partnering](#organizational-contributions) with us to reach out via [email](mailto:contact@tf-encrypted.io) or [Slack](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLWM4MTVjOGVmNGFkMWU2MGEzM2Q5ZWFjMTdmZjdmMTM2ZTU4YjJmNTVjYmE1NDAwMDIzMjllZjJjMWNiMTlmZTQ).
+TF Encrypted is open source community project developed under the Apache 2 license and maintained by a set of core developers. We welcome contributions from all individuals and organizations, with further information available in our [contribution guide](./docs/CONTRIBUTING.md). We invite any organizations interested in [partnering](#organizational-contributions) with us to reach out via [email](mailto:contact@tf-encrypted.io).
 
-Don't hesitate to send a pull request, open an issue, or ask for help! You can do so either via [GitHub](https://github.com/tf-encrypted/tf-encrypted) or in our [Slack channel](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLWM4MTVjOGVmNGFkMWU2MGEzM2Q5ZWFjMTdmZjdmMTM2ZTU4YjJmNTVjYmE1NDAwMDIzMjllZjJjMWNiMTlmZTQ). We use [ZenHub](https://www.zenhub.com/extension) to plan and track GitHub issues and pull requests.
+Don't hesitate to send a pull request, open an issue, or ask for help! We use [ZenHub](https://www.zenhub.com/extension) to plan and track GitHub issues and pull requests.
 
 ## Individual contributions
 
@@ -143,7 +143,7 @@ TF Encrypted is experimental software not currently intended for use in producti
 
 ## Support
 
-Please open an [issue](https://github.com/tf-encrypted/tf-encrypted/issues), reach out directly on [Slack](https://join.slack.com/t/tf-encrypted/shared_invite/enQtNjI5NjY5NTc0NjczLWM4MTVjOGVmNGFkMWU2MGEzM2Q5ZWFjMTdmZjdmMTM2ZTU4YjJmNTVjYmE1NDAwMDIzMjllZjJjMWNiMTlmZTQ), or send an email to [contact@tf-encrypted.io](mailto:contact@tf-encrypted.io).
+Please open an [issue](https://github.com/tf-encrypted/tf-encrypted/issues), or send an email to [contact@tf-encrypted.io](mailto:contact@tf-encrypted.io).
 
 # License
 
