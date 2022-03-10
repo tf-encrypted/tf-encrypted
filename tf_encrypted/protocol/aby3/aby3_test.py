@@ -10,9 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.protocol.aby3 import ABY3
-from tf_encrypted.protocol.aby3 import ARITHMETIC
-from tf_encrypted.protocol.aby3 import BOOLEAN
+from tf_encrypted.protocol.aby3 import ABY3, ShareType
 
 
 class TestABY3(unittest.TestCase):
@@ -279,10 +277,10 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=BOOLEAN
+            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.BOOLEAN
         )
         y = tfe.define_private_variable(
-            tf.constant([[7, 8, 9], [10, 11, 12]]), share_type=BOOLEAN
+            tf.constant([[7, 8, 9], [10, 11, 12]]), share_type=ShareType.BOOLEAN
         )
 
         z1 = tfe.B_xor(x, y)
@@ -310,12 +308,12 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=BOOLEAN, apply_scaling=False
+            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.BOOLEAN, apply_scaling=False
         )
         y = tfe.define_private_variable(
             tf.constant([[1, 0, 0], [0, 1, 0]]),
             apply_scaling=False,
-            share_type=BOOLEAN,
+            share_type=ShareType.BOOLEAN,
             factory=prot.bool_factory,
         )
         z1 = ~x
@@ -477,7 +475,7 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=BOOLEAN
+            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.BOOLEAN
         )
 
         z = x << 1
@@ -498,11 +496,11 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=BOOLEAN
+            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.BOOLEAN
         )
         y = tfe.define_private_variable(
             tf.constant([[-1, -2, -3], [-4, 5, 6]]),
-            share_type=BOOLEAN,
+            share_type=ShareType.BOOLEAN,
             apply_scaling=False,
         )
 
@@ -551,10 +549,10 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=BOOLEAN
+            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.BOOLEAN
         )
         y = tfe.define_private_variable(
-            tf.constant([[7, 8, 9], [10, 11, 12]]), share_type=BOOLEAN
+            tf.constant([[7, 8, 9], [10, 11, 12]]), share_type=ShareType.BOOLEAN
         )
 
         # Parallel prefix adder. It is simply an adder for boolean sharing.
@@ -582,11 +580,11 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ARITHMETIC
+            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.ARITHMETIC
         )
 
         z = tfe.A2B(x)
-        assert z.share_type == BOOLEAN
+        assert z.share_type == ShareType.BOOLEAN
 
         with tfe.Session() as sess:
             # initialize variables
@@ -604,11 +602,11 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=BOOLEAN
+            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.BOOLEAN
         )
 
         z = tfe.B2A(x)
-        assert z.share_type == ARITHMETIC
+        assert z.share_type == ShareType.ARITHMETIC
 
         with tfe.Session() as sess:
             # initialize variables
@@ -672,11 +670,11 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_constant(np.array([[1, 2, 3], [4, 5, 6]]), share_type=ARITHMETIC)
+        x = tfe.define_constant(np.array([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.ARITHMETIC)
         y = tfe.define_private_variable(
             tf.constant([[1, 0, 0], [0, 1, 0]]),
             apply_scaling=False,
-            share_type=BOOLEAN,
+            share_type=ShareType.BOOLEAN,
             factory=prot.bool_factory,
         )
 
@@ -698,12 +696,12 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            np.array([[1, 2, 3], [4, 5, 6]]), share_type=ARITHMETIC,
+            np.array([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.ARITHMETIC,
         )
         y = tfe.define_private_variable(
             tf.constant([[1, 0, 0], [0, 1, 0]]),
             apply_scaling=False,
-            share_type=BOOLEAN,
+            share_type=ShareType.BOOLEAN,
             factory=prot.bool_factory,
         )
 
@@ -725,11 +723,11 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            np.array([[1, -2, 3], [-4, -5, 6]]), share_type=ARITHMETIC,
+            np.array([[1, -2, 3], [-4, -5, 6]]), share_type=ShareType.ARITHMETIC,
         )
         y = tfe.define_private_variable(
             np.array([[1, -2, 3], [-4, -5, 6]]),
-            share_type=ARITHMETIC,
+            share_type=ShareType.ARITHMETIC,
             apply_scaling=False,
         )
 

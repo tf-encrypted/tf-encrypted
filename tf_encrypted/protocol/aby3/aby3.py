@@ -35,14 +35,12 @@ from ...tensor.native import native_factory
 from ..protocol import Protocol
 from ..protocol import memoize
 
+from .aby3_tensors import *
+
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 TF_NATIVE_TYPES = [tf.bool, tf.int8, tf.int16, tf.int32, tf.int64]
 
 _THISMODULE = sys.modules[__name__]
-
-# ===== Share types =====
-ARITHMETIC = 0
-BOOLEAN = 1
 
 # ===== Factory =====
 i64_factory = native_factory(tf.int64)
@@ -223,7 +221,7 @@ class ABY3(Protocol):
         self,
         value: Union[np.ndarray, int, float],
         apply_scaling: bool = True,
-        share_type=ARITHMETIC,
+        share_type=ShareType.ARITHMETIC,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
     ):
@@ -264,7 +262,7 @@ class ABY3(Protocol):
         self,
         initial_value,
         apply_scaling: bool = True,
-        share_type=ARITHMETIC,
+        share_type=ShareType.ARITHMETIC,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
     ):
@@ -336,7 +334,7 @@ class ABY3(Protocol):
         computation_fn,
         arguments=None,
         apply_scaling=True,
-        share_type=ARITHMETIC,
+        share_type=ShareType.ARITHMETIC,
         name=None,
         factory=None,
     ):
@@ -422,7 +420,7 @@ class ABY3(Protocol):
         player,
         inputter_fn,
         apply_scaling: bool = True,
-        share_type=ARITHMETIC,
+        share_type=ShareType.ARITHMETIC,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
     ):
@@ -454,7 +452,7 @@ class ABY3(Protocol):
         player: Union[str, Player],
         inputter_fn: TFEInputter,
         apply_scaling: bool = True,
-        share_type=ARITHMETIC,
+        share_type=ShareType.ARITHMETIC,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
     ):
@@ -508,7 +506,7 @@ class ABY3(Protocol):
         self,
         tensor: tf.Tensor,
         apply_scaling: bool = True,
-        share_type=ARITHMETIC,
+        share_type=ShareType.ARITHMETIC,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
     ):
@@ -606,12 +604,12 @@ class ABY3(Protocol):
     """
 
         with tf.name_scope("share"):
-            if share_type == ARITHMETIC or share_type == BOOLEAN:
+            if share_type == ShareType.ARITHMETIC or share_type == ShareType.BOOLEAN:
                 share0 = secret.factory.sample_uniform(secret.shape)
                 share1 = secret.factory.sample_uniform(secret.shape)
-                if share_type == ARITHMETIC:
+                if share_type == ShareType.ARITHMETIC:
                     share2 = secret - share0 - share1
-                elif share_type == BOOLEAN:
+                elif share_type == ShareType.BOOLEAN:
                     share2 = secret ^ share0 ^ share1
                 # Replicated sharing
                 shares = ((share0, share1), (share1, share2), (share2, share0))
@@ -639,9 +637,9 @@ class ABY3(Protocol):
     """
 
         def helper(s0, s1, s2):
-            if share_type == ARITHMETIC:
+            if share_type == ShareType.ARITHMETIC:
                 return s0 + s1 + s2
-            elif share_type == BOOLEAN:
+            elif share_type == ShareType.BOOLEAN:
                 return s0 ^ s1 ^ s2
             else:
                 raise NotImplementedError(
@@ -649,7 +647,7 @@ class ABY3(Protocol):
                 )
 
         with tf.name_scope("reconstruct"):
-            if share_type == ARITHMETIC or share_type == BOOLEAN:
+            if share_type == ShareType.ARITHMETIC or share_type == ShareType.BOOLEAN:
                 if player == self.servers[0]:
                     return helper(shares[0][0], shares[0][1], shares[2][0])
                 elif player == self.servers[1]:
@@ -665,11 +663,11 @@ class ABY3(Protocol):
             else:
                 raise NotImplementedError("Unknown share type.")
 
-    def _gen_zero_sharing(self, shape, share_type=ARITHMETIC, factory=None):
+    def _gen_zero_sharing(self, shape, share_type=ShareType.ARITHMETIC, factory=None):
         def helper(f0, f1):
-            if share_type == ARITHMETIC:
+            if share_type == ShareType.ARITHMETIC:
                 return f0 - f1
-            elif share_type == BOOLEAN:
+            elif share_type == ShareType.BOOLEAN:
                 return f0 ^ f1
             else:
                 raise NotImplementedError(
@@ -706,7 +704,7 @@ class ABY3(Protocol):
         self.pairwise_nonces = self.pairwise_nonces + 1
         return a0, a1, a2
 
-    def _gen_random_sharing(self, shape, share_type=ARITHMETIC, factory=None):
+    def _gen_random_sharing(self, shape, share_type=ShareType.ARITHMETIC, factory=None):
 
         r = [[None] * 2 for _ in range(3)]
         factory = factory or self.int_factory
@@ -892,7 +890,7 @@ class ABY3(Protocol):
         x, y = self.lift(x, y)
         return self.dispatch("add", x, y)
 
-    def lift(self, x, y=None, share_type=ARITHMETIC):
+    def lift(self, x, y=None, share_type=ShareType.ARITHMETIC):
         """
     Convenience method for working with mixed typed tensors in programs:
     combining any of the ABY3 objects together with e.g. ints and floats
@@ -1049,11 +1047,11 @@ class ABY3(Protocol):
         return self.dispatch("matmul", x, y)
 
     def gather_bit(self, x, even):
-        assert x.share_type is BOOLEAN
+        assert x.share_type is ShareType.BOOLEAN
         return self.dispatch("gather_bit", x, even)
 
     def xor_indices(self, x):
-        assert x.share_type is BOOLEAN
+        assert x.share_type is ShareType.BOOLEAN
         return self.dispatch("xor_indices", x)
 
     @memoize
@@ -1092,37 +1090,37 @@ class ABY3(Protocol):
 
     @memoize
     def B_xor(self, x, y):
-        x, y = self.lift(x, y, share_type=BOOLEAN)
+        x, y = self.lift(x, y, share_type=ShareType.BOOLEAN)
         return self.dispatch("B_xor", x, y)
 
     @memoize
     def B_and(self, x, y):
-        x, y = self.lift(x, y, share_type=BOOLEAN)
+        x, y = self.lift(x, y, share_type=ShareType.BOOLEAN)
         return self.dispatch("B_and", x, y)
 
     @memoize
     def B_or(self, x, y):
-        x, y = self.lift(x, y, share_type=BOOLEAN)
+        x, y = self.lift(x, y, share_type=ShareType.BOOLEAN)
         return self.dispatch("B_or", x, y)
 
     @memoize
     def B_not(self, x):
-        x = self.lift(x, share_type=BOOLEAN)
+        x = self.lift(x, share_type=ShareType.BOOLEAN)
         return self.dispatch("B_not", x)
 
     @memoize
     def B_ppa(self, x, y, n_bits=None, topology="kogge_stone"):
-        x, y = self.lift(x, y, share_type=BOOLEAN)
+        x, y = self.lift(x, y, share_type=ShareType.BOOLEAN)
         return self.dispatch("B_ppa", x, y, n_bits, topology)
 
     @memoize
     def B_add(self, x, y):
-        x, y = self.lift(x, y, share_type=BOOLEAN)
+        x, y = self.lift(x, y, share_type=ShareType.BOOLEAN)
         return self.dispatch("B_add", x, y)
 
     @memoize
     def B_sub(self, x, y):
-        x, y = self.lift(x, y, share_type=BOOLEAN)
+        x, y = self.lift(x, y, share_type=ShareType.BOOLEAN)
         return self.dispatch("B_sub", x, y)
 
     @memoize
@@ -1156,7 +1154,7 @@ class ABY3(Protocol):
 
     @memoize
     def bit_extract(self, x, i):
-        if x.share_type == BOOLEAN or x.share_type == ARITHMETIC:
+        if x.share_type == ShareType.BOOLEAN or x.share_type == ShareType.ARITHMETIC:
             return self.dispatch("bit_extract", x, i)
         else:
             raise ValueError("unsupported share type: {}".format(x.share_type))
@@ -1238,463 +1236,6 @@ class ABY3(Protocol):
             return func(self, *args, **kwargs)  # pylint: disable=not-callable
         raise TypeError(
             ("Don't know how to {}: {}").format(base_name, [type(arg) for arg in args])
-        )
-
-
-#
-# Classes representing the base values in the ABY3 protocol.
-#
-
-
-class ABY3Tensor(abc.ABC):
-    """
-  This class functions mostly as a convenient way of exposing operations
-  directly on the various tensor objects, ie allowing one to write `x + y`
-  instead of `prot.add(x, y)`. Since this functionality is shared among all
-  tensors we put it in this superclass.
-
-  This class should never be instantiated on its own.
-  Instead you should use your chosen protocols factory methods::
-
-      x = prot.define_private_input(tf.constant(np.array([1,2,3,4])))
-      y = prot.define_public_input(tf.constant(np.array([4,5,6,7])))
-
-      z = x + y
-
-      with config.Session() as sess:
-          answer = z.reveal().eval(sess)
-
-          print(answer) # => [5, 7, 9, 11]
-    """
-
-    def __init__(self, prot, is_scaled, share_type):
-        self.prot = prot
-        self.is_scaled = is_scaled
-        self.share_type = share_type
-
-    @property
-    @abc.abstractmethod
-    def shape(self) -> List[int]:
-        """
-    :rtype: List[int]
-    :returns: The shape of this tensor.
-    """
-        pass
-
-    @property
-    @abc.abstractmethod
-    def unwrapped(self) -> Tuple[AbstractTensor, ...]:
-        pass
-
-    def add(self, other):
-        """
-    Add `other` to this ABY3Tensor.  This can be another tensor with the same
-    backing or a primitive.
-
-    This function returns a new ABY3Tensor and does not modify this one.
-
-    :param ABY3Tensor other: a or primitive (e.g. a float)
-    :return: A new ABY3Tensor with `other` added.
-    :rtype: ABY3Tensor
-    """
-        if self.share_type == ARITHMETIC:
-            return self.prot.add(self, other)
-        else:
-            raise ValueError(
-                "unsupported share type for add: {}".format(self.share_type)
-            )
-
-    def __add__(self, other):
-        """
-    See :meth:`~tf_encrypted.protocol.aby3.ABY3Tensor.add`
-    """
-        return self.add(other)
-
-    def __radd__(self, other):
-        return self + other
-
-    def reduce_sum(self, axis=None, keepdims=False):
-        """
-    Like :meth:`tensorflow.reduce_sum`
-
-    :param int axis:  The axis to reduce along
-    :param bool keepdims: If true, retains reduced dimensions with length 1.
-    :return: A new ABY3Tensor
-    :rtype: ABY3Tensor
-    """
-        return self.prot.reduce_sum(self, axis, keepdims)
-
-    def sum(self, axis=None, keepdims=False):
-        """
-    See :meth:`ABY3Tensor.reduce_sum`
-    """
-        return self.reduce_sum(axis, keepdims)
-
-    def sub(self, other):
-        """
-    Subtract `other` from this tensor.
-
-    :param ABY3Tensor other: to subtract
-    :return: A new ABY3Tensor
-    :rtype: ABY3Tensor
-    """
-        if self.share_type == ARITHMETIC:
-            return self.prot.sub(self, other)
-        else:
-            raise ValueError(
-                "unsupported share type for sub: {}".format(self.share_type)
-            )
-
-    def __sub__(self, other):
-        return self.sub(other)
-
-    def __rsub__(self, other):
-        if self.share_type == ARITHMETIC:
-            return self.prot.sub(other, self)
-        else:
-            raise ValueError(
-                "unsupported share type for sub: {}".format(self.share_type)
-            )
-
-    def mul(self, other):
-        """
-    Multiply this tensor with `other`
-
-    :param ABY3Tensor other: to multiply
-    :return: A new ABY3Tensor
-    :rtype: ABY3Tensor
-    """
-        return self.prot.mul(self, other)
-
-    def __mul__(self, other):
-        return self.prot.mul(self, other)
-
-    def __rmul__(self, other):
-        return self.prot.mul(other, self)
-
-    def __truediv__(self, other):
-        return self.prot.div(self, other)
-
-    def __mod__(self, other):
-        return self.prot.mod(self, other)
-
-    def __pow__(self, p):
-        return self.prot.pow(self, p)
-
-    def square(self):
-        """
-    Square this tensor.
-
-    :return: A new ABY3Tensor
-    :rtype: ABY3Tensor
-    """
-        return self.prot.square(self)
-
-    def matmul(self, other):
-        """
-    MatMul this tensor with `other`.  This will perform matrix multiplication,
-    rather than elementwise like
-    :meth:`~tf_encrypted.protocol.aby3.ABY3Tensor.mul`
-
-    :param ABY3Tensor other: to mul
-    :return: A new ABY3Tensor
-    :rtype: ABY3Tensor
-    """
-        return self.prot.matmul(self, other)
-
-    def dot(self, other):
-        """
-    :return: A new ABY3Tensor
-    :rtype: ABY3Tensor
-    """
-        return self.matmul(other)
-
-    def __getitem__(self, slc):
-        return self.prot.indexer(self, slc)
-
-    def transpose(self, perm=None):
-        """
-    Transpose this tensor.
-
-    See :meth:`tensorflow.transpose`
-
-    :param List[int]: A permutation of the dimensions of this tensor.
-
-    :return: A new ABY3Tensor
-    :rtype: ABY3Tensor
-    """
-        return self.prot.transpose(self, perm)
-
-    def truncate(self):
-        """
-    Truncate this tensor.
-
-    `TODO`
-
-    :return: A new ABY3Tensor
-    :rtype: ABY3Tensor
-    """
-        return self.prot.truncate(self)
-
-    def expand_dims(self, axis=None):
-        """
-    :See: tf.expand_dims
-
-    :return: A new ABY3Tensor
-    :rtype: ABY3Tensor
-    """
-        return self.prot.expand_dims(self, axis=axis)
-
-    def reshape(self, shape: List[int]) -> "ABY3Tensor":
-        """
-    :See: tf.reshape
-
-    :param List[int] shape: The new shape of the tensor.
-    :rtype: ABY3Tensor
-    :returns: A new tensor with the contents of this tensor, but with the new
-        specified shape.
-    """
-        return self.prot.reshape(self, shape)
-
-    def __neg__(self):
-        return self.prot.negative(self)
-
-    def negative(self) -> "ABY3Tensor":
-        """
-    :See: tf.negative
-
-    :rtype: ABY3Tensor
-    :returns: A new tensor with numerical negative value element-wise computed.
-    """
-        return self.prot.negative(self)
-
-    def reduce_max(self, axis: int) -> "ABY3Tensor":
-        """
-    :See: tf.reduce_max
-
-    :param int axis: The axis to take the max along
-    :rtype: ABY3Tensor
-    :returns: A new ABY3 tensor with the max value from each axis.
-    """
-        return self.prot.reduce_max(self, axis)
-
-    def bitwise_xor(self, other):
-        if self.share_type == BOOLEAN:
-            return self.prot.B_xor(self, other)
-        else:
-            raise ValueError(
-                "Unsupported share type for xor: {}".format(self.share_type)
-            )
-
-    def __xor__(self, other):
-        return self.bitwise_xor(other)
-
-    def bitwise_and(self, other):
-        if self.share_type == BOOLEAN:
-            return self.prot.B_and(self, other)
-        else:
-            raise ValueError(
-                "unsupported share type for and: {}".format(self.share_type)
-            )
-
-    def __and__(self, other):
-        return self.bitwise_and(other)
-
-    def bitwise_or(self, other):
-        if self.share_type == BOOLEAN:
-            return self.prot.B_or(self, other)
-        else:
-            raise ValueError(
-                "unsupported share type for and: {}".format(self.share_type)
-            )
-
-    def __or__(self, other):
-        return self.bitwise_or(other)
-
-    def invert(self):
-        if self.share_type == BOOLEAN:
-            return self.prot.B_not(self)
-        else:
-            raise ValueError(
-                "unsupported share type for and: {}".format(self.share_type)
-            )
-
-    def __invert__(self):
-        return self.invert()
-
-    def __lshift__(self, steps):
-        return self.prot.lshift(self, steps)
-
-    def lshift(self, steps):
-        return self.prot.lshift(self, steps)
-
-    def __rshift__(self, steps):
-        return self.prot.rshift(self, steps)
-
-    def rshift(self, steps):
-        return self.prot.rshift(self, steps)
-
-    def arith_rshift(self, steps):
-        return self.rshift(steps)
-
-    def logical_rshift(self, steps):
-        return self.prot.logical_rshift(self, steps)
-
-    def write(self, filename_prefix):
-        return self.prot.write(self, filename_prefix)
-
-
-class ABY3PublicTensor(ABY3Tensor):
-    """
-  This class represents a public tensor, known by at least by the three servers
-  but potentially known by more. Although there is only a single value we
-  replicate it on both servers to avoid sending it from one to the other
-  in the operations where it's needed by both (eg multiplication).
-  """
-
-    dispatch_id = "public"
-
-    def __init__(
-        self, prot: ABY3, values: List[AbstractTensor], is_scaled: bool, share_type
-    ) -> None:
-        assert all(isinstance(v, AbstractTensor) for v in values)
-        assert all((v.shape == values[0].shape) for v in values)
-
-        super(ABY3PublicTensor, self).__init__(prot, is_scaled, share_type)
-        self.values = values
-
-    def __repr__(self) -> str:
-        return "ABY3PublicTensor(shape={}, share_type={})".format(
-            self.shape, self.share_type
-        )
-
-    @property
-    def shape(self) -> List[int]:
-        return self.values[0].shape
-
-    @property
-    def backing_dtype(self):
-        return self.values[0].factory
-
-    @property
-    def unwrapped(self) -> Tuple[AbstractTensor, ...]:
-        """
-    Unwrap the tensor.
-
-    This will return the value for each of the parties that collectively own
-    the tensor.
-
-    In most cases, this will be the same value on each device.
-
-    .. code-block:: python
-
-        x_0, y_0, z_0 = tensor.unwrapped
-        # x_0 == 10 with the value pinned to player_0's device.
-        # y_0 == 10 with the value pinned to player_1's device.
-        # z_0 == 10 with the value pinned to player_2's device.
-
-    In most cases you will want to work on this data on the specified device.
-
-    .. code-block:: python
-
-        x_0, y_0, z_0= tensor.unwrapped
-
-        with tf.device(prot.player_0.device_name):
-            # act on x_0
-
-        with tf.device(prot.player_1.device_name):
-            # act on y_0
-
-        with tf.device(prot.player_2.device_name):
-            # act on z_0
-
-    In most cases you will not need to use this method.  All funtions
-    will hide this functionality for you (e.g. `add`, `mul`, etc).
-    """
-        return self.values
-
-    def decode(self) -> Union[np.ndarray, tf.Tensor]:
-        return self.prot._decode(
-            self.values[0], self.is_scaled
-        )  # pylint: disable=protected-access
-
-    def to_native(self):
-        return self.decode()
-
-
-class ABY3Constant(ABY3PublicTensor):
-    """
-  This class essentially represents a public value, however it additionally
-  records the fact that the underlying value was declared as a constant.
-  """
-
-    def __init__(self, prot, constants, is_scaled, share_type):
-        assert all(isinstance(c, AbstractConstant) for c in constants)
-        assert all((c.shape == constants[0].shape) for c in constants)
-
-        super(ABY3Constant, self).__init__(prot, constants, is_scaled, share_type)
-        self.constants = constants
-
-    def __repr__(self) -> str:
-        return "ABY3Constant(shape={}, share_type={})".format(
-            self.shape, self.share_type
-        )
-
-
-class ABY3PrivateTensor(ABY3Tensor):
-    """
-  This class represents a private value that may be unknown to everyone.
-  """
-
-    dispatch_id = "private"
-
-    def __init__(self, prot, shares, is_scaled, share_type):
-        assert len(shares) == 3
-        assert all(
-            (ss.shape == shares[0][0].shape) for s in shares for ss in s
-        ), "Shares have different shapes."
-
-        super(ABY3PrivateTensor, self).__init__(prot, is_scaled, share_type)
-        self.shares = shares
-
-    def __repr__(self) -> str:
-        return "ABY3PrivateTensor(shape={}, share_type={})".format(
-            self.shape, self.share_type
-        )
-
-    @property
-    def shape(self) -> List[int]:
-        return self.shares[0][0].shape
-
-    @property
-    def backing_dtype(self):
-        return self.shares[0][0].factory
-
-    @property
-    def unwrapped(self):
-        return self.shares
-
-    def reveal(self) -> ABY3PublicTensor:
-        return self.prot.reveal(self)
-
-
-class ABY3PrivateVariable(ABY3PrivateTensor):
-    """
-  This class essentially represents a private value, however it additionally
-  records the fact that the backing tensor was declared as a variable in
-  order to allow treating it as a variable itself.
-  """
-
-    def __init__(self, prot, shares, is_scaled, share_type):
-        super(ABY3PrivateVariable, self).__init__(prot, shares, is_scaled, share_type)
-        self.shares = shares
-        self.initializer = tf.group(
-            *[var.initializer for share in shares for var in share]
-        )
-
-    def __repr__(self) -> str:
-        return "ABY3PrivateVariable(shape={}, share_type={})".format(
-            self.shape, self.share_type
         )
 
 
@@ -2054,7 +1595,7 @@ def _mul_trunc2_private_private(prot, x, y):
     with tf.name_scope("mul_trunc2"):
         # Step 1: Generate a Random Truncation Pair
         # If TF is smart enough, this part is supposed to be pre-computation.
-        r = prot._gen_random_sharing(shape, share_type=BOOLEAN)
+        r = prot._gen_random_sharing(shape, share_type=ShareType.BOOLEAN)
         r_trunc = r.arith_rshift(amount)
         r = prot.B2A(r)
         r_trunc = prot.B2A(r_trunc)
@@ -2091,13 +1632,13 @@ def _mul_trunc2_private_private(prot, x, y):
         # Step 3: Reveal (x*y - r) / 2^d
         # xy_minus_r = z0 + z1 + z2
         # xy_minus_r_trunc = xy_minus_r.right_shift(amount)
-        # z = ABY3PublicTensor(prot, [xy_minus_r_trunc, xy_minus_r_trunc, xy_minus_r_trunc], True, ARITHMETIC)
+        # z = ABY3PublicTensor(prot, [xy_minus_r_trunc, xy_minus_r_trunc, xy_minus_r_trunc], True, ShareType.ARITHMETIC)
         xy_minus_r_trunc = [None] * 3
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
                 xy_minus_r_trunc[i] = z0 + z1 + z2
                 xy_minus_r_trunc[i] = xy_minus_r_trunc[i].right_shift(amount)
-        z = ABY3PublicTensor(prot, xy_minus_r_trunc, True, ARITHMETIC)
+        z = ABY3PublicTensor(prot, xy_minus_r_trunc, True, ShareType.ARITHMETIC)
 
         # Step 4: Final addition
         z = z + r_trunc
@@ -2448,7 +1989,7 @@ def _B_and_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTenso
     z = [[None, None], [None, None], [None, None]]
     with tf.name_scope("b_and"):
         a0, a1, a2 = prot._gen_zero_sharing(
-            x.shape, share_type=BOOLEAN, factory=x.backing_dtype
+            x.shape, share_type=ShareType.BOOLEAN, factory=x.backing_dtype
         )
 
         with tf.device(prot.servers[0].device_name):
@@ -2696,12 +2237,12 @@ def _B_ppa_sklansky_private_private(prot, x, y, n_bits):
             c_mask = prot.define_constant(
                 np.ones(x.shape, dtype=np.object) * copy_masks[i],
                 apply_scaling=False,
-                share_type=BOOLEAN,
+                share_type=ShareType.BOOLEAN,
             )
             k_mask = prot.define_constant(
                 np.ones(x.shape, dtype=np.object) * keep_masks[i],
                 apply_scaling=False,
-                share_type=BOOLEAN,
+                share_type=ShareType.BOOLEAN,
             )
             # Copy the selected bit to 2^i positions:
             # For example, when i=2, the 4-th bit is copied to the (5, 6, 7, 8)-th bits
@@ -2782,7 +2323,7 @@ def _B_ppa_kogge_stone_private_private(prot, x, y, n_bits):
             k_mask = prot.define_constant(
                 np.ones(x.shape, dtype=np.object) * keep_masks[i],
                 apply_scaling=False,
-                share_type=BOOLEAN,
+                share_type=ShareType.BOOLEAN,
             )
 
             G1 = G << (2 ** i)
@@ -2817,14 +2358,14 @@ def _A2B_private(prot, x, nbits):
   Bit decomposition: Convert an arithmetic sharing to a boolean sharing.
   """
     assert isinstance(x, ABY3PrivateTensor), type(x)
-    assert x.share_type == ARITHMETIC
+    assert x.share_type == ShareType.ARITHMETIC
 
     x_shares = x.unwrapped
     zero = prot.define_constant(
-        np.zeros(x.shape, dtype=np.int64), apply_scaling=False, share_type=BOOLEAN
+        np.zeros(x.shape, dtype=np.int64), apply_scaling=False, share_type=ShareType.BOOLEAN
     )
     zero_on_0, zero_on_1, zero_on_2 = zero.unwrapped
-    a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=BOOLEAN)
+    a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=ShareType.BOOLEAN)
 
     operand1 = [[None, None], [None, None], [None, None]]
     operand2 = [[None, None], [None, None], [None, None]]
@@ -2855,8 +2396,8 @@ def _A2B_private(prot, x, nbits):
             operand2[2][0] = x_shares[2][0]
             operand2[2][1] = zero_on_2
 
-        operand1 = ABY3PrivateTensor(prot, operand1, x.is_scaled, BOOLEAN)
-        operand2 = ABY3PrivateTensor(prot, operand2, x.is_scaled, BOOLEAN)
+        operand1 = ABY3PrivateTensor(prot, operand1, x.is_scaled, ShareType.BOOLEAN)
+        operand2 = ABY3PrivateTensor(prot, operand2, x.is_scaled, ShareType.BOOLEAN)
 
         # Step 2: Parallel prefix adder that requires log(k) rounds of communication
         result = prot.B_ppa(operand1, operand2, nbits)
@@ -2873,16 +2414,16 @@ def _bit_extract_private(prot, x, i):
     assert x.backing_dtype == prot.int_factory
 
     with tf.name_scope("bit_extract"):
-        if x.share_type == ARITHMETIC:
+        if x.share_type == ShareType.ARITHMETIC:
             with tf.name_scope("A2B_partial"):
                 x_shares = x.unwrapped
                 zero = prot.define_constant(
                     np.zeros(x.shape, dtype=np.int64),
                     apply_scaling=False,
-                    share_type=BOOLEAN,
+                    share_type=ShareType.BOOLEAN,
                 )
                 zero_on_0, zero_on_1, zero_on_2 = zero.unwrapped
-                a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=BOOLEAN)
+                a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=ShareType.BOOLEAN)
 
                 operand1 = [[None, None], [None, None], [None, None]]
                 operand2 = [[None, None], [None, None], [None, None]]
@@ -2912,8 +2453,8 @@ def _bit_extract_private(prot, x, i):
                     operand2[2][0] = x_shares[2][0]
                     operand2[2][1] = zero_on_2
 
-                operand1 = ABY3PrivateTensor(prot, operand1, x.is_scaled, BOOLEAN)
-                operand2 = ABY3PrivateTensor(prot, operand2, x.is_scaled, BOOLEAN)
+                operand1 = ABY3PrivateTensor(prot, operand1, x.is_scaled, ShareType.BOOLEAN)
+                operand2 = ABY3PrivateTensor(prot, operand2, x.is_scaled, ShareType.BOOLEAN)
 
                 # Step 2: Parallel prefix adder that requires log(i+1) rounds of communication
                 x = prot.B_ppa(operand1, operand2, i + 1)
@@ -2925,7 +2466,7 @@ def _bit_extract_private(prot, x, i):
         # the same scale, which is not what want here.
         #
         mask = prot.define_constant(
-            np.array([0x1 << i]), apply_scaling=False, share_type=BOOLEAN
+            np.array([0x1 << i]), apply_scaling=False, share_type=ShareType.BOOLEAN
         )
         x = x & mask
 
@@ -2935,7 +2476,7 @@ def _bit_extract_private(prot, x, i):
             with tf.device(prot.servers[i].device_name):
                 result[i][0] = x_shares[i][0].cast(prot.bool_factory)
                 result[i][1] = x_shares[i][1].cast(prot.bool_factory)
-        result = ABY3PrivateTensor(prot, result, False, BOOLEAN)
+        result = ABY3PrivateTensor(prot, result, False, ShareType.BOOLEAN)
 
     return result
 
@@ -2945,7 +2486,7 @@ def _B2A_private(prot, x, nbits):
   Bit composition: Convert a boolean sharing to an arithmetic sharing.
   """
     assert isinstance(x, ABY3PrivateTensor), type(x)
-    assert x.share_type == BOOLEAN
+    assert x.share_type == ShareType.BOOLEAN
 
     # In semi-honest, the following two calls can be further optimized because we don't
     # need the boolean shares of x1 and x2. We only need their original values on intended servers.
@@ -2958,7 +2499,7 @@ def _B2A_private(prot, x, nbits):
     )
     assert x2_on_0 is None
 
-    a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=BOOLEAN)
+    a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=ShareType.BOOLEAN)
 
     with tf.name_scope("B2A"):
         # Server 1 reshares (-x1-x2) as private input
@@ -2973,16 +2514,16 @@ def _B2A_private(prot, x, nbits):
         with tf.device(prot.servers[2].device_name):
             neg_x1_neg_x2[2][0] = a2
             neg_x1_neg_x2[2][1] = a0
-        neg_x1_neg_x2 = ABY3PrivateTensor(prot, neg_x1_neg_x2, x.is_scaled, BOOLEAN)
+        neg_x1_neg_x2 = ABY3PrivateTensor(prot, neg_x1_neg_x2, x.is_scaled, ShareType.BOOLEAN)
 
         # Compute x0 = x + (-x1-x2) using the parallel prefix adder
         x0 = prot.B_ppa(x, neg_x1_neg_x2, nbits)
 
         # Reveal x0 to server 0 and 2
         with tf.device(prot.servers[0].device_name):
-            x0_on_0 = prot._reconstruct(x0.unwrapped, prot.servers[0], BOOLEAN)
+            x0_on_0 = prot._reconstruct(x0.unwrapped, prot.servers[0], ShareType.BOOLEAN)
         with tf.device(prot.servers[2].device_name):
-            x0_on_2 = prot._reconstruct(x0.unwrapped, prot.servers[2], BOOLEAN)
+            x0_on_2 = prot._reconstruct(x0.unwrapped, prot.servers[2], ShareType.BOOLEAN)
 
         # Construct the arithmetic sharing
         result = [[None, None], [None, None], [None, None]]
@@ -2995,7 +2536,7 @@ def _B2A_private(prot, x, nbits):
         with tf.device(prot.servers[2].device_name):
             result[2][0] = x2_on_2
             result[2][1] = x0_on_2
-        result = ABY3PrivateTensor(prot, result, x.is_scaled, ARITHMETIC)
+        result = ABY3PrivateTensor(prot, result, x.is_scaled, ShareType.ARITHMETIC)
 
     return result
 
@@ -3003,14 +2544,14 @@ def _B2A_private(prot, x, nbits):
 def _mul_AB_public_private(prot, x, y):
     assert isinstance(x, ABY3PublicTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(x)
-    assert x.share_type == ARITHMETIC
-    assert y.share_type == BOOLEAN
+    assert x.share_type == ShareType.ARITHMETIC
+    assert y.share_type == ShareType.BOOLEAN
 
     x_on_0, x_on_1, x_on_2 = x.unwrapped
 
     with tf.name_scope("mul_AB"):
         z = __mul_AB_routine(prot, x_on_2, y, 2)
-        z = ABY3PrivateTensor(prot, z, x.is_scaled, ARITHMETIC)
+        z = ABY3PrivateTensor(prot, z, x.is_scaled, ShareType.ARITHMETIC)
 
     return z
 
@@ -3018,21 +2559,21 @@ def _mul_AB_public_private(prot, x, y):
 def _mul_AB_private_private(prot, x, y):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(y)
-    assert x.share_type == ARITHMETIC
-    assert y.share_type == BOOLEAN
+    assert x.share_type == ShareType.ARITHMETIC
+    assert y.share_type == ShareType.BOOLEAN
 
     x_shares = x.unwrapped
 
     with tf.name_scope("mul_AB"):
         with tf.name_scope("term0"):
             w = __mul_AB_routine(prot, x_shares[0][0], y, 0)
-            w = ABY3PrivateTensor(prot, w, x.is_scaled, ARITHMETIC)
+            w = ABY3PrivateTensor(prot, w, x.is_scaled, ShareType.ARITHMETIC)
 
         with tf.name_scope("term1"):
             with tf.device(prot.servers[1].device_name):
                 a = x_shares[1][0] + x_shares[1][1]
             z = __mul_AB_routine(prot, a, y, 1)
-            z = ABY3PrivateTensor(prot, z, x.is_scaled, ARITHMETIC)
+            z = ABY3PrivateTensor(prot, z, x.is_scaled, ShareType.ARITHMETIC)
         z = w + z
 
     return z
@@ -3048,7 +2589,7 @@ def __mul_AB_routine(prot, a, b, sender_idx):
     with tf.name_scope("__mul_AB_routine"):
         b_shares = b.unwrapped
         s = [None, None, None]
-        s[0], s[1], s[2] = prot._gen_zero_sharing(a.shape, ARITHMETIC)
+        s[0], s[1], s[2] = prot._gen_zero_sharing(a.shape, ShareType.ARITHMETIC)
 
         z = [[None, None], [None, None], [None, None]]
         idx0 = sender_idx
@@ -3098,7 +2639,7 @@ def __mul_AB_routine(prot, a, b, sender_idx):
 
 def _pow_private(prot, x, p):
     assert isinstance(x, ABY3PrivateTensor), type(x)
-    assert x.share_type == ARITHMETIC
+    assert x.share_type == ShareType.ARITHMETIC
     assert p >= 1, "Exponent should be >= 0"
 
     # NOTE: pow should be able to use the `memoir` memoization
@@ -3118,7 +2659,7 @@ def _pow_private(prot, x, p):
 
 def _polynomial_private(prot, x, coeffs):
     assert isinstance(x, ABY3PrivateTensor), type(x)
-    assert x.share_type == ARITHMETIC
+    assert x.share_type == ShareType.ARITHMETIC
 
     with tf.name_scope("polynomial"):
         result = prot.define_constant(np.zeros(x.shape), apply_scaling=x.is_scaled)
@@ -3371,7 +2912,7 @@ def _read_(prot, filename_prefix, batch_size, n_columns):
                 batch[i][j] = tf.reshape(batch[i][j], [batch_size] + row_shape)
                 batch[i][j] = prot.int_factory.tensor(batch[i][j])
 
-    return ABY3PrivateTensor(prot, batch, True, ARITHMETIC)
+    return ABY3PrivateTensor(prot, batch, True, ShareType.ARITHMETIC)
 
 
 def _iterate_private(
