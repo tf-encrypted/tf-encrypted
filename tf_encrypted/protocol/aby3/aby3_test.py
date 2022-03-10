@@ -20,12 +20,13 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
+        @tfe.local_computation("input-provider")
         def provide_input():
             return tf.ones(shape=(2, 2)) * 1.3
 
         # define inputs
         x = tfe.define_private_variable(tf.ones(shape=(2, 2)))
-        y = tfe.define_private_input("input-provider", provide_input)
+        y = provide_input()
 
         # define computation
         z = x + y
@@ -67,11 +68,12 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
+        @tfe.local_computation("input-provider")
         def provide_input():
             return tf.ones(shape=(2, 2)) * 1.3
 
         x = tfe.define_private_variable(tf.ones(shape=(2, 2)))
-        y = tfe.define_private_input("input-provider", provide_input)
+        y = provide_input()
 
         z = x - y
 
@@ -163,6 +165,7 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
+        @tfe.local_computation("input-provider")
         def provide_input():
             # normal TensorFlow operations can be run locally
             # as part of defining a private input, in this
@@ -171,7 +174,7 @@ class TestABY3(unittest.TestCase):
 
         # define inputs
         x = tfe.define_private_variable(tf.ones(shape=(2, 2)) * 2)
-        y = tfe.define_private_input("input-provider", provide_input)
+        y = provide_input()
 
         # define computation
         z = y * x
@@ -191,6 +194,7 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
+        @tfe.local_computation("input-provider")
         def provide_input():
             # normal TensorFlow operations can be run locally
             # as part of defining a private input, in this
@@ -199,7 +203,7 @@ class TestABY3(unittest.TestCase):
 
         # define inputs
         x = tfe.define_private_variable(tf.ones(shape=(2, 2)))
-        y = tfe.define_public_input("input-provider", provide_input)
+        y = provide_input()
         v = tfe.define_constant(np.ones((2, 2)))
 
         # define computation
@@ -977,6 +981,7 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
+        @tfe.local_computation("input-provider")
         def provide_input():
             # normal TensorFlow operations can be run locally
             # as part of defining a private input, in this
@@ -985,7 +990,7 @@ class TestABY3(unittest.TestCase):
 
         # define inputs
         x = tfe.define_private_variable(tf.ones(shape=(2, 2)) * 2)
-        y = tfe.define_private_input("input-provider", provide_input)
+        y = provide_input()
 
         # define computation
         z = tfe.mul_trunc2(x, y)
@@ -1005,6 +1010,7 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
+        @tfe.local_computation("input-provider")
         def provide_input():
             # normal TensorFlow operations can be run locally
             # as part of defining a private input, in this
@@ -1012,7 +1018,7 @@ class TestABY3(unittest.TestCase):
             return tf.ones(shape=(2, 2)) * 1.3
 
         # define inputs
-        x = tfe.define_private_input("input-provider", provide_input)
+        x = provide_input()
 
         _, tmp_filename = tempfile.mkstemp()
         write_op = x.write(tmp_filename)
@@ -1032,11 +1038,12 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
+        @tfe.local_computation("input-provider")
         def provide_input():
             return tf.reshape(tf.range(0, 8), [4, 2])
 
         # define inputs
-        x = tfe.define_private_input("input-provider", provide_input)
+        x = provide_input()
 
         _, tmp_filename = tempfile.mkstemp()
         write_op = x.write(tmp_filename)
@@ -1066,11 +1073,12 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
+        @tfe.local_computation("input-provider")
         def provide_input():
             return tf.reshape(tf.range(0, 8), [4, 2])
 
         # define inputs
-        x = tfe.define_private_input("input-provider", provide_input)
+        x = provide_input()
 
         _, tmp_filename = tempfile.mkstemp()
         write_op = x.write(tmp_filename)
