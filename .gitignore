@@ -11,6 +11,8 @@ data/
 docs/source/gen
 bazel-*
 .bazelrc
+.idea/
+*.dylib
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
