@@ -88,7 +88,7 @@ def seeded_random_uniform(
     :rtype: tf.Tensor
     """
     dtype = dtypes.as_dtype(dtype)
-    if dtype not in (dtypes.int32, dtypes.int64):
+    if dtype not in (dtypes.int8, dtypes.int16, dtypes.int32, dtypes.int64):
         raise ValueError("Invalid dtype %r" % dtype)
 
     if maxval is None:
@@ -126,7 +126,7 @@ def random_uniform(
     """
 
     dtype = dtypes.as_dtype(dtype)
-    if dtype not in (dtypes.int32, dtypes.int64):
+    if dtype not in (dtypes.int8, dtypes.int16, dtypes.int32, dtypes.int64):
         raise ValueError("Invalid dtype %r" % dtype)
 
     if maxval is None:
