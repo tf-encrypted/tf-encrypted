@@ -314,7 +314,7 @@ class TestABY3(unittest.TestCase):
             tf.constant([[1, 0, 0], [0, 1, 0]]),
             apply_scaling=False,
             share_type=ShareType.BOOLEAN,
-            factory=prot.bool_factory,
+            factory=prot.factories[tf.bool],
         )
         z1 = ~x
         z2 = ~y
@@ -531,11 +531,11 @@ class TestABY3(unittest.TestCase):
                 np.array(
                     [
                         [
-                            (-1 & ((1 << prot.nbits) - 1)) >> 1,
-                            (-2 & ((1 << prot.nbits) - 1)) >> 1,
-                            (-3 & ((1 << prot.nbits) - 1)) >> 1,
+                            (-1 & ((1 << prot.default_nbits) - 1)) >> 1,
+                            (-2 & ((1 << prot.default_nbits) - 1)) >> 1,
+                            (-3 & ((1 << prot.default_nbits) - 1)) >> 1,
                         ],
-                        [(-4 & ((1 << prot.nbits) - 1)) >> 1, 2, 3],
+                        [(-4 & ((1 << prot.default_nbits) - 1)) >> 1, 2, 3],
                     ]
                 ),
                 rtol=0.0,
@@ -632,12 +632,12 @@ class TestABY3(unittest.TestCase):
         c_on_receiver = prot.define_constant(
             np.array([[1, 0, 1], [0, 1, 0]]),
             apply_scaling=False,
-            factory=prot.bool_factory,
+            factory=prot.factories[tf.bool],
         ).unwrapped[0]
         c_on_helper = prot.define_constant(
             np.array([[1, 0, 1], [0, 1, 0]]),
             apply_scaling=False,
-            factory=prot.bool_factory,
+            factory=prot.factories[tf.bool],
         ).unwrapped[0]
 
         m_c = prot._ot(  # pylint: disable=protected-access
@@ -675,7 +675,7 @@ class TestABY3(unittest.TestCase):
             tf.constant([[1, 0, 0], [0, 1, 0]]),
             apply_scaling=False,
             share_type=ShareType.BOOLEAN,
-            factory=prot.bool_factory,
+            factory=prot.factories[tf.bool],
         )
 
         z = tfe.mul_AB(x, y)
@@ -702,7 +702,7 @@ class TestABY3(unittest.TestCase):
             tf.constant([[1, 0, 0], [0, 1, 0]]),
             apply_scaling=False,
             share_type=ShareType.BOOLEAN,
-            factory=prot.bool_factory,
+            factory=prot.factories[tf.bool],
         )
 
         z = tfe.mul_AB(x, y)

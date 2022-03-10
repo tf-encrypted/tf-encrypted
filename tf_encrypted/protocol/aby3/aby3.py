@@ -42,10 +42,6 @@ TF_NATIVE_TYPES = [tf.bool, tf.int8, tf.int16, tf.int32, tf.int64]
 
 _THISMODULE = sys.modules[__name__]
 
-# ===== Factory =====
-i64_factory = native_factory(tf.int64)
-b_factory = bool_factory()
-
 
 class ABY3(Protocol):
     """ABY3 framework."""
@@ -64,23 +60,33 @@ class ABY3(Protocol):
         self.servers[1] = config.get_player(server_1 if server_1 else "server1")
         self.servers[2] = config.get_player(server_2 if server_2 else "server2")
 
-        int_factory = i64_factory
-
         if use_noninteractive_truncation:
             fixedpoint_config = fixed64_ni
         else:
             fixedpoint_config = fixed64
 
         self.fixedpoint_config = fixedpoint_config
-        self.int_factory = int_factory
-        self.bool_factory = b_factory
+
+        self.factories = {
+            1 : bool_factory(),
+            8 : native_factory(tf.int8),
+            16: native_factory(tf.int16),
+            32: native_factory(tf.int32),
+            64: native_factory(tf.int64)
+        }
+        self.factories.update({
+            tf.bool: self.factories[1],
+            tf.int8: self.factories[8],
+            tf.int16: self.factories[16],
+            tf.int32: self.factories[32],
+            tf.int64: self.factories[64]
+        })
+        self.default_nbits = 64
+        self.default_factory = self.factories[self.default_nbits]
 
         self.pairwise_keys, self.pairwise_nonces = self.setup_pairwise_randomness()
         self.b2a_keys_1, self.b2a_keys_2, self.b2a_nonce = self.setup_b2a_generator()
 
-    @property
-    def nbits(self):
-        return self.int_factory.nbits
 
     def setup_pairwise_randomness(self):
         """
@@ -243,7 +249,7 @@ class ABY3(Protocol):
         if isinstance(value, (int, float)):
             value = np.array([value])
 
-        factory = factory or self.int_factory
+        factory = factory or self.default_factory
 
         value = self._encode(value, apply_scaling)
         with tf.name_scope("constant{}".format("-" + name if name else "")):
@@ -285,7 +291,7 @@ class ABY3(Protocol):
         init_val_types = (np.ndarray, tf.Tensor, ABY3PrivateTensor)
         assert isinstance(initial_value, init_val_types), type(initial_value)
 
-        factory = factory or self.int_factory
+        factory = factory or self.default_factory
         suffix = "-" + name if name else ""
 
         with tf.name_scope("private-var{}".format(suffix)):
@@ -347,7 +353,7 @@ class ABY3(Protocol):
     :param factory: Backing tensor type to use for outputs.
     """
 
-        factory = factory or self.int_factory
+        factory = factory or self.default_factory
 
         if isinstance(player, str):
             player = get_config().get_player(player)
@@ -470,7 +476,7 @@ class ABY3(Protocol):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
 
-        factory = factory or self.int_factory
+        factory = factory or self.default_factory
         suffix = "-" + name if name else ""
 
         def helper(v: tf.Tensor) -> "ABY3PublicTensor":
@@ -518,7 +524,7 @@ class ABY3(Protocol):
             tensor.shape.is_fully_defined()
         ), "Shape of input '{}' is not fully defined".format(name if name else "")
 
-        factory = factory or self.int_factory
+        factory = factory or self.defaul_factory
 
         with tf.name_scope("public-tensor"):
             tensor = self._encode(tensor, apply_scaling)
@@ -572,7 +578,7 @@ class ABY3(Protocol):
                 integers = scaled.astype(int).astype(object)
 
             elif isinstance(scaled, tf.Tensor):
-                factory = factory or self.int_factory
+                factory = factory or self.default_factory
                 tf_native_type = factory.native_type
                 assert tf_native_type in TF_NATIVE_TYPES
                 integers = tf.cast(scaled, dtype=tf_native_type)
@@ -674,7 +680,7 @@ class ABY3(Protocol):
                     "Only arithmetic and boolean sharings are supported."
                 )
 
-        factory = factory or self.int_factory
+        factory = factory or self.default_factory
         with tf.name_scope("zero-sharing"):
             with tf.device(self.servers[0].device_name):
                 f00 = factory.sample_seeded_uniform(
@@ -707,7 +713,7 @@ class ABY3(Protocol):
     def _gen_random_sharing(self, shape, share_type=ShareType.ARITHMETIC, factory=None):
 
         r = [[None] * 2 for _ in range(3)]
-        factory = factory or self.int_factory
+        factory = factory or self.default_factory
         with tf.name_scope("random-sharing"):
             with tf.device(self.servers[0].device_name):
                 r[0][0] = factory.sample_seeded_uniform(
@@ -738,43 +744,43 @@ class ABY3(Protocol):
     def _gen_b2a_sharing(self, shape, b2a_keys):
         shares = [[None, None], [None, None], [None, None]]
         with tf.device(self.servers[0].device_name):
-            shares[0][0] = self.int_factory.sample_seeded_uniform(
+            shares[0][0] = self.default_factory.sample_seeded_uniform(
                 shape=shape, seed=b2a_keys[0][0] + self.b2a_nonce
             )  # yapf: disable
-            shares[0][1] = self.int_factory.sample_seeded_uniform(
+            shares[0][1] = self.default_factory.sample_seeded_uniform(
                 shape=shape, seed=b2a_keys[0][1] + self.b2a_nonce
             )  # yapf: disable
             x_on_0 = None
             if b2a_keys[0][2] is not None:
-                share_2 = self.int_factory.sample_seeded_uniform(
+                share_2 = self.default_factory.sample_seeded_uniform(
                     shape=shape, seed=b2a_keys[0][2] + self.b2a_nonce
                 )  # yapf: disable
                 x_on_0 = shares[0][0] ^ shares[0][1] ^ share_2
 
         with tf.device(self.servers[1].device_name):
-            shares[1][0] = self.int_factory.sample_seeded_uniform(
+            shares[1][0] = self.default_factory.sample_seeded_uniform(
                 shape=shape, seed=b2a_keys[1][1] + self.b2a_nonce
             )  # yapf: disable
-            shares[1][1] = self.int_factory.sample_seeded_uniform(
+            shares[1][1] = self.default_factory.sample_seeded_uniform(
                 shape=shape, seed=b2a_keys[1][2] + self.b2a_nonce
             )  # yapf: disable
             x_on_1 = None
             if b2a_keys[1][0] is not None:
-                share_0 = self.int_factory.sample_seeded_uniform(
+                share_0 = self.default_factory.sample_seeded_uniform(
                     shape=shape, seed=b2a_keys[1][0] + self.b2a_nonce
                 )  # yapf: disable
                 x_on_1 = share_0 ^ shares[1][0] ^ shares[1][1]
 
         with tf.device(self.servers[2].device_name):
-            shares[2][0] = self.int_factory.sample_seeded_uniform(
+            shares[2][0] = self.default_factory.sample_seeded_uniform(
                 shape=shape, seed=b2a_keys[2][2] + self.b2a_nonce
             )  # yapf: disable
-            shares[2][1] = self.int_factory.sample_seeded_uniform(
+            shares[2][1] = self.default_factory.sample_seeded_uniform(
                 shape=shape, seed=b2a_keys[2][0] + self.b2a_nonce
             )  # yapf: disable
             x_on_2 = None
             if b2a_keys[2][1] is not None:
-                share_1 = self.int_factory.sample_seeded_uniform(
+                share_1 = self.default_factory.sample_seeded_uniform(
                     shape=shape, seed=b2a_keys[2][1] + self.b2a_nonce
                 )  # yapf: disable
                 x_on_2 = share_1 ^ shares[2][0] ^ shares[2][1]
@@ -806,28 +812,28 @@ class ABY3(Protocol):
         assert m0.shape == m1.shape, "m0 shape {}, m1 shape {}".format(
             m0.shape, m1.shape
         )
-        assert m0.factory == self.int_factory
-        assert m1.factory == self.int_factory
-        assert c_on_receiver.factory == self.bool_factory
-        assert c_on_helper.factory == self.bool_factory
+        assert m0.factory == self.default_factory
+        assert m1.factory == self.default_factory
+        assert c_on_receiver.factory == self.factories[tf.bool]
+        assert c_on_helper.factory == self.factories[tf.bool]
 
         with tf.name_scope("OT"):
-            int_factory = self.int_factory
+            default_factory = self.default_factory
             with tf.device(sender.device_name):
-                w_on_sender = int_factory.sample_seeded_uniform(
+                w_on_sender = default_factory.sample_seeded_uniform(
                     shape=[2] + m0.shape.as_list(), seed=key_on_sender + nonce
                 )
                 masked_m0 = m0 ^ w_on_sender[0]
                 masked_m1 = m1 ^ w_on_sender[1]
             with tf.device(helper.device_name):
-                w_on_helper = int_factory.sample_seeded_uniform(
+                w_on_helper = default_factory.sample_seeded_uniform(
                     shape=[2] + m0.shape.as_list(), seed=key_on_helper + nonce
                 )
-                w_c = int_factory.where(
+                w_c = default_factory.where(
                     c_on_helper.value, w_on_helper[1], w_on_helper[0], v2=False
                 )
             with tf.device(receiver.device_name):
-                masked_m_c = int_factory.where(
+                masked_m_c = default_factory.where(
                     c_on_receiver.value, masked_m1, masked_m0, v2=False
                 )
                 m_c = masked_m_c ^ w_c
@@ -1161,7 +1167,8 @@ class ABY3(Protocol):
 
     @memoize
     def msb(self, x):
-        return self.bit_extract(x, self.nbits - 1)
+        x = self.lift(x)
+        return self.bit_extract(x, x.backing_dtype.nbits - 1)
 
     @memoize
     def polynomial(self, x, coeffs):
@@ -1778,7 +1785,7 @@ def _truncate_private_noninteractive(
         # First step: compute new shares
 
         with tf.device(prot.servers[2].device_name):
-            r_on_2 = prot.int_factory.sample_seeded_uniform(
+            r_on_2 = prot.default_factory.sample_seeded_uniform(
                 shares[2][0].shape, prot.pairwise_keys[2][0] + prot.pairwise_nonces[1]
             )
 
@@ -1786,7 +1793,7 @@ def _truncate_private_noninteractive(
             y0 = shares[0][0].truncate(amount, base)
 
         with tf.device(prot.servers[1].device_name):
-            r_on_1 = prot.int_factory.sample_seeded_uniform(
+            r_on_1 = prot.default_factory.sample_seeded_uniform(
                 shares[1][0].shape, prot.pairwise_keys[1][1] + prot.pairwise_nonces[1]
             )
             t = shares[1][0] + shares[1][1]
@@ -1828,7 +1835,7 @@ def _truncate_private_interactive(
     with tf.name_scope("truncate-i"):
         scaling_factor = prot.fixedpoint_config.scaling_factor
         scaling_factor_inverse = inverse(
-            prot.fixedpoint_config.scaling_factor, prot.int_factory.modulus
+            prot.fixedpoint_config.scaling_factor, prot.default_factory.modulus
         )
 
         # we first rotate `a` to make sure reconstructed values fall into
@@ -1864,12 +1871,12 @@ def _truncate_private_interactive(
 
         d = [[None] * 2 for _ in range(3)]
         with tf.device(prot.servers[0].device_name):
-            r0_on_0 = prot.int_factory.sample_seeded_bounded(
+            r0_on_0 = prot.default_factory.sample_seeded_bounded(
                 shape,
                 prot.pairwise_keys[0][0] + prot.pairwise_nonces[2],
                 mask_bitlength,
             )
-            r1_on_0 = prot.int_factory.sample_seeded_bounded(
+            r1_on_0 = prot.default_factory.sample_seeded_bounded(
                 shape,
                 prot.pairwise_keys[0][1] + prot.pairwise_nonces[0],
                 mask_bitlength,
@@ -1887,7 +1894,7 @@ def _truncate_private_interactive(
             d[0][1] = (a_shares[0][1] - a_lower1_on_0) * scaling_factor_inverse
 
         with tf.device(prot.servers[1].device_name):
-            r1_on_1 = prot.int_factory.sample_seeded_bounded(
+            r1_on_1 = prot.default_factory.sample_seeded_bounded(
                 shape,
                 prot.pairwise_keys[1][0] + prot.pairwise_nonces[0],
                 mask_bitlength,
@@ -1907,7 +1914,7 @@ def _truncate_private_interactive(
             d[1][1] = (a_shares[1][1] - a_lower2_on_1) * scaling_factor_inverse
 
         with tf.device(prot.servers[2].device_name):
-            r0_on_2 = prot.int_factory.sample_seeded_bounded(
+            r0_on_2 = prot.default_factory.sample_seeded_bounded(
                 shape,
                 prot.pairwise_keys[2][1] + prot.pairwise_nonces[2],
                 mask_bitlength,
@@ -2203,6 +2210,7 @@ def _B_ppa_sklansky_private_private(prot, x, y, n_bits):
 
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(y)
+    assert x.backing_dtype == y.backing_dtype
 
     if x.backing_dtype.native_type != tf.int64:
         raise NotImplementedError(
@@ -2230,7 +2238,7 @@ def _B_ppa_sklansky_private_private(prot, x, y, n_bits):
         G = x & y
         P = x ^ y
 
-        k = prot.nbits
+        k = x.backing_dtype.nbits
         if n_bits is not None:
             k = n_bits
         for i in range(ceil(log2(k))):
@@ -2300,6 +2308,7 @@ def _B_ppa_kogge_stone_private_private(prot, x, y, n_bits):
 
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(y)
+    assert x.backing_dtype == y.backing_dtype
 
     if x.backing_dtype.native_type != tf.int64:
         raise NotImplementedError(
@@ -2308,17 +2317,17 @@ def _B_ppa_kogge_stone_private_private(prot, x, y, n_bits):
 
     with tf.name_scope("B_ppa"):
         keep_masks = []
-        for i in range(ceil(log2(prot.nbits))):
+        for i in range(ceil(log2(x.backing_dtype.nbits))):
             keep_masks.append((1 << (2 ** i)) - 1)
         """
-    For example, if prot.nbits = 64, then keep_masks is:
+    For example, if nbits = 64, then keep_masks is:
     keep_masks = [0x0000000000000001, 0x0000000000000003, 0x000000000000000f,
                   0x00000000000000ff, 0x000000000000ffff, 0x00000000ffffffff]
     """
 
         G = x & y
         P = x ^ y
-        k = prot.nbits if n_bits is None else n_bits
+        k = x.backing_dtype.nbits if n_bits is None else n_bits
         for i in range(ceil(log2(k))):
             k_mask = prot.define_constant(
                 np.ones(x.shape, dtype=np.object) * keep_masks[i],
@@ -2411,7 +2420,7 @@ def _bit_extract_private(prot, x, i):
   to a single-bit boolean sharing.
   """
     assert isinstance(x, ABY3PrivateTensor), type(x)
-    assert x.backing_dtype == prot.int_factory
+    assert x.backing_dtype == prot.default_factory
 
     with tf.name_scope("bit_extract"):
         if x.share_type == ShareType.ARITHMETIC:
@@ -2474,8 +2483,8 @@ def _bit_extract_private(prot, x, i):
         result = [[None, None], [None, None], [None, None]]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
-                result[i][0] = x_shares[i][0].cast(prot.bool_factory)
-                result[i][1] = x_shares[i][1].cast(prot.bool_factory)
+                result[i][0] = x_shares[i][0].cast(prot.factories[tf.bool])
+                result[i][1] = x_shares[i][1].cast(prot.factories[tf.bool])
         result = ABY3PrivateTensor(prot, result, False, ShareType.BOOLEAN)
 
     return result
@@ -2910,7 +2919,7 @@ def _read_(prot, filename_prefix, batch_size, n_columns):
                 it = data.make_one_shot_iterator()
                 batch[i][j] = it.get_next()
                 batch[i][j] = tf.reshape(batch[i][j], [batch_size] + row_shape)
-                batch[i][j] = prot.int_factory.tensor(batch[i][j])
+                batch[i][j] = prot.default_factory.tensor(batch[i][j])
 
     return ABY3PrivateTensor(prot, batch, True, ShareType.ARITHMETIC)
 
@@ -2954,7 +2963,7 @@ def _iterate_private(
                 )
                 batch = iterators[idx][i].get_next()
                 # Wrap the tf.tensor as a dense tensor (no extra encoding is needed)
-                results[idx][i] = prot.int_factory.tensor(tf.reshape(batch, out_shape))
+                results[idx][i] = prot.default_factory.tensor(tf.reshape(batch, out_shape))
 
             prot._initializers.append(
                 tf.group(iterators[idx][0].initializer, iterators[idx][1].initializer)
