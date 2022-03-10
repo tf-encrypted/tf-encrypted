@@ -1348,6 +1348,10 @@ class ABY3(Protocol):
         return self.greater_equal(y, x)
 
     @memoize
+    def bit_gather(self, x, start, stride):
+        return self.dispatch("bit_gather", x, start, stride)
+
+    @memoize
     def cast(self, x, factory):
         return self.dispatch("cast", x, factory)
 
@@ -1394,6 +1398,38 @@ def _reveal_private(prot, x):
             z_on_2 = prot._reconstruct(shares, prot.servers[2], x.share_type)
 
     return ABY3PublicTensor(prot, [z_on_0, z_on_1, z_on_2], x.is_scaled, x.share_type)
+
+
+def _bit_gather_private(prot, x, start, stride):
+    assert isinstance(x, ABY3PrivateTensor), type(x)
+
+    shares = x.unwrapped
+
+    z = [[None, None], [None, None], [None, None]]
+    with tf.name_scope("bit-gather-private"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = x_shares[i][0].bit_gather(start, stride)
+                z[i][1] = x_shares[i][1].bit_gather(start, stride)
+
+        z = ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+    return z
+
+
+def _bit_gather_public(prot, x, start, stride):
+    assert isinstance(x, ABY3PublicTensor), type(x)
+
+    x_ = x.unwrapped
+
+    z = [None, None, None]
+    with tf.name_scope("bit-gather-public"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i] = x_[i].bit_gather(start, stride)
+
+        z = ABY3PublicTensor(prot, z, x.is_scaled, x.share_type)
+    return z
+
 
 
 def _cast_private(prot, x, factory):

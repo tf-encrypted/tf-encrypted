@@ -16,6 +16,7 @@ import numpy as np
 import tensorflow as tf
 
 from ..operations import secure_random
+from ..operations import aux
 from .factory import AbstractConstant
 from .factory import AbstractFactory
 from .factory import AbstractPlaceholder
@@ -307,6 +308,10 @@ def native_factory(
             value = tf.matmul(x.value, y.value)
             if EXPLICIT_MODULUS is not None:
                 value %= EXPLICIT_MODULUS
+            return DenseTensor(value)
+
+        def bit_gather(self, start, stride):
+            value = aux.bit_gather(self.value, start, stride)
             return DenseTensor(value)
 
         def im2col(self, h_filter, w_filter, padding, stride):
