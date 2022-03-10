@@ -327,15 +327,34 @@ $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECUR
 	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
 		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
 
+secure_random : $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so 
+
+# ###############################################
+# Aux ops 
+# ###############################################
+AUX_OUT_PRE = tf_encrypted/operations/aux/aux_module_tf_
+AUX_IN = $(wildcard operations/aux/*.cc)
+
+$(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so: $(AUX_IN)
+	mkdir -p tf_encrypted/operations/aux
+	g++ -std=c++11 -shared $(AUX_IN) -o $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so \
+		-fPIC  $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2
+
+aux : $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so
+
+.PHONY: aux
+
+
 # ###############################################
 # Build
 # ###############################################
 
-build: $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so
+build: secure_random aux 
 
 build-all:
 	pip install tensorflow==1.15.2
 	$(MAKE) $(SECURE_OUT_PRE)1.15.2.so
+	$(MAKE) $(AUX_OUT_PRE)1.15.2.so
 
 .PHONY: build build-all
 
