@@ -274,6 +274,29 @@ class TestABY3(unittest.TestCase):
                 atol=0.01,
             )
 
+    def test_cast(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        # define inputs
+        x = tfe.define_private_variable(np.array([[0.6, -0.7], [-0.8, 0.9]]))
+        y = tfe.define_constant(np.array([[0.6, -0.7], [-0.8, 0.9]]))
+
+        # define computation
+        z1 = x.cast(prot.factories[tf.int32])
+        z2 = y.cast(prot.factories[tf.int32])
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(z1.reveal())
+            np.testing.assert_allclose(result, np.array([[0.6, -0.7], [-0.8, 0.9]]), rtol=0.0, atol=0.01)
+            result = sess.run(z2)
+            np.testing.assert_allclose(result, np.array([[0.6, -0.7], [-0.8, 0.9]]), rtol=0.0, atol=0.01)
+
     def test_boolean_sharing(self):
         tf.reset_default_graph()
 

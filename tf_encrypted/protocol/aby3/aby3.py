@@ -1324,6 +1324,33 @@ class ABY3(Protocol):
             )
         return self.dispatch("blinded_shuffle", tensor)
 
+    @memoize
+    def equal(self, x, y):
+        x, y = self.lift(x, y)
+        return self.dispatch("equal", x, y)
+
+    @memoize
+    def greater(self, x, y):
+        x, y = self.lift(x, y)
+        return self.dispatch("greater", x, y, output_share_type)
+
+    @memoize
+    def less(self, x, y):
+        return self.greater(y, x)
+
+    @memoize
+    def greater_equal(self, x, y):
+        x, y = self.lift(x, y)
+        return self.dispatch("greater_equal", x, y)
+
+    @memoize
+    def less_equal(self, x, y):
+        return self.greater_equal(y, x)
+
+    @memoize
+    def cast(self, x, factory):
+        return self.dispatch("cast", x, factory)
+
     def dispatch(self, base_name, *args, container=None, **kwargs):
         """
     Finds the correct protocol logicto perform based on the dispatch_id
@@ -1368,6 +1395,36 @@ def _reveal_private(prot, x):
 
     return ABY3PublicTensor(prot, [z_on_0, z_on_1, z_on_2], x.is_scaled, x.share_type)
 
+
+def _cast_private(prot, x, factory):
+    assert isinstance(x, ABY3PrivateTensor), type(x)
+
+    shares = x.unwrapped
+
+    z = [[None, None], [None, None], [None, None]]
+    with tf.name_scope("cast-private"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = shares[i][0].cast(factory)
+                z[i][1] = shares[i][1].cast(factory)
+
+        z = ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+    return z
+
+
+def _cast_public(prot, x, factory):
+    assert isinstance(x, ABY3PublicTensor), type(x)
+
+    x_ = x.unwrapped
+
+    z = [None, None, None]
+    with tf.name_scope("cast-public"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i] = x_[i].cast(factory)
+
+        z = ABY3PublicTensor(prot, z, x.is_scaled, x.share_type)
+    return z
 
 #
 # add helpers
