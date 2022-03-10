@@ -251,7 +251,7 @@ class ABY3Tensor(abc.ABC):
 
     def bitwise_xor(self, other):
         if self.share_type == ShareType.BOOLEAN:
-            return self.prot.B_xor(self, other)
+            return self.prot.xor(self, other)
         else:
             raise ValueError("Unsupported share type for xor: {}".format(self.share_type))
 
@@ -260,7 +260,7 @@ class ABY3Tensor(abc.ABC):
 
     def bitwise_and(self, other):
         if self.share_type == ShareType.BOOLEAN:
-            return self.prot.B_and(self, other)
+            return self.prot.and_(self, other)
         else:
             raise ValueError("unsupported share type for and: {}".format(self.share_type))
 
@@ -269,7 +269,7 @@ class ABY3Tensor(abc.ABC):
 
     def bitwise_or(self, other):
         if self.share_type == ShareType.BOOLEAN:
-            return self.prot.B_or(self, other)
+            return self.prot.or_(self, other)
         else:
             raise ValueError("unsupported share type for and: {}".format(self.share_type))
 
@@ -278,7 +278,7 @@ class ABY3Tensor(abc.ABC):
 
     def invert(self):
         if self.share_type == ShareType.BOOLEAN:
-            return self.prot.B_not(self)
+            return self.prot.not_(self)
         else:
             raise ValueError("unsupported share type for and: {}".format(self.share_type))
 

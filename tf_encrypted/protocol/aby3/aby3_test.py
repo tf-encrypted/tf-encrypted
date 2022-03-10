@@ -287,9 +287,9 @@ class TestABY3(unittest.TestCase):
             tf.constant([[7, 8, 9], [10, 11, 12]]), share_type=ShareType.BOOLEAN
         )
 
-        z1 = tfe.B_xor(x, y)
+        z1 = tfe.xor(x, y)
 
-        z2 = tfe.B_and(x, y)
+        z2 = tfe.and_(x, y)
 
         with tfe.Session() as sess:
             # initialize variables

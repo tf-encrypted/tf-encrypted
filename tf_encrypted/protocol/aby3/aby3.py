@@ -1194,24 +1194,24 @@ class ABY3(Protocol):
         return self.dispatch("reveal", x)
 
     @memoize
-    def B_xor(self, x, y):
+    def xor(self, x, y):
         x, y = self.lift(x, y, share_type=ShareType.BOOLEAN)
-        return self.dispatch("B_xor", x, y)
+        return self.dispatch("xor", x, y)
 
     @memoize
-    def B_and(self, x, y):
+    def and_(self, x, y):
         x, y = self.lift(x, y, share_type=ShareType.BOOLEAN)
-        return self.dispatch("B_and", x, y)
+        return self.dispatch("and", x, y)
 
     @memoize
-    def B_or(self, x, y):
+    def or_(self, x, y):
         x, y = self.lift(x, y, share_type=ShareType.BOOLEAN)
-        return self.dispatch("B_or", x, y)
+        return self.dispatch("or", x, y)
 
     @memoize
-    def B_not(self, x):
+    def not_(self, x):
         x = self.lift(x, share_type=ShareType.BOOLEAN)
-        return self.dispatch("B_not", x)
+        return self.dispatch("not", x)
 
     @memoize
     def B_ppa(self, x, y, n_bits=None, topology="kogge_stone"):
@@ -2038,13 +2038,13 @@ def _truncate_private_interactive(
     return ABY3PrivateTensor(prot, d, a.is_scaled, a.share_type)
 
 
-def _B_xor_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor):
+def _xor_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(y)
     assert x.backing_dtype == y.backing_dtype
 
     z = [[None, None], [None, None], [None, None]]
-    with tf.name_scope("b_xor"):
+    with tf.name_scope("xor"):
 
         with tf.device(prot.servers[0].device_name):
             z[0][0] = x.shares[0][0] ^ y.shares[0][0]
@@ -2061,13 +2061,13 @@ def _B_xor_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTenso
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 
 
-def _B_xor_private_public(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PublicTensor):
+def _xor_private_public(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PublicTensor):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PublicTensor), type(y)
     assert x.backing_dtype == y.backing_dtype
 
     z = [[None, None], [None, None], [None, None]]
-    with tf.name_scope("b_xor"):
+    with tf.name_scope("xor"):
         y_on_0, y_on_1, y_on_2 = y.unwrapped
         with tf.device(prot.servers[0].device_name):
             z[0][0] = x.shares[0][0] ^ y_on_0
@@ -2084,7 +2084,7 @@ def _B_xor_private_public(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PublicTensor)
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 
 
-def _B_and_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor):
+def _and_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(y)
     assert x.backing_dtype == y.backing_dtype
@@ -2093,7 +2093,7 @@ def _B_and_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTenso
     y_shares = y.unwrapped
 
     z = [[None, None], [None, None], [None, None]]
-    with tf.name_scope("b_and"):
+    with tf.name_scope("and"):
         a0, a1, a2 = prot._gen_zero_sharing(
             x.shape, share_type=ShareType.BOOLEAN, factory=x.backing_dtype
         )
@@ -2131,7 +2131,7 @@ def _B_and_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTenso
         return z
 
 
-def _B_and_private_public(prot, x, y):
+def _and_private_public(prot, x, y):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PublicTensor), type(x)
     assert x.backing_dtype == y.backing_dtype
@@ -2140,7 +2140,7 @@ def _B_and_private_public(prot, x, y):
     y_on_0, y_on_1, y_on_2 = y.unwrapped
 
     z = [[None, None], [None, None], [None, None]]
-    with tf.name_scope("B_and"):
+    with tf.name_scope("and"):
         with tf.device(prot.servers[0].device_name):
             z[0][0] = x_shares[0][0] & y_on_0
             z[0][1] = x_shares[0][1] & y_on_0
@@ -2155,7 +2155,7 @@ def _B_and_private_public(prot, x, y):
     return z
 
 
-def _B_and_public_private(prot, x, y):
+def _and_public_private(prot, x, y):
     assert isinstance(x, ABY3PublicTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(y)
     assert x.backing_dtype == y.backing_dtype
@@ -2164,7 +2164,7 @@ def _B_and_public_private(prot, x, y):
     y_shares = y.unwrapped
 
     z = [[None, None], [None, None], [None, None]]
-    with tf.name_scope("B_and"):
+    with tf.name_scope("and"):
         with tf.device(prot.servers[0].device_name):
             z[0][0] = x_on_0 & y_shares[0][0]
             z[0][1] = x_on_0 & y_shares[0][1]
@@ -2179,23 +2179,23 @@ def _B_and_public_private(prot, x, y):
     return z
 
 
-def _B_or_private_private(prot, x, y):
+def _or_private_private(prot, x, y):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(y)
 
-    with tf.name_scope("B_or"):
+    with tf.name_scope("or"):
         z = (x ^ y) ^ (x & y)
 
     return z
 
 
-def _B_not_private(prot, x):
+def _not_private(prot, x):
     assert isinstance(x, ABY3PrivateTensor), type(x)
 
     x_shares = x.unwrapped
 
     z = [[None, None], [None, None], [None, None]]
-    with tf.name_scope("B_not"):
+    with tf.name_scope("not"):
         with tf.device(prot.servers[0].device_name):
             # We use the `~` operator instead of XORing a constant, because we want it to work for both
             # the int_factory and the bool_factory
