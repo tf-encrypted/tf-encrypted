@@ -324,13 +324,12 @@ class ABY3PublicTensor(ABY3Tensor):
             self,
             prot: "ABY3",
             values: List[AbstractTensor],
-            is_scaled: bool,
-            share_type
+            is_scaled: bool
     ) -> None:
         assert all(isinstance(v, AbstractTensor) for v in values)
         assert all((v.shape == values[0].shape) for v in values)
 
-        super(ABY3PublicTensor, self).__init__(prot, is_scaled, share_type)
+        super(ABY3PublicTensor, self).__init__(prot, is_scaled, ShareType.PUBLIC)
         self.values = values
 
     def __repr__(self) -> str:
@@ -394,12 +393,12 @@ class ABY3Constant(ABY3PublicTensor):
     records the fact that the underlying value was declared as a constant.
     """
 
-    def __init__(self, prot, constants, is_scaled, share_type):
+    def __init__(self, prot, constants, is_scaled):
         assert all(isinstance(c, AbstractConstant) for c in constants)
         assert all((c.shape == constants[0].shape) for c in constants)
 
         super(ABY3Constant, self).__init__(
-            prot, constants, is_scaled, share_type
+            prot, constants, is_scaled
         )
         self.constants = constants
 

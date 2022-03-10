@@ -69,14 +69,17 @@ class ABY3(Protocol):
         self.fixedpoint_config = fixedpoint_config
 
         self.factories = {
-            1 : bool_factory(),
+            0 : bool_factory(),
+            1 : native_factory(tf.int8),
+            2 : native_factory(tf.int8),
+            4 : native_factory(tf.int8),
             8 : native_factory(tf.int8),
             16: native_factory(tf.int16),
             32: native_factory(tf.int32),
             64: native_factory(tf.int64)
         }
         self.factories.update({
-            tf.bool: self.factories[1],
+            tf.bool: self.factories[0],
             tf.int8: self.factories[8],
             tf.int16: self.factories[16],
             tf.int32: self.factories[32],
@@ -228,7 +231,6 @@ class ABY3(Protocol):
         self,
         value: Union[np.ndarray, int, float],
         apply_scaling: bool = True,
-        share_type=ShareType.ARITHMETIC,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
     ):
@@ -263,7 +265,7 @@ class ABY3(Protocol):
             with tf.device(self.servers[2].device_name):
                 x_on_2 = factory.constant(value)
 
-        return ABY3Constant(self, [x_on_0, x_on_1, x_on_2], apply_scaling, share_type)
+        return ABY3Constant(self, [x_on_0, x_on_1, x_on_2], apply_scaling)
 
     def define_private_variable(
         self,
@@ -557,7 +559,6 @@ class ABY3(Protocol):
         player: Union[str, Player],
         inputter_fn: TFEInputter,
         apply_scaling: bool = True,
-        share_type=ShareType.ARITHMETIC,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
     ):
@@ -586,7 +587,7 @@ class ABY3(Protocol):
             )
             v = self._encode(v, apply_scaling)
             w = factory.tensor(v)
-            return ABY3PublicTensor(self, [w, w, w], apply_scaling, share_type)
+            return ABY3PublicTensor(self, [w, w, w], apply_scaling)
 
         with tf.name_scope("public-input{}".format(suffix)):
 
@@ -611,7 +612,6 @@ class ABY3(Protocol):
         self,
         tensor: tf.Tensor,
         apply_scaling: bool = True,
-        share_type=ShareType.ARITHMETIC,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
     ):
@@ -628,7 +628,7 @@ class ABY3(Protocol):
         with tf.name_scope("public-tensor"):
             tensor = self._encode(tensor, apply_scaling)
             w = factory.tensor(tensor)
-            return ABY3PublicTensor(self, [w, w, w], apply_scaling, share_type)
+            return ABY3PublicTensor(self, [w, w, w], apply_scaling)
 
     def define_output(
         self, player, arguments, outputter_fn, name=None,
@@ -1355,6 +1355,12 @@ class ABY3(Protocol):
     def cast(self, x, factory):
         return self.dispatch("cast", x, factory)
 
+    @memoize
+    def carry(self, x, y):
+        x, y = self.lift(x, y, share_type=ShareType.BOOLEAN)
+        return self.dispatch("carry", x, y)
+
+
     def dispatch(self, base_name, *args, container=None, **kwargs):
         """
     Finds the correct protocol logicto perform based on the dispatch_id
@@ -1397,11 +1403,11 @@ def _reveal_private(prot, x):
         with tf.device(prot.servers[2].device_name):
             z_on_2 = prot._reconstruct(shares, prot.servers[2], x.share_type)
 
-    return ABY3PublicTensor(prot, [z_on_0, z_on_1, z_on_2], x.is_scaled, x.share_type)
+    return ABY3PublicTensor(prot, [z_on_0, z_on_1, z_on_2], x.is_scaled)
 
 
 def _bit_gather_private(prot, x, start, stride):
-    assert isinstance(x, ABY3PrivateTensor), type(x)
+    assert x.share_type == ShareType.BOOLEAN
 
     shares = x.unwrapped
 
@@ -1409,16 +1415,14 @@ def _bit_gather_private(prot, x, start, stride):
     with tf.name_scope("bit-gather-private"):
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
-                z[i][0] = x_shares[i][0].bit_gather(start, stride)
-                z[i][1] = x_shares[i][1].bit_gather(start, stride)
+                z[i][0] = shares[i][0].bit_gather(start, stride)
+                z[i][1] = shares[i][1].bit_gather(start, stride)
 
         z = ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
     return z
 
 
 def _bit_gather_public(prot, x, start, stride):
-    assert isinstance(x, ABY3PublicTensor), type(x)
-
     x_ = x.unwrapped
 
     z = [None, None, None]
@@ -1427,13 +1431,16 @@ def _bit_gather_public(prot, x, start, stride):
             with tf.device(prot.servers[i].device_name):
                 z[i] = x_[i].bit_gather(start, stride)
 
-        z = ABY3PublicTensor(prot, z, x.is_scaled, x.share_type)
+        z = ABY3PublicTensor(prot, z, x.is_scaled)
     return z
 
 
 
 def _cast_private(prot, x, factory):
     assert isinstance(x, ABY3PrivateTensor), type(x)
+
+    if x.backing_dtype == factory:
+        return x
 
     shares = x.unwrapped
 
@@ -1451,6 +1458,9 @@ def _cast_private(prot, x, factory):
 def _cast_public(prot, x, factory):
     assert isinstance(x, ABY3PublicTensor), type(x)
 
+    if x.backing_dtype == factory:
+        return x
+
     x_ = x.unwrapped
 
     z = [None, None, None]
@@ -1459,7 +1469,7 @@ def _cast_public(prot, x, factory):
             with tf.device(prot.servers[i].device_name):
                 z[i] = x_[i].cast(factory)
 
-        z = ABY3PublicTensor(prot, z, x.is_scaled, x.share_type)
+        z = ABY3PublicTensor(prot, z, x.is_scaled)
     return z
 
 #
@@ -1549,7 +1559,7 @@ def _add_public_public(prot, x, y):
         for i in range(3):
             z[i] = x_shares[i] + y_shares[i]
 
-    return ABY3PublicTensor(prot, z, x.is_scaled, x.share_type)
+    return ABY3PublicTensor(prot, z, x.is_scaled)
 
 
 #
@@ -1659,7 +1669,7 @@ def _negative_public(prot, x):
         with tf.device(prot.servers[2].device_name):
             x_on_2_neg = -x_on_2
         x_neg = ABY3PublicTensor(
-            prot, [x_on_0_neg, x_on_1_neg, x_on_2_neg], x.is_scaled, x.share_type
+            prot, [x_on_0_neg, x_on_1_neg, x_on_2_neg], x.is_scaled
         )
     return x_neg
 
@@ -1837,7 +1847,7 @@ def _mul_trunc2_private_private(prot, x, y):
             with tf.device(prot.servers[i].device_name):
                 xy_minus_r_trunc[i] = z0 + z1 + z2
                 xy_minus_r_trunc[i] = xy_minus_r_trunc[i].right_shift(amount)
-        z = ABY3PublicTensor(prot, xy_minus_r_trunc, True, ShareType.ARITHMETIC)
+        z = ABY3PublicTensor(prot, xy_minus_r_trunc, True)
 
         # Step 4: Final addition
         z = z + r_trunc
@@ -2132,8 +2142,8 @@ def _truncate_private_interactive(
 
 
 def _xor_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor):
-    assert isinstance(x, ABY3PrivateTensor), type(x)
-    assert isinstance(y, ABY3PrivateTensor), type(y)
+    assert x.share_type == ShareType.BOOLEAN
+    assert y.share_type == ShareType.BOOLEAN
     assert x.backing_dtype == y.backing_dtype
 
     z = [[None, None], [None, None], [None, None]]
@@ -2155,8 +2165,7 @@ def _xor_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor)
 
 
 def _xor_private_public(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PublicTensor):
-    assert isinstance(x, ABY3PrivateTensor), type(x)
-    assert isinstance(y, ABY3PublicTensor), type(y)
+    assert x.share_type == ShareType.BOOLEAN
     assert x.backing_dtype == y.backing_dtype
 
     z = [[None, None], [None, None], [None, None]]
@@ -2178,8 +2187,8 @@ def _xor_private_public(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PublicTensor):
 
 
 def _and_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor):
-    assert isinstance(x, ABY3PrivateTensor), type(x)
-    assert isinstance(y, ABY3PrivateTensor), type(y)
+    assert x.share_type == ShareType.BOOLEAN
+    assert y.share_type == ShareType.BOOLEAN
     assert x.backing_dtype == y.backing_dtype
 
     x_shares = x.unwrapped
@@ -2225,8 +2234,7 @@ def _and_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor)
 
 
 def _and_private_public(prot, x, y):
-    assert isinstance(x, ABY3PrivateTensor), type(x)
-    assert isinstance(y, ABY3PublicTensor), type(x)
+    assert x.share_type == ShareType.BOOLEAN
     assert x.backing_dtype == y.backing_dtype
 
     x_shares = x.unwrapped
@@ -2249,8 +2257,7 @@ def _and_private_public(prot, x, y):
 
 
 def _and_public_private(prot, x, y):
-    assert isinstance(x, ABY3PublicTensor), type(x)
-    assert isinstance(y, ABY3PrivateTensor), type(y)
+    assert y.share_type == ShareType.BOOLEAN
     assert x.backing_dtype == y.backing_dtype
 
     x_on_0, x_on_1, x_on_2 = x.unwrapped
@@ -2552,6 +2559,46 @@ def _B_ppa_kogge_stone_private_private(prot, x, y, n_bits):
         P = x ^ y
         z = C ^ P
     return z
+
+
+def _carry_private_public(prot, x, y):
+    assert x.share_type == ShareType.BOOLEAN, x.share_type
+    return _carry_computation(prot, x, y)
+
+
+def _carry_public_private(prot, x, y):
+    assert y.share_type == ShareType.BOOLEAN, y.share_type
+    return _carry_computation(prot, x, y)
+
+
+def _carry_private_private(prot, x, y):
+    assert x.share_type == ShareType.BOOLEAN, x.share_type
+    assert y.share_type == ShareType.BOOLEAN, y.share_type
+    return _carry_computation(prot, x, y)
+
+def _carry_computation(prot, x, y):
+    """
+    Carry circuit, using the Kogge-Stone adder topology.
+    """
+    assert x.backing_dtype == y.backing_dtype
+
+    with tf.name_scope("carry"):
+        G = x & y
+        P = x ^ y
+        k = x.backing_dtype.nbits
+        while k > 1:
+            G1 = prot.bit_gather(G, 1, 2).cast(prot.factories[k // 2])
+            G2 = prot.bit_gather(G, 0, 2).cast(prot.factories[k // 2])
+            P1 = prot.bit_gather(P, 1, 2).cast(prot.factories[k // 2])
+            P2 = prot.bit_gather(P, 0, 2).cast(prot.factories[k // 2])
+
+            G = G1 ^ (G2 & P1)
+            P = P1 & P2
+            k = k // 2
+
+        # G stores the carry-in to the next position
+        G = G & prot.define_constant(1, apply_scaling=False, factory=G.backing_dtype)
+        return G
 
 
 def _A2B_private(prot, x, nbits):
@@ -2965,7 +3012,7 @@ def _transpose_public(prot, x, perm=None):
             x_on_2_t = x_on_2.transpose(perm=perm)
 
         return ABY3PublicTensor(
-            prot, [x_on_0_t, x_on_1_t, x_on_2_t], x.is_scaled, x.share_type
+            prot, [x_on_0_t, x_on_1_t, x_on_2_t], x.is_scaled
         )
 
 
@@ -2989,7 +3036,7 @@ def _reduce_sum_public(prot, x, axis=None, keepdims=False):
         with tf.device(prot.servers[2].device_name):
             y_on_2 = x_on_2.reduce_sum(axis, keepdims)
 
-    return ABY3PublicTensor(prot, [y_on_0, y_on_1, y_on_2], x.is_scaled, x.share_type)
+    return ABY3PublicTensor(prot, [y_on_0, y_on_1, y_on_2], x.is_scaled)
 
 
 def _reduce_sum_private(prot, x, axis=None, keepdims=False):
@@ -3031,8 +3078,7 @@ def _concat_public(prot, xs, axis):
         return ABY3PublicTensor(
             prot,
             [x_on_0_concat, x_on_1_concat, x_on_2_concat],
-            is_scaled,
-            xs[0].share_type,
+            is_scaled
         )
 
 

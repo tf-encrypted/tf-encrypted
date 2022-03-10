@@ -495,6 +495,62 @@ class TestABY3(unittest.TestCase):
 
             assert z == truth
 
+    def test_bit_gather(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        # define inputs
+        x = tfe.define_private_variable(np.array([0xaaaa, 0x425f32ea92]), apply_scaling=False, share_type=ShareType.BOOLEAN)
+
+        # define computation
+        z1 = tfe.bit_gather(x, 0, 2)
+        z2 = tfe.bit_gather(x, 1, 2)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(z1.reveal())
+            np.testing.assert_array_equal(result, np.array([0, 0x8f484]))
+            result = sess.run(z2.reveal())
+            np.testing.assert_array_equal(result, np.array([0xff, 0x135f9]))
+
+
+    def test_carry(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(
+            tf.constant([[1, -2**63, -1], [-1, -2, 4]], dtype=tf.int64), apply_scaling=False, share_type=ShareType.BOOLEAN
+        )
+        y1 = tfe.define_private_variable(
+            tf.constant([[7, -2**63, 1], [-1, 1, -1]], dtype=tf.int64), apply_scaling=False, share_type=ShareType.BOOLEAN
+        )
+        y2 = tfe.define_constant(
+            np.array([[7, -2**63, 1], [-1, 1, -1]], dtype=np.int64), apply_scaling=False
+        )
+
+        z1 = tfe.carry(x, y1).cast(prot.factories[tf.int8])
+        z2 = tfe.carry(x, y2).cast(prot.factories[tf.int8])
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(z1.reveal())
+            np.testing.assert_array_equal(
+                result, np.array([[0, 1, 1], [1, 0, 1]])
+            )
+
+            result = sess.run(z2.reveal())
+            np.testing.assert_array_equal(
+                result, np.array([[0, 1, 1], [1, 0, 1]])
+            )
+
     def test_lshift_private(self):
         tf.reset_default_graph()
 
@@ -697,7 +753,7 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_constant(np.array([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.ARITHMETIC)
+        x = tfe.define_constant(np.array([[1, 2, 3], [4, 5, 6]]))
         y = tfe.define_private_variable(
             tf.constant([[1, 0, 0], [0, 1, 0]]),
             apply_scaling=False,
