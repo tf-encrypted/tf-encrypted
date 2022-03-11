@@ -76,7 +76,7 @@ class ABY3Tensor(abc.ABC):
         :return: A new ABY3Tensor with `other` added.
         :rtype: ABY3Tensor
         """
-        if self.share_type == ShareType.ARITHMETIC:
+        if self.share_type == ShareType.ARITHMETIC or self.share_type == ShareType.PUBLIC:
             return self.prot.add(self, other)
         else:
             raise ValueError("unsupported share type for add: {}".format(self.share_type))
@@ -115,7 +115,7 @@ class ABY3Tensor(abc.ABC):
         :return: A new ABY3Tensor
         :rtype: ABY3Tensor
         """
-        if self.share_type == ShareType.ARITHMETIC:
+        if self.share_type == ShareType.ARITHMETIC or self.share_type == ShareType.PUBLIC:
             return self.prot.sub(self, other)
         else:
             raise ValueError("unsupported share type for sub: {}".format(self.share_type))
@@ -124,7 +124,7 @@ class ABY3Tensor(abc.ABC):
         return self.sub(other)
 
     def __rsub__(self, other):
-        if self.share_type == ShareType.ARITHMETIC:
+        if self.share_type == ShareType.ARITHMETIC or self.share_type == ShareType.PUBLIC:
             return self.prot.sub(other, self)
         else:
             raise ValueError("unsupported share type for sub: {}".format(self.share_type))

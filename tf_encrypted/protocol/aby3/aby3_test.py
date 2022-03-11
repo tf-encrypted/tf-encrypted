@@ -700,6 +700,89 @@ class TestABY3(unittest.TestCase):
                 result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
             )
 
+    def test_b2a_single_private(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(tf.constant([[0, 1, 0], [1, 0, 1]]), share_type = ShareType.BOOLEAN, apply_scaling = False, factory = prot.factories[tf.bool])
+        y = tfe.b2a_single(x)
+        assert y.share_type == ShareType.ARITHMETIC
+
+        with  tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(y.reveal())
+            np.testing.assert_allclose(result, np.array([[0, 1, 0], [1, 0, 1]]), rtol=0.0, atol=0.01)
+
+    def test_truncate_heuristic(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        scale = prot.fixedpoint_config.precision_fractional
+        a = tf.random_uniform([1], 0, 2**30) # Plus the 15-bit fractional scale, this will be encoded to 45-bit numbers
+        x = tfe.define_private_input("server0", lambda: a)
+        x = x << scale
+
+        y1 = tfe.truncate(x, method="heuristic")
+
+        with tfe.Session() as sess:
+            sess.run(tfe.global_variables_initializer())
+            n = 1000
+            for i in range(n):
+                result1, truth = sess.run(
+                    [y1.reveal(), a])
+                np.testing.assert_allclose(result1, truth, rtol=0.0, atol=0.1)
+
+
+    def test_truncate_msb0_cheetah(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        scale = prot.fixedpoint_config.precision_fractional
+        x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type = ShareType.ARITHMETIC)
+        y = x << scale
+
+        z = tfe.truncate_msb0(y, method="cheetah")
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(y.reveal())
+            np.testing.assert_allclose(result, np.array([[1*(2**scale), 2*(2**scale), 3*(2**scale)], [4*(2**scale), 5*(2**scale), 6*(2**scale)]]), rtol=0.0001, atol=0.0001*(2**scale))
+
+            result = sess.run(z.reveal())
+            np.testing.assert_allclose(result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.00, atol=0.001)
+
+    def test_truncate_msb0_secureq8(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        scale = prot.fixedpoint_config.precision_fractional
+        x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type = ShareType.ARITHMETIC)
+        y = x << scale
+
+        z = tfe.truncate_msb0(y, method="secureq8")
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(y.reveal())
+            np.testing.assert_allclose(result, np.array([[1*(2**scale), 2*(2**scale), 3*(2**scale)], [4*(2**scale), 5*(2**scale), 6*(2**scale)]]), rtol=0.0001, atol=0.0001*(2**scale))
+
+            result = sess.run(z.reveal())
+            np.testing.assert_allclose(result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.00, atol=0.001)
+
     def test_ot(self):
         tf.reset_default_graph()
 
