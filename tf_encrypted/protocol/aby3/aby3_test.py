@@ -639,8 +639,8 @@ class TestABY3(unittest.TestCase):
         )
 
         # Parallel prefix adder. It is simply an adder for boolean sharing.
-        z1 = tfe.B_ppa(x, y, topology="sklansky")
-        z2 = tfe.B_ppa(x, y, topology="kogge_stone")
+        z1 = tfe.ppa(x, y, topology="sklansky")
+        z2 = tfe.ppa(x, y, topology="kogge_stone")
 
         with tfe.Session() as sess:
             # initialize variables
@@ -666,7 +666,7 @@ class TestABY3(unittest.TestCase):
             tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.ARITHMETIC
         )
 
-        z = tfe.A2B(x)
+        z = tfe.a2b(x)
         assert z.share_type == ShareType.BOOLEAN
 
         with tfe.Session() as sess:
@@ -688,7 +688,7 @@ class TestABY3(unittest.TestCase):
             tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.BOOLEAN
         )
 
-        z = tfe.B2A(x)
+        z = tfe.b2a(x)
         assert z.share_type == ShareType.ARITHMETIC
 
         with tfe.Session() as sess:
@@ -830,7 +830,7 @@ class TestABY3(unittest.TestCase):
                 result, np.array([[2, 2, 4], [4, 6, 6]]), rtol=0.0, atol=0.01
             )
 
-    def test_mul_AB_public_private(self):
+    def test_mul_ab_public_private(self):
         tf.reset_default_graph()
 
         prot = ABY3()
@@ -844,7 +844,7 @@ class TestABY3(unittest.TestCase):
             factory=prot.factories[tf.bool],
         )
 
-        z = tfe.mul_AB(x, y)
+        z = tfe.mul_ab(x, y)
 
         with tfe.Session() as sess:
             # initialize variables
@@ -855,7 +855,7 @@ class TestABY3(unittest.TestCase):
                 result, np.array([[1, 0, 0], [0, 5, 0]]), rtol=0.0, atol=0.01
             )
 
-    def test_mul_AB_private_private(self):
+    def test_mul_ab_private_private(self):
         tf.reset_default_graph()
 
         prot = ABY3()
@@ -871,7 +871,7 @@ class TestABY3(unittest.TestCase):
             factory=prot.factories[tf.bool],
         )
 
-        z = tfe.mul_AB(x, y)
+        z = tfe.mul_ab(x, y)
 
         with tfe.Session() as sess:
             # initialize variables

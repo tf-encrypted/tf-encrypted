@@ -1220,19 +1220,19 @@ class ABY3(Protocol):
         return self.dispatch("not", x)
 
     @memoize
-    def B_ppa(self, x, y, n_bits=None, topology="kogge_stone"):
+    def ppa(self, x, y, n_bits=None, topology="kogge_stone"):
         x, y = self.lift(x, y)
-        return self.dispatch("B_ppa", x, y, n_bits, topology)
+        return self.dispatch("ppa", x, y, n_bits, topology)
 
     @memoize
-    def B_add(self, x, y):
+    def b_add(self, x, y):
         x, y = self.lift(x, y)
-        return self.dispatch("B_add", x, y)
+        return self.dispatch("b_add", x, y)
 
     @memoize
-    def B_sub(self, x, y):
+    def b_sub(self, x, y):
         x, y = self.lift(x, y)
-        return self.dispatch("B_sub", x, y)
+        return self.dispatch("b_sub", x, y)
 
     @memoize
     def lshift(self, x, steps):
@@ -1247,25 +1247,25 @@ class ABY3(Protocol):
         return self.dispatch("logical_rshift", x, steps)
 
     @memoize
-    def A2B(self, x, nbits=None):
-        return self.dispatch("A2B", x, nbits)
+    def a2b(self, x, nbits=None):
+        return self.dispatch("a2b", x, nbits)
 
     @memoize
-    def B2A(self, x, nbits=None):
-        return self.dispatch("B2A", x, nbits)
+    def b2a(self, x, nbits=None):
+        return self.dispatch("b2a", x, nbits)
 
     @memoize
     def b2a_single(self, x):
         return self.dispatch("b2a_single", x)
 
     @memoize
-    def mul_AB(self, x, y):
+    def mul_ab(self, x, y):
         """
     Callers should make sure y is boolean sharing whose backing TF native type is `tf.bool`.
     There is no automatic lifting for boolean sharing in the mixed-protocol multiplication.
     """
         x = self.lift(x)
-        return self.dispatch("mul_AB", x, y)
+        return self.dispatch("mul_ab", x, y)
 
     @memoize
     def bit_extract(self, x, i):
@@ -1816,8 +1816,8 @@ def _mul_trunc2_private_private(prot, x, y):
         # If TF is smart enough, this part is supposed to be pre-computation.
         r = prot._gen_random_sharing(shape, share_type=ShareType.BOOLEAN)
         r_trunc = r.arith_rshift(amount)
-        r = prot.B2A(r)
-        r_trunc = prot.B2A(r_trunc)
+        r = prot.b2a(r)
+        r_trunc = prot.b2a(r_trunc)
 
         # Step 2: Compute 3-out-of-3 sharing of (x*y - r)
         a0, a1, a2 = prot._gen_zero_sharing(x.shape)
@@ -2089,7 +2089,7 @@ def _truncate_msb0_cheetah_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3Priv
         w[2][1] = w_alice
 
 
-    # B2A. TODO: communication could be optimized from l to f
+    # b2a. TODO: communication could be optimized from l to f
     w = prot.b2a_single(ABY3PrivateTensor(prot, w, False, ShareType.BOOLEAN))
 
     # Fix potential big error: w * 2^{l-f}
@@ -2418,19 +2418,19 @@ def _logical_rshift_private(prot, x, steps):
     return z
 
 
-def _B_add_private_private(prot, x, y):
+def _b_add_private_private(prot, x, y):
     raise NotImplementedError(
         "Addition with boolean sharing is not implemented, and not recommended."
     )
 
 
-def _B_sub_private_private(prot, x, y):
+def _b_sub_private_private(prot, x, y):
     raise NotImplementedError(
         "Sbustraction with boolean sharing is not implemented, and not recommended."
     )
 
 
-def _B_ppa_private_private(prot, x, y, n_bits, topology="kogge_stone"):
+def _ppa_private_private(prot, x, y, n_bits, topology="kogge_stone"):
     """
   Parallel prefix adder (PPA). This adder can be used for addition of boolean sharings.
 
@@ -2442,14 +2442,14 @@ def _B_ppa_private_private(prot, x, y, n_bits, topology="kogge_stone"):
   """
 
     if topology == "kogge_stone":
-        return _B_ppa_kogge_stone_private_private(prot, x, y, n_bits)
+        return _ppa_kogge_stone_private_private(prot, x, y, n_bits)
     elif topology == "sklansky":
-        return _B_ppa_sklansky_private_private(prot, x, y, n_bits)
+        return _ppa_sklansky_private_private(prot, x, y, n_bits)
     else:
         raise NotImplementedError("Unknown adder topology.")
 
 
-def _B_ppa_sklansky_private_private(prot, x, y, n_bits):
+def _ppa_sklansky_private_private(prot, x, y, n_bits):
     """
   Parallel prefix adder (PPA), using the Sklansky adder topology.
   """
@@ -2463,7 +2463,7 @@ def _B_ppa_sklansky_private_private(prot, x, y, n_bits):
             "Native type {} not supported".format(x.backing_dtype.native_type)
         )
 
-    with tf.name_scope("B_ppa"):
+    with tf.name_scope("ppa"):
         keep_masks = [
             0x5555555555555555,
             0x3333333333333333,
@@ -2545,7 +2545,7 @@ def _B_ppa_sklansky_private_private(prot, x, y, n_bits):
     return z
 
 
-def _B_ppa_kogge_stone_private_private(prot, x, y, n_bits):
+def _ppa_kogge_stone_private_private(prot, x, y, n_bits):
     """
   Parallel prefix adder (PPA), using the Kogge-Stone adder topology.
   """
@@ -2559,7 +2559,7 @@ def _B_ppa_kogge_stone_private_private(prot, x, y, n_bits):
             "Native type {} not supported".format(x.backing_dtype.native_type)
         )
 
-    with tf.name_scope("B_ppa"):
+    with tf.name_scope("ppa"):
         keep_masks = []
         for i in range(ceil(log2(x.backing_dtype.nbits))):
             keep_masks.append((1 << (2 ** i)) - 1)
@@ -2645,7 +2645,7 @@ def _carry_computation(prot, x, y):
         return G
 
 
-def _A2B_private(prot, x, nbits):
+def _a2b_private(prot, x, nbits):
     """
   Bit decomposition: Convert an arithmetic sharing to a boolean sharing.
   """
@@ -2661,7 +2661,7 @@ def _A2B_private(prot, x, nbits):
 
     operand1 = [[None, None], [None, None], [None, None]]
     operand2 = [[None, None], [None, None], [None, None]]
-    with tf.name_scope("A2B"):
+    with tf.name_scope("a2b"):
         # Step 1: We know x = ((x0, x1), (x1, x2), (x2, x0))
         # We need to reshare it into two operands that will be fed into an addition circuit:
         # operand1 = (((x0+x1) XOR a0, a1), (a1, a2), (a2, (x0+x1) XOR a0)), meaning boolean sharing of x0+x1
@@ -2692,7 +2692,7 @@ def _A2B_private(prot, x, nbits):
         operand2 = ABY3PrivateTensor(prot, operand2, x.is_scaled, ShareType.BOOLEAN)
 
         # Step 2: Parallel prefix adder that requires log(k) rounds of communication
-        result = prot.B_ppa(operand1, operand2, nbits)
+        result = prot.ppa(operand1, operand2, nbits)
 
     return result
 
@@ -2706,7 +2706,7 @@ def _bit_extract_private(prot, x, i):
 
     with tf.name_scope("bit_extract"):
         if x.share_type == ShareType.ARITHMETIC:
-            with tf.name_scope("A2B_partial"):
+            with tf.name_scope("a2b_partial"):
                 x_shares = x.unwrapped
                 zero = prot.define_constant(
                     np.zeros(x.shape, dtype=np.int64),
@@ -2747,7 +2747,7 @@ def _bit_extract_private(prot, x, i):
                 operand2 = ABY3PrivateTensor(prot, operand2, x.is_scaled, ShareType.BOOLEAN)
 
                 # Step 2: Parallel prefix adder that requires log(i+1) rounds of communication
-                x = prot.B_ppa(operand1, operand2, i + 1)
+                x = prot.ppa(operand1, operand2, i + 1)
 
         # Take out the i-th bit
         #
@@ -2771,7 +2771,7 @@ def _bit_extract_private(prot, x, i):
     return result
 
 
-def _B2A_private(prot, x, nbits):
+def _b2a_private(prot, x, nbits):
     """
   Bit composition: Convert a boolean sharing to an arithmetic sharing.
   """
@@ -2791,7 +2791,7 @@ def _B2A_private(prot, x, nbits):
 
     a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=ShareType.BOOLEAN)
 
-    with tf.name_scope("B2A"):
+    with tf.name_scope("b2a"):
         # Server 1 reshares (-x1-x2) as private input
         neg_x1_neg_x2 = [[None, None], [None, None], [None, None]]
         with tf.device(prot.servers[1].device_name):
@@ -2807,7 +2807,7 @@ def _B2A_private(prot, x, nbits):
         neg_x1_neg_x2 = ABY3PrivateTensor(prot, neg_x1_neg_x2, x.is_scaled, ShareType.BOOLEAN)
 
         # Compute x0 = x + (-x1-x2) using the parallel prefix adder
-        x0 = prot.B_ppa(x, neg_x1_neg_x2, nbits)
+        x0 = prot.ppa(x, neg_x1_neg_x2, nbits)
 
         # Reveal x0 to server 0 and 2
         with tf.device(prot.servers[0].device_name):
@@ -2838,24 +2838,24 @@ def _b2a_single_private(prot, x):
     # TODO: this can be improved with 3pc COT
 
     a = prot.define_constant(np.ones(x.shape), apply_scaling=False)
-    return _mul_AB_public_private(prot, a, x)
+    return _mul_ab_public_private(prot, a, x)
 
 
-def _mul_AB_public_private(prot, x, y):
+def _mul_ab_public_private(prot, x, y):
     assert isinstance(x, ABY3PublicTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(x)
     assert y.share_type == ShareType.BOOLEAN
 
     x_on_0, x_on_1, x_on_2 = x.unwrapped
 
-    with tf.name_scope("mul_AB"):
-        z = __mul_AB_routine(prot, x_on_2, y, 2)
+    with tf.name_scope("mul_ab"):
+        z = __mul_ab_routine(prot, x_on_2, y, 2)
         z = ABY3PrivateTensor(prot, z, x.is_scaled, ShareType.ARITHMETIC)
 
     return z
 
 
-def _mul_AB_private_private(prot, x, y):
+def _mul_ab_private_private(prot, x, y):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(y)
     assert x.share_type == ShareType.ARITHMETIC
@@ -2863,29 +2863,29 @@ def _mul_AB_private_private(prot, x, y):
 
     x_shares = x.unwrapped
 
-    with tf.name_scope("mul_AB"):
+    with tf.name_scope("mul_ab"):
         with tf.name_scope("term0"):
-            w = __mul_AB_routine(prot, x_shares[0][0], y, 0)
+            w = __mul_ab_routine(prot, x_shares[0][0], y, 0)
             w = ABY3PrivateTensor(prot, w, x.is_scaled, ShareType.ARITHMETIC)
 
         with tf.name_scope("term1"):
             with tf.device(prot.servers[1].device_name):
                 a = x_shares[1][0] + x_shares[1][1]
-            z = __mul_AB_routine(prot, a, y, 1)
+            z = __mul_ab_routine(prot, a, y, 1)
             z = ABY3PrivateTensor(prot, z, x.is_scaled, ShareType.ARITHMETIC)
         z = w + z
 
     return z
 
 
-def __mul_AB_routine(prot, a, b, sender_idx):
+def __mul_ab_routine(prot, a, b, sender_idx):
     """
     A sub routine for multiplying a value 'a' (located at servers[sender_idx]) with a boolean sharing 'b'.
     """
     assert isinstance(a, AbstractTensor), type(a)
     assert isinstance(b, ABY3PrivateTensor), type(b)
 
-    with tf.name_scope("__mul_AB_routine"):
+    with tf.name_scope("__mul_ab_routine"):
         b_shares = b.unwrapped
         s = [None, None, None]
         s[0], s[1], s[2] = prot._gen_zero_sharing(a.shape, ShareType.ARITHMETIC)
@@ -3006,7 +3006,7 @@ def _polynomial_piecewise_private(prot, x, c, coeffs):
         result = 0
         for i in range(len(coeffs)):
             fi = prot.polynomial(x, coeffs[i])
-            result = result + prot.mul_AB(fi, b[i])
+            result = result + prot.mul_ab(fi, b[i])
     return result
 
 
