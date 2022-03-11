@@ -901,7 +901,6 @@ class TestABY3(unittest.TestCase):
             x, 63
         )  # The sign bit. Since x is scaled, you should be more careful about extracting other bits.
         w = tfe.bit_extract(y, 1)  # y is not scaled
-        s = tfe.msb(x)  # Sign bit
 
         with tfe.Session() as sess:
             # initialize variables
@@ -921,6 +920,24 @@ class TestABY3(unittest.TestCase):
                 rtol=0.0,
                 atol=0.01,
             )
+
+
+    def test_msb(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(
+            np.array([[1, -2, 3], [-4, -5, 6]]), share_type=ShareType.ARITHMETIC,
+        )
+
+        s = tfe.msb(x)  # Sign bit
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
             result = sess.run(s.reveal())
             np.testing.assert_allclose(
                 result.astype(int),

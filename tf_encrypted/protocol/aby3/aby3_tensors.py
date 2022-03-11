@@ -51,6 +51,18 @@ class ABY3Tensor(abc.ABC):
         self.is_scaled = is_scaled
         self.share_type = share_type
 
+    def __repr__(self) -> str:
+        return "{}(shape={}, share_type={})".format(type(self).__name__, self.shape, self.share_type)
+
+    def is_arithmetic(self) -> bool:
+        return self.share_type == ShareType.ARITHMETIC
+
+    def is_boolean(self) -> bool:
+        return self.share_type == ShareType.BOOLEAN
+
+    def is_public(self) -> bool:
+        return self.share_type == ShareType.PUBLIC
+
     @property
     @abc.abstractmethod
     def shape(self) -> List[int]:

@@ -1277,7 +1277,7 @@ class ABY3(Protocol):
     @memoize
     def msb(self, x):
         x = self.lift(x)
-        return self.bit_extract(x, x.backing_dtype.nbits - 1)
+        return self.dispatch("msb", x)
 
     @memoize
     def polynomial(self, x, coeffs):
@@ -1342,7 +1342,7 @@ class ABY3(Protocol):
     @memoize
     def greater(self, x, y):
         x, y = self.lift(x, y)
-        return self.dispatch("greater", x, y, output_share_type)
+        return self.dispatch("greater", x, y)
 
     @memoize
     def less(self, x, y):
@@ -2188,6 +2188,34 @@ def _truncate_msb0_secureq8_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3Pri
     return y
 
 
+def _greater_equal_private_private(prot, x, y):
+    assert x.is_arithmetic() and y.is_arithmetic(), \
+            "Unexpected share type: x {}, y {}".format(x.share_type, y.share_type)
+
+    return _greater_equal_computation(prot, x, y)
+
+
+def _greater_equal_private_public(prot, x, y):
+    assert x.is_arithmetic(), \
+            "Unexpected share type: x {}".format(x.share_type)
+
+    return _greater_equal_computation(prot, x, y)
+
+
+def _greater_equal_public_private(prot, x, y):
+    assert y.is_arithmetic(), \
+            "Unexpected share type: y {}".format(y.share_type)
+
+    return _greater_equal_computation(prot, x, y)
+
+
+def _less_than_computation(prot, x, y):
+    z = x - y
+    result = prot.msb(z)
+
+    return result
+
+
 def _xor_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor):
     assert x.share_type == ShareType.BOOLEAN
     assert y.share_type == ShareType.BOOLEAN
@@ -2642,6 +2670,7 @@ def _carry_computation(prot, x, y):
 
         # G stores the carry-in to the next position
         G = G & prot.define_constant(1, apply_scaling=False, factory=G.backing_dtype)
+        G.is_scaled = False
         return G
 
 
@@ -2769,6 +2798,64 @@ def _bit_extract_private(prot, x, i):
         result = ABY3PrivateTensor(prot, result, False, ShareType.BOOLEAN)
 
     return result
+
+def _msb_private(prot, x):
+
+    with tf.name_scope("msb"):
+        mask = prot.define_constant(1, apply_scaling=False, factory=x.backing_dtype)
+
+        if x.share_type == ShareType.BOOLEAN:
+            z = (x >> (x.backing_dtype.nbits-1)) & mask
+            z = z.cast(prot.factories[tf.bool])
+
+        elif x.share_type == ShareType.ARITHMETIC:
+            x_shares = x.unwrapped
+            zero = prot.define_constant(
+                np.zeros(x.shape, dtype=np.int64),
+                apply_scaling=False
+            )
+            zero_on_0, zero_on_1, zero_on_2 = zero.unwrapped
+            a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=ShareType.BOOLEAN)
+
+            operand1 = [[None, None], [None, None], [None, None]]
+            operand2 = [[None, None], [None, None], [None, None]]
+            # Step 1: We know x = ((x0, x1), (x1, x2), (x2, x0))
+            # We need to reshare it into two operands that will be fed into an addition circuit:
+            # operand1 = (((x0+x1) XOR a0, a1), (a1, a2), (a2, (x0+x1) XOR a0)), meaning boolean sharing of x0+x1
+            # operand2 = ((0, 0), (0, x2), (x2, 0)), meaning boolean sharing of x2
+            with tf.device(prot.servers[0].device_name):
+                x0_plus_x1 = x_shares[0][0] + x_shares[0][1]
+                operand1[0][0] = x0_plus_x1 ^ a0
+                operand1[0][1] = a1
+
+                operand2[0][0] = zero_on_0
+                operand2[0][1] = zero_on_0
+
+            with tf.device(prot.servers[1].device_name):
+                operand1[1][0] = a1
+                operand1[1][1] = a2
+
+                operand2[1][0] = zero_on_1
+                operand2[1][1] = x_shares[1][1]
+
+            with tf.device(prot.servers[2].device_name):
+                operand1[2][0] = a2
+                operand1[2][1] = operand1[0][0]
+
+                operand2[2][0] = x_shares[2][0]
+                operand2[2][1] = zero_on_2
+
+            operand1 = ABY3PrivateTensor(prot, operand1, x.is_scaled, ShareType.BOOLEAN)
+            operand2 = ABY3PrivateTensor(prot, operand2, x.is_scaled, ShareType.BOOLEAN)
+
+            # Step 2: Carry circuit that requires log(i+1) rounds of communication
+            carry = prot.carry(operand1 << 1, operand2 << 1)
+            P = (((operand1 ^ operand2) >> (x.backing_dtype.nbits - 1)) & mask).cast(carry.backing_dtype)
+            z = (carry ^ P).cast(prot.factories[tf.bool])
+
+        z.is_scaled=False
+
+    return z
 
 
 def _b2a_private(prot, x, nbits):
