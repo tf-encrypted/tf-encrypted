@@ -52,7 +52,6 @@ class ABY3(Protocol):
         server_0=None,
         server_1=None,
         server_2=None,
-        use_noninteractive_truncation=True,
     ):
         self._initializers = list()
         config = get_config()
@@ -61,12 +60,7 @@ class ABY3(Protocol):
         self.servers[1] = config.get_player(server_1 if server_1 else "server1")
         self.servers[2] = config.get_player(server_2 if server_2 else "server2")
 
-        if use_noninteractive_truncation:
-            fixedpoint_config = fixed64_ni
-        else:
-            fixedpoint_config = fixed64
-
-        self.fixedpoint_config = fixedpoint_config
+        self.fixedpoint_config = fixed64_ni
 
         self.factories = {
             0 : bool_factory(),
@@ -1977,15 +1971,6 @@ def _matmul_private_private(prot, x, y):
         z = ABY3PrivateTensor(prot, z, x.is_scaled or y.is_scaled, x.share_type)
         z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
         return z
-
-
-def _truncate_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3PrivateTensor:
-    assert isinstance(x, ABY3PrivateTensor)
-
-    if prot.fixedpoint_config.use_noninteractive_truncation:
-        return _truncate_private_noninteractive(prot, x)
-
-    return _truncate_private_interactive(prot, x)
 
 
 def _truncate_heuristic_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3PrivateTensor:
