@@ -1345,6 +1345,10 @@ class ABY3(Protocol):
         return self.dispatch("blinded_shuffle", tensor)
 
     @memoize
+    def equal_zero(self, x):
+        return self.dispatch("equal_zero", x)
+
+    @memoize
     def equal(self, x, y):
         x, y = self.lift(x, y)
         return self.dispatch("equal", x, y)
@@ -2262,11 +2266,28 @@ def _less_than_computation(prot, x, y):
 
 
 def _equal_private_private(prot, x, y):
-    pass
+    assert x.is_arithmetic() and y.is_arithmetic(), \
+            "Unexpected share type: x {}, y {}".format(x.share_type, y.share_type)
+    return _equal_zero_private(prot, x-y)
+
+def _equal_private_public(prot, x, y):
+    assert x.is_arithmetic(), \
+            "Unexpected share type: x {}".format(x.share_type)
+    return _equal_zero_private(prot, x-y)
+
+def _equal_public_private(prot, x, y):
+    assert y.is_arithmetic(), \
+            "Unexpected share type: y {}".format(y.share_type)
+    return _equal_zero_private(prot, x-y)
 
 
 def _equal_zero_private(prot, x):
     neg_x = -x
+    pack = prot.stack([x, neg_x], axis=0)
+    msb = prot.msb(pack)
+    result = (~msb[0]) & (~msb[1])
+    return result
+
 
 def _xor_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor):
     assert x.share_type == ShareType.BOOLEAN

@@ -946,6 +946,26 @@ class TestABY3(unittest.TestCase):
                 atol=0.01,
             )
 
+    def test_equal_zero(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(np.array([[1, -2, 0], [-4, 0, 6]]))
+        y = tfe.define_private_variable(np.array([[0, -2, 3], [0, -5, 6]]), apply_scaling=False)
+
+        z = tfe.equal_zero(x)
+        w = tfe.equal_zero(y)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            result = sess.run(z.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[0, 0, 1], [0, 1, 0]]))
+            result = sess.run(w.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[1, 0, 0], [1, 0, 0]]))
+
     def test_comparison(self):
         tf.reset_default_graph()
 
@@ -959,7 +979,7 @@ class TestABY3(unittest.TestCase):
         z2 = x < y
         z3 = x >= y
         z4 = x <= y
-        # z5 = tfe.equal(x, y)
+        z5 = tfe.equal(x, y)
         z6 = x > 0
         z7 = x >= 0
         z8 = x < 0
@@ -981,8 +1001,8 @@ class TestABY3(unittest.TestCase):
             result = sess.run(z4.reveal())
             np.testing.assert_array_equal(result.astype(int), np.array([[0, 1, 1], [1, 0, 1]]))
 
-            # result = sess.run(z5.reveal())
-            # close(result, np.array([[0, 1, 0], [0, 0, 1]]))
+            result = sess.run(z5.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[0, 1, 0], [0, 0, 1]]))
 
             result = sess.run(z6.reveal())
             np.testing.assert_array_equal(result.astype(int), np.array([[1, 0, 0], [0, 0, 1]]))
