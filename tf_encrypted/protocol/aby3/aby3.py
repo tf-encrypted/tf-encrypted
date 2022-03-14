@@ -1172,6 +1172,20 @@ class ABY3(Protocol):
         raise TypeError("Don't know how to do a concat {}".format(type(xs)))
 
     @memoize
+    def stack(self, xs, axis):
+
+        if all([isinstance(x, ABY3PublicTensor) for x in xs]):
+            xs_stack = _stack_public(self, xs, axis=axis)
+
+        elif all([isinstance(x, ABY3PrivateTensor) for x in xs]):
+            xs_stack = _stack_private(self, xs, axis=axis)
+
+        else:
+            raise TypeError("Don't know how to do a stack {}".format(type(xs)))
+
+        return xs_stack
+
+    @memoize
     def reduce_sum(self, x, axis=None, keepdims=False):
         x = self.lift(x)
         return self.dispatch("reduce_sum", x, axis=axis, keepdims=keepdims)
@@ -1295,10 +1309,6 @@ class ABY3(Protocol):
     @memoize
     def gather(self, x, indices, axis):
         raise NotImplementedError("Unsupported share type: {}".format(x.share_type))
-
-    @memoize
-    def stack(self, xs, axis):
-        raise TypeError("Don't know how to do a stack {}".format(type(xs)))
 
     def write(self, x, filename_prefix):
         if not isinstance(x, ABY3PrivateTensor):
@@ -2250,6 +2260,13 @@ def _less_than_computation(prot, x, y):
 
     return result
 
+
+def _equal_private_private(prot, x, y):
+    pass
+
+
+def _equal_zero_private(prot, x):
+    neg_x = -x
 
 def _xor_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor):
     assert x.share_type == ShareType.BOOLEAN
@@ -3274,6 +3291,54 @@ def _concat_private(prot, xs, axis):
             with tf.device(prot.servers[i].device_name):
                 z[i][0] = factory.concat(z[i][0], axis=axis)
                 z[i][1] = factory.concat(z[i][1], axis=axis)
+
+        return ABY3PrivateTensor(prot, z, is_scaled, share_type)
+
+
+def _stack_public(prot, xs, axis):
+    assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
+
+    factory = xs[0].backing_dtype
+    is_scaled = xs[0].is_scaled
+    xs_on_0, xs_on_1, xs_on_2 = zip(*(x.unwrapped for x in xs))
+
+    with tf.name_scope("stack-public"):
+
+        with tf.device(prot.servers[0].device_name):
+            x_on_0_stack = factory.stack(xs_on_0, axis=axis)
+
+        with tf.device(prot.servers[1].device_name):
+            x_on_1_stack = factory.stack(xs_on_1, axis=axis)
+
+        with tf.device(prot.servers[2].device_name):
+            x_on_2_stack = factory.stack(xs_on_2, axis=axis)
+
+        return ABY3PublicTensor(
+            prot,
+            [x_on_0_stack, x_on_1_stack, x_on_2_stack],
+            is_scaled
+        )
+
+
+def _stack_private(prot, xs, axis):
+    assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
+
+    factory = xs[0].backing_dtype
+    is_scaled = xs[0].is_scaled
+    share_type = xs[0].share_type
+
+    xs_shares = [x.unwrapped for x in xs]
+    z = [[None, None], [None, None], [None, None]]
+    for i in range(3):
+        z[i][0] = [x_shares[i][0] for x_shares in xs_shares]
+        z[i][1] = [x_shares[i][1] for x_shares in xs_shares]
+
+    with tf.name_scope("stack-private"):
+
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = factory.stack(z[i][0], axis=axis)
+                z[i][1] = factory.stack(z[i][1], axis=axis)
 
         return ABY3PrivateTensor(prot, z, is_scaled, share_type)
 
