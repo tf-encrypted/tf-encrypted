@@ -297,6 +297,18 @@ class ABY3Tensor(abc.ABC):
     def __invert__(self):
         return self.invert()
 
+    def __lt__(self, other):
+        return self.prot.less_than(self, other)
+
+    def __le__(self, other):
+        return self.prot.less_equal(self, other)
+
+    def __gt__(self, other):
+        return self.prot.greater_than(self, other)
+
+    def __ge__(self, other):
+        return self.prot.greater_equal(self, other)
+
     def __lshift__(self, steps):
         return self.prot.lshift(self, steps)
 

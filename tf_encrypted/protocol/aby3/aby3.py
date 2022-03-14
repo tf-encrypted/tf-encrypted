@@ -1340,13 +1340,9 @@ class ABY3(Protocol):
         return self.dispatch("equal", x, y)
 
     @memoize
-    def greater(self, x, y):
+    def greater_than(self, x, y):
         x, y = self.lift(x, y)
-        return self.dispatch("greater", x, y)
-
-    @memoize
-    def less(self, x, y):
-        return self.greater(y, x)
+        return self.dispatch("greater_than", x, y)
 
     @memoize
     def greater_equal(self, x, y):
@@ -1354,8 +1350,14 @@ class ABY3(Protocol):
         return self.dispatch("greater_equal", x, y)
 
     @memoize
+    def less_than(self, x, y):
+        x, y = self.lift(x, y)
+        return self.dispatch("less_than", x, y)
+
+    @memoize
     def less_equal(self, x, y):
-        return self.greater_equal(y, x)
+        x, y = self.lift(x, y)
+        return self.dispatch("less_equal", x, y)
 
     @memoize
     def bit_gather(self, x, start, stride):
@@ -2188,25 +2190,58 @@ def _truncate_msb0_secureq8_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3Pri
     return y
 
 
-def _greater_equal_private_private(prot, x, y):
-    assert x.is_arithmetic() and y.is_arithmetic(), \
-            "Unexpected share type: x {}, y {}".format(x.share_type, y.share_type)
+def _greater_than_private_private(prot, x, y):
+    return _less_than_private_private(prot, y, x)
 
-    return _greater_equal_computation(prot, x, y)
+
+def _greater_than_private_public(prot, x, y):
+    return _less_than_public_private(prot, y, x)
+
+
+def _greater_than_public_private(prot, x, y):
+    return _less_than_private_public(prot, y, x)
+
+def _greater_equal_private_private(prot, x, y):
+    return ~_less_than_private_private(prot, x, y)
 
 
 def _greater_equal_private_public(prot, x, y):
-    assert x.is_arithmetic(), \
-            "Unexpected share type: x {}".format(x.share_type)
-
-    return _greater_equal_computation(prot, x, y)
+    return ~_less_than_private_public(prot, x, y)
 
 
 def _greater_equal_public_private(prot, x, y):
+    return ~_less_than_public_private(prot, x, y)
+
+def _less_equal_private_private(prot, x, y):
+    return ~_greater_than_private_private(prot, x, y)
+
+
+def _less_equal_private_public(prot, x, y):
+    return ~_greater_than_private_public(prot, x, y)
+
+
+def _less_equal_public_private(prot, x, y):
+    return ~_greater_than_public_private(prot, x, y)
+
+def _less_than_private_private(prot, x, y):
+    assert x.is_arithmetic() and y.is_arithmetic(), \
+            "Unexpected share type: x {}, y {}".format(x.share_type, y.share_type)
+
+    return _less_than_computation(prot, x, y)
+
+
+def _less_than_private_public(prot, x, y):
+    assert x.is_arithmetic(), \
+            "Unexpected share type: x {}".format(x.share_type)
+
+    return _less_than_computation(prot, x, y)
+
+
+def _less_than_public_private(prot, x, y):
     assert y.is_arithmetic(), \
             "Unexpected share type: y {}".format(y.share_type)
 
-    return _greater_equal_computation(prot, x, y)
+    return _less_than_computation(prot, x, y)
 
 
 def _less_than_computation(prot, x, y):

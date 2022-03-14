@@ -946,6 +946,57 @@ class TestABY3(unittest.TestCase):
                 atol=0.01,
             )
 
+    def test_comparison(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(np.array([[1, -2, 0], [-4, 0, 6]]))
+        y = tfe.define_private_variable(np.array([[0, -2, 3], [0, -5, 6]]))
+
+        z1 = x > y
+        z2 = x < y
+        z3 = x >= y
+        z4 = x <= y
+        # z5 = tfe.equal(x, y)
+        z6 = x > 0
+        z7 = x >= 0
+        z8 = x < 0
+        z9 = x <= 0
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(z1.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[1, 0, 0], [0, 1, 0]]))
+
+            result = sess.run(z2.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[0, 0, 1], [1, 0, 0]]))
+
+            result = sess.run(z3.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[1, 1, 0], [0, 1, 1]]))
+
+            result = sess.run(z4.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[0, 1, 1], [1, 0, 1]]))
+
+            # result = sess.run(z5.reveal())
+            # close(result, np.array([[0, 1, 0], [0, 0, 1]]))
+
+            result = sess.run(z6.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[1, 0, 0], [0, 0, 1]]))
+
+            result = sess.run(z7.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[1, 0, 1], [0, 1, 1]]))
+
+            result = sess.run(z8.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[0, 1, 0], [1, 0, 0]]))
+
+            result = sess.run(z9.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[0, 1, 1], [1, 1, 0]]))
+
+
     def test_pow_private(self):
         tf.reset_default_graph()
 
