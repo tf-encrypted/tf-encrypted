@@ -1327,6 +1327,50 @@ class TestABY3(unittest.TestCase):
                 result, np.array([[1, 3], [4, 6]]), rtol=0.0, atol=0.01
             )
 
+    def test_split(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(tf.constant([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]))
+        y = tfe.define_constant(np.array([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]))
+
+        w = tfe.split(x, 3, axis=1)
+        z = tfe.split(y, 3, axis=1)
+        assert len(w) == 3
+        assert len(z) == 3
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(w[0].reveal())
+            np.testing.assert_allclose(
+                result, np.array([[1, 2], [7, 8]]), rtol=0.0, atol=0.01
+            )
+            result = sess.run(w[1].reveal())
+            np.testing.assert_allclose(
+                result, np.array([[3, 4], [9, 10]]), rtol=0.0, atol=0.01
+            )
+            result = sess.run(w[2].reveal())
+            np.testing.assert_allclose(
+                result, np.array([[5, 6], [11, 12]]), rtol=0.0, atol=0.01
+            )
+
+            result = sess.run(z[0])
+            np.testing.assert_allclose(
+                result, np.array([[1, 2], [7, 8]]), rtol=0.0, atol=0.01
+            )
+            result = sess.run(z[1])
+            np.testing.assert_allclose(
+                result, np.array([[3, 4], [9, 10]]), rtol=0.0, atol=0.01
+            )
+            result = sess.run(z[2])
+            np.testing.assert_allclose(
+                result, np.array([[5, 6], [11, 12]]), rtol=0.0, atol=0.01
+            )
+
     def test_simple_lr_model(self):
         tf.reset_default_graph()
 

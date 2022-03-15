@@ -1328,7 +1328,13 @@ class ABY3(Protocol):
 
     @memoize
     def gather(self, x, indices, axis=0):
+        """See tf.gather"""
         return self.dispatch("gather", x, indices, axis=axis)
+
+    @memoize
+    def split(self, x, num_split, axis=0):
+        """See tf.split"""
+        return self.dispatch("split", x, num_split, axis=axis)
 
     def write(self, x, filename_prefix):
         if not isinstance(x, ABY3PrivateTensor):
@@ -3490,6 +3496,37 @@ def _gather_private(prot, x, indices, axis=0):
                 z[i][1] = xs[i][1].gather(indices, axis=axis)
 
         return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+
+
+def _split_public(prot, x, num_split, axis = 0):
+
+    xs = x.unwrapped
+
+    with tf.name_scope("split-public"):
+        zs = [None, None, None]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                zs[i] = xs[i].split(num_split, axis=axis)
+
+        return [
+                ABY3PublicTensor(prot, z, x.is_scaled)
+                for z in zip(zs[0], zs[1], zs[2])
+        ]
+
+
+def _split_private(prot, x, num_split, axis = 0):
+
+    xs = x.unwrapped
+
+    with tf.name_scope("split-private"):
+        zs = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                zs[i][0] = xs[i][0].split(num_split, axis=axis)
+                zs[i][1] = xs[i][1].split(num_split, axis=axis)
+
+        return [ABY3PrivateTensor(prot, [[zs[0][0][i], zs[0][1][i]], [zs[1][0][i], zs[1][1][i]], [zs[2][0][i], zs[2][1][i]]], x.is_scaled, x.share_type)
+                        for i in range(len(zs[0][0]))]
 
 
 def _write_private(prot, x, filename_prefix):
