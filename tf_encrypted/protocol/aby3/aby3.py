@@ -1163,6 +1163,7 @@ class ABY3(Protocol):
 
     @memoize
     def concat(self, xs, axis):
+        """See tf.concat"""
         if all(isinstance(x, ABY3PublicTensor) for x in xs):
             return _concat_public(self, xs, axis=axis)
 
@@ -1173,6 +1174,7 @@ class ABY3(Protocol):
 
     @memoize
     def stack(self, xs, axis):
+        """See tf.stack"""
 
         if all([isinstance(x, ABY3PublicTensor) for x in xs]):
             xs_stack = _stack_public(self, xs, axis=axis)
@@ -1184,6 +1186,11 @@ class ABY3(Protocol):
             raise TypeError("Don't know how to do a stack {}".format(type(xs)))
 
         return xs_stack
+
+    @memoize
+    def expand_dims(self, x, axis):
+        """See tf.expand_dims."""
+        return self.dispatch("expand_dims", x, axis)
 
     @memoize
     def reduce_sum(self, x, axis=None, keepdims=False):
@@ -3362,6 +3369,33 @@ def _stack_private(prot, xs, axis):
                 z[i][1] = factory.stack(z[i][1], axis=axis)
 
         return ABY3PrivateTensor(prot, z, is_scaled, share_type)
+
+
+def _expand_dims_public(prot, x, axis):
+
+    xs = x.unwrapped
+
+    with tf.name_scope("expand-dims-public"):
+        z = [None, None, None]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i] = xs[i].expand_dims(axis=axis)
+
+        return ABY3PublicTensor(prot, z, x.is_scaled)
+
+
+def _expand_dims_private(prot, x, axis):
+
+    xs = x.unwrapped
+
+    with tf.name_scope("expand-dims-private"):
+        z = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = xs[i][0].expand_dims(axis=axis)
+                z[i][1] = xs[i][1].expand_dims(axis=axis)
+
+        return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 
 
 def _write_private(prot, x, filename_prefix):

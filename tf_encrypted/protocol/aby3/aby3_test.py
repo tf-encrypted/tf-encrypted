@@ -1215,6 +1215,32 @@ class TestABY3(unittest.TestCase):
                 result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
             )
 
+    def test_expand_dims(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(tf.constant([[1, 2], [3, 4]]))
+        y = tfe.define_constant(np.array([1, 2, 3]))
+
+        z1 = tfe.expand_dims(x, axis=1)
+        z2 = tfe.expand_dims(y, axis=1)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(z1.reveal())
+            np.testing.assert_allclose(
+                result, np.array([[[1, 2]], [[3, 4]]]), rtol=0.0, atol=0.01
+            )
+
+            result = sess.run(z2)
+            np.testing.assert_allclose(
+                result, np.array([[1], [2], [3]]), rtol=0.0, atol=0.01
+            )
+
     def test_simple_lr_model(self):
         tf.reset_default_graph()
 
