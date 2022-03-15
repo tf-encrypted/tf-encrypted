@@ -1197,6 +1197,14 @@ class ABY3(Protocol):
         """See tf.squeeze"""
         return self.dispatch("squeeze", x, axis)
 
+
+    @memoize
+    def strided_slice(self, x, *args, **kwargs):
+        """
+        See tf.strided_slice
+        """
+        return self.dispatch("strided_slice", x, args, kwargs)
+
     @memoize
     def reduce_sum(self, x, axis=None, keepdims=False):
         x = self.lift(x)
@@ -3426,6 +3434,33 @@ def _squeeze_private(prot, x, axis):
             with tf.device(prot.servers[i].device_name):
                 z[i][0] = xs[i][0].squeeze(axis=axis)
                 z[i][1] = xs[i][1].squeeze(axis=axis)
+
+        return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+
+
+def _strided_slice_public(prot, x, args, kwargs):
+
+    xs = x.unwrapped
+
+    with tf.name_scope("strided-slice-public"):
+        z = [None, None, None]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i] = xs[i].strided_slice(args, kwargs)
+
+        return ABY3PublicTensor(prot, z, x.is_scaled)
+
+
+def _strided_slice_private(prot, x, args, kwargs):
+
+    xs = x.unwrapped
+
+    with tf.name_scope("strided-slice-private"):
+        z = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = xs[i][0].strided_slice(args, kwargs)
+                z[i][1] = xs[i][1].strided_slice(args, kwargs)
 
         return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 

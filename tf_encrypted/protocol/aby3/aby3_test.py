@@ -1267,6 +1267,40 @@ class TestABY3(unittest.TestCase):
                 result, np.array([1, 2, 3]), rtol=0.0, atol=0.01
             )
 
+    def test_strided_slice(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(tf.constant(
+                [[[1, 1, 1], [2, 2, 2]],
+                 [[3, 3, 3], [4, 4, 4]],
+                 [[5, 5, 5], [6, 6, 6]]]))
+
+        z1 = tfe.strided_slice(x, [1, 0, 0], [2, 1, 3], [1, 1, 1])
+        z2 = tfe.strided_slice(x, [1, 0, 0], [2, 2, 3], [1, 1, 1])
+        z3 = tfe.strided_slice(x, [1, -1, 0], [2, -3, 3], [1, -1, 1])
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(z1.reveal())
+            np.testing.assert_allclose(
+                result, np.array([[[3, 3, 3]]]), rtol=0.0, atol=0.01
+            )
+
+            result = sess.run(z2.reveal())
+            np.testing.assert_allclose(
+                result, np.array([[[3, 3, 3], [4, 4, 4]]]), rtol=0.0, atol=0.01
+            )
+
+            result = sess.run(z3.reveal())
+            np.testing.assert_allclose(
+                result, np.array([[[4, 4, 4], [3, 3, 3]]]), rtol=0.0, atol=0.01
+            )
+
     def test_simple_lr_model(self):
         tf.reset_default_graph()
 
