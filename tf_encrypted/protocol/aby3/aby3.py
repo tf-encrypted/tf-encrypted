@@ -1327,8 +1327,8 @@ class ABY3(Protocol):
         return self.dispatch("sigmoid", x, approx_type)
 
     @memoize
-    def gather(self, x, indices, axis):
-        raise NotImplementedError("Unsupported share type: {}".format(x.share_type))
+    def gather(self, x, indices, axis=0):
+        return self.dispatch("gather", x, indices, axis=axis)
 
     def write(self, x, filename_prefix):
         if not isinstance(x, ABY3PrivateTensor):
@@ -3461,6 +3461,33 @@ def _strided_slice_private(prot, x, args, kwargs):
             with tf.device(prot.servers[i].device_name):
                 z[i][0] = xs[i][0].strided_slice(args, kwargs)
                 z[i][1] = xs[i][1].strided_slice(args, kwargs)
+
+        return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+
+
+def _gather_public(prot, x, indices, axis=0):
+
+    xs = x.unwrapped
+
+    with tf.name_scope("gather-public"):
+        z = [None, None, None]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i] = xs[i].gather(indices, axis=axis)
+
+        return ABY3PublicTensor(prot, z, x.is_scaled)
+
+
+def _gather_private(prot, x, indices, axis=0):
+
+    xs = x.unwrapped
+
+    with tf.name_scope("gather-private"):
+        z = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = xs[i][0].gather(indices, axis=axis)
+                z[i][1] = xs[i][1].gather(indices, axis=axis)
 
         return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 
