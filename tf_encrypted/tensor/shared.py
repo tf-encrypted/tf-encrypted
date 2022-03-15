@@ -55,7 +55,7 @@ def im2col(
         nhwc_tensor = tf.transpose(x, [0, 2, 3, 1])
         channels = int(nhwc_tensor.shape[3])
 
-        # extract patches
+        # extract patches. See `tf.image.extract_patches`.
         patch_tensor = tf.extract_image_patches(
             nhwc_tensor,
             ksizes=[1, h_filter, w_filter, 1],

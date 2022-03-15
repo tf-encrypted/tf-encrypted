@@ -1417,6 +1417,19 @@ class ABY3(Protocol):
         x, y = self.lift(x, y)
         return self.dispatch("carry", x, y)
 
+    @memoize
+    def im2col(self, x, h_filter, w_filter, padding, stride):
+        """
+        :param x: An NCHW image tensor
+
+        :return: ABY3Tensor with shape (s1, s2), where
+            s1 = h_filter * w_filter * C
+            s2 = #row * #column * N
+            #row and #column are the output height and width like in conv2d, by moving the filter along image height and width.
+        """
+        x = self.lift(x)
+        return self.dispatch("im2col", x, h_filter, w_filter, padding, stride)
+
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
         """
@@ -3699,3 +3712,44 @@ def _reshape_private(prot: ABY3, tensor: ABY3PrivateTensor, axe):
                 results[i][0] = shares[i][0].reshape(axe)
                 results[i][1] = shares[i][1].reshape(axe)
     return ABY3PrivateTensor(prot, results, tensor.is_scaled, tensor.share_type)
+
+
+def _im2col_public(
+        prot: ABY3,
+        x: ABY3PublicTensor,
+        h_filter: int,
+        w_filter: int,
+        padding: str,
+        stride: int,
+) -> ABY3PublicTensor:
+
+    xs = x.unwrapped
+
+    with tf.name_scope("im2col-public"):
+        z = [None, None, None]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i] = xs[i].im2col(h_filter, w_filter, padding, stride)
+
+    return ABY3PublicTensor(prot, z, x.is_scaled)
+
+
+def _im2col_private(
+        prot: ABY3,
+        x: ABY3PrivateTensor,
+        h_filter: int,
+        w_filter: int,
+        padding: str,
+        stride: int,
+) -> ABY3PrivateTensor:
+
+    xs = x.unwrapped
+
+    with tf.name_scope("im2col-private"):
+        z = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = xs[i][0].im2col(h_filter, w_filter, padding, stride)
+                z[i][1] = xs[i][1].im2col(h_filter, w_filter, padding, stride)
+
+    return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)

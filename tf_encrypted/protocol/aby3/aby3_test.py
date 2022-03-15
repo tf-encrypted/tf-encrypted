@@ -3,6 +3,7 @@
 # flake8: noqa
 
 import os
+import math
 import tempfile
 import unittest
 
@@ -1396,6 +1397,26 @@ class TestABY3(unittest.TestCase):
             np.testing.assert_allclose(
                 result, np.array([[1, 2, 3, 1, 2, 3], [4, 5, 6, 4, 5, 6]]), rtol=0.0, atol=0.01
             )
+
+    def test_im2col(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(tf.random.uniform([128, 3, 27, 27]))
+        y = tfe.define_constant(np.random.uniform(size = [128, 3, 27, 27]))
+
+        z1 = tfe.im2col(x, 5, 5, "SAME", 2)
+        z2 = tfe.im2col(y, 5, 5, "VALID", 2)
+
+        n_rows_same = math.ceil(27 / 2)
+        n_cols_same = math.ceil(27 / 2)
+        n_rows_valid = math.ceil((27 - 5 + 1) / 2)
+        n_cols_valid = math.ceil((27 - 5 + 1) / 2)
+        assert z1.shape == [5 * 5 * 3, n_rows_same * n_cols_same * 128]
+        assert z2.shape == [5 * 5 * 3, n_rows_valid * n_cols_valid * 128]
+
 
     def test_simple_lr_model(self):
         tf.reset_default_graph()
