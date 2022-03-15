@@ -1193,6 +1193,11 @@ class ABY3(Protocol):
         return self.dispatch("expand_dims", x, axis)
 
     @memoize
+    def squeeze(self, x, axis=None):
+        """See tf.squeeze"""
+        return self.dispatch("squeeze", x, axis)
+
+    @memoize
     def reduce_sum(self, x, axis=None, keepdims=False):
         x = self.lift(x)
         return self.dispatch("reduce_sum", x, axis=axis, keepdims=keepdims)
@@ -3394,6 +3399,33 @@ def _expand_dims_private(prot, x, axis):
             with tf.device(prot.servers[i].device_name):
                 z[i][0] = xs[i][0].expand_dims(axis=axis)
                 z[i][1] = xs[i][1].expand_dims(axis=axis)
+
+        return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+
+
+def _squeeze_public(prot, x, axis):
+
+    xs = x.unwrapped
+
+    with tf.name_scope("squeeze-public"):
+        z = [None, None, None]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i] = xs[i].squeeze(axis=axis)
+
+        return ABY3PublicTensor(prot, z, x.is_scaled)
+
+
+def _squeeze_private(prot, x, axis):
+
+    xs = x.unwrapped
+
+    with tf.name_scope("squeeze-private"):
+        z = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = xs[i][0].squeeze(axis=axis)
+                z[i][1] = xs[i][1].squeeze(axis=axis)
 
         return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 
