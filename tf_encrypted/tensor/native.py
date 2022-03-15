@@ -196,6 +196,9 @@ def native_factory(
                 value = tf.compat.v2.where(condition, x.value, y.value)
             return DenseTensor(value)
 
+        def tile(self, x, multiples):
+            return DenseTensor(tf.tile(x.value, multiples))
+
     FACTORY = Factory()  # pylint: disable=invalid-name
 
     def _lift(x, y) -> Tuple["Tensor", "Tensor"]:

@@ -1336,6 +1336,11 @@ class ABY3(Protocol):
         """See tf.split"""
         return self.dispatch("split", x, num_split, axis=axis)
 
+    @memoize
+    def tile(self, x, multiples):
+        """See tf.tile."""
+        return self.dispatch("tile", x, multiples)
+
     def write(self, x, filename_prefix):
         if not isinstance(x, ABY3PrivateTensor):
             raise TypeError("Only support writing ABY3PrivateTensor to disk.")
@@ -3494,6 +3499,35 @@ def _gather_private(prot, x, indices, axis=0):
             with tf.device(prot.servers[i].device_name):
                 z[i][0] = xs[i][0].gather(indices, axis=axis)
                 z[i][1] = xs[i][1].gather(indices, axis=axis)
+
+        return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+
+
+def _tile_public(prot, x, multiples):
+    factory = x.backing_dtype
+
+    xs = x.unwrapped
+
+    with tf.name_scope("tile-public"):
+        z = [None, None, None]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i] = factory.tile(xs[i], multiples)
+
+        return ABY3PublicTensor(prot, z, x.is_scaled)
+
+
+def _tile_private(prot, x, multiples):
+    factory = x.backing_dtype
+
+    xs = x.unwrapped
+
+    with tf.name_scope("tile-private"):
+        z = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = factory.tile(xs[i][0], multiples)
+                z[i][1] = factory.tile(xs[i][1], multiples)
 
         return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 
