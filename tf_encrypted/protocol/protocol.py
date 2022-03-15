@@ -49,7 +49,7 @@ def memoize(func: Callable) -> Callable:
     @functools.wraps(func)
     def cache_nodes(self: Protocol, *args: Any, **kwargs: Any) -> AbstractTensor:
         args = tuple(tuple(x) if isinstance(x, list) else x for x in args)
-        node_key = (func.__name__, args, tuple(sorted(kwargs.items())))
+        node_key = (func.__name__, args, tuple(sorted([(item[0], tuple(item[1])) if isinstance(item[1], list) else item for item in kwargs.items()])))
 
         cached_result = nodes.get(node_key, None)
         if cached_result is not None:
