@@ -1497,6 +1497,10 @@ class ABY3(Protocol):
     """
         return self.dispatch("maxpool2d", x, pool_size, strides, padding)
 
+    def avgpool2d(self, x, pool_size, strides, padding):
+        """See tf.nn.avgpool2d."""
+        return self.dispatch("avgpool2d", x, pool_size, strides, padding)
+
     def dispatch(self, base_name, *args, container=None, **kwargs):
         """
     Finds the correct protocol logicto perform based on the dispatch_id
@@ -3948,6 +3952,27 @@ def _maxpool2d_public(
     padding: str,
 ) -> ABY3PublicTensor:
     """Logic for performing maxpool2d on public input."""
+    return __maxpool2d_computation(prot, x, pool_size, strides, padding)
+
+
+def _maxpool2d_private(
+    prot: ABY3,
+    x: ABY3PrivateTensor,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: str,
+) -> ABY3PrivateTensor:
+    """Logic for performing maxpool2d on private input."""
+    return __maxpool2d_computation(prot, x, pool_size, strides, padding)
+
+
+def __maxpool2d_computation(
+    prot: ABY3,
+    x: ABY3Tensor,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: str
+) -> ABY3Tensor:
     batch, channels, height, width = x.shape
     out_height, out_width = _out_shape(height, width, pool_size, strides, padding)
 
@@ -3960,21 +3985,43 @@ def _maxpool2d_public(
         return result
 
 
-def _maxpool2d_private(
+def _avgpool2d_public(
+    prot: ABY3,
+    x: ABY3PublicTensor,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: str,
+) -> ABY3PublicTensor:
+    """Logic for performing avgpool2d on public input."""
+    return __avgpool2d_computation(prot, x, pool_size, strides, padding)
+
+
+def _avgpool2d_private(
     prot: ABY3,
     x: ABY3PrivateTensor,
     pool_size: Tuple[int, int],
     strides: Tuple[int, int],
     padding: str,
 ) -> ABY3PrivateTensor:
-    """Logic for performing maxpool2d on private input."""
+    """Logic for performing avgpool2d on private input."""
+    return __avgpool2d_computation(prot, x, pool_size, strides, padding)
+
+
+def __avgpool2d_computation(
+    prot: ABY3,
+    x: ABY3Tensor,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: str,
+) -> ABY3Tensor:
     batch, channels, height, width = x.shape
     out_height, out_width = _out_shape(height, width, pool_size, strides, padding)
+    scalar = 1 / (pool_size[0] * pool_size[1])
 
-    with tf.name_scope("maxpool2d"):
+    with tf.name_scope("avgpool2d"):
         x_split = x.reshape((batch * channels, 1, height, width))
 
         y = prot.im2col(x_split, pool_size[0], pool_size[1], padding, strides[0])
-        i2c_max = y.reduce_max(axis=0)
+        i2c_max = y.reduce_sum(axis=0) * scalar
         result = i2c_max.reshape([out_height, out_width, batch, channels]).transpose([2, 3, 0, 1])
         return result
