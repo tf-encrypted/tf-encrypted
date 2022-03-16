@@ -1584,6 +1584,74 @@ class TestABY3(unittest.TestCase):
 
         os.remove(tmp_filename)
 
+    def test_conv2d(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        # input
+        batch_size, channels_in, channels_out = 32, 3, 64
+        img_height, img_width = 28, 28
+        input_shape = (batch_size, channels_in, img_height, img_width)
+        input_conv = np.random.normal(size=input_shape).astype(np.float32)
+
+        # filters
+        h_filter, w_filter, strides = 2, 2, 2
+        filter_shape = (h_filter, w_filter, channels_in, channels_out)
+        filter_values = np.random.normal(size=filter_shape)
+
+        conv_input = prot.define_private_variable(input_conv)
+        private_filter = prot.define_private_variable(filter_values)
+        conv_output_tfe1 = tfe.conv2d(conv_input, filter_values, strides=2, padding="SAME")
+        conv_output_tfe2 = tfe.conv2d(conv_input, private_filter, strides=2, padding="SAME")
+
+        with tfe.Session() as sess:
+
+            sess.run(tf.global_variables_initializer())
+            # outputs
+            output_tfe1 = sess.run(conv_output_tfe1.reveal())
+            output_tfe2 = sess.run(conv_output_tfe2.reveal())
+
+        # reset graph
+        tf.reset_default_graph()
+
+        # convolution tensorflow
+        with tf.Session() as sess:
+            # conv input
+            x = tf.Variable(input_conv, dtype=tf.float32)
+            x_nhwc = tf.transpose(x, (0, 2, 3, 1))
+
+            # convolution Tensorflow
+            filters_tf = tf.Variable(filter_values, dtype=tf.float32)
+
+            conv_out_tf = tf.nn.conv2d(
+                x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME",
+            )
+
+            sess.run(tf.global_variables_initializer())
+            output_tensorflow = sess.run(conv_out_tf).transpose(0, 3, 1, 2)
+
+        np.testing.assert_allclose(output_tfe1, output_tensorflow, atol=0.01)
+        np.testing.assert_allclose(output_tfe2, output_tensorflow, atol=0.01)
+
+    def test_maximum(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(np.array([[1, -2, 0], [-4, 0, 6]]))
+        y = tfe.define_private_variable(np.array([[0, -2, 3], [0, -5, 6]]))
+
+        z = tfe.maximum(x, y)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            result = sess.run(z.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[1, -2, 3], [0, 0, 6]]))
+
 
 def print_banner(title):
     title_length = len(title)

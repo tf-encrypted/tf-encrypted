@@ -1430,6 +1430,56 @@ class ABY3(Protocol):
         x = self.lift(x)
         return self.dispatch("im2col", x, h_filter, w_filter, padding, stride)
 
+    def conv2d(self, x, w, strides, padding):
+        """See tf.nn.conv2d."""
+        x, w = self.lift(x, w)
+        return self.dispatch("conv2d", x, w, strides, padding)
+
+    @memoize
+    def select(self, choice_bit, x, y):
+        """
+    .. code-block:: python
+
+        >>> option_x = [10, 20, 30, 40]
+        >>> option_y = [1, 2, 3, 4]
+        >>> select(choice_bit=1, x=option_x, y=option_y)
+        [1, 2, 3, 4]
+        >>> select(choice_bit=[0,1,0,1], x=option_x, y=option_y)
+        [10, 2, 30, 4]
+
+    `NOTE:` Inputs to this function in real use will not look like above.
+    In practice these will be secret shares.
+
+    :param Spdz2kTensor choice_bit: The bits representing which tensor to choose.
+      If `choice_bit = 0` then choose elements from `x`, otherwise choose
+      from `y`.
+    :param Spdz2kTensor x: Candidate tensor 0.
+    :param Spdz2kTensor y: Candidate tensor 1.
+    """
+        with tf.name_scope("select"):
+            return self.mul_ab(y - x, choice_bit) + x
+
+    @memoize
+    def maximum(self, x, y):
+        """
+    maximum(x, y) -> Spdz2kTensor
+
+    Computes :math:`max(x,y)`.
+
+    Returns the greater value of each tensor per index.
+
+    .. code-block:: python
+
+        >>> maximum([10, 20, 30], [11, 19, 31])
+        [11, 20, 31]
+
+    :param Spdz2kTensor x: Input tensor.
+    :param Spdz2kTensor y: Input tensor.
+    """
+        with tf.name_scope("maximum"):
+            max_choices = x > y
+            return self.select(max_choices, y, x)
+
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
         """
@@ -1482,7 +1532,7 @@ def _bit_gather_private(prot, x, start, stride):
     shares = x.unwrapped
 
     z = [[None, None], [None, None], [None, None]]
-    with tf.name_scope("bit-gather-private"):
+    with tf.name_scope("bit-gather"):
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
                 z[i][0] = shares[i][0].bit_gather(start, stride)
@@ -1496,7 +1546,7 @@ def _bit_gather_public(prot, x, start, stride):
     x_ = x.unwrapped
 
     z = [None, None, None]
-    with tf.name_scope("bit-gather-public"):
+    with tf.name_scope("bit-gather"):
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
                 z[i] = x_[i].bit_gather(start, stride)
@@ -1515,7 +1565,7 @@ def _cast_private(prot, x, factory):
     shares = x.unwrapped
 
     z = [[None, None], [None, None], [None, None]]
-    with tf.name_scope("cast-private"):
+    with tf.name_scope("cast"):
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
                 z[i][0] = shares[i][0].cast(factory)
@@ -1534,7 +1584,7 @@ def _cast_public(prot, x, factory):
     x_ = x.unwrapped
 
     z = [None, None, None]
-    with tf.name_scope("cast-public"):
+    with tf.name_scope("cast"):
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
                 z[i] = x_[i].cast(factory)
@@ -3048,7 +3098,7 @@ def _b2a_single_private(prot, x):
 def _mul_ab_public_private(prot, x, y):
     assert isinstance(x, ABY3PublicTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(x)
-    assert y.share_type == ShareType.BOOLEAN
+    assert y.is_boolean(), y.share_type
 
     x_on_0, x_on_1, x_on_2 = x.unwrapped
 
@@ -3062,8 +3112,8 @@ def _mul_ab_public_private(prot, x, y):
 def _mul_ab_private_private(prot, x, y):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert isinstance(y, ABY3PrivateTensor), type(y)
-    assert x.share_type == ShareType.ARITHMETIC
-    assert y.share_type == ShareType.BOOLEAN
+    assert x.is_arithmetic(), x.share_type
+    assert y.is_boolean(), y.share_type
 
     x_shares = x.unwrapped
 
@@ -3367,7 +3417,7 @@ def _stack_public(prot, xs, axis):
     is_scaled = xs[0].is_scaled
     xs_on_0, xs_on_1, xs_on_2 = zip(*(x.unwrapped for x in xs))
 
-    with tf.name_scope("stack-public"):
+    with tf.name_scope("stack"):
 
         with tf.device(prot.servers[0].device_name):
             x_on_0_stack = factory.stack(xs_on_0, axis=axis)
@@ -3398,7 +3448,7 @@ def _stack_private(prot, xs, axis):
         z[i][0] = [x_shares[i][0] for x_shares in xs_shares]
         z[i][1] = [x_shares[i][1] for x_shares in xs_shares]
 
-    with tf.name_scope("stack-private"):
+    with tf.name_scope("stack"):
 
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3412,7 +3462,7 @@ def _expand_dims_public(prot, x, axis):
 
     xs = x.unwrapped
 
-    with tf.name_scope("expand-dims-public"):
+    with tf.name_scope("expand-dims"):
         z = [None, None, None]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3425,7 +3475,7 @@ def _expand_dims_private(prot, x, axis):
 
     xs = x.unwrapped
 
-    with tf.name_scope("expand-dims-private"):
+    with tf.name_scope("expand-dims"):
         z = [[None, None], [None, None], [None, None]]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3439,7 +3489,7 @@ def _squeeze_public(prot, x, axis):
 
     xs = x.unwrapped
 
-    with tf.name_scope("squeeze-public"):
+    with tf.name_scope("squeeze"):
         z = [None, None, None]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3452,7 +3502,7 @@ def _squeeze_private(prot, x, axis):
 
     xs = x.unwrapped
 
-    with tf.name_scope("squeeze-private"):
+    with tf.name_scope("squeeze"):
         z = [[None, None], [None, None], [None, None]]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3466,7 +3516,7 @@ def _strided_slice_public(prot, x, args, kwargs):
 
     xs = x.unwrapped
 
-    with tf.name_scope("strided-slice-public"):
+    with tf.name_scope("strided-slice"):
         z = [None, None, None]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3479,7 +3529,7 @@ def _strided_slice_private(prot, x, args, kwargs):
 
     xs = x.unwrapped
 
-    with tf.name_scope("strided-slice-private"):
+    with tf.name_scope("strided-slice"):
         z = [[None, None], [None, None], [None, None]]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3493,7 +3543,7 @@ def _gather_public(prot, x, indices, axis=0):
 
     xs = x.unwrapped
 
-    with tf.name_scope("gather-public"):
+    with tf.name_scope("gather"):
         z = [None, None, None]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3506,7 +3556,7 @@ def _gather_private(prot, x, indices, axis=0):
 
     xs = x.unwrapped
 
-    with tf.name_scope("gather-private"):
+    with tf.name_scope("gather"):
         z = [[None, None], [None, None], [None, None]]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3521,7 +3571,7 @@ def _tile_public(prot, x, multiples):
 
     xs = x.unwrapped
 
-    with tf.name_scope("tile-public"):
+    with tf.name_scope("tile"):
         z = [None, None, None]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3535,7 +3585,7 @@ def _tile_private(prot, x, multiples):
 
     xs = x.unwrapped
 
-    with tf.name_scope("tile-private"):
+    with tf.name_scope("tile"):
         z = [[None, None], [None, None], [None, None]]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3549,7 +3599,7 @@ def _split_public(prot, x, num_split, axis = 0):
 
     xs = x.unwrapped
 
-    with tf.name_scope("split-public"):
+    with tf.name_scope("split"):
         zs = [None, None, None]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3565,7 +3615,7 @@ def _split_private(prot, x, num_split, axis = 0):
 
     xs = x.unwrapped
 
-    with tf.name_scope("split-private"):
+    with tf.name_scope("split"):
         zs = [[None, None], [None, None], [None, None]]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3725,7 +3775,7 @@ def _im2col_public(
 
     xs = x.unwrapped
 
-    with tf.name_scope("im2col-public"):
+    with tf.name_scope("im2col"):
         z = [None, None, None]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3745,7 +3795,7 @@ def _im2col_private(
 
     xs = x.unwrapped
 
-    with tf.name_scope("im2col-private"):
+    with tf.name_scope("im2col"):
         z = [[None, None], [None, None], [None, None]]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -3753,3 +3803,50 @@ def _im2col_private(
                 z[i][1] = xs[i][1].im2col(h_filter, w_filter, padding, stride)
 
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+
+
+def _conv2d_private_public(prot, x, w, strides, padding):
+
+    xs = x.unwrapped
+    ws = w.unwrapped
+
+    with tf.name_scope("conv2d"):
+        z = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = xs[i][0].conv2d(ws[i], strides, padding)
+                z[i][1] = xs[i][1].conv2d(ws[i], strides, padding)
+
+        z = ABY3PrivateTensor(prot, z, x.is_scaled or w.is_scaled, x.share_type)
+        z = prot.truncate(z) if x.is_scaled and w.is_scaled else z
+        return z
+
+
+def _conv2d_private_private(prot, x, w, strides, padding):
+
+    xs = x.unwrapped
+    ws = w.unwrapped
+
+    with tf.name_scope("conv2d"):
+        y = [None, None, None]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                y[i] = (xs[i][0].conv2d(ws[i][0], strides, padding) +
+                    xs[i][0].conv2d(ws[i][1], strides, padding) +
+                    xs[i][1].conv2d(ws[i][0], strides, padding)
+                )
+
+
+        a = prot._gen_zero_sharing(y[0].shape)
+        z = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = y[i] + a[i]
+
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][1] = z[(i+1)%3][0]
+
+        z = ABY3PrivateTensor(prot, z, x.is_scaled or w.is_scaled, x.share_type)
+        z = prot.truncate(z) if x.is_scaled and w.is_scaled else z
+        return z
