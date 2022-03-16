@@ -378,6 +378,10 @@ def native_factory(
                 value %= EXPLICIT_MODULUS
             return DenseTensor(value)
 
+        def reduce_max(self, axis=None, keepdims=False):
+            value = tf.reduce_max(self.value, axis, keepdims)
+            return DenseTensor(value)
+
         def equal_zero(self, factory=None):
             factory = factory or FACTORY
             return factory.tensor(

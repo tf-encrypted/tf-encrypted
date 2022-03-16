@@ -1652,6 +1652,42 @@ class TestABY3(unittest.TestCase):
             result = sess.run(z.reveal())
             np.testing.assert_array_equal(result.astype(int), np.array([[1, -2, 3], [0, 0, 6]]))
 
+    def test_reduce_max(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(np.array([[1, -2, 0], [-4, 0, 6]]))
+
+        z1 = tfe.reduce_max(x, axis=0)
+        z2 = tfe.reduce_max(x, axis=0, keepdims=True)
+        z3 = tfe.reduce_max(x, axis=1)
+        z4 = tfe.reduce_max(x, axis=1, keepdims=True)
+        z5 = tfe.reduce_max(x)
+        z6 = tfe.reduce_max(x, keepdims=True)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            result = sess.run(z1.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([1, 0, 6]))
+
+            result = sess.run(z2.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[1, 0, 6]]))
+
+            result = sess.run(z3.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([1, 6]))
+
+            result = sess.run(z4.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[1], [6]]))
+
+            result = sess.run(z5.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array(6))
+
+            result = sess.run(z6.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[6]]))
+
 
 def print_banner(title):
     title_length = len(title)

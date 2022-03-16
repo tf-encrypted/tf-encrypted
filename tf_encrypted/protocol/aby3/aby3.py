@@ -1450,11 +1450,11 @@ class ABY3(Protocol):
     `NOTE:` Inputs to this function in real use will not look like above.
     In practice these will be secret shares.
 
-    :param Spdz2kTensor choice_bit: The bits representing which tensor to choose.
+    :param ABY3Tensor choice_bit: The bits representing which tensor to choose.
       If `choice_bit = 0` then choose elements from `x`, otherwise choose
       from `y`.
-    :param Spdz2kTensor x: Candidate tensor 0.
-    :param Spdz2kTensor y: Candidate tensor 1.
+    :param ABY3Tensor x: Candidate tensor 0.
+    :param ABY3Tensor y: Candidate tensor 1.
     """
         with tf.name_scope("select"):
             return self.mul_ab(y - x, choice_bit) + x
@@ -1462,8 +1462,6 @@ class ABY3(Protocol):
     @memoize
     def maximum(self, x, y):
         """
-    maximum(x, y) -> Spdz2kTensor
-
     Computes :math:`max(x,y)`.
 
     Returns the greater value of each tensor per index.
@@ -1473,12 +1471,18 @@ class ABY3(Protocol):
         >>> maximum([10, 20, 30], [11, 19, 31])
         [11, 20, 31]
 
-    :param Spdz2kTensor x: Input tensor.
-    :param Spdz2kTensor y: Input tensor.
+    :param ABY3Tensor x: Input tensor.
+    :param ABY3Tensor y: Input tensor.
     """
         with tf.name_scope("maximum"):
             max_choices = x > y
             return self.select(max_choices, y, x)
+
+
+    @memoize
+    def reduce_max(self, x, axis=None, keepdims=False):
+        x = self.lift(x)
+        return self.dispatch("reduce_max", x, axis=axis, keepdims=keepdims)
 
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
@@ -3850,3 +3854,64 @@ def _conv2d_private_private(prot, x, w, strides, padding):
         z = ABY3PrivateTensor(prot, z, x.is_scaled or w.is_scaled, x.share_type)
         z = prot.truncate(z) if x.is_scaled and w.is_scaled else z
         return z
+
+
+def _reduce_max_public(
+        prot: ABY3,
+        x: ABY3PublicTensor,
+        axis: Optional[int] = None,
+        keepdims: Optional[bool] = False,
+) -> ABY3PublicTensor:
+
+    xs = x.unwrapped
+
+    with tf.name_scope("reduce_max"):
+        z = [None, None, None]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i] = xs[i].reduce_max(axis, keepdims)
+
+    return ABY3PublicTensor(prot, z, x.is_scaled)
+
+
+def _reduce_max_private(
+        prot: ABY3,
+        x: ABY3PrivateTensor,
+        axis: Optional[int] = None,
+        keepdims: Optional[bool] = False,
+) -> ABY3PrivateTensor:
+
+    with tf.name_scope("reduce_max"):
+
+        def build_comparison_tree(ts):
+            if len(ts) == 1:
+                return ts[0]
+            halfway = len(ts) // 2
+            ts_left, ts_right = ts[:halfway], ts[halfway:]
+            maximum_left = build_comparison_tree(ts_left)
+            maximum_right = build_comparison_tree(ts_right)
+            return prot.maximum(maximum_left, maximum_right)
+
+        def vector_max(vec):
+            """
+            Theoretically, this has the same complexity as `build_comparison_tree` by splitting the vector
+            into sub-vecotrs all of length 1. But it is more compact from an engineering point of view.
+            """
+            if vec.shape[0] == 1:
+                return vec[0]
+            halfway = vec.shape[0] // 2
+            vec_left = vec[:(halfway + vec.shape[0] % 2)]
+            vec_right = vec[halfway:]
+            return vector_max(prot.maximum(vec_left, vec_right))
+
+        if axis is None:
+            vec = prot.reshape(x, [-1])
+            maximum = vector_max(vec)
+            if keepdims:
+                maximum = prot.reshape(maximum, [1]*len(x.shape))
+        else:
+            tensors = prot.split(x, int(x.shape[axis]), axis=axis)
+            maximum = build_comparison_tree(tensors)
+            if not keepdims:
+                maximum = prot.squeeze(maximum, axis=(axis,))
+        return maximum
