@@ -1688,6 +1688,33 @@ class TestABY3(unittest.TestCase):
             result = sess.run(z6.reveal())
             np.testing.assert_array_equal(result.astype(int), np.array([[6]]))
 
+    def test_maxpool2d(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(np.array([[1, 2, 3, 4],
+                                                  [5, 6, 7, 8],
+                                                  [9, 10, 11, 12]]))
+        # Add the `batch` and `channels` dimensions
+        x = tfe.expand_dims(x, axis=0)
+        x = tfe.expand_dims(x, axis=0)
+
+        z1 = tfe.maxpool2d(x, pool_size=(2, 2), strides=(2, 2), padding="VALID")
+        z2 = tfe.maxpool2d(x, pool_size=(2, 2), strides=(2, 2), padding="SAME")
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            result = sess.run(z1.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[[[6, 8]]]]))
+
+            result = sess.run(z2.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[[[6, 8], [10, 12]]]]))
+
+
+
 
 def print_banner(title):
     title_length = len(title)

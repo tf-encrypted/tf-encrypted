@@ -1484,6 +1484,18 @@ class ABY3(Protocol):
         x = self.lift(x)
         return self.dispatch("reduce_max", x, axis=axis, keepdims=keepdims)
 
+    @memoize
+    def maxpool2d(self, x, pool_size, strides, padding):
+        """
+    Performs a `MaxPooling2d` operation on `x`.
+
+    :param ABY3Tensor x: Input tensor.
+    :param List[int] pool_size: The size of the pool.
+    :param List[int] strides: A list describing how to stride over the
+      convolution.
+    :param str padding: Which type of padding to use ("SAME" or "VALID").
+    """
+        return self.dispatch("maxpool2d", x, pool_size, strides, padding)
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
         """
@@ -3915,3 +3927,54 @@ def _reduce_max_private(
             if not keepdims:
                 maximum = prot.squeeze(maximum, axis=(axis,))
         return maximum
+
+
+def _out_shape(in_height, in_width, pool_size, strides, padding):
+
+    if padding == "SAME":
+        out_height = ceil(int(in_height) / strides[0])
+        out_width = ceil(int(in_width) / strides[1])
+    else:
+        out_height = ceil((int(in_height) - pool_size[0] + 1) / strides[0])
+        out_width = ceil((int(in_width) - pool_size[1] + 1) / strides[1])
+    return [out_height, out_width]
+
+
+def _maxpool2d_public(
+    prot: ABY3,
+    x: ABY3PublicTensor,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: str,
+) -> ABY3PublicTensor:
+    """Logic for performing maxpool2d on public input."""
+    batch, channels, height, width = x.shape
+    out_height, out_width = _out_shape(height, width, pool_size, strides, padding)
+
+    with tf.name_scope("maxpool2d"):
+        x_split = x.reshape((batch * channels, 1, height, width))
+
+        y = prot.im2col(x_split, pool_size[0], pool_size[1], padding, strides[0])
+        i2c_max = y.reduce_max(axis=0)
+        result = i2c_max.reshape([out_height, out_width, batch, channels]).transpose([2, 3, 0, 1])
+        return result
+
+
+def _maxpool2d_private(
+    prot: ABY3,
+    x: ABY3PrivateTensor,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: str,
+) -> ABY3PrivateTensor:
+    """Logic for performing maxpool2d on private input."""
+    batch, channels, height, width = x.shape
+    out_height, out_width = _out_shape(height, width, pool_size, strides, padding)
+
+    with tf.name_scope("maxpool2d"):
+        x_split = x.reshape((batch * channels, 1, height, width))
+
+        y = prot.im2col(x_split, pool_size[0], pool_size[1], padding, strides[0])
+        i2c_max = y.reduce_max(axis=0)
+        result = i2c_max.reshape([out_height, out_width, batch, channels]).transpose([2, 3, 0, 1])
+        return result
