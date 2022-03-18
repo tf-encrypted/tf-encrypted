@@ -1319,12 +1319,20 @@ class ABY3(Protocol):
         return self.dispatch("polynomial", x, coeffs)
 
     @memoize
+    def multi_polynomial(self, x, coeffs):
+        return self.dispatch("multi_polynomial", x, coeffs)
+
+    @memoize
     def polynomial_piecewise(self, x, c, coeffs):
         return self.dispatch("polynomial_piecewise", x, c, coeffs)
 
     @memoize
-    def sigmoid(self, x, approx_type="piecewise_linear"):
+    def sigmoid(self, x, approx_type="3_piecewise_linear"):
         return self.dispatch("sigmoid", x, approx_type)
+
+    @memoize
+    def relu(self, x, approx_type="2_piecewise_linear"):
+        return self.dispatch("relu", x, approx_type)
 
     @memoize
     def gather(self, x, indices, axis=0):
@@ -3253,6 +3261,34 @@ def _polynomial_private(prot, x, coeffs):
     return result
 
 
+def _multi_polynomial_private(prot, x, coeffs):
+    assert x.is_arithmetic(), \
+            "Unexpected share type: x {}".format(x.share_type)
+
+    with tf.name_scope("multi-polynomial"):
+        poly_num = len(coeffs)
+        degree = max([len(c) for c in coeffs])
+        padded_coeffs = []
+        for i in range(degree):
+            degree_i_coeffs = []
+            for j in range(poly_num):
+                if i < len(coeffs[j]):
+                    degree_i_coeffs.append(coeffs[j][i])
+                else:
+                    degree_i_coeffs.append(0)
+            padded_coeffs.append(tf.reshape(tf.constant(degree_i_coeffs), [poly_num] + [1] * len(x.shape)))
+
+        result = padded_coeffs[0]
+
+        for i in range(1, degree):
+            xi = x ** i
+            xi_tile = prot.tile(prot.expand_dims(xi, 0), [poly_num] + [1] * len(x.shape))
+            tmp = xi_tile * padded_coeffs[i]
+            result = result + tmp
+
+    return result
+
+
 def _polynomial_piecewise_private(prot, x, c, coeffs):
     """
   :param prot:
@@ -3267,20 +3303,26 @@ def _polynomial_piecewise_private(prot, x, c, coeffs):
     with tf.name_scope("polynomial_piecewise"):
         # Compute the selection bit for each polynomial
         with tf.name_scope("polynomial-selection-bit"):
-            msbs = [None] * len(c)
-            for i in range(len(c)):
-                msbs[i] = prot.msb(x - c[i])
-            b = [None] * len(coeffs)
-            b[0] = msbs[0]
-            for i in range(len(c) - 1):
-                b[i + 1] = ~msbs[i] & msbs[i + 1]
-            b[len(c)] = ~msbs[len(c) - 1]
+            x_tile = prot.tile(prot.expand_dims(x, 0), [len(c)] + [1] * len(x.shape))
+            c_public = prot.define_constant(
+                    np.reshape(np.array(c), [len(c)] + [1] * len(x.shape)),
+                    apply_scaling=x.is_scaled)
+            pivots = prot.less_equal(x_tile, c_public)
+
+            le_pivots = prot.concat([
+                pivots,
+                _ones_private(prot, [1] + x.shape, False, ShareType.BOOLEAN, pivots.backing_dtype)
+            ], axis=0)
+            gt_pivots = prot.concat([
+                _ones_private(prot, [1] + x.shape, False, ShareType.BOOLEAN, pivots.backing_dtype),
+                pivots ^ 1
+            ], axis=0)
+            b = prot.and_(le_pivots, gt_pivots)
 
         # Compute the piecewise combination result
-        result = 0
-        for i in range(len(coeffs)):
-            fi = prot.polynomial(x, coeffs[i])
-            result = result + prot.mul_ab(fi, b[i])
+        f = prot.multi_polynomial(x, coeffs)
+        result = prot.mul_ab(f, b)
+        result = prot.reduce_sum(result, axis=0)
     return result
 
 
@@ -3288,15 +3330,36 @@ def _sigmoid_private(prot, x, approx_type):
     assert isinstance(x, ABY3PrivateTensor), type(x)
 
     with tf.name_scope("sigmoid"):
-        if approx_type == "piecewise_linear":
+        if approx_type == "3_piecewise_linear":
             c = (-2.5, 2.5)
             coeffs = ((1e-4,), (0.50, 0.17), (1 - 1e-4,))
+        elif approx_type == "5_piecewise_linear":
+            c = (-4, -1.5, 1.5, 4)
+            coeffs = ((1e-4, ), (0.281, 0.066), (0.5, 0.212), (0.719, 0.066), (1-1e-4, ))
         else:
             raise NotImplementedError(
                 "Only support piecewise linear approximation of sigmoid."
             )
 
         result = prot.polynomial_piecewise(x, c, coeffs)
+    return result
+
+
+def _relu_private(prot, x, approx_type):
+    assert x.is_arithmetic(), \
+            "Unexpected share type: x {}".format(x.share_type)
+
+    with tf.name_scope("relu"):
+        if approx_type == "2_piecewise_linear":
+            # Use tuple because list is not hashable for the memoir cache key
+            c = (0, )
+            coeffs = ((0, ), (0, 1))
+            result = prot.polynomial_piecewise(x, c, coeffs)
+        else:
+            raise NotImplementedError(
+                "Only support piecewise linear approximation of sigmoid."
+            )
+
     return result
 
 
@@ -4025,3 +4088,32 @@ def __avgpool2d_computation(
         i2c_max = y.reduce_sum(axis=0) * scalar
         result = i2c_max.reshape([out_height, out_width, batch, channels]).transpose([2, 3, 0, 1])
         return result
+
+
+def _ones_private(
+        prot,
+        shape,
+        apply_scaling,
+        share_type,
+        factory
+) ->  ABY3PrivateTensor:
+
+    ones_array = np.ones(shape)
+    zeros_array = np.zeros(shape)
+
+    with tf.name_scope("private-ones"):
+        x = [[None, None], [None, None], [None, None]]
+        with tf.device(prot.servers[0].device_name):
+            x[0][0] = factory.tensor(prot._encode(ones_array, apply_scaling, factory))
+            x[0][1] = factory.tensor(prot._encode(zeros_array, apply_scaling, factory))
+
+        with tf.device(prot.servers[1].device_name):
+            x[1][0] = factory.tensor(prot._encode(zeros_array, apply_scaling, factory))
+            x[1][1] = factory.tensor(prot._encode(zeros_array, apply_scaling, factory))
+
+        with tf.device(prot.servers[2].device_name):
+            x[2][0] = factory.tensor(prot._encode(zeros_array, apply_scaling, factory))
+            x[2][1] = factory.tensor(prot._encode(ones_array, apply_scaling, factory))
+
+    x = ABY3PrivateTensor(prot, x, apply_scaling, share_type)
+    return x

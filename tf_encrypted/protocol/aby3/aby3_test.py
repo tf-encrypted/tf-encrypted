@@ -15,6 +15,35 @@ from tf_encrypted.protocol.aby3 import ABY3, ShareType
 
 
 class TestABY3(unittest.TestCase):
+
+    def test_define_private(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        @tfe.local_computation("input-provider")
+        def provide_input():
+            return tf.ones(shape=(2, 2)) * 1.3
+
+        # define inputs
+        x = tfe.define_private_variable(tf.ones(shape=(2, 2)))
+        y = tfe.define_private_variable(np.ones(shape=(2, 2)))
+        z = provide_input()
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(x.reveal())
+            np.testing.assert_allclose(result, np.array([[1, 1], [1, 1]]), rtol=0.0, atol=0.01)
+
+            result = sess.run(y.reveal())
+            np.testing.assert_allclose(result, np.array([[1, 1], [1, 1]]), rtol=0.0, atol=0.01)
+
+            result = sess.run(z.reveal())
+            np.testing.assert_allclose(result, np.array([[1.3, 1.3], [1.3, 1.3]]), rtol=0.0, atol=0.01)
+
     def test_add_private_private(self):
         tf.reset_default_graph()
 
@@ -1093,6 +1122,7 @@ class TestABY3(unittest.TestCase):
         )
         # Or, simply use the pre-defined sigmoid API which includes a different approximation
         z2 = tfe.sigmoid(x)
+        z3 = tfe.relu(x)
 
         with tfe.Session() as sess:
             # initialize variables
@@ -1106,6 +1136,13 @@ class TestABY3(unittest.TestCase):
             np.testing.assert_allclose(
                 result,
                 np.array([[0.33, 0.415, 0.4575], [0.5, 0.5425, 0.84]]),
+                rtol=0.0,
+                atol=0.01,
+            )
+            result = sess.run(z3.reveal())
+            np.testing.assert_allclose(
+                result,
+                np.array([[0, 0, 0], [0, 0.25, 2]]),
                 rtol=0.0,
                 atol=0.01,
             )
