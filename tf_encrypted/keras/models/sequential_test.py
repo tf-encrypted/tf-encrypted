@@ -159,6 +159,29 @@ class TestSequential(unittest.TestCase):
         KE.clear_session()
 
 
+class TestSequentialABY3(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
+    def test_two_layers(self):
+        shape = (10, 3)
+        with tfe.protocol.ABY3():
+            model = Sequential()
+            model.add(Dense(2, batch_input_shape=shape, activation="sigmoid"))
+            model.add(Dense(1))
+
+            x = tfe.define_private_variable(np.random.normal(size=shape))
+            y = tfe.define_private_variable(np.random.normal(size=(10, 1)))
+            logits = model(x)
+            loss = tfe.keras.losses.BinaryCrossentropy(from_logits=True)
+
+            optimizer = tfe.keras.optimizers.SGD(lr=0.01)
+            model.compile(optimizer, loss)
+
+            model.fit(x, y)
+
+
+
 def _model_predict_keras(input_data, input_shape):
     with tf.Session():
         model = tf.keras.models.Sequential()

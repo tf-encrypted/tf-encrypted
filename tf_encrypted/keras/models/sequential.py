@@ -8,7 +8,6 @@ from tf_encrypted.keras import optimizers
 from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import Input
 from tf_encrypted.keras.engine.input_layer import InputLayer
-from tf_encrypted.protocol.pond import PondPrivateTensor
 
 
 class Sequential(Layer):
@@ -161,8 +160,6 @@ class Sequential(Layer):
       steps_per_epoch: Integer. Total number of steps (batches of samples)
         before declaring one epoch finished and starting the next epoch.
     """
-        assert isinstance(x, PondPrivateTensor), type(x)
-        assert isinstance(y, PondPrivateTensor), type(y)
 
         # Initialize variables before starting to train
         sess = KE.get_session()
