@@ -3,6 +3,7 @@ from typing import Tuple, List, Union, Optional, Callable
 from ...tensor.factory import (
     AbstractTensor,
     AbstractConstant,
+    AbstractPlaceholder
 )
 import numpy as np
 import tensorflow as tf
@@ -483,3 +484,64 @@ class ABY3PrivateVariable(ABY3PrivateTensor):
         return "ABY3PrivateVariable(shape={}, share_type={})".format(self.shape, self.share_type)
 
 
+class ABY3PrivatePlaceholder(ABY3PrivateTensor):
+    """
+  This class essentially represents a private value, however it additionally
+  records the fact that the backing tensor was declared as a placeholder in
+  order to allow treating it as a placeholder itself.
+  """
+
+    def __init__(self, prot, shares, is_scaled, share_type):
+        assert all(isinstance(ss, AbstractPlaceholder) for s in shares for ss in s), "Shares should be AbstractPlaceholder."
+
+        super().__init__(prot, shares, is_scaled, share_type)
+        self.shares = shares
+
+    def __repr__(self) -> str:
+        return "PondPrivatePlaceholder(shape={})".format(self.shape)
+
+    def feed(self, value):
+        """
+    Feed `value` to placeholder
+    """
+        assert isinstance(value, np.ndarray), type(value)
+        enc = self.prot._encode(value, self.is_scaled)
+        assert isinstance(enc, np.ndarray)
+
+        # x0, x1 = self.prot._share(enc)
+        # assert isinstance(x0, np.ndarray), type(x0)
+        # assert isinstance(x1, np.ndarray), type(x1)
+
+        # TODO(Morten)
+        #
+        # This is a huge hack and it would be better to use `_share` as above.
+        # However, _share currently expects its inputs to be TFE tensors backed
+        # by tf.Tensors in order to have extra information attached, and not sure
+        # we should change this until we've least considered what will happen with
+        # TF2 and eager mode.
+        #
+        # So, to ensure that feeding can be done locally *outside* the TF graph,
+        # in the mean time we manually share values here, avoiding a call to
+        # `factory.tensor` as that's where tensors are converted to tf.Tensors.
+        shape = self.shape
+        minval = self.backing_dtype.min
+        maxval = self.backing_dtype.max
+        # TODO(Morten) not using secure randomness here; reconsider after TF2
+        x0 = np.array(
+            [random.randrange(minval, maxval) for _ in range(np.product(shape))]
+        ).reshape(shape)
+        x1 = np.array(
+            [random.randrange(minval, maxval) for _ in range(np.product(shape))]
+        ).reshape(shape)
+        if self.share_type == ShareType.ARITHMETIC:
+            x2 = enc - x0 - x1
+        else:
+            x2 = enc ^ x0 ^ x1
+
+        feed00 = self.shares[0][0].feed(x0)
+        feed01 = self.shares[0][1].feed(x1)
+        feed10 = self.shares[1][0].feed(x1)
+        feed11 = self.shares[1][1].feed(x2)
+        feed20 = self.shares[2][0].feed(x2)
+        feed21 = self.shares[2][1].feed(x0)
+        return {**feed00, **feed01, **feed10, **feed11, **feed20, **feed21}

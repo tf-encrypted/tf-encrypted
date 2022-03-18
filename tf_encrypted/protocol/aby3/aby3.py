@@ -331,6 +331,43 @@ class ABY3(Protocol):
         x = ABY3PrivateVariable(self, x, apply_scaling, share_type)
         return x
 
+    def define_private_placeholder(
+        self,
+        shape,
+        apply_scaling: bool = True,
+        share_type=ShareType.ARITHMETIC,
+        factory: Optional[AbstractFactory] = None,
+        name: Optional[str] = None,
+    ):
+        """Define a `private` placeholder to use in computation. This will only be
+    known by the party that defines it.
+
+    .. code-block:: python
+
+        x = prot.define_private_placeholder(shape=(1024, 1024))
+
+    :See: tf.placeholder
+
+    :param List[int] shape: The shape of the placeholder.
+    :param bool apply_scaling: Whether or not to scale the value.
+    :param str name: What name to give to this node in the graph.
+    :param AbstractFactory factory: Which tensor type to represent this value
+        with.
+    """
+
+        factory = factory or self.default_factory
+
+        suffix = "-" + name if name else ""
+        with tf.name_scope("private-placeholder{}".format(suffix)):
+
+            x = [[None, None], [None, None], [None, None]]
+            for i in range(3):
+                with tf.device(self.servers[i].device_name):
+                    x[i][0] = factory.placeholder(shape)
+                    x[i][1] = factory.placeholder(shape)
+
+        return ABY3PrivatePlaceholder(self, x, apply_scaling, share_type)
+
     def local_computation(
             self,
             player_name=None,
@@ -1101,6 +1138,10 @@ class ABY3(Protocol):
         return self.dispatch("negative", x)
 
     @memoize
+    def square(self, x):
+        return self.mul(x, x)
+
+    @memoize
     def mul(self, x, y):
         x, y = self.lift(x, y)
         return self.dispatch("mul", x, y)
@@ -1508,6 +1549,13 @@ class ABY3(Protocol):
     def avgpool2d(self, x, pool_size, strides, padding):
         """See tf.nn.avgpool2d."""
         return self.dispatch("avgpool2d", x, pool_size, strides, padding)
+
+    @memoize
+    def log(self, x, approx_type="chebyshev"):
+        """
+    A Chebyshev polynomial approximation of the hyperbolic tangent function.
+    """
+        return self.dispatch("log", x, approx_type)
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
         """
@@ -3363,6 +3411,44 @@ def _relu_private(prot, x, approx_type):
     return result
 
 
+def _log_private(prot, x, approx_type):
+    assert x.is_arithmetic(), \
+            "Unexpected share type: x {}".format(x.share_type)
+
+    with tf.name_scope("log"):
+
+        if approx_type == "chebyshev":
+            """
+            A Chebyshev polynomial approximation of the hyperbolic tangent function.
+            """
+            w0 = -3.35674972
+            w1 = 12.79333646
+            w2 = -26.18955259
+            w3 = 30.24596692
+            w4 = -17.30367641
+            w5 = 3.82474222
+
+            x1 = x
+            x2 = x.square()
+            x3 = x2 * x1
+            x4 = x3 * x1
+            x5 = x2 * x3
+
+            y1 = x1 * w1
+            y2 = x2 * w2
+            y3 = x3 * w3
+            y4 = x4 * w4
+            y5 = x5 * w5
+
+            z = y5 + y4 + y3 + y2 + y1 + w0
+        else:
+            raise NotImplementedError(
+                "Unsupported approximation type for `log`."
+            )
+
+        return z
+
+
 #
 # transpose helpers
 #
@@ -4096,7 +4182,7 @@ def _ones_private(
         apply_scaling,
         share_type,
         factory
-) ->  ABY3PrivateTensor:
+) -> ABY3PrivateTensor:
 
     ones_array = np.ones(shape)
     zeros_array = np.zeros(shape)
