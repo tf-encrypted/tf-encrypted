@@ -24,7 +24,7 @@ from ...config import get_config
 from ...operations import secure_random as crypto
 from ...player import Player
 from ...tensor import fixed64
-from ...tensor import fixed64_ni
+from ...tensor import fixed64_heuristic
 from ...tensor.boolfactory import bool_factory
 from ...tensor.factory import AbstractConstant
 from ...tensor.factory import AbstractFactory
@@ -60,7 +60,7 @@ class ABY3(Protocol):
         self.servers[1] = config.get_player(server_1 if server_1 else "server1")
         self.servers[2] = config.get_player(server_2 if server_2 else "server2")
 
-        self.fixedpoint_config = fixed64_ni
+        self.fixedpoint_config = fixed64_heuristic
 
         self.factories = {
             0 : bool_factory(),
@@ -1460,7 +1460,7 @@ class ABY3(Protocol):
         return self.dispatch("polynomial_piecewise", x, c, coeffs)
 
     @memoize
-    def sigmoid(self, x, approx_type="3_piecewise_linear"):
+    def sigmoid(self, x, approx_type="5_piecewise_linear"):
         return self.dispatch("sigmoid", x, approx_type)
 
     @memoize
