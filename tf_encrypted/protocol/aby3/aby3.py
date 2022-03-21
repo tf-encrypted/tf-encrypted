@@ -261,6 +261,72 @@ class ABY3(Protocol):
 
         return ABY3Constant(self, [x_on_0, x_on_1, x_on_2], apply_scaling)
 
+
+    def define_public_variable(
+        self,
+        initial_value,
+        apply_scaling: bool = True,
+        name: Optional[str] = None,
+        factory: Optional[AbstractFactory] = None,
+    ):
+        """Define a public variable.
+
+    This is like defining a variable in tensorflow except it creates one that
+    can be used by the protocol.
+
+    For most cases, you can think of this as the same as the one from
+    TensorFlow and you don't generally need to consider the difference.
+
+    For those curious, under the hood, the major difference is that this
+    function will pin your data to a specific device which will be used to
+    optimize the graph later on.
+
+    :see: tf.Variable
+
+    :param Union[np.ndarray,tf.Tensor,ABY3PublicTensor] initial_value: The
+        initial value.
+    :param bool apply_scaling: Whether or not to scale the value.
+    :param str name: What name to give to this node in the graph.
+    :param AbstractFactory factory: Which tensor type to represent this value
+        with.
+    """
+        assert isinstance(
+            initial_value, (np.ndarray, tf.Tensor, ABY3PublicTensor)
+        ), type(initial_value)
+
+        factory = factory or self.default_factory
+
+        with tf.name_scope("public-var{}".format("-" + name if name else "")):
+
+            if isinstance(initial_value, np.ndarray):
+                v = self._encode(initial_value, apply_scaling)
+                v = factory.tensor(v)
+                vs = [v, v, v]
+
+            elif isinstance(initial_value, tf.Tensor):
+                v = self._encode(initial_value, apply_scaling)
+                v = factory.tensor(v)
+                vs = [v, v, v]
+
+            elif isinstance(initial_value, ABY3PublicTensor):
+                vs = initial_value.unwrapped
+
+            else:
+                raise TypeError(
+                    ("Don't know how to turn {} into a " "public variable").format(
+                        type(initial_value)
+                    )
+                )
+
+            xs = [None, None, None]
+            for i in range(3):
+                with tf.device(self.servers[i].device_name):
+                    xs[i] = factory.variable(vs[i])
+
+        x = ABY3PublicVariable(self, xs, apply_scaling)
+        return x
+
+
     def define_private_variable(
         self,
         initial_value,
@@ -972,47 +1038,73 @@ class ABY3(Protocol):
         return m_c
 
     @memoize
-    def assign(self, variable: "ABY3PrivateVariable", value) -> tf.Operation:
+    def assign(self, variable: Union["ABY3PrivateVariable", "ABY3PublicVariable"], value) -> tf.Operation:
         """See tf.assign."""
-        assert isinstance(variable, ABY3PrivateVariable), type(variable)
-        assert isinstance(value, ABY3PrivateTensor), type(value)
-        assert (
-            variable.is_scaled == value.is_scaled
-        ), "Scaling must match: {}, {}".format(variable.is_scaled, value.is_scaled,)
+        if isinstance(variable, ABY3PrivateVariable):
+            assert isinstance(value, ABY3PrivateTensor), type(value)
+            assert (
+                variable.is_scaled == value.is_scaled
+            ), "Scaling must match: {}, {}".format(variable.is_scaled, value.is_scaled,)
 
-        var_shares = variable.unwrapped
-        val_shares = value.unwrapped
+            var_shares = variable.unwrapped
+            val_shares = value.unwrapped
 
-        with tf.name_scope("assign"):
+            with tf.name_scope("assign"):
 
-            # Having this control_dependencies is important in order to avoid that
-            # computationally-dependent shares are updated in different pace
-            # (e.g., share0 is computed from share1, and we need to make sure that
-            # share1 is NOT already updated).
-            with tf.control_dependencies(
-                [
-                    val_shares[0][0].value,
-                    val_shares[0][1].value,
-                    val_shares[1][0].value,
-                    val_shares[1][1].value,
-                    val_shares[2][0].value,
-                    val_shares[2][1].value,
-                ]
-            ):
+                # Having this control_dependencies is important in order to avoid that
+                # computationally-dependent shares are updated in different pace
+                # (e.g., share0 is computed from share1, and we need to make sure that
+                # share1 is NOT already updated).
+                with tf.control_dependencies(
+                    [
+                        val_shares[0][0].value,
+                        val_shares[0][1].value,
+                        val_shares[1][0].value,
+                        val_shares[1][1].value,
+                        val_shares[2][0].value,
+                        val_shares[2][1].value,
+                    ]
+                ):
 
-                with tf.device(self.servers[0].device_name):
-                    op00 = var_shares[0][0].assign_from_same(val_shares[0][0])
-                    op01 = var_shares[0][1].assign_from_same(val_shares[0][1])
+                    with tf.device(self.servers[0].device_name):
+                        op00 = var_shares[0][0].assign_from_same(val_shares[0][0])
+                        op01 = var_shares[0][1].assign_from_same(val_shares[0][1])
 
-                with tf.device(self.servers[1].device_name):
-                    op10 = var_shares[1][0].assign_from_same(val_shares[1][0])
-                    op11 = var_shares[1][1].assign_from_same(val_shares[1][1])
+                    with tf.device(self.servers[1].device_name):
+                        op10 = var_shares[1][0].assign_from_same(val_shares[1][0])
+                        op11 = var_shares[1][1].assign_from_same(val_shares[1][1])
 
-                with tf.device(self.servers[2].device_name):
-                    op20 = var_shares[2][0].assign_from_same(val_shares[2][0])
-                    op21 = var_shares[2][1].assign_from_same(val_shares[2][1])
+                    with tf.device(self.servers[2].device_name):
+                        op20 = var_shares[2][0].assign_from_same(val_shares[2][0])
+                        op21 = var_shares[2][1].assign_from_same(val_shares[2][1])
 
-                op = tf.group(op00, op01, op10, op11, op20, op21)
+                    op = tf.group(op00, op01, op10, op11, op20, op21)
+
+        elif isinstance(variable, ABY3PublicVariable):
+            assert isinstance(value, ABY3PublicTensor), type(value)
+            assert (
+                variable.is_scaled == value.is_scaled
+            ), "Scaling must match: {}, {}".format(variable.is_scaled, value.is_scaled,)
+
+            var = variable.unwrapped
+            val = value.unwrapped
+
+            with tf.name_scope("assign"):
+
+                with tf.control_dependencies(val[0].support + val[1].support + val[2].support):
+                    ops = [None, None, None]
+                    for i in range(3):
+                        with tf.device(self.servers[i].device_name):
+                            ops[i] = var[i].assign_from_same(val[i])
+
+                    op = tf.group(*ops)
+
+        else:
+            raise TypeError(
+                ("Don't know how to handle variable " "of type {}").format(
+                    type(variable)
+                )
+            )
 
         return op
 

@@ -430,6 +430,30 @@ class ABY3Constant(ABY3PublicTensor):
     def __repr__(self) -> str:
         return "ABY3Constant(shape={}, share_type={})".format(self.shape, self.share_type)
 
+
+class ABY3PublicVariable(ABY3PublicTensor):
+    """
+  This class essentially represents a public value, however it additionally
+  records the fact that the backing tensor was declared as a variable in
+  order to allow treating it as a variable itself.
+  """
+
+    def __init__(self, prot, variables, is_scaled):
+        assert all(isinstance(v, AbstractVariable) for v in variables)
+        assert all((v.shape == variables[0].shape) for v in variables)
+
+        super(ABYPublicVariable, self).__init__(
+            prot, variables, is_scaled,
+        )
+        self.variables = variables
+        self.initializer = tf.group(
+            *[var.initializer for var in variables]
+        )
+
+    def __repr__(self) -> str:
+        return "ABY3PublicVariable(shape={})".format(self.shape)
+
+
 class ABY3PrivateTensor(ABY3Tensor):
     """
     This class represents a private value that may be unknown to everyone.
