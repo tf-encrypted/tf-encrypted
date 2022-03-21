@@ -1468,6 +1468,14 @@ class ABY3(Protocol):
         return self.dispatch("relu", x, approx_type)
 
     @memoize
+    def reciprocal(self, x, approx_type="8_piecewise_linear_positive"):
+        return self.dispatch("reciprocal", x, approx_type)
+
+    @memoize
+    def exp(self, x, approx_type="7_piecewise_linear_positive"):
+        return self.dispatch("exp", x, approx_type)
+
+    @memoize
     def gather(self, x, indices, axis=0):
         """See tf.gather"""
         return self.dispatch("gather", x, indices, axis=axis)
@@ -3500,6 +3508,41 @@ def _relu_private(prot, x, approx_type):
                 "Only support piecewise linear approximation of sigmoid."
             )
 
+    return result
+
+
+def _reciprocal_private(prot, x, approx_type):
+    assert isinstance(x, ABY3PrivateTensor), type(x)
+
+    with tf.name_scope("reciprocal"):
+        if approx_type == "8_piecewise_linear_positive":
+            c = (1e-2, 1e-1, 5e-1, 1, 2, 10, 100)
+            coeffs = ((100, ), (110, -1e3), (12, -2e1), (3, -2), (1.5, -5e-1), (0.6, -5e-2), (0.11, -1e-3), (-1e-3, ))
+        else:
+            raise NotImplementedError(
+                "Unsupported approximation type: {}.".format(approx_type)
+            )
+
+        result = prot.polynomial_piecewise(x, c, coeffs)
+    return result
+
+
+def _exp_private(prot, x, approx_type):
+    assert isinstance(x, ABY3PrivateTensor), type(x)
+
+    with tf.name_scope("exp"):
+        if approx_type == "7_piecewise_linear_positive":
+            c = (-8, -5, -2, 0, 2, 5)
+            coeffs = ((3.35462628e-04, ), (0.01740875428439039, 0.002134161457060985), (0.22106684072829752, 0.04286577874584241),
+                    (1.0, 0.43233235838169365), (1.0, 3.194528049465325), (-86.62701257016666, 47.008034334548654),
+                    (-4572.494887462677, 944.1816093130506))
+            # The last piece is just the line intercepting the two points: (5, exp(5)) and (8, exp(8))
+        else:
+            raise NotImplementedError(
+                "Unsupported approximation type: {}.".format(approx_type)
+            )
+
+        result = prot.polynomial_piecewise(x, c, coeffs)
     return result
 
 

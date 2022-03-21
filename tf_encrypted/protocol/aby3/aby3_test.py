@@ -1147,6 +1147,44 @@ class TestABY3(unittest.TestCase):
                 atol=0.01,
             )
 
+    def test_reciprocal(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(tf.constant([0.001, 0.25, 1, 2, 5, 10, 20]))
+
+        z = tfe.reciprocal(x)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(z.reveal())
+            # np.testing.assert_allclose(
+                # result, np.array([1000, 4, 1, 0.5, 0.2, 0.1, 0.05]), rtol=0.0, atol=0.01
+            # )
+
+    def test_exp(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(tf.constant([-4, -0.5, 0, 1, 2, 5]))
+
+        z = tfe.exp(x)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(z.reveal())
+            # np.testing.assert_allclose(
+                # result, np.array([1.83156389e-02, 6.06530660e-01, 1, 2.71828183e+00, 7.38905610e+00, 1.48413159e+02]), rtol=0.0, atol=0.01
+            # )
+
     def test_transpose(self):
         tf.reset_default_graph()
 
