@@ -94,3 +94,39 @@ def mean_squared_error(y_true, y_pred):
     mse_loss = out.reduce_sum(axis=0) * batch_size_inv
     return mse_loss
 
+
+class CategoricalCrossentropy(Loss):
+    """
+    See `tf.keras.losses.CategoricalCrossentropy`.
+    """
+    def __init__(self, from_logits=False):
+        self.from_logits = from_logits
+        if from_logits:
+            super(CategoricalCrossentropy, self).__init__(categorical_crossentropy_from_logits)
+        else:
+            super(CategoricalCrossentropy, self).__init__(categorical_crossentropy)
+
+    def grad(self, y_true, y_pred):
+        batch_size = y_true.shape.as_list()[0]
+        batch_size_inv = 1 / batch_size
+        if self.from_logits:
+            grad = tfe.keras.activations.softmax(y_pred) - y_true
+        else:
+            raise NotImplementedError("BinaryCrossentropy should be always used with `from_logits=True` "
+                    "in a backward propagation, otherwise it requires a private division.")
+            # grad = (y_pred - y_true) / (y_pred * (1 - y_pred))
+        grad = grad * batch_size_inv
+        return grad
+
+
+def categorical_crossentropy(y_true, y_pred):
+    batch_size = y_true.shape.as_list()[0]
+    batch_size_inv = 1 / batch_size
+    out = -y_true * tfe.log(y_pred)
+    cce = out.reduce_sum() * batch_size_inv
+    return cce
+
+
+def categorical_crossentropy_from_logits(y_true, y_pred):
+    y_pred = tfe.keras.activations.softmax(y_pred)
+    return categorical_crossentropy(y_true, y_pred)

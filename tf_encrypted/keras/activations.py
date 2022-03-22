@@ -27,6 +27,11 @@ def linear(x):
     return x
 
 
+def softmax(x):
+    ex = tfe.exp(x)
+    return ex * tfe.reciprocal(tfe.reduce_sum(ex, axis=-1, keepdims=True))
+
+
 def get(identifier):
     """get the activation function"""
     if identifier is None:
