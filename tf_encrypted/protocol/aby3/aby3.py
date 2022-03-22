@@ -244,7 +244,7 @@ class ABY3(Protocol):
         assert isinstance(value, (np.ndarray, int, float))
 
         if isinstance(value, (int, float)):
-            value = np.array([value])
+            value = np.array(value)
 
         factory = factory or self.default_factory
 
@@ -780,7 +780,12 @@ class ABY3(Protocol):
                 integers = tf.cast(scaled, dtype=tf_native_type)
 
             else:
-                raise TypeError("Don't know how to encode {}".format(type(rationals)))
+                # give it a last try
+                try:
+                    scaled = np.array(scaled)
+                    integers = scaled.astype(int).astype(object)
+                except:
+                    raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
             assert type(rationals) == type(integers)
             return integers
@@ -1468,7 +1473,7 @@ class ABY3(Protocol):
         return self.dispatch("relu", x, approx_type)
 
     @memoize
-    def reciprocal(self, x, approx_type="8_piecewise_linear_positive"):
+    def reciprocal(self, x, approx_type="10_piecewise_linear_positive"):
         return self.dispatch("reciprocal", x, approx_type)
 
     @memoize
@@ -2261,12 +2266,12 @@ def _matmul_private_private(prot, x, y):
 
 def _truncate_heuristic_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3PrivateTensor:
     with tf.name_scope("truncate-heuristic"):
-        amount = prot.fixedpoint_config.precision_fractional
+        scale = prot.fixedpoint_config.precision_fractional
 
-        heuristic_bound_bits = x.backing_dtype.nbits - 4
-        y = x + (1 << (heuristic_bound_bits - amount)) # Lifted to make msb 0
+        heuristic_bound_bits = x.backing_dtype.nbits - 2
+        y = x + (1 << (heuristic_bound_bits - scale)) # Lifted to make msb 0
         z = prot.truncate_msb0(y, "secureq8")
-        z = z - (1 << (heuristic_bound_bits - 2*amount)) # Reverse the effect of lifting
+        z = z - (1 << (heuristic_bound_bits - 2*scale)) # Reverse the effect of lifting
     return z
 
 
@@ -2400,77 +2405,79 @@ def _truncate_msb0_secureq8_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3Pri
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert x.share_type == ShareType.ARITHMETIC, x.share_type
 
-    ifactory = x.backing_dtype
-    bfactory = prot.factories[tf.bool]
+    with tf.name_scope("trunc-msb0-secureq8"):
 
-    amount = prot.fixedpoint_config.precision_fractional
-    shape = x.shape
-    x_shares = x.unwrapped
-    msb_mask = 1 << (x.backing_dtype.nbits - 1)
-    mod_mask = (1 << (x.backing_dtype.nbits - amount - 1)) - 1
+        ifactory = x.backing_dtype
+        bfactory = prot.factories[tf.bool]
 
-    # P2: Generate random values, compute intermediate results, and share them as 2PC sharings among P0 and P1
-    with tf.device(prot.servers[2].device_name):
-        r = ifactory.sample_uniform(shape)
-        h = r & msb_mask
-        s = r.logical_rshift(amount) - h.logical_rshift(amount)
-        r_msb = h.cast(bfactory).cast(ifactory)
+        amount = prot.fixedpoint_config.precision_fractional
+        shape = x.shape
+        x_shares = x.unwrapped
+        msb_mask = 1 << (x.backing_dtype.nbits - 1)
+        mod_mask = (1 << (x.backing_dtype.nbits - amount - 1)) - 1
 
-        r0 = ifactory.sample_uniform(shape)
-        r1 = r - r0
+        # P2: Generate random values, compute intermediate results, and share them as 2PC sharings among P0 and P1
+        with tf.device(prot.servers[2].device_name):
+            r = ifactory.sample_uniform(shape)
+            h = r & msb_mask
+            s = r.logical_rshift(amount) - h.logical_rshift(amount)
+            r_msb = h.cast(bfactory).cast(ifactory)
 
-        s0 = ifactory.sample_uniform(shape)
-        s1 = s - s0
+            r0 = ifactory.sample_uniform(shape)
+            r1 = r - r0
 
-        r_msb0 = ifactory.sample_uniform(shape)
-        r_msb1 = r_msb - r_msb0
+            s0 = ifactory.sample_uniform(shape)
+            s1 = s - s0
 
-        y0 = ifactory.sample_uniform(shape)
-        y2 = ifactory.sample_uniform(shape)
+            r_msb0 = ifactory.sample_uniform(shape)
+            r_msb1 = r_msb - r_msb0
 
-    # Proceed as 2PC computation between P0 and P1
+            y0 = ifactory.sample_uniform(shape)
+            y2 = ifactory.sample_uniform(shape)
 
-    # P0: mask x0
-    with tf.device(prot.servers[0].device_name):
-        x0 = x_shares[0][0] + x_shares[0][1]
-        c0 = x0 + r0
+        # Proceed as 2PC computation between P0 and P1
 
-    # P1: mask x1
-    with tf.device(prot.servers[1].device_name):
-        x1 = x_shares[1][1]
-        c1 = x1 + r1
+        # P0: mask x0
+        with tf.device(prot.servers[0].device_name):
+            x0 = x_shares[0][0] + x_shares[0][1]
+            c0 = x0 + r0
 
-    with tf.device(prot.servers[0].device_name):
-        c_on_0 = c0 + c1
-        c_prime_on_0 = (c_on_0 >> amount) & mod_mask
-        c_msb_on_0 = (c_on_0 & msb_mask).cast(bfactory)
-        b0 = ifactory.where(c_msb_on_0.value, 1 - r_msb0, r_msb0, v2=False)
-        y_prime0 = c_prime_on_0 - s0 + b0 * (mod_mask + 1)
-        y_tilde0 = y_prime0 - y0
+        # P1: mask x1
+        with tf.device(prot.servers[1].device_name):
+            x1 = x_shares[1][1]
+            c1 = x1 + r1
 
-    with tf.device(prot.servers[1].device_name):
-        c_on_1 = c0 + c1
-        c_prime_on_1 = (c_on_1 >> amount) & mod_mask
-        c_msb_on_1 = (c_on_1 & msb_mask).cast(bfactory)
-        b1 = ifactory.where(c_msb_on_1.value, -r_msb1, r_msb1, v2=False)
-        y_prime1 = - s1 + b1 * (mod_mask + 1)
-        y_tilde1 = y_prime1 - y2
+        with tf.device(prot.servers[0].device_name):
+            c_on_0 = c0 + c1
+            c_prime_on_0 = (c_on_0 >> amount) & mod_mask
+            c_msb_on_0 = (c_on_0 & msb_mask).cast(bfactory)
+            b0 = ifactory.where(c_msb_on_0.value, 1 - r_msb0, r_msb0, v2=False)
+            y_prime0 = c_prime_on_0 - s0 + b0 * (mod_mask + 1)
+            y_tilde0 = y_prime0 - y0
+
+        with tf.device(prot.servers[1].device_name):
+            c_on_1 = c0 + c1
+            c_prime_on_1 = (c_on_1 >> amount) & mod_mask
+            c_msb_on_1 = (c_on_1 & msb_mask).cast(bfactory)
+            b1 = ifactory.where(c_msb_on_1.value, -r_msb1, r_msb1, v2=False)
+            y_prime1 = - s1 + b1 * (mod_mask + 1)
+            y_tilde1 = y_prime1 - y2
 
 
-    y = [[None, None], [None, None], [None, None]]
-    with tf.device(prot.servers[0].device_name):
-        y[0][0] = y0
-        y[0][1] = y_tilde0 + y_tilde1
+        y = [[None, None], [None, None], [None, None]]
+        with tf.device(prot.servers[0].device_name):
+            y[0][0] = y0
+            y[0][1] = y_tilde0 + y_tilde1
 
-    with tf.device(prot.servers[1].device_name):
-        y[1][0] = y_tilde0 + y_tilde1
-        y[1][1] = y2
+        with tf.device(prot.servers[1].device_name):
+            y[1][0] = y_tilde0 + y_tilde1
+            y[1][1] = y2
 
-    with tf.device(prot.servers[2].device_name):
-        y[2][0] = y2
-        y[2][1] = y0
+        with tf.device(prot.servers[2].device_name):
+            y[2][0] = y2
+            y[2][1] = y0
 
-    y = ABY3PrivateTensor(prot, y, x.is_scaled, ShareType.ARITHMETIC)
+        y = ABY3PrivateTensor(prot, y, x.is_scaled, ShareType.ARITHMETIC)
     return y
 
 
@@ -3515,9 +3522,9 @@ def _reciprocal_private(prot, x, approx_type):
     assert isinstance(x, ABY3PrivateTensor), type(x)
 
     with tf.name_scope("reciprocal"):
-        if approx_type == "8_piecewise_linear_positive":
-            c = (1e-2, 1e-1, 5e-1, 1, 2, 10, 100)
-            coeffs = ((100, ), (110, -1e3), (12, -2e1), (3, -2), (1.5, -5e-1), (0.6, -5e-2), (0.11, -1e-3), (-1e-3, ))
+        if approx_type == "10_piecewise_linear_positive":
+            c = (0.01, 0.1, 0.25, 0.5, 1, 2, 4, 10, 100)
+            coeffs = ((100, ), (110, -1e3), (14, -40), (6, -8), (3, -2), (1.5, -0.5), (0.75, -0.125), (0.35, -2.5e-2), (0.11, -1e-3), (-1e-3, ))
         else:
             raise NotImplementedError(
                 "Unsupported approximation type: {}.".format(approx_type)

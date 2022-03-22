@@ -754,7 +754,7 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         scale = prot.fixedpoint_config.precision_fractional
-        a = tf.random_uniform([1], 0, 2**30) # Plus the 15-bit fractional scale, this will be encoded to 45-bit numbers
+        a = tf.random_uniform([1], 0, 2**20) # Plus the 20-bit fractional scale, this will be encoded to 40-bit numbers
         x = tfe.define_private_input("server0", lambda: a)
         x = x << scale
 
@@ -1135,7 +1135,7 @@ class TestABY3(unittest.TestCase):
             result = sess.run(z2.reveal())
             np.testing.assert_allclose(
                 result,
-                np.array([[0.33, 0.415, 0.4575], [0.5, 0.5425, 0.84]]),
+                np.array([[0.288, 0.394, 0.447], [0.5, 0.553, 0.851]]),
                 rtol=0.0,
                 atol=0.01,
             )
@@ -1222,6 +1222,7 @@ class TestABY3(unittest.TestCase):
 
         z1 = x.reduce_sum(axis=1, keepdims=True)
         z2 = tfe.reduce_sum(y, axis=0, keepdims=False)
+        z3 = tfe.reduce_sum(x)
 
         with tfe.Session() as sess:
             # initialize variables
@@ -1234,6 +1235,9 @@ class TestABY3(unittest.TestCase):
 
             result = sess.run(z2)
             np.testing.assert_allclose(result, np.array([5, 7, 9]), rtol=0.0, atol=0.01)
+
+            result = sess.run(z3.reveal())
+            np.testing.assert_allclose(result, np.array(21), rtol=0.0, atol=0.01)
 
     def test_concat(self):
         tf.reset_default_graph()

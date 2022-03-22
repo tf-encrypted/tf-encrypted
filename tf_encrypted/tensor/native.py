@@ -47,6 +47,12 @@ def native_factory(
                 value = tf.convert_to_tensor(value, dtype=self.native_type)
                 return DenseTensor(value)
 
+            else:
+                # Give it a last try
+                value = np.array(value)
+                value = tf.convert_to_tensor(value, dtype=self.native_type)
+                return DenseTensor(value)
+
             raise TypeError("Don't know how to handle {}".format(type(value)))
 
         def constant(self, value):
@@ -209,12 +215,12 @@ def native_factory(
         if isinstance(x, Tensor):
 
             if isinstance(y, int):
-                return x, x.factory.tensor(np.array([y]))
+                return x, x.factory.tensor(np.array(y))
 
         if isinstance(y, Tensor):
 
             if isinstance(x, int):
-                return y.factory.tensor(np.array([x])), y
+                return y.factory.tensor(np.array(x)), y
 
         raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
 
