@@ -8,6 +8,7 @@ from tf_encrypted.keras import optimizers
 from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import Input
 from tf_encrypted.keras.engine.input_layer import InputLayer
+import numpy as np
 
 
 class Sequential(Layer):
@@ -88,6 +89,9 @@ class Sequential(Layer):
         else:
             self._layers.append(layer)
 
+        # Add layer weights to model weights
+        self.weights.extend(layer.weights)
+
     def call(
         self, inputs, training=None, mask=None,
     ):  # pylint: disable=arguments-differ
@@ -96,6 +100,9 @@ class Sequential(Layer):
         if mask is not None:
             raise NotImplementedError()
         outputs = inputs  # handle the corner case where self.layers is empty
+        # Clear model weights. NOTE: this does NOT result in weights re-initialization if the model
+        # has been built before.
+        self.weights = []
         for layer in self.layers:
             # During each iteration, `inputs` are the inputs to `layer`, and `outputs`
             # are the outputs of `layer` applied to `inputs`. At the end of each
@@ -104,6 +111,9 @@ class Sequential(Layer):
 
             # `outputs` will be the inputs to the next layer.
             inputs = outputs
+
+            # Add layer weights to model weights
+            self.weights.extend(layer.weights)
 
         return outputs
 
@@ -172,6 +182,72 @@ class Sequential(Layer):
             for _ in range(steps_per_epoch):
                 self.fit_batch(x, y)
                 progbar.add(batch_size, values=[("loss", self._current_loss)])
+
+    # def predict(self, x, steps=None, reveal=False):
+        # if isinstance(x, np.ndarray):
+            # return self.predict_on_batch(x, reveal)
+
+        # y_batches = []
+        # if steps is not None:
+            # for i in range(steps):
+                # y_batches.append(self.predict_on_batch(x, reveal))
+        # else:
+            # # Assuming `x` comes from a tf.Dataset iterator
+            # while True:
+                # try:
+                    # y_batches.append(self.predict_on_batch(x, reveal))
+                # except tf.errors.OutOfRangeError:
+                    # break
+        # if reveal:
+            # return np.concatenate(y_batches)
+        # else:
+            # return tfe.concat(y_batches, axis=0)
+
+    def predict(self, x, reveal=False):
+        y_pred = self.call(x)
+
+        if reveal:
+            sess = KE.get_session()
+            y_pred = sess.run(y_pred.reveal())
+
+        return y_pred
+
+    def evaluate(self, x, y, steps=None, metrics=None):
+        if metrics is None:
+            return {}
+
+        result = {}
+        for metric in metrics:
+            if metric == "categorical_accuracy":
+                result[metric] = lambda y_true, y_pred: tf.reduce_mean(tf.keras.metrics.categorical_accuracy(y_true, y_pred))
+
+        y_pred = self.call(x)
+
+        sess = KE.get_session()
+        y_preds = []
+        y_trues = []
+        if steps is not None:
+            for i in range(steps):
+                y_true_, y_pred_ = sess.run([y, y_pred.reveal()])
+                y_preds.append(y_pred_)
+                y_trues.append(y_true_)
+        else:
+            while True:
+                try:
+                    y_true_, y_pred_ = sess.run([y, y_pred.reveal()])
+                    y_preds.append(y_pred_)
+                    y_trues.append(y_true_)
+                except tf.errors.OutOfRangeError:
+                    break
+
+        y_pred = np.concatenate(y_preds)
+        y_true = np.concatenate(y_trues)
+
+        for metric in result.keys():
+            result[metric] = sess.run(result[metric](y_true, y_pred))
+
+        return result
+
 
     def set_weights(self, weights, sess=None):
         """Sets the weights of the model.
