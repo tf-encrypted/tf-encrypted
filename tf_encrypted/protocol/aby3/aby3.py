@@ -571,6 +571,8 @@ class ABY3(Protocol):
             return x
 
         def reconstruct_input(x, player):
+            if not isinstance(x, (AbstractTensor, ABY3Tensor)):
+                return x
 
             if isinstance(x, tf.Tensor):
                 return x
