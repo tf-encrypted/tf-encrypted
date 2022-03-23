@@ -2,6 +2,7 @@
 """Dense (i.e. fully connected) Layer implementation."""
 from tensorflow.python.keras import initializers
 
+import tf_encrypted as tfe
 from tf_encrypted.keras import activations
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
@@ -102,9 +103,9 @@ class Dense(Layer):
         self._layer_input = inputs
 
         if self.use_bias:
-            outputs = inputs.matmul(self.kernel) + self.bias
+            outputs = tfe.matmul(inputs, self.kernel) + self.bias
         else:
-            outputs = inputs.matmul(self.kernel)
+            outputs = tfe.matmul(inputs, self.kernel)
 
         if self.activation_identifier is not None:
             outputs = self.activation(outputs)
@@ -124,8 +125,8 @@ class Dense(Layer):
             self._activation_deriv = activations.get_deriv(self.activation_identifier)
             d_y = self._activation_deriv(y, d_y)
 
-        d_x = d_y.matmul(kernel.transpose())
-        d_weights = x.transpose().matmul(d_y)
+        d_x = tfe.matmul(d_y, kernel.transpose())
+        d_weights = tfe.matmul(x.transpose(), d_y)
         grad_weights.append(d_weights)
 
         if self.use_bias:
