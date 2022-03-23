@@ -5,7 +5,7 @@ from abc import abstractmethod
 from typing import List
 from typing import Optional
 
-from tf_encrypted.protocol.pond import TFEVariable
+from tf_encrypted.protocol import TFEVariable
 
 # TODO
 # Split backward function in compute_gradient and compute_backpropagated_error?

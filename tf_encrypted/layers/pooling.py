@@ -10,7 +10,7 @@ from typing import Union
 import tf_encrypted as tfe
 from tf_encrypted.layers.core import Layer
 
-from ..protocol.pond import TFEVariable
+from ..protocol import TFEVariable
 
 IntTuple = Union[int, Tuple[int, int], List[int]]
 

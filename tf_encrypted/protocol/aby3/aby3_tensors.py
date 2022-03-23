@@ -7,6 +7,12 @@ from ...tensor.factory import (
 )
 import numpy as np
 import tensorflow as tf
+from ..protocol import TFETensor
+from ..protocol import TFEVariable
+from ..protocol import TFEPublicVariable
+from ..protocol import TFEPrivateVariable
+from ..protocol import TFEPublicTensor
+from ..protocol import TFEPrivateTensor
 
 
 class ShareType:
@@ -26,7 +32,7 @@ class ShareType:
 #
 
 
-class ABY3Tensor(abc.ABC):
+class ABY3Tensor(TFETensor):
     """
     This class functions mostly as a convenient way of exposing operations
     directly on the various tensor objects, ie allowing one to write `x + y`
@@ -335,7 +341,7 @@ class ABY3Tensor(abc.ABC):
         return self.prot.cast(self, factory)
 
 
-class ABY3PublicTensor(ABY3Tensor):
+class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
     """
     This class represents a public tensor, known by at least by the three servers
     but potentially known by more. Although there is only a single value we
@@ -431,7 +437,7 @@ class ABY3Constant(ABY3PublicTensor):
         return "ABY3Constant(shape={}, share_type={})".format(self.shape, self.share_type)
 
 
-class ABY3PublicVariable(ABY3PublicTensor):
+class ABY3PublicVariable(ABY3PublicTensor, TFEPublicVariable):
     """
   This class essentially represents a public value, however it additionally
   records the fact that the backing tensor was declared as a variable in
@@ -454,7 +460,7 @@ class ABY3PublicVariable(ABY3PublicTensor):
         return "ABY3PublicVariable(shape={})".format(self.shape)
 
 
-class ABY3PrivateTensor(ABY3Tensor):
+class ABY3PrivateTensor(ABY3Tensor, TFEPrivateTensor):
     """
     This class represents a private value that may be unknown to everyone.
     """
@@ -487,7 +493,7 @@ class ABY3PrivateTensor(ABY3Tensor):
         return self.prot.reveal(self)
 
 
-class ABY3PrivateVariable(ABY3PrivateTensor):
+class ABY3PrivateVariable(ABY3PrivateTensor, TFEPrivateVariable):
     """
     This class essentially represents a private value, however it additionally
     records the fact that the backing tensor was declared as a variable in

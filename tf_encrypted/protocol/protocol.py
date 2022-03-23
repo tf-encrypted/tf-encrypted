@@ -36,6 +36,25 @@ class Protocol(ABC):
         tfe.set_protocol(self.last_protocol)
 
 
+class TFETensor(ABC):
+    pass
+
+class TFEVariable(TFETensor):
+    pass
+
+class TFEPrivateTensor(TFETensor):
+    pass
+
+class TFEPrivateVariable(TFEPrivateTensor, TFEVariable):
+    pass
+
+class TFEPublicTensor(TFETensor):
+    pass
+
+class TFEPublicVariable(TFEPublicTensor, TFEVariable):
+    pass
+
+
 def memoize(func: Callable) -> Callable:
     """
   memoize(func) -> Callable
@@ -61,3 +80,5 @@ def memoize(func: Callable) -> Callable:
         return result
 
     return cache_nodes
+
+
