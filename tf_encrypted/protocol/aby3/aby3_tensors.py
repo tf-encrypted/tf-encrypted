@@ -3,7 +3,8 @@ from typing import Tuple, List, Union, Optional, Callable
 from ...tensor.factory import (
     AbstractTensor,
     AbstractConstant,
-    AbstractPlaceholder
+    AbstractPlaceholder,
+    AbstractVariable
 )
 import numpy as np
 import tensorflow as tf
@@ -448,7 +449,7 @@ class ABY3PublicVariable(ABY3PublicTensor, TFEPublicVariable):
         assert all(isinstance(v, AbstractVariable) for v in variables)
         assert all((v.shape == variables[0].shape) for v in variables)
 
-        super(ABYPublicVariable, self).__init__(
+        super(ABY3PublicVariable, self).__init__(
             prot, variables, is_scaled,
         )
         self.variables = variables
