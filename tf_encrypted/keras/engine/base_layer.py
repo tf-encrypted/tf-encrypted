@@ -2,6 +2,7 @@
 import logging
 from abc import ABC
 
+import tensorflow as tf
 import numpy as np
 from tensorflow.python.keras.utils import generic_utils
 
@@ -100,7 +101,8 @@ class Layer(ABC):
 
             self.built = True
 
-        outputs = self.call(inputs, *args, **kargs)
+        with tf.name_scope(self._name):
+            outputs = self.call(inputs, *args, **kargs)
 
         return outputs
 
