@@ -361,6 +361,10 @@ def native_factory(
             values = tf.split(self.value, num_split, axis=axis)
             return [DenseTensor(value) for value in values]
 
+        def scatter_nd(self, indices, shape):
+            value = tf.scatter_nd(indices, self.value, shape)
+            return DenseTensor(value)
+
         def reshape(self, axes: Union[tf.Tensor, List[int]]):
             return DenseTensor(tf.reshape(self.value, axes))
 

@@ -1596,6 +1596,25 @@ class ABY3(Protocol):
         x, w = self.lift(x, w)
         return self.dispatch("conv2d", x, w, strides, padding)
 
+    def expand(self, x, stride):
+        """
+        Expand the input `x` with inner paddinds of 0.
+        Example:
+            ```
+            x = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+            stride = 2
+            Then this function returns:
+            [
+                [1, 0, 2, 0, 3]
+                [0, 0, 0, 0, 0]
+                [4, 0, 5, 0, 6]
+                [0, 0, 0, 0, 0]
+                [7, 0, 8, 0, 9]
+            ]
+            ```
+        """
+        return self.dispatch("expand", x, stride)
+
     @memoize
     def select(self, choice_bit, x, y):
         """
@@ -4449,3 +4468,27 @@ def _zeros_public(
 
     with tf.name_scope("zeros"):
         return prot.define_consant(zeros_array, apply_scaling=apply_scaling, factory=factory)
+
+
+def _expand_private(prot, x, stride):
+
+    h_in = x.shape[0]
+    w_in = x.shape[1]
+    h_out = (h_in-1)*stride + 1
+    w_out = (w_in-1)*stride + 1
+    shape_out = [h_out, w_out] + x.shape[2:]
+
+    I, J = tf.meshgrid(tf.range(h_out, delta=stride), tf.range(w_out, delta=stride), indexing="ij")
+    indices = tf.stack([I, J], axis=2)
+
+    shares = x.unwrapped
+    out = [[None, None], [None, None], [None, None]]
+    with tf.name_scope("expand"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                out[i][0] = shares[i][0].scatter_nd(indices, shape_out)
+                out[i][1] = shares[i][1].scatter_nd(indices, shape_out)
+
+    return ABY3PrivateTensor(prot, out, x.is_scaled, x.share_type)
+
+

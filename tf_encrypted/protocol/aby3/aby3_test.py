@@ -1841,6 +1841,32 @@ class TestABY3(unittest.TestCase):
             result = sess.run(z2.reveal())
             np.testing.assert_allclose(result, np.array([[[[3.5, 5.5], [4.75, 5.75]]]]), rtol=0.0, atol=0.01)
 
+    def test_expand(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        image = np.reshape(np.arange(48), [1, 3, 4, 4])
+
+        x = tfe.define_private_variable(image)
+        y = tfe.transpose(x, [2, 3, 0, 1])
+        y = tfe.expand(y, stride=2)
+        y = tfe.transpose(y, [2, 3, 0, 1])
+
+        # Plain TF version
+        plain_x = tf.transpose(tf.constant(image), [2, 3, 0, 1])
+        I, J = tf.meshgrid(tf.range(4)*2, tf.range(4)*2, indexing="ij")
+        indices = tf.stack([I, J], axis=2)
+        z = tf.scatter_nd(indices, plain_x, tf.constant([7, 7, 1, 3]))
+        z = tf.transpose(z, [2, 3, 0, 1])
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            y, z = sess.run([y.reveal(), z])
+            np.testing.assert_array_equal(y, z)
+
 
 
 
