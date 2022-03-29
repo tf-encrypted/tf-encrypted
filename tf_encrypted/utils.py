@@ -1,5 +1,6 @@
 """TF Encrypted utilities."""
 import tensorflow as tf
+import inspect
 
 
 def wrap_in_variables(*tensors):
@@ -76,3 +77,12 @@ def unwrap_fetches(fetches):
     if isinstance(fetches, (tf.Tensor, tf.Operation)):
         return fetches
     return fetches.to_native()
+
+
+def get_default_arg(func, arg):
+    signature = inspect.signature(func)
+    v = signature.parameters[arg]
+    if v.default is inspect.Parameter.empty:
+        raise ValueError("Parameter {} has no default value".format(arg))
+    return v.default
+
