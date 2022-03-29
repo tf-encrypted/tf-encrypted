@@ -79,7 +79,10 @@ def im2col(
 
 
 def conv2d(x: AbstractTensor, y: AbstractTensor, stride, padding,) -> AbstractTensor:
-    """Generic convolution implementation with im2col over AbstractTensors."""
+    """
+    Generic convolution implementation with im2col over AbstractTensors.
+    It expects input `x` to be in 'NCHW' format.
+    """
 
     with tf.name_scope("conv2d"):
 
