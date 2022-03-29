@@ -1475,6 +1475,11 @@ class ABY3(Protocol):
         return self.dispatch("relu", x, approx_type)
 
     @memoize
+    def softmax(self, x):
+        ex = self.exp(x)
+        return ex * self.reciprocal(self.reduce_sum(ex, axis=-1, keepdims=True))
+
+    @memoize
     def reciprocal(self, x, approx_type="10_piecewise_linear_positive"):
         return self.dispatch("reciprocal", x, approx_type)
 
@@ -1663,6 +1668,61 @@ class ABY3(Protocol):
     A Chebyshev polynomial approximation of the hyperbolic tangent function.
     """
         return self.dispatch("log", x, approx_type)
+
+    def pad(self, x: "ABY3Tensor", paddings: list):
+        """See tf.pad."""
+
+        if isinstance(x, ABY3PublicTensor):
+            zeros_func = _zeros_public
+        elif isinstance(x, ABY3PrivateTensor):
+            zeros_func = _zeros_private
+        else:
+            raise ValueError("Don't know how to handle type {}".format(type(x)))
+
+        def zeros(shape):
+            # NOTE
+            # this is a cheating way of getting zeros for the case where tensor_type
+            # is private, in particular because non-interactive truncation may fail
+            # if applied to these tensors only; for this reason we here use the
+            # assumption that truncation will only ever be applied after these zeros
+            # have been mix with proper shares
+            return zeros_func(self, shape, x.is_scaled, x.share_type, x.backing_dtype)
+
+
+        def prepend_zeros(tensor, pad_amt, axis):
+
+            with tf.name_scope("prepend"):
+
+                if pad_amt == 0:
+                    return tensor
+
+                padshape = tuple(
+                    dim if i != axis else pad_amt
+                    for (i, dim) in enumerate(tensor.shape.as_list())
+                )
+
+                return self.concat([zeros(padshape), tensor], axis=axis)
+
+        def append_zeros(tensor, pad_amt, axis):
+
+            with tf.name_scope("append"):
+
+                if pad_amt == 0:
+                    return tensor
+
+                padshape = tuple(
+                    dim if i != axis else pad_amt
+                    for (i, dim) in enumerate(tensor.shape.as_list())
+                )
+
+                return self.concat([tensor, zeros(padshape)], axis=axis)
+
+        with tf.name_scope("pad"):
+            for axis, (pad_before, pad_after) in enumerate(paddings):
+                x = append_zeros(x, pad_after, axis)
+                x = prepend_zeros(x, pad_before, axis)
+
+        return x
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
         """
@@ -3526,7 +3586,7 @@ def _reciprocal_private(prot, x, approx_type):
     with tf.name_scope("reciprocal"):
         if approx_type == "10_piecewise_linear_positive":
             c = (0.01, 0.1, 0.25, 0.5, 1, 2, 4, 10, 100)
-            coeffs = ((100, ), (110, -1e3), (14, -40), (6, -8), (3, -2), (1.5, -0.5), (0.75, -0.125), (0.35, -2.5e-2), (0.11, -1e-3), (-1e-3, ))
+            coeffs = ((100, ), (110, -1e3), (14, -40), (6, -8), (3, -2), (1.5, -0.5), (0.75, -0.125), (0.35, -2.5e-2), (0.11, -1e-3), (1e-3, ))
         else:
             raise NotImplementedError(
                 "Unsupported approximation type: {}.".format(approx_type)
@@ -4331,7 +4391,7 @@ def _ones_private(
     ones_array = np.ones(shape)
     zeros_array = np.zeros(shape)
 
-    with tf.name_scope("private-ones"):
+    with tf.name_scope("ones"):
         x = [[None, None], [None, None], [None, None]]
         with tf.device(prot.servers[0].device_name):
             x[0][0] = factory.tensor(prot._encode(ones_array, apply_scaling, factory))
@@ -4347,3 +4407,45 @@ def _ones_private(
 
     x = ABY3PrivateTensor(prot, x, apply_scaling, share_type)
     return x
+
+
+def _zeros_private(
+        prot,
+        shape,
+        apply_scaling,
+        share_type,
+        factory
+) -> ABY3PrivateTensor:
+
+    zeros_array = np.zeros(shape)
+
+    with tf.name_scope("zeros"):
+        x = [[None, None], [None, None], [None, None]]
+        with tf.device(prot.servers[0].device_name):
+            x[0][0] = factory.tensor(prot._encode(zeros_array, apply_scaling, factory))
+            x[0][1] = factory.tensor(prot._encode(zeros_array, apply_scaling, factory))
+
+        with tf.device(prot.servers[1].device_name):
+            x[1][0] = factory.tensor(prot._encode(zeros_array, apply_scaling, factory))
+            x[1][1] = factory.tensor(prot._encode(zeros_array, apply_scaling, factory))
+
+        with tf.device(prot.servers[2].device_name):
+            x[2][0] = factory.tensor(prot._encode(zeros_array, apply_scaling, factory))
+            x[2][1] = factory.tensor(prot._encode(zeros_array, apply_scaling, factory))
+
+    x = ABY3PrivateTensor(prot, x, apply_scaling, share_type)
+    return x
+
+
+def _zeros_public(
+        prot,
+        shape,
+        apply_scaling,
+        share_type,
+        factory
+) -> ABY3PublicTensor:
+
+    zeros_array = np.zeros(shape)
+
+    with tf.name_scope("zeros"):
+        return prot.define_consant(zeros_array, apply_scaling=apply_scaling, factory=factory)
