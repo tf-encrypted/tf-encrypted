@@ -30,8 +30,7 @@ def linear(x):
 
 
 def softmax(x):
-    ex = tfe.exp(x)
-    return ex * tfe.reciprocal(tfe.reduce_sum(ex, axis=-1, keepdims=True))
+    return tfe.softmax(x)
 
 
 def get(identifier):
