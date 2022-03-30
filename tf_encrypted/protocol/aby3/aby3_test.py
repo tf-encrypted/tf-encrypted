@@ -1867,6 +1867,26 @@ class TestABY3(unittest.TestCase):
             y, z = sess.run([y.reveal(), z])
             np.testing.assert_array_equal(y, z)
 
+    def test_reverse(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = np.random.randint(1000, size=[4, 4, 3, 1])
+
+        y = tfe.define_private_variable(x)
+        y = tfe.reverse(y, [0, 1])
+
+        # Plain TF version
+        plain_x = tf.constant(x)
+        z = tf.reverse(plain_x, [0, 1])
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            y, z = sess.run([y.reveal(), z])
+            np.testing.assert_array_equal(y, z)
 
 
 

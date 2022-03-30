@@ -1612,6 +1612,7 @@ class ABY3(Protocol):
                 [7, 0, 8, 0, 9]
             ]
             ```
+        NOTE: `x` should have at least two dimensions, and only the first two dimensions will be padded.
         """
         return self.dispatch("expand", x, stride)
 
@@ -1742,6 +1743,10 @@ class ABY3(Protocol):
                 x = prepend_zeros(x, pad_before, axis)
 
         return x
+
+    @memoize
+    def reverse(self, x, axis):
+        return self.dispatch("reverse", x, axis)
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
         """
@@ -4492,3 +4497,13 @@ def _expand_private(prot, x, stride):
     return ABY3PrivateTensor(prot, out, x.is_scaled, x.share_type)
 
 
+def _reverse_private(prot, x, axis):
+    shares = x.unwrapped
+    out = [[None, None], [None, None], [None, None]]
+    with tf.name_scope("reverse"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                out[i][0] = shares[i][0].reverse(axis)
+                out[i][1] = shares[i][1].reverse(axis)
+
+    return ABY3PrivateTensor(prot, out, x.is_scaled, x.share_type)

@@ -365,6 +365,10 @@ def native_factory(
             value = tf.scatter_nd(indices, self.value, shape)
             return DenseTensor(value)
 
+        def reverse(self, axis):
+            value = tf.reverse(self.value, axis)
+            return DenseTensor(value)
+
         def reshape(self, axes: Union[tf.Tensor, List[int]]):
             return DenseTensor(tf.reshape(self.value, axes))
 
