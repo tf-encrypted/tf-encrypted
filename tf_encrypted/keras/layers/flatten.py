@@ -29,6 +29,7 @@ class Flatten(Layer):
         self.built = True
 
     def call(self, inputs):
+        self._layer_input = inputs
         input_shape = inputs.shape.as_list()
         rank = len(input_shape)
 
@@ -44,8 +45,17 @@ class Flatten(Layer):
             flatten_shape = [input_shape[0], -1]
 
         outputs = tfe.reshape(inputs, flatten_shape)
-
+        self._layer_output = outputs
         return outputs
+
+    def backward(self, d_y):
+        x = self._layer_input
+        grad_weights = []
+
+        input_shape = x.shape.as_list()
+
+        d_x = tfe.reshape(d_y, input_shape)
+        return grad_weights, d_x
 
     def compute_output_shape(self, input_shape):
         if not input_shape:
