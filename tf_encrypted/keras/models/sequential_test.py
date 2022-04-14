@@ -20,7 +20,7 @@ class TestSequential(unittest.TestCase):
     def test_two_layers(self):
         shape = (1, 3)
         input_data = np.random.normal(size=shape)
-        with tfe.protocol.SecureNN():
+        with tf.name_scope("TFE"):
             model = Sequential()
             model.add(Dense(2, input_shape=shape))
             model.add(Dense(3))
@@ -33,7 +33,7 @@ class TestSequential(unittest.TestCase):
         input_data = np.random.normal(size=input_shape)
         expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
 
-        with tfe.protocol.SecureNN():
+        with tf.name_scope("TFE"):
             x = tfe.define_private_input(
                 "inputter", lambda: tf.convert_to_tensor(input_data)
             )
@@ -54,7 +54,7 @@ class TestSequential(unittest.TestCase):
         input_data = np.random.normal(size=input_shape)
         expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
 
-        with tfe.protocol.SecureNN():
+        with tf.name_scope("TFE"):
             x = tfe.define_private_input(
                 "inputter", lambda: tf.convert_to_tensor(input_data)
             )
@@ -79,7 +79,7 @@ class TestSequential(unittest.TestCase):
         model.add(tf.keras.layers.Dense(3))
         expected = model.predict(input_data)
 
-        with tfe.protocol.SecureNN():
+        with tf.name_scope("TFE"):
             x = tfe.define_private_input(
                 "inputter", lambda: tf.convert_to_tensor(input_data)
             )
@@ -99,7 +99,7 @@ class TestSequential(unittest.TestCase):
         input_data = np.random.normal(size=input_shape)
         expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
 
-        with tfe.protocol.SecureNN():
+        with tf.name_scope("TFE"):
             x = tfe.define_private_input(
                 "inputter", lambda: tf.convert_to_tensor(input_data)
             )
@@ -141,7 +141,7 @@ class TestSequential(unittest.TestCase):
             k_weights = model.get_weights()
             k_config = model.get_config()
 
-        with tfe.protocol.SecureNN():
+        with tf.name_scope("TFE"):
             x = tfe.define_private_input(
                 "inputter", lambda: tf.convert_to_tensor(input_data)
             )

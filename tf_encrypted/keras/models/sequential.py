@@ -128,9 +128,11 @@ class Sequential(Layer):
         return layers[:]
 
     def backward(self, d_y):
+        update_ops = []
         for layer in reversed(self.layers):
             grad_weights, d_y = layer.backward(d_y)
-            self._optimizer.apply_gradients(layer.weights, grad_weights)
+            update_ops.append(self._optimizer.apply_gradients(layer.weights, grad_weights))
+        return tf.group(*update_ops)
 
     def compile(self, optimizer, loss):
         """Configures the model for training.
@@ -153,11 +155,12 @@ class Sequential(Layer):
     """
         y_pred = self.call(x)
         dy = self._loss.grad(y, y_pred)
-        self.backward(dy)
+        back_prop = self.backward(dy)
         loss = self._loss(y, y_pred)
 
         sess = KE.get_session()
-        self._current_loss = sess.run(loss.reveal())
+        _, self._current_loss = sess.run([back_prop, loss.reveal()])
+
 
     def fit(self, x, y, epochs=1, steps_per_epoch=1):
         """Trains the model for a given number of epochs
