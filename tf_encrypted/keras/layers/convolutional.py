@@ -11,7 +11,7 @@ from tf_encrypted.keras import activations
 from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
-from tf_encrypted.protocol.pond import PondPrivateTensor
+from tf_encrypted.protocol import TFEPrivateTensor
 
 logger = logging.getLogger("tf_encrypted")
 
@@ -167,6 +167,7 @@ class Conv2D(Layer):
         self.built = True
 
     def call(self, inputs):
+        self._layer_input = inputs
 
         if self.data_format != "channels_first":
             inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
@@ -180,8 +181,90 @@ class Conv2D(Layer):
             outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
 
         if self.activation is not None:
-            return self.activation(outputs)
+            outputs = self.activation(outputs)
+
+        self._layer_output = outputs
         return outputs
+
+    def backward(self, d_y):
+        x = self._layer_input
+        y = self._layer_output
+        kernel = self.weights[0]
+        grad_weights = []
+
+        # Convert to NCHW format
+        if self.data_format != "channels_first":
+            x = tfe.transpose(x, perm=[0, 3, 1, 2])
+        n_x, _, h_x, w_x = x.shape.as_list()
+
+        if self.activation is not None:
+            self._activation_deriv = activations.get_deriv(self.activation.__name__)
+            d_y = self._activation_deriv(y, d_y)
+
+        # Convert to HWNC format
+        if self.data_format == "channels_first":
+            d_y = tfe.transpose(d_y, perm=[2, 3, 0, 1])
+        else:
+            d_y = tfe.transpose(d_y, perm=[1, 2, 0, 3])
+
+        inner_padded_d_y = tfe.expand(d_y, self.strides[0])
+        padded_d_y = tfe.pad(inner_padded_d_y, [[self.kernel_size[0]-1, self.kernel_size[0]-1], [self.kernel_size[1]-1, self.kernel_size[1]-1]])
+
+        # Recover the NCHW format
+        padded_d_y = tfe.transpose(padded_d_y, perm=[2, 3, 0, 1])
+
+        # Flip h and w axis, and swap in and out channels
+        flipped_kernel = tfe.transpose(tfe.reverse(kernel, [0, 1]), perm=[0, 1, 3, 2])
+
+        # Back prop for dx: https://medium.com/@mayank.utexas/backpropagation-for-convolution-with-strides-8137e4fc2710
+        d_x = tfe.conv2d(padded_d_y, flipped_kernel, 1, "VALID")
+
+        # Remove padding, if any
+        if self.padding == "SAME":
+            [[pad_top, pad_bottom], [pad_left, pad_right]] = self.pad_size(h_x, w_x)
+            d_x = d_x[:, :, pad_top:(d_x.shape[2]-pad_bottom), pad_left:(d_x.shape[3]-pad_right)]
+            x = tfe.pad(x, [[0, 0], [0, 0], [pad_top, pad_bottom], [pad_left, pad_right]])
+
+        if self.data_format != "channels_first":
+            d_x = tfe.transpose(d_x, perm=[0, 2, 3, 1])
+
+        # Convert to CNHW
+        x = tfe.transpose(x, perm=[1, 0, 2, 3])
+        # Back prop for dw: https://medium.com/@mayank.utexas/backpropagation-for-convolution-with-strides-fb2f2efc4faa
+        # Output is in IOHW format
+        d_kernel = tfe.conv2d(x, inner_padded_d_y, 1, "VALID")
+        # Convert to HWIO
+        d_kernel = tfe.transpose(d_kernel, perm=[2, 3, 0, 1])
+        grad_weights.append(d_kernel)
+
+        if self.use_bias:
+            d_bias = d_y.reduce_sum(axis=[0, 1, 2]).reshape(self.bias.shape)
+            grad_weights.append(d_bias)
+
+        assert d_x.shape == self._layer_input.shape, "Different shapes: {} vs {}".format(d_x.shape, self._layer_input.shape)
+        assert d_kernel.shape == self.kernel_shape, "Different shapes: {} vs {}".format(d_kernel.shape, self.kernel_shape)
+
+        return grad_weights, d_x
+
+
+    def pad_size(self, h_in, w_in):
+        if (h_in % self.strides[0] == 0):
+            pad_along_height = max(self.kernel_size[0] - self.strides[0], 0)
+        else:
+            pad_along_height = max(self.kernel_size[0] - (h_in % self.strides[0]), 0)
+
+        if (w_in % self.strides[1] == 0):
+            pad_along_width = max(self.kernel_size[1] - self.strides[1], 0)
+        else:
+            pad_along_width = max(self.kernel_size[1] - (w_in % self.strides[1]), 0)
+
+        pad_top = pad_along_height // 2
+        pad_bottom = pad_along_height - pad_top
+        pad_left = pad_along_width // 2
+        pad_right = pad_along_width - pad_left
+
+        return [[pad_top, pad_bottom], [pad_left, pad_right]]
+
 
     def compute_output_shape(self, input_shape):
         """Compute output_shape for the layer."""
@@ -199,7 +282,10 @@ class Conv2D(Layer):
             h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides[0])))
             w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))
 
-        return [n_x, n_filters, h_out, w_out]
+        if self.data_format == "channels_first":
+            return [n_x, n_filters, h_out, w_out]
+        else:
+            return [n_x, h_out, w_out, n_filters]
 
 
 class DepthwiseConv2D(Conv2D):
@@ -384,18 +470,17 @@ class DepthwiseConv2D(Conv2D):
                 shape=(
                     self.kernel_size[0],
                     self.kernel_size[1],
-                    self.input_dim * self.depth_multiplier,
                     self.input_dim,
+                    self.input_dim * self.depth_multiplier,
                 ),
             )
 
             if self.depth_multiplier > 1:
                 # rearrange kernel
-                kernel = tf.transpose(kernel, [0, 1, 3, 2])
                 kernel = tf.reshape(
                     kernel,
                     shape=self.kernel_size
-                    + (self.input_dim * self.depth_multiplier, 1),
+                    + (1, self.input_dim * self.depth_multiplier),
                 )
 
             kernel = tf.multiply(kernel, mask)
@@ -403,27 +488,27 @@ class DepthwiseConv2D(Conv2D):
         elif isinstance(kernel, np.ndarray):
             if self.depth_multiplier > 1:
                 # rearrange kernel
-                kernel = np.transpose(kernel, [0, 1, 3, 2])
                 kernel = np.reshape(
                     kernel,
                     newshape=self.kernel_size
-                    + (self.input_dim * self.depth_multiplier, 1),
+                    + (1, self.input_dim * self.depth_multiplier),
                 )
 
             kernel = np.multiply(kernel, mask)
 
-        elif isinstance(kernel, PondPrivateTensor):
+        elif isinstance(kernel, TFEPrivateTensor):
             mask = tfe.define_public_variable(mask)
             if self.depth_multiplier > 1:
                 # rearrange kernel
-                kernel = tfe.transpose(kernel, [0, 1, 3, 2])
                 kernel = tfe.reshape(
                     kernel,
                     shape=self.kernel_size
-                    + (self.input_dim * self.depth_multiplier, 1),
+                    + (1, self.input_dim * self.depth_multiplier),
                 )
 
             kernel = tfe.mul(kernel, mask)
+        else:
+            raise ValueError("Invalid kernel type")
 
         return kernel
 
@@ -444,6 +529,9 @@ class DepthwiseConv2D(Conv2D):
             return self.activation(outputs)
         return outputs
 
+    def backward(self, d_y):
+        raise NotImplementedError("Depthwise conv backward not implemented")
+
     def compute_output_shape(self, input_shape):
         """Compute output_shape for the layer."""
         h_filter, w_filter, _, n_filters = self.kernel_shape
@@ -463,7 +551,6 @@ class DepthwiseConv2D(Conv2D):
         return [n_x, n_filters, h_out, w_out]
 
     def get_mask(self, in_channels):
-        """TODO"""
         mask = np.zeros(
             (
                 self.kernel_size[0],
@@ -474,8 +561,8 @@ class DepthwiseConv2D(Conv2D):
         )
         for d in range(self.depth_multiplier):
             for i in range(in_channels):
-                mask[:, :, i, i + (d * in_channels)] = 1.0
-        return np.transpose(mask, [0, 1, 3, 2])
+                mask[:, :, i, d + (i * self.depth_multiplier)] = 1.0
+        return mask
 
     def set_weights(self, weights, sess=None):
         """
@@ -487,7 +574,7 @@ class DepthwiseConv2D(Conv2D):
           of private variables
       sess: tfe session"""
 
-        weights_types = (np.ndarray, PondPrivateTensor)
+        weights_types = (np.ndarray, TFEPrivateTensor)
         assert isinstance(weights[0], weights_types), type(weights[0])
 
         # Assign new keras weights to existing weights defined by
@@ -511,7 +598,7 @@ class DepthwiseConv2D(Conv2D):
                 fd = tfe_weights_pl.feed(new_weight)
                 sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
 
-        elif isinstance(weights[0], PondPrivateTensor):
+        elif isinstance(weights[0], TFEPrivateTensor):
             for i, w in enumerate(self.weights):
                 shape = w.shape.as_list()
 

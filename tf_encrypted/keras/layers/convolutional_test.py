@@ -38,7 +38,7 @@ class TestConv2d(unittest.TestCase):
         else:
             kernel_size_in = layer_kwargs["kernel_size"]
 
-        kernel = np.random.normal(kernel_size_in + (filters_in, filters))
+        kernel = np.random.normal(size=kernel_size_in + (filters_in, filters))
         initializer = tf.keras.initializers.Constant(kernel)
 
         base_kwargs = {
@@ -90,7 +90,8 @@ class TestDepthwiseConv2d(unittest.TestCase):
             k_weights = model.get_weights()
             k_config = model.get_config()
 
-        with tfe.protocol.SecureNN():
+
+        with tf.name_scope("TFE"):
             x = tfe.define_private_input(
                 "inputter", lambda: tf.convert_to_tensor(input_data)
             )
