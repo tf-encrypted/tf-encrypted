@@ -30,10 +30,9 @@ class TestActivation(unittest.TestCase):
         input_data = np.array([-1, -0.75, 0.75, 1]).reshape(input_shape)
         weights_second_layer = np.ones(shape=[1])
 
-        with tfe.protocol.SecureNN() as prot:
-
-            private_input = prot.define_private_variable(input_data)
-            w = prot.define_private_variable(weights_second_layer)
+        with tf.name_scope("TFE"):
+            private_input = tfe.define_private_variable(input_data)
+            w = tfe.define_private_variable(weights_second_layer)
 
             tfe_layer = tfe.keras.layers.Activation("sigmoid", input_shape=[4])
 

@@ -7,7 +7,7 @@ import tf_encrypted as tfe
 from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
-from tf_encrypted.protocol.pond import PondPublicTensor
+from tf_encrypted.protocol import TFEPublicTensor
 
 
 class BatchNormalization(Layer):
@@ -208,6 +208,9 @@ class BatchNormalization(Layer):
             out = self.gamma * (inputs - self.moving_mean) * self.denom + self.beta
         return out
 
+    def backward(self, d_y):
+        raise NotImplementedError("BatchNorm backward not implemented")
+
     def compute_output_shape(self, input_shape):
         return input_shape
 
@@ -226,7 +229,7 @@ class BatchNormalization(Layer):
 
         if isinstance(weights[0], np.ndarray):
             for i, w in enumerate(self.weights):
-                if isinstance(w, PondPublicTensor):
+                if isinstance(w, TFEPublicTensor):
                     shape = w.shape.as_list()
                     tfe_weights_pl = tfe.define_public_placeholder(shape)
                     fd = tfe_weights_pl.feed(weights[i].reshape(shape))
@@ -240,7 +243,7 @@ class BatchNormalization(Layer):
                         ).format(type(w))
                     )
 
-        elif isinstance(weights[0], PondPublicTensor):
+        elif isinstance(weights[0], TFEPublicTensor):
             for i, w in enumerate(self.weights):
                 shape = w.shape.as_list()
                 sess.run(tfe.assign(w, weights[i].reshape(shape)))
