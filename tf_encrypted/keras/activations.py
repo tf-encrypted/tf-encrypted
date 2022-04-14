@@ -28,6 +28,9 @@ def tanh(x):
 def linear(x):
     return x
 
+def linear_deriv(y, d_y):
+    return d_y
+
 
 def softmax(x):
     return tfe.softmax(x)
@@ -63,7 +66,8 @@ def get_deriv(identifier):
     if isinstance(identifier, str):
         activations = {
                 "sigmoid": sigmoid_deriv,
-                "relu": relu_deriv
+                "relu": relu_deriv,
+                "linear": linear_deriv
         }
         if identifier not in activations.keys():
             raise NotImplementedError(
