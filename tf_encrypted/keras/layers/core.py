@@ -88,4 +88,10 @@ class Reshape(Layer):
         return output_shape
 
     def call(self, inputs):
+        self._layer_input = inputs
         return inputs.reshape((int(inputs.shape[0]),) + self.target_shape)
+
+    def backward(self, d_y):
+        x = self._layer_input
+        d_x = d_y.reshape(x.shape)
+        return [], d_x
