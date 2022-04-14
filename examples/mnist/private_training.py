@@ -74,10 +74,10 @@ class NetworkC(PrivateModel):
         self.model = tfe.keras.Sequential()
         self.model.add(tfe.keras.layers.Conv2D(20, 5, 1, padding='valid', activation='relu', batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS]))
         self.model.add(tfe.keras.layers.MaxPooling2D(2))
-        self.model.add(tfe.keras.layers.Conv2D(50, 5, 1, padding='valid', activation='relu'))
-        self.model.add(tfe.keras.layers.MaxPooling2D(2))
+        # self.model.add(tfe.keras.layers.Conv2D(50, 5, 1, padding='valid', activation='relu'))
+        # self.model.add(tfe.keras.layers.MaxPooling2D(2))
         self.model.add(tfe.keras.layers.Flatten())
-        self.model.add(tfe.keras.layers.Dense(100, activation='relu'))
+        # self.model.add(tfe.keras.layers.Dense(100, activation='relu'))
         self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None))
 
         # optimizer and data pipeline
@@ -146,7 +146,7 @@ class TrainingClient(PrivateModel):
         with tf.name_scope("loading-data"):
             x, y = self._build_data_pipeline()
 
-        model.fit(x, y, epochs=self.EPOCHS, steps_per_epoch=self.ITERATIONS)
+        model.fit(x, y, epochs=self.EPOCHS, steps_per_epoch=2)
 
 
 class PredictionClient(PrivateModel):
@@ -196,7 +196,7 @@ class PredictionClient(PrivateModel):
             x, y = self._build_data_pipeline()
 
         with tf.name_scope("evaluate"):
-            result = model.evaluate(x, y, metrics=["categorical_accuracy"])
+            result = model.evaluate(x, y, metrics=["categorical_accuracy"], steps=1)
 
         return result
 
