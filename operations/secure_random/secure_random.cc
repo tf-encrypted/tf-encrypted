@@ -47,8 +47,13 @@ REGISTER_OP("SecureRandomUniform")
     .SetShapeFn(RandomUniformShapeCommon);
 
 REGISTER_OP("SecureSeed")
+    .Output("output: int32")
     .SetIsStateful()
-    .Output("output: int32");
+    .SetShapeFn([](InferenceContext* c) {
+        if (!c) return errors::Internal("empty shape_inference::InferenceContext pointer");
+        c->set_output(0, c->MakeShape({c->MakeDim(NUMBER_OF_SEEDS)}));
+        return Status::OK();
+    });
 
 template <typename T, typename Gen>
 class SeededRandomUniformOp : public OpKernel {
