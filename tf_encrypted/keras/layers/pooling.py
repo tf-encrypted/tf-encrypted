@@ -69,7 +69,7 @@ class Pooling2D(Layer):
         return outputs
 
     def compute_output_shape(self, input_shape):
-        if self.channels_first:
+        if self.data_format == "channels_first":
             _, _, h_in, w_in = input_shape
         else:
             _, h_in, w_in, _ = input_shape
@@ -80,7 +80,11 @@ class Pooling2D(Layer):
         else:
             h_out = math.ceil((h_in - self.pool_size[0] + 1) / self.strides[0])
             w_out = math.ceil((w_in - self.pool_size[1] + 1) / self.strides[1])
-        return [input_shape[0], input_shape[1], h_out, w_out]
+
+        if self.data_format == "channels_first":
+            return [input_shape[0], input_shape[1], h_out, w_out]
+        else:
+            return [input_shape[0], h_out, w_out, input_shape[3]]
 
 
 class MaxPooling2D(Pooling2D):
@@ -135,6 +139,49 @@ class MaxPooling2D(Pooling2D):
             **kwargs,
         )
 
+    def call(self, inputs):
+        self._layer_input = inputs
+
+        if self.data_format != "channels_first":
+            inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
+
+        outputs, outputs_argmax = tfe.maxpool2d_with_argmax(
+            inputs, self.pool_size, self.strides, self.padding
+        )
+
+        if self.data_format != "channels_first":
+            outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
+            outputs_argmax = tfe.transpose(outputs_argmax, perm=[0, 2, 3, 1, 4])
+
+        self._layer_output = (outputs, outputs_argmax)
+
+        return outputs
+
+    def backward(self, d_y):
+        x = self._layer_input
+        y, y_arg = self._layer_output
+
+        if self.data_format != "channels_first":
+            d_y = tfe.transpose(d_y, perm=[0, 3, 1, 2])
+            y_arg = tfe.transpose(y_arg, perm=[0, 3, 1, 2, 4])
+            h_x, w_x = (x.shape[1], x.shape[2])
+        else:
+            h_x, w_x = (x.shape[2], x.shape[3])
+
+        batch, channels, h_y, w_y, pool_len = y_arg.shape
+
+        _d_y = tfe.tile(tfe.expand_dims(d_y, axis=4), [1,1,1,1,pool_len])
+        _d_y = _d_y * y_arg
+        _d_y = tfe.reshape(_d_y, [batch * channels, h_y, w_y, pool_len])
+
+        d_x = tfe.patches2im(_d_y, self.pool_size, stride=self.strides[0], padding=self.padding, img_size=(h_x, w_x), consolidation="SUM", data_format="NHWC")
+        d_x = tfe.reshape(d_x, [batch, channels, h_x, w_x])
+
+        if self.data_format != "channels_first":
+            d_x = tfe.transpose(d_x, perm=[0, 2, 3, 1])
+
+        return [], d_x
+
 
 class AveragePooling2D(Pooling2D):
     """Average pooling operation for spatial data.
@@ -187,6 +234,49 @@ class AveragePooling2D(Pooling2D):
             data_format=data_format,
             **kwargs,
         )
+
+    def call(self, inputs):
+        self._layer_input = inputs
+
+        if self.data_format != "channels_first":
+            inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
+
+        outputs = tfe.avgpool2d(
+            inputs, self.pool_size, self.strides, self.padding
+        )
+
+        if self.data_format != "channels_first":
+            outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
+
+        self._layer_output = outputs
+
+        return outputs
+
+    def backward(self, d_y):
+        x = self._layer_input
+        y = self._layer_output
+        pool_len = self.pool_size[0] * self.pool_size[1]
+        scalar = 1 / pool_len
+
+        if self.data_format != "channels_first":
+            d_y = tfe.transpose(d_y, perm=[0, 3, 1, 2])
+            h_x, w_x = (x.shape[1], x.shape[2])
+        else:
+            h_x, w_x = (x.shape[2], x.shape[3])
+
+        batch, channels, h_y, w_y = d_y.shape
+
+        _d_y = tfe.tile(tfe.expand_dims(d_y, 4), [1,1,1,1,pool_len])
+        _d_y = _d_y * scalar
+        _d_y = tfe.reshape(_d_y, [batch * channels, h_y, w_y, pool_len])
+
+        d_x = tfe.patches2im(_d_y, self.pool_size, stride=self.strides[0], padding=self.padding, img_size=(h_x, w_x), consolidation="SUM", data_format="NHWC")
+        d_x = tfe.reshape(d_x, [batch, channels, h_x, w_x])
+
+        if self.data_format != "channels_first":
+            d_x = tfe.transpose(d_x, perm=[0, 2, 3, 1])
+
+        return [], d_x
 
 
 class GlobalPooling2D(Layer):
@@ -247,12 +337,31 @@ class GlobalAveragePooling2D(GlobalPooling2D):
         self.scalar = 1 / int(h_in * w_in)
 
     def call(self, inputs):
+        self._layer_input = inputs
         if self.data_format == "channels_last":
             x_reduced = inputs.reduce_sum(axis=2).reduce_sum(axis=1)
         else:
             x_reduced = inputs.reduce_sum(axis=3).reduce_sum(axis=2)
 
         return x_reduced * self.scalar
+
+    def backward(self, d_y):
+        x = self._layer_input
+        if self.data_format == "channels_last":
+            h_x, w_x = (x.shape[1], x.shape[2])
+        else:
+            h_x, w_x = (x.shape[2], x.shape[3])
+        batch, channels = (d_y.shape[0], d_y.shape[1])
+
+        _d_y = d_y * self.scalar
+        _d_y = tfe.expand_dims(tfe.expand_dims(_d_y, axis=2), axis=3)
+
+        d_x = tfe.tile(_d_y, multiples=[1, 1, h_x, w_x])
+
+        if self.data_format == "channels_last":
+            d_x = tfe.transpose(d_x, perm=[0, 2, 3, 1])
+
+        return [], d_x
 
 
 class GlobalMaxPooling2D(GlobalPooling2D):
@@ -284,11 +393,34 @@ class GlobalMaxPooling2D(GlobalPooling2D):
   """
 
     def call(self, inputs):
-        if self.data_format == "channels_last":
-            x_reduced = tfe.reduce_max(inputs, axis=2)
-            x_reduced = tfe.reduce_max(x_reduced, axis=1)
-        else:
-            x_reduced = tfe.reduce_max(inputs, axis=3)
-            x_reduced = tfe.reduce_max(x_reduced, axis=2)
+        self._layer_input = inputs
 
-        return x_reduced
+        if self.data_format == "channels_last":
+            inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
+        batch, channels, h_x, w_x = inputs.shape
+        inputs = tfe.reshape(inputs, [batch, channels, -1])
+
+        outputs, outputs_argmax = tfe.reduce_max_with_argmax(inputs, axis=2)
+
+        self._layer_output = (outputs, outputs_argmax)
+
+        return outputs
+
+    def backward(self, d_y):
+        x = self._layer_input
+        y, y_arg = self._layer_output
+
+        if self.data_format == "channels_last":
+            batch, h_x, w_x, channels = x.shape
+        else:
+            batch, channels, h_x, w_x = x.shape
+
+        _d_y = tfe.expand_dims(d_y, axis=2)
+        d_x = tfe.tile(_d_y, multiples=[1, 1, h_x * w_x])
+        d_x = d_x * y_arg
+        d_x = tfe.reshape(d_x, [batch, channels, h_x, w_x])
+
+        if self.data_format == "channels_last":
+            d_x = tfe.transpose(d_x, perm=[0, 2, 3, 1])
+
+        return [], d_x
