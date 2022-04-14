@@ -515,6 +515,34 @@ class ABY3PrivateVariable(ABY3PrivateTensor, TFEPrivateVariable):
         return "ABY3PrivateVariable(shape={}, share_type={})".format(self.shape, self.share_type)
 
 
+class ABY3PublicPlaceholder(ABY3PublicTensor):
+    """
+  This class essentially represents a public value, however it additionally
+  records the fact that the backing tensor was declared as a placeholder in
+  order to allow treating it as a placeholder itself.
+  """
+
+    def __init__(self, prot, placeholders, is_scaled):
+        assert all(isinstance(p, AbstractPlaceholder) for p in placeholders), "Shares should be AbstractPlaceholder"
+
+        super(ABY3PublicPlaceholder, self).__init__(
+            prot, placeholders, is_scaled,
+        )
+
+    def __repr__(self) -> str:
+        return "ABY3PublicPlaceholder(shape={})".format(self.shape)
+
+    def feed(self, value):
+        """
+    Feed `value` to placeholder
+    """
+        assert isinstance(value, np.ndarray), type(value)
+        enc = self.prot._encode(value, self.is_scaled)
+        feed0 = self.values[0].feed(enc)
+        feed1 = self.values[1].feed(enc)
+        feed2 = self.values[2].feed(enc)
+        return {**feed0, **feed1, **feed2}
+
 class ABY3PrivatePlaceholder(ABY3PrivateTensor):
     """
   This class essentially represents a private value, however it additionally
@@ -558,12 +586,8 @@ class ABY3PrivatePlaceholder(ABY3PrivateTensor):
         minval = self.backing_dtype.min
         maxval = self.backing_dtype.max
         # TODO(Morten) not using secure randomness here; reconsider after TF2
-        x0 = np.array(
-            [random.randrange(minval, maxval) for _ in range(np.product(shape))]
-        ).reshape(shape)
-        x1 = np.array(
-            [random.randrange(minval, maxval) for _ in range(np.product(shape))]
-        ).reshape(shape)
+        x0 = np.random.randint(minval, maxval, size=shape)
+        x1 = np.random.randint(minval, maxval, size=shape)
         if self.share_type == ShareType.ARITHMETIC:
             x2 = enc - x0 - x1
         else:

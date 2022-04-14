@@ -844,9 +844,9 @@ class TestABY3(unittest.TestCase):
             m1,
             c_on_receiver,
             c_on_helper,
-            prot.pairwise_keys[1][0],
-            prot.pairwise_keys[0][1],
-            prot.pairwise_nonces[0],
+            prot.pairwise_keys()[1][0],
+            prot.pairwise_keys()[0][1],
+            prot.pairwise_nonces()[0],
         )
 
         with tfe.Session() as sess:
@@ -1191,23 +1191,24 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_private_variable(tf.constant([
+        a = [
             10.9189482 ,  9.44967556,  8.807868  ,  8.20117855,  8.16848373,
             7.9203186 ,  7.29018497,  7.00307369,  6.53640938,  6.42448902,
             6.21095753,  6.16129017,  5.82647038,  5.74629307,  5.70382595,
-            5.55218601,  5.51741982,  5.46005726,  5.42303944,  5.36902714]))
+            5.55218601,  5.51741982,  5.46005726,  5.42303944,  5.36902714]
+        x = tfe.define_private_variable(tf.constant(a))
 
         z = tfe.softmax(x)
+        tf_z = tf.nn.softmax(a)
 
         with tfe.Session() as sess:
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(z.reveal())
-            print(result)
-            # np.testing.assert_allclose(
-                # result, np.array([1.83156389e-02, 6.06530660e-01, 1, 2.71828183e+00, 7.38905610e+00, 1.48413159e+02]), rtol=0.0, atol=0.01
-            # )
+            # print(result)
+            # print(sess.run(tf_z))
+
 
     def test_transpose(self):
         tf.reset_default_graph()
@@ -1510,8 +1511,8 @@ class TestABY3(unittest.TestCase):
         x = tfe.define_private_variable(tf.random.uniform([128, 3, 27, 27]))
         y = tfe.define_constant(np.random.uniform(size = [128, 3, 27, 27]))
 
-        z1 = tfe.im2col(x, 5, 5, "SAME", 2)
-        z2 = tfe.im2col(y, 5, 5, "VALID", 2)
+        z1 = tfe.im2col(x, 5, 5, stride=2, padding="SAME")
+        z2 = tfe.im2col(y, 5, 5, stride=2, padding="VALID")
 
         n_rows_same = math.ceil(27 / 2)
         n_cols_same = math.ceil(27 / 2)
@@ -1791,30 +1792,93 @@ class TestABY3(unittest.TestCase):
             result = sess.run(z6.reveal())
             np.testing.assert_array_equal(result.astype(int), np.array([[6]]))
 
+    def test_argmax(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(np.array([[1, -2, 5, 0], [-4, 9, 0, 6], [10, 1, 0, 7]]))
+
+        z1 = tfe.argmax(x, axis=0, output_style="onehot")
+        z2 = tfe.argmax(x, axis=1, output_style="onehot")
+        z3 = tfe.argmax(x, axis=0, output_style="normal")
+        z4 = tfe.argmax(x, axis=1, output_style="normal")
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            result = sess.run(z1.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 1]]))
+
+            result = sess.run(z2.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]]))
+
+            result = sess.run(z3.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([2, 1, 0, 2]))
+
+            result = sess.run(z4.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([2, 1, 0]))
+
+    def test_reduce_max_with_argmax(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(np.array([[2, 0, 9, 1], [7, 5, 0, 8], [5, 3, 1, 10]]))
+
+        z1 = tfe.argmax(x, axis=1, output_style="onehot")
+        z2 = tfe.argmax(x, axis=1, output_style="normal")
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            result = sess.run(z1.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([[0, 0, 1, 0], [0, 0, 0, 1], [0, 0, 0, 1]]))
+
+            result = sess.run(z2.reveal())
+            np.testing.assert_array_equal(result.astype(int), np.array([2, 3, 3]))
+
     def test_maxpool2d(self):
         tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_private_variable(np.array([[1, 2, 3, 4],
-                                                  [5, 6, 7, 8],
-                                                  [9, 10, 11, 12]]))
-        # Add the `batch` and `channels` dimensions
-        x = tfe.expand_dims(x, axis=0)
-        x = tfe.expand_dims(x, axis=0)
+        data = np.random.random([1, 1, 3, 4])
+        dataT = np.transpose(data, axes=[0, 2, 3, 1])
+        x = tfe.define_private_variable(data)
 
         z1 = tfe.maxpool2d(x, pool_size=(2, 2), strides=(2, 2), padding="VALID")
+        tf_z1 = tf.transpose(tf.nn.max_pool2d(dataT, ksize=(2, 2), strides=(2, 2), padding="VALID", data_format='NHWC'), perm=[0, 3, 1, 2])
         z2 = tfe.maxpool2d(x, pool_size=(2, 2), strides=(2, 2), padding="SAME")
+        tf_z2 = tf.transpose(tf.nn.max_pool2d(dataT, ksize=(2, 2), strides=(2, 2), padding="SAME", data_format='NHWC'), perm=[0, 3, 1, 2])
+
+        data = np.array([[[[2, 0, 9, 1], [7, 5, 0, 8], [5, 3, 1, 10]]]])
+        dataT = np.transpose(data, axes=[0, 2, 3, 1])
+        x = tfe.define_private_variable(data)
+
+        z3, z3_arg = tfe.maxpool2d_with_argmax(x, pool_size=(2, 2), strides=(2, 2), padding="VALID", )
 
         with tfe.Session() as sess:
             # initialize variables
             sess.run(tfe.global_variables_initializer())
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(result, np.array([[[[6, 8]]]]), rtol=0.0, atol=0.01)
+            actual, expected = sess.run([z1.reveal(), tf_z1])
+            np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
 
-            result = sess.run(z2.reveal())
-            np.testing.assert_allclose(result, np.array([[[[6, 8], [10, 12]]]]), rtol=0.0, atol=0.01)
+            actual, expected = sess.run([z2.reveal(), tf_z2])
+            np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
+
+            actual = sess.run(z3.reveal())
+            expected = np.array([[[[7, 9]]]])
+            np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
+
+            actual = sess.run(z3_arg.reveal())
+            expected = np.array([[[[[0, 0, 1, 0], [1, 0, 0, 0]]]]])
+            np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
+
+
 
     def test_avgpool2d(self):
         tf.reset_default_graph()

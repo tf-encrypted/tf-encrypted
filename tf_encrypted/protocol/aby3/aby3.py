@@ -33,6 +33,7 @@ from ...tensor.fixed import FixedpointConfig
 from ...tensor.fixed import _validate_fixedpoint_config
 from ...tensor.helpers import inverse
 from ...tensor.native import native_factory
+from ...tensor.shared import out_size
 from ..protocol import Protocol
 from ..protocol import memoize
 
@@ -82,144 +83,195 @@ class ABY3(Protocol):
         self.default_nbits = 64
         self.default_factory = self.factories[self.default_nbits]
 
-        self.pairwise_keys, self.pairwise_nonces = self.setup_pairwise_randomness()
-        self.b2a_keys_1, self.b2a_keys_2, self.b2a_nonce = self.setup_b2a_generator()
+        self.reset()
 
 
-    def setup_pairwise_randomness(self):
+    def reset(self):
+        self.pairwise_keys_ = None
+        self.pairwise_nonces_ = None
+        self.b2a_keys_1_ = None
+        self.b2a_keys_2_ = None
+        self.b2a_nonce_ = None
+        self.keys_initialized = False
+
+
+    def pairwise_keys(self):
+        if not self.keys_initialized:
+            self.initialize_keys()
+        return self.pairwise_keys_
+
+    def pairwise_nonces(self):
+        if not self.keys_initialized:
+            self.initialize_keys()
+        return self.pairwise_nonces_
+
+    def _update_pairwise_nonces(self):
+        self.pairwise_nonces_ += 1
+
+    def b2a_keys_1(self):
+        if not self.keys_initialized:
+            self.initialize_keys()
+        return self.b2a_keys_1_
+
+    def b2a_keys_2(self):
+        if not self.keys_initialized:
+            self.initialize_keys()
+        return self.b2a_keys_2_
+
+    def b2a_nonce(self):
+        if not self.keys_initialized:
+            self.initialize_keys()
+        return self.b2a_nonce_
+
+    def _update_b2a_nonce(self):
+        self.b2a_nonce_ += 1
+
+    def initialize_keys(self):
+        self._setup_pairwise_randomness()
+        self._setup_b2a_generator()
+        self.keys_initialized = True
+
+
+    def _setup_pairwise_randomness(self):
         """
     Initial setup for pairwise randomness: Every two parties hold a shared key.
     """
 
-        keys = [[None, None], [None, None], [None, None]]
+        with tf.name_scope("pair-randomness-setup"):
+            keys = [[None, None], [None, None], [None, None]]
 
-        if crypto.supports_seeded_randomness():
+            if crypto.supports_seeded_randomness():
+                with tf.device(self.servers[0].device_name):
+                    seed_0 = crypto.secure_seed(name="seed0")
+                with tf.device(self.servers[1].device_name):
+                    seed_1 = crypto.secure_seed(name="seed1")
+                with tf.device(self.servers[2].device_name):
+                    seed_2 = crypto.secure_seed(name="seed2")
+            else:
+                # Shape and Type are kept consistent with the 'secure_seed' version
+                with tf.device(self.servers[0].device_name):
+                    seed_0 = tf.random.uniform(
+                        [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                    )
+                with tf.device(self.servers[1].device_name):
+                    seed_1 = tf.random.uniform(
+                        [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                    )
+                with tf.device(self.servers[2].device_name):
+                    seed_2 = tf.random.uniform(
+                        [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                    )
+
+            # Replicated keys
+            # NOTE: The following `with` contexts do NOT have any impact for the Python-only operations.
+            #       We use them here only for indicating "which server has which seed".
+            #       In other words, `keys[0][1] = seed_1` only stores the TF graph node `seed_1` in the
+            #       Python list `keys`, but does NOT actually "send" `seed_1` to server 0, which only happens
+            #       when a future TF operation on server 0 uses `keys[0][1]`.
+            # The same NOTE applies to other places where we use Python list to store TF graph nodes in the
+            # `with` context.
             with tf.device(self.servers[0].device_name):
-                seed_0 = crypto.secure_seed()
+                keys[0][0] = seed_0
+                keys[0][1] = seed_1
             with tf.device(self.servers[1].device_name):
-                seed_1 = crypto.secure_seed()
+                keys[1][0] = seed_1
+                keys[1][1] = seed_2
             with tf.device(self.servers[2].device_name):
-                seed_2 = crypto.secure_seed()
-        else:
-            # Shape and Type are kept consistent with the 'secure_seed' version
-            with tf.device(self.servers[0].device_name):
-                seed_0 = tf.random.uniform(
-                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
-                )
-            with tf.device(self.servers[1].device_name):
-                seed_1 = tf.random.uniform(
-                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
-                )
-            with tf.device(self.servers[2].device_name):
-                seed_2 = tf.random.uniform(
-                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
-                )
+                keys[2][0] = seed_2
+                keys[2][1] = seed_0
 
-        # Replicated keys
-        # NOTE: The following `with` contexts do NOT have any impact for the Python-only operations.
-        #       We use them here only for indicating "which server has which seed".
-        #       In other words, `keys[0][1] = seed_1` only stores the TF graph node `seed_1` in the
-        #       Python list `keys`, but does NOT actually "send" `seed_1` to server 0, which only happens
-        #       when a future TF operation on server 0 uses `keys[0][1]`.
-        # The same NOTE applies to other places where we use Python list to store TF graph nodes in the
-        # `with` context.
-        with tf.device(self.servers[0].device_name):
-            keys[0][0] = seed_0
-            keys[0][1] = seed_1
-        with tf.device(self.servers[1].device_name):
-            keys[1][0] = seed_1
-            keys[1][1] = seed_2
-        with tf.device(self.servers[2].device_name):
-            keys[2][0] = seed_2
-            keys[2][1] = seed_0
+            # nonces[0] for server 0 and 1, nonces[1] for server 1 and 2, nonces[2] for server 2 and 0
+            nonces = np.array([0, 0, 0], dtype=np.int)
 
-        # nonces[0] for server 0 and 1, nonces[1] for server 1 and 2, nonces[2] for server 2 and 0
-        nonces = np.array([0, 0, 0], dtype=np.int)
+            self.pairwise_keys_ = keys
+            self.pairwise_nonces_ = nonces
 
-        return keys, nonces
-
-    def setup_b2a_generator(self):
+    def _setup_b2a_generator(self):
         """
     Initial setup for generating shares during the conversion
     from boolean sharing to arithmetic sharing
     """
+        with tf.name_scope("b2a-randomness-setup"):
 
-        # Type 1: Server 0 and 1 hold three keys, while server 2 holds two
-        b2a_keys_1 = [[None, None, None], [None, None, None], [None, None, None]]
+            # Type 1: Server 0 and 1 hold three keys, while server 2 holds two
+            b2a_keys_1 = [[None, None, None], [None, None, None], [None, None, None]]
 
-        if crypto.supports_seeded_randomness():
+            if crypto.supports_seeded_randomness():
+                with tf.device(self.servers[0].device_name):
+                    seed_0 = crypto.secure_seed(name="seed1-0")
+                with tf.device(self.servers[1].device_name):
+                    seed_1 = crypto.secure_seed(name="seed1-1")
+                with tf.device(self.servers[2].device_name):
+                    seed_2 = crypto.secure_seed(name="seed1-2")
+            else:
+                # Shape and Type are kept consistent with the 'secure_seed' version
+                with tf.device(self.servers[0].device_name):
+                    seed_0 = tf.random.uniform(
+                        [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                    )
+                with tf.device(self.servers[1].device_name):
+                    seed_1 = tf.random.uniform(
+                        [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                    )
+                with tf.device(self.servers[2].device_name):
+                    seed_2 = tf.random.uniform(
+                        [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                    )
+
             with tf.device(self.servers[0].device_name):
-                seed_0 = crypto.secure_seed()
+                b2a_keys_1[0][0] = seed_0
+                b2a_keys_1[0][1] = seed_1
+                b2a_keys_1[0][2] = seed_2
             with tf.device(self.servers[1].device_name):
-                seed_1 = crypto.secure_seed()
+                b2a_keys_1[1][0] = seed_0
+                b2a_keys_1[1][1] = seed_1
+                b2a_keys_1[1][2] = seed_2
             with tf.device(self.servers[2].device_name):
-                seed_2 = crypto.secure_seed()
-        else:
-            # Shape and Type are kept consistent with the 'secure_seed' version
+                b2a_keys_1[2][0] = seed_0
+                b2a_keys_1[2][2] = seed_2
+
+            # Type 2: Server 1 and 2 hold three keys, while server 0 holds two
+            b2a_keys_2 = [[None, None, None], [None, None, None], [None, None, None]]
+
+            if crypto.supports_seeded_randomness():
+                with tf.device(self.servers[0].device_name):
+                    seed_0 = crypto.secure_seed(name="seed2-0")
+                with tf.device(self.servers[1].device_name):
+                    seed_1 = crypto.secure_seed(name="seed2-1")
+                with tf.device(self.servers[2].device_name):
+                    seed_2 = crypto.secure_seed(name="seed2-2")
+            else:
+                # Shape and Type are kept consistent with the 'secure_seed' version
+                with tf.device(self.servers[0].device_name):
+                    seed_0 = tf.random.uniform(
+                        [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                    )
+                with tf.device(self.servers[1].device_name):
+                    seed_1 = tf.random.uniform(
+                        [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                    )
+                with tf.device(self.servers[2].device_name):
+                    seed_2 = tf.random.uniform(
+                        [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
+                    )
+
             with tf.device(self.servers[0].device_name):
-                seed_0 = tf.random.uniform(
-                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
-                )
+                b2a_keys_2[0][0] = seed_0
+                b2a_keys_2[0][1] = seed_1
             with tf.device(self.servers[1].device_name):
-                seed_1 = tf.random.uniform(
-                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
-                )
+                b2a_keys_2[1][0] = seed_0
+                b2a_keys_2[1][1] = seed_1
+                b2a_keys_2[1][2] = seed_2
             with tf.device(self.servers[2].device_name):
-                seed_2 = tf.random.uniform(
-                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
-                )
+                b2a_keys_2[2][0] = seed_0
+                b2a_keys_2[2][1] = seed_1
+                b2a_keys_2[2][2] = seed_2
 
-        with tf.device(self.servers[0].device_name):
-            b2a_keys_1[0][0] = seed_0
-            b2a_keys_1[0][1] = seed_1
-            b2a_keys_1[0][2] = seed_2
-        with tf.device(self.servers[1].device_name):
-            b2a_keys_1[1][0] = seed_0
-            b2a_keys_1[1][1] = seed_1
-            b2a_keys_1[1][2] = seed_2
-        with tf.device(self.servers[2].device_name):
-            b2a_keys_1[2][0] = seed_0
-            b2a_keys_1[2][2] = seed_2
+            b2a_nonce = 0
+            self.b2a_keys_1_ = b2a_keys_1
+            self.b2a_keys_2_ = b2a_keys_2
+            self.b2a_nonce_ = b2a_nonce
 
-        # Type 2: Server 1 and 2 hold three keys, while server 0 holds two
-        b2a_keys_2 = [[None, None, None], [None, None, None], [None, None, None]]
-
-        if crypto.supports_seeded_randomness():
-            with tf.device(self.servers[0].device_name):
-                seed_0 = crypto.secure_seed()
-            with tf.device(self.servers[1].device_name):
-                seed_1 = crypto.secure_seed()
-            with tf.device(self.servers[2].device_name):
-                seed_2 = crypto.secure_seed()
-        else:
-            # Shape and Type are kept consistent with the 'secure_seed' version
-            with tf.device(self.servers[0].device_name):
-                seed_0 = tf.random.uniform(
-                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
-                )
-            with tf.device(self.servers[1].device_name):
-                seed_1 = tf.random.uniform(
-                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
-                )
-            with tf.device(self.servers[2].device_name):
-                seed_2 = tf.random.uniform(
-                    [2], minval=tf.int64.min, maxval=tf.int64.max, dtype=tf.int64
-                )
-
-        with tf.device(self.servers[0].device_name):
-            b2a_keys_2[0][0] = seed_0
-            b2a_keys_2[0][1] = seed_1
-        with tf.device(self.servers[1].device_name):
-            b2a_keys_2[1][0] = seed_0
-            b2a_keys_2[1][1] = seed_1
-            b2a_keys_2[1][2] = seed_2
-        with tf.device(self.servers[2].device_name):
-            b2a_keys_2[2][0] = seed_0
-            b2a_keys_2[2][1] = seed_1
-            b2a_keys_2[2][2] = seed_2
-
-        b2a_nonce = 0
-        return b2a_keys_1, b2a_keys_2, b2a_nonce
 
     def define_constant(
         self,
@@ -396,6 +448,40 @@ class ABY3(Protocol):
 
         x = ABY3PrivateVariable(self, x, apply_scaling, share_type)
         return x
+
+    def define_public_placeholder(
+        self,
+        shape,
+        apply_scaling: bool = True,
+        factory: Optional[AbstractFactory] = None,
+        name: Optional[str] = None,
+    ):
+        """Define a `public` placeholder to use in computation. This will be known
+    to both parties.
+
+    .. code-block:: python
+
+        x = prot.define_public_placeholder(shape=(1024, 1024))
+
+    :See: tf.placeholder
+
+    :param List[int] shape: The shape of the placeholder.
+    :param bool apply_scaling: Whether or not to scale the value.
+    :param str name: What name to give to this node in the graph.
+    :param AbstractFactory factory: Which tensor type to represent this value
+        with.
+    """
+
+        factory = factory or self.default_factory
+        suffix = "-" + name if name else ""
+
+        with tf.name_scope("public-placeholder{}".format(suffix)):
+            x = [None, None, None]
+            for i in range(3):
+                with tf.device(self.servers[i].device_name):
+                    x[i] = factory.placeholder(shape)
+
+        return ABY3PublicPlaceholder(self, x, apply_scaling)
 
     def define_private_placeholder(
         self,
@@ -773,7 +859,7 @@ class ABY3(Protocol):
             # and then we round to integers
 
             if isinstance(scaled, np.ndarray):
-                integers = scaled.astype(int).astype(object)
+                integers = scaled.astype(np.int64)
 
             elif isinstance(scaled, tf.Tensor):
                 factory = factory or self.default_factory
@@ -785,7 +871,7 @@ class ABY3(Protocol):
                 # give it a last try
                 try:
                     scaled = np.array(scaled)
-                    integers = scaled.astype(int).astype(object)
+                    integers = scaled.astype(np.int64)
                 except:
                     raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
@@ -887,30 +973,30 @@ class ABY3(Protocol):
         with tf.name_scope("zero-sharing"):
             with tf.device(self.servers[0].device_name):
                 f00 = factory.sample_seeded_uniform(
-                    shape=shape, seed=self.pairwise_keys[0][0] + self.pairwise_nonces[2]
+                    shape=shape, seed=self.pairwise_keys()[0][0] + self.pairwise_nonces()[2]
                 )  # yapf: disable
                 f01 = factory.sample_seeded_uniform(
-                    shape=shape, seed=self.pairwise_keys[0][1] + self.pairwise_nonces[0]
+                    shape=shape, seed=self.pairwise_keys()[0][1] + self.pairwise_nonces()[0]
                 )  # yapf: disable
                 a0 = helper(f00, f01)
             with tf.device(self.servers[1].device_name):
                 f10 = factory.sample_seeded_uniform(
-                    shape=shape, seed=self.pairwise_keys[1][0] + self.pairwise_nonces[0]
+                    shape=shape, seed=self.pairwise_keys()[1][0] + self.pairwise_nonces()[0]
                 )  # yapf: disable
                 f11 = factory.sample_seeded_uniform(
-                    shape=shape, seed=self.pairwise_keys[1][1] + self.pairwise_nonces[1]
+                    shape=shape, seed=self.pairwise_keys()[1][1] + self.pairwise_nonces()[1]
                 )  # yapf: disable
                 a1 = helper(f10, f11)
             with tf.device(self.servers[2].device_name):
                 f20 = factory.sample_seeded_uniform(
-                    shape=shape, seed=self.pairwise_keys[2][0] + self.pairwise_nonces[1]
+                    shape=shape, seed=self.pairwise_keys()[2][0] + self.pairwise_nonces()[1]
                 )  # yapf: disable
                 f21 = factory.sample_seeded_uniform(
-                    shape=shape, seed=self.pairwise_keys[2][1] + self.pairwise_nonces[2]
+                    shape=shape, seed=self.pairwise_keys()[2][1] + self.pairwise_nonces()[2]
                 )  # yapf: disable
                 a2 = helper(f20, f21)
 
-        self.pairwise_nonces = self.pairwise_nonces + 1
+        self._update_pairwise_nonces()
         return a0, a1, a2
 
     def _gen_random_sharing(self, shape, share_type=ShareType.ARITHMETIC, factory=None):
@@ -920,27 +1006,27 @@ class ABY3(Protocol):
         with tf.name_scope("random-sharing"):
             with tf.device(self.servers[0].device_name):
                 r[0][0] = factory.sample_seeded_uniform(
-                    shape=shape, seed=self.pairwise_keys[0][0] + self.pairwise_nonces[2]
+                    shape=shape, seed=self.pairwise_keys()[0][0] + self.pairwise_nonces()[2]
                 )  # yapf: disable
                 r[0][1] = factory.sample_seeded_uniform(
-                    shape=shape, seed=self.pairwise_keys[0][1] + self.pairwise_nonces[0]
+                    shape=shape, seed=self.pairwise_keys()[0][1] + self.pairwise_nonces()[0]
                 )  # yapf: disable
             with tf.device(self.servers[1].device_name):
                 r[1][0] = factory.sample_seeded_uniform(
-                    shape=shape, seed=self.pairwise_keys[1][0] + self.pairwise_nonces[0]
+                    shape=shape, seed=self.pairwise_keys()[1][0] + self.pairwise_nonces()[0]
                 )  # yapf: disable
                 r[1][1] = factory.sample_seeded_uniform(
-                    shape=shape, seed=self.pairwise_keys[1][1] + self.pairwise_nonces[1]
+                    shape=shape, seed=self.pairwise_keys()[1][1] + self.pairwise_nonces()[1]
                 )  # yapf: disable
             with tf.device(self.servers[2].device_name):
                 r[2][0] = factory.sample_seeded_uniform(
-                    shape=shape, seed=self.pairwise_keys[2][0] + self.pairwise_nonces[1]
+                    shape=shape, seed=self.pairwise_keys()[2][0] + self.pairwise_nonces()[1]
                 )  # yapf: disable
                 r[2][1] = factory.sample_seeded_uniform(
-                    shape=shape, seed=self.pairwise_keys[2][1] + self.pairwise_nonces[2]
+                    shape=shape, seed=self.pairwise_keys()[2][1] + self.pairwise_nonces()[2]
                 )  # yapf: disable
 
-        self.pairwise_nonces = self.pairwise_nonces + 1
+        self._update_pairwise_nonces()
 
         return ABY3PrivateTensor(self, r, True, share_type)
 
@@ -949,47 +1035,47 @@ class ABY3(Protocol):
         shares = [[None, None], [None, None], [None, None]]
         with tf.device(self.servers[0].device_name):
             shares[0][0] = factory.sample_seeded_uniform(
-                shape=shape, seed=b2a_keys[0][0] + self.b2a_nonce
+                shape=shape, seed=b2a_keys[0][0] + self.b2a_nonce()
             )  # yapf: disable
             shares[0][1] = factory.sample_seeded_uniform(
-                shape=shape, seed=b2a_keys[0][1] + self.b2a_nonce
+                shape=shape, seed=b2a_keys[0][1] + self.b2a_nonce()
             )  # yapf: disable
             x_on_0 = None
             if b2a_keys[0][2] is not None:
                 share_2 = factory.sample_seeded_uniform(
-                    shape=shape, seed=b2a_keys[0][2] + self.b2a_nonce
+                    shape=shape, seed=b2a_keys[0][2] + self.b2a_nonce()
                 )  # yapf: disable
                 x_on_0 = shares[0][0] ^ shares[0][1] ^ share_2
 
         with tf.device(self.servers[1].device_name):
             shares[1][0] = factory.sample_seeded_uniform(
-                shape=shape, seed=b2a_keys[1][1] + self.b2a_nonce
+                shape=shape, seed=b2a_keys[1][1] + self.b2a_nonce()
             )  # yapf: disable
             shares[1][1] = factory.sample_seeded_uniform(
-                shape=shape, seed=b2a_keys[1][2] + self.b2a_nonce
+                shape=shape, seed=b2a_keys[1][2] + self.b2a_nonce()
             )  # yapf: disable
             x_on_1 = None
             if b2a_keys[1][0] is not None:
                 share_0 = factory.sample_seeded_uniform(
-                    shape=shape, seed=b2a_keys[1][0] + self.b2a_nonce
+                    shape=shape, seed=b2a_keys[1][0] + self.b2a_nonce()
                 )  # yapf: disable
                 x_on_1 = share_0 ^ shares[1][0] ^ shares[1][1]
 
         with tf.device(self.servers[2].device_name):
             shares[2][0] = factory.sample_seeded_uniform(
-                shape=shape, seed=b2a_keys[2][2] + self.b2a_nonce
+                shape=shape, seed=b2a_keys[2][2] + self.b2a_nonce()
             )  # yapf: disable
             shares[2][1] = factory.sample_seeded_uniform(
-                shape=shape, seed=b2a_keys[2][0] + self.b2a_nonce
+                shape=shape, seed=b2a_keys[2][0] + self.b2a_nonce()
             )  # yapf: disable
             x_on_2 = None
             if b2a_keys[2][1] is not None:
                 share_1 = factory.sample_seeded_uniform(
-                    shape=shape, seed=b2a_keys[2][1] + self.b2a_nonce
+                    shape=shape, seed=b2a_keys[2][1] + self.b2a_nonce()
                 )  # yapf: disable
                 x_on_2 = share_1 ^ shares[2][0] ^ shares[2][1]
 
-        self.b2a_nonce = self.b2a_nonce + 1
+        self._update_b2a_nonce()
         return x_on_0, x_on_1, x_on_2, shares
 
     def _ot(
@@ -1295,9 +1381,11 @@ class ABY3(Protocol):
         x = self.lift(x)
         return self.dispatch("transpose", x, perm)
 
+    @memoize
     def indexer(self, x: "ABY3Tensor", slc) -> "ABY3Tensor":
         return self.dispatch("indexer", x, slc)
 
+    @memoize
     def reshape(self, x: "ABY3Tensor", axe) -> "ABY3Tensor":
         return self.dispatch("reshape", x, axe)
 
@@ -1484,6 +1572,13 @@ class ABY3(Protocol):
         return self.dispatch("reciprocal", x, approx_type)
 
     @memoize
+    def sqrt(self, x, approx_type=""):
+        """
+        NOTE: only supports public now.
+        """
+        return self.dispatch("sqrt", x, approx_type)
+
+    @memoize
     def exp(self, x, approx_type="7_piecewise_linear_positive"):
         return self.dispatch("exp", x, approx_type)
 
@@ -1579,7 +1674,7 @@ class ABY3(Protocol):
         return self.dispatch("carry", x, y)
 
     @memoize
-    def im2col(self, x, h_filter, w_filter, padding, stride):
+    def im2col(self, x, h_filter, w_filter, stride, padding):
         """
         :param x: An NCHW image tensor
 
@@ -1589,13 +1684,23 @@ class ABY3(Protocol):
             #row and #column are the output height and width like in conv2d, by moving the filter along image height and width.
         """
         x = self.lift(x)
-        return self.dispatch("im2col", x, h_filter, w_filter, padding, stride)
+        return self.dispatch("im2col", x, h_filter, w_filter, stride, padding)
 
+    @memoize
+    def im2patches(self, x, patch_size, stride=1, padding="SAME", data_format="NCHW"):
+        return self.dispatch("im2patches", x, patch_size, stride=stride, padding=padding, data_format=data_format)
+
+    @memoize
+    def patches2im(self, x, patch_size, stride=1, padding="SAME", img_size=None, consolidation="SUM", data_format="NCHW"):
+        return self.dispatch("patches2im", x, patch_size, stride=stride, padding=padding, img_size=img_size, consolidation=consolidation, data_format=data_format)
+
+    @memoize
     def conv2d(self, x, w, strides, padding):
         """See tf.nn.conv2d."""
         x, w = self.lift(x, w)
         return self.dispatch("conv2d", x, w, strides, padding)
 
+    @memoize
     def expand(self, x, stride):
         """
         Expand the input `x` with inner paddinds of 0.
@@ -1666,6 +1771,14 @@ class ABY3(Protocol):
         return self.dispatch("reduce_max", x, axis=axis, keepdims=keepdims)
 
     @memoize
+    def argmax(self, x, axis=0, output_style="onehot"):
+        return self.dispatch("argmax", x, axis=axis, output_style=output_style)
+
+    @memoize
+    def reduce_max_with_argmax(self, x, axis=0, keepdims=False, output_style="onehot"):
+        return self.dispatch("reduce_max_with_argmax", x, axis=axis, keepdims=keepdims, output_style=output_style)
+
+    @memoize
     def maxpool2d(self, x, pool_size, strides, padding):
         """
     Performs a `MaxPooling2d` operation on `x`.
@@ -1678,6 +1791,10 @@ class ABY3(Protocol):
     """
         return self.dispatch("maxpool2d", x, pool_size, strides, padding)
 
+    @memoize
+    def maxpool2d_with_argmax(self, x, pool_size, strides, padding):
+        return self.dispatch("maxpool2d_with_argmax", x, pool_size, strides, padding)
+
     def avgpool2d(self, x, pool_size, strides, padding):
         """See tf.nn.avgpool2d."""
         return self.dispatch("avgpool2d", x, pool_size, strides, padding)
@@ -1689,6 +1806,7 @@ class ABY3(Protocol):
     """
         return self.dispatch("log", x, approx_type)
 
+    @memoize
     def pad(self, x: "ABY3Tensor", paddings: list):
         """See tf.pad."""
 
@@ -2020,6 +2138,20 @@ def _sub_public_private(prot, x, y):
             z[2][1] = x_on_2 - shares[2][1]
 
     return ABY3PrivateTensor(prot, z, x.is_scaled, y.share_type)
+
+
+def _sub_public_public(prot, x, y):
+    assert x.is_scaled == y.is_scaled, "Cannot sub tensors with different scales"
+
+    x_shares = x.unwrapped
+    y_shares = y.unwrapped
+
+    z = [None] * 3
+    with tf.name_scope("sub"):
+        for i in range(3):
+            z[i] = x_shares[i] - y_shares[i]
+
+    return ABY3PublicTensor(prot, z, x.is_scaled)
 
 
 #
@@ -2375,7 +2507,7 @@ def _truncate_local_private(
         # Local computation
         with tf.device(prot.servers[2].device_name):
             r_on_2 = x.backing_dtype.sample_seeded_uniform(
-                shares[2][0].shape, prot.pairwise_keys[2][0] + prot.pairwise_nonces[1]
+                shares[2][0].shape, prot.pairwise_keys()[2][0] + prot.pairwise_nonces()[1]
             )
 
         # Local computation
@@ -2385,13 +2517,13 @@ def _truncate_local_private(
         # Local computation
         with tf.device(prot.servers[1].device_name):
             r_on_1 = x.backing_dtype.sample_seeded_uniform(
-                shares[1][0].shape, prot.pairwise_keys[1][1] + prot.pairwise_nonces[1]
+                shares[1][0].shape, prot.pairwise_keys()[1][1] + prot.pairwise_nonces()[1]
             )
             t = shares[1][0] + shares[1][1]
             tmp = t.truncate(amount, base)
             y1 = tmp - r_on_1
 
-        prot.pairwise_nonces[1] = prot.pairwise_nonces[1] + 1
+        prot._update_pairwise_nonces()
 
         # Replicate shares
 
@@ -2445,20 +2577,20 @@ def _truncate_msb0_cheetah_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3Priv
     w_bob = prot._ot(prot.servers[0], prot.servers[1], prot.servers[2],
             s0, s1,
             msb_bob_on_1, msb_bob_on_2,
-            prot.pairwise_keys[0][0], prot.pairwise_keys[2][1],
-            prot.pairwise_nonces[2])
+            prot.pairwise_keys()[0][0], prot.pairwise_keys()[2][1],
+            prot.pairwise_nonces()[2])
 
     w = [[None, None], [None, None], [None, None]]
     with tf.device(prot.servers[0].device_name):
         w[0][0] = w_alice
         w[0][1] = bfactory.sample_seeded_uniform(
                 shape,
-                prot.pairwise_keys[0][1] + prot.pairwise_nonces[0])
+                prot.pairwise_keys()[0][1] + prot.pairwise_nonces()[0])
 
     with tf.device(prot.servers[1].device_name):
         w[1][0] = bfactory.sample_seeded_uniform(
                 shape,
-                prot.pairwise_keys[1][0] + prot.pairwise_nonces[0])
+                prot.pairwise_keys()[1][0] + prot.pairwise_nonces()[0])
         w[1][1] = w_bob ^ w[1][0]
 
     with tf.device(prot.servers[2].device_name):
@@ -3304,11 +3436,11 @@ def _b2a_private(prot, x, nbits):
     # In semi-honest, the following two calls can be further optimized because we don't
     # need the boolean shares of x1 and x2. We only need their original values on intended servers.
     x1_on_0, x1_on_1, x1_on_2, x1_shares = prot._gen_b2a_sharing(
-        x.shape, prot.b2a_keys_1
+        x.shape, prot.b2a_keys_1()
     )
     assert x1_on_2 is None
     x2_on_0, x2_on_1, x2_on_2, x2_shares = prot._gen_b2a_sharing(
-        x.shape, prot.b2a_keys_2
+        x.shape, prot.b2a_keys_2()
     )
     assert x2_on_0 is None
 
@@ -3408,10 +3540,12 @@ def __mul_ab_routine(prot, a, b, sender_idx):
     assert isinstance(a, AbstractTensor), type(a)
     assert isinstance(b, ABY3PrivateTensor), type(b)
 
+    shape = tf.broadcast_static_shape(a.shape, b.shape).as_list()
+
     with tf.name_scope("__mul_ab_routine"):
         b_shares = b.unwrapped
         s = [None, None, None]
-        s[0], s[1], s[2] = prot._gen_zero_sharing(a.shape, ShareType.ARITHMETIC)
+        s[0], s[1], s[2] = prot._gen_zero_sharing(shape, ShareType.ARITHMETIC)
 
         z = [[None, None], [None, None], [None, None]]
         idx0 = sender_idx
@@ -3434,11 +3568,10 @@ def __mul_ab_routine(prot, a, b, sender_idx):
                 m1,
                 b_shares[idx1][1],
                 b_shares[idx2][0],
-                prot.pairwise_keys[idx0][0],
-                prot.pairwise_keys[idx2][1],
-                prot.pairwise_nonces[idx2],
+                prot.pairwise_keys()[idx0][0],
+                prot.pairwise_keys()[idx2][1],
+                prot.pairwise_nonces()[idx2],
             )
-            prot.pairwise_nonces[idx2] = prot.pairwise_nonces[idx2] + 1
 
         with tf.device(prot.servers[idx2].device_name):
             z[idx2][0] = prot._ot(
@@ -3449,12 +3582,13 @@ def __mul_ab_routine(prot, a, b, sender_idx):
                 m1,
                 b_shares[idx2][0],
                 b_shares[idx1][1],
-                prot.pairwise_keys[idx0][1],
-                prot.pairwise_keys[idx1][0],
-                prot.pairwise_nonces[idx0],
+                prot.pairwise_keys()[idx0][1],
+                prot.pairwise_keys()[idx1][0],
+                prot.pairwise_nonces()[idx0],
             )
             z[idx2][1] = s[idx2]
-            prot.pairwise_nonces[idx0] = prot.pairwise_nonces[idx0] + 1
+
+        prot._update_pairwise_nonces()
 
     return z
 
@@ -3592,17 +3726,76 @@ def _relu_private(prot, x, approx_type):
 
     with tf.name_scope("relu"):
         if approx_type == "2_piecewise_linear":
+            result = prot.select(x > 0, 0, x)
             # Use tuple because list is not hashable for the memoir cache key
-            c = (0, )
-            coeffs = ((0, ), (0, 1))
-            result = prot.polynomial_piecewise(x, c, coeffs)
+            # c = (0, )
+            # coeffs = ((0, ), (0, 1))
+            # result = prot.polynomial_piecewise(x, c, coeffs)
         else:
             raise NotImplementedError(
-                "Only support piecewise linear approximation of sigmoid."
+                "Only support piecewise linear approximation of relu."
             )
 
     return result
 
+
+
+def _sqrt_public(prot, x, approx_type):
+    assert isinstance(x, ABY3PublicTensor), type(x)
+
+    backing_dtype = x.backing_dtype
+    xs = x.unwrapped
+    is_scaled = x.is_scaled
+    assert is_scaled, "Can only sqrt of scaled numbers"
+
+    with tf.name_scope("sqrt"):
+
+        ys = [None, None, None]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                # decode value as ordinary tensor locally and compute sqrt
+                xi_decoded = prot._decode(xs[i], is_scaled)
+                yi_decoded = tf.math.sqrt(xi_decoded)
+                # re-encode and re-wrap
+                ys[i] = backing_dtype.tensor(
+                    prot._encode(
+                        yi_decoded,
+                        apply_scaling=is_scaled,
+                        factory=backing_dtype,
+                    )
+                )
+
+        y = ABY3PublicTensor(prot, ys, is_scaled)
+        return y
+
+
+def _reciprocal_public(prot, x, approx_type):
+    assert isinstance(x, ABY3PublicTensor), type(x)
+
+    backing_dtype = x.backing_dtype
+    xs = x.unwrapped
+    is_scaled = x.is_scaled
+    assert is_scaled, "Can only reciprocal of scaled numbers"
+
+    with tf.name_scope("reciprocal"):
+
+        ys = [None, None, None]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                # decode value as ordinary tensor locally and compute reciprocal
+                xi_decoded = prot._decode(xs[i], is_scaled)
+                yi_decoded = tf.math.reciprocal(xi_decoded)
+                # re-encode and re-wrap
+                ys[i] = backing_dtype.tensor(
+                    prot._encode(
+                        yi_decoded,
+                        apply_scaling=is_scaled,
+                        factory=backing_dtype,
+                    )
+                )
+
+        y = ABY3PublicTensor(prot, ys, is_scaled)
+        return y
 
 def _reciprocal_private(prot, x, approx_type):
     assert isinstance(x, ABY3PrivateTensor), type(x)
@@ -4166,8 +4359,8 @@ def _im2col_public(
         x: ABY3PublicTensor,
         h_filter: int,
         w_filter: int,
-        padding: str,
         stride: int,
+        padding: str,
 ) -> ABY3PublicTensor:
 
     xs = x.unwrapped
@@ -4176,7 +4369,7 @@ def _im2col_public(
         z = [None, None, None]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
-                z[i] = xs[i].im2col(h_filter, w_filter, padding, stride)
+                z[i] = xs[i].im2col(h_filter, w_filter, stride, padding)
 
     return ABY3PublicTensor(prot, z, x.is_scaled)
 
@@ -4186,8 +4379,8 @@ def _im2col_private(
         x: ABY3PrivateTensor,
         h_filter: int,
         w_filter: int,
-        padding: str,
         stride: int,
+        padding: str,
 ) -> ABY3PrivateTensor:
 
     xs = x.unwrapped
@@ -4196,8 +4389,8 @@ def _im2col_private(
         z = [[None, None], [None, None], [None, None]]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
-                z[i][0] = xs[i][0].im2col(h_filter, w_filter, padding, stride)
-                z[i][1] = xs[i][1].im2col(h_filter, w_filter, padding, stride)
+                z[i][0] = xs[i][0].im2col(h_filter, w_filter, stride, padding)
+                z[i][1] = xs[i][1].im2col(h_filter, w_filter, stride, padding)
 
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 
@@ -4310,15 +4503,65 @@ def _reduce_max_private(
         return maximum
 
 
-def _out_shape(in_height, in_width, pool_size, strides, padding):
+def _argmax_private(prot, x, axis=0, output_style="onehot"):
 
-    if padding == "SAME":
-        out_height = ceil(int(in_height) / strides[0])
-        out_width = ceil(int(in_width) / strides[1])
-    else:
-        out_height = ceil((int(in_height) - pool_size[0] + 1) / strides[0])
-        out_width = ceil((int(in_width) - pool_size[1] + 1) / strides[1])
-    return [out_height, out_width]
+    _, argmax = _reduce_max_with_argmax_private(prot, x, axis, output_style=output_style)
+    return argmax
+
+
+def _reduce_max_with_argmax_private(prot, x, axis=0, keepdims=False, output_style="onehot"):
+    with tf.name_scope("reducemax-argmax"):
+
+        def build_comparison_tree(tensors, indices):
+            assert len(tensors) == len(indices)
+            if len(indices) == 1:
+                return tensors[0], indices[0]
+
+            halfway = len(tensors) // 2
+            tensors_left, tensors_right = tensors[:halfway], tensors[halfway:]
+            indices_left, indices_right = indices[:halfway], indices[halfway:]
+
+            maximum_left, argmax_left = build_comparison_tree(
+                tensors_left, indices_left
+            )
+            maximum_right, argmax_right = build_comparison_tree(
+                tensors_right, indices_right
+            )
+
+            # compute binary tensor indicating which side is greater
+            greater = prot.greater_than(maximum_left, maximum_right)
+
+            # use above binary tensor to select maximum and argmax
+            maximum = prot.select(greater, maximum_right, maximum_left)
+            argmax = prot.select(greater, argmax_right, argmax_left)
+
+            return maximum, argmax
+
+        n = int(x.shape[axis])
+        tensors = prot.split(x, n, axis=axis)
+        if output_style == "onehot":
+            idx_init_shape = [1] * axis + [n] + [1] * (len(x.shape) - axis - 1)
+            # tile_shape = x.shape[:axis] + [1] + x.shape[(axis+1):] # This is mainly to avoid the potential `tf.where` broadcasting problem in TF v1
+            indices = [
+                # prot.define_constant(np.tile(np.reshape(np.eye(n)[i], idx_init_shape), tile_shape)) for i, _ in enumerate(tensors)
+                prot.define_constant(np.reshape(np.eye(n)[i], idx_init_shape)) for i, _ in enumerate(tensors)
+            ]
+        elif output_style == "normal":
+            indices = [
+                prot.define_constant(np.array([i])) for i, _ in enumerate(tensors)
+            ]
+        else:
+            raise ValueError("Unknown output style: {}".format(output_style))
+
+        with tf.name_scope("comparison-tree"):
+            maximum, argmax = build_comparison_tree(tensors, indices)
+
+        if not keepdims:
+            maximum = prot.squeeze(maximum, axis=(axis,))
+        if output_style=="normal":
+            argmax = prot.squeeze(argmax, axis=(axis,))
+
+        return maximum, argmax
 
 
 def _maxpool2d_public(
@@ -4351,15 +4594,46 @@ def __maxpool2d_computation(
     padding: str
 ) -> ABY3Tensor:
     batch, channels, height, width = x.shape
-    out_height, out_width = _out_shape(height, width, pool_size, strides, padding)
+    out_height, out_width = out_size([height, width], pool_size, strides, padding)
 
     with tf.name_scope("maxpool2d"):
         x_split = x.reshape((batch * channels, 1, height, width))
 
-        y = prot.im2col(x_split, pool_size[0], pool_size[1], padding, strides[0])
-        i2c_max = y.reduce_max(axis=0)
-        result = i2c_max.reshape([out_height, out_width, batch, channels]).transpose([2, 3, 0, 1])
+        y = prot.im2patches(x_split, pool_size, stride=strides[0], padding=padding)
+        i2c_max = y.reduce_max(axis=1)
+        result = i2c_max.reshape([batch, channels, out_height, out_width])
         return result
+
+
+def _maxpool2d_with_argmax_private(
+    prot: ABY3,
+    x: ABY3PrivateTensor,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: str,
+) -> ABY3PrivateTensor:
+    """Logic for performing maxpool2d on private input."""
+    return __maxpool2d_with_argmax_computation(prot, x, pool_size, strides, padding)
+
+
+def __maxpool2d_with_argmax_computation(
+    prot: ABY3,
+    x: ABY3Tensor,
+    pool_size: Tuple[int, int],
+    strides: Tuple[int, int],
+    padding: str
+) -> ABY3Tensor:
+    batch, channels, height, width = x.shape
+    out_height, out_width = out_size([height, width], pool_size, strides, padding)
+
+    with tf.name_scope("maxpool2d-with-argmax"):
+        x_split = x.reshape((batch * channels, 1, height, width))
+
+        y = prot.im2patches(x_split, pool_size, stride=strides[0], padding=padding, data_format="NCHW")
+        i2c_max, i2c_argmax = prot.reduce_max_with_argmax(y, axis=1, output_style="onehot")
+        i2c_max = i2c_max.reshape([batch, channels, out_height, out_width])
+        i2c_argmax = prot.transpose(i2c_argmax, perm=[0, 2, 3, 1]).reshape([batch, channels, out_height, out_width, -1])
+        return i2c_max, i2c_argmax
 
 
 def _avgpool2d_public(
@@ -4392,13 +4666,13 @@ def __avgpool2d_computation(
     padding: str,
 ) -> ABY3Tensor:
     batch, channels, height, width = x.shape
-    out_height, out_width = _out_shape(height, width, pool_size, strides, padding)
+    out_height, out_width = out_size([height, width], pool_size, strides, padding)
     scalar = 1 / (pool_size[0] * pool_size[1])
 
     with tf.name_scope("avgpool2d"):
         x_split = x.reshape((batch * channels, 1, height, width))
 
-        y = prot.im2col(x_split, pool_size[0], pool_size[1], padding, strides[0])
+        y = prot.im2col(x_split, pool_size[0], pool_size[1], strides[0], padding)
         i2c_max = y.reduce_sum(axis=0) * scalar
         result = i2c_max.reshape([out_height, out_width, batch, channels]).transpose([2, 3, 0, 1])
         return result
@@ -4507,3 +4781,29 @@ def _reverse_private(prot, x, axis):
                 out[i][1] = shares[i][1].reverse(axis)
 
     return ABY3PrivateTensor(prot, out, x.is_scaled, x.share_type)
+
+
+def _im2patches_private(prot, x, patch_size, stride=1, padding="SAME", data_format="NCHW"):
+    xs = x.unwrapped
+
+    with tf.name_scope("im2patches"):
+        z = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = xs[i][0].im2patches(patch_size, stride, padding, data_format=data_format)
+                z[i][1] = xs[i][1].im2patches(patch_size, stride, padding, data_format=data_format)
+
+    return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+
+
+def _patches2im_private(prot, x, patch_size, stride=1, padding="SAME", img_size=None, consolidation="SUM", data_format="NCHW"):
+    xs = x.unwrapped
+
+    with tf.name_scope("patches2im"):
+        z = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = xs[i][0].patches2im(patch_size, stride=stride, padding=padding, img_size=img_size, consolidation=consolidation, data_format=data_format)
+                z[i][1] = xs[i][1].patches2im(patch_size, stride=stride, padding=padding, img_size=img_size, consolidation=consolidation, data_format=data_format)
+
+    return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
