@@ -38,11 +38,60 @@ class PrivateModel:
     IMG_ROWS = 28
     IMG_COLS = 28
     FLATTENED_DIM = IMG_ROWS * IMG_COLS
+    IN_CHANNELS = 1
 
+class NetworkA(PrivateModel):
     def __init__(self):
         self.model = tfe.keras.Sequential()
-        self.model.add(tfe.keras.layers.Dense(512, batch_input_shape=[self.BATCH_SIZE, self.FLATTENED_DIM]))
-        self.model.add(tfe.keras.layers.Activation("relu"))
+        self.model.add(tfe.keras.layers.Flatten(batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS]))
+        self.model.add(tfe.keras.layers.Dense(128, activation='relu'))
+        self.model.add(tfe.keras.layers.Dense(128, activation='relu'))
+        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None))
+
+        # optimizer and data pipeline
+        optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
+        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True)
+        self.model.compile(optimizer, loss)
+
+class NetworkB(PrivateModel):
+    def __init__(self):
+        self.model = tfe.keras.Sequential()
+        self.model.add(tfe.keras.layers.Conv2D(16, 5, 1, padding='same', activation='relu', batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS]))
+        self.model.add(tfe.keras.layers.MaxPooling2D(2))
+        self.model.add(tfe.keras.layers.Conv2D(16, 5, 1, padding='same', activation='relu'))
+        self.model.add(tfe.keras.layers.MaxPooling2D(2))
+        self.model.add(tfe.keras.layers.Flatten())
+        self.model.add(tfe.keras.layers.Dense(100, activation='relu'))
+        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None))
+
+        # optimizer and data pipeline
+        optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
+        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True)
+        self.model.compile(optimizer, loss)
+
+class NetworkC(PrivateModel):
+    def __init__(self):
+        self.model = tfe.keras.Sequential()
+        self.model.add(tfe.keras.layers.Conv2D(20, 5, 1, padding='valid', activation='relu', batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS]))
+        self.model.add(tfe.keras.layers.MaxPooling2D(2))
+        self.model.add(tfe.keras.layers.Conv2D(50, 5, 1, padding='valid', activation='relu'))
+        self.model.add(tfe.keras.layers.MaxPooling2D(2))
+        self.model.add(tfe.keras.layers.Flatten())
+        self.model.add(tfe.keras.layers.Dense(100, activation='relu'))
+        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None))
+
+        # optimizer and data pipeline
+        optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
+        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True)
+        self.model.compile(optimizer, loss)
+
+
+class NetworkD(PrivateModel):
+    def __init__(self):
+        self.model = tfe.keras.Sequential()
+        self.model.add(tfe.keras.layers.Conv2D(5, 5, 2, padding='same', activation='relu', batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS]))
+        self.model.add(tfe.keras.layers.Flatten())
+        self.model.add(tfe.keras.layers.Dense(100, activation='relu'))
         self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None))
 
         # optimizer and data pipeline
@@ -74,37 +123,30 @@ class TrainingClient(PrivateModel):
             label = tf.one_hot(label, self.NUM_CLASSES)
             return image, label
 
-        def flatten(image, label):
-            image = tf.reshape(image, shape=[self.FLATTENED_DIM])
+        def shaping(image, label):
+            image = tf.reshape(image, shape=[PrivateModel.IMG_ROWS, PrivateModel.IMG_COLS, PrivateModel.IN_CHANNELS])
             return image, label
 
         dataset = tf.data.TFRecordDataset([self.local_data_file])
         dataset = dataset.map(decode)
         dataset = dataset.map(normalize)
-        dataset = dataset.map(flatten)
+        dataset = dataset.map(shaping)
         dataset = dataset.repeat()
         dataset = dataset.batch(self.BATCH_SIZE)
 
         iterator = dataset.make_one_shot_iterator()
         x, y = iterator.get_next()
-        x = tf.reshape(x, [self.BATCH_SIZE, self.FLATTENED_DIM])
+        x = tf.reshape(x, [self.BATCH_SIZE, PrivateModel.IMG_ROWS, PrivateModel.IMG_COLS, PrivateModel.IN_CHANNELS])
         y = tf.reshape(y, [self.BATCH_SIZE, self.NUM_CLASSES])
         return x, y
 
-    def _train(self, training_data):
+    def train(self, model):
         """Build a graph for private model training."""
 
-        x, y = training_data
-        self.model.fit(x, y, epochs=self.EPOCHS, steps_per_epoch=self.ITERATIONS)
+        with tf.name_scope("loading-data"):
+            x, y = self._build_data_pipeline()
 
-    def provide_weights(self):
-        with tf.name_scope("loading"):
-            training_data = self._build_data_pipeline()
-
-        with tf.name_scope("training"):
-            self._train(training_data)
-
-        return self.model.weights
+        model.fit(x, y, epochs=self.EPOCHS, steps_per_epoch=self.ITERATIONS)
 
 
 class PredictionClient(PrivateModel):
@@ -133,50 +175,28 @@ class PredictionClient(PrivateModel):
             label = tf.one_hot(label, self.NUM_CLASSES)
             return image, label
 
-        def flatten(image, label):
-            image = tf.reshape(image, shape=[self.FLATTENED_DIM])
+        def shaping(image, label):
+            image = tf.reshape(image, shape=[PrivateModel.IMG_ROWS, PrivateModel.IMG_COLS, PrivateModel.IN_CHANNELS])
             return image, label
 
         dataset = tf.data.TFRecordDataset([self.local_data_file])
         dataset = dataset.map(decode)
         dataset = dataset.map(normalize)
-        dataset = dataset.map(flatten)
+        dataset = dataset.map(shaping)
         dataset = dataset.batch(self.BATCH_SIZE)
 
         iterator = dataset.make_one_shot_iterator()
         x, y = iterator.get_next()
-        x = tf.reshape(x, [self.BATCH_SIZE, self.FLATTENED_DIM])
+        x = tf.reshape(x, [self.BATCH_SIZE, PrivateModel.IMG_ROWS, PrivateModel.IMG_COLS, PrivateModel.IN_CHANNELS])
         y = tf.reshape(y, [self.BATCH_SIZE, self.NUM_CLASSES])
         return x, y
 
-    @tfe.local_computation
-    def provide_input(self) -> tf.Tensor:
-        """Prepare input data for prediction."""
-        with tf.name_scope("loading"):
-            prediction_input, expected_result = self._build_data_pipeline().get_next()
-            print_op = tf.print("Expect", expected_result, summarize=self.BATCH_SIZE)
-            with tf.control_dependencies([print_op]):
-                prediction_input = tf.identity(prediction_input)
-
-        with tf.name_scope("pre-processing"):
-            prediction_input = tf.reshape(
-                prediction_input, shape=(self.BATCH_SIZE, ModelOwner.FLATTENED_DIM)
-            )
-        return prediction_input
-
-    @tfe.local_computation
-    def receive_output(self, logits: tf.Tensor) -> tf.Operation:
-        with tf.name_scope("post-processing"):
-            prediction = tf.argmax(logits, axis=1)
-            op = tf.print("Result", prediction, summarize=self.BATCH_SIZE)
-            return op
-
-    def evaluate(self):
+    def evaluate(self, model):
         with tf.name_scope("loading"):
             x, y = self._build_data_pipeline()
 
         with tf.name_scope("evaluate"):
-            result = self.model.evaluate(x, y, metrics=["categorical_accuracy"])
+            result = model.evaluate(x, y, metrics=["categorical_accuracy"])
 
         return result
 
@@ -188,6 +208,11 @@ if __name__ == "__main__":
     sess = tfe.Session(target=session_target)
     KE.set_session(sess)
 
+    # Network = NetworkA
+    Network = NetworkC
+
+    model = Network().model
+
     training_client = TrainingClient(
         player_name="training-client", local_data_file="./data/train.tfrecord"
     )
@@ -196,15 +221,18 @@ if __name__ == "__main__":
         player_name="prediction-client", local_data_file="./data/test.tfrecord"
     )
 
-    # get model parameters as private tensors from training client
     print("Train model")
-    params = training_client.provide_weights()
+    training_client.train(model)
+    weights = model.weights
+
 
     print("Set trained weights")
-    prediction_client.model.set_weights(params)
+    model_2 = Network().model
+    model_2.set_weights(weights)
 
     print("Evaluate")
-    result = prediction_client.evaluate()
+    result = prediction_client.evaluate(model_2)
 
     print(result)
+
 
