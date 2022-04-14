@@ -808,7 +808,7 @@ class ABY3(Protocol):
             tensor.shape.is_fully_defined()
         ), "Shape of input '{}' is not fully defined".format(name if name else "")
 
-        factory = factory or self.defaul_factory
+        factory = factory or self.default_factory
 
         with tf.name_scope("public-tensor"):
             tensor = self._encode(tensor, apply_scaling)
@@ -4393,6 +4393,23 @@ def _im2col_private(
                 z[i][1] = xs[i][1].im2col(h_filter, w_filter, stride, padding)
 
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+
+
+def _conv2d_public_private(prot, x, w, strides, padding):
+
+    xs = x.unwrapped
+    ws = w.unwrapped
+
+    with tf.name_scope("conv2d"):
+        z = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = xs[i].conv2d(ws[i][0], strides, padding)
+                z[i][1] = xs[i].conv2d(ws[i][1], strides, padding)
+
+        z = ABY3PrivateTensor(prot, z, x.is_scaled or w.is_scaled, w.share_type)
+        z = prot.truncate(z) if x.is_scaled and w.is_scaled else z
+        return z
 
 
 def _conv2d_private_public(prot, x, w, strides, padding):

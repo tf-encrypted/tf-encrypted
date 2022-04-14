@@ -112,7 +112,7 @@ def patches2im(patches, patch_size, stride=1, padding='SAME', img_size=None, con
         stratified_img_count = tf.scatter_nd(idx, tf.ones_like(patches), (bs, hout, wout, col_ch, np))
         stratified_img_count = tf.transpose(stratified_img_count, (0, 4, 1, 2, 3))
 
-        with tf.variable_scope("consolidate"):
+        with tf.name_scope("consolidate"):
             sum_stratified_img = tf.reduce_sum(stratified_img, axis=1)
             if consolidation == "SUM":
                 reconstructed_img = sum_stratified_img

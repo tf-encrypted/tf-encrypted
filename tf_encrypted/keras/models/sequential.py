@@ -130,8 +130,9 @@ class Sequential(Layer):
     def backward(self, d_y):
         update_ops = []
         for layer in reversed(self.layers):
-            grad_weights, d_y = layer.backward(d_y)
-            update_ops.append(self._optimizer.apply_gradients(layer.weights, grad_weights))
+            with tf.name_scope(layer.name + '/backward'):
+                grad_weights, d_y = layer.backward(d_y)
+                update_ops.append(self._optimizer.apply_gradients(layer.weights, grad_weights))
         return tf.group(*update_ops)
 
     def compile(self, optimizer, loss):
@@ -159,7 +160,7 @@ class Sequential(Layer):
         loss = self._loss(y, y_pred)
 
         sess = KE.get_session()
-        _, self._current_loss = sess.run([back_prop, loss.reveal()])
+        _, self._current_loss = sess.run([back_prop, loss.reveal()], tag="fit-batch")
 
 
     def fit(self, x, y, epochs=1, steps_per_epoch=1):
@@ -176,7 +177,7 @@ class Sequential(Layer):
 
         # Initialize variables before starting to train
         sess = KE.get_session()
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.global_variables_initializer(), tag="global-init")
 
         for e in range(epochs):
             print("Epoch {}/{}".format(e + 1, epochs))
