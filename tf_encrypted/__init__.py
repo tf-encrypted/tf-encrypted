@@ -23,6 +23,7 @@ from .config import RemoteConfig
 from .config import get_config
 from .player import player
 from .protocol import Pond
+from .protocol import ABY3
 from .session import Session
 from .session import set_log_directory
 from .session import set_tfe_events_flag
@@ -101,8 +102,23 @@ def set_config(config: Config) -> None:
 def global_variables_initializer() -> tf.Operation:
     return tf.global_variables_initializer()
 
+def reset_default_graph():
+    globals()['tf_reset_default_graph']()
+    # Reset the protocol to clear any previously created nodes in the old graph
+    get_protocol().reset()
 
-set_protocol(Pond())
+def hook_tf():
+    """
+    Hook functions in TF. This is currently only a partial hook.
+    TODO(Zico): Extend to a full hook?
+    """
+    globals()["tf_reset_default_graph"] = tf.reset_default_graph
+    tf.reset_default_graph = reset_default_graph
+
+
+# set_protocol(Pond())
+set_protocol(ABY3())
+hook_tf()
 
 __all__ = [
     "LocalConfig",
