@@ -138,5 +138,5 @@ def random_uniform(
     return secure_random_module.secure_random_uniform(shape, minval, maxval, name=name,)
 
 
-def secure_seed():
-    return secure_random_module.secure_seed()
+def secure_seed(name=None):
+    return secure_random_module.secure_seed(name=name)
