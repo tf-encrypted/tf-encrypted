@@ -1,5 +1,5 @@
 """Activation Layer implementation."""
-from tf_encrypted.keras.activations import relu
+from tf_encrypted.keras.activations import relu, relu_deriv
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
 
@@ -35,7 +35,16 @@ class ReLU(Layer):
         self.built = True
 
     def call(self, inputs):
-        return relu(inputs)
+        y = relu(inputs)
+
+        self._layer_output = y
+        return y
+
+    def backward(self, d_y):
+        y = self._layer_output
+        d_x = relu_deriv(y, d_y)
+
+        return [], d_x
 
     def compute_output_shape(self, input_shape):
         return input_shape
