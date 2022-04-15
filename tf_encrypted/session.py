@@ -153,6 +153,7 @@ def set_tfe_trace_flag(trace: bool = False) -> None:
   set_tfe_trace_flag(trace)
 
   Set flag to enable or disable tracing in TF Encrypted.
+  The output can be loaded and viewed in chrome browser with URL `chrome://tracing`.
 
   :param bool trace: Enable or disable tracing, disabled by default.
   """
