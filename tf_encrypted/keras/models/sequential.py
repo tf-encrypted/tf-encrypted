@@ -8,6 +8,7 @@ from tf_encrypted.keras import optimizers
 from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import Input
 from tf_encrypted.keras.engine.input_layer import InputLayer
+from tf_encrypted.protocol import memoize
 import numpy as np
 
 
@@ -147,6 +148,7 @@ class Sequential(Layer):
         assert self._optimizer is not None, "An optimizer must be specified."
         assert self._loss is not None, "A loss must be specified."
 
+    @memoize
     def fit_batch(self, x, y):
         """Trains the model on a single batch.
 
@@ -159,8 +161,9 @@ class Sequential(Layer):
         back_prop = self.backward(dy)
         loss = self._loss(y, y_pred)
 
-        sess = KE.get_session()
-        _, self._current_loss = sess.run([back_prop, loss.reveal()], tag="fit-batch")
+        # sess = KE.get_session()
+        # _, self._current_loss = sess.run([back_prop, loss.reveal()], tag="fit-batch")
+        return back_prop, loss
 
 
     def fit(self, x, y, epochs=1, steps_per_epoch=1):
@@ -179,13 +182,15 @@ class Sequential(Layer):
         sess = KE.get_session()
         sess.run(tf.global_variables_initializer(), tag="global-init")
 
+        fit_batch_op, loss = self.fit_batch(x, y)
+
         for e in range(epochs):
             print("Epoch {}/{}".format(e + 1, epochs))
             batch_size = x.shape.as_list()[0]
             progbar = utils.Progbar(batch_size * steps_per_epoch)
             for _ in range(steps_per_epoch):
-                self.fit_batch(x, y)
-                progbar.add(batch_size, values=[("loss", self._current_loss)])
+                _, current_loss = sess.run([fit_batch_op, loss.reveal()], tag='fit-batch')
+                progbar.add(batch_size, values=[("loss", current_loss)])
 
     # def predict(self, x, steps=None, reveal=False):
         # if isinstance(x, np.ndarray):
