@@ -10,6 +10,7 @@ from tf_encrypted.keras.engine.input_layer import Input
 from tf_encrypted.keras.engine.input_layer import InputLayer
 from tf_encrypted.protocol import memoize
 import numpy as np
+import time
 
 
 class Sequential(Layer):
@@ -189,8 +190,10 @@ class Sequential(Layer):
             batch_size = x.shape.as_list()[0]
             progbar = utils.Progbar(batch_size * steps_per_epoch)
             for _ in range(steps_per_epoch):
+                start = time.time()
                 _, current_loss = sess.run([fit_batch_op, loss.reveal()], tag='fit-batch')
-                progbar.add(batch_size, values=[("loss", current_loss)])
+                end = time.time()
+                progbar.add(batch_size, values=[("loss", current_loss), ("time", end-start)])
 
     # def predict(self, x, steps=None, reveal=False):
         # if isinstance(x, np.ndarray):
