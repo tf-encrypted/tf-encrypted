@@ -1665,6 +1665,10 @@ class ABY3(Protocol):
         return self.dispatch("bit_gather", x, start, stride)
 
     @memoize
+    def bit_split_and_gather(self, x, stride):
+        return self.dispatch("bit_split_and_gather", x, stride)
+
+    @memoize
     def cast(self, x, factory):
         return self.dispatch("cast", x, factory)
 
@@ -1935,6 +1939,35 @@ def _bit_gather_public(prot, x, start, stride):
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
                 z[i] = x_[i].bit_gather(start, stride)
+
+        z = ABY3PublicTensor(prot, z, x.is_scaled)
+    return z
+
+
+def _bit_split_and_gather_private(prot, x, stride):
+    assert x.share_type == ShareType.BOOLEAN
+
+    shares = x.unwrapped
+
+    z = [[None, None], [None, None], [None, None]]
+    with tf.name_scope("bit-split-gather"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = shares[i][0].bit_split_and_gather(stride)
+                z[i][1] = shares[i][1].bit_split_and_gather(stride)
+
+        z = ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+    return z
+
+
+def _bit_split_and_gather_public(prot, x, stride):
+    x_ = x.unwrapped
+
+    z = [None, None, None]
+    with tf.name_scope("bit-split-gather"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i] = x_[i].bit_split_and_gather(stride)
 
         z = ABY3PublicTensor(prot, z, x.is_scaled)
     return z
@@ -3227,13 +3260,10 @@ def _carry_computation(prot, x, y):
         P = x ^ y
         k = x.backing_dtype.nbits
         while k > 1:
-            G1 = prot.bit_gather(G, 1, 2).cast(prot.factories[k // 2])
-            G2 = prot.bit_gather(G, 0, 2).cast(prot.factories[k // 2])
-            P1 = prot.bit_gather(P, 1, 2).cast(prot.factories[k // 2])
-            P2 = prot.bit_gather(P, 0, 2).cast(prot.factories[k // 2])
-
-            G = G1 ^ (G2 & P1)
-            P = P1 & P2
+            Gs = prot.bit_split_and_gather(G, 2).cast(prot.factories[k // 2])
+            Ps = prot.bit_split_and_gather(P, 2).cast(prot.factories[k // 2])
+            G = Gs[1] ^ (Gs[0] & Ps[1])
+            P = Ps[0] & Ps[1]
             k = k // 2
 
         # G stores the carry-in to the next position

@@ -44,6 +44,15 @@ class TestAux(unittest.TestCase):
             np.testing.assert_array_equal(z, np.array([0x135f9]))
 
 
+    def test_bit_split_and_gather(self):
+        x = tf.constant([0xaaaa, 0x425f32ea92, 0x2], dtype=tf.int64)
+        y = aux.bit_split_and_gather(x, 2)
+        assert list(y.shape) == [2, 3]
+
+        with tf.Session():
+            y = y.eval()
+            np.testing.assert_array_equal(y, np.array([[0, 0x8f484, 0], [0xff, 0x135f9, 0x1]]))
+
 
 if __name__ == "__main__":
     unittest.main()

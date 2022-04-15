@@ -548,6 +548,25 @@ class TestABY3(unittest.TestCase):
             np.testing.assert_array_equal(result, np.array([0xff, 0x135f9]))
 
 
+    def test_bit_split_and_gather(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        # define inputs
+        x = tfe.define_private_variable(np.array([0xaaaa, 0x425f32ea92, 0x2]), apply_scaling=False, share_type=ShareType.BOOLEAN)
+
+        # define computation
+        z1 = tfe.bit_split_and_gather(x, 2)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(z1.reveal())
+            np.testing.assert_array_equal(result, np.array([[0, 0x8f484, 0], [0xff, 0x135f9, 0x1]]))
+
     def test_carry(self):
         tf.reset_default_graph()
 
