@@ -525,6 +525,32 @@ class TestABY3(unittest.TestCase):
 
             assert z == truth
 
+    def test_error(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        a = tf.random_uniform([1], -2**44, 2**44) # Plus the 18-bit fractional scale, this will be encoded to 62-bit numbers
+        x = tfe.define_private_input("server0", lambda: a)
+
+        amount = prot.fixedpoint_config.precision_fractional
+        y1 = tfe.truncate(x)
+        z = a / (2**amount)
+
+        with tfe.Session() as sess:
+            sess.run(tfe.global_variables_initializer())
+            error1 = 0
+            n = 100000
+            for i in range(n):
+                result1, truth = sess.run(
+                    [y1.reveal(),  z])
+                try:
+                    np.testing.assert_allclose(result1, truth, rtol=0.0, atol=0.1)
+                except:
+                    error1 += 1
+            print("Heuristic truncate error rate: ", error1 / n * 100, "%")
+
     def test_bit_gather(self):
         tf.reset_default_graph()
 
@@ -1971,6 +1997,24 @@ class TestABY3(unittest.TestCase):
             y, z = sess.run([y.reveal(), z])
             np.testing.assert_array_equal(y, z)
 
+    def test_exp2_pade(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        data = np.random.rand(3, 4)
+
+        x = tfe.define_private_variable(data)
+        y = tfe.exp2_pade(x)
+
+        y_expected = np.power(np.ones(data.shape) * 2, data)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            y = sess.run(y.reveal())
+            np.testing.assert_allclose(y, y_expected, rtol=0.0, atol=0.01)
 
 
 def print_banner(title):

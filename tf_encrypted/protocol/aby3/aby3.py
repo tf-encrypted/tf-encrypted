@@ -1364,6 +1364,17 @@ class ABY3(Protocol):
         return self.dispatch("pow", x, p)
 
     @memoize
+    def exp2_pade(self, x):
+        """
+        Compute exp(2, x).
+
+        Reference: https://eprint.iacr.org/2019/354.pdf
+
+        @param x: Assumed to be on the interval [0, 1] for a good approximation
+        """
+        return self.dispatch("exp2_pade", x)
+
+    @memoize
     def matmul(self, x, y):
         x, y = self.lift(x, y)
         return self.dispatch("matmul", x, y)
@@ -1564,8 +1575,7 @@ class ABY3(Protocol):
 
     @memoize
     def softmax(self, x):
-        ex = self.exp(x)
-        return ex * self.reciprocal(self.reduce_sum(ex, axis=-1, keepdims=True))
+        return self.dispatch("softmax", x)
 
     @memoize
     def reciprocal(self, x, approx_type="10_piecewise_linear_positive"):
@@ -4854,3 +4864,36 @@ def _patches2im_private(prot, x, patch_size, stride=1, padding="SAME", img_size=
                 z[i][1] = xs[i][1].patches2im(patch_size, stride=stride, padding=padding, img_size=img_size, consolidation=consolidation, data_format=data_format)
 
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+
+
+def _softmax_private(prot, x):
+    logits_max = prot.reduce_max(x, axis=-1, keepdims=True)
+    adjusted_x = x - logits_max
+    ex = prot.exp(adjusted_x)
+    return ex * prot.reciprocal(prot.reduce_sum(ex, axis=-1, keepdims=True))
+
+
+def _exp2_pade_private(prot, x):
+    c = np.array([
+        1.0000e+00, 6.9314e-01, 2.4022e-01, 5.5504e-02, 9.6183e-03,
+        1.3327e-03, 1.5510e-04, 1.4197e-05, 1.8633e-06])
+
+    with tf.name_scope("exp2-pade"):
+        x0 = 1
+        x1 = x
+        x2 = x.square()
+        x3 = x2 * x
+        x4 = x2 * x2
+        x5 = x2 * x3 # better than x4 * x1 with lower depth
+        x6 = x2 * x4
+        x7 = x3 * x4
+        x8 = x4 * x4
+        x_pows = [x0, x1, x2, x3, x4, x5, x6, x7, x8]
+
+        y = [x_pows[i] * c[i] for i in range(len(c))]
+
+        z = y[0]
+        for i in range(1, len(y)):
+            z = z + y[i]
+
+    return z
