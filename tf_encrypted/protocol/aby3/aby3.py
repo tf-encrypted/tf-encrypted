@@ -4932,8 +4932,10 @@ def _exp2_private(prot, x):
 
         # Only consider at most 6 bits on the exponent, we cannot represent any bigger number anyway.
         bits = prot.bits(i_x, bitsize=6)
-        t = prot.define_constant(np.array([2-1, 2**2-1, 2**4-1, 2**8-1, 2**16-1, 2**32-1]), apply_scaling=False)
-        t = prot.tile(t, i_x.shape[:-1] + [1])
+        t = prot.define_constant(
+            np.reshape(np.array([2-1, 2**2-1, 2**4-1, 2**8-1, 2**16-1, 2**32-1]), [1]*len(i_x.shape) + [6]),
+            apply_scaling=False)
+        t = prot.tile(t, bits.shape[:-1] + [1])
 
         # first term
         d = prot.mul_ab(t, bits) + 1
