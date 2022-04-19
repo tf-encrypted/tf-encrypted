@@ -31,7 +31,7 @@ session_target = sys.argv[2] if len(sys.argv) > 2 else None
 class PrivateModel:
     BATCH_SIZE = 128
     NUM_CLASSES = 10
-    EPOCHS = 1
+    EPOCHS = 5
 
     ITERATIONS = 60000 // BATCH_SIZE
 
@@ -150,7 +150,7 @@ class TrainingClient(PrivateModel):
         with tf.name_scope("loading-data"):
             x, y = self._build_data_pipeline()
 
-        model.fit(x, y, epochs=self.EPOCHS, steps_per_epoch=20)
+        model.fit(x, y, epochs=self.EPOCHS, steps_per_epoch=self.ITERATIONS)
 
 
 class PredictionClient(PrivateModel):
@@ -164,7 +164,7 @@ class PredictionClient(PrivateModel):
                        a local federated learning update.
   """
 
-    BATCH_SIZE = 20
+    BATCH_SIZE = 128
 
     def __init__(self, player_name, local_data_file):
         super().__init__()
