@@ -162,8 +162,6 @@ class Sequential(Layer):
         back_prop = self.backward(dy)
         loss = self._loss(y, y_pred)
 
-        # sess = KE.get_session()
-        # _, self._current_loss = sess.run([back_prop, loss.reveal()], tag="fit-batch")
         return back_prop, loss
 
 
@@ -194,26 +192,6 @@ class Sequential(Layer):
                 _, current_loss = sess.run([fit_batch_op, loss.reveal()], tag='fit-batch')
                 end = time.time()
                 progbar.add(batch_size, values=[("loss", current_loss), ("time", end-start)])
-
-    # def predict(self, x, steps=None, reveal=False):
-        # if isinstance(x, np.ndarray):
-            # return self.predict_on_batch(x, reveal)
-
-        # y_batches = []
-        # if steps is not None:
-            # for i in range(steps):
-                # y_batches.append(self.predict_on_batch(x, reveal))
-        # else:
-            # # Assuming `x` comes from a tf.Dataset iterator
-            # while True:
-                # try:
-                    # y_batches.append(self.predict_on_batch(x, reveal))
-                # except tf.errors.OutOfRangeError:
-                    # break
-        # if reveal:
-            # return np.concatenate(y_batches)
-        # else:
-            # return tfe.concat(y_batches, axis=0)
 
     def predict(self, x, reveal=False):
         y_pred = self.call(x)

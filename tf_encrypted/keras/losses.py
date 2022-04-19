@@ -110,11 +110,11 @@ class CategoricalCrossentropy(Loss):
         batch_size = y_true.shape.as_list()[0]
         batch_size_inv = 1 / batch_size
         if self.from_logits:
-            grad = tfe.keras.activations.softmax(y_pred) - y_true
-        else:
-            raise NotImplementedError("CategoricalCrossentropy should be always used with `from_logits=True` "
-                    "in a backward propagation, otherwise it requires a private division.")
-            # grad = (y_pred - y_true) / (y_pred * (1 - y_pred))
+            y_pred = tfe.keras.activations.softmax(y_pred)
+        # else:
+            # raise NotImplementedError("CategoricalCrossentropy should be always used with `from_logits=True` "
+                    # "in a backward propagation, otherwise it requires a private division.")
+        grad = y_pred - y_true
         grad = grad * batch_size_inv
         return grad
 
