@@ -251,11 +251,12 @@ def native_factory(
         def to_native(self) -> tf.Tensor:
             return self.value
 
-        def bits(self, factory=None) -> AbstractTensor:
+        def bits(self, factory=None, bitsize=None) -> AbstractTensor:
             factory = factory or FACTORY
             if EXPLICIT_MODULUS is None:
-                return factory.tensor(binarize(self.value))
-            bitsize = bitsize = math.ceil(math.log2(EXPLICIT_MODULUS))
+                return factory.tensor(binarize(self.value, bitsize))
+            if bitsize is None:
+                bitsize = math.ceil(math.log2(EXPLICIT_MODULUS))
             return factory.tensor(binarize(self.value % EXPLICIT_MODULUS, bitsize))
 
         def __repr__(self) -> str:
@@ -513,6 +514,10 @@ def native_factory(
             x = tf.bitwise.right_shift(self.value, bitlength)
             x = tf.bitwise.bitwise_and(x, mask)
             return DenseTensor(x)
+
+        def bit_reverse(self):
+            value = aux.bit_reverse(self.value)
+            return DenseTensor(value)
 
     class DenseTensor(Tensor):
         """Public native Tensor class."""

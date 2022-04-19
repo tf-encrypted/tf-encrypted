@@ -341,6 +341,9 @@ class ABY3Tensor(TFETensor):
     def cast(self, factory):
         return self.prot.cast(self, factory)
 
+    def reciprocal(self):
+        return self.prot.reciprocal(self)
+
 
 class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
     """

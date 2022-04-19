@@ -17,6 +17,10 @@ using tf::TensorShape;
 using tf::DEVICE_CPU;
 using tf::Status;
 
+using u32 = tensorflow::uint32;
+using u64 = tensorflow::uint64;
+using i64 = tensorflow::int64;
+
 template <typename T>
 class BitGatherOp : public OpKernel {
     int start_;
@@ -98,6 +102,40 @@ public:
     }
 };
 
+class BitReverseOp : public OpKernel {
+public:
+    explicit BitReverseOp(OpKernelConstruction *context) : OpKernel(context) {}
+    void Compute(OpKernelContext *ctx) override {
+        const Tensor &op0 = ctx->input(0);
+        Tensor *output;
+        TensorShape out_shape {op0.shape()};
+        OP_REQUIRES_OK(ctx, ctx->allocate_output(0, out_shape, &output));
+
+        auto u32_reverse = [](u32 v) -> u32 {
+            v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);
+            // swap consecutive pairs
+            v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) << 2);
+            // swap nibbles ...
+            v = ((v >> 4) & 0x0F0F0F0F) | ((v & 0x0F0F0F0F) << 4);
+            // swap bytes
+            v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) << 8);
+            // swap 2-byte long pairs
+            v = (v >> 16) | (v << 16);
+            return v;
+        };
+
+        const u64 *src = (const u64 *)op0.flat<i64>().data();
+        const u64 *end = src + op0.NumElements();
+        i64 *dst       = output->flat<i64>().data();
+        std::transform(src, end, dst, [u32_reverse](u64 v) -> i64 {
+            u32 *raw = (u32 *)&v;
+            raw[0]   = u32_reverse(raw[0]);
+            raw[1]   = u32_reverse(raw[1]);
+            std::swap(raw[0], raw[1]);
+            return (i64)v;
+        });
+    }
+};
 
 REGISTER_OP("BitGather")
     .Input("op: dtype")
@@ -123,6 +161,8 @@ REGISTER_OP("BitSplitAndGather")
         c->set_output(0, c->MakeShape(dims));
         return Status::OK();
     });
+
+REGISTER_OP("BitReverse").Input("op0: int64").Output("output: int64").SetShapeFn(UnchangedShape);
 
 
 REGISTER_KERNEL_BUILDER(
@@ -150,4 +190,6 @@ REGISTER_KERNEL_BUILDER(
 REGISTER_KERNEL_BUILDER(
         Name("BitSplitAndGather").Device(DEVICE_CPU).template TypeConstraint<tf::int64>("dtype"), 
         BitSplitAndGatherOp<tf::int64>);
+
+REGISTER_KERNEL_BUILDER(Name("BitReverse").Device(DEVICE_CPU), BitReverseOp);
 

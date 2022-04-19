@@ -1198,18 +1198,20 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_private_variable(tf.constant([0.001, 0.25, 1, 2, 5, 10, 20]))
+        _x = (np.random.rand(1) - 0.5) * 1000 # [-500, 500]
+        _y = (np.random.rand(1) - 0.5) * 1000 # [-500, 500]
 
-        z = tfe.reciprocal(x)
+        x = tfe.define_private_input("server0", lambda: tf.constant(_x))
+        y = tfe.reciprocal(x)
 
         with tfe.Session() as sess:
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             # reveal result
-            result = sess.run(z.reveal())
-            # np.testing.assert_allclose(
-                # result, np.array([1000, 4, 1, 0.5, 0.2, 0.1, 0.05]), rtol=0.0, atol=0.01
-            # )
+            result = sess.run(y.reveal())
+            np.testing.assert_allclose(
+                result, 1.0 / _x, rtol=0.0, atol=0.01
+            )
 
     def test_exp(self):
         tf.reset_default_graph()
@@ -2015,6 +2017,41 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             y = sess.run(y.reveal())
             np.testing.assert_allclose(y, y_expected, rtol=0.0, atol=0.01)
+
+    def test_exp2(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        data = np.array([-4, -0.5, 0, 1.3, 2, 5.63])
+        x = tfe.define_private_variable(data)
+
+        z = tfe.exp2(x)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(z.reveal())
+            np.testing.assert_allclose(
+                result, np.array([0.0625, 0.70710678, 1., 2.46228883, 4., 49.52207979]), rtol=0.0, atol=0.01
+            )
+
+    def test_bit_reverse(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        _x = np.random.randint(-(1<<20), 1<<20)
+        x = tfe.define_private_variable(tf.constant(_x), apply_scaling=False, share_type=ShareType.BOOLEAN)
+        y = prot.bit_reverse(prot.bit_reverse(x)).reveal()
+        with tfe.Session() as sess:
+            sess.run(tfe.global_variables_initializer())
+            y = sess.run(y)
+            np.testing.assert_allclose(y, _x, rtol=0.0, atol=0.01)
+
 
 
 def print_banner(title):

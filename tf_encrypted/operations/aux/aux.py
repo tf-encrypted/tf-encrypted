@@ -62,4 +62,5 @@ def bit_gather(x, start, stride):
 def bit_split_and_gather(x, stride):
     return aux_module.bit_split_and_gather(x, stride=stride)
 
-
+def bit_reverse(x: tf.Tensor):
+    return aux_module.bit_reverse(x)

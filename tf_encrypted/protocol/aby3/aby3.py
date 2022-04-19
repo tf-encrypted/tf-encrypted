@@ -34,6 +34,7 @@ from ...tensor.fixed import _validate_fixedpoint_config
 from ...tensor.helpers import inverse
 from ...tensor.native import native_factory
 from ...tensor.shared import out_size
+from . import fp
 from ..protocol import Protocol
 from ..protocol import memoize
 
@@ -1375,6 +1376,17 @@ class ABY3(Protocol):
         return self.dispatch("exp2_pade", x)
 
     @memoize
+    def exp2(self, x):
+        """
+        Compute exp(2, x).
+
+        Reference: https://eprint.iacr.org/2019/354.pdf
+
+        @param x:
+        """
+        return self.dispatch("exp2", x)
+
+    @memoize
     def matmul(self, x, y):
         x, y = self.lift(x, y)
         return self.dispatch("matmul", x, y)
@@ -1448,6 +1460,11 @@ class ABY3(Protocol):
     def reduce_sum(self, x, axis=None, keepdims=False):
         x = self.lift(x)
         return self.dispatch("reduce_sum", x, axis=axis, keepdims=keepdims)
+
+    @memoize
+    def prod(self, x, axis=None, keepdims=False):
+        x = self.lift(x)
+        return self.dispatch("prod", x, axis=axis, keepdims=keepdims)
 
     @memoize
     def truncate(self, x: "ABY3Tensor", method="heuristic"):
@@ -1577,9 +1594,12 @@ class ABY3(Protocol):
     def softmax(self, x):
         return self.dispatch("softmax", x)
 
+    # @memoize
+    # def reciprocal(self, x, approx_type="10_piecewise_linear_positive"):
+        # return self.dispatch("reciprocal", x, approx_type)
     @memoize
-    def reciprocal(self, x, approx_type="10_piecewise_linear_positive"):
-        return self.dispatch("reciprocal", x, approx_type)
+    def reciprocal(self, x, nonsigned=False):
+        return self.dispatch("fp_recip", x, nonsigned, container=fp)
 
     @memoize
     def sqrt(self, x, approx_type=""):
@@ -1879,6 +1899,15 @@ class ABY3(Protocol):
     @memoize
     def reverse(self, x, axis):
         return self.dispatch("reverse", x, axis)
+
+    @memoize
+    def bits(self, x, bitsize=None):
+        return self.dispatch("bits", x, bitsize)
+
+    @memoize
+    def bit_reverse(self, x):
+        return self.dispatch("bit_reverse", x)
+
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
         """
@@ -4897,3 +4926,90 @@ def _exp2_pade_private(prot, x):
             z = z + y[i]
 
     return z
+
+
+def _exp2_private(prot, x):
+    nbits = x.backing_dtype.nbits
+    bfactory = prot.factories[tf.bool]
+    scale = prot.fixedpoint_config.precision_fractional
+    fractional_mask = prot.define_constant((1 << scale) - 1, apply_scaling=False, factory=x.backing_dtype)
+    lsb_mask = prot.define_constant(1, apply_scaling=False, factory=x.backing_dtype)
+
+    # sign of x
+    s =  x < 0
+    # convert x to positive number
+    pos_x = prot.select(s, x, -x)
+
+    b_pos_x = prot.a2b(pos_x)
+    # Integer part of x
+    i_x = prot.logical_rshift(b_pos_x, scale)
+    i_x.is_scaled = False
+    # fractional part of x
+    f_x = b_pos_x & fractional_mask
+    f_x.is_scaled = True
+
+    # Only consider at most 6 bits on the exponent, we cannot represent any bigger number anyway.
+    bits = prot.bits(i_x, bitsize=6)
+    t = prot.define_constant(np.array([2-1, 2**2-1, 2**4-1, 2**8-1, 2**16-1, 2**32-1]), apply_scaling=False)
+    t = prot.tile(t, i_x.shape[:-1] + [1])
+
+    # first term
+    d = prot.mul_ab(t, bits) + 1
+    d = prot.prod(d, axis=-1, keepdims=False)
+
+    # second term
+    f_x = prot.b2a(f_x, nbits=scale)
+    u = prot.exp2_pade(f_x)
+
+    g = u * d
+    z = prot.select(s, g, g.reciprocal())
+
+    return z
+
+
+def _bits_private(prot, x, bitsize=None):
+    assert x.share_type == ShareType.BOOLEAN, x.share_type
+    bfactory = prot.factories[tf.bool]
+
+    x_shares = x.unwrapped
+    y = [[None, None], [None, None], [None, None]]
+    with tf.name_scope("bits"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                y[i][0] = x_shares[i][0].bits(bfactory, bitsize)
+                y[i][1] = x_shares[i][1].bits(bfactory, bitsize)
+    return ABY3PrivateTensor(prot, y, False, ShareType.BOOLEAN)
+
+
+def _bit_reverse_private(prot: ABY3, x: ABY3PrivateTensor):
+    assert x.share_type == ShareType.BOOLEAN, x.share_type
+
+    shares = x.unwrapped
+    results = [[None] * 2 for _ in range(3)]
+    with tf.name_scope("bit_reverse"):
+        for idx in range(3):
+            with tf.device(prot.servers[idx].device_name):
+                results[idx][0] = shares[idx][0].bit_reverse()
+                results[idx][1] = shares[idx][1].bit_reverse()
+    return ABY3PrivateTensor(prot, results, x.is_scaled, x.share_type)
+
+
+def _prod_private(prot, x, axis, keepdims):
+    assert x.share_type == ShareType.ARITHMETIC, x.share_type
+
+    with tf.name_scope("prod"):
+
+        def build_prod_tree(ts):
+            if len(ts) == 1:
+                return ts[0]
+            halfway = len(ts) // 2
+            ts_left, ts_right = ts[:halfway], ts[halfway:]
+            prod_left = build_prod_tree(ts_left)
+            prod_right = build_prod_tree(ts_right)
+            return prod_left * prod_right
+
+        tensors = prot.split(x, int(x.shape[axis]), axis=axis)
+        result = build_prod_tree(tensors)
+        if not keepdims:
+            result = prot.squeeze(result, axis=(axis,))
+        return result
