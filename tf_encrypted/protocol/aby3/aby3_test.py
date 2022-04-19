@@ -1213,49 +1213,6 @@ class TestABY3(unittest.TestCase):
                 result, 1.0 / _x, rtol=0.0, atol=0.01
             )
 
-    def test_exp(self):
-        tf.reset_default_graph()
-
-        prot = ABY3()
-        tfe.set_protocol(prot)
-
-        x = tfe.define_private_variable(tf.constant([-4, -0.5, 0, 1, 2, 5]))
-
-        z = tfe.exp(x)
-
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            # np.testing.assert_allclose(
-                # result, np.array([1.83156389e-02, 6.06530660e-01, 1, 2.71828183e+00, 7.38905610e+00, 1.48413159e+02]), rtol=0.0, atol=0.01
-            # )
-
-    def test_softmax(self):
-        tf.reset_default_graph()
-
-        prot = ABY3()
-        tfe.set_protocol(prot)
-
-        a = [
-            10.9189482 ,  9.44967556,  8.807868  ,  8.20117855,  8.16848373,
-            7.9203186 ,  7.29018497,  7.00307369,  6.53640938,  6.42448902,
-            6.21095753,  6.16129017,  5.82647038,  5.74629307,  5.70382595,
-            5.55218601,  5.51741982,  5.46005726,  5.42303944,  5.36902714]
-        x = tfe.define_private_variable(tf.constant(a))
-
-        z = tfe.softmax(x)
-        tf_z = tf.nn.softmax(a)
-
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            # print(result)
-            # print(sess.run(tf_z))
-
 
     def test_transpose(self):
         tf.reset_default_graph()
@@ -2036,6 +1993,51 @@ class TestABY3(unittest.TestCase):
             result = sess.run(z.reveal())
             np.testing.assert_allclose(
                 result, np.array([0.0625, 0.70710678, 1., 2.46228883, 4., 49.52207979]), rtol=0.0, atol=0.01
+            )
+
+    def test_exp(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        data = np.array([-4, -0.5, 0, 1.3, 2, 5.63])
+        x = tfe.define_private_variable(data)
+
+        z = tfe.exp(x)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(z.reveal())
+            np.testing.assert_allclose(
+                result, np.array([1.83156389e-02, 6.06530660e-01, 1.0, 3.66929667, 7.38905610, 2.78662118e+02]), rtol=0.0, atol=0.01
+            )
+
+    def test_softmax(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        a = [
+            10.9189482 ,  9.44967556,  8.807868  ,  8.20117855,  8.16848373,
+            7.9203186 ,  7.29018497,  7.00307369,  6.53640938,  6.42448902,
+            6.21095753,  6.16129017,  5.82647038,  5.74629307,  5.70382595,
+            5.55218601,  5.51741982,  5.46005726,  5.42303944,  5.36902714]
+        x = tfe.define_private_variable(tf.constant(a))
+
+        z = tfe.softmax(x)
+        expected = tf.nn.softmax(a)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result, expected = sess.run([z.reveal(), expected])
+            np.testing.assert_allclose(
+                result, expected, rtol=0.0, atol=0.01
             )
 
     def test_bit_reverse(self):

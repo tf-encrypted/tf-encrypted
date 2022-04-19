@@ -1387,6 +1387,10 @@ class ABY3(Protocol):
         return self.dispatch("exp2", x)
 
     @memoize
+    def exp(self, x):
+        return self.dispatch("exp", x)
+
+    @memoize
     def matmul(self, x, y):
         x, y = self.lift(x, y)
         return self.dispatch("matmul", x, y)
@@ -1607,10 +1611,6 @@ class ABY3(Protocol):
         NOTE: only supports public now.
         """
         return self.dispatch("sqrt", x, approx_type)
-
-    @memoize
-    def exp(self, x, approx_type="7_piecewise_linear_positive"):
-        return self.dispatch("exp", x, approx_type)
 
     @memoize
     def gather(self, x, indices, axis=0):
@@ -3882,25 +3882,6 @@ def _reciprocal_private(prot, x, approx_type):
     return result
 
 
-def _exp_private(prot, x, approx_type):
-    assert isinstance(x, ABY3PrivateTensor), type(x)
-
-    with tf.name_scope("exp"):
-        if approx_type == "7_piecewise_linear_positive":
-            c = (-8, -5, -2, 0, 2, 5)
-            coeffs = ((3.35462628e-04, ), (0.01740875428439039, 0.002134161457060985), (0.22106684072829752, 0.04286577874584241),
-                    (1.0, 0.43233235838169365), (1.0, 3.194528049465325), (-86.62701257016666, 47.008034334548654),
-                    (-4572.494887462677, 944.1816093130506))
-            # The last piece is just the line intercepting the two points: (5, exp(5)) and (8, exp(8))
-        else:
-            raise NotImplementedError(
-                "Unsupported approximation type: {}.".format(approx_type)
-            )
-
-        result = prot.polynomial_piecewise(x, c, coeffs)
-    return result
-
-
 def _log_private(prot, x, approx_type):
     assert x.is_arithmetic(), \
             "Unexpected share type: x {}".format(x.share_type)
@@ -4929,42 +4910,51 @@ def _exp2_pade_private(prot, x):
 
 
 def _exp2_private(prot, x):
-    nbits = x.backing_dtype.nbits
-    bfactory = prot.factories[tf.bool]
-    scale = prot.fixedpoint_config.precision_fractional
-    fractional_mask = prot.define_constant((1 << scale) - 1, apply_scaling=False, factory=x.backing_dtype)
-    lsb_mask = prot.define_constant(1, apply_scaling=False, factory=x.backing_dtype)
+    with tf.name_scope("exp2"):
+        nbits = x.backing_dtype.nbits
+        bfactory = prot.factories[tf.bool]
+        scale = prot.fixedpoint_config.precision_fractional
+        fractional_mask = prot.define_constant((1 << scale) - 1, apply_scaling=False, factory=x.backing_dtype)
+        lsb_mask = prot.define_constant(1, apply_scaling=False, factory=x.backing_dtype)
 
-    # sign of x
-    s =  x < 0
-    # convert x to positive number
-    pos_x = prot.select(s, x, -x)
+        # sign of x
+        s =  x < 0
+        # convert x to positive number
+        pos_x = prot.select(s, x, -x)
 
-    b_pos_x = prot.a2b(pos_x)
-    # Integer part of x
-    i_x = prot.logical_rshift(b_pos_x, scale)
-    i_x.is_scaled = False
-    # fractional part of x
-    f_x = b_pos_x & fractional_mask
-    f_x.is_scaled = True
+        b_pos_x = prot.a2b(pos_x)
+        # Integer part of x
+        i_x = prot.logical_rshift(b_pos_x, scale)
+        i_x.is_scaled = False
+        # fractional part of x
+        f_x = b_pos_x & fractional_mask
+        f_x.is_scaled = True
 
-    # Only consider at most 6 bits on the exponent, we cannot represent any bigger number anyway.
-    bits = prot.bits(i_x, bitsize=6)
-    t = prot.define_constant(np.array([2-1, 2**2-1, 2**4-1, 2**8-1, 2**16-1, 2**32-1]), apply_scaling=False)
-    t = prot.tile(t, i_x.shape[:-1] + [1])
+        # Only consider at most 6 bits on the exponent, we cannot represent any bigger number anyway.
+        bits = prot.bits(i_x, bitsize=6)
+        t = prot.define_constant(np.array([2-1, 2**2-1, 2**4-1, 2**8-1, 2**16-1, 2**32-1]), apply_scaling=False)
+        t = prot.tile(t, i_x.shape[:-1] + [1])
 
-    # first term
-    d = prot.mul_ab(t, bits) + 1
-    d = prot.prod(d, axis=-1, keepdims=False)
+        # first term
+        d = prot.mul_ab(t, bits) + 1
+        d = prot.prod(d, axis=-1, keepdims=False)
 
-    # second term
-    f_x = prot.b2a(f_x, nbits=scale)
-    u = prot.exp2_pade(f_x)
+        # second term
+        f_x = prot.b2a(f_x, nbits=scale)
+        u = prot.exp2_pade(f_x)
 
-    g = u * d
-    z = prot.select(s, g, g.reciprocal())
+        g = u * d
+        z = prot.select(s, g, g.reciprocal())
 
-    return z
+        return z
+
+
+def _exp_private(prot, x):
+
+    with tf.name_scope("exp"):
+        log2_e = np.log2(np.e)
+        adjusted_x = x * log2_e
+        return prot.exp2(adjusted_x)
 
 
 def _bits_private(prot, x, bitsize=None):
@@ -5013,3 +5003,6 @@ def _prod_private(prot, x, axis, keepdims):
         if not keepdims:
             result = prot.squeeze(result, axis=(axis,))
         return result
+
+
+
