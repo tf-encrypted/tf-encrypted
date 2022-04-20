@@ -134,7 +134,9 @@ class Sequential(Layer):
         for layer in reversed(self.layers):
             with tf.name_scope(layer.name + '/backward'):
                 grad_weights, d_y = layer.backward(d_y)
-                update_ops.append(self._optimizer.apply_gradients(layer.weights, grad_weights))
+                # IMPORTANT: make sure d_y is computed before the weights are updated
+                with tf.control_dependencies([d_y]):
+                    update_ops.append(self._optimizer.apply_gradients(layer.weights, grad_weights))
         return tf.group(*update_ops)
 
     def compile(self, optimizer, loss):
