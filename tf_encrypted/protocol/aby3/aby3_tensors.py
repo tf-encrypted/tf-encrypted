@@ -85,6 +85,10 @@ class ABY3Tensor(TFETensor):
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
         pass
 
+    @abc.abstractmethod
+    def flatten_to_native(self) -> Tuple[tf.Tensor, ...]:
+        pass
+
     def add(self, other):
         """
         Add `other` to this ABY3Tensor.  This can be another tensor with the same
@@ -415,6 +419,9 @@ class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
         """
         return self.values
 
+    def flatten_to_native(self) -> Tuple[AbstractTensor, ...]:
+        return [v.value for v in self.values]
+
     def decode(self) -> Union[np.ndarray, tf.Tensor]:
         return self.prot._decode(self.values[0], self.is_scaled)  # pylint: disable=protected-access
 
@@ -492,6 +499,9 @@ class ABY3PrivateTensor(ABY3Tensor, TFEPrivateTensor):
     @property
     def unwrapped(self):
         return self.shares
+
+    def flatten_to_native(self):
+        return [ss.value for s in self.shares for ss in s]
 
     def reveal(self) -> ABY3PublicTensor:
         return self.prot.reveal(self)
