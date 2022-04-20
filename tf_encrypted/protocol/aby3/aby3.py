@@ -3049,6 +3049,23 @@ def _lshift_private(prot, x, steps):
     return z
 
 
+def _rshift_public(prot, x, steps):
+    """
+  Arithmetic right shift.
+  """
+    x_shares = x.unwrapped
+
+    z = [None, None, None]
+    with tf.name_scope("rshift"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i] = x_shares[i] >> steps
+
+        z = ABY3PublicTensor(prot, z, x.is_scaled)
+
+    return z
+
+
 def _rshift_private(prot, x, steps):
     """
   Arithmetic right shift.

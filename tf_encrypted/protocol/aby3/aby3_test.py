@@ -280,6 +280,33 @@ class TestABY3(unittest.TestCase):
                 result, np.array([[58, 64], [139, 154]]), rtol=0.0, atol=0.01
             )
 
+    def test_matmul_repeat(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        xs = [np.random.rand(128, 100) for i in range(10)]
+        ys = [np.random.rand(100, 10) for i in range(10)]
+        z = 0
+        for i in range(10):
+            z = z + np.matmul(xs[i], ys[i]) / 10
+
+        m_xs = [tfe.define_private_variable(xs[i]) for i in range(10)]
+        m_ys = [tfe.define_private_variable(ys[i]) for i in range(10)]
+        m_z = 0
+        for i in range(10):
+            m_z = m_z + tfe.matmul(m_xs[i], m_ys[i]) / 10
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(m_z.reveal())
+            np.testing.assert_allclose(
+                result, z, rtol=0.0, atol=0.01
+            )
+
     def test_3d_matmul_private(self):
         tf.reset_default_graph()
 
