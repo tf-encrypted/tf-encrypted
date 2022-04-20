@@ -1387,8 +1387,11 @@ class ABY3(Protocol):
         return self.dispatch("exp2", x)
 
     @memoize
-    def exp(self, x):
-        return self.dispatch("exp", x)
+    def exp(self, x, approx_type="infinity"):
+        """
+        @param approx_type: "infinity" (default) or "as2019"
+        """
+        return self.dispatch("exp", x, approx_type)
 
     @memoize
     def matmul(self, x, y):
@@ -4879,8 +4882,9 @@ def _patches2im_private(prot, x, patch_size, stride=1, padding="SAME", img_size=
 def _softmax_private(prot, x):
     logits_max = prot.reduce_max(x, axis=-1, keepdims=True)
     adjusted_x = x - logits_max
-    ex = prot.exp(adjusted_x)
-    return ex * prot.reciprocal(prot.reduce_sum(ex, axis=-1, keepdims=True))
+    ex = prot.exp(adjusted_x, approx_type="infinity")
+    norm = prot.reciprocal(prot.reduce_sum(ex, axis=-1, keepdims=True))
+    return ex * norm
 
 
 def _exp2_pade_private(prot, x):
@@ -4910,6 +4914,7 @@ def _exp2_pade_private(prot, x):
 
 
 def _exp2_private(prot, x):
+    # TODO: is x scaled or not?
     with tf.name_scope("exp2"):
         nbits = x.backing_dtype.nbits
         bfactory = prot.factories[tf.bool]
@@ -4951,12 +4956,20 @@ def _exp2_private(prot, x):
         return z
 
 
-def _exp_private(prot, x):
+def _exp_private(prot, x, approx_type="infinity"):
 
     with tf.name_scope("exp"):
-        log2_e = np.log2(np.e)
-        adjusted_x = x * log2_e
-        return prot.exp2(adjusted_x)
+        if approx_type == "infinity":
+            # exp(x) ~ (1 + x/2^5)^(2^5)
+            iters = 5
+            a = 1 + x / 2.**iters
+            for _ in range(iters):
+                a = a * a
+            return a
+        elif approx_type == "as2019":
+            log2_e = np.log2(np.e)
+            adjusted_x = x * log2_e
+            return prot.exp2(adjusted_x)
 
 
 def _bits_private(prot, x, bitsize=None):

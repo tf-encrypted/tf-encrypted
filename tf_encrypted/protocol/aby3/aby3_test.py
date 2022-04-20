@@ -1198,8 +1198,8 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        _x = (np.random.rand(1) - 0.5) * 1000 # [-500, 500]
-        _y = (np.random.rand(1) - 0.5) * 1000 # [-500, 500]
+        _x = (np.random.rand(1000) - 0.5) * 1000 # [-500, 500]
+        #_x = 1537 # Would not work larger than this number
 
         x = tfe.define_private_input("server0", lambda: tf.constant(_x))
         y = tfe.reciprocal(x)
@@ -1982,6 +1982,7 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         data = np.array([-4, -0.5, 0, 1.3, 2, 5.63])
+        # data = np.array([-11]) # Would not work for smaller than -11
         x = tfe.define_private_variable(data)
 
         z = tfe.exp2(x)
@@ -2001,18 +2002,25 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        data = np.array([-4, -0.5, 0, 1.3, 2, 5.63])
-        x = tfe.define_private_variable(data)
+        data1 = np.array([-7.49590683, -3.56, -4, -0.5, 0])
+        data2 = np.array([-3.56, -4, -0.5, 0, 1.3, 2, 5.63])
+        x1 = tfe.define_private_variable(data1)
+        x2 = tfe.define_private_variable(data2)
 
-        z = tfe.exp(x)
+        z1 = tfe.exp(x1, approx_type="infinity") # For negative x, using "infinity" approximation should be a good choice
+        z2 = tfe.exp(x2, approx_type="as2019")
 
         with tfe.Session() as sess:
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             # reveal result
-            result = sess.run(z.reveal())
+            result = sess.run(z1.reveal())
             np.testing.assert_allclose(
-                result, np.array([1.83156389e-02, 6.06530660e-01, 1.0, 3.66929667, 7.38905610, 2.78662118e+02]), rtol=0.0, atol=0.01
+                result, np.e ** data1, rtol=0.0, atol=0.01
+            )
+            result = sess.run(z2.reveal())
+            np.testing.assert_allclose(
+                result, np.e ** data2, rtol=0.0, atol=0.01
             )
 
     def test_softmax(self):
@@ -2026,18 +2034,28 @@ class TestABY3(unittest.TestCase):
             7.9203186 ,  7.29018497,  7.00307369,  6.53640938,  6.42448902,
             6.21095753,  6.16129017,  5.82647038,  5.74629307,  5.70382595,
             5.55218601,  5.51741982,  5.46005726,  5.42303944,  5.36902714]
+        b = [
+            -7.9189482 , -3.567180633544922,  -4.125492095947266,  -5.74629307,  -5.70382595,
+            -1.55218601,  -5.51741982,  -2.46005726,  -0.42303944,  -5.36902714, 0]
         x = tfe.define_private_variable(tf.constant(a))
+        y = tfe.define_private_variable(tf.constant(b))
 
-        z = tfe.softmax(x)
-        expected = tf.nn.softmax(a)
+        z1 = tfe.softmax(x)
+        z2 = tfe.softmax(y)
+        expected1 = tf.nn.softmax(a)
+        expected2 = tf.nn.softmax(b)
 
         with tfe.Session() as sess:
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             # reveal result
-            result, expected = sess.run([z.reveal(), expected])
+            result, expected1 = sess.run([z1.reveal(), expected1])
             np.testing.assert_allclose(
-                result, expected, rtol=0.0, atol=0.01
+                result, expected1, rtol=0.0, atol=0.03
+            )
+            result, expected2 = sess.run([z2.reveal(), expected2])
+            np.testing.assert_allclose(
+                result, expected2, rtol=0.0, atol=0.03
             )
 
     def test_bit_reverse(self):
