@@ -1594,8 +1594,8 @@ class ABY3(Protocol):
         return self.dispatch("sigmoid", x, approx_type)
 
     @memoize
-    def relu(self, x, approx_type="2_piecewise_linear"):
-        return self.dispatch("relu", x, approx_type)
+    def relu(self, x):
+        return self.dispatch("relu", x)
 
     @memoize
     def softmax(self, x):
@@ -3809,24 +3809,15 @@ def _sigmoid_private(prot, x, approx_type):
     return result
 
 
-def _relu_private(prot, x, approx_type):
+def _relu_private(prot, x):
     assert x.is_arithmetic(), \
             "Unexpected share type: x {}".format(x.share_type)
 
     with tf.name_scope("relu"):
-        if approx_type == "2_piecewise_linear":
-            result = prot.select(x > 0, 0, x)
-            # Use tuple because list is not hashable for the memoir cache key
-            # c = (0, )
-            # coeffs = ((0, ), (0, 1))
-            # result = prot.polynomial_piecewise(x, c, coeffs)
-        else:
-            raise NotImplementedError(
-                "Only support piecewise linear approximation of relu."
-            )
+        cmp = x > 0
+        result = prot.select(cmp, 0, x)
 
-    return result
-
+    return result, cmp
 
 
 def _sqrt_public(prot, x, approx_type):

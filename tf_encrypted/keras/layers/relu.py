@@ -1,4 +1,5 @@
 """Activation Layer implementation."""
+import tf_encrypted as tfe
 from tf_encrypted.keras.activations import relu, relu_deriv
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
@@ -38,11 +39,20 @@ class ReLU(Layer):
         y = relu(inputs)
 
         self._layer_output = y
-        return y
+        if isinstance(y, tuple):
+            return y[0]
+        else:
+            return y
 
     def backward(self, d_y):
         y = self._layer_output
-        d_x = relu_deriv(y, d_y)
+
+        if isinstance(y, tuple):
+            cmp = y[1]
+        else:
+            cmp = y > 0
+
+        d_x = tfe.select(cmp, 0, d_y)
 
         return [], d_x
 
