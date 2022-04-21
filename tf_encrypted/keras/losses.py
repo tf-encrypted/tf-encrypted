@@ -107,6 +107,9 @@ class CategoricalCrossentropy(Loss):
             super(CategoricalCrossentropy, self).__init__(categorical_crossentropy)
 
     def grad(self, y_true, y_pred):
+        """
+        Softmax grad reference: https://slowbreathing.github.io/articles/2019-05/softmax-and-cross-entropy
+        """
         batch_size = y_true.shape.as_list()[0]
         batch_size_inv = 1 / batch_size
         if self.from_logits:
