@@ -170,7 +170,7 @@ class PredictionClient(PrivateModel):
                        a local federated learning update.
   """
 
-    BATCH_SIZE = 128
+    BATCH_SIZE = 100
 
     def __init__(self, player_name, local_data_file):
         super().__init__()
@@ -193,7 +193,7 @@ class PredictionClient(PrivateModel):
         dataset = dataset.map(decode)
         dataset = dataset.map(normalize)
         dataset = dataset.map(shaping)
-        dataset = dataset.batch(self.BATCH_SIZE)
+        dataset = dataset.batch(self.BATCH_SIZE, drop_remainder=True) # drop remainder because we need to fix batch size in private model
 
         iterator = dataset.make_one_shot_iterator()
         x, y = iterator.get_next()
