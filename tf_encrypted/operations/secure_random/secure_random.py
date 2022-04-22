@@ -31,7 +31,9 @@ def _try_load_secure_random_module():
         return None
 
     try:
-        return tf.load_op_library(so_file)
+        module = tf.load_op_library(so_file)
+        logger.info("secure random module loaded: {}".format(module))
+        return module
 
     except NotFoundError as ex:
         logger.warning(
