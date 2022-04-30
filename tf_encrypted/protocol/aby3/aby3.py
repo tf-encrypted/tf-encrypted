@@ -1376,20 +1376,26 @@ class ABY3(Protocol):
         return self.dispatch("exp2_pade", x)
 
     @memoize
-    def exp2(self, x):
+    def exp2(self, x, approx_type="mp-spdz"):
         """
         Compute exp(2, x).
 
         Reference: https://eprint.iacr.org/2019/354.pdf
 
         @param x:
+        @param approx_type: "mp-spdz" or "as2019"
+            "mp-spdz" approximates very good in range [-32, +);
+            "as2019" approximates very good in range [-11, +);
         """
-        return self.dispatch("exp2", x)
+        return self.dispatch("exp2", x, approx_type)
 
     @memoize
     def exp(self, x, approx_type="infinity"):
         """
-        @param approx_type: "infinity" (default) or "as2019"
+        @param approx_type: "mp-spdz" (default) , "as2019", "infinity".
+            "mp-spdz" approximates very good in range [-32, +);
+            "as2019" approximates very good in range [-11, +);
+            "infinity" approximates not so good in range (-, +).
         """
         return self.dispatch("exp", x, approx_type)
 
@@ -1474,23 +1480,23 @@ class ABY3(Protocol):
         return self.dispatch("prod", x, axis=axis, keepdims=keepdims)
 
     @memoize
-    def truncate(self, x: "ABY3Tensor", method="heuristic"):
+    def truncate(self, x: "ABY3Tensor", method="heuristic", amount=None):
         """
         @param method: "local", or "heuristic". "local" truncation always has a small
             probability to fail with big error, while "heuristic" truncation relies on
             an assumption of the maximum plain value and will not fail if this assumption
             holds.
         """
-        return self.dispatch("truncate_" + method, x)
+        return self.dispatch("truncate_" + method, x, amount)
 
     @memoize
-    def truncate_msb0(self, x, method="secureq8"):
+    def truncate_msb0(self, x, method="secureq8", amount=None):
         """
         @param method: "cheetah" or "secureq8". "secureq8" is a little more efficient.
             "cheetah" is a 3pc truncation protocol inspired by the Cheetah paper.
             "secureq8" is a 3pc truncation protocol inspired by the SequceQ8 paper.
         """
-        return self.dispatch("truncate_msb0_" + method, x)
+        return self.dispatch("truncate_msb0_" + method, x, amount)
 
     @memoize
     def reveal(self, x):
@@ -1598,8 +1604,14 @@ class ABY3(Protocol):
         return self.dispatch("relu", x)
 
     @memoize
-    def softmax(self, x):
-        return self.dispatch("softmax", x)
+    def softmax(self, x, approx_type="mp-spdz"):
+        """
+        @param approx_type: "mp-spdz" (default), "as2019", or "infinity"
+            "mp-spdz" approximates very good in range [-32, +);
+            "as2019" approximates very good in range [-11, +);
+            "infinity" approximates not so good in range (-, +).
+        """
+        return self.dispatch("softmax", x, approx_type)
 
     # @memoize
     # def reciprocal(self, x, approx_type="10_piecewise_linear_positive"):
@@ -1910,6 +1922,10 @@ class ABY3(Protocol):
     @memoize
     def bit_reverse(self, x):
         return self.dispatch("bit_reverse", x)
+
+    @memoize
+    def pow2_from_bits(self, bits):
+        return self.dispatch("pow2_from_bits", bits)
 
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
@@ -2557,23 +2573,26 @@ def _matmul_private_private(prot, x, y):
         return z
 
 
-def _truncate_heuristic_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3PrivateTensor:
+def _truncate_heuristic_private(prot: ABY3, x: ABY3PrivateTensor, amount) -> ABY3PrivateTensor:
     with tf.name_scope("truncate-heuristic"):
         scale = prot.fixedpoint_config.precision_fractional
+        if amount is None:
+            amount = scale
 
         heuristic_bound_bits = x.backing_dtype.nbits - 2
         y = x + (1 << (heuristic_bound_bits - scale)) # Lifted to make msb 0
-        z = prot.truncate_msb0(y, "secureq8")
-        z = z - (1 << (heuristic_bound_bits - 2*scale)) # Reverse the effect of lifting
+        z = prot.truncate_msb0(y, method="secureq8", amount=amount)
+        z = z - (1 << (heuristic_bound_bits - (scale+amount))) # Reverse the effect of lifting
     return z
 
 
 def _truncate_local_private(
-    prot: ABY3, x: ABY3PrivateTensor,
+    prot: ABY3, x: ABY3PrivateTensor, amount
 ) -> ABY3PrivateTensor:
 
     base = prot.fixedpoint_config.scaling_base
-    amount = prot.fixedpoint_config.precision_fractional
+    if amount is None:
+        amount = prot.fixedpoint_config.precision_fractional
     shares = x.unwrapped
 
     y = [[None, None], [None, None], [None, None]]
@@ -2618,12 +2637,13 @@ def _truncate_local_private(
     return ABY3PrivateTensor(prot, y, x.is_scaled, x.share_type)
 
 
-def _truncate_msb0_cheetah_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3PrivateTensor:
+def _truncate_msb0_cheetah_private(prot: ABY3, x: ABY3PrivateTensor, amount) -> ABY3PrivateTensor:
     assert x.share_type == ShareType.ARITHMETIC, x.share_type
 
     bfactory = prot.factories[tf.bool]
 
-    amount = prot.fixedpoint_config.precision_fractional
+    if amount is None:
+        amount = prot.fixedpoint_config.precision_fractional
     shape = x.shape
     x_shares = x.unwrapped
     with tf.device(prot.servers[0].device_name):
@@ -2693,7 +2713,7 @@ def _truncate_msb0_cheetah_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3Priv
     return z
 
 
-def _truncate_msb0_secureq8_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3PrivateTensor:
+def _truncate_msb0_secureq8_private(prot: ABY3, x: ABY3PrivateTensor, amount) -> ABY3PrivateTensor:
 
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert x.share_type == ShareType.ARITHMETIC, x.share_type
@@ -2703,7 +2723,8 @@ def _truncate_msb0_secureq8_private(prot: ABY3, x: ABY3PrivateTensor) -> ABY3Pri
         ifactory = x.backing_dtype
         bfactory = prot.factories[tf.bool]
 
-        amount = prot.fixedpoint_config.precision_fractional
+        if amount is None:
+            amount = prot.fixedpoint_config.precision_fractional
         shape = x.shape
         x_shares = x.unwrapped
         msb_mask = 1 << (x.backing_dtype.nbits - 1)
@@ -4887,10 +4908,10 @@ def _patches2im_private(prot, x, patch_size, stride=1, padding="SAME", img_size=
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 
 
-def _softmax_private(prot, x):
+def _softmax_private(prot, x, approx_type="mp-spdz"):
     logits_max = prot.reduce_max(x, axis=-1, keepdims=True)
     adjusted_x = x - logits_max
-    ex = prot.exp(adjusted_x, approx_type="infinity")
+    ex = prot.exp(adjusted_x, approx_type=approx_type)
     norm = prot.reciprocal(prot.reduce_sum(ex, axis=-1, keepdims=True))
     return ex * norm
 
@@ -4921,45 +4942,85 @@ def _exp2_pade_private(prot, x):
     return z
 
 
-def _exp2_private(prot, x):
+def _pow2_from_bits_private(prot, bits):
+    nbits = bits.shape[-1]
+    twopow = [2**(2**i) for i in range(nbits)]
+    t = prot.define_constant(
+        np.reshape(np.array(twopow)-1, [1]*(len(bits.shape)-1) + [nbits]),
+        apply_scaling=False)
+    t = prot.tile(t, bits.shape[:-1] + [1])
+
+    d = prot.mul_ab(t, bits) + 1
+    d = prot.prod(d, axis=-1, keepdims=False)
+    assert d.is_scaled == False
+    return d
+
+
+def _exp2_private(prot, x, approx_type="mp-spdz"):
     # TODO: is x scaled or not?
+    nbits = x.backing_dtype.nbits
+    bfactory = prot.factories[tf.bool]
+    scale = prot.fixedpoint_config.precision_fractional
+    # Only consider at most 5 bits on the exponent, we cannot represent any bigger number anyway.
+    n_int_bits = 5
+    fractional_mask = prot.define_constant((1 << scale) - 1, apply_scaling=False, factory=x.backing_dtype)
+    int_mask = prot.define_constant((1 << n_int_bits) - 1, apply_scaling=False, factory=x.backing_dtype)
+    lsb_mask = prot.define_constant(1, apply_scaling=False, factory=x.backing_dtype)
     with tf.name_scope("exp2"):
-        nbits = x.backing_dtype.nbits
-        bfactory = prot.factories[tf.bool]
-        scale = prot.fixedpoint_config.precision_fractional
-        fractional_mask = prot.define_constant((1 << scale) - 1, apply_scaling=False, factory=x.backing_dtype)
-        lsb_mask = prot.define_constant(1, apply_scaling=False, factory=x.backing_dtype)
+        if approx_type == "as2019":
 
-        # sign of x
-        s =  x < 0
-        # convert x to positive number
-        pos_x = prot.select(s, x, -x)
+            # sign of x
+            s =  x < 0
+            # convert x to positive number
+            pos_x = prot.select(s, x, -x)
 
-        b_pos_x = prot.a2b(pos_x)
-        # Integer part of x
-        i_x = prot.logical_rshift(b_pos_x, scale)
-        i_x.is_scaled = False
-        # fractional part of x
-        f_x = b_pos_x & fractional_mask
-        f_x.is_scaled = True
+            b_pos_x = prot.a2b(pos_x)
+            # Integer part of x
+            i_x = prot.logical_rshift(b_pos_x, scale)
+            i_x.is_scaled = False
+            # fractional part of x
+            f_x = b_pos_x & fractional_mask
+            f_x.is_scaled = True
 
-        # Only consider at most 6 bits on the exponent, we cannot represent any bigger number anyway.
-        bits = prot.bits(i_x, bitsize=6)
-        t = prot.define_constant(
-            np.reshape(np.array([2-1, 2**2-1, 2**4-1, 2**8-1, 2**16-1, 2**32-1]), [1]*len(i_x.shape) + [6]),
-            apply_scaling=False)
-        t = prot.tile(t, bits.shape[:-1] + [1])
+            bits = prot.bits(i_x, bitsize=n_int_bits)
+            # twopow = [2**(2**i) for i in range(n_int_bits)]
+            # t = prot.define_constant(
+                # np.reshape(np.array(twopow)-1, [1]*len(i_x.shape) + [n_int_bits]),
+                # apply_scaling=False)
+            # t = prot.tile(t, bits.shape[:-1] + [1])
 
-        # first term
-        d = prot.mul_ab(t, bits) + 1
-        d = prot.prod(d, axis=-1, keepdims=False)
+            # # first term
+            # d = prot.mul_ab(t, bits) + 1
+            # d = prot.prod(d, axis=-1, keepdims=False)
+            d = prot.pow2_from_bits(bits)
 
-        # second term
-        f_x = prot.b2a(f_x, nbits=scale)
-        u = prot.exp2_pade(f_x)
+            # second term
+            f_x = prot.b2a(f_x, nbits=scale)
+            u = prot.exp2_pade(f_x)
 
-        g = u * d
-        z = prot.select(s, g, g.reciprocal())
+            g = u * d
+            z = prot.select(s, g, g.reciprocal())
+
+        elif approx_type == "mp-spdz":
+            bx = prot.a2b(x)
+            s = prot.logical_rshift(bx, nbits-1).cast(bfactory)
+            # Integer part of x
+            i_x = prot.logical_rshift(bx, scale) & int_mask
+            i_x.is_scaled = False
+            # fractional part of x
+            f_x = bx & fractional_mask
+            f_x.is_scaled = True
+
+            bits = prot.bits(i_x, bitsize=n_int_bits)
+            d = prot.pow2_from_bits(bits)
+
+            # second term
+            f_x = prot.b2a(f_x, nbits=scale)
+            u = prot.exp2_pade(f_x)
+
+            g = u * d
+            small_result = prot.truncate(g, method="heuristic", amount=2**n_int_bits)
+            z = prot.select(s, g, small_result)
 
         return z
 
@@ -4969,7 +5030,7 @@ def _exp_private(prot, x, approx_type="infinity"):
     with tf.name_scope("exp"):
         if approx_type == "infinity":
             # exp(x) ~ (1 + x/2^5)^(2^5)
-            iters = 5
+            iters = 7
             a = 1 + x / 2.**iters
             for _ in range(iters):
                 a = a * a
@@ -4977,7 +5038,12 @@ def _exp_private(prot, x, approx_type="infinity"):
         elif approx_type == "as2019":
             log2_e = np.log2(np.e)
             adjusted_x = x * log2_e
-            return prot.exp2(adjusted_x)
+            return prot.exp2(adjusted_x, approx_type="as2019")
+        elif approx_type == "mp-spdz":
+            log2_e = np.log2(np.e)
+            adjusted_x = x * log2_e
+            return prot.exp2(adjusted_x, approx_type="mp-spdz")
+
 
 
 def _bits_private(prot, x, bitsize=None):

@@ -828,9 +828,13 @@ class TestABY3(unittest.TestCase):
         scale = prot.fixedpoint_config.precision_fractional
         a = tf.random_uniform([1], 0, 2**20) # Plus the 20-bit fractional scale, this will be encoded to 40-bit numbers
         x = tfe.define_private_input("server0", lambda: a)
-        x = x << scale
 
-        y1 = tfe.truncate(x, method="heuristic")
+        x1 = x << scale
+        y1 = tfe.truncate(x1, method="heuristic")
+
+        amount = 20
+        x2 = x << amount
+        y2 = tfe.truncate(x2, method="heuristic", amount=amount)
 
         with tfe.Session() as sess:
             sess.run(tfe.global_variables_initializer())
@@ -839,6 +843,9 @@ class TestABY3(unittest.TestCase):
                 result1, truth = sess.run(
                     [y1.reveal(), a])
                 np.testing.assert_allclose(result1, truth, rtol=0.0, atol=0.1)
+                result2, truth = sess.run(
+                    [y2.reveal(), a])
+                np.testing.assert_allclose(result2, truth, rtol=0.0, atol=0.1)
 
 
     def test_truncate_msb0_cheetah(self):
@@ -2012,13 +2019,18 @@ class TestABY3(unittest.TestCase):
         # data = np.array([-11]) # Would not work for smaller than -11
         x = tfe.define_private_variable(data)
 
-        z = tfe.exp2(x)
+        z1 = tfe.exp2(x, approx_type="as2019")
+        z2 = tfe.exp2(x, approx_type="mp-spdz")
 
         with tfe.Session() as sess:
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             # reveal result
-            result = sess.run(z.reveal())
+            result = sess.run(z1.reveal())
+            np.testing.assert_allclose(
+                result, np.array([0.0625, 0.70710678, 1., 2.46228883, 4., 49.52207979]), rtol=0.0, atol=0.01
+            )
+            result = sess.run(z2.reveal())
             np.testing.assert_allclose(
                 result, np.array([0.0625, 0.70710678, 1., 2.46228883, 4., 49.52207979]), rtol=0.0, atol=0.01
             )
@@ -2031,11 +2043,14 @@ class TestABY3(unittest.TestCase):
 
         data1 = np.array([-7.49590683, -3.56, -4, -0.5, 0])
         data2 = np.array([-3.56, -4, -0.5, 0, 1.3, 2, 5.63])
+        data3 = np.array([-7.49590683, -3.56, -4, -0.5, 0])
         x1 = tfe.define_private_variable(data1)
         x2 = tfe.define_private_variable(data2)
+        x3 = tfe.define_private_variable(data3)
 
         z1 = tfe.exp(x1, approx_type="infinity") # For negative x, using "infinity" approximation should be a good choice
         z2 = tfe.exp(x2, approx_type="as2019")
+        z3 = tfe.exp(x3, approx_type="mp-spdz")
 
         with tfe.Session() as sess:
             # initialize variables
@@ -2048,6 +2063,10 @@ class TestABY3(unittest.TestCase):
             result = sess.run(z2.reveal())
             np.testing.assert_allclose(
                 result, np.e ** data2, rtol=0.0, atol=0.01
+            )
+            result = sess.run(z3.reveal())
+            np.testing.assert_allclose(
+                result, np.e ** data3, rtol=0.0, atol=0.01
             )
 
     def test_softmax(self):
@@ -2067,22 +2086,42 @@ class TestABY3(unittest.TestCase):
         x = tfe.define_private_variable(tf.constant(a))
         y = tfe.define_private_variable(tf.constant(b))
 
-        z1 = tfe.softmax(x)
-        z2 = tfe.softmax(y)
-        expected1 = tf.nn.softmax(a)
-        expected2 = tf.nn.softmax(b)
+        # z1_a = tfe.softmax(x, approx_type="as2019")
+        # z1_b = tfe.softmax(y, approx_type="as2019")
+        # z2_a = tfe.softmax(x, approx_type="mp-spdz")
+        # z2_b = tfe.softmax(y, approx_type="mp-spdz")
+        z3_a = tfe.softmax(x, approx_type="infinity")
+        z3_b = tfe.softmax(y, approx_type="infinity")
+        expected_a = tf.nn.softmax(a)
+        expected_b = tf.nn.softmax(b)
 
         with tfe.Session() as sess:
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             # reveal result
-            result, expected1 = sess.run([z1.reveal(), expected1])
+            # result, expected = sess.run([z1_a.reveal(), expected_a])
+            # np.testing.assert_allclose(
+                # result, expected, rtol=0.0, atol=0.01
+            # )
+            # result, expected = sess.run([z1_b.reveal(), expected_b])
+            # np.testing.assert_allclose(
+                # result, expected, rtol=0.0, atol=0.01
+            # )
+            # result, expected = sess.run([z2_a.reveal(), expected_a])
+            # np.testing.assert_allclose(
+                # result, expected, rtol=0.0, atol=0.01
+            # )
+            # result, expected = sess.run([z2_b.reveal(), expected_b])
+            # np.testing.assert_allclose(
+                # result, expected, rtol=0.0, atol=0.01
+            # )
+            result, expected = sess.run([z3_a.reveal(), expected_a])
             np.testing.assert_allclose(
-                result, expected1, rtol=0.0, atol=0.03
+                result, expected, rtol=0.0, atol=0.01
             )
-            result, expected2 = sess.run([z2.reveal(), expected2])
+            result, expected = sess.run([z3_b.reveal(), expected_b])
             np.testing.assert_allclose(
-                result, expected2, rtol=0.0, atol=0.03
+                result, expected, rtol=0.0, atol=0.0
             )
 
     def test_bit_reverse(self):
