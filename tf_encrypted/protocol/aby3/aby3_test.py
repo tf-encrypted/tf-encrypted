@@ -2090,10 +2090,10 @@ class TestABY3(unittest.TestCase):
         x = tfe.define_private_variable(tf.constant(a))
         y = tfe.define_private_variable(tf.constant(b))
 
-        # z1_a = tfe.softmax(x, approx_type="as2019")
-        # z1_b = tfe.softmax(y, approx_type="as2019")
-        # z2_a = tfe.softmax(x, approx_type="mp-spdz")
-        # z2_b = tfe.softmax(y, approx_type="mp-spdz")
+        z1_a = tfe.softmax(x, approx_type="as2019")
+        z1_b = tfe.softmax(y, approx_type="as2019")
+        z2_a = tfe.softmax(x, approx_type="mp-spdz")
+        z2_b = tfe.softmax(y, approx_type="mp-spdz")
         z3_a = tfe.softmax(x, approx_type="infinity")
         z3_b = tfe.softmax(y, approx_type="infinity")
         expected_a = tf.nn.softmax(a)
@@ -2103,29 +2103,29 @@ class TestABY3(unittest.TestCase):
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             # reveal result
-            # result, expected = sess.run([z1_a.reveal(), expected_a])
-            # np.testing.assert_allclose(
-                # result, expected, rtol=0.0, atol=0.01
-            # )
-            # result, expected = sess.run([z1_b.reveal(), expected_b])
-            # np.testing.assert_allclose(
-                # result, expected, rtol=0.0, atol=0.01
-            # )
-            # result, expected = sess.run([z2_a.reveal(), expected_a])
-            # np.testing.assert_allclose(
-                # result, expected, rtol=0.0, atol=0.01
-            # )
-            # result, expected = sess.run([z2_b.reveal(), expected_b])
-            # np.testing.assert_allclose(
-                # result, expected, rtol=0.0, atol=0.01
-            # )
+            result, expected = sess.run([z1_a.reveal(), expected_a])
+            np.testing.assert_allclose(
+                result, expected, rtol=0.0, atol=0.01
+            )
+            result, expected = sess.run([z1_b.reveal(), expected_b])
+            np.testing.assert_allclose(
+                result, expected, rtol=0.0, atol=0.01
+            )
+            result, expected = sess.run([z2_a.reveal(), expected_a])
+            np.testing.assert_allclose(
+                result, expected, rtol=0.0, atol=0.01
+            )
+            result, expected = sess.run([z2_b.reveal(), expected_b])
+            np.testing.assert_allclose(
+                result, expected, rtol=0.0, atol=0.01
+            )
             result, expected = sess.run([z3_a.reveal(), expected_a])
             np.testing.assert_allclose(
                 result, expected, rtol=0.0, atol=0.01
             )
             result, expected = sess.run([z3_b.reveal(), expected_b])
             np.testing.assert_allclose(
-                result, expected, rtol=0.0, atol=0.0
+                result, expected, rtol=0.0, atol=0.01
             )
 
     def test_bit_reverse(self):
