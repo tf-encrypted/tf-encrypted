@@ -45,6 +45,8 @@ TF_NATIVE_TYPES = [tf.bool, tf.int8, tf.int16, tf.int32, tf.int64]
 
 _THISMODULE = sys.modules[__name__]
 
+def next_power_of_two(x):
+    return 2**ceil(log2(x))
 
 class ABY3(Protocol):
     """ABY3 framework."""
@@ -1718,9 +1720,12 @@ class ABY3(Protocol):
         return self.dispatch("cast", x, factory)
 
     @memoize
-    def carry(self, x, y):
+    def carry(self, x, y, pos=None):
+        """
+        @param pos: the position where we calculate the carry out bit. If None, default to inputs' most significant bit position.
+        """
         x, y = self.lift(x, y)
-        return self.dispatch("carry", x, y)
+        return self.dispatch("carry", x, y, pos)
 
     @memoize
     def im2col(self, x, h_filter, w_filter, stride, padding):
@@ -1926,6 +1931,10 @@ class ABY3(Protocol):
     @memoize
     def pow2_from_bits(self, bits):
         return self.dispatch("pow2_from_bits", bits)
+
+    @memoize
+    def while_loop(self, cond, body, loop_vars):
+        return self.dispatch("while_loop", cond, body, loop_vars)
 
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
@@ -3314,31 +3323,46 @@ def _ppa_kogge_stone_private_private(prot, x, y, n_bits):
     return z
 
 
-def _carry_private_public(prot, x, y):
+def _carry_private_public(prot, x, y, pos=None):
     assert x.share_type == ShareType.BOOLEAN, x.share_type
-    return _carry_computation(prot, x, y)
+    return _carry_computation(prot, x, y, pos)
 
 
-def _carry_public_private(prot, x, y):
+def _carry_public_private(prot, x, y, pos=None):
     assert y.share_type == ShareType.BOOLEAN, y.share_type
-    return _carry_computation(prot, x, y)
+    return _carry_computation(prot, x, y, pos)
 
 
-def _carry_private_private(prot, x, y):
+def _carry_private_private(prot, x, y, pos=None):
     assert x.share_type == ShareType.BOOLEAN, x.share_type
     assert y.share_type == ShareType.BOOLEAN, y.share_type
-    return _carry_computation(prot, x, y)
+    return _carry_computation(prot, x, y, pos)
 
-def _carry_computation(prot, x, y):
+def _carry_computation(prot, x, y, pos=None):
     """
     Carry circuit, using the Kogge-Stone adder topology.
     """
     assert x.backing_dtype == y.backing_dtype
 
     with tf.name_scope("carry"):
+
+        if pos is None:
+            pos = x.backing_dtype.nbits - 1
+
+        if pos < 0:
+            return _zeros_public(prot, x.shape, False, ShareType.PUBLIC, prot.factories[1])
+
+        # k is the bit length
+        k = next_power_of_two(pos + 1)
+        if k != pos + 1:
+            x = x << (k - pos - 1)
+            y = y << (k - pos - 1)
+        if k != x.backing_dtype.nbits:
+            x = x.cast(prot.factories[k])
+            y = y.cast(prot.factories[k])
+
         G = x & y
         P = x ^ y
-        k = x.backing_dtype.nbits
         while k > 1:
             Gs = prot.bit_split_and_gather(G, 2).cast(prot.factories[k // 2])
             Ps = prot.bit_split_and_gather(P, 2).cast(prot.factories[k // 2])
@@ -3350,6 +3374,70 @@ def _carry_computation(prot, x, y):
         G = G & prot.define_constant(1, apply_scaling=False, factory=G.backing_dtype)
         G.is_scaled = False
         return G
+
+
+def _while_loop_(prot, cond, body, loop_vars):
+
+    def extract_var_aux_info(var):
+        info = {}
+        info["class"] = var.__class__
+        if isinstance(var, (ABY3PublicTensor, ABY3PrivateTensor)):
+            info["is_scaled"] = var.is_scaled
+            info["share_type"] = var.share_type
+            info["factory"] = var.backing_dtype
+        return info
+
+    def extract_var_native_vars(var):
+        if isinstance(var, ABY3PublicTensor):
+            a, b, c = var.unwrapped
+            return (a.value, b.value, c.value)
+        elif isinstance(var, ABY3PrivateTensor):
+            a, b, c = var.unwrapped
+            return (a[0].value, a[1].value, b[0].value, b[1].value, c[0].value, c[1].value)
+        else:
+            return var
+
+    def unwrap(var_list):
+        _aux = [extract_var_aux_info(var) for var in var_list]
+        _native = [extract_var_native_vars(var) for var in var_list]
+        return _aux, _native
+
+    def wrap(aux, native):
+        _wrapped_vars = []
+        for i in range(len(aux)):
+            if issubclass(aux[i]["class"], ABY3PublicTensor):
+                var = ABY3PublicTensor(
+                        prot,
+                        [aux[i]["factory"].tensor(native[i][0]), aux[i]["factory"].tensor(native[i][1]), aux[i]["factory"].tensor(native[i][2])],
+                        aux[i]["is_scaled"])
+            elif issubclass(aux[i]["class"], ABY3PrivateTensor):
+                var = ABY3PrivateTensor(
+                        prot,
+                        [[aux[i]["factory"].tensor(native[i][0]), aux[i]["factory"].tensor(native[i][1])], [aux[i]["factory"].tensor(native[i][2]), aux[i]["factory"].tensor(native[i][3])], [aux[i]["factory"].tensor(native[i][4]), aux[i]["factory"].tensor(native[i][5])]],
+                        aux[i]["is_scaled"],
+                        aux[i]["share_type"])
+            else:
+                var = native[i]
+
+            _wrapped_vars.append(var)
+        return _wrapped_vars
+
+    def cond_wrapper(*unwrapped_loop_vars):
+        wrapped_loop_vars = wrap(aux_info, unwrapped_loop_vars)
+        return cond(*wrapped_loop_vars)
+
+    def body_wrapper(*unwrapped_loop_vars):
+        wrapped_loop_vars = wrap(aux_info, unwrapped_loop_vars)
+        wrapped_result = body(*wrapped_loop_vars)
+        _, unwrapped_result = unwrap(wrapped_result)
+        return unwrapped_result
+
+    aux_info, native_vars = unwrap(loop_vars)
+
+    result = tf.while_loop(cond_wrapper, body_wrapper, native_vars)
+    if not isinstance(result, (tuple, list)):
+        result = [result]
+    return wrap(aux_info, result)
 
 
 def _a2b_private(prot, x, nbits):
@@ -3409,77 +3497,8 @@ def _bit_extract_private(prot, x, i):
   Bit extraction: Extracts the `i`-th bit of an arithmetic sharing or boolean sharing
   to a single-bit boolean sharing.
   """
-    assert isinstance(x, ABY3PrivateTensor), type(x)
 
     with tf.name_scope("bit_extract"):
-        if x.share_type == ShareType.ARITHMETIC:
-            with tf.name_scope("a2b_partial"):
-                x_shares = x.unwrapped
-                zero = prot.define_constant(
-                    np.zeros(x.shape, dtype=np.int64),
-                    apply_scaling=False
-                )
-                zero_on_0, zero_on_1, zero_on_2 = zero.unwrapped
-                a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=ShareType.BOOLEAN)
-
-                operand1 = [[None, None], [None, None], [None, None]]
-                operand2 = [[None, None], [None, None], [None, None]]
-                # Step 1: We know x = ((x0, x1), (x1, x2), (x2, x0))
-                # We need to reshare it into two operands that will be fed into an addition circuit:
-                # operand1 = (((x0+x1) XOR a0, a1), (a1, a2), (a2, (x0+x1) XOR a0)), meaning boolean sharing of x0+x1
-                # operand2 = ((0, 0), (0, x2), (x2, 0)), meaning boolean sharing of x2
-                with tf.device(prot.servers[0].device_name):
-                    x0_plus_x1 = x_shares[0][0] + x_shares[0][1]
-                    operand1[0][0] = x0_plus_x1 ^ a0
-                    operand1[0][1] = a1
-
-                    operand2[0][0] = zero_on_0
-                    operand2[0][1] = zero_on_0
-
-                with tf.device(prot.servers[1].device_name):
-                    operand1[1][0] = a1
-                    operand1[1][1] = a2
-
-                    operand2[1][0] = zero_on_1
-                    operand2[1][1] = x_shares[1][1]
-
-                with tf.device(prot.servers[2].device_name):
-                    operand1[2][0] = a2
-                    operand1[2][1] = operand1[0][0]
-
-                    operand2[2][0] = x_shares[2][0]
-                    operand2[2][1] = zero_on_2
-
-                operand1 = ABY3PrivateTensor(prot, operand1, x.is_scaled, ShareType.BOOLEAN)
-                operand2 = ABY3PrivateTensor(prot, operand2, x.is_scaled, ShareType.BOOLEAN)
-
-                # Step 2: Parallel prefix adder that requires log(i+1) rounds of communication
-                x = prot.ppa(operand1, operand2, i + 1)
-
-        # Take out the i-th bit
-        #
-        # NOTE: Don't use x = x & 0x1. Even though we support automatic lifting of 0x1
-        # to an ABY3Tensor, but it also includes automatic scaling to make the two operands have
-        # the same scale, which is not what want here.
-        #
-        mask = prot.define_constant(
-            np.array([0x1 << i]), apply_scaling=False
-        )
-        x = x & mask
-
-        x_shares = x.unwrapped
-        result = [[None, None], [None, None], [None, None]]
-        for i in range(3):
-            with tf.device(prot.servers[i].device_name):
-                result[i][0] = x_shares[i][0].cast(prot.factories[tf.bool])
-                result[i][1] = x_shares[i][1].cast(prot.factories[tf.bool])
-        result = ABY3PrivateTensor(prot, result, False, ShareType.BOOLEAN)
-
-    return result
-
-def _msb_private(prot, x):
-
-    with tf.name_scope("msb"):
         mask = prot.define_constant(1, apply_scaling=False, factory=x.backing_dtype)
 
         if x.share_type == ShareType.BOOLEAN:
@@ -3527,13 +3546,19 @@ def _msb_private(prot, x):
             operand2 = ABY3PrivateTensor(prot, operand2, x.is_scaled, ShareType.BOOLEAN)
 
             # Step 2: Carry circuit that requires log(i+1) rounds of communication
-            carry = prot.carry(operand1 << 1, operand2 << 1)
-            P = (((operand1 ^ operand2) >> (x.backing_dtype.nbits - 1)) & mask).cast(carry.backing_dtype)
+            carry = prot.carry(operand1, operand2, pos=i-1)
+            P = (((operand1 ^ operand2) >> i) & mask).cast(carry.backing_dtype)
             z = (carry ^ P).cast(prot.factories[tf.bool])
 
         z.is_scaled=False
 
     return z
+
+
+def _msb_private(prot, x):
+
+    with tf.name_scope("msb"):
+        return _bit_extract_private(prot, x, x.backing_dtype.nbits - 1)
 
 
 def _b2a_private(prot, x, nbits):

@@ -2142,6 +2142,30 @@ class TestABY3(unittest.TestCase):
             y = sess.run(y)
             np.testing.assert_allclose(y, _x, rtol=0.0, atol=0.01)
 
+    def test_while_loop(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        def cond(i, a):
+            return i < 10
+        def body(i, a):
+            return (i + 1, a + 10)
+
+        i = 0
+        x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
+        y = x * 1
+        r1, r2 = tfe.while_loop(cond, body, [i, y])
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(r1)
+            np.testing.assert_allclose(result, np.array(10), rtol=0.0, atol=0.01)
+            result = sess.run(r2.reveal())
+            np.testing.assert_allclose(result, np.array([[101, 102, 103], [104, 105, 106]]), rtol=0.0, atol=0.01)
 
 
 def print_banner(title):
