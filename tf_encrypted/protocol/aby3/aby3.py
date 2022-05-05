@@ -1934,6 +1934,10 @@ class ABY3(Protocol):
 
     @memoize
     def while_loop(self, cond, body, loop_vars):
+        """
+        NOTE: be careful about using this. From experiments, using while loop will result in
+        faster graph building time, but slower evaluation time.
+        """
         return self.dispatch("while_loop", cond, body, loop_vars)
 
 
@@ -2741,22 +2745,24 @@ def _truncate_msb0_secureq8_private(prot: ABY3, x: ABY3PrivateTensor, amount) ->
 
         # P2: Generate random values, compute intermediate results, and share them as 2PC sharings among P0 and P1
         with tf.device(prot.servers[2].device_name):
-            r = ifactory.sample_uniform(shape)
+            randoms = ifactory.sample_uniform([6] + shape)
+            r = randoms[0]
             h = r & msb_mask
             s = r.logical_rshift(amount) - h.logical_rshift(amount)
             r_msb = h.cast(bfactory).cast(ifactory)
 
-            r0 = ifactory.sample_uniform(shape)
+            r0 = randoms[1]
             r1 = r - r0
 
-            s0 = ifactory.sample_uniform(shape)
+            s0 = randoms[2]
             s1 = s - s0
 
-            r_msb0 = ifactory.sample_uniform(shape)
+            r_msb0 = randoms[3]
             r_msb1 = r_msb - r_msb0
 
-            y0 = ifactory.sample_uniform(shape)
-            y2 = ifactory.sample_uniform(shape)
+            y0 = randoms[4]
+            y2 = randoms[5]
+
 
         # Proceed as 2PC computation between P0 and P1
 
@@ -4437,6 +4443,16 @@ def _iterate_private(
             results[i][1] = results[i][1].identity()
 
     return ABY3PrivateTensor(prot, results, tensor.is_scaled, tensor.share_type)
+
+
+def _indexer_public(prot: ABY3, tensor: ABY3PublicTensor, slc) -> "ABY3PublicTensor":
+    shares = tensor.unwrapped
+    results = [None, None, None]
+    with tf.name_scope("index"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                results[i] = shares[i][slc]
+    return ABY3PublicTensor(prot, results, tensor.is_scaled)
 
 
 def _indexer_private(prot: ABY3, tensor: ABY3PrivateTensor, slc) -> "ABY3PrivateTensor":
