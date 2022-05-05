@@ -1390,11 +1390,11 @@ class ABY3(Protocol):
         return self.dispatch("exp2", x, approx_type)
 
     @memoize
-    def exp(self, x, approx_type="infinity"):
+    def exp(self, x, approx_type="mp-spdz"):
         """
         @param approx_type: "mp-spdz" (default) , "as2019", "infinity".
-            "mp-spdz" approximates very good in range [-32, +);
-            "as2019" approximates very good in range [-11, +);
+            "mp-spdz" approximates very good in range [-22, +);
+            "as2019" approximates very good in range [-7, +);
             "infinity" approximates not so good in range (-, +).
         """
         return self.dispatch("exp", x, approx_type)
@@ -5022,10 +5022,13 @@ def _exp2_private(prot, x, approx_type="mp-spdz"):
             small_result = prot.truncate(g, method="heuristic", amount=2**n_int_bits)
             z = prot.select(s, g, small_result)
 
+            out_of_range = x < -scale
+            z = prot.select(out_of_range, z, 0)
+
         return z
 
 
-def _exp_private(prot, x, approx_type="infinity"):
+def _exp_private(prot, x, approx_type="mp-spdz"):
 
     with tf.name_scope("exp"):
         if approx_type == "infinity":

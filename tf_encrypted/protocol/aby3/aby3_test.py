@@ -2015,12 +2015,16 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        data = np.array([-4, -0.5, 0, 1.3, 2, 5.63])
-        # data = np.array([-11]) # Would not work for smaller than -11
-        x = tfe.define_private_variable(data)
+        scale = prot.fixedpoint_config.precision_fractional
 
-        z1 = tfe.exp2(x, approx_type="as2019")
-        z2 = tfe.exp2(x, approx_type="mp-spdz")
+        data1 = np.array([-4, -0.5, 0, 1.3, 2, 5.63])
+        data2 = np.array([-scale-1, -scale, -4, -0.5, 0, 1.3, 2, 5.63])
+        # data = np.array([-11]) # Would not work for smaller than -11
+        x1 = tfe.define_private_variable(data1)
+        x2 = tfe.define_private_variable(data2)
+
+        z1 = tfe.exp2(x1, approx_type="as2019")
+        z2 = tfe.exp2(x2, approx_type="mp-spdz")
 
         with tfe.Session() as sess:
             # initialize variables
@@ -2032,7 +2036,7 @@ class TestABY3(unittest.TestCase):
             )
             result = sess.run(z2.reveal())
             np.testing.assert_allclose(
-                result, np.array([0.0625, 0.70710678, 1., 2.46228883, 4., 49.52207979]), rtol=0.0, atol=0.01
+                result, np.array([0, 1.52587890625e-05, 0.0625, 0.70710678, 1., 2.46228883, 4., 49.52207979]), rtol=0.0, atol=0.0
             )
 
     def test_exp(self):
