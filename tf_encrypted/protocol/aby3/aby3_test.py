@@ -1015,14 +1015,16 @@ class TestABY3(unittest.TestCase):
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             # reveal result
-            result = sess.run(z.reveal())
+            for i in range(1000):
+                result = sess.run(z.reveal())
             np.testing.assert_allclose(
                 result.astype(int),
                 np.array([[0, 1, 0], [1, 1, 0]]),
                 rtol=0.0,
                 atol=0.01,
             )
-            result = sess.run(w.reveal())
+            for i in range(1000):
+                result = sess.run(w.reveal())
             np.testing.assert_allclose(
                 result.astype(int),
                 np.array([[0, 1, 1], [0, 1, 1]]),
@@ -1866,17 +1868,19 @@ class TestABY3(unittest.TestCase):
 
         x = tfe.define_private_variable(np.array([[2, 0, 9, 1], [7, 5, 0, 8], [5, 3, 1, 10]]))
 
-        z1 = tfe.argmax(x, axis=1, output_style="onehot")
-        z2 = tfe.argmax(x, axis=1, output_style="normal")
+        y1, z1 = tfe.reduce_max_with_argmax(x, axis=1, output_style="onehot")
+        y2, z2 = tfe.reduce_max_with_argmax(x, axis=1, output_style="normal")
 
         with tfe.Session() as sess:
             # initialize variables
             sess.run(tfe.global_variables_initializer())
-            result = sess.run(z1.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[0, 0, 1, 0], [0, 0, 0, 1], [0, 0, 0, 1]]))
+            result1, result2 = sess.run([y1.reveal(), z1.reveal()])
+            np.testing.assert_array_equal(result1.astype(int), np.array([9, 8, 10]))
+            np.testing.assert_array_equal(result2.astype(int), np.array([[0, 0, 1, 0], [0, 0, 0, 1], [0, 0, 0, 1]]))
 
-            result = sess.run(z2.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([2, 3, 3]))
+            result1, result2 = sess.run([y2.reveal(), z2.reveal()])
+            np.testing.assert_array_equal(result1.astype(int), np.array([9, 8, 10]))
+            np.testing.assert_array_equal(result2.astype(int), np.array([2, 3, 3]))
 
     def test_maxpool2d(self):
         tf.reset_default_graph()
