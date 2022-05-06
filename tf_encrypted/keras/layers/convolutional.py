@@ -235,10 +235,14 @@ class Conv2D(Layer):
         d_kernel = tfe.conv2d(x, inner_padded_d_y, 1, "VALID")
         # Convert to HWIO
         d_kernel = tfe.transpose(d_kernel, perm=[2, 3, 0, 1])
+        if self.lazy_normalization:
+            d_kernel = d_kernel / n_x
         grad_weights.append(d_kernel)
 
         if self.use_bias:
             d_bias = d_y.reduce_sum(axis=[0, 1, 2]).reshape(self.bias.shape)
+            if self.lazy_normalization:
+                d_bias = d_bias / n_x
             grad_weights.append(d_bias)
 
         assert d_x.shape == self._layer_input.shape, "Different shapes: {} vs {}".format(d_x.shape, self._layer_input.shape)

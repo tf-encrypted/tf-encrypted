@@ -40,6 +40,7 @@ class Layer(ABC):
             "weights",
             "activity_regularizer",
             "dtype",
+            "lazy_normalization"
         }
         # Validate optional keyword arguments.
         for kwarg in kwargs:
@@ -55,6 +56,10 @@ class Layer(ABC):
             self._batch_input_shape = kwargs["input_shape"]
         if "batch_input_shape" in kwargs:
             self._batch_input_shape = kwargs["batch_input_shape"]
+
+        self.lazy_normalization = False
+        if "lazy_normalization" in kwargs:
+            self.lazy_normalization = kwargs["lazy_normalization"]
 
         self.trainable = trainable
         self._init_set_name(name)

@@ -120,6 +120,7 @@ class Dense(Layer):
         y = self._layer_output
         kernel = self.weights[0]
         grad_weights = []
+        batch_size = int(x.shape[0])
 
         if self.activation_identifier is not None:
             self._activation_deriv = activations.get_deriv(self.activation_identifier)
@@ -127,10 +128,14 @@ class Dense(Layer):
 
         d_x = tfe.matmul(d_y, kernel.transpose())
         d_weights = tfe.matmul(x.transpose(), d_y)
+        if self.lazy_normalization:
+            d_weights = d_weights / batch_size
         grad_weights.append(d_weights)
 
         if self.use_bias:
             d_bias = d_y.reduce_sum(axis=0)
+            if self.lazy_normalization:
+                d_bias = d_bias / batch_size
             grad_weights.append(d_bias)
 
         return grad_weights, d_x
