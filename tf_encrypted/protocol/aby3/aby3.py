@@ -5132,7 +5132,7 @@ def _exp2_private(prot, x, approx_type="mp-spdz"):
             d = prot.pow2_from_bits(bits)
 
             # second term
-            f_x = prot.b2a(f_x, nbits=scale)
+            f_x = prot.b2a(f_x, nbits=scale, method="single")
             u = prot.exp2_pade(f_x)
 
             g = u * d
@@ -5152,7 +5152,7 @@ def _exp2_private(prot, x, approx_type="mp-spdz"):
             d = prot.pow2_from_bits(bits)
 
             # second term
-            f_x = prot.b2a(f_x, nbits=scale)
+            f_x = prot.b2a(f_x, nbits=scale, method="single")
             u = prot.exp2_pade(f_x)
 
             g = u * d
