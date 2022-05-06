@@ -131,12 +131,18 @@ class Sequential(Layer):
 
     def backward(self, d_y):
         update_ops = []
-        for layer in reversed(self.layers):
-            with tf.name_scope(layer.name + '/backward'):
-                grad_weights, d_y = layer.backward(d_y)
-                # IMPORTANT: make sure d_y is computed before the weights are updated
-                with tf.control_dependencies(d_y.flatten_to_native()):
-                    update_ops.append(self._optimizer.apply_gradients(layer.weights, grad_weights))
+        # for layer in reversed(self.layers):
+        for i in range(len(self.layers)-1, -1, -1):
+            with tf.name_scope(layers[i].name + '/backward'):
+                grad_weights, d_y = layers[i].backward(d_y)
+                if i < len(self.layers)-1:
+                    # IMPORTANT: make sure d_y is computed before the weights are updated
+                    with tf.control_dependencies(d_y.flatten_to_native()):
+                        update_ops.append(self._optimizer.apply_gradients(layers[i].weights, grad_weights))
+                else:
+                    # No need to wait for the computation of the last backward d_y because it will not be used
+                    update_ops.append(self._optimizer.apply_gradients(layers[i].weights, grad_weights))
+
         return tf.group(*update_ops)
 
     def compile(self, optimizer, loss):
