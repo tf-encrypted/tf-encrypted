@@ -829,6 +829,11 @@ class TestABY3(unittest.TestCase):
         z = tfe.b2a(x)
         assert z.share_type == ShareType.ARITHMETIC
 
+        x2 = tfe.define_private_variable(
+            tf.constant([0]), share_type=ShareType.BOOLEAN
+        )
+        z2 = tfe.b2a(x2, nbits=prot.fixedpoint_config.precision_fractional, method="single")
+
         with tfe.Session() as sess:
             # initialize variables
             sess.run(tfe.global_variables_initializer())
@@ -836,6 +841,10 @@ class TestABY3(unittest.TestCase):
             result = sess.run(z.reveal())
             np.testing.assert_allclose(
                 result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
+            )
+            result = sess.run(z2.reveal())
+            np.testing.assert_allclose(
+                result, np.array([0]), rtol=0.0, atol=0.01
             )
 
     def test_b2a_single_private(self):
@@ -2125,7 +2134,7 @@ class TestABY3(unittest.TestCase):
             6.21095753,  6.16129017,  5.82647038,  5.74629307,  5.70382595,
             5.55218601,  5.51741982,  5.46005726,  5.42303944,  5.36902714]
         b = [
-            -7.9189482 , -3.567180633544922,  -4.125492095947266,  -5.74629307,  -5.70382595,
+            -18, -7.9189482 , -3.567180633544922,  -4.125492095947266,  -5.74629307,  -5.70382595,
             -1.55218601,  -5.51741982,  -2.46005726,  -0.42303944,  -5.36902714, 0]
         x = tfe.define_private_variable(tf.constant(a))
         y = tfe.define_private_variable(tf.constant(b))

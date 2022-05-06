@@ -1588,8 +1588,11 @@ class ABY3(Protocol):
         return self.dispatch("a2b", x, nbits)
 
     @memoize
-    def b2a(self, x, nbits=None):
-        return self.dispatch("b2a", x, nbits)
+    def b2a(self, x, nbits=None, method="ppa"):
+        """
+        @param method: "ppa" or "single". "ppa" only works for full bit composition.
+        """
+        return self.dispatch("b2a", x, nbits, method)
 
     @memoize
     def b2a_single(self, x):
@@ -3362,6 +3365,10 @@ def _ppa_kogge_stone_private_private(prot, x, y, n_bits):
         C = G << 1
         P = x ^ y
         z = C ^ P
+
+        if k < x.backing_dtype.nbits:
+            mask = prot.define_constant(np.array((1 << k) - 1).astype(np.int64), apply_scaling=False)
+            z = z & mask
     return z
 
 
@@ -3636,62 +3643,76 @@ def _msb_private(prot, x):
         return _bit_extract_private(prot, x, x.backing_dtype.nbits - 1)
 
 
-def _b2a_private(prot, x, nbits):
+def _b2a_private(prot, x, nbits, method="ppa"):
     """
   Bit composition: Convert a boolean sharing to an arithmetic sharing.
   """
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert x.share_type == ShareType.BOOLEAN
 
-    # In semi-honest, the following two calls can be further optimized because we don't
-    # need the boolean shares of x1 and x2. We only need their original values on intended servers.
-    x1_on_0, x1_on_1, x1_on_2, x1_shares = prot._gen_b2a_sharing(
-        x.shape, prot.b2a_keys_1(), x.backing_dtype
-    )
-    assert x1_on_2 is None
-    x2_on_0, x2_on_1, x2_on_2, x2_shares = prot._gen_b2a_sharing(
-        x.shape, prot.b2a_keys_2(), x.backing_dtype
-    )
-    assert x2_on_0 is None
+    if (nbits is None or nbits == x.backing_dtype.nbits) and method == "ppa":
+        # The 'ppa' method only works for full bit composition
 
-    a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=ShareType.BOOLEAN)
+        # In semi-honest, the following two calls can be further optimized because we don't
+        # need the boolean shares of x1 and x2. We only need their original values on intended servers.
+        x1_on_0, x1_on_1, x1_on_2, x1_shares = prot._gen_b2a_sharing(
+            x.shape, prot.b2a_keys_1(), x.backing_dtype
+        )
+        assert x1_on_2 is None
+        x2_on_0, x2_on_1, x2_on_2, x2_shares = prot._gen_b2a_sharing(
+            x.shape, prot.b2a_keys_2(), x.backing_dtype
+        )
+        assert x2_on_0 is None
 
-    with tf.name_scope("b2a"):
-        # Server 1 reshares (-x1-x2) as private input
-        neg_x1_neg_x2 = [[None, None], [None, None], [None, None]]
-        with tf.device(prot.servers[1].device_name):
-            value = -x1_on_1 - x2_on_1
-            neg_x1_neg_x2[1][0] = value ^ a1
-            neg_x1_neg_x2[1][1] = a2
-        with tf.device(prot.servers[0].device_name):
-            neg_x1_neg_x2[0][0] = a0
-            neg_x1_neg_x2[0][1] = neg_x1_neg_x2[1][0]
-        with tf.device(prot.servers[2].device_name):
-            neg_x1_neg_x2[2][0] = a2
-            neg_x1_neg_x2[2][1] = a0
-        neg_x1_neg_x2 = ABY3PrivateTensor(prot, neg_x1_neg_x2, x.is_scaled, ShareType.BOOLEAN)
+        a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=ShareType.BOOLEAN)
 
-        # Compute x0 = x + (-x1-x2) using the parallel prefix adder
-        x0 = prot.ppa(x, neg_x1_neg_x2, nbits)
+        with tf.name_scope("b2a"):
+            # Server 1 reshares (-x1-x2) as private input
+            neg_x1_neg_x2 = [[None, None], [None, None], [None, None]]
+            with tf.device(prot.servers[1].device_name):
+                value = -x1_on_1 - x2_on_1
+                neg_x1_neg_x2[1][0] = value ^ a1
+                neg_x1_neg_x2[1][1] = a2
+            with tf.device(prot.servers[0].device_name):
+                neg_x1_neg_x2[0][0] = a0
+                neg_x1_neg_x2[0][1] = neg_x1_neg_x2[1][0]
+            with tf.device(prot.servers[2].device_name):
+                neg_x1_neg_x2[2][0] = a2
+                neg_x1_neg_x2[2][1] = a0
+            neg_x1_neg_x2 = ABY3PrivateTensor(prot, neg_x1_neg_x2, x.is_scaled, ShareType.BOOLEAN)
 
-        # Reveal x0 to server 0 and 2
-        with tf.device(prot.servers[0].device_name):
-            x0_on_0 = prot._reconstruct(x0.unwrapped, prot.servers[0], ShareType.BOOLEAN)
-        with tf.device(prot.servers[2].device_name):
-            x0_on_2 = prot._reconstruct(x0.unwrapped, prot.servers[2], ShareType.BOOLEAN)
+            # Compute x0 = x + (-x1-x2) using the parallel prefix adder
+            x0 = prot.ppa(x, neg_x1_neg_x2)
 
-        # Construct the arithmetic sharing
-        result = [[None, None], [None, None], [None, None]]
-        with tf.device(prot.servers[0].device_name):
-            result[0][0] = x0_on_0
-            result[0][1] = x1_on_0
-        with tf.device(prot.servers[1].device_name):
-            result[1][0] = x1_on_1
-            result[1][1] = x2_on_1
-        with tf.device(prot.servers[2].device_name):
-            result[2][0] = x2_on_2
-            result[2][1] = x0_on_2
-        result = ABY3PrivateTensor(prot, result, x.is_scaled, ShareType.ARITHMETIC)
+            # Reveal x0 to server 0 and 2
+            with tf.device(prot.servers[0].device_name):
+                x0_on_0 = prot._reconstruct(x0.unwrapped, prot.servers[0], ShareType.BOOLEAN)
+            with tf.device(prot.servers[2].device_name):
+                x0_on_2 = prot._reconstruct(x0.unwrapped, prot.servers[2], ShareType.BOOLEAN)
+
+            # Construct the arithmetic sharing
+            result = [[None, None], [None, None], [None, None]]
+            with tf.device(prot.servers[0].device_name):
+                result[0][0] = x0_on_0
+                result[0][1] = x1_on_0
+            with tf.device(prot.servers[1].device_name):
+                result[1][0] = x1_on_1
+                result[1][1] = x2_on_1
+            with tf.device(prot.servers[2].device_name):
+                result[2][0] = x2_on_2
+                result[2][1] = x0_on_2
+            result = ABY3PrivateTensor(prot, result, x.is_scaled, ShareType.ARITHMETIC)
+
+    else:
+        k = x.backing_dtype.nbits if nbits is None else nbits
+        bits = prot.bits(x, bitsize=k)
+        arithmetic_bits = prot.b2a_single(bits)
+
+        i = np.reshape(np.arange(k), [1]*(len(x.shape)-1) + [k])
+        two_power_i = prot.define_constant(np.exp2(i), apply_scaling=False)
+        arithmetic_x = arithmetic_bits * two_power_i
+        result = arithmetic_x.reduce_sum(axis=-1, keepdims=False)
+        result.is_scaled = x.is_scaled
 
     return result
 
