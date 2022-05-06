@@ -50,7 +50,7 @@ def next_power_of_two(x):
     return 2**ceil(log2(x))
 
 def is_power_of_two(x):
-    return int(math.log2(x)) == math.log2(x)
+    return x > 0 and int(math.log2(x)) == math.log2(x)
 
 class ABY3(Protocol):
     """ABY3 framework."""
