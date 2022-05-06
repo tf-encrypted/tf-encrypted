@@ -84,7 +84,7 @@ class NetworkC(PrivateModel):
         self.model.add(tfe.keras.layers.MaxPooling2D(2))
         self.model.add(tfe.keras.layers.ReLU())
         self.model.add(tfe.keras.layers.Flatten())
-        self.model.add(tfe.keras.layers.Dense(100, activation=None))
+        self.model.add(tfe.keras.layers.Dense(500, activation=None))
         self.model.add(tfe.keras.layers.ReLU())
         self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None))
 
