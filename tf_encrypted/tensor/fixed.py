@@ -90,8 +90,8 @@ fixed64_ni = FixedpointConfig(
 
 fixed64_heuristic = FixedpointConfig(
     scaling_base=2,
-    precision_integral=10,
-    precision_fractional=18,
+    precision_integral=11,
+    precision_fractional=16,
     matmul_threshold=256,
     truncation_gap=0,
     use_noninteractive_truncation=False,

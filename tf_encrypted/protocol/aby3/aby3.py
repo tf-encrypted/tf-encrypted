@@ -9,6 +9,7 @@ import abc
 import sys
 from functools import reduce
 from functools import wraps
+import math
 from math import ceil
 from math import log2
 from typing import Callable
@@ -47,6 +48,9 @@ _THISMODULE = sys.modules[__name__]
 
 def next_power_of_two(x):
     return 2**ceil(log2(x))
+
+def is_power_of_two(x):
+    return int(math.log2(x)) == math.log2(x)
 
 class ABY3(Protocol):
     """ABY3 framework."""
@@ -1332,6 +1336,12 @@ class ABY3(Protocol):
 
     @memoize
     def mul(self, x, y):
+        # Fast cases
+        if isinstance(y, (int, float)) and is_power_of_two(y):
+            return self.mul_pow2(x, int(math.log2(y)))
+        elif isinstance(x, (int, float)) and is_power_of_two(x):
+            return self.mul_pow2(y, int(math.log2(x)))
+
         x, y = self.lift(x, y)
         return self.dispatch("mul", x, y)
 
@@ -1339,6 +1349,15 @@ class ABY3(Protocol):
     def mul_trunc2(self, x, y):
         x, y = self.lift(x, y)
         return self.dispatch("mul_trunc2", x, y)
+
+    @memoize
+    def mul_pow2(self, x, exponent):
+        if exponent == 0:
+            return x
+        elif exponent < 0:
+            return self.truncate(x, amount=-exponent)
+        else:
+            return self.lshift(x, exponent)
 
     @memoize
     def div(self, x, y):
@@ -1350,6 +1369,19 @@ class ABY3(Protocol):
     """
 
         assert isinstance(x, ABY3Tensor)
+
+        if isinstance(y, ABY3PublicTensor):
+            y = y.decode()
+
+        if isinstance(y, (int, float)):
+            if is_power_of_two(y):
+                return self.mul_pow2(x, int(-math.log2(y)))
+            else:
+                return self.mul(x, 1.0 / y)
+
+        else:
+            raise TypeError("Don't know how to divide by type {}".format(type(y)))
+
 
         if isinstance(y, float):
             y_inverse = 1.0 / y
