@@ -2076,7 +2076,7 @@ class TestABY3(unittest.TestCase):
             )
             result = sess.run(z2.reveal())
             np.testing.assert_allclose(
-                result, np.array([0, 1.52587890625e-05, 0.0625, 0.70710678, 1., 2.46228883, 4., 49.52207979]), rtol=0.0, atol=0.0
+                result, np.array([0, 1.52587890625e-05, 0.0625, 0.70710678, 1., 2.46228883, 4., 49.52207979]), rtol=0.0, atol=0.01
             )
 
     def test_exp(self):

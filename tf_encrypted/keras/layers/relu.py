@@ -36,21 +36,13 @@ class ReLU(Layer):
         self.built = True
 
     def call(self, inputs):
-        y = relu(inputs)
+        y, cmp = tfe.relu_with_cmp(inputs)
 
-        self._layer_output = y
-        if isinstance(y, tuple):
-            return y[0]
-        else:
-            return y
+        self._layer_output = (y, cmp)
+        return y
 
     def backward(self, d_y):
-        y = self._layer_output
-
-        if isinstance(y, tuple):
-            cmp = y[1]
-        else:
-            cmp = y > 0
+        y, cmp = self._layer_output
 
         d_x = tfe.select(cmp, 0, d_y)
 

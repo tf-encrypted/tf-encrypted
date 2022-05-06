@@ -1639,6 +1639,10 @@ class ABY3(Protocol):
         return self.dispatch("relu", x)
 
     @memoize
+    def relu_with_cmp(self, x):
+        return self.dispatch("relu_with_cmp", x)
+
+    @memoize
     def softmax(self, x, approx_type="mp-spdz"):
         """
         @param approx_type: "mp-spdz" (default), "as2019", or "infinity"
@@ -3928,6 +3932,12 @@ def _sigmoid_private(prot, x, approx_type):
 
 
 def _relu_private(prot, x):
+    result, _ = prot.relu_with_cmp(x)
+
+    return result
+
+
+def _relu_with_cmp_private(prot, x):
     assert x.is_arithmetic(), \
             "Unexpected share type: x {}".format(x.share_type)
 
