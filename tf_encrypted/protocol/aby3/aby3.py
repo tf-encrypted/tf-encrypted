@@ -1038,8 +1038,7 @@ class ABY3(Protocol):
 
         return ABY3PrivateTensor(self, r, True, share_type)
 
-    def _gen_b2a_sharing(self, shape, b2a_keys, factory=None):
-        factory = factory or self.default_factory
+    def _gen_b2a_sharing(self, shape, b2a_keys, factory):
         shares = [[None, None], [None, None], [None, None]]
         with tf.device(self.servers[0].device_name):
             shares[0][0] = factory.sample_seeded_uniform(
@@ -3647,11 +3646,11 @@ def _b2a_private(prot, x, nbits):
     # In semi-honest, the following two calls can be further optimized because we don't
     # need the boolean shares of x1 and x2. We only need their original values on intended servers.
     x1_on_0, x1_on_1, x1_on_2, x1_shares = prot._gen_b2a_sharing(
-        x.shape, prot.b2a_keys_1()
+        x.shape, prot.b2a_keys_1(), x.backing_dtype
     )
     assert x1_on_2 is None
     x2_on_0, x2_on_1, x2_on_2, x2_shares = prot._gen_b2a_sharing(
-        x.shape, prot.b2a_keys_2()
+        x.shape, prot.b2a_keys_2(), x.backing_dtype
     )
     assert x2_on_0 is None
 
