@@ -77,16 +77,16 @@ class NetworkB(PrivateModel):
 class NetworkC(PrivateModel):
     def __init__(self):
         self.model = tfe.keras.Sequential()
-        self.model.add(tfe.keras.layers.Conv2D(20, 5, 1, padding='valid', activation=None, batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS]), lazy_normalization=True)
+        self.model.add(tfe.keras.layers.Conv2D(20, 5, 1, padding='valid', activation=None, batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS], lazy_normalization=True))
         self.model.add(tfe.keras.layers.MaxPooling2D(2))
         self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Conv2D(50, 5, 1, padding='valid', activation=None), lazy_normalization=True)
+        self.model.add(tfe.keras.layers.Conv2D(50, 5, 1, padding='valid', activation=None, lazy_normalization=True))
         self.model.add(tfe.keras.layers.MaxPooling2D(2))
         self.model.add(tfe.keras.layers.ReLU())
         self.model.add(tfe.keras.layers.Flatten())
-        self.model.add(tfe.keras.layers.Dense(500, activation=None), lazy_normalization=True)
+        self.model.add(tfe.keras.layers.Dense(500, activation=None, lazy_normalization=True))
         self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None), lazy_normalization=True)
+        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
 
         # optimizer and data pipeline
         optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
