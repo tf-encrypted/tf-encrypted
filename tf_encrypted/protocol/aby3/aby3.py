@@ -3508,48 +3508,7 @@ def _bit_extract_private(prot, x, i):
 
     with tf.name_scope("bit_extract"):
         if x.share_type == ShareType.ARITHMETIC:
-            with tf.name_scope("a2b_partial"):
-                x_shares = x.unwrapped
-                zero = prot.define_constant(
-                    np.zeros(x.shape, dtype=np.int64),
-                    apply_scaling=False
-                )
-                zero_on_0, zero_on_1, zero_on_2 = zero.unwrapped
-                a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=ShareType.BOOLEAN)
-
-                operand1 = [[None, None], [None, None], [None, None]]
-                operand2 = [[None, None], [None, None], [None, None]]
-                # Step 1: We know x = ((x0, x1), (x1, x2), (x2, x0))
-                # We need to reshare it into two operands that will be fed into an addition circuit:
-                # operand1 = (((x0+x1) XOR a0, a1), (a1, a2), (a2, (x0+x1) XOR a0)), meaning boolean sharing of x0+x1
-                # operand2 = ((0, 0), (0, x2), (x2, 0)), meaning boolean sharing of x2
-                with tf.device(prot.servers[0].device_name):
-                    x0_plus_x1 = x_shares[0][0] + x_shares[0][1]
-                    operand1[0][0] = x0_plus_x1 ^ a0
-                    operand1[0][1] = a1
-
-                    operand2[0][0] = zero_on_0
-                    operand2[0][1] = zero_on_0
-
-                with tf.device(prot.servers[1].device_name):
-                    operand1[1][0] = a1
-                    operand1[1][1] = a2
-
-                    operand2[1][0] = zero_on_1
-                    operand2[1][1] = x_shares[1][1]
-
-                with tf.device(prot.servers[2].device_name):
-                    operand1[2][0] = a2
-                    operand1[2][1] = operand1[0][0]
-
-                    operand2[2][0] = x_shares[2][0]
-                    operand2[2][1] = zero_on_2
-
-                operand1 = ABY3PrivateTensor(prot, operand1, x.is_scaled, ShareType.BOOLEAN)
-                operand2 = ABY3PrivateTensor(prot, operand2, x.is_scaled, ShareType.BOOLEAN)
-
-                # Step 2: Parallel prefix adder that requires log(i+1) rounds of communication
-                x = prot.ppa(operand1, operand2, i + 1)
+            x = prot.a2b(x, i + 1)
 
         # Take out the i-th bit
         #
