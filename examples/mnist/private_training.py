@@ -145,8 +145,8 @@ class TrainingClient(PrivateModel):
             .cache() \
             .shuffle(60000, reshuffle_each_iteration=True) \
             .repeat() \
-            .batch(self.BATCH_SIZE, drop_remainder=True) \ # drop remainder because we need to fix batch size in private model
-            .prefetch(tf.data.experimental.AUTOTUNE)
+            .batch(self.BATCH_SIZE, drop_remainder=True) # drop remainder because we need to fix batch size in private model
+        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
         iterator = dataset.make_one_shot_iterator()
         x, y = iterator.get_next()
@@ -199,8 +199,8 @@ class PredictionClient(PrivateModel):
             .map(normalize) \
             .map(shaping) \
             .cache() \
-            .batch(self.BATCH_SIZE, drop_remainder=True) \ # drop remainder because we need to fix batch size in private model
-            .prefetch(tf.data.experimental.AUTOTUNE)
+            .batch(self.BATCH_SIZE, drop_remainder=True) # drop remainder because we need to fix batch size in private model
+        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
         iterator = dataset.make_one_shot_iterator()
         x, y = iterator.get_next()
