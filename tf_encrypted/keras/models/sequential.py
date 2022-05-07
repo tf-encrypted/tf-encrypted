@@ -157,6 +157,9 @@ class Sequential(Layer):
         assert self._optimizer is not None, "An optimizer must be specified."
         assert self._loss is not None, "A loss must be specified."
 
+        self._optimizer.compile(self.layers)
+
+
     @memoize
     def fit_batch(self, x, y):
         """Trains the model on a single batch.
