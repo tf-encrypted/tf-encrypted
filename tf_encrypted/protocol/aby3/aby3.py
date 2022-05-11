@@ -1894,6 +1894,7 @@ class ABY3(Protocol):
     def maxpool2d_with_argmax(self, x, pool_size, strides, padding):
         return self.dispatch("maxpool2d_with_argmax", x, pool_size, strides, padding)
 
+    @memoize
     def avgpool2d(self, x, pool_size, strides, padding):
         """See tf.nn.avgpool2d."""
         return self.dispatch("avgpool2d", x, pool_size, strides, padding)
