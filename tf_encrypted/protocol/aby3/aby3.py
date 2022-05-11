@@ -5058,7 +5058,8 @@ def _softmax_private(prot, x, approx_type="mp-spdz"):
     adjusted_x = x - logits_max - precision
     # Pass sign=-1 (negative) to accelerate the computation
     ex = prot.exp(adjusted_x, approx_type=approx_type, sign=-1)
-    norm = prot.reciprocal(prot.reduce_sum(ex, axis=-1, keepdims=True))
+    # Set `nonsigned=True` because the input to the reciprocal is always positive
+    norm = prot.reciprocal(prot.reduce_sum(ex, axis=-1, keepdims=True), nonsigned=True)
     return ex * norm
 
 
