@@ -1410,7 +1410,7 @@ class ABY3(Protocol):
         return self.dispatch("exp2_pade", x)
 
     @memoize
-    def exp2(self, x, approx_type="mp-spdz"):
+    def exp2(self, x, approx_type="mp-spdz", sign=None):
         """
         Compute exp(2, x).
 
@@ -1420,18 +1420,24 @@ class ABY3(Protocol):
         @param approx_type: "mp-spdz" or "as2019"
             "mp-spdz" approximates very good in range [-32, +);
             "as2019" approximates very good in range [-11, +);
+        @param sign: None, 1 (positive), or -1 (negaitve). It denotes whether the
+            input `x` is all positive or all negative. This extra information
+            helps to accelerate the computation.
         """
-        return self.dispatch("exp2", x, approx_type)
+        return self.dispatch("exp2", x, approx_type, sign)
 
     @memoize
-    def exp(self, x, approx_type="mp-spdz"):
+    def exp(self, x, approx_type="mp-spdz", sign=None):
         """
         @param approx_type: "mp-spdz" (default) , "as2019", "infinity".
             "mp-spdz" approximates very good in range [-22, +);
             "as2019" approximates very good in range [-7, +);
             "infinity" approximates not so good in range (-, +).
+        @param sign: None, 1 (positive), or -1 (negaitve). It denotes whether the
+            input `x` is all positive or all negative. This extra information
+            helps to accelerate the computation.
         """
-        return self.dispatch("exp", x, approx_type)
+        return self.dispatch("exp", x, approx_type, sign)
 
     @memoize
     def matmul(self, x, y):
@@ -5047,8 +5053,11 @@ def _patches2im_private(prot, x, patch_size, stride=1, padding="SAME", img_size=
 
 def _softmax_private(prot, x, approx_type="mp-spdz"):
     logits_max = prot.reduce_max(x, axis=-1, keepdims=True)
-    adjusted_x = x - logits_max
-    ex = prot.exp(adjusted_x, approx_type=approx_type)
+    # Minus precision to make sure all negative. Softmax results are the same.
+    precision = 2**(-prot.fixedpoint_config.precision_fractional)
+    adjusted_x = x - logits_max - precision
+    # Pass sign=-1 (negative) to accelerate the computation
+    ex = prot.exp(adjusted_x, approx_type=approx_type, sign=-1)
     norm = prot.reciprocal(prot.reduce_sum(ex, axis=-1, keepdims=True))
     return ex * norm
 
@@ -5096,7 +5105,7 @@ def _pow2_from_bits_private(prot, bits):
     return d
 
 
-def _exp2_private(prot, x, approx_type="mp-spdz"):
+def _exp2_private(prot, x, approx_type="mp-spdz", sign=None):
     # TODO: is x scaled or not?
     nbits = x.backing_dtype.nbits
     bfactory = prot.factories[tf.bool]
@@ -5143,7 +5152,6 @@ def _exp2_private(prot, x, approx_type="mp-spdz"):
 
         elif approx_type == "mp-spdz":
             bx = prot.a2b(x)
-            s = prot.logical_rshift(bx, nbits-1).cast(bfactory)
             # Integer part of x
             i_x = prot.logical_rshift(bx, scale) & int_mask
             i_x.is_scaled = False
@@ -5160,15 +5168,23 @@ def _exp2_private(prot, x, approx_type="mp-spdz"):
 
             g = u * d
             small_result = prot.truncate(g, method="heuristic", amount=2**n_int_bits)
-            z = prot.select(s, g, small_result)
 
-            out_of_range = x < -scale
-            z = prot.select(out_of_range, z, 0)
+            if sign == 1:
+                z = g
+            elif sign == -1:
+                z = small_result
+            else:
+                s = prot.logical_rshift(bx, nbits-1).cast(bfactory)
+                z = prot.select(s, g, small_result)
+
+            if sign != 1:
+                out_of_range = x < -scale
+                z = prot.select(out_of_range, z, 0)
 
         return z
 
 
-def _exp_private(prot, x, approx_type="mp-spdz"):
+def _exp_private(prot, x, approx_type="mp-spdz", sign=None):
 
     with tf.name_scope("exp"):
         if approx_type == "infinity":
@@ -5181,11 +5197,11 @@ def _exp_private(prot, x, approx_type="mp-spdz"):
         elif approx_type == "as2019":
             log2_e = np.log2(np.e)
             adjusted_x = x * log2_e
-            return prot.exp2(adjusted_x, approx_type="as2019")
+            return prot.exp2(adjusted_x, approx_type="as2019", sign=sign)
         elif approx_type == "mp-spdz":
             log2_e = np.log2(np.e)
             adjusted_x = x * log2_e
-            return prot.exp2(adjusted_x, approx_type="mp-spdz")
+            return prot.exp2(adjusted_x, approx_type="mp-spdz", sign=sign)
 
 
 

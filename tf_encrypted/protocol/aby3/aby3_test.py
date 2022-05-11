@@ -2115,7 +2115,7 @@ class TestABY3(unittest.TestCase):
             )
             result = sess.run(z2.reveal())
             np.testing.assert_allclose(
-                result, np.e ** data2, rtol=0.0, atol=0.01
+                result, np.e ** data2, rtol=0.001, atol=0.01
             )
             result = sess.run(z3.reveal())
             np.testing.assert_allclose(
