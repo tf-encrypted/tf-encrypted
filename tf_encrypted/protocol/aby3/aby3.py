@@ -5054,23 +5054,26 @@ def _softmax_private(prot, x, approx_type="mp-spdz"):
 
 
 def _exp2_pade_private(prot, x):
-    c = np.array([
+    c = [
         1.0000e+00, 6.9314e-01, 2.4022e-01, 5.5504e-02, 9.6183e-03,
-        1.3327e-03, 1.5510e-04, 1.4197e-05, 1.8633e-06])
+        1.3327e-03, 1.5510e-04, 1.4197e-05, 1.8633e-06]
+    precision = 2**(-prot.fixedpoint_config.precision_fractional)
+    degree = len(c) - 1
+    for c_i in reversed(c):
+        # ignore "zero" coefficients
+        if c_i < precision:
+            degree -= 1
+        else:
+            break
 
     with tf.name_scope("exp2-pade"):
-        x0 = 1
-        x1 = x
-        x2 = x.square()
-        x3 = x2 * x
-        x4 = x2 * x2
-        x5 = x2 * x3 # better than x4 * x1 with lower depth
-        x6 = x2 * x4
-        x7 = x3 * x4
-        x8 = x4 * x4
-        x_pows = [x0, x1, x2, x3, x4, x5, x6, x7, x8]
+        x_pows = [0] * (degree + 1)
+        x_pows[0] = 1
+        x_pows[1] = x
+        for i in range(2, degree):
+            x_pows[i] = x_pows[i//2] * x_pows[(i+1)//2]
 
-        y = [x_pows[i] * c[i] for i in range(len(c))]
+        y = [x_pows[i] * c[i] for i in range(degree+1)]
 
         z = y[0]
         for i in range(1, len(y)):
