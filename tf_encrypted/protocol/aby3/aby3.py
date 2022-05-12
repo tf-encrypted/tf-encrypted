@@ -2791,31 +2791,40 @@ def _truncate_msb0_secureq8_private(prot: ABY3, x: ABY3PrivateTensor, amount) ->
 
         # P2: Generate random values, compute intermediate results, and share them as 2PC sharings among P0 and P1
         with tf.device(prot.servers[2].device_name):
-            randoms = ifactory.sample_uniform([6] + shape)
-            r = randoms[0]
+            randoms02_on_2 = ifactory.sample_seeded_uniform(
+                [4] + shape, prot.pairwise_keys()[2][1] + prot.pairwise_nonces()[2]
+            )
+            randoms12_on_2 = ifactory.sample_seeded_uniform(
+                shape, prot.pairwise_keys()[2][0] + prot.pairwise_nonces()[1]
+            )
+            r = ifactory.sample_uniform(shape)
             h = r & msb_mask
             s = r.logical_rshift(amount) - h.logical_rshift(amount)
             r_msb = h.cast(bfactory).cast(ifactory)
 
-            r0 = randoms[1]
-            r1 = r - r0
+            r0_on_2 = randoms02_on_2[0]
+            r1 = r - r0_on_2
 
-            s0 = randoms[2]
-            s1 = s - s0
+            s0_on_2 = randoms02_on_2[1]
+            s1 = s - s0_on_2
 
-            r_msb0 = randoms[3]
+            r_msb0 = randoms02_on_2[2]
             r_msb1 = r_msb - r_msb0
 
-            y0 = randoms[4]
-            y2 = randoms[5]
+            y0 = randoms02_on_2[3]
+            y2 = randoms12_on_2
 
 
         # Proceed as 2PC computation between P0 and P1
 
         # P0: mask x0
         with tf.device(prot.servers[0].device_name):
+            randoms02_on_0 = ifactory.sample_seeded_uniform(
+                [4] + shape, prot.pairwise_keys()[0][0] + prot.pairwise_nonces()[2]
+            )
+            r0_on_0 = randoms02_on_0[0]
             x0 = x_shares[0][0] + x_shares[0][1]
-            c0 = x0 + r0
+            c0 = x0 + r0_on_0
 
         # P1: mask x1
         with tf.device(prot.servers[1].device_name):
@@ -2823,6 +2832,9 @@ def _truncate_msb0_secureq8_private(prot: ABY3, x: ABY3PrivateTensor, amount) ->
             c1 = x1 + r1
 
         with tf.device(prot.servers[0].device_name):
+            s0 = randoms02_on_0[1]
+            r_msb0 = randoms02_on_0[2]
+            y0 = randoms02_on_0[3]
             c_on_0 = c0 + c1
             c_prime_on_0 = (c_on_0 >> amount) & mod_mask
             c_msb_on_0 = (c_on_0 & msb_mask).cast(bfactory)
@@ -2831,6 +2843,10 @@ def _truncate_msb0_secureq8_private(prot: ABY3, x: ABY3PrivateTensor, amount) ->
             y_tilde0 = y_prime0 - y0
 
         with tf.device(prot.servers[1].device_name):
+            randoms12_on_1 = ifactory.sample_seeded_uniform(
+                shape, prot.pairwise_keys()[1][1] + prot.pairwise_nonces()[1]
+            )
+            y2 = randoms12_on_1
             c_on_1 = c0 + c1
             c_prime_on_1 = (c_on_1 >> amount) & mod_mask
             c_msb_on_1 = (c_on_1 & msb_mask).cast(bfactory)
@@ -2838,6 +2854,7 @@ def _truncate_msb0_secureq8_private(prot: ABY3, x: ABY3PrivateTensor, amount) ->
             y_prime1 = - s1 + b1 * (mod_mask + 1)
             y_tilde1 = y_prime1 - y2
 
+        prot._update_pairwise_nonces()
 
         y = [[None, None], [None, None], [None, None]]
         with tf.device(prot.servers[0].device_name):
