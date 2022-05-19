@@ -2257,6 +2257,42 @@ class TestABY3(unittest.TestCase):
             np.testing.assert_allclose(y, expected, rtol=0.0, atol=0.01)
 
 
+    def test_sort(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(tf.constant([[3, 1, 5, 2, 6, 4], [11, 8, 10, 12, 9, 7]]))
+
+        y0 = tfe.sort(x, axis=1, acc=True)
+        y1 = tfe.sort(x, axis=0, acc=True)
+        y2 = tfe.sort(x, axis=1, acc=False)
+        y3 = tfe.sort(x, axis=0, acc=False)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(y0.reveal())
+            np.testing.assert_allclose(
+                result, np.array([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]), rtol=0.0, atol=0.01
+            )
+            result = sess.run(y1.reveal())
+            np.testing.assert_allclose(
+                result, np.array([[3, 1, 5, 2, 6, 4], [11, 8, 10, 12, 9, 7]]), rtol=0.0, atol=0.01
+            )
+            result = sess.run(y2.reveal())
+            np.testing.assert_allclose(
+                result, np.array([[6, 5, 4, 3, 2, 1], [12, 11, 10, 9, 8, 7]]), rtol=0.0, atol=0.01
+            )
+
+            result = sess.run(y3.reveal())
+            np.testing.assert_allclose(
+                result, np.array([[11, 8, 10, 12, 9, 7], [3, 1, 5, 2, 6, 4]]), rtol=0.0, atol=0.01
+            )
+
+
 def print_banner(title):
     title_length = len(title)
     banner_length = title_length + 2 * 10

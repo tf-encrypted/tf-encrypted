@@ -49,6 +49,12 @@ _THISMODULE = sys.modules[__name__]
 def next_power_of_two(x):
     return 2**ceil(log2(x))
 
+def prev_power_of_two_less_than(n):
+    k = 1
+    while k < n:
+        k = k << 1
+    return k >> 1
+
 def is_power_of_two(x):
     return x > 0 and int(math.log2(x)) == math.log2(x)
 
@@ -1861,6 +1867,24 @@ class ABY3(Protocol):
             max_choices = x > y
             return self.select(max_choices, y, x)
 
+    @memoize
+    def cmp_swap(self, x, y):
+        """
+    Computes :math:`(min(x, y), max(x,y))`.
+
+    .. code-block:: python
+
+        >>> cmp_swap([10, 20, 30], [11, 19, 31])
+        ([10, 19, 30], [11, 20, 31])
+
+    :param ABY3Tensor x: Input tensor.
+    :param ABY3Tensor y: Input tensor.
+    """
+        with tf.name_scope("cmp-swap"):
+            max_choices = x > y
+            max_ = self.select(max_choices, y, x)
+            min_ = self.select(~max_choices, y, x)
+            return (min_, max_)
 
     @memoize
     def reduce_max(self, x, axis=None, keepdims=False):
@@ -1983,6 +2007,10 @@ class ABY3(Protocol):
         faster graph building time, but slower evaluation time.
         """
         return self.dispatch("while_loop", cond, body, loop_vars)
+
+    @memoize
+    def sort(self, x, axis, acc=True):
+        return self.dispatch("sort", x, axis, acc)
 
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
@@ -5318,3 +5346,46 @@ def _xor_indices_private(prot, x):
             z[idx][0] = shares[idx][0].xor_indices()
             z[idx][1] = shares[idx][1].xor_indices()
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+
+
+def _sort_private(
+        prot: ABY3,
+        x: ABY3PrivateTensor,
+        axis: int,
+        acc: bool = True,
+) -> ABY3PrivateTensor:
+
+    with tf.name_scope("sort"):
+
+        def bitonic_merge(ts, acc):
+            if len(ts) == 1:
+                return ts
+            m = prev_power_of_two_less_than(len(ts))
+            for i in range(len(ts) - m):
+                m0, m1 = prot.cmp_swap(ts[i], ts[i+m])
+                if acc:
+                    ts[i] = m0
+                    ts[i+m] = m1
+                else:
+                    ts[i] = m1
+                    ts[i+m] = m0
+
+            ts_left = bitonic_merge(ts[:m], acc)
+            ts_right = bitonic_merge(ts[m:], acc)
+            return ts_left + ts_right
+
+
+        def bitonic_sort(ts, acc):
+            if len(ts) == 1:
+                return ts
+            m = len(ts) // 2
+            ts_left, ts_right = ts[:m], ts[m:]
+            ts_left = bitonic_sort(ts_left, not acc)
+            ts_right = bitonic_sort(ts_right, acc)
+            result = bitonic_merge(ts_left + ts_right, acc)
+            return result
+
+        tensors = prot.split(x, int(x.shape[axis]), axis=axis)
+        sorted_tensors = bitonic_sort(tensors, acc)
+        result = prot.concat(sorted_tensors, axis)
+        return result
