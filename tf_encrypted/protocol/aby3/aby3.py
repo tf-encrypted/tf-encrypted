@@ -1369,20 +1369,14 @@ class ABY3(Protocol):
 
         assert isinstance(x, ABY3Tensor)
 
-        if isinstance(y, ABY3PublicTensor):
-            y = y.decode()
-
         if isinstance(y, (int, float)):
             if is_power_of_two(y):
                 return self.mul_pow2(x, int(-math.log2(y)))
             else:
                 return self.mul(x, 1.0 / y)
 
-        else:
-            raise TypeError("Don't know how to divide by type {}".format(type(y)))
 
-
-        if isinstance(y, float):
+        if isinstance(y, (float, np.ndarray, tf.Tensor)):
             y_inverse = 1.0 / y
         elif isinstance(y, int):
             y_inverse = 1.0 / float(y)
@@ -2351,6 +2345,29 @@ def _negative_public(prot, x):
 # mul helpers
 #
 
+def _mul_public_public(prot, x, y):
+    assert isinstance(x, ABY3PublicTensor), type(x)
+    assert isinstance(y, ABY3PublicTensor), type(y)
+
+    x_on_0, x_on_1, x_on_2 = x.unwrapped
+    y_on_0, y_on_1, y_on_2 = y.unwrapped
+
+    z = [None, None, None]
+    with tf.name_scope("mul"):
+
+        with tf.device(prot.servers[0].device_name):
+            z[0] = x_on_0 * y_on_0
+
+        with tf.device(prot.servers[1].device_name):
+            z[1] = x_on_1 * y_on_1
+
+        with tf.device(prot.servers[2].device_name):
+            z[2] = x_on_2 * y_on_2
+
+        z = ABY3PublicTensor(prot, z, x.is_scaled or y.is_scaled)
+        z = prot.truncate(z, method="local") if x.is_scaled and y.is_scaled else z
+        return z
+
 
 def _mul_public_private(prot, x, y):
     assert isinstance(x, ABY3PublicTensor), type(x)
@@ -2647,6 +2664,23 @@ def _truncate_heuristic_private(prot: ABY3, x: ABY3PrivateTensor, amount) -> ABY
         z = prot.truncate_msb0(y, method="secureq8", amount=amount)
         z = z - (1 << (heuristic_bound_bits - (scale+amount))) # Reverse the effect of lifting
     return z
+
+
+def _truncate_local_public(prot, x, amount):
+    assert isinstance(x, ABY3PublicTensor)
+
+    if amount is None:
+        amount = prot.fixedpoint_config.precision_fractional
+
+    xs = x.unwrapped
+    ys = [None, None, None]
+    with tf.name_scope("truncate-local"):
+
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                ys[i] = xs[i].truncate(amount)
+
+    return ABY3PublicTensor(prot, ys, x.is_scaled)
 
 
 def _truncate_local_private(
