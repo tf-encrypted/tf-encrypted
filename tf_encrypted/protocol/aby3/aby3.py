@@ -1668,6 +1668,10 @@ class ABY3(Protocol):
         return self.dispatch("fp_recip", x, nonsigned, container=fp)
 
     @memoize
+    def inv_sqrt(self, x):
+        return self.dispatch("fp_inv_sqrt", x, container=fp)
+
+    @memoize
     def sqrt(self, x, approx_type=""):
         """
         NOTE: only supports public now.
@@ -5272,4 +5276,11 @@ def _prod_private(prot, x, axis, keepdims):
         return result
 
 
-
+def _xor_indices_private(prot, x):
+    shares = x.unwrapped
+    z = [[None, None], [None, None], [None, None]]
+    for idx in range(3):
+        with tf.device(prot.servers[idx].device_name):
+            z[idx][0] = shares[idx][0].xor_indices()
+            z[idx][1] = shares[idx][1].xor_indices()
+    return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)

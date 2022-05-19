@@ -66,3 +66,6 @@ def bit_split_and_gather(x, stride):
 
 def bit_reverse(x: tf.Tensor):
     return aux_module.bit_reverse(x)
+
+def xor_indices(x: tf.Tensor):
+    return aux_module.xor_indices(x)

@@ -2216,6 +2216,46 @@ class TestABY3(unittest.TestCase):
             result = sess.run(r2.reveal())
             np.testing.assert_allclose(result, np.array([[101, 102, 103], [104, 105, 106]]), rtol=0.0, atol=0.01)
 
+    def test_inv_sqrt(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        _x = (np.random.rand(1000)) * 1000 # [0, 1000]
+        #_x = 1537 # Would not work larger than this number
+
+        x = tfe.define_private_input("server0", lambda: tf.constant(_x))
+        y = tfe.inv_sqrt(x)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(y.reveal())
+            # np.testing.assert_allclose(
+                # result, 1.0 / np.sqrt(_x), rtol=0.0, atol=0.01
+            # )
+
+    def test_xor_indices(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        _x = np.random.randint(-(1<<20), 1<<20, size=[5, 5], dtype=np.int64)
+        expected = np.zeros(_x.shape, dtype=np.int64)
+        for d in range(64):
+            idx = (np.bitwise_and(_x, np.array(1<<d).astype(np.int64)) == 0).astype(np.int64) * d
+            expected = np.bitwise_xor(expected, idx)
+
+        x = tfe.define_private_variable(tf.constant(_x), apply_scaling=False, share_type=ShareType.BOOLEAN)
+        y = prot.xor_indices(x).reveal()
+        with tfe.Session() as sess:
+            sess.run(tfe.global_variables_initializer())
+            y = sess.run(y)
+            np.testing.assert_allclose(y, expected, rtol=0.0, atol=0.01)
+
 
 def print_banner(title):
     title_length = len(title)

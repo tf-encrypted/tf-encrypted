@@ -187,7 +187,7 @@ def approx_sqrt_inv(prot, x: "PrivateTensor"):
     k = prot.fixedpoint_config.precision_fractional
     f = prot.fixedpoint_config.precision_integral
     m = k + f
-    n = prot.int_factory.nbits
+    n = x.backing_dtype.nbits
     assert x.is_scaled, "Er.. tricky here."
     assert 2*k > m, "We assume 2^{-j} can be represent with 2k-bit precisions for all j in [0, m)"
     with tf.name_scope("normalize_for_sqrt"):
@@ -229,7 +229,8 @@ def approx_sqrt_inv(prot, x: "PrivateTensor"):
         """
         j_add_k = prot.xor_indices(z_bits) # j + k
         lsb = prot.bit_extract(j_add_k, 0) # lsb = 0 <-> j + k is even
-        exponet = prot.b2a(prot.gather_bit(rev_z_bits | rev_z_bits >> 1, True), ceil(m/2)) # 2^{floor(-(j+k)/2)}
+        # exponet = prot.b2a(prot.gather_bit(rev_z_bits | rev_z_bits >> 1, True), ceil(m/2)) # 2^{floor(-(j+k)/2)}
+        exponet = prot.b2a(prot.bit_gather(rev_z_bits | rev_z_bits >> 1, 0, 2), ceil(m/2)) # 2^{floor(-(j+k)/2)}
         exponet.is_scaled = False # Stop truncation
         if k & 1 == 0: # k is even which means lsb = 1 <=> j is odd
             exponet = exponet * select(2**(k//2), 2**(k//2) * np.sqrt(2.), lsb)

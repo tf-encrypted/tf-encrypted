@@ -335,6 +335,10 @@ def native_factory(
             value = aux.bit_split_and_gather(self.value, stride)
             return DenseTensor(value)
 
+        def xor_indices(self):
+            value = aux.xor_indices(self.value)
+            return DenseTensor(value)
+
         def im2col(self, h_filter, w_filter, stride, padding):
             i2c = im2col(self.value, h_filter, w_filter, stride=stride, padding=padding)
             return DenseTensor(i2c)

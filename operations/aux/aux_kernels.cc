@@ -137,6 +137,31 @@ public:
     }
 };
 
+
+class XorIndicesOp : public OpKernel {
+public:
+    explicit XorIndicesOp(OpKernelConstruction *context) : OpKernel(context) {}
+    void Compute(OpKernelContext *ctx) override {
+        const Tensor &op0 = ctx->input(0);
+        Tensor *output;
+        TensorShape out_shape {op0.shape()};
+        OP_REQUIRES_OK(ctx, ctx->allocate_output(0, out_shape, &output));
+
+        const u64 *src = (const u64 *)op0.flat<i64>().data();
+        const u64 *end = src + op0.NumElements();
+        u64 *dst       = (u64 *)output->flat<i64>().data();
+        std::transform(src, end, dst, [](u64 v) -> u64 {
+            long ans {0};
+            for (long d = 0; v > 0 && d < 64; ++d) {
+                if (v & 1) ans ^= d;
+                v >>= 1;
+            }
+            return (u64)ans;
+        });
+    }
+};
+
+
 REGISTER_OP("BitGather")
     .Input("op: dtype")
     .Output("output: dtype")
@@ -163,6 +188,8 @@ REGISTER_OP("BitSplitAndGather")
     });
 
 REGISTER_OP("BitReverse").Input("op0: int64").Output("output: int64").SetShapeFn(UnchangedShape);
+
+REGISTER_OP("XorIndices").Input("op0: int64").Output("output: int64").SetShapeFn(UnchangedShape);
 
 
 REGISTER_KERNEL_BUILDER(
@@ -192,4 +219,5 @@ REGISTER_KERNEL_BUILDER(
         BitSplitAndGatherOp<tf::int64>);
 
 REGISTER_KERNEL_BUILDER(Name("BitReverse").Device(DEVICE_CPU), BitReverseOp);
+REGISTER_KERNEL_BUILDER(Name("XorIndices").Device(DEVICE_CPU), XorIndicesOp);
 
