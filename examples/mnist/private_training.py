@@ -89,7 +89,9 @@ class NetworkC(PrivateModel):
         self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
 
         # optimizer and data pipeline
-        optimizer = tfe.keras.optimizers.SGDWithMomentum(learning_rate=0.01, momentum=0.9)
+        # optimizer = tfe.keras.optimizers.SGDWithMomentum(learning_rate=0.01, momentum=0.9)
+        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.01)
+        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.01)
         loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
         self.model.compile(optimizer, loss)
 
