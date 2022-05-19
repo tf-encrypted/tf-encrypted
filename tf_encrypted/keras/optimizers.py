@@ -112,12 +112,13 @@ class Adam:
     """
     M = b1 * M + (1-b1) * G
     V = b2 * V + (1-b2) * G^2
-    V_hat = max(V_hat, V)
-    W = W - r * M / sqrt(V_hat)
+    M_hat = M / (1 - beta1**t)
+    V_hat = V / (1 - beta2**t)
+    W = W - r * M_hat / sqrt(V_hat)
 
     https://paperswithcode.com/method/adam
     """
-    def __init__(self, learning_rate=0.01, beta1=0.9, beta2=0.999):
+    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999):
         self.learning_rate = learning_rate
         self.beta1 = beta1
         self.beta2 = beta2

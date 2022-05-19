@@ -90,8 +90,8 @@ class NetworkC(PrivateModel):
 
         # optimizer and data pipeline
         # optimizer = tfe.keras.optimizers.SGDWithMomentum(learning_rate=0.01, momentum=0.9)
-        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.01)
-        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.01)
+        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
+        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
         loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
         self.model.compile(optimizer, loss)
 
