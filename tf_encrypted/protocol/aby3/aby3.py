@@ -5391,59 +5391,68 @@ def _sort_private(
                 right = np.concatenate(b[1::2])
                 return (left, right)
 
-        def bitonic_sort(x):
-            n = int(x.shape[0])
+        # def bitonic_sort(x):
+            # n = int(x.shape[0])
+            # n_stages = ceil(log2(n))
+            # for stage in range(n_stages):
+                # print("building stage: ", stage)
+                # for sub_stage in range(stage + 1):
+                    # left_idx, right_idx = bitonic_index(n, stage, sub_stage)
+                    # left = prot.gather(x, left_idx)
+                    # right = prot.gather(x, right_idx)
+                    # left, right = prot.cmp_swap(left, right)
+                    # z0 = prot.scatter_nd(
+                        # np.expand_dims(left_idx, axis=1),
+                        # left,
+                        # x.shape)
+                    # z1 = prot.scatter_nd(
+                        # np.expand_dims(right_idx, axis=1),
+                        # right,
+                        # x.shape)
+                    # x = z0 + z1
+            # return x
+
+        # return bitonic_sort(x)
+
+        def build_bitonic_index(n):
+            indices = []
             n_stages = ceil(log2(n))
             for stage in range(n_stages):
                 print("building stage: ", stage)
                 for sub_stage in range(stage + 1):
                     left_idx, right_idx = bitonic_index(n, stage, sub_stage)
-                    left = prot.gather(x, left_idx)
-                    right = prot.gather(x, right_idx)
-                    left, right = prot.cmp_swap(left, right)
-                    z0 = prot.scatter_nd(
-                        np.expand_dims(left_idx, axis=1),
-                        left,
-                        x.shape)
-                    z1 = prot.scatter_nd(
-                        np.expand_dims(right_idx, axis=1),
-                        right,
-                        x.shape)
-                    x = z0 + z1
-            return x
+                    indices.append(np.stack([left_idx, right_idx]))
+            return np.stack(indices)
 
-        return bitonic_sort(x)
+        n = int(x.shape[0])
+        n_stages = ceil(log2(n))
+        n_sub_stages = int((1 + n_stages) * n_stages / 2)
 
+        indices = build_bitonic_index(n)
+        indices = tf.constant(indices, dtype=tf.int32)
 
-        # def bitonic_merge(ts, acc):
-            # if len(ts) == 1:
-                # return ts
-            # m = prev_power_of_two_less_than(len(ts))
-            # for i in range(len(ts) - m):
-                # m0, m1 = prot.cmp_swap(ts[i], ts[i+m])
-                # if acc:
-                    # ts[i] = m0
-                    # ts[i+m] = m1
-                # else:
-                    # ts[i] = m1
-                    # ts[i+m] = m0
+        def cond(i, x):
+            return i < n_sub_stages
 
-            # ts_left = bitonic_merge(ts[:m], acc)
-            # ts_right = bitonic_merge(ts[m:], acc)
-            # return ts_left + ts_right
+        def body(i, x):
+            left_idx = indices[i][0]
+            right_idx = indices[i][1]
+
+            left = prot.gather(x, left_idx)
+            right = prot.gather(x, right_idx)
+            left, right = prot.cmp_swap(left, right)
+            z0 = prot.scatter_nd(
+                tf.expand_dims(left_idx, axis=1),
+                left,
+                x.shape)
+            z1 = prot.scatter_nd(
+                tf.expand_dims(right_idx, axis=1),
+                right,
+                x.shape)
+            x = z0 + z1
+
+            return (i+1, x)
 
 
-        # def bitonic_sort(ts, acc):
-            # if len(ts) == 1:
-                # return ts
-            # m = len(ts) // 2
-            # ts_left, ts_right = ts[:m], ts[m:]
-            # ts_left = bitonic_sort(ts_left, not acc)
-            # ts_right = bitonic_sort(ts_right, acc)
-            # result = bitonic_merge(ts_left + ts_right, acc)
-            # return result
-
-        # tensors = prot.split(x, int(x.shape[axis]), axis=axis)
-        # sorted_tensors = bitonic_sort(tensors, acc)
-        # result = prot.concat(sorted_tensors, axis)
-        # return result
+        _, x = prot.while_loop(cond, body, [0, x])
+        return x
