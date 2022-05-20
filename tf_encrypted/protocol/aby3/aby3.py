@@ -863,32 +863,41 @@ class ABY3(Protocol):
 
         with tf.name_scope("encode"):
 
-            # we first scale as needed
-            if apply_scaling:
-                scaled = rationals * self.fixedpoint_config.scaling_factor
-            else:
-                scaled = rationals
-
-            # and then we round to integers
-
-            if isinstance(scaled, np.ndarray):
+            if isinstance(rationals, np.ndarray):
+                if apply_scaling:
+                    # First converting to float64, otherwise the scaling would not work as expected for input np array of type int32
+                    scaled = rationals.astype(np.float64)
+                    scaled = scaled * self.fixedpoint_config.scaling_factor
+                else:
+                    scaled = rationals
                 integers = scaled.astype(np.int64)
 
-            elif isinstance(scaled, tf.Tensor):
+            elif isinstance(rationals, tf.Tensor):
                 factory = factory or self.default_factory
                 tf_native_type = factory.native_type
                 assert tf_native_type in TF_NATIVE_TYPES
+                if apply_scaling:
+                    # First converting to float64, otherwise the scaling would not work as expected for input np array of type int32
+                    scaled = tf.cast(rationals, tf.float64)
+                    scaled = scaled * self.fixedpoint_config.scaling_factor
+                else:
+                    scaled = rationals
                 integers = tf.cast(scaled, dtype=tf_native_type)
 
             else:
                 # give it a last try
                 try:
-                    scaled = np.array(scaled)
+                    scaled = np.array(rationals)
+                    if apply_scaling:
+                        # First converting to float64, otherwise the scaling would not work as expected for input np array of type int32
+                        scaled = rationals.astype(np.float64)
+                        scaled = scaled * self.fixedpoint_config.scaling_factor
+                    else:
+                        scaled = rationals
                     integers = scaled.astype(np.int64)
                 except:
                     raise TypeError("Don't know how to encode {}".format(type(rationals)))
 
-            assert type(rationals) == type(integers)
             return integers
 
     @memoize
