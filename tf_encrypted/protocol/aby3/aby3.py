@@ -1684,6 +1684,11 @@ class ABY3(Protocol):
         return self.dispatch("gather", x, indices, axis=axis)
 
     @memoize
+    def scatter_nd(self, indices, updates, shape):
+        """See tf.scatter_nd"""
+        return self.dispatch("scatter_nd", indices, updates, shape)
+
+    @memoize
     def split(self, x, num_split, axis=0):
         """See tf.split"""
         return self.dispatch("split", x, num_split, axis=axis)
@@ -5348,6 +5353,18 @@ def _xor_indices_private(prot, x):
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 
 
+def _scatter_nd_private(prot, indices, updates, shape):
+    shares = updates.unwrapped
+    with tf.name_scope("scatter-nd"):
+        z = [[None, None], [None, None], [None, None]]
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i][0] = updates.backing_dtype.scatter_nd(indices, shares[i][0], shape)
+                z[i][1] = updates.backing_dtype.scatter_nd(indices, shares[i][1], shape)
+
+        return ABY3PrivateTensor(prot, z, updates.is_scaled, updates.share_type)
+
+
 def _sort_private(
         prot: ABY3,
         x: ABY3PrivateTensor,
@@ -5357,35 +5374,76 @@ def _sort_private(
 
     with tf.name_scope("sort"):
 
-        def bitonic_merge(ts, acc):
-            if len(ts) == 1:
-                return ts
-            m = prev_power_of_two_less_than(len(ts))
-            for i in range(len(ts) - m):
-                m0, m1 = prot.cmp_swap(ts[i], ts[i+m])
-                if acc:
-                    ts[i] = m0
-                    ts[i+m] = m1
-                else:
-                    ts[i] = m1
-                    ts[i+m] = m0
+        def bitonic_index(n, stage, sub_stage):
+            assert sub_stage <= stage, "The i-th stage can have at most i+1 sub stages."
+            # In bitonic sorting network, the 0-th sub stage in each stage has a different pattern from
+            # other sub stages.
+            if sub_stage == 0:
+                a = np.arange(n)
+                b = np.split(a, n/(2**stage))
+                left = np.concatenate(b[0::2])
+                right = np.concatenate([np.flip(x) for x in b[1::2]])
+                return (left, right)
+            else:
+                a = np.arange(n)
+                b = np.split(a, n/(2**(stage-sub_stage)))
+                left = np.concatenate(b[0::2])
+                right = np.concatenate(b[1::2])
+                return (left, right)
 
-            ts_left = bitonic_merge(ts[:m], acc)
-            ts_right = bitonic_merge(ts[m:], acc)
-            return ts_left + ts_right
+        def bitonic_sort(x):
+            n = int(x.shape[0])
+            n_stages = ceil(log2(n))
+            for stage in range(n_stages):
+                print("building stage: ", stage)
+                for sub_stage in range(stage + 1):
+                    left_idx, right_idx = bitonic_index(n, stage, sub_stage)
+                    left = prot.gather(x, left_idx)
+                    right = prot.gather(x, right_idx)
+                    left, right = prot.cmp_swap(left, right)
+                    z0 = prot.scatter_nd(
+                        np.expand_dims(left_idx, axis=1),
+                        left,
+                        x.shape)
+                    z1 = prot.scatter_nd(
+                        np.expand_dims(right_idx, axis=1),
+                        right,
+                        x.shape)
+                    x = z0 + z1
+            return x
+
+        return bitonic_sort(x)
 
 
-        def bitonic_sort(ts, acc):
-            if len(ts) == 1:
-                return ts
-            m = len(ts) // 2
-            ts_left, ts_right = ts[:m], ts[m:]
-            ts_left = bitonic_sort(ts_left, not acc)
-            ts_right = bitonic_sort(ts_right, acc)
-            result = bitonic_merge(ts_left + ts_right, acc)
-            return result
+        # def bitonic_merge(ts, acc):
+            # if len(ts) == 1:
+                # return ts
+            # m = prev_power_of_two_less_than(len(ts))
+            # for i in range(len(ts) - m):
+                # m0, m1 = prot.cmp_swap(ts[i], ts[i+m])
+                # if acc:
+                    # ts[i] = m0
+                    # ts[i+m] = m1
+                # else:
+                    # ts[i] = m1
+                    # ts[i+m] = m0
 
-        tensors = prot.split(x, int(x.shape[axis]), axis=axis)
-        sorted_tensors = bitonic_sort(tensors, acc)
-        result = prot.concat(sorted_tensors, axis)
-        return result
+            # ts_left = bitonic_merge(ts[:m], acc)
+            # ts_right = bitonic_merge(ts[m:], acc)
+            # return ts_left + ts_right
+
+
+        # def bitonic_sort(ts, acc):
+            # if len(ts) == 1:
+                # return ts
+            # m = len(ts) // 2
+            # ts_left, ts_right = ts[:m], ts[m:]
+            # ts_left = bitonic_sort(ts_left, not acc)
+            # ts_right = bitonic_sort(ts_right, acc)
+            # result = bitonic_merge(ts_left + ts_right, acc)
+            # return result
+
+        # tensors = prot.split(x, int(x.shape[axis]), axis=axis)
+        # sorted_tensors = bitonic_sort(tensors, acc)
+        # result = prot.concat(sorted_tensors, axis)
+        # return result

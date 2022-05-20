@@ -2293,6 +2293,26 @@ class TestABY3(unittest.TestCase):
             )
 
 
+    def test_sort(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        x = tfe.define_private_variable(tf.constant([3, 16, 1, 11, 2, 6, 15, 4, 5, 13, 8, 10, 12, 9, 7, 14]))
+
+        y = tfe.sort(x, axis=0, acc=True)
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            result = sess.run(y.reveal())
+            np.testing.assert_allclose(
+                result, np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]), rtol=0.0, atol=0.01
+            )
+
+
 def print_banner(title):
     title_length = len(title)
     banner_length = title_length + 2 * 10

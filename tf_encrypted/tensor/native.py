@@ -212,6 +212,9 @@ def native_factory(
         def tile(self, x, multiples):
             return DenseTensor(tf.tile(x.value, multiples))
 
+        def scatter_nd(self, indices, updates, shape):
+            return DenseTensor(tf.scatter_nd(indices, updates.value, shape))
+
     FACTORY = Factory()  # pylint: disable=invalid-name
 
     def _lift(x, y) -> Tuple["Tensor", "Tensor"]:
