@@ -870,7 +870,8 @@ class ABY3(Protocol):
                     scaled = scaled * self.fixedpoint_config.scaling_factor
                 else:
                     scaled = rationals
-                integers = scaled.astype(np.int64)
+                # need to convert again to np.array here because it is possible taht the type was downgraded to a scalar in previous computation
+                integers = np.array(scaled).astype(np.int64)
 
             elif isinstance(rationals, tf.Tensor):
                 factory = factory or self.default_factory
@@ -890,10 +891,8 @@ class ABY3(Protocol):
                     scaled = np.array(rationals)
                     if apply_scaling:
                         # First converting to float64, otherwise the scaling would not work as expected for input np array of type int32
-                        scaled = rationals.astype(np.float64)
-                        scaled = scaled * self.fixedpoint_config.scaling_factor
-                    else:
-                        scaled = rationals
+                        scaled = scaled.astype(np.float64)
+                        scaled = np.array(scaled * self.fixedpoint_config.scaling_factor)
                     integers = scaled.astype(np.int64)
                 except:
                     raise TypeError("Don't know how to encode {}".format(type(rationals)))
@@ -4902,6 +4901,69 @@ def _reduce_max_with_argmax_private(prot, x, axis=0, keepdims=False, output_styl
             argmax = prot.squeeze(argmax, axis=(axis,))
 
         return maximum, argmax
+
+
+# def _reduce_max_with_argmax_private(prot, x, axis=0, keepdims=False, output_style="onehot"):
+    # with tf.name_scope("reducemax-argmax"):
+
+        # def build_comparison_indices(n):
+            # indices = []
+            # while n > 1:
+                # indices.append([0, n//2, n//2*2])
+                # n = (n+1)//2
+            # return np.array(indices)
+
+        # n = int(x.shape[axis])
+        # indices = build_comparison_indices(n)
+        # steps = indices.shape[0]
+        # indices = tf.constant(indices, dtype=tf.int32)
+
+        # def cond(i, x, y):
+            # return i < steps
+
+        # def body(i, x, y):
+            # left_x = x[indices[i][0]:indices[i][1]]
+            # right_x = x[indices[i][1]:indices[i][2]]
+            # remain_x = x[indices[i][2]:]
+
+            # left_y = y[indices[i][0]:indices[i][1]]
+            # right_y = y[indices[i][1]:indices[i][2]]
+            # remain_y = y[indices[i][2]:]
+
+            # greater = prot.greater_than(left_x, right_x)
+            # x = prot.select(greater, right_x, left_x)
+            # y = prot.select(greater, right_y, left_y)
+
+            # x = prot.concat([x, remain_x], axis=0)
+            # y = prot.concat([y, remain_y], axis=0)
+
+            # return (i+1, x, y)
+
+        # tensors = prot.split(x, n, axis=axis)
+        # if output_style == "onehot":
+            # idx_init_shape = [1] * axis + [n] + [1] * (len(x.shape) - axis - 1)
+            # # tile_shape = x.shape[:axis] + [1] + x.shape[(axis+1):] # This is mainly to avoid the potential `tf.where` broadcasting problem in TF v1
+            # args = [
+                # # prot.define_constant(np.tile(np.reshape(np.eye(n)[i], idx_init_shape), tile_shape)) for i, _ in enumerate(tensors)
+                # prot.define_constant(np.reshape(np.eye(n)[i], idx_init_shape)) for i, _ in enumerate(tensors)
+            # ]
+            # args = prot.stack(args, 0)
+        # elif output_style == "normal":
+            # args = [
+                # prot.define_constant(np.array([i])) for i, _ in enumerate(tensors)
+            # ]
+            # args = prot.stack(indice, 0)
+
+        # tensors = prot.stack(tensors, 0)
+
+        # _, maximum, argmax = prot.while_loop(cond, body, [0, tensors, args])
+
+        # if not keepdims:
+            # maximum = prot.squeeze(maximum, axis=(axis,))
+        # if output_style=="normal":
+            # argmax = prot.squeeze(argmax, axis=(axis,))
+
+        # return maximum, argmax
 
 
 def _maxpool2d_public(
