@@ -2246,7 +2246,7 @@ class TestABY3(unittest.TestCase):
         _x = np.random.randint(-(1<<20), 1<<20, size=[5, 5], dtype=np.int64)
         expected = np.zeros(_x.shape, dtype=np.int64)
         for d in range(64):
-            idx = (np.bitwise_and(_x, np.array(1<<d).astype(np.int64)) == 0).astype(np.int64) * d
+            idx = (np.bitwise_and(_x, np.array(1<<d).astype(np.int64)) != 0).astype(np.int64) * d
             expected = np.bitwise_xor(expected, idx)
 
         x = tfe.define_private_variable(tf.constant(_x), apply_scaling=False, share_type=ShareType.BOOLEAN)
