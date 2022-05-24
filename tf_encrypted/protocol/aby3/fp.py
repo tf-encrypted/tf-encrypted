@@ -204,8 +204,8 @@ def approx_sqrt_inv(prot, x: "PrivateTensor"):
         f(b) = 4.7979 * b^2 - 5.9417 * b + 3.1855 approixmates 1/sqrt(b) in [0.25, 0.5)
         with less than 0.7% relative error
         """
-        # sqrt_inv = ((4.7979 * normalized) - 5.9417) * normalized + 3.1855
-        sqrt_inv = ((4.63887 * normalized) - 5.77789) * normalized + 3.14736
+        sqrt_inv = ((4.7979 * normalized) - 5.9417) * normalized + 3.1855
+        # sqrt_inv = ((4.63887 * normalized) - 5.77789) * normalized + 3.14736
         """
             Indeed, the exponetent part is 2^{j+k} where k is the scaling factor.
             We want to compute sqrt(2^{-j}) with k-bit precision, i.e., sqrt(2^{-j}) * 2^k.

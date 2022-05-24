@@ -67,7 +67,7 @@ class AMSgrad:
 
     Reference: https://paperswithcode.com/method/amsgrad
     """
-    def __init__(self, learning_rate=0.01, beta1=0.9, beta2=0.999):
+    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999):
         self.learning_rate = learning_rate
         self.beta1 = beta1
         self.beta2 = beta2
