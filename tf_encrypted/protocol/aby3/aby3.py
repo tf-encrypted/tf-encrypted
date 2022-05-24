@@ -1467,10 +1467,12 @@ class ABY3(Protocol):
 
     @memoize
     def indexer(self, x: "ABY3Tensor", slc) -> "ABY3Tensor":
+        x = self.lift(x)
         return self.dispatch("indexer", x, slc)
 
     @memoize
     def reshape(self, x: "ABY3Tensor", axe) -> "ABY3Tensor":
+        x = self.lift(x)
         return self.dispatch("reshape", x, axe)
 
     @memoize
@@ -4687,6 +4689,16 @@ def _indexer_private(prot: ABY3, tensor: ABY3PrivateTensor, slc) -> "ABY3Private
                 results[i][0] = shares[i][0][slc]
                 results[i][1] = shares[i][1][slc]
     return ABY3PrivateTensor(prot, results, tensor.is_scaled, tensor.share_type)
+
+
+def _reshape_public(prot: ABY3, tensor: ABY3PublicTensor, axe):
+    shares = tensor.unwrapped
+    results = [None for _ in range(3)]
+    with tf.name_scope("reshape"):
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                results[i] = shares[i].reshape(axe)
+    return ABY3PublicTensor(prot, results, tensor.is_scaled)
 
 
 def _reshape_private(prot: ABY3, tensor: ABY3PrivateTensor, axe):
