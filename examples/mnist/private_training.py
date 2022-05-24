@@ -44,34 +44,38 @@ class NetworkA(PrivateModel):
     def __init__(self):
         self.model = tfe.keras.Sequential()
         self.model.add(tfe.keras.layers.Flatten(batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS]))
-        self.model.add(tfe.keras.layers.Dense(128, activation=None))
+        self.model.add(tfe.keras.layers.Dense(128, activation=None, lazy_normalization=True))
         self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Dense(128, activation=None))
+        self.model.add(tfe.keras.layers.Dense(128, activation=None, lazy_normalization=True))
         self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None))
+        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
 
         # optimizer and data pipeline
-        optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
-        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True)
+        # optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
+        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
+        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
+        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
         self.model.compile(optimizer, loss)
 
 class NetworkB(PrivateModel):
     def __init__(self):
         self.model = tfe.keras.Sequential()
-        self.model.add(tfe.keras.layers.Conv2D(16, 5, 1, padding='same', activation=None, batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS]))
+        self.model.add(tfe.keras.layers.Conv2D(16, 5, 1, padding='same', activation=None, batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS], lazy_normalization=True))
         self.model.add(tfe.keras.layers.MaxPooling2D(2))
         self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Conv2D(16, 5, 1, padding='same', activation=None))
+        self.model.add(tfe.keras.layers.Conv2D(16, 5, 1, padding='same', activation=None, lazy_normalization=True))
         self.model.add(tfe.keras.layers.MaxPooling2D(2))
         self.model.add(tfe.keras.layers.ReLU())
         self.model.add(tfe.keras.layers.Flatten())
-        self.model.add(tfe.keras.layers.Dense(100, activation=None))
+        self.model.add(tfe.keras.layers.Dense(100, activation=None, lazy_normalization=True))
         self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None))
+        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
 
         # optimizer and data pipeline
-        optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
-        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True)
+        # optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
+        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
+        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
+        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
         self.model.compile(optimizer, loss)
 
 class NetworkC(PrivateModel):
@@ -99,16 +103,18 @@ class NetworkC(PrivateModel):
 class NetworkD(PrivateModel):
     def __init__(self):
         self.model = tfe.keras.Sequential()
-        self.model.add(tfe.keras.layers.Conv2D(5, 5, 2, padding='same', activation=None, batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS]))
+        self.model.add(tfe.keras.layers.Conv2D(5, 5, 2, padding='same', activation=None, batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS], lazy_normalization=True))
         self.model.add(tfe.keras.layers.ReLU())
         self.model.add(tfe.keras.layers.Flatten())
-        self.model.add(tfe.keras.layers.Dense(100, activation=None))
+        self.model.add(tfe.keras.layers.Dense(100, activation=None, lazy_normalization=True))
         self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None))
+        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
 
         # optimizer and data pipeline
-        optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
-        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True)
+        # optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
+        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
+        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
+        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
         self.model.compile(optimizer, loss)
 
 
