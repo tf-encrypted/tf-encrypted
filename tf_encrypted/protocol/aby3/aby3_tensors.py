@@ -428,6 +428,13 @@ class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
     def to_native(self):
         return self.decode()
 
+    def to_private(self, share_type):
+        factory = self.backing_dtype
+        result = self.prot.zeros(self.shape, self.is_scaled, share_type, factory)
+        result.unwrapped[0][0] = self.values[0]
+        result.unwrapped[2][1] = self.values[2]
+        return result
+
 
 class ABY3Constant(ABY3PublicTensor):
     """

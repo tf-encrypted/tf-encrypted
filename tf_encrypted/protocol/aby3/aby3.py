@@ -2014,17 +2014,27 @@ class ABY3(Protocol):
         return self.dispatch("pow2_from_bits", bits)
 
     @memoize
-    def while_loop(self, cond, body, loop_vars):
+    def while_loop(self, cond, body, loop_vars, shape_invariants=None):
         """
         NOTE: be careful about using this. From experiments, using while loop will result in
         faster graph building time, but slower evaluation time.
         """
-        return self.dispatch("while_loop", cond, body, loop_vars)
+        return self.dispatch("while_loop", cond, body, loop_vars, shape_invariants)
 
     @memoize
     def sort(self, x, axis, acc=True):
         return self.dispatch("sort", x, axis, acc)
 
+    @memoize
+    def zeros(self, shape, apply_scaling=False, share_type=ShareType.ARITHMETIC, factory=None):
+        if share_type == ShareType.ARITHMETIC or share_type == ShareType.BOOLEAN:
+            return _zeros_private(self, shape, apply_scaling, share_type, factory)
+        elif share_type == ShareType.PUBLIC:
+            return _zeros_public(self, shape, apply_scaling, share_type, factory)
+        else:
+            raise TypeError(
+                ("Don't know how to create zeros for share type: {}").format(share_type)
+            )
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
         """
@@ -3528,7 +3538,7 @@ def _carry_computation(prot, x, y, pos=None):
         return G
 
 
-def _while_loop_(prot, cond, body, loop_vars):
+def _while_loop_(prot, cond, body, loop_vars, shape_invariants):
 
     def extract_var_aux_info(var):
         info = {}
@@ -3553,6 +3563,17 @@ def _while_loop_(prot, cond, body, loop_vars):
         _aux = [extract_var_aux_info(var) for var in var_list]
         _native = [extract_var_native_vars(var) for var in var_list]
         return _aux, _native
+
+    def unwrap_shape_invariants(var_list, shape_invariants):
+        result = []
+        for i in range(len(var_list)):
+            if isinstance(var_list[i], ABY3PublicTensor):
+                result.append((shape_invariants[i], shape_invariants[i], shape_invariants[i]))
+            elif isinstance(var_list[i], ABY3PrivateTensor):
+                result.append((shape_invariants[i], shape_invariants[i], shape_invariants[i], shape_invariants[i], shape_invariants[i], shape_invariants[i]))
+            else:
+                result.append(shape_invariants[i])
+        return result
 
     def wrap(aux, native):
         _wrapped_vars = []
@@ -3585,8 +3606,11 @@ def _while_loop_(prot, cond, body, loop_vars):
         return unwrapped_result
 
     aux_info, native_vars = unwrap(loop_vars)
+    unwrapped_shape_invariants = None
+    if shape_invariants is not None:
+        unwrapped_shape_invariants = unwrap_shape_invariants(loop_vars, shape_invariants)
 
-    result = tf.while_loop(cond_wrapper, body_wrapper, native_vars)
+    result = tf.while_loop(cond_wrapper, body_wrapper, native_vars, unwrapped_shape_invariants)
     if not isinstance(result, (tuple, list)):
         result = [result]
     return wrap(aux_info, result)
@@ -4956,7 +4980,8 @@ def _reduce_max_with_argmax_private(prot, x, axis=0, keepdims=False, output_styl
 
         # tensors = prot.stack(tensors, 0)
 
-        # _, maximum, argmax = prot.while_loop(cond, body, [0, tensors, args])
+        # _, maximum, argmax = prot.while_loop(cond, body, [0, tensors, args],
+                # shape_invariants=[tf.TensorShape([]), tf.TensorShape([None] + tensors.shape.as_list()[1:]), tf.TensorShape([None] + args.shape.as_list()[1:])])
 
         # if not keepdims:
             # maximum = prot.squeeze(maximum, axis=(axis,))
@@ -5527,3 +5552,4 @@ def _sort_private(
 
         _, x = prot.while_loop(cond, body, [0, x])
         return x
+
