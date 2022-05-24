@@ -3713,7 +3713,7 @@ def _bit_extract_private(prot, x, i):
         mask = prot.define_constant(1, apply_scaling=False, factory=x.backing_dtype)
 
         if x.share_type == ShareType.BOOLEAN:
-            z = (x >> (x.backing_dtype.nbits-1)) & mask
+            z = (x >> i) & mask
             z = z.cast(prot.factories[tf.bool])
 
         elif x.share_type == ShareType.ARITHMETIC:

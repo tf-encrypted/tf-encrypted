@@ -2222,8 +2222,9 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        _x = (np.random.rand(1000)) * 1000 # [0, 1000]
+        # _x = (np.random.rand(1000)) * 1000 # [0, 1000]
         #_x = 1537 # Would not work larger than this number
+        _x = 9.1552734375e-05 # Would not work larger than this number
 
         x = tfe.define_private_input("server0", lambda: tf.constant(_x))
         y = tfe.inv_sqrt(x)
@@ -2233,9 +2234,9 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(y.reveal())
-            # np.testing.assert_allclose(
-                # result, 1.0 / np.sqrt(_x), rtol=0.0, atol=0.01
-            # )
+            np.testing.assert_allclose(
+                result, 1.0 / np.sqrt(_x), rtol=0.01, atol=0.01
+            )
 
     def test_xor_indices(self):
         tf.reset_default_graph()
