@@ -101,9 +101,14 @@ class AMSgrad:
             op1 = tfe.assign(M[i], self.beta1 * M[i] + (1-self.beta1) * G[i])
             op2 = tfe.assign(V[i], self.beta2 * V[i] + (1-self.beta2) * G[i] * G[i])
             with tf.control_dependencies([op2]):
-                op3 = tfe.assign(Vhat[i], tfe.maximum(Vhat[i], V[i]))
+                # need to use read_value here to use the updated lastest value of variable,
+                # otherwise it might use cached copy of the variable. The documentation of `read_value` says:
+                # "Can be different from value() if it's on another device, with control dependencies, etc."
+                v_max = tfe.maximum(Vhat[i].read_value(), V[i].read_value())
+                op3 = tfe.assign(Vhat[i], v_max)
             with tf.control_dependencies([op1, op3]):
-                diff = self.learning_rate * M[i] * tfe.inv_sqrt(Vhat[i] + self.epsilon)
+                vhat_add_e = Vhat[i].read_value() + self.epsilon
+                diff = self.learning_rate * M[i] * tfe.inv_sqrt(vhat_add_e)
                 ops.append(tfe.assign(W[i], W[i] - diff))
         return tf.group(*ops)
 
@@ -157,9 +162,9 @@ class Adam:
             op1 = tfe.assign(M[i], self.beta1 * M[i] + (1-self.beta1) * G[i])
             op2 = tfe.assign(V[i], self.beta2 * V[i] + (1-self.beta2) * G[i] * G[i])
             with tf.control_dependencies([op1, beta1_op]):
-                mhat = M[i] / (1 - beta1_pow)
+                mhat = M[i].read_value() / (1 - beta1_pow)
             with tf.control_dependencies([op2, beta2_op]):
-                vhat = V[i] / (1 - beta2_pow)
+                vhat = V[i].read_value() / (1 - beta2_pow)
 
             diff = self.learning_rate * mhat * tfe.inv_sqrt(vhat + self.epsilon)
             ops.append(tfe.assign(W[i], W[i] - diff))
