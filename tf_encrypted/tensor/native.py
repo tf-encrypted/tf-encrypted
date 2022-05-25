@@ -620,4 +620,7 @@ def native_factory(
             assert isinstance(value, Tensor), type(value)
             return tf.assign(self.variable, value.value).op
 
+        def read_value(self):
+            return DenseTensor(self.variable.read_value())
+
     return FACTORY

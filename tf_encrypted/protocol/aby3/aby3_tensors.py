@@ -534,6 +534,14 @@ class ABY3PrivateVariable(ABY3PrivateTensor, TFEPrivateVariable):
     def __repr__(self) -> str:
         return "ABY3PrivateVariable(shape={}, share_type={})".format(self.shape, self.share_type)
 
+    def read_value(self) -> ABY3PrivateTensor:
+        values = [
+            [self.shares[0][0].read_value(), self.shares[0][1].read_value()],
+            [self.shares[1][0].read_value(), self.shares[1][1].read_value()],
+            [self.shares[2][0].read_value(), self.shares[2][1].read_value()],
+        ]
+        return ABY3PrivateTensor(self.prot, values, self.is_scaled, self.share_type)
+
 
 class ABY3PublicPlaceholder(ABY3PublicTensor):
     """
