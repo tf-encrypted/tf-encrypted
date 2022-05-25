@@ -51,7 +51,7 @@ class NetworkA(PrivateModel):
         self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
 
         # optimizer and data pipeline
-        # optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
+        # optimizer = tfe.keras.optimizers.SGDWithMomentum(learning_rate=0.01)
         # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
         optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
         loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
@@ -72,7 +72,7 @@ class NetworkB(PrivateModel):
         self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
 
         # optimizer and data pipeline
-        # optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
+        # optimizer = tfe.keras.optimizers.SGDWithMomentum(learning_rate=0.01)
         # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
         optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
         loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
@@ -111,7 +111,7 @@ class NetworkD(PrivateModel):
         self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
 
         # optimizer and data pipeline
-        # optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
+        # optimizer = tfe.keras.optimizers.SGDWithMomentum(learning_rate=0.01)
         # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
         optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
         loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
