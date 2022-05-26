@@ -102,7 +102,9 @@ class AMSgrad:
             op2 = tfe.assign(V[i], self.beta2 * V[i] + (1-self.beta2) * G[i] * G[i])
             with tf.control_dependencies([op2]):
                 # need to use read_value here to use the updated lastest value of variable,
-                # otherwise it might use cached copy of the variable. The documentation of `read_value` says:
+                # otherwise it might use cached copy of the variable, leading to totally wrong result
+                # (i.e., some device uses the cached copy, some device uses updated value, such that the sharing
+                # is completely wrong). The documentation of `read_value` says:
                 # "Can be different from value() if it's on another device, with control dependencies, etc."
                 v_max = tfe.maximum(Vhat[i].read_value(), V[i].read_value())
                 op3 = tfe.assign(Vhat[i], v_max)
