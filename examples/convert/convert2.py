@@ -79,10 +79,15 @@ def verify_frozen_resnet50():
 
 
 def convert_to_tfe_model(graph_def):
-    config = tfe.LocalConfig(
-        ["server0", "server1", "server2", "crypto-producer", "prediction-client", "weights-provider"]
-    )
-    tfe.set_config(config)
+    if len(sys.argv) > 1:
+        # config file was specified
+        config_file = sys.argv[1]
+        config = tfe.RemoteConfig.load(config_file)
+        tfe.set_config(config)
+    else:
+        # Always best practice to preset all players to avoid invalid device errors
+        config = tfe.LocalConfig(player_names=["server0", "server1", "server2", "prediction-client", "weights-provider"])
+        tfe.set_config(config)
 
     def provide_input() -> tf.Tensor:
         images = load_images()
@@ -94,9 +99,7 @@ def convert_to_tfe_model(graph_def):
         return tensor
 
 
-    with tfe.protocol.ABY3(
-        *config.get_players("server0, server1, server2")
-    ) as prot:
+    with tfe.protocol.ABY3() as prot:
 
         c = convert.Converter(registry(), config=config, protocol=prot, model_provider=config.get_player("weights-provider"))
         x = c.convert(
@@ -120,7 +123,7 @@ def convert_to_tfe_model(graph_def):
 
 
 # load_images()
-# export_resnet50()
+export_resnet50()
 verify_frozen_resnet50()
 
 graph_def = load_frozen_resnet50()
