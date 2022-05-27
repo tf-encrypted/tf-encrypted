@@ -12,6 +12,7 @@ import tf_encrypted as tfe
 from tf_encrypted.convert import convert
 from tf_encrypted.convert.register import registry
 import time
+import sys
 
 
 check_nodes = ["conv2_block3_preact_bn/FusedBatchNormV3", "conv2_block3_1_bn/FusedBatchNormV3"]
