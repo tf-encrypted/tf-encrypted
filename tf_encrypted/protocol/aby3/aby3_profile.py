@@ -12,7 +12,7 @@ import tensorflow as tf
 
 import tf_encrypted as tfe
 from tf_encrypted.protocol.aby3 import ABY3, ShareType
-from .performance import Performance
+from tf_encrypted.performance import Performance
 
 
 class TestABY3Profile(unittest.TestCase):
