@@ -2258,7 +2258,7 @@ class TestABY3(unittest.TestCase):
             np.testing.assert_allclose(y, expected, rtol=0.0, atol=0.01)
 
 
-    def test_sort(self):
+    def test_sort1(self):
         tf.reset_default_graph()
 
         prot = ABY3()
@@ -2294,7 +2294,7 @@ class TestABY3(unittest.TestCase):
             )
 
 
-    def test_sort(self):
+    def test_sort2(self):
         tf.reset_default_graph()
 
         prot = ABY3()
