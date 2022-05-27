@@ -40,6 +40,23 @@ class PrivateModel:
     FLATTENED_DIM = IMG_ROWS * IMG_COLS
     IN_CHANNELS = 1
 
+class NetworkLR(PrivateModel):
+    def __init__(self):
+        self.model = tfe.keras.Sequential()
+        self.model.add(tfe.keras.layers.Flatten(batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS]))
+        self.model.add(tfe.keras.layers.Dense(128, activation=None, lazy_normalization=True))
+        self.model.add(tfe.keras.layers.ReLU())
+        self.model.add(tfe.keras.layers.Dense(128, activation=None, lazy_normalization=True))
+        self.model.add(tfe.keras.layers.ReLU())
+        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
+
+        # optimizer and data pipeline
+        # optimizer = tfe.keras.optimizers.SGDWithMomentum(learning_rate=0.01)
+        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
+        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
+        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
+        self.model.compile(optimizer, loss)
+
 class NetworkA(PrivateModel):
     def __init__(self):
         self.model = tfe.keras.Sequential()

@@ -15,4 +15,4 @@ echo "Starting prediction-client"
 sleep 1
 
 echo "Run private training example..."
-(time python examples/mnist/private_training.py examples/mnist/config.json > log.txt 2>&1 &)
+(time python examples/mnist/private_network_training.py examples/mnist/config.json > log.txt 2>&1 &)
