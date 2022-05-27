@@ -13,6 +13,7 @@ from tf_encrypted.convert import convert
 from tf_encrypted.convert.register import registry
 import time
 import sys
+from tf_encrypted.performance import Performance
 
 
 check_nodes = ["conv2_block3_preact_bn/FusedBatchNormV3", "conv2_block3_1_bn/FusedBatchNormV3"]
@@ -110,11 +111,10 @@ def convert_to_tfe_model(graph_def):
         with tfe.Session(config=config) as sess:
             sess.run(tfe.global_variables_initializer(), tag="init")
 
-            start = time.time()
+            Performance.time_log("Resnet50 Prediction")
             preds = sess.run(x.reveal(), tag="prediction")
             print('Predicted:', decode_predictions(preds, top=10)[0])
-            end = time.time()
-            print('[Time] {} seconds'.format(end-start))
+            Performance.time_log("Resnet50 Prediction")
 
             out_tensors = [c.outputs[check].reveal() for check in check_nodes]
             out_tensors = sess.run(out_tensors)
