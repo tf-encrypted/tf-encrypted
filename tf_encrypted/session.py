@@ -38,7 +38,7 @@ class Session(tf.compat.v1.Session):
     when executing the graph.
   """
 
-    def __init__(self, graph=None, config=None, target=None, **tf_config_kwargs):
+    def __init__(self, target=None, graph=None, config=None, **tf_config_kwargs):
         if config is None:
             config = get_config()
 

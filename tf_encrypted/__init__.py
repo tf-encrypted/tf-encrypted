@@ -113,7 +113,9 @@ def hook_tf():
     TODO(Zico): Extend to a full hook?
     """
     globals()["tf_reset_default_graph"] = tf.reset_default_graph
+    globals()["tf_Session"] = tf.Session
     tf.reset_default_graph = reset_default_graph
+    tf.Session = Session
 
 
 # set_protocol(Pond())
