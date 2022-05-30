@@ -5532,7 +5532,16 @@ def _sort_private(
                     indices.append(np.stack([left_idx, right_idx]))
             return np.stack(indices)
 
-        n = int(x.shape[0])
+        unpadded_n = int(x.shape[0])
+        n = next_power_of_two(unpadded_n)
+        if n > unpadded_n:
+            # We can only handle numbers of bit length k-2 for comparison
+            max_bound = (1 << (x.backing_dtype.nbits-2))-1
+            pad = prot.define_constant(np.ones([n-unpadded_n] + x.shape[1:]) * max_bound, apply_scaling=False)
+            pad = pad.to_private(x.share_type)
+            pad.is_scaled = x.is_scaled
+            x = prot.concat([x, pad], axis=0)
+
         n_stages = ceil(log2(n))
         n_sub_stages = int((1 + n_stages) * n_stages / 2)
 
@@ -5563,5 +5572,7 @@ def _sort_private(
 
 
         _, x = prot.while_loop(cond, body, [0, x])
+        if n > unpadded_n:
+            x = x[:unpadded_n]
         return x
 
