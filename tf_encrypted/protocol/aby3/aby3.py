@@ -1662,12 +1662,13 @@ class ABY3(Protocol):
         return self.dispatch("relu_with_cmp", x)
 
     @memoize
-    def softmax(self, x, approx_type="mp-spdz"):
+    def softmax(self, x, approx_type="mp-spdz", max_method="network"):
         """
         @param approx_type: "mp-spdz" (default), "as2019", or "infinity"
             "mp-spdz" approximates very good in range [-32, +);
             "as2019" approximates very good in range [-11, +);
             "infinity" approximates not so good in range (-, +).
+        @param max_method: "tree" or "network". See `reduce_max` for details.
         """
         return self.dispatch("softmax", x, approx_type)
 
@@ -1903,9 +1904,15 @@ class ABY3(Protocol):
             return (min_, max_)
 
     @memoize
-    def reduce_max(self, x, axis=None, keepdims=False):
+    def reduce_max(self, x, axis=None, keepdims=False, method="tree"):
+        """
+        @param method: "tree" or "network". The "tree" method builds a binary comparison tree and has
+            an optimial communication cost. The "network" method uses a sorting network to first sort
+            the input and then takes the maximum, which might give a better performance in Tensorflow's
+            graph execution.
+        """
         x = self.lift(x)
-        return self.dispatch("reduce_max", x, axis=axis, keepdims=keepdims)
+        return self.dispatch("reduce_max", x, axis=axis, keepdims=keepdims, method=method)
 
     @memoize
     def argmax(self, x, axis=0, output_style="onehot"):
@@ -4823,11 +4830,12 @@ def _reduce_max_public(
         x: ABY3PublicTensor,
         axis: Optional[int] = None,
         keepdims: Optional[bool] = False,
+        method="tree",
 ) -> ABY3PublicTensor:
 
     xs = x.unwrapped
 
-    with tf.name_scope("reduce_max"):
+    with tf.name_scope("reduce-max"):
         z = [None, None, None]
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
@@ -4841,9 +4849,26 @@ def _reduce_max_private(
         x: ABY3PrivateTensor,
         axis: Optional[int] = None,
         keepdims: Optional[bool] = False,
+        method="tree",
 ) -> ABY3PrivateTensor:
 
-    with tf.name_scope("reduce_max"):
+    with tf.name_scope("reduce-max"):
+        if method == "tree":
+            return _reduce_max_tree_private(prot, x, axis=axis, keepdims=keepdims)
+        elif method == "network":
+            return _reduce_max_network_private(prot, x, axis=axis, keepdims=keepdims)
+        else:
+            raise NotImplementedError("Unknown method for reduce max: " + method)
+
+
+def _reduce_max_tree_private(
+        prot: ABY3,
+        x: ABY3PrivateTensor,
+        axis: Optional[int] = None,
+        keepdims: Optional[bool] = False,
+) -> ABY3PrivateTensor:
+
+    with tf.name_scope("reduce-max-tree"):
 
         def build_comparison_tree(ts):
             if len(ts) == 1:
@@ -4876,6 +4901,29 @@ def _reduce_max_private(
             maximum = build_comparison_tree(tensors)
             if not keepdims:
                 maximum = prot.squeeze(maximum, axis=(axis,))
+        return maximum
+
+
+def _reduce_max_network_private(
+        prot: ABY3,
+        x: ABY3PrivateTensor,
+        axis: Optional[int] = None,
+        keepdims: Optional[bool] = False,
+) -> ABY3PrivateTensor:
+
+    with tf.name_scope("reduce-max-network"):
+
+        if axis is None:
+            x = prot.reshape(x, [-1])
+            y = prot.sort(x, 0, acc=False)
+            if keepdims:
+                maximum = prot.reshape(y[0], [1]*len(x.shape))
+        else:
+            y = prot.sort(x, axis, acc=False)
+            if keepdims:
+                maximum = prot.gather(y, [0], axis=axis)
+            else:
+                maximum = prot.gather(y, 0, axis=axis)
         return maximum
 
 
@@ -5249,8 +5297,8 @@ def _patches2im_private(prot, x, patch_size, stride=1, padding="SAME", img_size=
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
 
 
-def _softmax_private(prot, x, approx_type="mp-spdz"):
-    logits_max = prot.reduce_max(x, axis=-1, keepdims=True)
+def _softmax_private(prot, x, approx_type="mp-spdz", max_method="network"):
+    logits_max = prot.reduce_max(x, axis=-1, keepdims=True, method=max_method)
     # Minus precision to make sure all negative. Softmax results are the same.
     precision = 2**(-prot.fixedpoint_config.precision_fractional)
     adjusted_x = x - logits_max - precision
@@ -5534,6 +5582,9 @@ def _sort_private(
             return np.stack(indices)
 
 
+        axis = axis % len(x.shape)
+        if axis < 0:
+            axis += len(x.shape)
         if axis != 0:
             x = prot.transpose(x, perm=[axis] + list(range(0, axis)) + list(range(axis+1, len(x.shape))))
 
