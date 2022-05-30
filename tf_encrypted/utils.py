@@ -74,9 +74,13 @@ def unwrap_fetches(fetches):
 
     if isinstance(fetches, (list, tuple)):
         return [unwrap_fetches(fetch) for fetch in fetches]
-    if isinstance(fetches, (tf.Tensor, tf.Operation)):
+    if isinstance(fetches, (tf.Tensor, tf.Operation, tf.Variable)):
         return fetches
-    return fetches.to_native()
+    try:
+        native = getattr(fetches, 'to_native')
+        return native()
+    except:
+        return fetches
 
 
 def get_default_arg(func, arg):
