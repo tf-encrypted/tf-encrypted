@@ -16,6 +16,16 @@ import sys
 from tf_encrypted.performance import Performance
 
 
+if len(sys.argv) > 1:
+    # config file was specified
+    config_file = sys.argv[1]
+    config = tfe.RemoteConfig.load(config_file)
+    tfe.set_config(config)
+else:
+    # Always best practice to preset all players to avoid invalid device errors
+    config = tfe.LocalConfig(player_names=["server0", "server1", "server2", "prediction-client", "weights-provider"])
+    tfe.set_config(config)
+
 check_nodes = ["conv2_block3_preact_bn/FusedBatchNormV3", "conv2_block3_1_bn/FusedBatchNormV3"]
 
 
@@ -74,22 +84,13 @@ def verify_frozen_resnet50():
             preds = sess.run(output_node, feed_dict={input_node: images})
             print('Predicted:', decode_predictions(preds, top=10)[0])
 
-            out_tensors = [sess.graph.get_tensor_by_name(check+":0") for check in check_nodes]
-            out_tensors = sess.run(out_tensors, feed_dict={input_node: images})
-            for i in range(len(check_nodes)):
-                print(check_nodes[i], ": \n", out_tensors[i])
+            # out_tensors = [sess.graph.get_tensor_by_name(check+":0") for check in check_nodes]
+            # out_tensors = sess.run(out_tensors, feed_dict={input_node: images})
+            # for i in range(len(check_nodes)):
+                # print(check_nodes[i], ": \n", out_tensors[i])
 
 
 def convert_to_tfe_model(graph_def):
-    if len(sys.argv) > 1:
-        # config file was specified
-        config_file = sys.argv[1]
-        config = tfe.RemoteConfig.load(config_file)
-        tfe.set_config(config)
-    else:
-        # Always best practice to preset all players to avoid invalid device errors
-        config = tfe.LocalConfig(player_names=["server0", "server1", "server2", "prediction-client", "weights-provider"])
-        tfe.set_config(config)
 
     def provide_input() -> tf.Tensor:
         images = load_images()
@@ -116,10 +117,10 @@ def convert_to_tfe_model(graph_def):
             print('Predicted:', decode_predictions(preds, top=10)[0])
             Performance.time_log("Resnet50 Prediction")
 
-            out_tensors = [c.outputs[check].reveal() for check in check_nodes]
-            out_tensors = sess.run(out_tensors)
-            for i in range(len(check_nodes)):
-                print(check_nodes[i], ": \n", out_tensors[i])
+            # out_tensors = [c.outputs[check].reveal() for check in check_nodes]
+            # out_tensors = sess.run(out_tensors)
+            # for i in range(len(check_nodes)):
+                # print(check_nodes[i], ": \n", out_tensors[i])
 
 
 
