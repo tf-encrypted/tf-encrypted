@@ -106,16 +106,17 @@ class ABY3(Protocol):
         self.b2a_keys_2_ = None
         self.b2a_nonce_ = None
         self.keys_initialized = False
+        self.initialize_keys()
 
 
     def pairwise_keys(self):
         if not self.keys_initialized:
-            self.initialize_keys()
+            raise RuntimeError("Please call `reset` to initialize keys.")
         return self.pairwise_keys_
 
     def pairwise_nonces(self):
         if not self.keys_initialized:
-            self.initialize_keys()
+            raise RuntimeError("Please call `reset` to initialize keys.")
         return self.pairwise_nonces_
 
     def _update_pairwise_nonces(self):
@@ -123,17 +124,17 @@ class ABY3(Protocol):
 
     def b2a_keys_1(self):
         if not self.keys_initialized:
-            self.initialize_keys()
+            raise RuntimeError("Please call `reset` to initialize keys.")
         return self.b2a_keys_1_
 
     def b2a_keys_2(self):
         if not self.keys_initialized:
-            self.initialize_keys()
+            raise RuntimeError("Please call `reset` to initialize keys.")
         return self.b2a_keys_2_
 
     def b2a_nonce(self):
         if not self.keys_initialized:
-            self.initialize_keys()
+            raise RuntimeError("Please call `reset` to initialize keys.")
         return self.b2a_nonce_
 
     def _update_b2a_nonce(self):
@@ -5532,6 +5533,10 @@ def _sort_private(
                     indices.append(np.stack([left_idx, right_idx]))
             return np.stack(indices)
 
+
+        if axis != 0:
+            x = prot.transpose(x, perm=[axis] + list(range(0, axis)) + list(range(axis+1, len(x.shape))))
+
         unpadded_n = int(x.shape[0])
         n = next_power_of_two(unpadded_n)
         if n > unpadded_n:
@@ -5548,6 +5553,8 @@ def _sort_private(
         indices = build_bitonic_index(n)
         indices = tf.constant(indices, dtype=tf.int32)
 
+
+
         def cond(i, x):
             return i < n_sub_stages
 
@@ -5555,16 +5562,22 @@ def _sort_private(
             left_idx = indices[i][0]
             right_idx = indices[i][1]
 
-            left = prot.gather(x, left_idx)
-            right = prot.gather(x, right_idx)
-            left, right = prot.cmp_swap(left, right)
+            left = prot.gather(x, left_idx, axis=0)
+            right = prot.gather(x, right_idx, axis=0)
+            min_, max_ = prot.cmp_swap(left, right)
+
+            if acc:
+                min_idx, max_idx = (left_idx, right_idx)
+            else:
+                min_idx, max_idx = (right_idx, left_idx)
+
             z0 = prot.scatter_nd(
-                tf.expand_dims(left_idx, axis=1),
-                left,
+                tf.expand_dims(min_idx, axis=1),
+                min_,
                 x.shape)
             z1 = prot.scatter_nd(
-                tf.expand_dims(right_idx, axis=1),
-                right,
+                tf.expand_dims(max_idx, axis=1),
+                max_,
                 x.shape)
             x = z0 + z1
 
@@ -5573,6 +5586,11 @@ def _sort_private(
 
         _, x = prot.while_loop(cond, body, [0, x])
         if n > unpadded_n:
-            x = x[:unpadded_n]
+            if acc:
+                x = x[:unpadded_n]
+            else:
+                x = x[(n-unpadded_n):]
+        if axis != 0:
+            x = prot.transpose(x, perm=list(range(1, axis+1)) + [0] + list(range(axis+1, len(x.shape))))
         return x
 

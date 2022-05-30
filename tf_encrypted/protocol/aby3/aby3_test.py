@@ -2287,7 +2287,6 @@ class TestABY3(unittest.TestCase):
             np.testing.assert_allclose(
                 result, np.array([[6, 5, 4, 3, 2, 1], [12, 11, 10, 9, 8, 7]]), rtol=0.0, atol=0.01
             )
-
             result = sess.run(y3.reveal())
             np.testing.assert_allclose(
                 result, np.array([[11, 8, 10, 12, 9, 7], [3, 1, 5, 2, 6, 4]]), rtol=0.0, atol=0.01
