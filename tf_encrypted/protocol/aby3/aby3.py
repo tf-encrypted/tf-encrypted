@@ -5575,7 +5575,6 @@ def _sort_private(
             indices = []
             n_stages = ceil(log2(n))
             for stage in range(n_stages):
-                print("building stage: ", stage)
                 for sub_stage in range(stage + 1):
                     left_idx, right_idx = bitonic_index(n, stage, sub_stage)
                     indices.append(np.stack([left_idx, right_idx]))
