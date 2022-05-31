@@ -25,7 +25,8 @@ def save_training_data(images, labels, filename):
 
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-data_dir = os.path.expanduser("./data/")
+directory = os.path.dirname(os.path.abspath(__file__))
+data_dir = os.path.join(directory, "data")
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
 

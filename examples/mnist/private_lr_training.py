@@ -31,7 +31,6 @@ session_target = sys.argv[2] if len(sys.argv) > 2 else None
 
 class PrivateModel:
     BATCH_SIZE = 128
-    NUM_CLASSES = 10
     EPOCHS = 5
 
     ITERATIONS = 60000 // BATCH_SIZE
@@ -41,81 +40,17 @@ class PrivateModel:
     FLATTENED_DIM = IMG_ROWS * IMG_COLS
     IN_CHANNELS = 1
 
-class NetworkA(PrivateModel):
+class LogisticRegression(PrivateModel):
     def __init__(self):
         self.model = tfe.keras.Sequential()
         self.model.add(tfe.keras.layers.Flatten(batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS]))
-        self.model.add(tfe.keras.layers.Dense(128, activation=None, lazy_normalization=True))
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Dense(128, activation=None, lazy_normalization=True))
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
+        self.model.add(tfe.keras.layers.Dense(1, activation=None, lazy_normalization=True))
 
         # optimizer and data pipeline
         # optimizer = tfe.keras.optimizers.SGDWithMomentum(learning_rate=0.01)
         # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
         optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
-        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
-        self.model.compile(optimizer, loss)
-
-class NetworkB(PrivateModel):
-    def __init__(self):
-        self.model = tfe.keras.Sequential()
-        self.model.add(tfe.keras.layers.Conv2D(16, 5, 1, padding='valid', activation=None, batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS], lazy_normalization=True))
-        self.model.add(tfe.keras.layers.MaxPooling2D(2))
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Conv2D(16, 5, 1, padding='valid', activation=None, lazy_normalization=True))
-        self.model.add(tfe.keras.layers.MaxPooling2D(2))
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Flatten())
-        self.model.add(tfe.keras.layers.Dense(100, activation=None, lazy_normalization=True))
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
-
-        # optimizer and data pipeline
-        # optimizer = tfe.keras.optimizers.SGDWithMomentum(learning_rate=0.01)
-        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
-        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
-        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
-        self.model.compile(optimizer, loss)
-
-class NetworkC(PrivateModel):
-    def __init__(self):
-        self.model = tfe.keras.Sequential()
-        self.model.add(tfe.keras.layers.Conv2D(20, 5, 1, padding='valid', activation=None, batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS], lazy_normalization=True))
-        self.model.add(tfe.keras.layers.MaxPooling2D(2))
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Conv2D(50, 5, 1, padding='valid', activation=None, lazy_normalization=True))
-        self.model.add(tfe.keras.layers.MaxPooling2D(2))
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Flatten())
-        self.model.add(tfe.keras.layers.Dense(500, activation=None, lazy_normalization=True))
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
-
-        # optimizer and data pipeline
-        # optimizer = tfe.keras.optimizers.SGDWithMomentum(learning_rate=0.01, momentum=0.9)
-        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
-        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
-        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
-        self.model.compile(optimizer, loss)
-
-
-class NetworkD(PrivateModel):
-    def __init__(self):
-        self.model = tfe.keras.Sequential()
-        self.model.add(tfe.keras.layers.Conv2D(5, 5, 2, padding='same', activation=None, batch_input_shape=[self.BATCH_SIZE, self.IMG_ROWS, self.IMG_COLS, self.IN_CHANNELS], lazy_normalization=True))
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Flatten())
-        self.model.add(tfe.keras.layers.Dense(100, activation=None, lazy_normalization=True))
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Dense(self.NUM_CLASSES, activation=None, lazy_normalization=True))
-
-        # optimizer and data pipeline
-        # optimizer = tfe.keras.optimizers.SGDWithMomentum(learning_rate=0.01)
-        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
-        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
-        loss = tfe.keras.losses.CategoricalCrossentropy(from_logits=True, lazy_normalization=True)
+        loss = tfe.keras.losses.BinaryCrossentropy(from_logits=True, lazy_normalization=True)
         self.model.compile(optimizer, loss)
 
 
@@ -139,7 +74,7 @@ class TrainingClient(PrivateModel):
 
         def normalize(image, label):
             image = tf.cast(image, tf.float32) / 255.0
-            label = tf.one_hot(label, self.NUM_CLASSES)
+            label = tf.cast(tf.math.greater(label, 4), dtype=tf.float32)
             return image, label
 
         def shaping(image, label):
@@ -160,7 +95,7 @@ class TrainingClient(PrivateModel):
         iterator = dataset.make_one_shot_iterator()
         x, y = iterator.get_next()
         x = tf.reshape(x, [self.BATCH_SIZE, PrivateModel.IMG_ROWS, PrivateModel.IMG_COLS, PrivateModel.IN_CHANNELS])
-        y = tf.reshape(y, [self.BATCH_SIZE, self.NUM_CLASSES])
+        y = tf.reshape(y, [self.BATCH_SIZE, 1])
         return x, y
 
     def train(self, model):
@@ -195,7 +130,7 @@ class PredictionClient(PrivateModel):
 
         def normalize(image, label):
             image = tf.cast(image, tf.float32) / 255.0
-            label = tf.one_hot(label, self.NUM_CLASSES)
+            label = tf.cast(tf.math.greater(label, 4), dtype=tf.float32)
             return image, label
 
         def shaping(image, label):
@@ -214,7 +149,7 @@ class PredictionClient(PrivateModel):
         iterator = dataset.make_one_shot_iterator()
         x, y = iterator.get_next()
         x = tf.reshape(x, [self.BATCH_SIZE, PrivateModel.IMG_ROWS, PrivateModel.IMG_COLS, PrivateModel.IN_CHANNELS])
-        y = tf.reshape(y, [self.BATCH_SIZE, self.NUM_CLASSES])
+        y = tf.reshape(y, [self.BATCH_SIZE, 1])
         return x, y
 
     def evaluate(self, model):
@@ -234,22 +169,19 @@ if __name__ == "__main__":
     sess = tfe.Session(target=session_target)
     KE.set_session(sess)
 
-    # Network = NetworkA
-    # Network = NetworkB
-    Network = NetworkC
-    # Network = NetworkD
+    Network = LogisticRegression
 
     model = Network().model
 
     directory = os.path.dirname(os.path.abspath(__file__))
     train_data_file = os.path.join(directory, "data", "train.tfrecord")
     training_client = TrainingClient(
-        player_name="training-client", local_data_file="./data/train.tfrecord"
+        player_name="training-client", local_data_file=train_data_file
     )
 
     test_data_file = os.path.join(directory, "data", "test.tfrecord")
     prediction_client = PredictionClient(
-        player_name="prediction-client", local_data_file="./data/test.tfrecord"
+        player_name="prediction-client", local_data_file=test_data_file
     )
 
     print("Train model")
