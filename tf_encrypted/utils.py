@@ -90,3 +90,15 @@ def get_default_arg(func, arg):
         raise ValueError("Parameter {} has no default value".format(arg))
     return v.default
 
+
+def print_banner(title):
+    title_length = len(title)
+    banner_length = title_length + 2 * 10
+    banner_top = "+" + ("-" * (banner_length - 2)) + "+"
+    banner_middle = "|" + " " * 9 + title + " " * 9 + "|"
+
+    print()
+    print(banner_top)
+    print(banner_middle)
+    print(banner_top)
+
