@@ -39,8 +39,9 @@ class BinaryCrossentropy(Loss):
             that `y_pred` contains probabilities (i.e., values in [0, 1]).
     """
 
-    def __init__(self, from_logits=False):
+    def __init__(self, from_logits=False, lazy_normalization=False):
         self.from_logits = from_logits
+        self.lazy_normalization = lazy_normalization
         if from_logits:
             super(BinaryCrossentropy, self).__init__(binary_crossentropy_from_logits)
         else:
@@ -56,7 +57,8 @@ class BinaryCrossentropy(Loss):
                     # "in a backward propagation, otherwise it requires a private division.")
             # # grad = (y_pred - y_true) / (y_pred * (1 - y_pred))
         grad = y_pred - y_true
-        grad = grad * batch_size_inv
+        if not self.lazy_normalization:
+            grad = grad * batch_size_inv
         return grad
 
 
