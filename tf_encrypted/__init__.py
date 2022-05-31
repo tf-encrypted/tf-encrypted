@@ -97,6 +97,8 @@ def set_config(config: Config) -> None:
 
     set_global_config(config)
     set_protocol(None)
+    # Reset the graph to clear all ops that were created under previous config that might use different devices, otherwise there might be invalid device error.
+    reset_default_graph()
 
 
 def global_variables_initializer() -> tf.Operation:
@@ -105,7 +107,8 @@ def global_variables_initializer() -> tf.Operation:
 def reset_default_graph():
     globals()['tf_reset_default_graph']()
     # Reset the protocol to clear any previously created nodes in the old graph
-    get_protocol().reset()
+    if get_protocol() is not None:
+        get_protocol().reset()
 
 def hook_tf():
     """
