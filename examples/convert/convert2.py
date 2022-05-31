@@ -14,6 +14,8 @@ from tf_encrypted.convert.register import registry
 import time
 import sys
 from tf_encrypted.performance import Performance
+import os
+from tf_encrypted.utils import print_banner
 
 
 if len(sys.argv) > 1:
@@ -28,9 +30,10 @@ else:
 
 check_nodes = ["conv2_block3_preact_bn/FusedBatchNormV3", "conv2_block3_1_bn/FusedBatchNormV3"]
 
+directory = os.path.dirname(os.path.abspath(__file__))
 
 def load_images(preprocess=True):
-    with open("./n02109961_36_enc.pkl", "rb") as ff:
+    with open(os.path.join(directory, "n02109961_36_enc.pkl"), "rb") as ff:
         images = np.array(pickle.load(ff))
 
     if preprocess:
@@ -40,12 +43,13 @@ def load_images(preprocess=True):
     return images
 
 def export_resnet50():
+    print_banner("Export Resnet50 Model")
     images = load_images()
     tf.keras.backend.set_learning_phase(0)
     tf.keras.backend.set_image_data_format('channels_last')
     tf.keras.backend.set_floatx('float32')
 
-    output_graph_filename = "resnet50.pb"
+    output_graph_filename = os.path.join(directory, "resnet50.pb")
 
     with tf.Session() as sess:
         # Must construct the model inside this session, otherwise it might be complicated to freeze the graph later due to unitialized variables
@@ -65,7 +69,8 @@ def export_resnet50():
 
 
 def load_frozen_resnet50():
-    model_filename = "resnet50.pb"
+    print_banner("Load Frozen Resnet50")
+    model_filename = os.path.join(directory, "resnet50.pb")
     with gfile.GFile(model_filename, "rb") as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
@@ -74,6 +79,7 @@ def load_frozen_resnet50():
 
 
 def verify_frozen_resnet50():
+    print_banner("Verify Frozen Resnet50")
     with tf.Graph().as_default():
         graph_def = load_frozen_resnet50()
         importer.import_graph_def(graph_def, name="")
@@ -91,6 +97,7 @@ def verify_frozen_resnet50():
 
 
 def convert_to_tfe_model(graph_def):
+    print_banner("Convert Plain Resnet50 to TFE Resnet50")
 
     def provide_input() -> tf.Tensor:
         images = load_images()

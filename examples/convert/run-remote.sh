@@ -1,6 +1,5 @@
 SCRIPT_PATH="${BASH_SOURCE:-$0}"
-ABS_SCRIPT_PATH="$(realpath "${SCRIPT_PATH}")"
-ABS_DIRECTORY="$(dirname "${ABS_SCRIPT_PATH}")"
+ABS_DIRECTORY="$(dirname "${SCRIPT_PATH}")"
 
 echo "Starting server0"
 (python -m tf_encrypted.player server0 --config ${ABS_DIRECTORY}/config.json > log0.txt 2>&1 &)
