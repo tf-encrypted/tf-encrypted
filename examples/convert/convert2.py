@@ -112,10 +112,15 @@ def convert_to_tfe_model(graph_def):
         with tfe.Session(config=config) as sess:
             sess.run(tfe.global_variables_initializer(), tag="init")
 
-            Performance.time_log("Resnet50 Prediction")
+            Performance.time_log("Resnet50 Prediction 1st run")
             preds = sess.run(x.reveal(), tag="prediction")
+            Performance.time_log("Resnet50 Prediction 1st run")
+
+            Performance.time_log("Resnet50 Prediction 2nd run")
+            preds = sess.run(x.reveal(), tag="prediction")
+            Performance.time_log("Resnet50 Prediction 2nd run")
+
             print('Predicted:', decode_predictions(preds, top=10)[0])
-            Performance.time_log("Resnet50 Prediction")
 
             # out_tensors = [c.outputs[check].reveal() for check in check_nodes]
             # out_tensors = sess.run(out_tensors)
