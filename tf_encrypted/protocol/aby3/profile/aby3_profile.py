@@ -52,6 +52,58 @@ class TestABY3Profile(unittest.TestCase):
             x_, result = sess.run([x, y0.reveal()])
             Performance.time_log("2nd run")
 
+    def test_max_performance_type1(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        n = 2**10
+        x = tf.range(n)
+        x = tf.random.shuffle(x)
+        private_x = tfe.define_private_variable(x)
+
+        Performance.time_log("Graph building")
+        y0 = tfe.reduce_max(private_x, axis=0)
+        Performance.time_log("Graph building")
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            Performance.time_log("1st run")
+            x_, result = sess.run([x, y0.reveal()])
+            Performance.time_log("1st run")
+            Performance.time_log("2nd run")
+            x_, result = sess.run([x, y0.reveal()])
+            Performance.time_log("2nd run")
+
+    def test_max_performance_type2(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        n = 2**10 * 4
+        x = tf.range(n)
+        x = tf.reshape(tf.random.shuffle(x), [2**10, 4])
+        private_x = tfe.define_private_variable(x)
+
+        Performance.time_log("Graph building")
+        y0 = tfe.reduce_max(private_x, axis=1)
+        Performance.time_log("Graph building")
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            Performance.time_log("1st run")
+            x_, result = sess.run([x, y0.reveal()])
+            Performance.time_log("1st run")
+            Performance.time_log("2nd run")
+            x_, result = sess.run([x, y0.reveal()])
+            Performance.time_log("2nd run")
+
 
 if __name__ == "__main__":
     """
