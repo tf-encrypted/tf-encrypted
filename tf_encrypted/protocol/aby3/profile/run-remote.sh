@@ -1,3 +1,5 @@
+# Usage: ./run-remote.sh test_sort_performance 
+
 SCRIPT_PATH="${BASH_SOURCE:-$0}"
 ABS_DIRECTORY="$(dirname "${SCRIPT_PATH}")"
 
