@@ -6,6 +6,7 @@ import os
 import math
 import tempfile
 import unittest
+import sys
 
 import numpy as np
 import tensorflow as tf
@@ -13,6 +14,9 @@ import tensorflow as tf
 import tf_encrypted as tfe
 from tf_encrypted.protocol.aby3 import ABY3, ShareType
 from tf_encrypted.performance import Performance
+
+
+
 
 
 class TestABY3Profile(unittest.TestCase):
@@ -24,7 +28,7 @@ class TestABY3Profile(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        n = 2**20
+        n = 2**10
         x = tf.range(n)
         x = tf.random.shuffle(x)
         private_x = tfe.define_private_variable(x)
@@ -49,22 +53,21 @@ class TestABY3Profile(unittest.TestCase):
             Performance.time_log("2nd run")
 
 
-
-def print_banner(title):
-    title_length = len(title)
-    banner_length = title_length + 2 * 10
-    banner_top = "+" + ("-" * (banner_length - 2)) + "+"
-    banner_middle = "|" + " " * 9 + title + " " * 9 + "|"
-
-    print()
-    print(banner_top)
-    print(banner_middle)
-    print(banner_top)
-
-
 if __name__ == "__main__":
     """
     Run these tests with:
-    python aby3_test.py
+    python aby3_profile.py
     """
-    unittest.main()
+
+    if len(sys.argv) < 3:
+        raise RuntimeError("Expect at least 3 arguments")
+
+    # config file was specified
+    config_file = sys.argv[1]
+    config = tfe.RemoteConfig.load(config_file)
+    tfe.set_config(config)
+
+    test = sys.argv[2]
+    singletest = unittest.TestSuite()
+    singletest.addTest(TestABY3Profile(test))
+    unittest.TextTestRunner().run(singletest)
