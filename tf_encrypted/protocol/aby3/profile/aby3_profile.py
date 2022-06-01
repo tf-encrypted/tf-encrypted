@@ -64,7 +64,7 @@ class TestABY3Profile(unittest.TestCase):
         private_x = tfe.define_private_variable(x)
 
         Performance.time_log("Graph building")
-        y0 = tfe.reduce_max(private_x, axis=0)
+        y0 = tfe.reduce_max(private_x, axis=0, method="network")
         Performance.time_log("Graph building")
 
         with tfe.Session() as sess:
