@@ -111,10 +111,12 @@ def convert_to_tfe_model(graph_def):
 
     with tfe.protocol.ABY3() as prot:
 
+        Performance.time_log("Graph conversion")
         c = convert.Converter(registry(), config=config, protocol=prot, model_provider=config.get_player("weights-provider"))
         x = c.convert(
             graph_def, config.get_player("prediction-client"), provide_input
         )
+        Performance.time_log("Graph conversion")
 
         with tfe.Session(config=config) as sess:
             sess.run(tfe.global_variables_initializer(), tag="init")
