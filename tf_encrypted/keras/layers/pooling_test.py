@@ -85,7 +85,7 @@ class TestGlobalPooling2d(unittest.TestCase):
 
     def _core_global_maxpooling2d(self, **layer_kwargs):
         channel_in = 2
-        input_shape = [2, 8, 8, channel_in]  # channels last
+        input_shape = [2, 4, 4, channel_in]  # channels last
 
         base_kwargs = {}
 
@@ -101,7 +101,7 @@ class TestGlobalPooling2d(unittest.TestCase):
 
     def _core_global_avgpooling2d(self, **layer_kwargs):
         channel_in = 2
-        input_shape = [2, 8, 8, channel_in]  # channels last
+        input_shape = [2, 4, 4, channel_in]  # channels last
 
         base_kwargs = {}
 
