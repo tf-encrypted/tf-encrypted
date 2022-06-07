@@ -6,7 +6,6 @@ from typing import List
 from typing import Tuple
 
 import numpy as np
-import pytest
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Conv2D
@@ -20,6 +19,7 @@ from tensorflow.python.framework import graph_io
 from tensorflow.python.framework import graph_util
 from tensorflow.python.platform import gfile
 
+import pytest
 import tf_encrypted as tfe
 from tf_encrypted.convert import Converter
 from tf_encrypted.convert.register import registry
