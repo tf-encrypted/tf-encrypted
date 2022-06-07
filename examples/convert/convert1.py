@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import graph_io
@@ -21,11 +19,14 @@ def export_cnn() -> None:
     d = tf.keras.layers.Conv2D(1, 3, padding="same", data_format="channels_first")(b)
     e = tf.keras.layers.Conv2D(1, 3, padding="same", data_format="channels_first")(x)
     with tf.name_scope("scope1"):
-        f = tf.keras.layers.Conv2D(1, 3, padding="same", data_format="channels_first")(a)
+        f = tf.keras.layers.Conv2D(1, 3, padding="same", data_format="channels_first")(
+            a
+        )
     with tf.name_scope("scope2"):
-        g = tf.keras.layers.Conv2D(1, 3, padding="same", data_format="channels_first")(b)
+        g = tf.keras.layers.Conv2D(1, 3, padding="same", data_format="channels_first")(
+            b
+        )
     x = c + d + e + f + g
-    # x = tf.raw_ops.FusedBatchNormV3(x=x, scale=np.ones(x.shape[0], dtype=np.float32), offset=np.ones(x.shape[0]), mean=np.ones(x.shape[0]), variance=np.ones(x.shape[0]), is_training=False, data_format='NCHW')[0]
     x = tf.keras.layers.BatchNormalization(axis=1)(x, training=False)
 
     pred_node_names = ["output"]
@@ -71,10 +72,13 @@ with tfe.protocol.Pond(
     *config.get_players("server0, server1, crypto-producer")
 ) as prot:
 
-    c = convert.Converter(registry(), config=config, protocol=prot, model_provider=config.get_player("weights-provider"))
-    x = c.convert(
-        graph_def, config.get_player("prediction-client"), provide_input
+    c = convert.Converter(
+        registry(),
+        config=config,
+        protocol=prot,
+        model_provider=config.get_player("weights-provider"),
     )
+    x = c.convert(graph_def, config.get_player("prediction-client"), provide_input)
 
     prediction_op = prot.define_output(
         config.get_player("prediction-client"), x, receive_output
