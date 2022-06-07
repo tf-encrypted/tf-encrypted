@@ -72,7 +72,7 @@ def registry():
         "Mean": _keras_global_avgpool,
         "Max": _keras_global_maxpool,
         "FusedBatchNormV3": _fused_batchnorm_v3,
-        "Softmax": _softmax
+        "Softmax": _softmax,
     }
 
     return reg
@@ -102,8 +102,10 @@ def _identity(converter, node: Any, inputs: List[str]) -> Any:
     return converter.outputs[inputs[0]]
 
 
-# [TODO] Zico: why is the 2nd argument to `matmul` assumed to be a NodeDef? What if it is a previous TFE op result?
+# [TODO] Zico: why is the 2nd argument to `matmul` assumed to be a NodeDef?
+# What if it is a previous TFE op result?
 # Indeed, the impl is not completed after my test.
+
 
 def _matmul(converter, node: Any, inputs: List[str]) -> Any:
     print("register _matmul")
@@ -310,7 +312,7 @@ def _fused_batchnorm_v3(converter, node, inputs):
     # Heuristic: Assume x_in is output of a previous op, but not a constant NodeDef
 
     fmt = node.attr["data_format"].s.decode("ascii")
-    epsilon = node.attr['epsilon'].f if 'epsilon' in node.attr else None
+    epsilon = node.attr["epsilon"].f if "epsilon" in node.attr else None
 
     gamma = _nodef_to_numpy_array(converter.outputs[inputs[1]])
     gamma_init = tf.keras.initializers.Constant(gamma)
@@ -329,7 +331,9 @@ def _fused_batchnorm_v3(converter, node, inputs):
     layer = BatchNormalization(
         input_shape=input_shape,
         axis=(3 if fmt == "NHWC" else 1),
-        epsilon=epsilon if epsilon is not None else get_default_arg(BatchNormalization.__init__, 'epsilon'),
+        epsilon=epsilon
+        if epsilon is not None
+        else get_default_arg(BatchNormalization.__init__, "epsilon"),
         gamma_initializer=gamma_init,
         beta_initializer=beta_init,
         moving_mean_initializer=moving_mean_init,
@@ -337,7 +341,6 @@ def _fused_batchnorm_v3(converter, node, inputs):
     )
 
     return layer(x_in)
-
 
 
 def _relu(converter, node: Any, inputs: List[str]) -> Any:
@@ -626,7 +629,10 @@ def _rsqrt(converter, node: Any, inputs: List[str]) -> Any:
 
     return x
 
-# [TODO] Zico: Why are the three ops `_add`, `_sub`, `_mul` so special to use public tensor?
+
+# [TODO] Zico: Why are the three ops `_add`, `_sub`, `_mul`
+# so special to use public tensor?
+
 
 def _add(converter, node: Any, inputs: List[str]) -> Any:
     print("register _add")
@@ -942,7 +948,8 @@ def _nodef_to_private_pond(converter, x):
         else:
             raise TypeError(err_msg.format(dtype, x.name))
 
-        # Corner case: a tensor contains only one element that is not stored in `tensor_content`, but in `xxx_val`
+        # Corner case: a tensor contains only one element that is not
+        # stored in `tensor_content`, but in `xxx_val`
         if len(nums) == 0 and np.prod(x_shape) == 1:
             if dtype == tf.float32:
                 nums = x.attr["value"].tensor.float_val

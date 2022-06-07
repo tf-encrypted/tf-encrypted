@@ -315,7 +315,9 @@ def match_numbered_scope(specop, search_string, return_group=True, numbered=True
     """
     if numbered:
         # TF's auto names could be like: conv2d, conv2d_1, conv2d_1_1
-        expr = "^(.*/)*({0})/|(^(.*/)*({0}_[0-9]+))/|(^(.*/)*({0}_[0-9]+_[0-9]+))/".format(specop)
+        expr = "^(.*/)*({0})/|(^(.*/)*({0}_[0-9]+))/|(^(.*/)*({0}_[0-9]+_[0-9]+))/".format(  # noqa
+            specop
+        )
     else:
         expr = "^(.*/)*({0})/".format(specop)
 

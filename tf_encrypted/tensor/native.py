@@ -15,8 +15,8 @@ from typing import Union
 import numpy as np
 import tensorflow as tf
 
-from ..operations import secure_random
 from ..operations import aux
+from ..operations import secure_random
 from .factory import AbstractConstant
 from .factory import AbstractFactory
 from .factory import AbstractPlaceholder
@@ -199,10 +199,15 @@ def native_factory(
                 msg = "Don't know how to handle `condition` of type {}"
                 raise TypeError(msg.format(type(condition)))
             if not v2:
-                # Try to solve the broadcasting problem in a naive way. Not a comprehensive implementation.
+                # Try to solve the broadcasting problem in a naive way.
+                # Not a comprehensive implementation.
                 if condition.shape != x.shape:
-                    shape = tf.broadcast_static_shape(tf.broadcast_static_shape(condition.shape, x.shape), y.shape)
-                    tile_shape = [(shape[i] // condition.shape[i]) for i in range(len(shape))]
+                    shape = tf.broadcast_static_shape(
+                        tf.broadcast_static_shape(condition.shape, x.shape), y.shape
+                    )
+                    tile_shape = [
+                        (shape[i] // condition.shape[i]) for i in range(len(shape))
+                    ]
                     condition = tf.tile(condition, tile_shape)
                 value = tf.where(condition, x.value, y.value)
             else:
@@ -347,11 +352,33 @@ def native_factory(
             return DenseTensor(i2c)
 
         def im2patches(self, patch_size, stride, padding, data_format="NCHW"):
-            i2p = im2patches(self.value, patch_size, stride=stride, padding=padding, data_format=data_format)
+            i2p = im2patches(
+                self.value,
+                patch_size,
+                stride=stride,
+                padding=padding,
+                data_format=data_format,
+            )
             return DenseTensor(i2p)
 
-        def patches2im(self, patch_size, stride, padding, img_size=None, consolidation="SUM", data_format="NCHW"):
-            p2i = patches2im(self.value, patch_size, stride=stride, padding=padding, img_size=img_size, consolidation=consolidation, data_format=data_format)
+        def patches2im(
+            self,
+            patch_size,
+            stride,
+            padding,
+            img_size=None,
+            consolidation="SUM",
+            data_format="NCHW",
+        ):
+            p2i = patches2im(
+                self.value,
+                patch_size,
+                stride=stride,
+                padding=padding,
+                img_size=img_size,
+                consolidation=consolidation,
+                data_format=data_format,
+            )
             return DenseTensor(p2i)
 
         def conv2d(self, other, stride: int, padding: str = "SAME"):

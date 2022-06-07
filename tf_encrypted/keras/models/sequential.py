@@ -1,4 +1,7 @@
 """Sequential model API."""
+import time
+
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras import utils
 
@@ -9,8 +12,6 @@ from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import Input
 from tf_encrypted.keras.engine.input_layer import InputLayer
 from tf_encrypted.protocol import memoize
-import numpy as np
-import time
 
 
 class Sequential(Layer):
@@ -102,7 +103,8 @@ class Sequential(Layer):
         if mask is not None:
             raise NotImplementedError()
         outputs = inputs  # handle the corner case where self.layers is empty
-        # Clear model weights. NOTE: this does NOT result in weights re-initialization if the model
+        # Clear model weights.
+        # NOTE: this does NOT result in weights re-initialization if the model
         # has been built before.
         self.weights = []
         for layer in self.layers:
@@ -132,16 +134,25 @@ class Sequential(Layer):
     def backward(self, d_y):
         update_ops = []
         # for layer in reversed(self.layers):
-        for i in range(len(self.layers)-1, -1, -1):
-            with tf.name_scope(self.layers[i].name + '/backward'):
+        for i in range(len(self.layers) - 1, -1, -1):
+            with tf.name_scope(self.layers[i].name + "/backward"):
                 grad_weights, d_y = self.layers[i].backward(d_y)
                 if i > 0:
-                    # IMPORTANT: make sure d_y is computed before the weights are updated
+                    # IMPORTANT: d_y should be computed before the weights are updated
                     with tf.control_dependencies(d_y.flatten_to_native()):
-                        update_ops.append(self._optimizer.apply_gradients(self.layers[i].weights, grad_weights))
+                        update_ops.append(
+                            self._optimizer.apply_gradients(
+                                self.layers[i].weights, grad_weights
+                            )
+                        )
                 else:
-                    # No need to wait for the computation of the last backward d_y because it will not be used
-                    update_ops.append(self._optimizer.apply_gradients(self.layers[i].weights, grad_weights))
+                    # No need to wait for the computation of the last
+                    # backward d_y because it will not be used
+                    update_ops.append(
+                        self._optimizer.apply_gradients(
+                            self.layers[i].weights, grad_weights
+                        )
+                    )
 
         return tf.group(*update_ops)
 
@@ -159,7 +170,6 @@ class Sequential(Layer):
 
         self._optimizer.compile(self.layers)
 
-
     @memoize
     def fit_batch(self, x, y):
         """Trains the model on a single batch.
@@ -174,7 +184,6 @@ class Sequential(Layer):
         loss = self._loss(y, y_pred)
 
         return back_prop, loss
-
 
     def fit(self, x, y, epochs=1, steps_per_epoch=1):
         """Trains the model for a given number of epochs
@@ -200,9 +209,13 @@ class Sequential(Layer):
             progbar = utils.Progbar(batch_size * steps_per_epoch)
             for _ in range(steps_per_epoch):
                 start = time.time()
-                _, current_loss = sess.run([fit_batch_op, loss.reveal()], tag='fit-batch')
+                _, current_loss = sess.run(
+                    [fit_batch_op, loss.reveal()], tag="fit-batch"
+                )
                 end = time.time()
-                progbar.add(batch_size, values=[("loss", current_loss), ("time", end-start)])
+                progbar.add(
+                    batch_size, values=[("loss", current_loss), ("time", end - start)]
+                )
 
     def predict(self, x, reveal=False):
         y_pred = self.call(x)
@@ -220,7 +233,9 @@ class Sequential(Layer):
         result = {}
         for metric in metrics:
             if metric == "categorical_accuracy":
-                result[metric] = lambda y_true, y_pred: tf.reduce_mean(tf.keras.metrics.categorical_accuracy(y_true, y_pred))
+                result[metric] = lambda y_true, y_pred: tf.reduce_mean(
+                    tf.keras.metrics.categorical_accuracy(y_true, y_pred)
+                )
 
         y_pred = self.call(x)
 
@@ -248,7 +263,6 @@ class Sequential(Layer):
             result[metric] = sess.run(result[metric](y_true, y_pred))
 
         return result
-
 
     def set_weights(self, weights, sess=None):
         """Sets the weights of the model.

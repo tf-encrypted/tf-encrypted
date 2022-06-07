@@ -1,6 +1,7 @@
 """TF Encrypted utilities."""
-import tensorflow as tf
 import inspect
+
+import tensorflow as tf
 
 
 def wrap_in_variables(*tensors):
@@ -77,9 +78,9 @@ def unwrap_fetches(fetches):
     if isinstance(fetches, (tf.Tensor, tf.Operation, tf.Variable)):
         return fetches
     try:
-        native = getattr(fetches, 'to_native')
+        native = getattr(fetches, "to_native")
         return native()
-    except:
+    except AttributeError:
         return fetches
 
 
@@ -101,4 +102,3 @@ def print_banner(title):
     print(banner_top)
     print(banner_middle)
     print(banner_top)
-

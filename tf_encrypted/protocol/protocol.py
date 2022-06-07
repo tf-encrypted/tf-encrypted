@@ -7,6 +7,7 @@ from typing import Callable
 from typing import Optional
 
 import tensorflow as tf
+
 import tf_encrypted as tfe
 
 from ..tensor.factory import AbstractTensor
@@ -43,26 +44,36 @@ class Protocol(ABC):
 class TFETensor(ABC):
     pass
 
+
 class TFEVariable(TFETensor):
     pass
+
 
 class TFEPrivateTensor(TFETensor):
     pass
 
+
 class TFEPrivateVariable(TFEPrivateTensor, TFEVariable):
     pass
+
 
 class TFEPublicTensor(TFETensor):
     pass
 
+
 class TFEPublicVariable(TFEPublicTensor, TFEVariable):
     pass
+
 
 def make_hashable(x):
     if isinstance(x, (tuple, list)):
         return tuple([make_hashable(y) for y in x])
     elif isinstance(x, dict):
-        return tuple(sorted([(make_hashable(item[0]), make_hashable(item[1])) for item in x.items()]))
+        return tuple(
+            sorted(
+                [(make_hashable(item[0]), make_hashable(item[1])) for item in x.items()]
+            )
+        )
     elif isinstance(x, tf.TensorShape):
         return tuple(x.as_list())
     else:
@@ -71,6 +82,7 @@ def make_hashable(x):
             return x
         except TypeError:
             return id(x)
+
 
 def memoize(func: Callable) -> Callable:
     """
@@ -98,5 +110,3 @@ def memoize(func: Callable) -> Callable:
         return result
 
     return cache_nodes
-
-

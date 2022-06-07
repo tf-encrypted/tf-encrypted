@@ -104,7 +104,6 @@ class TestLosses(unittest.TestCase):
 
         np.testing.assert_allclose(actual, expected, rtol=1e-1, atol=1e-1)
 
-
     def test_categorical_crossentropy_from_logits(self):
 
         y_true_np = np.array([[0, 1, 0], [0, 0, 1]]).astype(float)

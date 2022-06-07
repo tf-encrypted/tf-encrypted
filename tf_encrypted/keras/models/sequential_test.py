@@ -187,17 +187,20 @@ class TestSequentialABY3(unittest.TestCase):
             weights0_init, weights1_init = sess.run([layer0_weights, layer1_weights])
 
             tfe_model.fit_batch(x, y)
-            weights0_updated, weights1_updated = sess.run([layer0_weights, layer1_weights])
+            weights0_updated, weights1_updated = sess.run(
+                [layer0_weights, layer1_weights]
+            )
 
             x_value = sess.run(x.reveal())
             y_value = sess.run(y.reveal())
-
 
         tf.reset_default_graph()
 
         with tf.Session() as sess:
             plain_model = tf.keras.Sequential()
-            plain_model.add(tf.keras.layers.Dense(2, batch_input_shape=shape, activation="sigmoid"))
+            plain_model.add(
+                tf.keras.layers.Dense(2, batch_input_shape=shape, activation="sigmoid")
+            )
             plain_model.add(tf.keras.layers.Dense(1))
 
             plain_model(tf.Variable(np.random.normal(size=shape)))
@@ -210,14 +213,18 @@ class TestSequentialABY3(unittest.TestCase):
 
             plain_model.fit(x_value, y_value)
 
-            expected_weights0_updated, expected_weights1_updated = sess.run([plain_model.layers[0].weights, plain_model.layers[1].weights])
+            expected_weights0_updated, expected_weights1_updated = sess.run(
+                [plain_model.layers[0].weights, plain_model.layers[1].weights]
+            )
 
         for i in range(len(weights0_updated)):
-            np.testing.assert_allclose(weights0_updated[i], expected_weights0_updated[i], rtol=1e-3, atol=1e-3)
+            np.testing.assert_allclose(
+                weights0_updated[i], expected_weights0_updated[i], rtol=1e-3, atol=1e-3
+            )
         for i in range(len(weights1_updated)):
-            np.testing.assert_allclose(weights1_updated[i], expected_weights1_updated[i], rtol=1e-3, atol=1e-3)
-
-
+            np.testing.assert_allclose(
+                weights1_updated[i], expected_weights1_updated[i], rtol=1e-3, atol=1e-3
+            )
 
 
 def _model_predict_keras(input_data, input_shape):

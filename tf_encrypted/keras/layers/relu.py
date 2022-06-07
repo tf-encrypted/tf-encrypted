@@ -1,6 +1,5 @@
 """Activation Layer implementation."""
 import tf_encrypted as tfe
-from tf_encrypted.keras.activations import relu, relu_deriv
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
 

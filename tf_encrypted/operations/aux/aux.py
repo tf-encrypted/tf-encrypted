@@ -2,8 +2,6 @@ import logging
 import os
 
 import tensorflow as tf
-from tensorflow.python.framework import dtypes
-from tensorflow.python.framework import ops
 from tensorflow.python.framework.errors import NotFoundError
 
 import tf_encrypted as tfe
@@ -21,8 +19,8 @@ def _try_load_aux_module():
     if not os.path.exists(so_file):
         logger.warning(
             (
-                "Could not find aux module for the installed version of TensorFlow. Fix "
-                "this by compiling custom ops. Missing file was '%s'"
+                "Could not find aux module for the installed version of TensorFlow. "
+                "Fix this by compiling custom ops. Missing file was '%s'"
             ),
             so_file,
         )
@@ -36,8 +34,9 @@ def _try_load_aux_module():
     except NotFoundError as ex:
         logger.warning(
             (
-                "Could not find aux module for the installed version of TensorFlow. Fix "
-                "this by compiling custom ops. Missing file was '%s', error was \"%s\"."
+                "Could not find aux module for the installed version of TensorFlow. "
+                "Fix this by compiling custom ops. Missing file was '%s', "
+                'error was "%s".'
             ),
             so_file,
             ex,
@@ -61,11 +60,14 @@ aux_module = _try_load_aux_module()
 def bit_gather(x, start, stride):
     return aux_module.bit_gather(x, start=start, stride=stride)
 
+
 def bit_split_and_gather(x, stride):
     return aux_module.bit_split_and_gather(x, stride=stride)
 
+
 def bit_reverse(x: tf.Tensor):
     return aux_module.bit_reverse(x)
+
 
 def xor_indices(x: tf.Tensor):
     return aux_module.xor_indices(x)

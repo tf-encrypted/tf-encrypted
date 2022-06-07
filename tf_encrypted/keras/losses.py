@@ -52,10 +52,6 @@ class BinaryCrossentropy(Loss):
         batch_size_inv = 1 / batch_size
         if self.from_logits:
             y_pred = tfe.sigmoid(y_pred)
-        # else:
-            # raise NotImplementedError("BinaryCrossentroy should be always used with `from_logits=True` "
-                    # "in a backward propagation, otherwise it requires a private division.")
-            # # grad = (y_pred - y_true) / (y_pred * (1 - y_pred))
         grad = y_pred - y_true
         if not self.lazy_normalization:
             grad = grad * batch_size_inv
@@ -102,25 +98,26 @@ class CategoricalCrossentropy(Loss):
     """
     See `tf.keras.losses.CategoricalCrossentropy`.
     """
+
     def __init__(self, from_logits=False, lazy_normalization=False):
         self.from_logits = from_logits
         self.lazy_normalization = lazy_normalization
         if from_logits:
-            super(CategoricalCrossentropy, self).__init__(categorical_crossentropy_from_logits)
+            super(CategoricalCrossentropy, self).__init__(
+                categorical_crossentropy_from_logits
+            )
         else:
             super(CategoricalCrossentropy, self).__init__(categorical_crossentropy)
 
     def grad(self, y_true, y_pred):
         """
-        Softmax grad reference: https://slowbreathing.github.io/articles/2019-05/softmax-and-cross-entropy
+        Softmax grad reference:
+        https://slowbreathing.github.io/articles/2019-05/softmax-and-cross-entropy
         """
         batch_size = y_true.shape.as_list()[0]
         batch_size_inv = 1 / batch_size
         if self.from_logits:
             y_pred = tfe.keras.activations.softmax(y_pred)
-        # else:
-            # raise NotImplementedError("CategoricalCrossentropy should be always used with `from_logits=True` "
-                    # "in a backward propagation, otherwise it requires a private division.")
         grad = y_pred - y_true
         if not self.lazy_normalization:
             grad = grad * batch_size_inv

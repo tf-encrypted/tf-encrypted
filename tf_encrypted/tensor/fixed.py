@@ -97,6 +97,7 @@ fixed64_heuristic = FixedpointConfig(
     use_noninteractive_truncation=False,
 )
 
+
 def _validate_fixedpoint_config(
     config: FixedpointConfig, tensor_factory: AbstractFactory
 ) -> bool:

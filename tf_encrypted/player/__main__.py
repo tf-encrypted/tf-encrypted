@@ -3,8 +3,6 @@ import logging
 
 from tf_encrypted.config import RemoteConfig
 
-from tf_encrypted import operations
-
 if __name__ == "__main__":
 
     logging.basicConfig()

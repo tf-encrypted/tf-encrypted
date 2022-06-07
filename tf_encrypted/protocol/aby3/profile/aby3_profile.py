@@ -2,33 +2,29 @@
 # pylint: disable=missing-docstring
 # flake8: noqa
 
-import os
 import math
+import os
+import sys
 import tempfile
 import unittest
-import sys
 
 import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.protocol.aby3 import ABY3, ShareType
 from tf_encrypted.performance import Performance
-
-
-
+from tf_encrypted.protocol.aby3 import ABY3
+from tf_encrypted.protocol.aby3 import ShareType
 
 
 class TestABY3Profile(unittest.TestCase):
-
-
     def test_sort_performance(self):
         tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        n = 2**10
+        n = 2 ** 10
         x = tf.range(n)
         x = tf.random.shuffle(x)
         private_x = tfe.define_private_variable(x)
@@ -43,9 +39,7 @@ class TestABY3Profile(unittest.TestCase):
             # reveal result
             Performance.time_log("1st run")
             x_, result = sess.run([x, y0.reveal()])
-            np.testing.assert_allclose(
-                result, np.arange(n), rtol=0.0, atol=0.01
-            )
+            np.testing.assert_allclose(result, np.arange(n), rtol=0.0, atol=0.01)
             Performance.time_log("1st run")
             print("1st run x: ", x_[:10], "...")
             Performance.time_log("2nd run")
@@ -58,7 +52,7 @@ class TestABY3Profile(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        n = 2**10
+        n = 2 ** 10
         x = tf.range(n)
         x = tf.random.shuffle(x)
         private_x = tfe.define_private_variable(x)
@@ -84,9 +78,9 @@ class TestABY3Profile(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        n = 2**10 * 4
+        n = 2 ** 10 * 4
         x = tf.range(n)
-        x = tf.reshape(tf.random.shuffle(x), [2**10, 4])
+        x = tf.reshape(tf.random.shuffle(x), [2 ** 10, 4])
         private_x = tfe.define_private_variable(x)
 
         Performance.time_log("Graph building")

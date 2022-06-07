@@ -2,8 +2,8 @@
 import logging
 from abc import ABC
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 from tensorflow.python.keras.utils import generic_utils
 
 import tf_encrypted as tfe
@@ -40,7 +40,7 @@ class Layer(ABC):
             "weights",
             "activity_regularizer",
             "dtype",
-            "lazy_normalization"
+            "lazy_normalization",
         }
         # Validate optional keyword arguments.
         for kwarg in kwargs:

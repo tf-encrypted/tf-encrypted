@@ -22,7 +22,6 @@ from .config import LocalConfig
 from .config import RemoteConfig
 from .config import get_config
 from .player import player
-from .protocol import Pond
 from .protocol import ABY3
 from .session import Session
 from .session import set_log_directory
@@ -97,18 +96,22 @@ def set_config(config: Config) -> None:
 
     set_global_config(config)
     set_protocol(None)
-    # Reset the graph to clear all ops that were created under previous config that might use different devices, otherwise there might be invalid device error.
+    # Reset the graph to clear all ops that were created under
+    # previous config that might use different devices,
+    # otherwise there might be invalid device error.
     reset_default_graph()
 
 
 def global_variables_initializer() -> tf.Operation:
     return tf.global_variables_initializer()
 
+
 def reset_default_graph():
-    globals()['tf_reset_default_graph']()
+    globals()["tf_reset_default_graph"]()
     # Reset the protocol to clear any previously created nodes in the old graph
     if get_protocol() is not None:
         get_protocol().reset()
+
 
 def hook_tf():
     """
@@ -121,6 +124,7 @@ def hook_tf():
     tf.Session = Session
 
 
+# from .protocol import Pond
 # set_protocol(Pond())
 set_protocol(ABY3())
 hook_tf()

@@ -1,19 +1,22 @@
 import abc
-from typing import Tuple, List, Union, Optional, Callable
-from ...tensor.factory import (
-    AbstractTensor,
-    AbstractConstant,
-    AbstractPlaceholder,
-    AbstractVariable
-)
+from typing import List
+from typing import Tuple
+from typing import Union
+
 import numpy as np
 import tensorflow as tf
-from ..protocol import TFETensor
-from ..protocol import TFEVariable
-from ..protocol import TFEPublicVariable
+
+import aby3
+
+from ...tensor.factory import AbstractConstant
+from ...tensor.factory import AbstractPlaceholder
+from ...tensor.factory import AbstractTensor
+from ...tensor.factory import AbstractVariable
+from ..protocol import TFEPrivateTensor
 from ..protocol import TFEPrivateVariable
 from ..protocol import TFEPublicTensor
-from ..protocol import TFEPrivateTensor
+from ..protocol import TFEPublicVariable
+from ..protocol import TFETensor
 
 
 class ShareType:
@@ -23,9 +26,11 @@ class ShareType:
 
     @staticmethod
     def is_legal_type(share_type):
-        return (share_type == ShareType.PUBLIC) \
-                or (share_type == ShareType.ARITHMETIC) \
-                or (share_type == ShareType.BOOLEAN)
+        return (
+            (share_type == ShareType.PUBLIC)
+            or (share_type == ShareType.ARITHMETIC)
+            or (share_type == ShareType.BOOLEAN)
+        )
 
 
 #
@@ -60,7 +65,9 @@ class ABY3Tensor(TFETensor):
         self.share_type = share_type
 
     def __repr__(self) -> str:
-        return "{}(shape={}, share_type={})".format(type(self).__name__, self.shape, self.share_type)
+        return "{}(shape={}, share_type={})".format(
+            type(self).__name__, self.shape, self.share_type
+        )
 
     def is_arithmetic(self) -> bool:
         return self.share_type == ShareType.ARITHMETIC
@@ -100,10 +107,15 @@ class ABY3Tensor(TFETensor):
         :return: A new ABY3Tensor with `other` added.
         :rtype: ABY3Tensor
         """
-        if self.share_type == ShareType.ARITHMETIC or self.share_type == ShareType.PUBLIC:
+        if (
+            self.share_type == ShareType.ARITHMETIC
+            or self.share_type == ShareType.PUBLIC
+        ):
             return self.prot.add(self, other)
         else:
-            raise ValueError("unsupported share type for add: {}".format(self.share_type))
+            raise ValueError(
+                "unsupported share type for add: {}".format(self.share_type)
+            )
 
     def __add__(self, other):
         """
@@ -139,19 +151,29 @@ class ABY3Tensor(TFETensor):
         :return: A new ABY3Tensor
         :rtype: ABY3Tensor
         """
-        if self.share_type == ShareType.ARITHMETIC or self.share_type == ShareType.PUBLIC:
+        if (
+            self.share_type == ShareType.ARITHMETIC
+            or self.share_type == ShareType.PUBLIC
+        ):
             return self.prot.sub(self, other)
         else:
-            raise ValueError("unsupported share type for sub: {}".format(self.share_type))
+            raise ValueError(
+                "unsupported share type for sub: {}".format(self.share_type)
+            )
 
     def __sub__(self, other):
         return self.sub(other)
 
     def __rsub__(self, other):
-        if self.share_type == ShareType.ARITHMETIC or self.share_type == ShareType.PUBLIC:
+        if (
+            self.share_type == ShareType.ARITHMETIC
+            or self.share_type == ShareType.PUBLIC
+        ):
             return self.prot.sub(other, self)
         else:
-            raise ValueError("unsupported share type for sub: {}".format(self.share_type))
+            raise ValueError(
+                "unsupported share type for sub: {}".format(self.share_type)
+            )
 
     def mul(self, other):
         """
@@ -277,7 +299,9 @@ class ABY3Tensor(TFETensor):
         if self.share_type == ShareType.BOOLEAN:
             return self.prot.xor(self, other)
         else:
-            raise ValueError("Unsupported share type for xor: {}".format(self.share_type))
+            raise ValueError(
+                "Unsupported share type for xor: {}".format(self.share_type)
+            )
 
     def __xor__(self, other):
         return self.bitwise_xor(other)
@@ -286,7 +310,9 @@ class ABY3Tensor(TFETensor):
         if self.share_type == ShareType.BOOLEAN:
             return self.prot.and_(self, other)
         else:
-            raise ValueError("unsupported share type for and: {}".format(self.share_type))
+            raise ValueError(
+                "unsupported share type for and: {}".format(self.share_type)
+            )
 
     def __and__(self, other):
         return self.bitwise_and(other)
@@ -295,7 +321,9 @@ class ABY3Tensor(TFETensor):
         if self.share_type == ShareType.BOOLEAN:
             return self.prot.or_(self, other)
         else:
-            raise ValueError("unsupported share type for and: {}".format(self.share_type))
+            raise ValueError(
+                "unsupported share type for and: {}".format(self.share_type)
+            )
 
     def __or__(self, other):
         return self.bitwise_or(other)
@@ -304,7 +332,9 @@ class ABY3Tensor(TFETensor):
         if self.share_type == ShareType.BOOLEAN:
             return self.prot.not_(self)
         else:
-            raise ValueError("unsupported share type for and: {}".format(self.share_type))
+            raise ValueError(
+                "unsupported share type for and: {}".format(self.share_type)
+            )
 
     def __invert__(self):
         return self.invert()
@@ -360,10 +390,7 @@ class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
     dispatch_id = "public"
 
     def __init__(
-            self,
-            prot: "ABY3",
-            values: List[AbstractTensor],
-            is_scaled: bool
+        self, prot: "aby3.ABY3", values: List[AbstractTensor], is_scaled: bool
     ) -> None:
         assert all(isinstance(v, AbstractTensor) for v in values)
         assert all((v.shape == values[0].shape) for v in values)
@@ -372,7 +399,9 @@ class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
         self.values = values
 
     def __repr__(self) -> str:
-        return "ABY3PublicTensor(shape={}, share_type={})".format(self.shape, self.share_type)
+        return "ABY3PublicTensor(shape={}, share_type={})".format(
+            self.shape, self.share_type
+        )
 
     @property
     def shape(self) -> List[int]:
@@ -423,7 +452,9 @@ class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
         return [v.value for v in self.values]
 
     def decode(self) -> Union[np.ndarray, tf.Tensor]:
-        return self.prot._decode(self.values[0], self.is_scaled)  # pylint: disable=protected-access
+        return self.prot._decode(
+            self.values[0], self.is_scaled
+        )  # pylint: disable=protected-access
 
     def to_native(self):
         return self.decode()
@@ -446,13 +477,13 @@ class ABY3Constant(ABY3PublicTensor):
         assert all(isinstance(c, AbstractConstant) for c in constants)
         assert all((c.shape == constants[0].shape) for c in constants)
 
-        super(ABY3Constant, self).__init__(
-            prot, constants, is_scaled
-        )
+        super(ABY3Constant, self).__init__(prot, constants, is_scaled)
         self.constants = constants
 
     def __repr__(self) -> str:
-        return "ABY3Constant(shape={}, share_type={})".format(self.shape, self.share_type)
+        return "ABY3Constant(shape={}, share_type={})".format(
+            self.shape, self.share_type
+        )
 
 
 class ABY3PublicVariable(ABY3PublicTensor, TFEPublicVariable):
@@ -470,9 +501,7 @@ class ABY3PublicVariable(ABY3PublicTensor, TFEPublicVariable):
             prot, variables, is_scaled,
         )
         self.variables = variables
-        self.initializer = tf.group(
-            *[var.initializer for var in variables]
-        )
+        self.initializer = tf.group(*[var.initializer for var in variables])
 
     def __repr__(self) -> str:
         return "ABY3PublicVariable(shape={})".format(self.shape)
@@ -487,13 +516,17 @@ class ABY3PrivateTensor(ABY3Tensor, TFEPrivateTensor):
 
     def __init__(self, prot, shares, is_scaled, share_type):
         assert len(shares) == 3
-        assert all((ss.shape == shares[0][0].shape) for s in shares for ss in s), "Shares have different shapes."
+        assert all(
+            (ss.shape == shares[0][0].shape) for s in shares for ss in s
+        ), "Shares have different shapes."
 
         super(ABY3PrivateTensor, self).__init__(prot, is_scaled, share_type)
         self.shares = shares
 
     def __repr__(self) -> str:
-        return "ABY3PrivateTensor(shape={}, share_type={})".format(self.shape, self.share_type)
+        return "ABY3PrivateTensor(shape={}, share_type={})".format(
+            self.shape, self.share_type
+        )
 
     @property
     def shape(self) -> List[int]:
@@ -523,16 +556,16 @@ class ABY3PrivateVariable(ABY3PrivateTensor, TFEPrivateVariable):
 
     def __init__(self, prot, shares, is_scaled, share_type):
 
-        super(ABY3PrivateVariable, self).__init__(
-            prot, shares, is_scaled, share_type
-        )
+        super(ABY3PrivateVariable, self).__init__(prot, shares, is_scaled, share_type)
         self.shares = shares
         self.initializer = tf.group(
             *[var.initializer for share in shares for var in share]
         )
 
     def __repr__(self) -> str:
-        return "ABY3PrivateVariable(shape={}, share_type={})".format(self.shape, self.share_type)
+        return "ABY3PrivateVariable(shape={}, share_type={})".format(
+            self.shape, self.share_type
+        )
 
     def read_value(self) -> ABY3PrivateTensor:
         values = [
@@ -551,7 +584,9 @@ class ABY3PublicPlaceholder(ABY3PublicTensor):
   """
 
     def __init__(self, prot, placeholders, is_scaled):
-        assert all(isinstance(p, AbstractPlaceholder) for p in placeholders), "Shares should be AbstractPlaceholder"
+        assert all(
+            isinstance(p, AbstractPlaceholder) for p in placeholders
+        ), "Shares should be AbstractPlaceholder"
 
         super(ABY3PublicPlaceholder, self).__init__(
             prot, placeholders, is_scaled,
@@ -571,6 +606,7 @@ class ABY3PublicPlaceholder(ABY3PublicTensor):
         feed2 = self.values[2].feed(enc)
         return {**feed0, **feed1, **feed2}
 
+
 class ABY3PrivatePlaceholder(ABY3PrivateTensor):
     """
   This class essentially represents a private value, however it additionally
@@ -579,7 +615,9 @@ class ABY3PrivatePlaceholder(ABY3PrivateTensor):
   """
 
     def __init__(self, prot, shares, is_scaled, share_type):
-        assert all(isinstance(ss, AbstractPlaceholder) for s in shares for ss in s), "Shares should be AbstractPlaceholder."
+        assert all(
+            isinstance(ss, AbstractPlaceholder) for s in shares for ss in s
+        ), "Shares should be AbstractPlaceholder."
 
         super().__init__(prot, shares, is_scaled, share_type)
         self.shares = shares

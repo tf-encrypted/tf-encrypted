@@ -10,9 +10,7 @@ import tf_encrypted as tfe
 from tf_encrypted.layers.core import Layer
 from tf_encrypted.protocol import TFETensor
 
-InitialTensor = Optional[
-    Union[np.ndarray, tf.Tensor, TFETensor]
-]
+InitialTensor = Optional[Union[np.ndarray, tf.Tensor, TFETensor]]
 
 
 class Dense(Layer):

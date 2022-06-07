@@ -208,7 +208,13 @@ class Conv2D(Layer):
             d_y = tfe.transpose(d_y, perm=[1, 2, 0, 3])
 
         inner_padded_d_y = tfe.expand(d_y, self.strides[0])
-        padded_d_y = tfe.pad(inner_padded_d_y, [[self.kernel_size[0]-1, self.kernel_size[0]-1], [self.kernel_size[1]-1, self.kernel_size[1]-1]])
+        padded_d_y = tfe.pad(
+            inner_padded_d_y,
+            [
+                [self.kernel_size[0] - 1, self.kernel_size[0] - 1],
+                [self.kernel_size[1] - 1, self.kernel_size[1] - 1],
+            ],
+        )
 
         # Recover the NCHW format
         padded_d_y = tfe.transpose(padded_d_y, perm=[2, 3, 0, 1])
@@ -216,21 +222,30 @@ class Conv2D(Layer):
         # Flip h and w axis, and swap in and out channels
         flipped_kernel = tfe.transpose(tfe.reverse(kernel, [0, 1]), perm=[0, 1, 3, 2])
 
-        # Back prop for dx: https://medium.com/@mayank.utexas/backpropagation-for-convolution-with-strides-8137e4fc2710
+        # Back prop for dx:
+        # https://medium.com/@mayank.utexas/backpropagation-for-convolution-with-strides-8137e4fc2710
         d_x = tfe.conv2d(padded_d_y, flipped_kernel, 1, "VALID")
 
         # Remove padding, if any
         if self.padding == "SAME":
             [[pad_top, pad_bottom], [pad_left, pad_right]] = self.pad_size(h_x, w_x)
-            d_x = d_x[:, :, pad_top:(d_x.shape[2]-pad_bottom), pad_left:(d_x.shape[3]-pad_right)]
-            x = tfe.pad(x, [[0, 0], [0, 0], [pad_top, pad_bottom], [pad_left, pad_right]])
+            d_x = d_x[
+                :,
+                :,
+                pad_top : (d_x.shape[2] - pad_bottom),
+                pad_left : (d_x.shape[3] - pad_right),
+            ]
+            x = tfe.pad(
+                x, [[0, 0], [0, 0], [pad_top, pad_bottom], [pad_left, pad_right]]
+            )
 
         if self.data_format != "channels_first":
             d_x = tfe.transpose(d_x, perm=[0, 2, 3, 1])
 
         # Convert to CNHW
         x = tfe.transpose(x, perm=[1, 0, 2, 3])
-        # Back prop for dw: https://medium.com/@mayank.utexas/backpropagation-for-convolution-with-strides-fb2f2efc4faa
+        # Back prop for dw:
+        # https://medium.com/@mayank.utexas/backpropagation-for-convolution-with-strides-fb2f2efc4faa
         # Output is in IOHW format
         d_kernel = tfe.conv2d(x, inner_padded_d_y, 1, "VALID")
         # Convert to HWIO
@@ -245,19 +260,22 @@ class Conv2D(Layer):
                 d_bias = d_bias / n_x
             grad_weights.append(d_bias)
 
-        assert d_x.shape == self._layer_input.shape, "Different shapes: {} vs {}".format(d_x.shape, self._layer_input.shape)
-        assert d_kernel.shape == self.kernel_shape, "Different shapes: {} vs {}".format(d_kernel.shape, self.kernel_shape)
+        assert (
+            d_x.shape == self._layer_input.shape
+        ), "Different shapes: {} vs {}".format(d_x.shape, self._layer_input.shape)
+        assert d_kernel.shape == self.kernel_shape, "Different shapes: {} vs {}".format(
+            d_kernel.shape, self.kernel_shape
+        )
 
         return grad_weights, d_x
 
-
     def pad_size(self, h_in, w_in):
-        if (h_in % self.strides[0] == 0):
+        if h_in % self.strides[0] == 0:
             pad_along_height = max(self.kernel_size[0] - self.strides[0], 0)
         else:
             pad_along_height = max(self.kernel_size[0] - (h_in % self.strides[0]), 0)
 
-        if (w_in % self.strides[1] == 0):
+        if w_in % self.strides[1] == 0:
             pad_along_width = max(self.kernel_size[1] - self.strides[1], 0)
         else:
             pad_along_width = max(self.kernel_size[1] - (w_in % self.strides[1]), 0)
@@ -268,7 +286,6 @@ class Conv2D(Layer):
         pad_right = pad_along_width - pad_left
 
         return [[pad_top, pad_bottom], [pad_left, pad_right]]
-
 
     def compute_output_shape(self, input_shape):
         """Compute output_shape for the layer."""

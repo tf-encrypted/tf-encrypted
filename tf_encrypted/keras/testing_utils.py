@@ -38,7 +38,7 @@ def agreement_test(
         x = tfe.define_private_variable(input_data)
         y = tfe_layer(x)
 
-        d_y=tfe.define_private_variable(np.ones(y.shape))
+        d_y = tfe.define_private_variable(np.ones(y.shape))
         try:
             _, tfe_dx = tfe_layer.backward(d_y)
         except NotImplementedError:

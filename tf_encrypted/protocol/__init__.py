@@ -7,12 +7,12 @@ import inspect
 from .aby3 import ABY3
 from .pond import Pond
 from .protocol import Protocol
-from .protocol import TFETensor
-from .protocol import TFEVariable
 from .protocol import TFEPrivateTensor
 from .protocol import TFEPrivateVariable
 from .protocol import TFEPublicTensor
 from .protocol import TFEPublicVariable
+from .protocol import TFETensor
+from .protocol import TFEVariable
 from .protocol import memoize
 from .securenn import SecureNN
 
@@ -39,7 +39,7 @@ __all__ = [
     "TFEVariable",
     "TFETensor",
     "TFEPrivateTensor",
-    "TFEPrivateVariable"
+    "TFEPrivateVariable",
     "TFEPublicTensor",
-    "TFEPublicVariable"
+    "TFEPublicVariable",
 ]

@@ -42,12 +42,11 @@ from ...tensor.fixed import _validate_fixedpoint_config
 from ...tensor.helpers import inverse
 from ...utils import wrap_in_variables
 from ..protocol import Protocol
-from ..protocol import TFETensor
-from ..protocol import TFEVariable
-from ..protocol import TFEPublicVariable
+from ..protocol import TFEPrivateTensor
 from ..protocol import TFEPrivateVariable
 from ..protocol import TFEPublicTensor
-from ..protocol import TFEPrivateTensor
+from ..protocol import TFEPublicVariable
+from ..protocol import TFETensor
 from ..protocol import memoize
 from ..protocol import nodes
 from .triple_sources import OnlineTripleSource

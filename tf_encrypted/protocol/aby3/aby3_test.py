@@ -2,8 +2,8 @@
 # pylint: disable=missing-docstring
 # flake8: noqa
 
-import os
 import math
+import os
 import tempfile
 import unittest
 
@@ -11,11 +11,11 @@ import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
-from tf_encrypted.protocol.aby3 import ABY3, ShareType
+from tf_encrypted.protocol.aby3 import ABY3
+from tf_encrypted.protocol.aby3 import ShareType
 
 
 class TestABY3(unittest.TestCase):
-
     def test_define_private(self):
         tf.reset_default_graph()
 
@@ -36,13 +36,19 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(x.reveal())
-            np.testing.assert_allclose(result, np.array([[1, 1], [1, 1]]), rtol=0.0, atol=0.01)
+            np.testing.assert_allclose(
+                result, np.array([[1, 1], [1, 1]]), rtol=0.0, atol=0.01
+            )
 
             result = sess.run(y.reveal())
-            np.testing.assert_allclose(result, np.array([[1, 1], [1, 1]]), rtol=0.0, atol=0.01)
+            np.testing.assert_allclose(
+                result, np.array([[1, 1], [1, 1]]), rtol=0.0, atol=0.01
+            )
 
             result = sess.run(z.reveal())
-            np.testing.assert_allclose(result, np.array([[1.3, 1.3], [1.3, 1.3]]), rtol=0.0, atol=0.01)
+            np.testing.assert_allclose(
+                result, np.array([[1.3, 1.3], [1.3, 1.3]]), rtol=0.0, atol=0.01
+            )
 
     def test_add_private_private(self):
         tf.reset_default_graph()
@@ -339,9 +345,7 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(m_z.reveal())
-            np.testing.assert_allclose(
-                result, z, rtol=0.0, atol=0.01
-            )
+            np.testing.assert_allclose(result, z, rtol=0.0, atol=0.01)
 
     def test_3d_matmul_private(self):
         tf.reset_default_graph()
@@ -386,9 +390,13 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(z1.reveal())
-            np.testing.assert_allclose(result, np.array([[0.6, -0.7], [-0.8, 0.9]]), rtol=0.0, atol=0.01)
+            np.testing.assert_allclose(
+                result, np.array([[0.6, -0.7], [-0.8, 0.9]]), rtol=0.0, atol=0.01
+            )
             result = sess.run(z2)
-            np.testing.assert_allclose(result, np.array([[0.6, -0.7], [-0.8, 0.9]]), rtol=0.0, atol=0.01)
+            np.testing.assert_allclose(
+                result, np.array([[0.6, -0.7], [-0.8, 0.9]]), rtol=0.0, atol=0.01
+            )
 
     def test_boolean_sharing(self):
         tf.reset_default_graph()
@@ -428,7 +436,9 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.BOOLEAN, apply_scaling=False
+            tf.constant([[1, 2, 3], [4, 5, 6]]),
+            share_type=ShareType.BOOLEAN,
+            apply_scaling=False,
         )
         y = tfe.define_private_variable(
             tf.constant([[1, 0, 0], [0, 1, 0]]),
@@ -594,20 +604,21 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        a = tf.random_uniform([1], -2**44, 2**44) # Plus the 18-bit fractional scale, this will be encoded to 62-bit numbers
+        a = tf.random_uniform(
+            [1], -(2 ** 44), 2 ** 44
+        )  # Plus the 18-bit fractional scale, this will be encoded to 62-bit numbers
         x = tfe.define_private_input("server0", lambda: a)
 
         amount = prot.fixedpoint_config.precision_fractional
         y1 = tfe.truncate(x)
-        z = a / (2**amount)
+        z = a / (2 ** amount)
 
         with tfe.Session() as sess:
             sess.run(tfe.global_variables_initializer())
             error1 = 0
             n = 100000
             for i in range(n):
-                result1, truth = sess.run(
-                    [y1.reveal(),  z])
+                result1, truth = sess.run([y1.reveal(), z])
                 try:
                     np.testing.assert_allclose(result1, truth, rtol=0.0, atol=0.1)
                 except:
@@ -621,7 +632,11 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         # define inputs
-        x = tfe.define_private_variable(np.array([0xaaaa, 0x425f32ea92]), apply_scaling=False, share_type=ShareType.BOOLEAN)
+        x = tfe.define_private_variable(
+            np.array([0xAAAA, 0x425F32EA92]),
+            apply_scaling=False,
+            share_type=ShareType.BOOLEAN,
+        )
 
         # define computation
         z1 = tfe.bit_gather(x, 0, 2)
@@ -632,10 +647,9 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(z1.reveal())
-            np.testing.assert_array_equal(result, np.array([0, 0x8f484]))
+            np.testing.assert_array_equal(result, np.array([0, 0x8F484]))
             result = sess.run(z2.reveal())
-            np.testing.assert_array_equal(result, np.array([0xff, 0x135f9]))
-
+            np.testing.assert_array_equal(result, np.array([0xFF, 0x135F9]))
 
     def test_bit_split_and_gather(self):
         tf.reset_default_graph()
@@ -644,7 +658,11 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         # define inputs
-        x = tfe.define_private_variable(np.array([0xaaaa, 0x425f32ea92, 0x2]), apply_scaling=False, share_type=ShareType.BOOLEAN)
+        x = tfe.define_private_variable(
+            np.array([0xAAAA, 0x425F32EA92, 0x2]),
+            apply_scaling=False,
+            share_type=ShareType.BOOLEAN,
+        )
 
         # define computation
         z1 = tfe.bit_split_and_gather(x, 2)
@@ -654,7 +672,9 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(z1.reveal())
-            np.testing.assert_array_equal(result, np.array([[0, 0x8f484, 0], [0xff, 0x135f9, 0x1]]))
+            np.testing.assert_array_equal(
+                result, np.array([[0, 0x8F484, 0], [0xFF, 0x135F9, 0x1]])
+            )
 
     def test_carry(self):
         tf.reset_default_graph()
@@ -663,13 +683,18 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            tf.constant([[1, -2**63, -1], [-1, -2, 4]], dtype=tf.int64), apply_scaling=False, share_type=ShareType.BOOLEAN
+            tf.constant([[1, -(2 ** 63), -1], [-1, -2, 4]], dtype=tf.int64),
+            apply_scaling=False,
+            share_type=ShareType.BOOLEAN,
         )
         y1 = tfe.define_private_variable(
-            tf.constant([[7, -2**63, 1], [-1, 1, -1]], dtype=tf.int64), apply_scaling=False, share_type=ShareType.BOOLEAN
+            tf.constant([[7, -(2 ** 63), 1], [-1, 1, -1]], dtype=tf.int64),
+            apply_scaling=False,
+            share_type=ShareType.BOOLEAN,
         )
         y2 = tfe.define_constant(
-            np.array([[7, -2**63, 1], [-1, 1, -1]], dtype=np.int64), apply_scaling=False
+            np.array([[7, -(2 ** 63), 1], [-1, 1, -1]], dtype=np.int64),
+            apply_scaling=False,
         )
 
         z1 = tfe.carry(x, y1).cast(prot.factories[tf.int8])
@@ -680,14 +705,10 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(z1.reveal())
-            np.testing.assert_array_equal(
-                result, np.array([[0, 1, 1], [1, 0, 1]])
-            )
+            np.testing.assert_array_equal(result, np.array([[0, 1, 1], [1, 0, 1]]))
 
             result = sess.run(z2.reveal())
-            np.testing.assert_array_equal(
-                result, np.array([[0, 1, 1], [1, 0, 1]])
-            )
+            np.testing.assert_array_equal(result, np.array([[0, 1, 1], [1, 0, 1]]))
 
     def test_lshift_private(self):
         tf.reset_default_graph()
@@ -829,10 +850,10 @@ class TestABY3(unittest.TestCase):
         z = tfe.b2a(x)
         assert z.share_type == ShareType.ARITHMETIC
 
-        x2 = tfe.define_private_variable(
-            tf.constant([0]), share_type=ShareType.BOOLEAN
+        x2 = tfe.define_private_variable(tf.constant([0]), share_type=ShareType.BOOLEAN)
+        z2 = tfe.b2a(
+            x2, nbits=prot.fixedpoint_config.precision_fractional, method="single"
         )
-        z2 = tfe.b2a(x2, nbits=prot.fixedpoint_config.precision_fractional, method="single")
 
         with tfe.Session() as sess:
             # initialize variables
@@ -843,9 +864,7 @@ class TestABY3(unittest.TestCase):
                 result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
             )
             result = sess.run(z2.reveal())
-            np.testing.assert_allclose(
-                result, np.array([0]), rtol=0.0, atol=0.01
-            )
+            np.testing.assert_allclose(result, np.array([0]), rtol=0.0, atol=0.01)
 
     def test_b2a_single_private(self):
         tf.reset_default_graph()
@@ -853,16 +872,23 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_private_variable(tf.constant([[0, 1, 0], [1, 0, 1]]), share_type = ShareType.BOOLEAN, apply_scaling = False, factory = prot.factories[tf.bool])
+        x = tfe.define_private_variable(
+            tf.constant([[0, 1, 0], [1, 0, 1]]),
+            share_type=ShareType.BOOLEAN,
+            apply_scaling=False,
+            factory=prot.factories[tf.bool],
+        )
         y = tfe.b2a_single(x)
         assert y.share_type == ShareType.ARITHMETIC
 
-        with  tfe.Session() as sess:
+        with tfe.Session() as sess:
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(y.reveal())
-            np.testing.assert_allclose(result, np.array([[0, 1, 0], [1, 0, 1]]), rtol=0.0, atol=0.01)
+            np.testing.assert_allclose(
+                result, np.array([[0, 1, 0], [1, 0, 1]]), rtol=0.0, atol=0.01
+            )
 
     def test_truncate_heuristic(self):
         tf.reset_default_graph()
@@ -871,7 +897,9 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         scale = prot.fixedpoint_config.precision_fractional
-        a = tf.random_uniform([1], 0, 2**20) # Plus the 20-bit fractional scale, this will be encoded to 40-bit numbers
+        a = tf.random_uniform(
+            [1], 0, 2 ** 20
+        )  # Plus the 20-bit fractional scale, this will be encoded to 40-bit numbers
         x = tfe.define_private_input("server0", lambda: a)
 
         x1 = x << scale
@@ -885,13 +913,10 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             n = 1000
             for i in range(n):
-                result1, truth = sess.run(
-                    [y1.reveal(), a])
+                result1, truth = sess.run([y1.reveal(), a])
                 np.testing.assert_allclose(result1, truth, rtol=0.0, atol=0.1)
-                result2, truth = sess.run(
-                    [y2.reveal(), a])
+                result2, truth = sess.run([y2.reveal(), a])
                 np.testing.assert_allclose(result2, truth, rtol=0.0, atol=0.1)
-
 
     def test_truncate_msb0_cheetah(self):
         tf.reset_default_graph()
@@ -900,7 +925,9 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         scale = prot.fixedpoint_config.precision_fractional
-        x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type = ShareType.ARITHMETIC)
+        x = tfe.define_private_variable(
+            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.ARITHMETIC
+        )
         y = x << scale
 
         z = tfe.truncate_msb0(y, method="cheetah")
@@ -910,10 +937,22 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(y.reveal())
-            np.testing.assert_allclose(result, np.array([[1*(2**scale), 2*(2**scale), 3*(2**scale)], [4*(2**scale), 5*(2**scale), 6*(2**scale)]]), rtol=0.0001, atol=0.0001*(2**scale))
+            np.testing.assert_allclose(
+                result,
+                np.array(
+                    [
+                        [1 * (2 ** scale), 2 * (2 ** scale), 3 * (2 ** scale)],
+                        [4 * (2 ** scale), 5 * (2 ** scale), 6 * (2 ** scale)],
+                    ]
+                ),
+                rtol=0.0001,
+                atol=0.0001 * (2 ** scale),
+            )
 
             result = sess.run(z.reveal())
-            np.testing.assert_allclose(result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.00, atol=0.001)
+            np.testing.assert_allclose(
+                result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.00, atol=0.001
+            )
 
     def test_truncate_msb0_secureq8(self):
         tf.reset_default_graph()
@@ -922,7 +961,9 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         scale = prot.fixedpoint_config.precision_fractional
-        x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]), share_type = ShareType.ARITHMETIC)
+        x = tfe.define_private_variable(
+            tf.constant([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.ARITHMETIC
+        )
         y = x << scale
 
         z = tfe.truncate_msb0(y, method="secureq8")
@@ -932,10 +973,22 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(y.reveal())
-            np.testing.assert_allclose(result, np.array([[1*(2**scale), 2*(2**scale), 3*(2**scale)], [4*(2**scale), 5*(2**scale), 6*(2**scale)]]), rtol=0.0001, atol=0.0001*(2**scale))
+            np.testing.assert_allclose(
+                result,
+                np.array(
+                    [
+                        [1 * (2 ** scale), 2 * (2 ** scale), 3 * (2 ** scale)],
+                        [4 * (2 ** scale), 5 * (2 ** scale), 6 * (2 ** scale)],
+                    ]
+                ),
+                rtol=0.0001,
+                atol=0.0001 * (2 ** scale),
+            )
 
             result = sess.run(z.reveal())
-            np.testing.assert_allclose(result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.00, atol=0.001)
+            np.testing.assert_allclose(
+                result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.00, atol=0.001
+            )
 
     def test_ot(self):
         tf.reset_default_graph()
@@ -1077,7 +1130,6 @@ class TestABY3(unittest.TestCase):
                 atol=0.01,
             )
 
-
     def test_msb(self):
         tf.reset_default_graph()
 
@@ -1109,7 +1161,9 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(np.array([[1, -2, 0], [-4, 0, 6]]))
-        y = tfe.define_private_variable(np.array([[0, -2, 3], [0, -5, 6]]), apply_scaling=False)
+        y = tfe.define_private_variable(
+            np.array([[0, -2, 3], [0, -5, 6]]), apply_scaling=False
+        )
 
         z = tfe.equal_zero(x)
         w = tfe.equal_zero(y)
@@ -1118,9 +1172,13 @@ class TestABY3(unittest.TestCase):
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             result = sess.run(z.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[0, 0, 1], [0, 1, 0]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[0, 0, 1], [0, 1, 0]])
+            )
             result = sess.run(w.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[1, 0, 0], [1, 0, 0]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[1, 0, 0], [1, 0, 0]])
+            )
 
     def test_comparison(self):
         tf.reset_default_graph()
@@ -1146,32 +1204,49 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(z1.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[1, 0, 0], [0, 1, 0]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[1, 0, 0], [0, 1, 0]])
+            )
 
             result = sess.run(z2.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[0, 0, 1], [1, 0, 0]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[0, 0, 1], [1, 0, 0]])
+            )
 
             result = sess.run(z3.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[1, 1, 0], [0, 1, 1]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[1, 1, 0], [0, 1, 1]])
+            )
 
             result = sess.run(z4.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[0, 1, 1], [1, 0, 1]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[0, 1, 1], [1, 0, 1]])
+            )
 
             result = sess.run(z5.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[0, 1, 0], [0, 0, 1]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[0, 1, 0], [0, 0, 1]])
+            )
 
             result = sess.run(z6.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[1, 0, 0], [0, 0, 1]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[1, 0, 0], [0, 0, 1]])
+            )
 
             result = sess.run(z7.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[1, 0, 1], [0, 1, 1]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[1, 0, 1], [0, 1, 1]])
+            )
 
             result = sess.run(z8.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[0, 1, 0], [1, 0, 0]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[0, 1, 0], [1, 0, 0]])
+            )
 
             result = sess.run(z9.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[0, 1, 1], [1, 1, 0]]))
-
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[0, 1, 1], [1, 1, 0]])
+            )
 
     def test_pow_private(self):
         tf.reset_default_graph()
@@ -1267,10 +1342,7 @@ class TestABY3(unittest.TestCase):
             )
             result = sess.run(z3.reveal())
             np.testing.assert_allclose(
-                result,
-                np.array([[0, 0, 0], [0, 0.25, 2]]),
-                rtol=0.0,
-                atol=0.01,
+                result, np.array([[0, 0, 0], [0, 0.25, 2]]), rtol=0.0, atol=0.01,
             )
 
     def test_reciprocal(self):
@@ -1279,8 +1351,8 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        _x = (np.random.rand(1000) - 0.5) * 1000 # [-500, 500]
-        #_x = 1537 # Would not work larger than this number
+        _x = (np.random.rand(1000) - 0.5) * 1000  # [-500, 500]
+        # _x = 1537 # Would not work larger than this number
 
         x = tfe.define_private_input("server0", lambda: tf.constant(_x))
         y = tfe.reciprocal(x)
@@ -1290,10 +1362,7 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(y.reveal())
-            np.testing.assert_allclose(
-                result, 1.0 / _x, rtol=0.0, atol=0.01
-            )
-
+            np.testing.assert_allclose(result, 1.0 / _x, rtol=0.0, atol=0.01)
 
     def test_transpose(self):
         tf.reset_default_graph()
@@ -1397,7 +1466,10 @@ class TestABY3(unittest.TestCase):
             # reveal result
             result = sess.run(z1.reveal())
             np.testing.assert_allclose(
-                result, np.array([[[1, 2], [5, 6]], [[3, 4], [7, 8]]]), rtol=0.0, atol=0.01
+                result,
+                np.array([[[1, 2], [5, 6]], [[3, 4], [7, 8]]]),
+                rtol=0.0,
+                atol=0.01,
             )
 
             result = sess.run(z2)
@@ -1453,9 +1525,7 @@ class TestABY3(unittest.TestCase):
             )
 
             result = sess.run(z2)
-            np.testing.assert_allclose(
-                result, np.array([1, 2, 3]), rtol=0.0, atol=0.01
-            )
+            np.testing.assert_allclose(result, np.array([1, 2, 3]), rtol=0.0, atol=0.01)
 
     def test_strided_slice(self):
         tf.reset_default_graph()
@@ -1463,10 +1533,11 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_private_variable(tf.constant(
-                [[[1, 1, 1], [2, 2, 2]],
-                 [[3, 3, 3], [4, 4, 4]],
-                 [[5, 5, 5], [6, 6, 6]]]))
+        x = tfe.define_private_variable(
+            tf.constant(
+                [[[1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4]], [[5, 5, 5], [6, 6, 6]]]
+            )
+        )
 
         z1 = tfe.strided_slice(x, [1, 0, 0], [2, 1, 3], [1, 1, 1])
         z2 = tfe.strided_slice(x, [1, 0, 0], [2, 2, 3], [1, 1, 1])
@@ -1523,7 +1594,9 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_private_variable(tf.constant([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]))
+        x = tfe.define_private_variable(
+            tf.constant([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]])
+        )
         y = tfe.define_constant(np.array([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]))
 
         w = tfe.split(x, 3, axis=1)
@@ -1579,12 +1652,18 @@ class TestABY3(unittest.TestCase):
             # reveal result
             result = sess.run(z1.reveal())
             np.testing.assert_allclose(
-                result, np.array([[1, 2, 3, 1, 2, 3], [4, 5, 6, 4, 5, 6]]), rtol=0.0, atol=0.01
+                result,
+                np.array([[1, 2, 3, 1, 2, 3], [4, 5, 6, 4, 5, 6]]),
+                rtol=0.0,
+                atol=0.01,
             )
 
             result = sess.run(z2)
             np.testing.assert_allclose(
-                result, np.array([[1, 2, 3, 1, 2, 3], [4, 5, 6, 4, 5, 6]]), rtol=0.0, atol=0.01
+                result,
+                np.array([[1, 2, 3, 1, 2, 3], [4, 5, 6, 4, 5, 6]]),
+                rtol=0.0,
+                atol=0.01,
             )
 
     def test_im2col(self):
@@ -1594,7 +1673,7 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(tf.random.uniform([128, 3, 27, 27]))
-        y = tfe.define_constant(np.random.uniform(size = [128, 3, 27, 27]))
+        y = tfe.define_constant(np.random.uniform(size=[128, 3, 27, 27]))
 
         z1 = tfe.im2col(x, 5, 5, stride=2, padding="SAME")
         z2 = tfe.im2col(y, 5, 5, stride=2, padding="VALID")
@@ -1605,7 +1684,6 @@ class TestABY3(unittest.TestCase):
         n_cols_valid = math.ceil((27 - 5 + 1) / 2)
         assert z1.shape == [5 * 5 * 3, n_rows_same * n_cols_same * 128]
         assert z2.shape == [5 * 5 * 3, n_rows_valid * n_cols_valid * 128]
-
 
     def test_simple_lr_model(self):
         tf.reset_default_graph()
@@ -1792,8 +1870,12 @@ class TestABY3(unittest.TestCase):
 
         conv_input = prot.define_private_variable(input_conv)
         private_filter = prot.define_private_variable(filter_values)
-        conv_output_tfe1 = tfe.conv2d(conv_input, filter_values, strides=2, padding="SAME")
-        conv_output_tfe2 = tfe.conv2d(conv_input, private_filter, strides=2, padding="SAME")
+        conv_output_tfe1 = tfe.conv2d(
+            conv_input, filter_values, strides=2, padding="SAME"
+        )
+        conv_output_tfe2 = tfe.conv2d(
+            conv_input, private_filter, strides=2, padding="SAME"
+        )
 
         with tfe.Session() as sess:
 
@@ -1839,7 +1921,9 @@ class TestABY3(unittest.TestCase):
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             result = sess.run(z.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[1, -2, 3], [0, 0, 6]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[1, -2, 3], [0, 0, 6]])
+            )
 
     def test_reduce_max(self):
         tf.reset_default_graph()
@@ -1883,7 +1967,9 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_private_variable(np.array([[1, -2, 5, 0], [-4, 9, 0, 6], [10, 1, 0, 7]]))
+        x = tfe.define_private_variable(
+            np.array([[1, -2, 5, 0], [-4, 9, 0, 6], [10, 1, 0, 7]])
+        )
 
         z1 = tfe.argmax(x, axis=0, output_style="onehot")
         z2 = tfe.argmax(x, axis=1, output_style="onehot")
@@ -1894,10 +1980,14 @@ class TestABY3(unittest.TestCase):
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             result = sess.run(z1.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 1]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 1]])
+            )
 
             result = sess.run(z2.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]]))
+            np.testing.assert_array_equal(
+                result.astype(int), np.array([[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]])
+            )
 
             result = sess.run(z3.reveal())
             np.testing.assert_array_equal(result.astype(int), np.array([2, 1, 0, 2]))
@@ -1911,7 +2001,9 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_private_variable(np.array([[2, 0, 9, 1], [7, 5, 0, 8], [5, 3, 1, 10]]))
+        x = tfe.define_private_variable(
+            np.array([[2, 0, 9, 1], [7, 5, 0, 8], [5, 3, 1, 10]])
+        )
 
         y1, z1 = tfe.reduce_max_with_argmax(x, axis=1, output_style="onehot")
         y2, z2 = tfe.reduce_max_with_argmax(x, axis=1, output_style="normal")
@@ -1921,7 +2013,10 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             result1, result2 = sess.run([y1.reveal(), z1.reveal()])
             np.testing.assert_array_equal(result1.astype(int), np.array([9, 8, 10]))
-            np.testing.assert_array_equal(result2.astype(int), np.array([[0, 0, 1, 0], [0, 0, 0, 1], [0, 0, 0, 1]]))
+            np.testing.assert_array_equal(
+                result2.astype(int),
+                np.array([[0, 0, 1, 0], [0, 0, 0, 1], [0, 0, 0, 1]]),
+            )
 
             result1, result2 = sess.run([y2.reveal(), z2.reveal()])
             np.testing.assert_array_equal(result1.astype(int), np.array([9, 8, 10]))
@@ -1938,15 +2033,27 @@ class TestABY3(unittest.TestCase):
         x = tfe.define_private_variable(data)
 
         z1 = tfe.maxpool2d(x, pool_size=(2, 2), strides=(2, 2), padding="VALID")
-        tf_z1 = tf.transpose(tf.nn.max_pool2d(dataT, ksize=(2, 2), strides=(2, 2), padding="VALID", data_format='NHWC'), perm=[0, 3, 1, 2])
+        tf_z1 = tf.transpose(
+            tf.nn.max_pool2d(
+                dataT, ksize=(2, 2), strides=(2, 2), padding="VALID", data_format="NHWC"
+            ),
+            perm=[0, 3, 1, 2],
+        )
         z2 = tfe.maxpool2d(x, pool_size=(2, 2), strides=(2, 2), padding="SAME")
-        tf_z2 = tf.transpose(tf.nn.max_pool2d(dataT, ksize=(2, 2), strides=(2, 2), padding="SAME", data_format='NHWC'), perm=[0, 3, 1, 2])
+        tf_z2 = tf.transpose(
+            tf.nn.max_pool2d(
+                dataT, ksize=(2, 2), strides=(2, 2), padding="SAME", data_format="NHWC"
+            ),
+            perm=[0, 3, 1, 2],
+        )
 
         data = np.array([[[[2, 0, 9, 1], [7, 5, 0, 8], [5, 3, 1, 10]]]])
         dataT = np.transpose(data, axes=[0, 2, 3, 1])
         x = tfe.define_private_variable(data)
 
-        z3, z3_arg = tfe.maxpool2d_with_argmax(x, pool_size=(2, 2), strides=(2, 2), padding="VALID", )
+        z3, z3_arg = tfe.maxpool2d_with_argmax(
+            x, pool_size=(2, 2), strides=(2, 2), padding="VALID",
+        )
 
         with tfe.Session() as sess:
             # initialize variables
@@ -1965,17 +2072,15 @@ class TestABY3(unittest.TestCase):
             expected = np.array([[[[[0, 0, 1, 0], [1, 0, 0, 0]]]]])
             np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
 
-
-
     def test_avgpool2d(self):
         tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_private_variable(np.array([[1, 2, 3, 4],
-                                                  [5, 6, 7, 8],
-                                                  [9, 10, 11, 12]]))
+        x = tfe.define_private_variable(
+            np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]])
+        )
         # Add the `batch` and `channels` dimensions
         x = tfe.expand_dims(x, axis=0)
         x = tfe.expand_dims(x, axis=0)
@@ -1987,10 +2092,14 @@ class TestABY3(unittest.TestCase):
             # initialize variables
             sess.run(tfe.global_variables_initializer())
             result = sess.run(z1.reveal())
-            np.testing.assert_allclose(result, np.array([[[[3.5, 5.5]]]]), rtol=0.0, atol=0.01)
+            np.testing.assert_allclose(
+                result, np.array([[[[3.5, 5.5]]]]), rtol=0.0, atol=0.01
+            )
 
             result = sess.run(z2.reveal())
-            np.testing.assert_allclose(result, np.array([[[[3.5, 5.5], [4.75, 5.75]]]]), rtol=0.0, atol=0.01)
+            np.testing.assert_allclose(
+                result, np.array([[[[3.5, 5.5], [4.75, 5.75]]]]), rtol=0.0, atol=0.01
+            )
 
     def test_expand(self):
         tf.reset_default_graph()
@@ -2007,7 +2116,7 @@ class TestABY3(unittest.TestCase):
 
         # Plain TF version
         plain_x = tf.transpose(tf.constant(image), [2, 3, 0, 1])
-        I, J = tf.meshgrid(tf.range(4)*2, tf.range(4)*2, indexing="ij")
+        I, J = tf.meshgrid(tf.range(4) * 2, tf.range(4) * 2, indexing="ij")
         indices = tf.stack([I, J], axis=2)
         z = tf.scatter_nd(indices, plain_x, tf.constant([7, 7, 1, 3]))
         z = tf.transpose(z, [2, 3, 0, 1])
@@ -2067,7 +2176,7 @@ class TestABY3(unittest.TestCase):
         scale = prot.fixedpoint_config.precision_fractional
 
         data1 = np.array([-4, -0.5, 0, 1.3, 2, 5.63])
-        data2 = np.array([-scale-1, -scale, -4, -0.5, 0, 1.3, 2, 5.63])
+        data2 = np.array([-scale - 1, -scale, -4, -0.5, 0, 1.3, 2, 5.63])
         # data = np.array([-11]) # Would not work for smaller than -11
         x1 = tfe.define_private_variable(data1)
         x2 = tfe.define_private_variable(data2)
@@ -2081,11 +2190,28 @@ class TestABY3(unittest.TestCase):
             # reveal result
             result = sess.run(z1.reveal())
             np.testing.assert_allclose(
-                result, np.array([0.0625, 0.70710678, 1., 2.46228883, 4., 49.52207979]), rtol=0.0, atol=0.01
+                result,
+                np.array([0.0625, 0.70710678, 1.0, 2.46228883, 4.0, 49.52207979]),
+                rtol=0.0,
+                atol=0.01,
             )
             result = sess.run(z2.reveal())
             np.testing.assert_allclose(
-                result, np.array([0, 1.52587890625e-05, 0.0625, 0.70710678, 1., 2.46228883, 4., 49.52207979]), rtol=0.0, atol=0.01
+                result,
+                np.array(
+                    [
+                        0,
+                        1.52587890625e-05,
+                        0.0625,
+                        0.70710678,
+                        1.0,
+                        2.46228883,
+                        4.0,
+                        49.52207979,
+                    ]
+                ),
+                rtol=0.0,
+                atol=0.01,
             )
 
     def test_exp(self):
@@ -2101,7 +2227,9 @@ class TestABY3(unittest.TestCase):
         x2 = tfe.define_private_variable(data2)
         x3 = tfe.define_private_variable(data3)
 
-        z1 = tfe.exp(x1, approx_type="infinity") # For negative x, using "infinity" approximation should be a good choice
+        z1 = tfe.exp(
+            x1, approx_type="infinity"
+        )  # For negative x, using "infinity" approximation should be a good choice
         z2 = tfe.exp(x2, approx_type="as2019")
         z3 = tfe.exp(x3, approx_type="mp-spdz")
 
@@ -2110,17 +2238,11 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.e ** data1, rtol=0.0, atol=0.01
-            )
+            np.testing.assert_allclose(result, np.e ** data1, rtol=0.0, atol=0.01)
             result = sess.run(z2.reveal())
-            np.testing.assert_allclose(
-                result, np.e ** data2, rtol=0.001, atol=0.01
-            )
+            np.testing.assert_allclose(result, np.e ** data2, rtol=0.001, atol=0.01)
             result = sess.run(z3.reveal())
-            np.testing.assert_allclose(
-                result, np.e ** data3, rtol=0.0, atol=0.01
-            )
+            np.testing.assert_allclose(result, np.e ** data3, rtol=0.0, atol=0.01)
 
     def test_softmax(self):
         tf.reset_default_graph()
@@ -2129,13 +2251,41 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         a = [
-            10.9189482 ,  9.44967556,  8.807868  ,  8.20117855,  8.16848373,
-            7.9203186 ,  7.29018497,  7.00307369,  6.53640938,  6.42448902,
-            6.21095753,  6.16129017,  5.82647038,  5.74629307,  5.70382595,
-            5.55218601,  5.51741982,  5.46005726,  5.42303944,  5.36902714]
+            10.9189482,
+            9.44967556,
+            8.807868,
+            8.20117855,
+            8.16848373,
+            7.9203186,
+            7.29018497,
+            7.00307369,
+            6.53640938,
+            6.42448902,
+            6.21095753,
+            6.16129017,
+            5.82647038,
+            5.74629307,
+            5.70382595,
+            5.55218601,
+            5.51741982,
+            5.46005726,
+            5.42303944,
+            5.36902714,
+        ]
         b = [
-            -18, -7.9189482 , -3.567180633544922,  -4.125492095947266,  -5.74629307,  -5.70382595,
-            -1.55218601,  -5.51741982,  -2.46005726,  -0.42303944,  -5.36902714, 0]
+            -18,
+            -7.9189482,
+            -3.567180633544922,
+            -4.125492095947266,
+            -5.74629307,
+            -5.70382595,
+            -1.55218601,
+            -5.51741982,
+            -2.46005726,
+            -0.42303944,
+            -5.36902714,
+            0,
+        ]
         x = tfe.define_private_variable(tf.constant(a))
         y = tfe.define_private_variable(tf.constant(b))
 
@@ -2153,29 +2303,17 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result, expected = sess.run([z1_a.reveal(), expected_a])
-            np.testing.assert_allclose(
-                result, expected, rtol=0.0, atol=0.01
-            )
+            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
             result, expected = sess.run([z1_b.reveal(), expected_b])
-            np.testing.assert_allclose(
-                result, expected, rtol=0.0, atol=0.01
-            )
+            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
             result, expected = sess.run([z2_a.reveal(), expected_a])
-            np.testing.assert_allclose(
-                result, expected, rtol=0.0, atol=0.01
-            )
+            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
             result, expected = sess.run([z2_b.reveal(), expected_b])
-            np.testing.assert_allclose(
-                result, expected, rtol=0.0, atol=0.01
-            )
+            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
             result, expected = sess.run([z3_a.reveal(), expected_a])
-            np.testing.assert_allclose(
-                result, expected, rtol=0.0, atol=0.01
-            )
+            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
             result, expected = sess.run([z3_b.reveal(), expected_b])
-            np.testing.assert_allclose(
-                result, expected, rtol=0.0, atol=0.01
-            )
+            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
 
     def test_bit_reverse(self):
         tf.reset_default_graph()
@@ -2183,8 +2321,10 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        _x = np.random.randint(-(1<<20), 1<<20)
-        x = tfe.define_private_variable(tf.constant(_x), apply_scaling=False, share_type=ShareType.BOOLEAN)
+        _x = np.random.randint(-(1 << 20), 1 << 20)
+        x = tfe.define_private_variable(
+            tf.constant(_x), apply_scaling=False, share_type=ShareType.BOOLEAN
+        )
         y = prot.bit_reverse(prot.bit_reverse(x)).reveal()
         with tfe.Session() as sess:
             sess.run(tfe.global_variables_initializer())
@@ -2199,6 +2339,7 @@ class TestABY3(unittest.TestCase):
 
         def cond(i, a):
             return i < 10
+
         def body(i, a):
             return (i + 1, a + 10)
 
@@ -2214,7 +2355,12 @@ class TestABY3(unittest.TestCase):
             result = sess.run(r1)
             np.testing.assert_allclose(result, np.array(10), rtol=0.0, atol=0.01)
             result = sess.run(r2.reveal())
-            np.testing.assert_allclose(result, np.array([[101, 102, 103], [104, 105, 106]]), rtol=0.0, atol=0.01)
+            np.testing.assert_allclose(
+                result,
+                np.array([[101, 102, 103], [104, 105, 106]]),
+                rtol=0.0,
+                atol=0.01,
+            )
 
     def test_inv_sqrt(self):
         tf.reset_default_graph()
@@ -2223,8 +2369,8 @@ class TestABY3(unittest.TestCase):
         tfe.set_protocol(prot)
 
         # _x = (np.random.rand(1000)) * 1000 # [0, 1000]
-        #_x = 1537 # Would not work larger than this number
-        _x = 9.1552734375e-05 # Would not work larger than this number
+        # _x = 1537 # Would not work larger than this number
+        _x = 9.1552734375e-05  # Would not work larger than this number
 
         x = tfe.define_private_input("server0", lambda: tf.constant(_x))
         y = tfe.inv_sqrt(x)
@@ -2234,9 +2380,7 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(y.reveal())
-            np.testing.assert_allclose(
-                result, 1.0 / np.sqrt(_x), rtol=0.01, atol=0.01
-            )
+            np.testing.assert_allclose(result, 1.0 / np.sqrt(_x), rtol=0.01, atol=0.01)
 
     def test_xor_indices(self):
         tf.reset_default_graph()
@@ -2244,19 +2388,22 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        _x = np.random.randint(-(1<<20), 1<<20, size=[5, 5], dtype=np.int64)
+        _x = np.random.randint(-(1 << 20), 1 << 20, size=[5, 5], dtype=np.int64)
         expected = np.zeros(_x.shape, dtype=np.int64)
         for d in range(64):
-            idx = (np.bitwise_and(_x, np.array(1<<d).astype(np.int64)) != 0).astype(np.int64) * d
+            idx = (np.bitwise_and(_x, np.array(1 << d).astype(np.int64)) != 0).astype(
+                np.int64
+            ) * d
             expected = np.bitwise_xor(expected, idx)
 
-        x = tfe.define_private_variable(tf.constant(_x), apply_scaling=False, share_type=ShareType.BOOLEAN)
+        x = tfe.define_private_variable(
+            tf.constant(_x), apply_scaling=False, share_type=ShareType.BOOLEAN
+        )
         y = prot.xor_indices(x).reveal()
         with tfe.Session() as sess:
             sess.run(tfe.global_variables_initializer())
             y = sess.run(y)
             np.testing.assert_allclose(y, expected, rtol=0.0, atol=0.01)
-
 
     def test_sort1(self):
         tf.reset_default_graph()
@@ -2264,7 +2411,9 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_private_variable(tf.constant([[3, 1, 5, 2, 6, 4], [11, 8, 10, 12, 9, 7]]))
+        x = tfe.define_private_variable(
+            tf.constant([[3, 1, 5, 2, 6, 4], [11, 8, 10, 12, 9, 7]])
+        )
 
         y0 = tfe.sort(x, axis=1, acc=True)
         y1 = tfe.sort(x, axis=0, acc=True)
@@ -2277,21 +2426,32 @@ class TestABY3(unittest.TestCase):
             # reveal result
             result = sess.run(y0.reveal())
             np.testing.assert_allclose(
-                result, np.array([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]), rtol=0.0, atol=0.01
+                result,
+                np.array([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]),
+                rtol=0.0,
+                atol=0.01,
             )
             result = sess.run(y1.reveal())
             np.testing.assert_allclose(
-                result, np.array([[3, 1, 5, 2, 6, 4], [11, 8, 10, 12, 9, 7]]), rtol=0.0, atol=0.01
+                result,
+                np.array([[3, 1, 5, 2, 6, 4], [11, 8, 10, 12, 9, 7]]),
+                rtol=0.0,
+                atol=0.01,
             )
             result = sess.run(y2.reveal())
             np.testing.assert_allclose(
-                result, np.array([[6, 5, 4, 3, 2, 1], [12, 11, 10, 9, 8, 7]]), rtol=0.0, atol=0.01
+                result,
+                np.array([[6, 5, 4, 3, 2, 1], [12, 11, 10, 9, 8, 7]]),
+                rtol=0.0,
+                atol=0.01,
             )
             result = sess.run(y3.reveal())
             np.testing.assert_allclose(
-                result, np.array([[11, 8, 10, 12, 9, 7], [3, 1, 5, 2, 6, 4]]), rtol=0.0, atol=0.01
+                result,
+                np.array([[11, 8, 10, 12, 9, 7], [3, 1, 5, 2, 6, 4]]),
+                rtol=0.0,
+                atol=0.01,
             )
-
 
     def test_sort2(self):
         tf.reset_default_graph()
@@ -2299,7 +2459,9 @@ class TestABY3(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        x = tfe.define_private_variable(tf.constant([3, 16, 1, 11, 2, 6, 15, 4, 5, 13, 8, 10, 12, 9, 7, 14]))
+        x = tfe.define_private_variable(
+            tf.constant([3, 16, 1, 11, 2, 6, 15, 4, 5, 13, 8, 10, 12, 9, 7, 14])
+        )
 
         y = tfe.sort(x, axis=0, acc=True)
 
@@ -2309,9 +2471,11 @@ class TestABY3(unittest.TestCase):
             # reveal result
             result = sess.run(y.reveal())
             np.testing.assert_allclose(
-                result, np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]), rtol=0.0, atol=0.01
+                result,
+                np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+                rtol=0.0,
+                atol=0.01,
             )
-
 
 
 if __name__ == "__main__":

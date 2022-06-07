@@ -90,7 +90,6 @@ class TestDepthwiseConv2d(unittest.TestCase):
             k_weights = model.get_weights()
             k_config = model.get_config()
 
-
         with tf.name_scope("TFE"):
             x = tfe.define_private_input(
                 "inputter", lambda: tf.convert_to_tensor(input_data)

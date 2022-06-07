@@ -1,8 +1,8 @@
 """TFE Keras optimizers"""
-import tensorflow as tf
-import tf_encrypted as tfe
-from tf_encrypted.keras import backend as KE
 import numpy as np
+import tensorflow as tf
+
+import tf_encrypted as tfe
 
 
 class SGD:
@@ -33,6 +33,7 @@ class SGDWithMomentum:
 
     Reference: https://paperswithcode.com/method/sgd-with-momentum
     """
+
     def __init__(self, learning_rate=0.01, momentum=0.9):
         self.learning_rate = learning_rate
         self.momentum = momentum
@@ -41,9 +42,15 @@ class SGDWithMomentum:
     def compile(self, layers):
         for layer in layers:
             W = layer.weights
-            self.Vs[id(W)] = [tfe.define_private_variable(
-                    np.zeros(list(map(int, W[i].shape.as_list()))), apply_scaling=True, share_type=W[i].share_type, factory=W[i].backing_dtype)
-                    for i in range(len(W))]
+            self.Vs[id(W)] = [
+                tfe.define_private_variable(
+                    np.zeros(list(map(int, W[i].shape.as_list()))),
+                    apply_scaling=True,
+                    share_type=W[i].share_type,
+                    factory=W[i].backing_dtype,
+                )
+                for i in range(len(W))
+            ]
 
     def apply_gradients(self, W, G):
         if id(W) not in self.Vs:
@@ -67,6 +74,7 @@ class AMSgrad:
 
     Reference: https://paperswithcode.com/method/amsgrad
     """
+
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999):
         self.learning_rate = learning_rate
         self.beta1 = beta1
@@ -74,20 +82,38 @@ class AMSgrad:
         self.Ms = {}
         self.Vs = {}
         self.Vhats = {}
-        self.epsilon = 2**-tfe.get_protocol().fixedpoint_config.precision_fractional
+        self.epsilon = 2 ** -tfe.get_protocol().fixedpoint_config.precision_fractional
 
     def compile(self, layers):
         for layer in layers:
             W = layer.weights
-            self.Vs[id(W)] = [tfe.define_private_variable(
-                    np.zeros(list(map(int, W[i].shape.as_list()))), apply_scaling=True, share_type=W[i].share_type, factory=W[i].backing_dtype)
-                    for i in range(len(W))]
-            self.Ms[id(W)] = [tfe.define_private_variable(
-                    np.zeros(list(map(int, W[i].shape.as_list()))), apply_scaling=True, share_type=W[i].share_type, factory=W[i].backing_dtype)
-                    for i in range(len(W))]
-            self.Vhats[id(W)] = [tfe.define_private_variable(
-                    np.zeros(list(map(int, W[i].shape.as_list()))), apply_scaling=True, share_type=W[i].share_type, factory=W[i].backing_dtype)
-                    for i in range(len(W))]
+            self.Vs[id(W)] = [
+                tfe.define_private_variable(
+                    np.zeros(list(map(int, W[i].shape.as_list()))),
+                    apply_scaling=True,
+                    share_type=W[i].share_type,
+                    factory=W[i].backing_dtype,
+                )
+                for i in range(len(W))
+            ]
+            self.Ms[id(W)] = [
+                tfe.define_private_variable(
+                    np.zeros(list(map(int, W[i].shape.as_list()))),
+                    apply_scaling=True,
+                    share_type=W[i].share_type,
+                    factory=W[i].backing_dtype,
+                )
+                for i in range(len(W))
+            ]
+            self.Vhats[id(W)] = [
+                tfe.define_private_variable(
+                    np.zeros(list(map(int, W[i].shape.as_list()))),
+                    apply_scaling=True,
+                    share_type=W[i].share_type,
+                    factory=W[i].backing_dtype,
+                )
+                for i in range(len(W))
+            ]
 
     def apply_gradients(self, W, G):
         if id(W) not in self.Vs:
@@ -98,14 +124,16 @@ class AMSgrad:
         Vhat = self.Vhats[id(W)]
         ops = []
         for i in range(len(W)):
-            op1 = tfe.assign(M[i], self.beta1 * M[i] + (1-self.beta1) * G[i])
-            op2 = tfe.assign(V[i], self.beta2 * V[i] + (1-self.beta2) * G[i] * G[i])
+            op1 = tfe.assign(M[i], self.beta1 * M[i] + (1 - self.beta1) * G[i])
+            op2 = tfe.assign(V[i], self.beta2 * V[i] + (1 - self.beta2) * G[i] * G[i])
             with tf.control_dependencies([op2]):
-                # need to use read_value here to use the updated lastest value of variable,
-                # otherwise it might use cached copy of the variable, leading to totally wrong result
-                # (i.e., some device uses the cached copy, some device uses updated value, such that the sharing
+                # need to use read_value here to use the updated lastest value
+                # of variable, otherwise it might use cached copy of the variable,
+                # leading to totally wrong result (i.e., some device uses the
+                # cached copy, some device uses updated value, such that the sharing
                 # is completely wrong). The documentation of `read_value` says:
-                # "Can be different from value() if it's on another device, with control dependencies, etc."
+                # "Can be different from value() if it's on another device,
+                # with control dependencies, etc."
                 v_max = tfe.maximum(Vhat[i].read_value(), V[i].read_value())
                 op3 = tfe.assign(Vhat[i], v_max)
             with tf.control_dependencies([op1, op3]):
@@ -125,6 +153,7 @@ class Adam:
 
     https://paperswithcode.com/method/adam
     """
+
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999):
         self.learning_rate = learning_rate
         self.beta1 = beta1
@@ -133,20 +162,36 @@ class Adam:
         self.Vs = {}
         self.beta1_pow = {}
         self.beta2_pow = {}
-        self.epsilon = 2**-tfe.get_protocol().fixedpoint_config.precision_fractional
+        self.epsilon = 2 ** -tfe.get_protocol().fixedpoint_config.precision_fractional
 
     def compile(self, layers):
         for layer in layers:
             W = layer.weights
-            self.Vs[id(W)] = [tfe.define_private_variable(
-                    np.zeros(list(map(int, W[i].shape.as_list()))), apply_scaling=True, share_type=W[i].share_type, factory=W[i].backing_dtype)
-                    for i in range(len(W))]
-            self.Ms[id(W)] = [tfe.define_private_variable(
-                    np.zeros(list(map(int, W[i].shape.as_list()))), apply_scaling=True, share_type=W[i].share_type, factory=W[i].backing_dtype)
-                    for i in range(len(W))]
+            self.Vs[id(W)] = [
+                tfe.define_private_variable(
+                    np.zeros(list(map(int, W[i].shape.as_list()))),
+                    apply_scaling=True,
+                    share_type=W[i].share_type,
+                    factory=W[i].backing_dtype,
+                )
+                for i in range(len(W))
+            ]
+            self.Ms[id(W)] = [
+                tfe.define_private_variable(
+                    np.zeros(list(map(int, W[i].shape.as_list()))),
+                    apply_scaling=True,
+                    share_type=W[i].share_type,
+                    factory=W[i].backing_dtype,
+                )
+                for i in range(len(W))
+            ]
             factory = W[0].backing_dtype if len(W) > 0 else None
-            self.beta1_pow[id(W)] = tfe.define_public_variable(np.array(1), apply_scaling=True, factory=factory)
-            self.beta2_pow[id(W)] = tfe.define_public_variable(np.array(1), apply_scaling=True, factory=factory)
+            self.beta1_pow[id(W)] = tfe.define_public_variable(
+                np.array(1), apply_scaling=True, factory=factory
+            )
+            self.beta2_pow[id(W)] = tfe.define_public_variable(
+                np.array(1), apply_scaling=True, factory=factory
+            )
 
     def apply_gradients(self, W, G):
         if id(W) not in self.Vs:
@@ -161,8 +206,8 @@ class Adam:
         V = self.Vs[id(W)]
         ops = []
         for i in range(len(W)):
-            op1 = tfe.assign(M[i], self.beta1 * M[i] + (1-self.beta1) * G[i])
-            op2 = tfe.assign(V[i], self.beta2 * V[i] + (1-self.beta2) * G[i] * G[i])
+            op1 = tfe.assign(M[i], self.beta1 * M[i] + (1 - self.beta1) * G[i])
+            op2 = tfe.assign(V[i], self.beta2 * V[i] + (1 - self.beta2) * G[i] * G[i])
             with tf.control_dependencies([op1, beta1_op]):
                 mhat = M[i].read_value() / (1 - beta1_pow)
             with tf.control_dependencies([op2, beta2_op]):

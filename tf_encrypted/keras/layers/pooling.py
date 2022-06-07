@@ -170,11 +170,19 @@ class MaxPooling2D(Pooling2D):
 
         batch, channels, h_y, w_y, pool_len = y_arg.shape
 
-        _d_y = tfe.tile(tfe.expand_dims(d_y, axis=4), [1,1,1,1,pool_len])
+        _d_y = tfe.tile(tfe.expand_dims(d_y, axis=4), [1, 1, 1, 1, pool_len])
         _d_y = _d_y * y_arg
         _d_y = tfe.reshape(_d_y, [batch * channels, h_y, w_y, pool_len])
 
-        d_x = tfe.patches2im(_d_y, self.pool_size, stride=self.strides[0], padding=self.padding, img_size=(h_x, w_x), consolidation="SUM", data_format="NHWC")
+        d_x = tfe.patches2im(
+            _d_y,
+            self.pool_size,
+            stride=self.strides[0],
+            padding=self.padding,
+            img_size=(h_x, w_x),
+            consolidation="SUM",
+            data_format="NHWC",
+        )
         d_x = tfe.reshape(d_x, [batch, channels, h_x, w_x])
 
         if self.data_format != "channels_first":
@@ -241,9 +249,7 @@ class AveragePooling2D(Pooling2D):
         if self.data_format != "channels_first":
             inputs = tfe.transpose(inputs, perm=[0, 3, 1, 2])
 
-        outputs = tfe.avgpool2d(
-            inputs, self.pool_size, self.strides, self.padding
-        )
+        outputs = tfe.avgpool2d(inputs, self.pool_size, self.strides, self.padding)
 
         if self.data_format != "channels_first":
             outputs = tfe.transpose(outputs, perm=[0, 2, 3, 1])
@@ -254,7 +260,6 @@ class AveragePooling2D(Pooling2D):
 
     def backward(self, d_y):
         x = self._layer_input
-        y = self._layer_output
         pool_len = self.pool_size[0] * self.pool_size[1]
         scalar = 1 / pool_len
 
@@ -266,11 +271,19 @@ class AveragePooling2D(Pooling2D):
 
         batch, channels, h_y, w_y = d_y.shape
 
-        _d_y = tfe.tile(tfe.expand_dims(d_y, 4), [1,1,1,1,pool_len])
+        _d_y = tfe.tile(tfe.expand_dims(d_y, 4), [1, 1, 1, 1, pool_len])
         _d_y = _d_y * scalar
         _d_y = tfe.reshape(_d_y, [batch * channels, h_y, w_y, pool_len])
 
-        d_x = tfe.patches2im(_d_y, self.pool_size, stride=self.strides[0], padding=self.padding, img_size=(h_x, w_x), consolidation="SUM", data_format="NHWC")
+        d_x = tfe.patches2im(
+            _d_y,
+            self.pool_size,
+            stride=self.strides[0],
+            padding=self.padding,
+            img_size=(h_x, w_x),
+            consolidation="SUM",
+            data_format="NHWC",
+        )
         d_x = tfe.reshape(d_x, [batch, channels, h_x, w_x])
 
         if self.data_format != "channels_first":
@@ -351,7 +364,6 @@ class GlobalAveragePooling2D(GlobalPooling2D):
             h_x, w_x = (x.shape[1], x.shape[2])
         else:
             h_x, w_x = (x.shape[2], x.shape[3])
-        batch, channels = (d_y.shape[0], d_y.shape[1])
 
         _d_y = d_y * self.scalar
         _d_y = tfe.expand_dims(tfe.expand_dims(_d_y, axis=2), axis=3)

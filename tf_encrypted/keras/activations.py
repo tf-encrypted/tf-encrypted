@@ -7,8 +7,10 @@ def relu(x):
     """Computes relu of x element-wise"""
     return tfe.relu(x)
 
+
 def relu_deriv(y, d_y):
     return tfe.select(y < 0, d_y, 0)
+
 
 def sigmoid(x):
     """Computes sigmoid of x element-wise"""
@@ -27,6 +29,7 @@ def tanh(x):
 
 def linear(x):
     return x
+
 
 def linear_deriv(y, d_y):
     return d_y
@@ -65,9 +68,9 @@ def get_deriv(identifier):
         )
     if isinstance(identifier, str):
         activations = {
-                "sigmoid": sigmoid_deriv,
-                "relu": relu_deriv,
-                "linear": linear_deriv
+            "sigmoid": sigmoid_deriv,
+            "relu": relu_deriv,
+            "linear": linear_deriv,
         }
         if identifier not in activations.keys():
             raise NotImplementedError(
