@@ -3414,7 +3414,7 @@ def _avgpool2d_im2col_reduce(
         out_width = ceil((int(width) - pool_size[1] + 1) / strides[1])
 
     x_split = x.reshape((batch * channels, 1, height, width))
-    x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
+    x_cols = x_split.im2col(pool_height, pool_width, strides[0], padding)
     x_cols_sum = x_cols.reduce_sum(axis=0)
     return x_cols_sum.reshape([out_height, out_width, batch, channels]).transpose(
         [2, 3, 0, 1]

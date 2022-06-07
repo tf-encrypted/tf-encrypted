@@ -1682,7 +1682,12 @@ class ABY3(Protocol):
     # return self.dispatch("reciprocal", x, approx_type)
     @memoize
     def reciprocal(self, x, nonsigned=False):
-        return self.dispatch("fp_recip", x, nonsigned, container=fp)
+        if x.dispatch_id == "public":
+            return self.dispatch("reciprocal", x)
+        elif x.dispatch_id == "private":
+            return self.dispatch("fp_recip", x, nonsigned, container=fp)
+        else:
+            raise TypeError("Don't know how to dispatch reciprocal: {}".format(type(x)))
 
     @memoize
     def inv_sqrt(self, x):
@@ -4267,7 +4272,7 @@ def _sqrt_public(prot, x, approx_type):
         return y
 
 
-def _reciprocal_public(prot, x, approx_type):
+def _reciprocal_public(prot, x):
     assert isinstance(x, ABY3PublicTensor), type(x)
 
     backing_dtype = x.backing_dtype
@@ -4292,33 +4297,6 @@ def _reciprocal_public(prot, x, approx_type):
 
         y = ABY3PublicTensor(prot, ys, is_scaled)
         return y
-
-
-def _reciprocal_private(prot, x, approx_type):
-    assert isinstance(x, ABY3PrivateTensor), type(x)
-
-    with tf.name_scope("reciprocal"):
-        if approx_type == "10_piecewise_linear_positive":
-            c = (0.01, 0.1, 0.25, 0.5, 1, 2, 4, 10, 100)
-            coeffs = (
-                (100,),
-                (110, -1e3),
-                (14, -40),
-                (6, -8),
-                (3, -2),
-                (1.5, -0.5),
-                (0.75, -0.125),
-                (0.35, -2.5e-2),
-                (0.11, -1e-3),
-                (1e-3,),
-            )
-        else:
-            raise NotImplementedError(
-                "Unsupported approximation type: {}.".format(approx_type)
-            )
-
-        result = prot.polynomial_piecewise(x, c, coeffs)
-    return result
 
 
 def _log_private(prot, x, approx_type):

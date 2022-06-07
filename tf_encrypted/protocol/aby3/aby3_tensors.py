@@ -6,8 +6,6 @@ from typing import Union
 import numpy as np
 import tensorflow as tf
 
-import aby3
-
 from ...tensor.factory import AbstractConstant
 from ...tensor.factory import AbstractPlaceholder
 from ...tensor.factory import AbstractTensor
@@ -389,9 +387,7 @@ class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
 
     dispatch_id = "public"
 
-    def __init__(
-        self, prot: "aby3.ABY3", values: List[AbstractTensor], is_scaled: bool
-    ) -> None:
+    def __init__(self, prot, values: List[AbstractTensor], is_scaled: bool) -> None:
         assert all(isinstance(v, AbstractTensor) for v in values)
         assert all((v.shape == values[0].shape) for v in values)
 

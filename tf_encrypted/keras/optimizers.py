@@ -6,35 +6,16 @@ import tf_encrypted as tfe
 
 
 class SGD:
-    """Stochastic gradient descent optimizer.
-    W = W - aG
-
-    Arguments:
-        learning_rate: float >= 0. Learning rate.
     """
+    Stochastic gradient descent optimizer.
 
-    def __init__(self, learning_rate=0.01):
-        self.learning_rate = learning_rate
-
-    def compile(self, layers):
-        pass
-
-    def apply_gradients(self, var, grad):
-        ops = []
-        for i, w in enumerate(var):
-            ops.append(tfe.assign(w, w - grad[i] * self.learning_rate))
-        return tf.group(*ops)
-
-
-class SGDWithMomentum:
-    """
     V = bV + aG
     W = W - V
 
     Reference: https://paperswithcode.com/method/sgd-with-momentum
     """
 
-    def __init__(self, learning_rate=0.01, momentum=0.9):
+    def __init__(self, learning_rate=0.01, momentum=0.0):
         self.learning_rate = learning_rate
         self.momentum = momentum
         self.Vs = {}
@@ -61,7 +42,7 @@ class SGDWithMomentum:
         for i in range(len(W)):
             op = tfe.assign(V[i], self.momentum * V[i] + self.learning_rate * G[i])
             with tf.control_dependencies([op]):
-                ops.append(tfe.assign(W[i], W[i] - V[i]))
+                ops.append(tfe.assign(W[i], W[i] - V[i].read_value()))
         return tf.group(*ops)
 
 
@@ -220,7 +201,6 @@ class Adam:
 
 _known_optimizers = {
     "sgd": SGD,
-    "sgd_with_momentum": SGDWithMomentum,
     "amsgrad": AMSgrad,
     "adam": Adam,
 }

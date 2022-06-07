@@ -67,7 +67,7 @@ class LogisticRegression(PrivateModel):
         )
 
         # optimizer and data pipeline
-        # optimizer = tfe.keras.optimizers.SGDWithMomentum(learning_rate=0.01)
+        # optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
         # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
         optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
         loss = tfe.keras.losses.BinaryCrossentropy(

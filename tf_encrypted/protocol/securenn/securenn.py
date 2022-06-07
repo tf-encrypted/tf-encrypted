@@ -509,6 +509,12 @@ class SecureNN(Pond):
       axis.
     """
         with tf.name_scope("argmax"):
+            _, argmax = self.reduce_max_with_argmax(x, axis)
+            return argmax
+
+    @memoize
+    def reduce_max_with_argmax(self, x, axis=0):
+        with tf.name_scope("reduce-max-with-argmax"):
 
             def build_comparison_tree(tensors, indices):
                 assert len(tensors) == len(indices)
@@ -545,7 +551,7 @@ class SecureNN(Pond):
 
             maximum = self.squeeze(maximum, axis=(axis,))
             argmax = self.squeeze(argmax, axis=(axis,))
-            return argmax
+            return maximum, argmax
 
     @memoize
     def cast_backing(self, x, backing_dtype):
@@ -784,11 +790,11 @@ def _im2col(
 
     with tf.device(prot.server_0.device_name):
         x_split = x_on_0.reshape((batch * channels, 1, height, width))
-        y_on_0 = x_split.im2col(pool_height, pool_width, padding, strides[0])
+        y_on_0 = x_split.im2col(pool_height, pool_width, strides[0], padding)
 
     with tf.device(prot.server_1.device_name):
         x_split = x_on_1.reshape((batch * channels, 1, height, width))
-        y_on_1 = x_split.im2col(pool_height, pool_width, padding, strides[0])
+        y_on_1 = x_split.im2col(pool_height, pool_width, strides[0], padding)
 
     return y_on_0, y_on_1, [out_height, out_width, int(batch), int(channels)]
 

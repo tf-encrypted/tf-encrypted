@@ -41,7 +41,6 @@ class TestABY3Profile(unittest.TestCase):
             x_, result = sess.run([x, y0.reveal()])
             np.testing.assert_allclose(result, np.arange(n), rtol=0.0, atol=0.01)
             Performance.time_log("1st run")
-            print("1st run x: ", x_[:10], "...")
             Performance.time_log("2nd run")
             x_, result = sess.run([x, y0.reveal()])
             Performance.time_log("2nd run")

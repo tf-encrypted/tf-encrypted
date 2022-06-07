@@ -186,7 +186,8 @@ class TestSequentialABY3(unittest.TestCase):
 
             weights0_init, weights1_init = sess.run([layer0_weights, layer1_weights])
 
-            tfe_model.fit_batch(x, y)
+            fit_op, _ = tfe_model.fit_batch(x, y)
+            sess.run(fit_op)
             weights0_updated, weights1_updated = sess.run(
                 [layer0_weights, layer1_weights]
             )
