@@ -6,6 +6,7 @@ import math
 import os
 import tempfile
 import unittest
+import pytest
 
 import numpy as np
 import tensorflow as tf
@@ -15,6 +16,7 @@ from tf_encrypted.protocol.aby3 import ABY3
 from tf_encrypted.protocol.aby3 import ShareType
 
 
+@pytest.mark.aby3
 class TestABY3(unittest.TestCase):
     def test_define_private(self):
         tf.reset_default_graph()
@@ -1362,7 +1364,7 @@ class TestABY3(unittest.TestCase):
             sess.run(tfe.global_variables_initializer())
             # reveal result
             result = sess.run(y.reveal())
-            np.testing.assert_allclose(result, 1.0 / _x, rtol=0.0, atol=0.01)
+            np.testing.assert_allclose(result, 1.0 / _x, rtol=0.01, atol=0.01)
 
     def test_transpose(self):
         tf.reset_default_graph()

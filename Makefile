@@ -59,9 +59,11 @@ bootstrap: pythoncheck pipcheck
 # Rules for running our tests and for running various different linters
 # ###############################################
 test: pythoncheck
-	pytest -n 8 -x -m "not slow and not convert_maxpool" tf_encrypted
-	pytest -n 8 -x -m "slow" tf_encrypted
-	pytest -n 8 -x -m "convert_maxpool" tf_encrypted
+	pytest -n 8 -x -m "aby3" tf_encrypted
+	pytest -n 8 -x -m "pond" tf_encrypted
+	pytest -n 8 -x -m "securenn" tf_encrypted
+	pytest -n 8 -x -m "layers" tf_encrypted
+	pytest -n 8 -x -m "not aby3 and not pond and not securenn and not layers" tf_encrypted
 
 lint: pythoncheck
 	flake8 tf_encrypted primitives operations examples

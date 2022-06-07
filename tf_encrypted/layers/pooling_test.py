@@ -1,5 +1,6 @@
 # pylint: disable=missing-docstring
 import unittest
+import pytest
 
 import numpy as np
 import pytest
@@ -10,6 +11,7 @@ from tf_encrypted.layers import AveragePooling2D
 from tf_encrypted.layers import MaxPooling2D
 
 
+@pytest.mark.layers
 class TestAveragePooling2D(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
@@ -90,7 +92,7 @@ class TestAveragePooling2D(unittest.TestCase):
         self._generic_tiled_forward("masked", False)
 
 
-@pytest.mark.slow
+@pytest.mark.layers
 class TestMaxPooling2D(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()

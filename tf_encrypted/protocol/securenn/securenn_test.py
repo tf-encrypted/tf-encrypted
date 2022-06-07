@@ -1,6 +1,7 @@
 # pylint: disable=missing-docstring
 import random
 import unittest
+import pytest
 
 import numpy as np
 import tensorflow as tf
@@ -12,6 +13,7 @@ from tf_encrypted.protocol.securenn.securenn import _private_compare
 from tf_encrypted.tensor import int100factory
 
 
+@pytest.mark.securenn
 class TestPrivateCompare(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
@@ -62,6 +64,7 @@ class TestPrivateCompare(unittest.TestCase):
             np.testing.assert_array_equal(actual, expected)
 
 
+@pytest.mark.securenn
 class TestSelectShare(unittest.TestCase):
     def test_select_share(self):
 
@@ -85,6 +88,7 @@ class TestSelectShare(unittest.TestCase):
             np.testing.assert_equal(expected, chosen)
 
 
+@pytest.mark.securenn
 class TestLSB(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
@@ -117,6 +121,7 @@ class TestLSB(unittest.TestCase):
         self._core_lsb(int100factory, None)
 
 
+@pytest.mark.securenn
 class TestArgMax(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()

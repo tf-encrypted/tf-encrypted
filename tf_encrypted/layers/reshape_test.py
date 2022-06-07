@@ -1,5 +1,6 @@
 # pylint: disable=missing-docstring
 import unittest
+import pytest
 
 import numpy as np
 import tensorflow as tf
@@ -8,6 +9,7 @@ import tf_encrypted as tfe
 from tf_encrypted.layers import Reshape
 
 
+@pytest.mark.layers
 class TestReshape(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()

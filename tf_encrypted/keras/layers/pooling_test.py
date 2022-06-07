@@ -1,5 +1,6 @@
 # pylint: disable=missing-docstring
 import unittest
+import pytest
 
 import numpy as np
 import tensorflow as tf
@@ -10,7 +11,7 @@ from tf_encrypted.keras.testing_utils import layer_test
 
 np.random.seed(42)
 
-
+@pytest.mark.layers
 class TestPooling2d(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
@@ -70,6 +71,7 @@ class TestPooling2d(unittest.TestCase):
         )
 
 
+@pytest.mark.layers
 class TestGlobalPooling2d(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
