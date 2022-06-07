@@ -13,7 +13,9 @@ TF Encrypted is available as a package on [PyPI](https://pypi.org/project/tf-enc
 ```bash
 pip install tf-encrypted
 ```
+
 Creating a conda environment to run TF Encrypted code can be done using:
+
 ```
 conda create -n tfe python=3.6
 conda activate tfe
@@ -62,6 +64,52 @@ with tfe.Session() as sess:
 ```
 
 For more information, check out the [documentation](./docs/) or the [examples](./examples/).
+
+# Performance
+
+All tests are performed by using the ABY3 protocol among 3 machines, each with 36 cores. The LAN environment has a bandwidth of 40 Gbps and a RTT of 0.02 ms, and the WAN environment has a bandwidth of 352 Mbps and a RTT of 40 ms.
+
+## Benchmark 1
+
+Graph building is a one-time cost, while LAN or WAN timings are average running time across multiple runs. For example, it takes 58.63 seconds to build the graph for Resnet50 model, and afterwards, it only takes 4.742 seconds to predict each image.
+
+|                                   | Build graph<br/>(seconds) | LAN<br/>(seconds) | WAN<br/>(seconds) |
+| --------------------------------- | ------------------------- | ----------------- | ----------------- |
+| Sort/Max (1k)                     | 0.90                      | 0.03              | 11.47             |
+| Sort/Max (100w)                   | 74.70                     | 38.90             | 1122.00           |
+| Max (1k $\times$ 4)<sup>1</sup>   | 2.02                      | 0.01              | 0.49              |
+| Max (100w $\times$ 4)<sup>1</sup> | 2.05                      | 1.01              | 15.28             |
+| Resnet50 Inference                | 58.63                     | 4.74              | 125.99            |
+
+<sup>1</sup> This means 1k (respectively, 100w) invocations of `max` on 4 elements, which is essentially a `MaxPool` with pool size of `2 x 2`.
+
+
+
+## Benchmark 2: Neural Network Training
+
+We benchmark the performance of training several neural network models on the MNIST dataset (60k training images, 10k test images, and batch size is 128). The definitions of these models can be found in `examples/mnist/private_network/training.py`.
+
+
+
+We compare the performance with another highly optimized MPC library [MP-SPDZ](https://github.com/data61/MP-SPDZ).
+
+|             | Accuracy (epochs) | Accuracy (epochs) | LAN Time/Batch | LAN Time/Batch | WAN Time/Batch | WAN Time/Batch |
+|:-----------:|:-----------------:| ----------------- |:--------------:|:--------------:|:--------------:|:--------------:|
+|             | MP-SPDZ           | TFE               | MP-SPDZ        | TFE            | MP-SPDZ        | TFE            |
+| A (SGD)     | 96.7% (5)         | 96.8% (5)         | 0.056          | 0.049          | 8.514          | 4.871          |
+| A (AMSgrad) | 97.8% (5)         | 97.3% (5)         | 0.130          | 0.216          | 19.808         | 17.780         |
+| A (Adam )   | 97.4% (5)         | 97.3% (5)         | 0.126          | 0.175          | 18.936         | 16.958         |
+| B (SGD)     | 97.5% (5)         | 98.7% (5)         | 0.331          | 1.118          | 20.588         | 25.067         |
+| B (AMSgrad) | 98.6% (5)         | 99.0% (5)         | 0.382          | 1.158          | 31.811         | 28.134         |
+| B (Adam)    | 98.8% (5)         | 98.8% (5)         | 0.378          | 1.147          | 31.146         | 27.949         |
+| C (SGD)     | 98.5% (5)         | 98.8% (5)         | 0.590          | 1.410          | 28.417         | 36.633         |
+| C (AMSgrad) | 98.9% (5)         | 99.0% (5)         | 0.769          | 1.923          | 52.944         | 83.393         |
+| C (Adam)    | 99.0% (5)         | 99.1% (5)         | 0.673          | 1.923          | 52.324         | 80.474         |
+| D (SGD)     | 97.6% (5)         | 97.5% (5)         | 0.083          | 0.118          | 9.462          | 5.954          |
+| D (AMSgrad) | 98.4% (5)         | 98.1% (5)         | 0.143          | 0.269          | 20.482         | 17.063         |
+| D (Adam)    | 98.2% (5)         | 98.0% (5)         | 0.141          | 0.222          | 20.097         | 16.190         |
+
+
 
 # Roadmap
 
