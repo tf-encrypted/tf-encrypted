@@ -1,7 +1,7 @@
 # pylint: disable=missing-docstring
 import unittest
-import pytest
 
+import pytest
 import tensorflow as tf
 
 import tf_encrypted as tfe

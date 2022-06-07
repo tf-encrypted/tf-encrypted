@@ -6,9 +6,9 @@ import math
 import os
 import tempfile
 import unittest
-import pytest
 
 import numpy as np
+import pytest
 import tensorflow as tf
 
 import tf_encrypted as tfe

@@ -1,6 +1,5 @@
 # pylint: disable=missing-docstring
 import unittest
-import pytest
 
 import numpy as np
 import pytest
