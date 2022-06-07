@@ -373,8 +373,8 @@ class ABY3Tensor(TFETensor):
     def cast(self, factory):
         return self.prot.cast(self, factory)
 
-    def reciprocal(self):
-        return self.prot.reciprocal(self)
+    def reciprocal(self, nonsigned=False):
+        return self.prot.reciprocal(self, nonsigned=nonsigned)
 
 
 class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
