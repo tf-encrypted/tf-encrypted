@@ -1675,7 +1675,7 @@ class ABY3(Protocol):
             "infinity" approximates not so good in range (-, +).
         @param max_method: "tree" or "network". See `reduce_max` for details.
         """
-        return self.dispatch("softmax", x, approx_type)
+        return self.dispatch("softmax", x, approx_type, max_method)
 
     # @memoize
     # def reciprocal(self, x, approx_type="10_piecewise_linear_positive"):
