@@ -69,6 +69,12 @@ For more information, check out the [documentation](./docs/) or the [examples](.
 
 All tests are performed by using the ABY3 protocol among 3 machines, each with 36 cores (Intel Xeon Platinum 8369B CPU @ 2.70GHz). The LAN environment has a bandwidth of 40 Gbps and a RTT of 0.02 ms, and the WAN environment has a bandwidth of 352 Mbps and a RTT of 40 ms.
 
+
+
+You can find source code of the following benchmarks in [`./examples/benchmark/`] and corresponding guidelines of how to reproduce them.
+
+
+
 ## Benchmark 1
 
 Graph building is a one-time cost, while LAN or WAN timings are average running time across multiple runs. For example, it takes 58.63 seconds to build the graph for Resnet50 model, and afterwards, it only takes 4.742 seconds to predict each image.
@@ -85,13 +91,9 @@ Graph building is a one-time cost, while LAN or WAN timings are average running 
 
 <sup>2</sup> This means 1k (respectively, 100w) invocations of `max` on 4 elements, which is essentially a `MaxPool` with pool size of `2 x 2`.
 
-
-
 ## Benchmark 2: Neural Network Training
 
 We benchmark the performance of training several neural network models on the MNIST dataset (60k training images, 10k test images, and batch size is 128). The definitions of these models can be found in [`examples/mnist/private_network/training.py`](./examples/mnist/private_network_training.py).
-
-
 
 We compare the performance with another highly optimized MPC library [MP-SPDZ](https://github.com/data61/MP-SPDZ).
 
@@ -110,8 +112,6 @@ We compare the performance with another highly optimized MPC library [MP-SPDZ](h
 | D (SGD)     | 97.6% (5)         | 97.5% (5)         | 0.083          | 0.118          | 9.462          | 5.954          |
 | D (AMSgrad) | 98.4% (5)         | 98.1% (5)         | 0.143          | 0.269          | 20.482         | 17.063         |
 | D (Adam)    | 98.2% (5)         | 98.0% (5)         | 0.141          | 0.222          | 20.097         | 16.190         |
-
-
 
 # Roadmap
 
