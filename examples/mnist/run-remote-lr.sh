@@ -1,6 +1,8 @@
 SCRIPT_PATH="${BASH_SOURCE:-$0}"
 ABS_DIRECTORY="$(dirname "${SCRIPT_PATH}")"
 
+kill -9 `ps -ef | grep ${ABS_DIRECTORY}/config.json | grep -v grep | awk '{print $2}'`
+
 echo "Starting server0"
 (python -m tf_encrypted.player server0 --config ${ABS_DIRECTORY}/config.json > log0.txt 2>&1 &)
 sleep 1
