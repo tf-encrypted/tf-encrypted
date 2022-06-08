@@ -75,19 +75,21 @@ Graph building is a one-time cost, while LAN or WAN timings are average running 
 
 |                                   | Build graph<br/>(seconds) | LAN<br/>(seconds) | WAN<br/>(seconds) |
 | --------------------------------- | ------------------------- | ----------------- | ----------------- |
-| Sort/Max (1k)                     | 0.90                      | 0.03              | 11.47             |
-| Sort/Max (100w)                   | 74.70                     | 38.90             | 1122.00           |
-| Max (1k $\times$ 4)<sup>1</sup>   | 2.02                      | 0.01              | 0.49              |
-| Max (100w $\times$ 4)<sup>1</sup> | 2.05                      | 1.01              | 15.28             |
+| Sort/Max (1k)<sup>1</sup>         | 0.90                      | 0.03              | 11.47             |
+| Sort/Max (100w)<sup>1</sup>       | 74.70                     | 38.90             | 1122.00           |
+| Max (1k $\times$ 4)<sup>2</sup>   | 2.02                      | 0.01              | 0.49              |
+| Max (100w $\times$ 4)<sup>2</sup> | 2.05                      | 1.01              | 15.28             |
 | Resnet50 Inference                | 58.63                     | 4.74              | 125.99            |
 
-<sup>1</sup> This means 1k (respectively, 100w) invocations of `max` on 4 elements, which is essentially a `MaxPool` with pool size of `2 x 2`.
+<sup>1</sup> `Max` is implemented by using a sorting network, hence its performance is essentially the same as `Sort`. Sorting network can be efficiently constructed as a TF graph. The traditional way of computing `Max` by using a binary comparison tree does not work well in a TF graph, because the graph becomes huge when the number of elements is large.
+
+<sup>2</sup> This means 1k (respectively, 100w) invocations of `max` on 4 elements, which is essentially a `MaxPool` with pool size of `2 x 2`.
 
 
 
 ## Benchmark 2: Neural Network Training
 
-We benchmark the performance of training several neural network models on the MNIST dataset (60k training images, 10k test images, and batch size is 128). The definitions of these models can be found in `examples/mnist/private_network/training.py`.
+We benchmark the performance of training several neural network models on the MNIST dataset (60k training images, 10k test images, and batch size is 128). The definitions of these models can be found in [`examples/mnist/private_network/training.py`](./examples/mnist/private_network_training.py).
 
 
 
