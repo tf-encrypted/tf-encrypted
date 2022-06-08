@@ -67,7 +67,7 @@ For more information, check out the [documentation](./docs/) or the [examples](.
 
 # Performance
 
-All tests are performed by using the ABY3 protocol among 3 machines, each with 36 cores. The LAN environment has a bandwidth of 40 Gbps and a RTT of 0.02 ms, and the WAN environment has a bandwidth of 352 Mbps and a RTT of 40 ms.
+All tests are performed by using the ABY3 protocol among 3 machines, each with 36 cores (Intel Xeon Platinum 8369B CPU @ 2.70GHz). The LAN environment has a bandwidth of 40 Gbps and a RTT of 0.02 ms, and the WAN environment has a bandwidth of 352 Mbps and a RTT of 40 ms.
 
 ## Benchmark 1
 
