@@ -2,7 +2,7 @@ SCRIPT_PATH="${BASH_SOURCE:-$0}"
 ABS_DIRECTORY="$(dirname "${SCRIPT_PATH}")"
 
 kill -9 `ps -ef | grep tf_encrypted.player | grep -v grep | awk '{print $2}'`
-kill -9 `ps -ef | grep ${ABS_DIRECTORY}/convert2.py | grep -v grep | awk '{print $2}'`
+kill -9 `ps -ef | grep ${ABS_DIRECTORY}/convert.py | grep -v grep | awk '{print $2}'`
 
 echo "Starting server0"
 (taskset -c 0,1,2,3 python -m tf_encrypted.player server0 --config ${ABS_DIRECTORY}/config.json > log0.txt 2>&1 &)
@@ -21,4 +21,4 @@ echo "Starting prediction-client"
 sleep 1
 
 echo "Run private model conversion and prediction example..."
-(time taskset -c 20,21,22,23 python ${ABS_DIRECTORY}/convert2.py ${ABS_DIRECTORY}/config.json > log.txt 2>&1 &)
+(time taskset -c 20,21,22,23 python ${ABS_DIRECTORY}/convert.py ${ABS_DIRECTORY}/config.json > log.txt 2>&1 &)
