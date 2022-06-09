@@ -75,30 +75,42 @@ You can find source code of the following benchmarks in [`./examples/benchmark/`
 
 
 
-## Benchmark 1
+## Benchmark 1: Sort and Max
 
 Graph building is a one-time cost, while LAN or WAN timings are average running time across multiple runs. For example, it takes 58.63 seconds to build the graph for Resnet50 model, and afterwards, it only takes 4.742 seconds to predict each image.
 
 |                                   | Build graph<br/>(seconds) | LAN<br/>(seconds) | WAN<br/>(seconds) |
 | --------------------------------- | ------------------------- | ----------------- | ----------------- |
-| Sort/Max (1k)<sup>1</sup>         | 0.90                      | 0.13              | 11.51             |
-| Sort/Max (100w)<sup>1</sup>       | 74.70                     | 117.451           | 1133.00           |
-| Max (1k $\times$ 4)<sup>2</sup>   | 2.02                      | 0.01              | 0.51              |
-| Max (100w $\times$ 4)<sup>2</sup> | 2.05                      | 3.66              | 15.28             |
+| Sort/Max (1,000)<sup>1</sup>         | 0.90                      | 0.13              | 11.51             |
+| Sort/Max (1,000,000)<sup>1</sup>       | 74.70                     | 117.451           | 1133.00           |
+| Max (1,000 $\times$ 4)<sup>2</sup>   | 2.02                      | 0.01              | 0.51              |
+| Max (1,000,000 $\times$ 4)<sup>2</sup> | 2.05                      | 3.66              | 15.28             |
 | Resnet50 Inference                | 57.79                     | 13.55             | 126.89            |
 
 <sup>1</sup> `Max` is implemented by using a sorting network, hence its performance is essentially the same as `Sort`. Sorting network can be efficiently constructed as a TF graph. The traditional way of computing `Max` by using a binary comparison tree does not work well in a TF graph, because the graph becomes huge when the number of elements is large.
 
-<sup>2</sup> This means 1k (respectively, 100w) invocations of `max` on 4 elements, which is essentially a `MaxPool` with pool size of `2 x 2`.
+<sup>2</sup> This means 1,000 (respectively, 1,000,000) invocations of `max` on 4 elements, which is essentially a `MaxPool` with pool size of `2 x 2`.
 
-## Benchmark 2: Neural Network Training
+## Benchmark 2: Neural Network Inference
 
-We benchmark the performance of training several neural network models on the MNIST dataset (60k training images, 10k test images, and batch size is 128). The definitions of these models can be found in [`examples/mnist/private_network/training.py`](./examples/mnist/private_network_training.py).
+We show the strength of TFE by loading a normal TF model (RESNET50) and run private inference on top of it.
+
+
+
+|                                   | Build graph<br/> | LAN<br/> | WAN<br/> |
+| --------------------------------- | ------------------------- | ----------------- | ----------------- |
+| RESNET50 inference time (seconds)               | 57.79                     | 13.55<sup>1</sup>             | 126.89            |
+
+<sup>1</sup> This is currently one of the fastest implementation of secure RESNET50 inference (three-party). Comparable with [CryptGPU](https://eprint.iacr.org/2021/533) , [SecureQ8](https://eprint.iacr.org/2019/131), and faster than [CryptFLOW](https://arxiv.org/abs/1909.07814).
+
+## Benchmark 3: Neural Network Training
+
+We benchmark the performance of training several neural network models on the MNIST dataset (60k training images, 10k test images, and batch size is 128). The definitions of these models can be found in [`examples/benchmark/mnist/private_network/training.py`](private_network_training.py).
 
 We compare the performance with another highly optimized MPC library [MP-SPDZ](https://github.com/data61/MP-SPDZ).
 
-|             | Accuracy (epochs) | Accuracy (epochs) | LAN Time/Batch | LAN Time/Batch | WAN Time/Batch | WAN Time/Batch |
-|:-----------:|:-----------------:| ----------------- |:--------------:|:--------------:|:--------------:|:--------------:|
+|           | Accuracy (epochs) | Accuracy (epochs) | Seconds per Batch (LAN) | Seconds per Batch (LAN) | Seconds per Batch (WAN) | Seconds per Batch (WAN) |
+|:------------|:-----------------:| :-----------------: |:--------------:|:--------------:|:--------------:|:--------------:|
 |             | MP-SPDZ           | TFE               | MP-SPDZ        | TFE            | MP-SPDZ        | TFE            |
 | A (SGD)     | 96.7% (5)         | 96.8% (5)         | 0.098          | 0.138          | 9.724          | 5.075          |
 | A (AMSgrad) | 97.8% (5)         | 97.3% (5)         | 0.228          | 0.567          | 21.038         | 17.780         |
