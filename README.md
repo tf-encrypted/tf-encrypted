@@ -67,11 +67,11 @@ For more information, check out the [documentation](./docs/) or the [examples](.
 
 # Performance
 
-All tests are performed by using the ABY3 protocol among 3 machines, each with 36 cores (Intel Xeon Platinum 8369B CPU @ 2.70GHz). The LAN environment has a bandwidth of 40 Gbps and a RTT of 0.02 ms, and the WAN environment has a bandwidth of 352 Mbps and a RTT of 40 ms.
+All tests are performed by using the ABY3 protocol among 3 machines, each with 4 cores (Intel Xeon Platinum 8369B CPU @ 2.70GHz). The LAN environment has a bandwidth of 40 Gbps and a RTT of 0.02 ms, and the WAN environment has a bandwidth of 352 Mbps and a RTT of 40 ms.
 
 
 
-You can find source code of the following benchmarks in [`./examples/benchmark/`] and corresponding guidelines of how to reproduce them.
+You can find source code of the following benchmarks in [`./examples/benchmark/`](./examples/benchmark/) and corresponding guidelines of how to reproduce them.
 
 
 
@@ -81,11 +81,11 @@ Graph building is a one-time cost, while LAN or WAN timings are average running 
 
 |                                   | Build graph<br/>(seconds) | LAN<br/>(seconds) | WAN<br/>(seconds) |
 | --------------------------------- | ------------------------- | ----------------- | ----------------- |
-| Sort/Max (1k)<sup>1</sup>         | 0.90                      | 0.03              | 11.47             |
-| Sort/Max (100w)<sup>1</sup>       | 74.70                     | 38.90             | 1122.00           |
-| Max (1k $\times$ 4)<sup>2</sup>   | 2.02                      | 0.01              | 0.49              |
-| Max (100w $\times$ 4)<sup>2</sup> | 2.05                      | 1.01              | 15.28             |
-| Resnet50 Inference                | 58.63                     | 4.74              | 125.99            |
+| Sort/Max (1k)<sup>1</sup>         | 0.90                      | 0.13              | 11.51             |
+| Sort/Max (100w)<sup>1</sup>       | 74.70                     | 117.451           | 1133.00           |
+| Max (1k $\times$ 4)<sup>2</sup>   | 2.02                      | 0.01              | 0.51              |
+| Max (100w $\times$ 4)<sup>2</sup> | 2.05                      | 3.66              | 15.28             |
+| Resnet50 Inference                | 57.79                     | 13.55             | 126.89            |
 
 <sup>1</sup> `Max` is implemented by using a sorting network, hence its performance is essentially the same as `Sort`. Sorting network can be efficiently constructed as a TF graph. The traditional way of computing `Max` by using a binary comparison tree does not work well in a TF graph, because the graph becomes huge when the number of elements is large.
 
@@ -100,18 +100,18 @@ We compare the performance with another highly optimized MPC library [MP-SPDZ](h
 |             | Accuracy (epochs) | Accuracy (epochs) | LAN Time/Batch | LAN Time/Batch | WAN Time/Batch | WAN Time/Batch |
 |:-----------:|:-----------------:| ----------------- |:--------------:|:--------------:|:--------------:|:--------------:|
 |             | MP-SPDZ           | TFE               | MP-SPDZ        | TFE            | MP-SPDZ        | TFE            |
-| A (SGD)     | 96.7% (5)         | 96.8% (5)         | 0.056          | 0.049          | 8.514          | 4.871          |
-| A (AMSgrad) | 97.8% (5)         | 97.3% (5)         | 0.130          | 0.216          | 19.808         | 17.780         |
-| A (Adam )   | 97.4% (5)         | 97.3% (5)         | 0.126          | 0.175          | 18.936         | 16.958         |
-| B (SGD)     | 97.5% (5)         | 98.7% (5)         | 0.331          | 1.118          | 20.588         | 25.067         |
-| B (AMSgrad) | 98.6% (5)         | 99.0% (5)         | 0.382          | 1.158          | 31.811         | 28.134         |
-| B (Adam)    | 98.8% (5)         | 98.8% (5)         | 0.378          | 1.147          | 31.146         | 27.949         |
-| C (SGD)     | 98.5% (5)         | 98.8% (5)         | 0.590          | 1.410          | 28.417         | 36.633         |
-| C (AMSgrad) | 98.9% (5)         | 99.0% (5)         | 0.769          | 1.923          | 52.944         | 83.393         |
-| C (Adam)    | 99.0% (5)         | 99.1% (5)         | 0.673          | 1.923          | 52.324         | 80.474         |
-| D (SGD)     | 97.6% (5)         | 97.5% (5)         | 0.083          | 0.118          | 9.462          | 5.954          |
-| D (AMSgrad) | 98.4% (5)         | 98.1% (5)         | 0.143          | 0.269          | 20.482         | 17.063         |
-| D (Adam)    | 98.2% (5)         | 98.0% (5)         | 0.141          | 0.222          | 20.097         | 16.190         |
+| A (SGD)     | 96.7% (5)         | 96.8% (5)         | 0.098          | 0.138          | 9.724          | 5.075          |
+| A (AMSgrad) | 97.8% (5)         | 97.3% (5)         | 0.228          | 0.567          | 21.038         | 17.780         |
+| A (Adam )   | 97.4% (5)         | 97.3% (5)         | 0.221          | 0.463          | 50.963         | 16.958         |
+| B (SGD)     | 97.5% (5)         | 98.7% (5)         | 0.571          | 4.000          | 60.755         | 25.300         |
+| B (AMSgrad) | 98.6% (5)         | 99.0% (5)         | 0.680          | 4.170          | 71.983         | 28.424         |
+| B (Adam)    | 98.8% (5)         | 98.8% (5)         | 0.772          | 4.075          | 98.108         | 28.184         |
+| C (SGD)     | 98.5% (5)         | 98.8% (5)         | 1.175          | 6.223          | 91.341         | 37.678         |
+| C (AMSgrad) | 98.9% (5)         | 99.0% (5)         | 1.568          | 7.336          | 119.271        | 83.695         |
+| C (Adam)    | 99.0% (5)         | 99.1% (5)         | 2.825          | 6.858          | 195.013        | 81.275         |
+| D (SGD)     | 97.6% (5)         | 97.5% (5)         | 0.134          | 0.355          | 15.083         | 6.112          |
+| D (AMSgrad) | 98.4% (5)         | 98.1% (5)         | 0.228          | 0.682          | 26.099         | 17.063         |
+| D (Adam)    | 98.2% (5)         | 98.0% (5)         | 0.293          | 0.605          | 54.404         | 16.190         |
 
 # Roadmap
 
