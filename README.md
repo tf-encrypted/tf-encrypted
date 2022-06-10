@@ -105,7 +105,7 @@ We show the strength of TFE by loading a normal TF model (RESNET50) and run priv
 
 ## Benchmark 3: Neural Network Training
 
-We benchmark the performance of training several neural network models on the MNIST dataset (60k training images, 10k test images, and batch size is 128). The definitions of these models can be found in [`examples/benchmark/mnist/private_network_training.py`](private_network_training.py).
+We benchmark the performance of training several neural network models on the MNIST dataset (60k training images, 10k test images, and batch size is 128). The definitions of these models can be found in [`examples/benchmark/mnist/private_network_training.py`](examples/benchmark/mnist/private_network_training.py).
 
 We compare the performance with another highly optimized MPC library [MP-SPDZ](https://github.com/data61/MP-SPDZ).
 
