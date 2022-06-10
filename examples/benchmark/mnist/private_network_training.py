@@ -383,12 +383,12 @@ if __name__ == "__main__":
     directory = os.path.dirname(os.path.abspath(__file__))
     train_data_file = os.path.join(directory, "data", "train.tfrecord")
     training_client = TrainingClient(
-        player_name="training-client", local_data_file="./data/train.tfrecord"
+        player_name="training-client", local_data_file=train_data_file
     )
 
     test_data_file = os.path.join(directory, "data", "test.tfrecord")
     prediction_client = PredictionClient(
-        player_name="prediction-client", local_data_file="./data/test.tfrecord"
+        player_name="prediction-client", local_data_file=test_data_file
     )
 
     print("Train model")
