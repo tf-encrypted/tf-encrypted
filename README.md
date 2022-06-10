@@ -85,7 +85,6 @@ Graph building is a one-time cost, while LAN or WAN timings are average running 
 | Sort/Max (1,000,000)<sup>1</sup>       | 74.70                     | 117.451           | 1133.00           |
 | Max (1,000 $\times$ 4)<sup>2</sup>   | 2.02                      | 0.01              | 0.51              |
 | Max (1,000,000 $\times$ 4)<sup>2</sup> | 2.05                      | 3.66              | 15.28             |
-| Resnet50 Inference                | 57.79                     | 13.55             | 126.89            |
 
 <sup>1</sup> `Max` is implemented by using a sorting network, hence its performance is essentially the same as `Sort`. Sorting network can be efficiently constructed as a TF graph. The traditional way of computing `Max` by using a binary comparison tree does not work well in a TF graph, because the graph becomes huge when the number of elements is large.
 
