@@ -1362,6 +1362,8 @@ class ABY3(Protocol):
             return self.mul_pow2(x, int(math.log2(y)))
         elif isinstance(x, (int, float)) and is_power_of_two(x):
             return self.mul_pow2(y, int(math.log2(x)))
+        elif isinstance(y, ABY3PrivateTensor) and y.backing_dtype == self.factories[tf.bool]:
+            return self.mul_ab(x, y)
 
         x, y = self.lift(x, y)
         return self.dispatch("mul", x, y)
