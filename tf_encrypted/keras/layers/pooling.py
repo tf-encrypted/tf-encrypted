@@ -171,7 +171,8 @@ class MaxPooling2D(Pooling2D):
         batch, channels, h_y, w_y, pool_len = y_arg.shape
 
         _d_y = tfe.tile(tfe.expand_dims(d_y, axis=4), [1, 1, 1, 1, pool_len])
-        _d_y = _d_y * y_arg
+        # _d_y = _d_y * y_arg
+        _d_y = tfe.select(y_arg, 0, _d_y)
         _d_y = tfe.reshape(_d_y, [batch * channels, h_y, w_y, pool_len])
 
         d_x = tfe.patches2im(
