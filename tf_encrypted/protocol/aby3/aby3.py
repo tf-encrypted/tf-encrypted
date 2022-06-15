@@ -5496,15 +5496,16 @@ def _patches2im_private(
 
 
 def _softmax_private(prot, x, approx_type="mp-spdz", max_method="network"):
-    logits_max = prot.reduce_max(x, axis=-1, keepdims=True, method=max_method)
-    # Minus precision to make sure all negative. Softmax results are the same.
-    precision = 2 ** (-prot.fixedpoint_config.precision_fractional)
-    adjusted_x = x - logits_max - precision
-    # Pass sign=-1 (negative) to accelerate the computation
-    ex = prot.exp(adjusted_x, approx_type=approx_type, sign=-1)
-    # Set `nonsigned=True` because the input to the reciprocal is always positive
-    norm = prot.reciprocal(prot.reduce_sum(ex, axis=-1, keepdims=True), nonsigned=True)
-    return ex * norm
+    with tf.name_scope("softmax"):
+        logits_max = prot.reduce_max(x, axis=-1, keepdims=True, method=max_method)
+        # Minus precision to make sure all negative. Softmax results are the same.
+        precision = 2 ** (-prot.fixedpoint_config.precision_fractional)
+        adjusted_x = x - logits_max - precision
+        # Pass sign=-1 (negative) to accelerate the computation
+        ex = prot.exp(adjusted_x, approx_type=approx_type, sign=-1)
+        # Set `nonsigned=True` because the input to the reciprocal is always positive
+        norm = prot.reciprocal(prot.reduce_sum(ex, axis=-1, keepdims=True), nonsigned=True)
+        return ex * norm
 
 
 def _exp2_pade_private(prot, x):
