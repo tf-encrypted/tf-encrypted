@@ -1897,8 +1897,12 @@ class ABY3(Protocol):
     :param ABY3Tensor x: Candidate tensor 0.
     :param ABY3Tensor y: Candidate tensor 1.
     """
+        x, y = self.lift(x, y)
         with tf.name_scope("select"):
-            return self.mul_ab(y - x, choice_bit) + x
+            if x.share_type == ShareType.BOOLEAN or y.share_type == ShareType.BOOLEAN or x.backing_dtype == self.factories[tf.bool]:
+                return ((x ^ y) & choice_bit) ^ x
+            else:
+                return self.mul_ab(y - x, choice_bit) + x
 
     @memoize
     def maximum(self, x, y):
@@ -3166,6 +3170,43 @@ def _xor_private_public(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PublicTensor):
             z[2][1] = x.shares[2][1] ^ y_on_2
 
     return ABY3PrivateTensor(prot, z, x.is_scaled, x.share_type)
+
+
+def _xor_public_private(prot: ABY3, x: ABY3PublicTensor, y: ABY3PrivateTensor):
+    assert y.share_type == ShareType.BOOLEAN
+    assert x.backing_dtype == y.backing_dtype
+
+    z = [[None, None], [None, None], [None, None]]
+    with tf.name_scope("xor"):
+        x_on_0, x_on_1, x_on_2 = x.unwrapped
+        with tf.device(prot.servers[0].device_name):
+            z[0][0] = y.shares[0][0] ^ x_on_0
+            z[0][1] = y.shares[0][1] ^ x_on_0
+
+        with tf.device(prot.servers[1].device_name):
+            z[1][0] = y.shares[1][0] ^ x_on_1
+            z[1][1] = y.shares[1][1] ^ x_on_1
+
+        with tf.device(prot.servers[2].device_name):
+            z[2][0] = y.shares[2][0] ^ x_on_2
+            z[2][1] = y.shares[2][1] ^ x_on_2
+
+    return ABY3PrivateTensor(prot, z, y.is_scaled, y.share_type)
+
+
+def _xor_public_public(prot: ABY3, x: ABY3PublicTensor, y: ABY3PublicTensor):
+    assert x.backing_dtype == y.backing_dtype
+    assert x.is_scaled == y.is_scaled
+
+    z = [None, None, None]
+    with tf.name_scope("xor"):
+        xs = x.unwrapped
+        ys = y.unwrapped
+        for i in range(3):
+            with tf.device(prot.servers[i].device_name):
+                z[i] = xs[i] ^ ys[i]
+
+    return ABY3PublicTensor(prot, z, x.is_scaled)
 
 
 def _and_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor):
@@ -5097,7 +5138,7 @@ def _reduce_max_with_argmax_private(
             # tile_shape = x.shape[:axis] + [1] + x.shape[(axis+1):] # This is mainly to avoid the potential `tf.where` broadcasting problem in TF v1
             indices = [
                 # prot.define_constant(np.tile(np.reshape(np.eye(n)[i], idx_init_shape), tile_shape)) for i, _ in enumerate(tensors)
-                prot.define_constant(np.reshape(np.eye(n)[i], idx_init_shape))
+                prot.define_constant(np.reshape(np.eye(n)[i], idx_init_shape), apply_scaling=False, factory=prot.factories[tf.bool])
                 for i, _ in enumerate(tensors)
             ]
         elif output_style == "normal":
@@ -5809,3 +5850,5 @@ def _sort_private(
                 + list(range(axis + 1, len(x.shape))),
             )
         return x
+
+

@@ -18,7 +18,7 @@ from ..protocol import TFETensor
 
 
 class ShareType:
-    PUBLIC = None
+    PUBLIC = "PUBLIC"
     ARITHMETIC = "ARITHMETIC"
     BOOLEAN = "BOOLEAN"
 
@@ -294,7 +294,7 @@ class ABY3Tensor(TFETensor):
         return self.prot.reduce_max(self, axis)
 
     def bitwise_xor(self, other):
-        if self.share_type == ShareType.BOOLEAN:
+        if self.share_type == ShareType.BOOLEAN or self.share_type == ShareType.PUBLIC:
             return self.prot.xor(self, other)
         else:
             raise ValueError(
@@ -305,7 +305,7 @@ class ABY3Tensor(TFETensor):
         return self.bitwise_xor(other)
 
     def bitwise_and(self, other):
-        if self.share_type == ShareType.BOOLEAN:
+        if self.share_type == ShareType.BOOLEAN or self.share_type == ShareType.PUBLIC:
             return self.prot.and_(self, other)
         else:
             raise ValueError(
@@ -316,7 +316,7 @@ class ABY3Tensor(TFETensor):
         return self.bitwise_and(other)
 
     def bitwise_or(self, other):
-        if self.share_type == ShareType.BOOLEAN:
+        if self.share_type == ShareType.BOOLEAN or self.share_type == ShareType.PUBLIC:
             return self.prot.or_(self, other)
         else:
             raise ValueError(

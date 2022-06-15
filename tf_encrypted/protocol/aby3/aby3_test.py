@@ -2056,6 +2056,7 @@ class TestABY3(unittest.TestCase):
         z3, z3_arg = tfe.maxpool2d_with_argmax(
             x, pool_size=(2, 2), strides=(2, 2), padding="VALID",
         )
+        assert z3_arg.backing_dtype == prot.factories[tf.bool]
 
         with tfe.Session() as sess:
             # initialize variables
