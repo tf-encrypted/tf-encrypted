@@ -3892,23 +3892,24 @@ def _b2a_private(prot, x, nbits, method="ppa"):
     assert isinstance(x, ABY3PrivateTensor), type(x)
     assert x.share_type == ShareType.BOOLEAN
 
-    if (nbits is None or nbits == x.backing_dtype.nbits) and method == "ppa":
-        # The 'ppa' method only works for full bit composition
+    with tf.name_scope("b2a"):
 
-        # In semi-honest, the following two calls can be further optimized because we don't
-        # need the boolean shares of x1 and x2. We only need their original values on intended servers.
-        x1_on_0, x1_on_1, x1_on_2, x1_shares = prot._gen_b2a_sharing(
-            x.shape, prot.b2a_keys_1(), x.backing_dtype
-        )
-        assert x1_on_2 is None
-        x2_on_0, x2_on_1, x2_on_2, x2_shares = prot._gen_b2a_sharing(
-            x.shape, prot.b2a_keys_2(), x.backing_dtype
-        )
-        assert x2_on_0 is None
+        if (nbits is None or nbits == x.backing_dtype.nbits) and method == "ppa":
+            # The 'ppa' method only works for full bit composition
 
-        a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=ShareType.BOOLEAN)
+            # In semi-honest, the following two calls can be further optimized because we don't
+            # need the boolean shares of x1 and x2. We only need their original values on intended servers.
+            x1_on_0, x1_on_1, x1_on_2, x1_shares = prot._gen_b2a_sharing(
+                x.shape, prot.b2a_keys_1(), x.backing_dtype
+            )
+            assert x1_on_2 is None
+            x2_on_0, x2_on_1, x2_on_2, x2_shares = prot._gen_b2a_sharing(
+                x.shape, prot.b2a_keys_2(), x.backing_dtype
+            )
+            assert x2_on_0 is None
 
-        with tf.name_scope("b2a"):
+            a0, a1, a2 = prot._gen_zero_sharing(x.shape, share_type=ShareType.BOOLEAN)
+
             # Server 1 reshares (-x1-x2) as private input
             neg_x1_neg_x2 = [[None, None], [None, None], [None, None]]
             with tf.device(prot.servers[1].device_name):
@@ -3951,16 +3952,16 @@ def _b2a_private(prot, x, nbits, method="ppa"):
                 result[2][1] = x0_on_2
             result = ABY3PrivateTensor(prot, result, x.is_scaled, ShareType.ARITHMETIC)
 
-    else:
-        k = x.backing_dtype.nbits if nbits is None else nbits
-        bits = prot.bits(x, bitsize=k)
-        arithmetic_bits = prot.b2a_single(bits)
+        else:
+            k = x.backing_dtype.nbits if nbits is None else nbits
+            bits = prot.bits(x, bitsize=k)
+            arithmetic_bits = prot.b2a_single(bits)
 
-        i = np.reshape(np.arange(k), [1] * (len(x.shape) - 1) + [k])
-        two_power_i = prot.define_constant(np.exp2(i), apply_scaling=False)
-        arithmetic_x = arithmetic_bits * two_power_i
-        result = arithmetic_x.reduce_sum(axis=-1, keepdims=False)
-        result.is_scaled = x.is_scaled
+            i = np.reshape(np.arange(k), [1] * (len(x.shape) - 1) + [k])
+            two_power_i = prot.define_constant(np.exp2(i), apply_scaling=False)
+            arithmetic_x = arithmetic_bits * two_power_i
+            result = arithmetic_x.reduce_sum(axis=-1, keepdims=False)
+            result.is_scaled = x.is_scaled
 
     return result
 
