@@ -98,6 +98,33 @@ class TestABY3Profile(unittest.TestCase):
             Performance.time_log("2nd run")
 
 
+    def test_matmul_performance(self):
+        tf.reset_default_graph()
+
+        prot = ABY3()
+        tfe.set_protocol(prot)
+
+        n = 1000000
+        x = tf.reshape(tf.range(n), [1, n])
+        y = tf.reshape(tf.range(n), [n, 1])
+        private_x = tfe.define_private_variable(x)
+        private_y = tfe.define_private_variable(y)
+
+        Performance.time_log("Graph building")
+        z = tfe.matmul(private_x, private_y)
+        Performance.time_log("Graph building")
+
+        with tfe.Session() as sess:
+            # initialize variables
+            sess.run(tfe.global_variables_initializer())
+            # reveal result
+            sess.run([z.reveal()])
+            Performance.time_log("Matmul")
+            for i in range(1):
+                result = sess.run([z.reveal()])
+            Performance.time_log("Matmul")
+
+
 if __name__ == "__main__":
     """
     Run these tests with:
