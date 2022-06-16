@@ -131,7 +131,8 @@ class TestABY3Profile(unittest.TestCase):
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        n = 1000000
+        repeats = 10
+        n = 100000
         x = tf.reshape(tf.range(n), [1, n])
         y = tf.reshape(tf.range(n), [1, n])
         private_x = tfe.define_private_variable(x)
@@ -141,6 +142,8 @@ class TestABY3Profile(unittest.TestCase):
         z0 = private_x + private_y
         z1 = private_x - private_y
         z2 = private_x * private_y
+        z3 = private_x + 1
+        z4 = private_x * 2
         Performance.time_log("Graph building")
 
         with tfe.Session() as sess:
@@ -149,17 +152,25 @@ class TestABY3Profile(unittest.TestCase):
             # reveal result
             sess.run([z0.reveal(), z1.reveal(), z2.reveal()])
             Performance.time_log("Add")
-            for i in range(1):
+            for i in range(repeats):
                 result = sess.run([z0.reveal()])
             Performance.time_log("Add")
             Performance.time_log("Sub")
-            for i in range(1):
+            for i in range(repeats):
                 result = sess.run([z1.reveal()])
             Performance.time_log("Sub")
             Performance.time_log("Mul")
-            for i in range(1):
+            for i in range(repeats):
                 result = sess.run([z2.reveal()])
             Performance.time_log("Mul")
+            Performance.time_log("Add constant")
+            for i in range(repeats):
+                result = sess.run([z3.reveal()])
+            Performance.time_log("Add constant")
+            Performance.time_log("Mul constant")
+            for i in range(repeats):
+                result = sess.run([z4.reveal()])
+            Performance.time_log("Mul constant")
 
 if __name__ == "__main__":
     """
