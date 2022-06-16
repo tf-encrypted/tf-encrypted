@@ -1941,7 +1941,7 @@ class ABY3(Protocol):
         with tf.name_scope("cmp-swap"):
             max_choices = x > y
             max_ = self.select(max_choices, y, x)
-            min_ = self.select(~max_choices, y, x)
+            min_ = self.select(max_choices, x, y)
             return (min_, max_)
 
     @memoize
