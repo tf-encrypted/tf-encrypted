@@ -52,7 +52,6 @@ class NetworkA(Model):
 
         # optimizer and data pipeline
         # optimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
-        # optimizer = tf.keras.optimizers.AMSgrad(learning_rate=0.001)
         optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
         loss = tf.keras.losses.CategoricalCrossentropy(
             from_logits=True
@@ -100,7 +99,6 @@ class NetworkB(Model):
 
         # optimizer and data pipeline
         # optimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
-        # optimizer = tf.keras.optimizers.AMSgrad(learning_rate=0.001)
         optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
         loss = tf.keras.losses.CategoricalCrossentropy(
             from_logits=True
@@ -148,7 +146,6 @@ class NetworkC(Model):
 
         # optimizer and data pipeline
         optimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
-        # optimizer = tf.keras.optimizers.AMSgrad(learning_rate=0.001)
         # optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
         loss = tf.keras.losses.CategoricalCrossentropy(
             from_logits=True
@@ -188,7 +185,6 @@ class NetworkD(Model):
 
         # optimizer and data pipeline
         # optimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
-        # optimizer = tf.keras.optimizers.AMSgrad(learning_rate=0.001)
         optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
         loss = tf.keras.losses.CategoricalCrossentropy(
             from_logits=True
