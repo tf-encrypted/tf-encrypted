@@ -1,5 +1,5 @@
 # pylint:  disable=redefined-outer-name
-"""An example of performing secure training with MNIST.
+"""An example of performing plain training with MNIST.
 """
 
 import logging
@@ -7,35 +7,10 @@ import os
 import sys
 
 import tensorflow as tf
-
-import tf_encrypted as tfe
 from convert import decode
-from tf_encrypted.keras import backend as KE
-
-if len(sys.argv) > 1:
-    # config file was specified
-    config_file = sys.argv[1]
-    config = tfe.RemoteConfig.load(config_file)
-    tfe.set_config(config)
-else:
-    # Always best practice to preset all players to avoid invalid device errors
-    config = tfe.LocalConfig(
-        player_names=[
-            "server0",
-            "server1",
-            "server2",
-            "training-client",
-            "prediction-client",
-        ]
-    )
-    tfe.set_config(config)
-
-tfe.set_protocol(tfe.protocol.ABY3())
-
-session_target = sys.argv[2] if len(sys.argv) > 2 else None
 
 
-class PrivateModel:
+class Model:
     BATCH_SIZE = 128
     NUM_CLASSES = 10
     EPOCHS = 5
@@ -48,11 +23,11 @@ class PrivateModel:
     IN_CHANNELS = 1
 
 
-class NetworkA(PrivateModel):
+class NetworkA(Model):
     def __init__(self):
-        self.model = tfe.keras.Sequential()
+        self.model = tf.keras.Sequential()
         self.model.add(
-            tfe.keras.layers.Flatten(
+            tf.keras.layers.Flatten(
                 batch_input_shape=[
                     self.BATCH_SIZE,
                     self.IMG_ROWS,
@@ -62,34 +37,34 @@ class NetworkA(PrivateModel):
             )
         )
         self.model.add(
-            tfe.keras.layers.Dense(128, activation=None, lazy_normalization=True)
+            tf.keras.layers.Dense(128, activation=None)
         )
-        self.model.add(tfe.keras.layers.ReLU())
+        self.model.add(tf.keras.layers.ReLU())
         self.model.add(
-            tfe.keras.layers.Dense(128, activation=None, lazy_normalization=True)
+            tf.keras.layers.Dense(128, activation=None)
         )
-        self.model.add(tfe.keras.layers.ReLU())
+        self.model.add(tf.keras.layers.ReLU())
         self.model.add(
-            tfe.keras.layers.Dense(
-                self.NUM_CLASSES, activation=None, lazy_normalization=True
+            tf.keras.layers.Dense(
+                self.NUM_CLASSES, activation=None
             )
         )
 
         # optimizer and data pipeline
-        # optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
-        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
-        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
-        loss = tfe.keras.losses.CategoricalCrossentropy(
-            from_logits=True, lazy_normalization=True
+        # optimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
+        # optimizer = tf.keras.optimizers.AMSgrad(learning_rate=0.001)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        loss = tf.keras.losses.CategoricalCrossentropy(
+            from_logits=True
         )
-        self.model.compile(optimizer, loss)
+        self.model.compile(optimizer, loss, metrics=["categorical_accuracy"], )
 
 
-class NetworkB(PrivateModel):
+class NetworkB(Model):
     def __init__(self):
-        self.model = tfe.keras.Sequential()
+        self.model = tf.keras.Sequential()
         self.model.add(
-            tfe.keras.layers.Conv2D(
+            tf.keras.layers.Conv2D(
                 16,
                 5,
                 1,
@@ -101,44 +76,43 @@ class NetworkB(PrivateModel):
                     self.IMG_COLS,
                     self.IN_CHANNELS,
                 ],
-                lazy_normalization=True,
             )
         )
-        self.model.add(tfe.keras.layers.MaxPooling2D(2))
-        self.model.add(tfe.keras.layers.ReLU())
+        self.model.add(tf.keras.layers.MaxPooling2D(2))
+        self.model.add(tf.keras.layers.ReLU())
         self.model.add(
-            tfe.keras.layers.Conv2D(
-                16, 5, 1, padding="valid", activation=None, lazy_normalization=True
+            tf.keras.layers.Conv2D(
+                16, 5, 1, padding="valid", activation=None
             )
         )
-        self.model.add(tfe.keras.layers.MaxPooling2D(2))
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Flatten())
+        self.model.add(tf.keras.layers.MaxPooling2D(2))
+        self.model.add(tf.keras.layers.ReLU())
+        self.model.add(tf.keras.layers.Flatten())
         self.model.add(
-            tfe.keras.layers.Dense(100, activation=None, lazy_normalization=True)
+            tf.keras.layers.Dense(100, activation=None)
         )
-        self.model.add(tfe.keras.layers.ReLU())
+        self.model.add(tf.keras.layers.ReLU())
         self.model.add(
-            tfe.keras.layers.Dense(
-                self.NUM_CLASSES, activation=None, lazy_normalization=True
+            tf.keras.layers.Dense(
+                self.NUM_CLASSES, activation=None
             )
         )
 
         # optimizer and data pipeline
-        # optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
-        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
-        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
-        loss = tfe.keras.losses.CategoricalCrossentropy(
-            from_logits=True, lazy_normalization=True
+        # optimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
+        # optimizer = tf.keras.optimizers.AMSgrad(learning_rate=0.001)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        loss = tf.keras.losses.CategoricalCrossentropy(
+            from_logits=True
         )
-        self.model.compile(optimizer, loss)
+        self.model.compile(optimizer, loss, metrics=["categorical_accuracy"], )
 
 
-class NetworkC(PrivateModel):
+class NetworkC(Model):
     def __init__(self):
-        self.model = tfe.keras.Sequential()
+        self.model = tf.keras.Sequential()
         self.model.add(
-            tfe.keras.layers.Conv2D(
+            tf.keras.layers.Conv2D(
                 20,
                 5,
                 1,
@@ -150,44 +124,43 @@ class NetworkC(PrivateModel):
                     self.IMG_COLS,
                     self.IN_CHANNELS,
                 ],
-                lazy_normalization=True,
             )
         )
-        self.model.add(tfe.keras.layers.MaxPooling2D(2))
-        self.model.add(tfe.keras.layers.ReLU())
+        self.model.add(tf.keras.layers.MaxPooling2D(2))
+        self.model.add(tf.keras.layers.ReLU())
         self.model.add(
-            tfe.keras.layers.Conv2D(
-                50, 5, 1, padding="valid", activation=None, lazy_normalization=True
+            tf.keras.layers.Conv2D(
+                50, 5, 1, padding="valid", activation=None
             )
         )
-        self.model.add(tfe.keras.layers.MaxPooling2D(2))
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Flatten())
+        self.model.add(tf.keras.layers.MaxPooling2D(2))
+        self.model.add(tf.keras.layers.ReLU())
+        self.model.add(tf.keras.layers.Flatten())
         self.model.add(
-            tfe.keras.layers.Dense(500, activation=None, lazy_normalization=True)
+            tf.keras.layers.Dense(500, activation=None)
         )
-        self.model.add(tfe.keras.layers.ReLU())
+        self.model.add(tf.keras.layers.ReLU())
         self.model.add(
-            tfe.keras.layers.Dense(
-                self.NUM_CLASSES, activation=None, lazy_normalization=True
+            tf.keras.layers.Dense(
+                self.NUM_CLASSES, activation=None
             )
         )
 
         # optimizer and data pipeline
-        # optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
-        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
-        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
-        loss = tfe.keras.losses.CategoricalCrossentropy(
-            from_logits=True, lazy_normalization=True
+        optimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
+        # optimizer = tf.keras.optimizers.AMSgrad(learning_rate=0.001)
+        # optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        loss = tf.keras.losses.CategoricalCrossentropy(
+            from_logits=True
         )
-        self.model.compile(optimizer, loss)
+        self.model.compile(optimizer, loss, metrics=["categorical_accuracy"], )
 
 
-class NetworkD(PrivateModel):
+class NetworkD(Model):
     def __init__(self):
-        self.model = tfe.keras.Sequential()
+        self.model = tf.keras.Sequential()
         self.model.add(
-            tfe.keras.layers.Conv2D(
+            tf.keras.layers.Conv2D(
                 5,
                 5,
                 2,
@@ -199,32 +172,31 @@ class NetworkD(PrivateModel):
                     self.IMG_COLS,
                     self.IN_CHANNELS,
                 ],
-                lazy_normalization=True,
             )
         )
-        self.model.add(tfe.keras.layers.ReLU())
-        self.model.add(tfe.keras.layers.Flatten())
+        self.model.add(tf.keras.layers.ReLU())
+        self.model.add(tf.keras.layers.Flatten())
         self.model.add(
-            tfe.keras.layers.Dense(100, activation=None, lazy_normalization=True)
+            tf.keras.layers.Dense(100, activation=None)
         )
-        self.model.add(tfe.keras.layers.ReLU())
+        self.model.add(tf.keras.layers.ReLU())
         self.model.add(
-            tfe.keras.layers.Dense(
-                self.NUM_CLASSES, activation=None, lazy_normalization=True
+            tf.keras.layers.Dense(
+                self.NUM_CLASSES, activation=None
             )
         )
 
         # optimizer and data pipeline
-        # optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
-        # optimizer = tfe.keras.optimizers.AMSgrad(learning_rate=0.001)
-        optimizer = tfe.keras.optimizers.Adam(learning_rate=0.001)
-        loss = tfe.keras.losses.CategoricalCrossentropy(
-            from_logits=True, lazy_normalization=True
+        # optimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
+        # optimizer = tf.keras.optimizers.AMSgrad(learning_rate=0.001)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        loss = tf.keras.losses.CategoricalCrossentropy(
+            from_logits=True
         )
-        self.model.compile(optimizer, loss)
+        self.model.compile(optimizer, loss, metrics=["categorical_accuracy"], )
 
 
-class TrainingClient(PrivateModel):
+class TrainingClient(Model):
     """Contains code meant to be executed by a training client.
 
   Args:
@@ -238,7 +210,6 @@ class TrainingClient(PrivateModel):
         self.player_name = player_name
         self.local_data_file = local_data_file
 
-    @tfe.local_computation
     def _build_data_pipeline(self):
         """Build a reproducible tf.data iterator."""
 
@@ -251,9 +222,9 @@ class TrainingClient(PrivateModel):
             image = tf.reshape(
                 image,
                 shape=[
-                    PrivateModel.IMG_ROWS,
-                    PrivateModel.IMG_COLS,
-                    PrivateModel.IN_CHANNELS,
+                    Model.IMG_ROWS,
+                    Model.IMG_COLS,
+                    Model.IN_CHANNELS,
                 ],
             )
             return image, label
@@ -276,24 +247,24 @@ class TrainingClient(PrivateModel):
             x,
             [
                 self.BATCH_SIZE,
-                PrivateModel.IMG_ROWS,
-                PrivateModel.IMG_COLS,
-                PrivateModel.IN_CHANNELS,
+                Model.IMG_ROWS,
+                Model.IMG_COLS,
+                Model.IN_CHANNELS,
             ],
         )
         y = tf.reshape(y, [self.BATCH_SIZE, self.NUM_CLASSES])
         return x, y
 
     def train(self, model):
-        """Build a graph for private model training."""
+        """Build a graph for model training."""
 
         with tf.name_scope("loading-data"):
             x, y = self._build_data_pipeline()
 
-        model.fit(x, y, epochs=self.EPOCHS, steps_per_epoch=self.ITERATIONS)
+        model.fit(x, y, epochs=self.EPOCHS, steps_per_epoch=1)
 
 
-class PredictionClient(PrivateModel):
+class PredictionClient(Model):
     """
   Contains code meant to be executed by a prediction client.
 
@@ -304,7 +275,6 @@ class PredictionClient(PrivateModel):
                        a local federated learning update.
   """
 
-    BATCH_SIZE = 100
 
     def __init__(self, player_name, local_data_file):
         super().__init__()
@@ -323,9 +293,9 @@ class PredictionClient(PrivateModel):
             image = tf.reshape(
                 image,
                 shape=[
-                    PrivateModel.IMG_ROWS,
-                    PrivateModel.IMG_COLS,
-                    PrivateModel.IN_CHANNELS,
+                    Model.IMG_ROWS,
+                    Model.IMG_COLS,
+                    Model.IN_CHANNELS,
                 ],
             )
             return image, label
@@ -339,27 +309,14 @@ class PredictionClient(PrivateModel):
             .batch(self.BATCH_SIZE, drop_remainder=True)
         )  # drop remainder because we need to fix batch size in private model
         dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-
-        iterator = dataset.make_one_shot_iterator()
-        x, y = iterator.get_next()
-        x = tf.reshape(
-            x,
-            [
-                self.BATCH_SIZE,
-                PrivateModel.IMG_ROWS,
-                PrivateModel.IMG_COLS,
-                PrivateModel.IN_CHANNELS,
-            ],
-        )
-        y = tf.reshape(y, [self.BATCH_SIZE, self.NUM_CLASSES])
-        return x, y
+        return dataset
 
     def evaluate(self, model):
         with tf.name_scope("loading"):
-            x, y = self._build_data_pipeline()
+            dataset = self._build_data_pipeline()
 
         with tf.name_scope("evaluate"):
-            result = model.evaluate(x, y, metrics=["categorical_accuracy"], steps=None)
+            result = model.evaluate(dataset, steps=None)
 
         return result
 
@@ -368,8 +325,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG)
 
-    sess = tfe.Session(target=session_target)
-    KE.set_session(sess)
+    sess = tf.Session()
 
     # Network = NetworkA
     # Network = NetworkB
@@ -393,11 +349,8 @@ if __name__ == "__main__":
     training_client.train(model)
     weights = model.weights
 
-    print("Set trained weights")
-    model_2 = Network().model
-    model_2.set_weights(weights)
-
     print("Evaluate")
-    result = prediction_client.evaluate(model_2)
+    result = prediction_client.evaluate(model)
 
     print(result)
+

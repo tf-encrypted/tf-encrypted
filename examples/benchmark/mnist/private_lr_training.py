@@ -1,7 +1,5 @@
 # pylint:  disable=redefined-outer-name
-"""An example of performing secure inference with MNIST.
-
-Also performs plaintext training.
+"""An example of performing secure training with MNIST.
 """
 
 import logging

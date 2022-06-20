@@ -96,7 +96,10 @@ def verify_frozen_resnet50():
         with tf.Session() as sess:
             input_node = sess.graph.get_tensor_by_name("input_1:0")
             output_node = sess.graph.get_tensor_by_name("probs/Softmax:0")
+
+            Performance.time_log("Resnet50 plain prediction")
             preds = sess.run(output_node, feed_dict={input_node: images})
+            Performance.time_log("Resnet50 plain prediction")
             print("Predicted:", decode_predictions(preds, top=10)[0])
 
             # out_tensors = [sess.graph.get_tensor_by_name(check+":0") for check in check_nodes] # noqa
