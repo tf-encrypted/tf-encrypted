@@ -209,7 +209,7 @@ class PredictionClient(PrivateModel):
             x, y = self._build_data_pipeline()
 
         with tf.name_scope("evaluate"):
-            result = model.evaluate(x, y, metrics=["categorical_accuracy"], steps=None)
+            result = model.evaluate(x, y, metrics=["binary_accuracy"], steps=None)
 
         return result
 

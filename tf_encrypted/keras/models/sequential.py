@@ -236,6 +236,10 @@ class Sequential(Layer):
                 result[metric] = lambda y_true, y_pred: tf.reduce_mean(
                     tf.keras.metrics.categorical_accuracy(y_true, y_pred)
                 )
+            if metric == "binary_accuracy":
+                result[metric] = lambda y_true, y_pred: tf.reduce_mean(
+                    tf.keras.metrics.binary_accuracy(y_true, y_pred)
+                )
 
         y_pred = self.call(x)
 
