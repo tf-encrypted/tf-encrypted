@@ -4,9 +4,9 @@
 
 import logging
 import os
-import sys
 
 import tensorflow as tf
+
 from convert import decode
 
 
@@ -36,27 +36,19 @@ class NetworkA(Model):
                 ]
             )
         )
-        self.model.add(
-            tf.keras.layers.Dense(128, activation=None)
-        )
+        self.model.add(tf.keras.layers.Dense(128, activation=None))
         self.model.add(tf.keras.layers.ReLU())
-        self.model.add(
-            tf.keras.layers.Dense(128, activation=None)
-        )
+        self.model.add(tf.keras.layers.Dense(128, activation=None))
         self.model.add(tf.keras.layers.ReLU())
-        self.model.add(
-            tf.keras.layers.Dense(
-                self.NUM_CLASSES, activation=None
-            )
-        )
+        self.model.add(tf.keras.layers.Dense(self.NUM_CLASSES, activation=None))
 
         # optimizer and data pipeline
         # optimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
         optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-        loss = tf.keras.losses.CategoricalCrossentropy(
-            from_logits=True
+        loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+        self.model.compile(
+            optimizer, loss, metrics=["categorical_accuracy"],
         )
-        self.model.compile(optimizer, loss, metrics=["categorical_accuracy"], )
 
 
 class NetworkB(Model):
@@ -80,30 +72,22 @@ class NetworkB(Model):
         self.model.add(tf.keras.layers.MaxPooling2D(2))
         self.model.add(tf.keras.layers.ReLU())
         self.model.add(
-            tf.keras.layers.Conv2D(
-                16, 5, 1, padding="valid", activation=None
-            )
+            tf.keras.layers.Conv2D(16, 5, 1, padding="valid", activation=None)
         )
         self.model.add(tf.keras.layers.MaxPooling2D(2))
         self.model.add(tf.keras.layers.ReLU())
         self.model.add(tf.keras.layers.Flatten())
-        self.model.add(
-            tf.keras.layers.Dense(100, activation=None)
-        )
+        self.model.add(tf.keras.layers.Dense(100, activation=None))
         self.model.add(tf.keras.layers.ReLU())
-        self.model.add(
-            tf.keras.layers.Dense(
-                self.NUM_CLASSES, activation=None
-            )
-        )
+        self.model.add(tf.keras.layers.Dense(self.NUM_CLASSES, activation=None))
 
         # optimizer and data pipeline
         # optimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
         optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-        loss = tf.keras.losses.CategoricalCrossentropy(
-            from_logits=True
+        loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+        self.model.compile(
+            optimizer, loss, metrics=["categorical_accuracy"],
         )
-        self.model.compile(optimizer, loss, metrics=["categorical_accuracy"], )
 
 
 class NetworkC(Model):
@@ -127,30 +111,22 @@ class NetworkC(Model):
         self.model.add(tf.keras.layers.MaxPooling2D(2))
         self.model.add(tf.keras.layers.ReLU())
         self.model.add(
-            tf.keras.layers.Conv2D(
-                50, 5, 1, padding="valid", activation=None
-            )
+            tf.keras.layers.Conv2D(50, 5, 1, padding="valid", activation=None)
         )
         self.model.add(tf.keras.layers.MaxPooling2D(2))
         self.model.add(tf.keras.layers.ReLU())
         self.model.add(tf.keras.layers.Flatten())
-        self.model.add(
-            tf.keras.layers.Dense(500, activation=None)
-        )
+        self.model.add(tf.keras.layers.Dense(500, activation=None))
         self.model.add(tf.keras.layers.ReLU())
-        self.model.add(
-            tf.keras.layers.Dense(
-                self.NUM_CLASSES, activation=None
-            )
-        )
+        self.model.add(tf.keras.layers.Dense(self.NUM_CLASSES, activation=None))
 
         # optimizer and data pipeline
         optimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
         # optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-        loss = tf.keras.losses.CategoricalCrossentropy(
-            from_logits=True
+        loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+        self.model.compile(
+            optimizer, loss, metrics=["categorical_accuracy"],
         )
-        self.model.compile(optimizer, loss, metrics=["categorical_accuracy"], )
 
 
 class NetworkD(Model):
@@ -173,23 +149,17 @@ class NetworkD(Model):
         )
         self.model.add(tf.keras.layers.ReLU())
         self.model.add(tf.keras.layers.Flatten())
-        self.model.add(
-            tf.keras.layers.Dense(100, activation=None)
-        )
+        self.model.add(tf.keras.layers.Dense(100, activation=None))
         self.model.add(tf.keras.layers.ReLU())
-        self.model.add(
-            tf.keras.layers.Dense(
-                self.NUM_CLASSES, activation=None
-            )
-        )
+        self.model.add(tf.keras.layers.Dense(self.NUM_CLASSES, activation=None))
 
         # optimizer and data pipeline
         # optimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
         optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-        loss = tf.keras.losses.CategoricalCrossentropy(
-            from_logits=True
+        loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+        self.model.compile(
+            optimizer, loss, metrics=["categorical_accuracy"],
         )
-        self.model.compile(optimizer, loss, metrics=["categorical_accuracy"], )
 
 
 class TrainingClient(Model):
@@ -216,12 +186,7 @@ class TrainingClient(Model):
 
         def shaping(image, label):
             image = tf.reshape(
-                image,
-                shape=[
-                    Model.IMG_ROWS,
-                    Model.IMG_COLS,
-                    Model.IN_CHANNELS,
-                ],
+                image, shape=[Model.IMG_ROWS, Model.IMG_COLS, Model.IN_CHANNELS],
             )
             return image, label
 
@@ -240,13 +205,7 @@ class TrainingClient(Model):
         iterator = dataset.make_one_shot_iterator()
         x, y = iterator.get_next()
         x = tf.reshape(
-            x,
-            [
-                self.BATCH_SIZE,
-                Model.IMG_ROWS,
-                Model.IMG_COLS,
-                Model.IN_CHANNELS,
-            ],
+            x, [self.BATCH_SIZE, Model.IMG_ROWS, Model.IMG_COLS, Model.IN_CHANNELS],
         )
         y = tf.reshape(y, [self.BATCH_SIZE, self.NUM_CLASSES])
         return x, y
@@ -271,7 +230,6 @@ class PredictionClient(Model):
                        a local federated learning update.
   """
 
-
     def __init__(self, player_name, local_data_file):
         super().__init__()
         self.player_name = player_name
@@ -287,12 +245,7 @@ class PredictionClient(Model):
 
         def shaping(image, label):
             image = tf.reshape(
-                image,
-                shape=[
-                    Model.IMG_ROWS,
-                    Model.IMG_COLS,
-                    Model.IN_CHANNELS,
-                ],
+                image, shape=[Model.IMG_ROWS, Model.IMG_COLS, Model.IN_CHANNELS],
             )
             return image, label
 
@@ -349,4 +302,3 @@ if __name__ == "__main__":
     result = prediction_client.evaluate(model)
 
     print(result)
-
