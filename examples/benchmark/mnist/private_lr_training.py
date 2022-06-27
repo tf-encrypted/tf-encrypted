@@ -93,8 +93,8 @@ class TrainingClient(PrivateModel):
         """Build a reproducible tf.data iterator."""
 
         def normalize(image, label):
-            image = tf.cast(image, tf.float32) / 255.0
-            label = tf.cast(tf.math.greater(label, 4), dtype=tf.float32)
+            image = tf.cast(image, tf.float64) / 255.0
+            label = tf.cast(tf.math.greater(label, 4), dtype=tf.float64)
             return image, label
 
         def shaping(image, label):
@@ -165,8 +165,8 @@ class PredictionClient(PrivateModel):
         """Build a reproducible tf.data iterator."""
 
         def normalize(image, label):
-            image = tf.cast(image, tf.float32) / 255.0
-            label = tf.cast(tf.math.greater(label, 4), dtype=tf.float32)
+            image = tf.cast(image, tf.float64) / 255.0
+            label = tf.cast(tf.math.greater(label, 4), dtype=tf.float64)
             return image, label
 
         def shaping(image, label):
