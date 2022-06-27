@@ -69,21 +69,17 @@ For more information, check out the [documentation](./docs/) or the [examples](.
 
 All tests are performed by using the ABY3 protocol among 3 machines, each with 4 cores (Intel Xeon Platinum 8369B CPU @ 2.70GHz). The LAN environment has a bandwidth of 40 Gbps and a RTT of 0.02 ms, and the WAN environment has a bandwidth of 352 Mbps and a RTT of 40 ms.
 
-
-
 You can find source code of the following benchmarks in [`./examples/benchmark/`](./examples/benchmark/) and corresponding guidelines of how to reproduce them.
-
-
 
 ## Benchmark 1: Sort and Max
 
 Graph building is a one-time cost, while LAN or WAN timings are average running time across multiple runs. For example, it takes 58.63 seconds to build the graph for Resnet50 model, and afterwards, it only takes 4.742 seconds to predict each image.
 
-|                                   | Build graph<br/>(seconds) | LAN<br/>(seconds) | WAN<br/>(seconds) |
-| --------------------------------- | ------------------------- | ----------------- | ----------------- |
-| Sort/Max (1,000)<sup>1</sup>         | 0.90                      | 0.13              | 11.51             |
+|                                        | Build graph<br/>(seconds) | LAN<br/>(seconds) | WAN<br/>(seconds) |
+| -------------------------------------- | ------------------------- | ----------------- | ----------------- |
+| Sort/Max (1,000)<sup>1</sup>           | 0.90                      | 0.13              | 11.51             |
 | Sort/Max (1,000,000)<sup>1</sup>       | 74.70                     | 117.451           | 1133.00           |
-| Max (1,000 $\times$ 4)<sup>2</sup>   | 2.02                      | 0.01              | 0.51              |
+| Max (1,000 $\times$ 4)<sup>2</sup>     | 2.02                      | 0.01              | 0.51              |
 | Max (1,000,000 $\times$ 4)<sup>2</sup> | 2.05                      | 3.66              | 15.28             |
 
 <sup>1</sup> `Max` is implemented by using a sorting network, hence its performance is essentially the same as `Sort`. Sorting network can be efficiently constructed as a TF graph. The traditional way of computing `Max` by using a binary comparison tree does not work well in a TF graph, because the graph becomes huge when the number of elements is large.
@@ -94,11 +90,9 @@ Graph building is a one-time cost, while LAN or WAN timings are average running 
 
 We show the strength of TFE by loading a normal TF model (RESNET50) and run private inference on top of it.
 
-
-
-|                                   | Build graph<br/> | LAN<br/> | WAN<br/> |
-| --------------------------------- | ------------------------- | ----------------- | ----------------- |
-| RESNET50 inference time (seconds)               | 57.79                     | 13.55<sup>1</sup>             | 126.89            |
+|                                   | Build graph<br/> | LAN<br/>          | WAN<br/> |
+| --------------------------------- | ---------------- | ----------------- | -------- |
+| RESNET50 inference time (seconds) | 57.79            | 13.55<sup>1</sup> | 126.89   |
 
 <sup>1</sup> This is currently one of the fastest implementation of secure RESNET50 inference (three-party). Comparable with [CryptGPU](https://eprint.iacr.org/2021/533) , [SecureQ8](https://eprint.iacr.org/2019/131), and faster than [CryptFLOW](https://arxiv.org/abs/1909.07814).
 
@@ -108,21 +102,29 @@ We benchmark the performance of training several neural network models on the MN
 
 We compare the performance with another highly optimized MPC library [MP-SPDZ](https://github.com/data61/MP-SPDZ).
 
-|           | Accuracy (epochs) | Accuracy (epochs) | Seconds per Batch (LAN) | Seconds per Batch (LAN) | Seconds per Batch (WAN) | Seconds per Batch (WAN) |
-|:------------|:-----------------:| :-----------------: |:--------------:|:--------------:|:--------------:|:--------------:|
-|             | MP-SPDZ           | TFE               | MP-SPDZ        | TFE            | MP-SPDZ        | TFE            |
-| A (SGD)     | 96.7% (5)         | 96.8% (5)         | 0.098          | 0.138          | 9.724          | 5.075          |
-| A (AMSgrad) | 97.8% (5)         | 97.3% (5)         | 0.228          | 0.567          | 21.038         | 17.780         |
-| A (Adam )   | 97.4% (5)         | 97.3% (5)         | 0.221          | 0.463          | 50.963         | 16.958         |
-| B (SGD)     | 97.5% (5)         | 98.7% (5)         | 0.571          | 4.000          | 60.755         | 25.300         |
-| B (AMSgrad) | 98.6% (5)         | 99.0% (5)         | 0.680          | 4.170          | 71.983         | 28.424         |
-| B (Adam)    | 98.8% (5)         | 98.8% (5)         | 0.772          | 4.075          | 98.108         | 28.184         |
-| C (SGD)     | 98.5% (5)         | 98.8% (5)         | 1.175          | 6.223          | 91.341         | 37.678         |
-| C (AMSgrad) | 98.9% (5)         | 99.0% (5)         | 1.568          | 7.336          | 119.271        | 83.695         |
-| C (Adam)    | 99.0% (5)         | 99.1% (5)         | 2.825          | 6.858          | 195.013        | 81.275         |
-| D (SGD)     | 97.6% (5)         | 97.5% (5)         | 0.134          | 0.355          | 15.083         | 6.112          |
-| D (AMSgrad) | 98.4% (5)         | 98.1% (5)         | 0.228          | 0.682          | 26.099         | 17.063         |
-| D (Adam)    | 98.2% (5)         | 98.0% (5)         | 0.293          | 0.605          | 54.404         | 16.190         |
+|             | Accuracy (epochs) | Accuracy (epochs) | Seconds per Batch (LAN) | Seconds per Batch (LAN) | Seconds per Batch (WAN) | Seconds per Batch (WAN) |
+|:----------- |:-----------------:|:-----------------:|:-----------------------:|:-----------------------:|:-----------------------:|:-----------------------:|
+|             | MP-SPDZ           | TFE               | MP-SPDZ                 | TFE                     | MP-SPDZ                 | TFE                     |
+| A (SGD)     | 96.7% (5)         | 96.8% (5)         | 0.098                   | 0.138                   | 9.724                   | 5.075                   |
+| A (AMSgrad) | 97.8% (5)         | 97.3% (5)         | 0.228                   | 0.567                   | 21.038                  | 17.780                  |
+| A (Adam )   | 97.4% (5)         | 97.3% (5)         | 0.221                   | 0.463                   | 50.963                  | 16.958                  |
+| B (SGD)     | 97.5% (5)         | 98.7% (5)         | 0.571                   | 4.000                   | 60.755                  | 25.300                  |
+| B (AMSgrad) | 98.6% (5)         | 99.0% (5)         | 0.680                   | 4.170                   | 71.983                  | 28.424                  |
+| B (Adam)    | 98.8% (5)         | 98.8% (5)         | 0.772                   | 4.075                   | 98.108                  | 28.184                  |
+| C (SGD)     | 98.5% (5)         | 98.8% (5)         | 1.175                   | 6.223                   | 91.341                  | 37.678                  |
+| C (AMSgrad) | 98.9% (5)         | 99.0% (5)         | 1.568                   | 7.336                   | 119.271                 | 83.695                  |
+| C (Adam)    | 99.0% (5)         | 99.1% (5)         | 2.825                   | 6.858                   | 195.013                 | 81.275                  |
+| D (SGD)     | 97.6% (5)         | 97.5% (5)         | 0.134                   | 0.355                   | 15.083                  | 6.112                   |
+| D (AMSgrad) | 98.4% (5)         | 98.1% (5)         | 0.228                   | 0.682                   | 26.099                  | 17.063                  |
+| D (Adam)    | 98.2% (5)         | 98.0% (5)         | 0.293                   | 0.605                   | 54.404                  | 16.190                  |
+
+We also give the performance of training a logistic regression model in the following table. This model is trained to classify two classes: small digits (0-4) vs large digits (5-9). Details can be found in [`examples/benchmark/mnist/private_lr_training.py`](examples/benchmark/mnist/private_lr_training.py)
+
+|              | Accuracy (epochs) | Seconds per Batch (LAN) | Seconds per Batch (WAN) |
+|:------------ |:-----------------:|:-----------------------:|:-----------------------:|
+| LR (SGD)     | 84.1% (5)         | 0.012                   | 0.760                   |
+| LR (AMSgrad) | 85.5% (5)         | 0.025                   | 1.567                   |
+| LR (Adam)    | 85.8% (5)         | 0.021                   | 1.353                   |
 
 # Roadmap
 
