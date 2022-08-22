@@ -98,7 +98,7 @@ We show the strength of TFE by loading a normal TF model (RESNET50) and run priv
 
 ## Benchmark 3: Neural Network Training
 
-We benchmark the performance of training several neural network models on the MNIST dataset (60k training images, 10k test images, and batch size is 128). The definitions of these models can be found in [`examples/benchmark/mnist/private_network_training.py`](examples/benchmark/mnist/private_network_training.py).
+We benchmark the performance of training several neural network models on the MNIST dataset (60k training images, 10k test images, and batch size is 128). The definitions of these models can be found in [`examples/benchmark/training/private_network_training.py`](examples/benchmark/training/private_network_training.py).
 
 We compare the performance with another highly optimized MPC library [MP-SPDZ](https://github.com/data61/MP-SPDZ).
 
@@ -118,7 +118,7 @@ We compare the performance with another highly optimized MPC library [MP-SPDZ](h
 | D (AMSgrad) | 98.4% (5)         | 98.1% (5)         | 0.228                   | 0.682                   | 26.099                  | 17.063                  |
 | D (Adam)    | 98.2% (5)         | 98.0% (5)         | 0.293                   | 0.605                   | 54.404                  | 16.190                  |
 
-We also give the performance of training a logistic regression model in the following table. This model is trained to classify two classes: small digits (0-4) vs large digits (5-9). Details can be found in [`examples/benchmark/mnist/private_lr_training.py`](examples/benchmark/mnist/private_lr_training.py)
+We also give the performance of training a logistic regression model in the following table. This model is trained to classify two classes: small digits (0-4) vs large digits (5-9). Details can be found in [`examples/benchmark/training/private_lr_training.py`](examples/benchmark/training/private_lr_training.py)
 
 |              | Accuracy (epochs) | Seconds per Batch (LAN) | Seconds per Batch (WAN) |
 |:------------ |:-----------------:|:-----------------------:|:-----------------------:|

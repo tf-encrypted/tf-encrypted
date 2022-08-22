@@ -7,5 +7,5 @@ This benchmark illustrates how TF Encrypted can be used to perform inference wit
 Start the benchmark with the startup script `run-remote.sh` or `run-remote-4-cores.sh` (restrict each party to use 4 cores)
 
 ```sh
-./examples/benchmark/convert/run-remote.sh
+./examples/benchmark/inference/run-remote.sh
 ```

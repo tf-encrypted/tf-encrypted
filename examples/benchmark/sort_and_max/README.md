@@ -7,6 +7,6 @@ This benchmark profiles some complex operations (e.g., sort) in the ABY3 protoco
 Start the benchmark with the startup script `run-remote.sh` or `run-remote-4-cores.sh` (restrict each party to use 4 cores)
 
 ```sh
-./examples/benchmark/aby3_profile/run-remote.sh test_sort_performance
+./examples/benchmark/sort_and_max/run-remote.sh test_sort_performance
 ```
 You can replace `test_sort_performance` with other benchmark functions located in `aby3_profile.py`.
