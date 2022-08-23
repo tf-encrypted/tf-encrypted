@@ -46,7 +46,7 @@ As a concrete example, say we want to run a computation involving three servers,
 
 Note that all machines in the hostmap must be able to talk to each other; in particular, that proper firewall settings are in place for the specified ports.
 
-Having distributed this file to every machine we next launch a TensorFlow server on each. Assuming that TF Encrypted has already been installed, the easiest way of during this is to simply use `python3 -m tf_encrypted.player`, which will parse the configuration file and start an ordinary TensorFlow server on the corresponding endpoint. For our concrete example we have:
+Having distributed this file to every machine we next launch a TensorFlow server on each. Assuming that TF Encrypted has already been installed, the easiest way of doing this is to simply use `python3 -m tf_encrypted.player`, which will parse the configuration file and start an ordinary TensorFlow server on the corresponding endpoint. For our concrete example we have:
 
 ```sh
 user@10.0.0.10 $ python3 -m tf_encrypted.player server0 --config config.json
@@ -76,7 +76,7 @@ Running the script may be done from anywhere, including e.g. a distinct laptop, 
 }
 ```
 
-Note that maybe of the [examples](/examples/) can be run by simply passing in a path to the configuration file, e.g.:
+Note that many of the [examples](/examples/) can be run by simply passing in a path to the configuration file, e.g.:
 
 ```sh
 python3 examples/simple-average/run.py config.json

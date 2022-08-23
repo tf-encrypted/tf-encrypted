@@ -33,25 +33,40 @@ def agreement_test(
     tf_layer_cls = getattr(tf.keras.layers, tfe_layer_cls.__name__)
     tfe_kwargs = {**kwargs, **tfe_kwargs}
 
-    with tfe.protocol.SecureNN():
+    with tf.name_scope("TFE"):
         tfe_layer = tfe_layer_cls(**tfe_kwargs)
         x = tfe.define_private_variable(input_data)
         y = tfe_layer(x)
 
+        d_y = tfe.define_private_variable(np.ones(y.shape))
+        try:
+            _, tfe_dx = tfe_layer.backward(d_y)
+        except NotImplementedError:
+            tfe_dx = None
+
         with tfe.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            actual = sess.run(y.reveal())
+            actual_y = sess.run(y.reveal())
+            if tfe_dx is not None:
+                actual_dx = sess.run(tfe_dx.reveal())
 
     tf.reset_default_graph()
 
-    with tf.Session() as sess:
-        tf_layer = tf_layer_cls(**kwargs)
-        x = tf.Variable(input_data, dtype=tf.float32)
-        y = tf_layer(x)
-        sess.run(tf.global_variables_initializer())
-        expected = sess.run(y)
+    with tf.name_scope("TF"):
+        with tf.Session() as sess:
+            tf_layer = tf_layer_cls(**kwargs)
+            x = tf.Variable(input_data, dtype=tf.float32)
+            y = tf_layer(x)
+            sess.run(tf.global_variables_initializer())
+            expected_y = sess.run(y)
 
-    np.testing.assert_allclose(actual, expected, rtol=rtol, atol=atol)
+            if tfe_dx is not None:
+                dx = tf.gradients([y], [x])[0]
+                expected_dx = sess.run(dx)
+
+    np.testing.assert_allclose(actual_y, expected_y, rtol=rtol, atol=atol)
+    if tfe_dx is not None:
+        np.testing.assert_allclose(actual_dx, expected_dx, rtol=rtol, atol=atol)
 
 
 def layer_test(layer_cls, kwargs=None, batch_input_shape=None, input_data=None):
@@ -74,7 +89,7 @@ def layer_test(layer_cls, kwargs=None, batch_input_shape=None, input_data=None):
     # instantiation
     kwargs = kwargs or {}
 
-    with tfe.protocol.SecureNN():
+    with tf.name_scope("TFE"):
         layer = layer_cls(batch_input_shape=input_shape, **kwargs)
         model = Sequential()
         model.add(layer)

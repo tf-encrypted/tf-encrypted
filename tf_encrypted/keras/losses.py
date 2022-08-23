@@ -39,18 +39,22 @@ class BinaryCrossentropy(Loss):
             that `y_pred` contains probabilities (i.e., values in [0, 1]).
     """
 
-    def __init__(self, from_logits=False):
+    def __init__(self, from_logits=False, lazy_normalization=False):
         self.from_logits = from_logits
+        self.lazy_normalization = lazy_normalization
         if from_logits:
             super(BinaryCrossentropy, self).__init__(binary_crossentropy_from_logits)
         else:
             super(BinaryCrossentropy, self).__init__(binary_crossentropy)
 
     def grad(self, y_true, y_pred):
+        batch_size = y_true.shape.as_list()[0]
+        batch_size_inv = 1 / batch_size
         if self.from_logits:
-            grad = tfe.sigmoid(y_pred) - y_true
-        else:
-            grad = y_pred - y_true
+            y_pred = tfe.sigmoid(y_pred)
+        grad = y_pred - y_true
+        if not self.lazy_normalization:
+            grad = grad * batch_size_inv
         return grad
 
 
@@ -88,3 +92,46 @@ def mean_squared_error(y_true, y_pred):
     out = out.square()
     mse_loss = out.reduce_sum(axis=0) * batch_size_inv
     return mse_loss
+
+
+class CategoricalCrossentropy(Loss):
+    """
+    See `tf.keras.losses.CategoricalCrossentropy`.
+    """
+
+    def __init__(self, from_logits=False, lazy_normalization=False):
+        self.from_logits = from_logits
+        self.lazy_normalization = lazy_normalization
+        if from_logits:
+            super(CategoricalCrossentropy, self).__init__(
+                categorical_crossentropy_from_logits
+            )
+        else:
+            super(CategoricalCrossentropy, self).__init__(categorical_crossentropy)
+
+    def grad(self, y_true, y_pred):
+        """
+        Softmax grad reference:
+        https://slowbreathing.github.io/articles/2019-05/softmax-and-cross-entropy
+        """
+        batch_size = y_true.shape.as_list()[0]
+        batch_size_inv = 1 / batch_size
+        if self.from_logits:
+            y_pred = tfe.keras.activations.softmax(y_pred)
+        grad = y_pred - y_true
+        if not self.lazy_normalization:
+            grad = grad * batch_size_inv
+        return grad
+
+
+def categorical_crossentropy(y_true, y_pred):
+    batch_size = y_true.shape.as_list()[0]
+    batch_size_inv = 1 / batch_size
+    out = -y_true * tfe.log(y_pred)
+    cce = out.reduce_sum() * batch_size_inv
+    return cce
+
+
+def categorical_crossentropy_from_logits(y_true, y_pred):
+    y_pred = tfe.keras.activations.softmax(y_pred)
+    return categorical_crossentropy(y_true, y_pred)

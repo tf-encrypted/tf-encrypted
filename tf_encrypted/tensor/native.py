@@ -15,6 +15,7 @@ from typing import Union
 import numpy as np
 import tensorflow as tf
 
+from ..operations import aux
 from ..operations import secure_random
 from .factory import AbstractConstant
 from .factory import AbstractFactory
@@ -25,6 +26,8 @@ from .helpers import inverse
 from .shared import binarize
 from .shared import conv2d
 from .shared import im2col
+from .shared import im2patches
+from .shared import patches2im
 
 
 def native_factory(
@@ -43,6 +46,12 @@ def native_factory(
                 return DenseTensor(value)
 
             if isinstance(value, np.ndarray):
+                value = tf.convert_to_tensor(value, dtype=self.native_type)
+                return DenseTensor(value)
+
+            else:
+                # Give it a last try
+                value = np.array(value)
                 value = tf.convert_to_tensor(value, dtype=self.native_type)
                 return DenseTensor(value)
 
@@ -190,10 +199,26 @@ def native_factory(
                 msg = "Don't know how to handle `condition` of type {}"
                 raise TypeError(msg.format(type(condition)))
             if not v2:
+                # Try to solve the broadcasting problem in a naive way.
+                # Not a comprehensive implementation.
+                if condition.shape != x.shape:
+                    shape = tf.broadcast_static_shape(
+                        tf.broadcast_static_shape(condition.shape, x.shape), y.shape
+                    )
+                    tile_shape = [
+                        (shape[i] // condition.shape[i]) for i in range(len(shape))
+                    ]
+                    condition = tf.tile(condition, tile_shape)
                 value = tf.where(condition, x.value, y.value)
             else:
                 value = tf.compat.v2.where(condition, x.value, y.value)
             return DenseTensor(value)
+
+        def tile(self, x, multiples):
+            return DenseTensor(tf.tile(x.value, multiples))
+
+        def scatter_nd(self, indices, updates, shape):
+            return DenseTensor(tf.scatter_nd(indices, updates.value, shape))
 
     FACTORY = Factory()  # pylint: disable=invalid-name
 
@@ -205,12 +230,12 @@ def native_factory(
         if isinstance(x, Tensor):
 
             if isinstance(y, int):
-                return x, x.factory.tensor(np.array([y]))
+                return x, x.factory.tensor(np.array(y))
 
         if isinstance(y, Tensor):
 
             if isinstance(x, int):
-                return y.factory.tensor(np.array([x])), y
+                return y.factory.tensor(np.array(x)), y
 
         raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
 
@@ -234,11 +259,12 @@ def native_factory(
         def to_native(self) -> tf.Tensor:
             return self.value
 
-        def bits(self, factory=None) -> AbstractTensor:
+        def bits(self, factory=None, bitsize=None) -> AbstractTensor:
             factory = factory or FACTORY
             if EXPLICIT_MODULUS is None:
-                return factory.tensor(binarize(self.value))
-            bitsize = bitsize = math.ceil(math.log2(EXPLICIT_MODULUS))
+                return factory.tensor(binarize(self.value, bitsize))
+            if bitsize is None:
+                bitsize = math.ceil(math.log2(EXPLICIT_MODULUS))
             return factory.tensor(binarize(self.value % EXPLICIT_MODULUS, bitsize))
 
         def __repr__(self) -> str:
@@ -309,16 +335,58 @@ def native_factory(
                 value %= EXPLICIT_MODULUS
             return DenseTensor(value)
 
-        def im2col(self, h_filter, w_filter, padding, stride):
-            i2c = im2col(self.value, h_filter, w_filter, padding, stride)
+        def bit_gather(self, start, stride):
+            value = aux.bit_gather(self.value, start, stride)
+            return DenseTensor(value)
+
+        def bit_split_and_gather(self, stride):
+            value = aux.bit_split_and_gather(self.value, stride)
+            return DenseTensor(value)
+
+        def xor_indices(self):
+            value = aux.xor_indices(self.value)
+            return DenseTensor(value)
+
+        def im2col(self, h_filter, w_filter, stride, padding):
+            i2c = im2col(self.value, h_filter, w_filter, stride=stride, padding=padding)
             return DenseTensor(i2c)
+
+        def im2patches(self, patch_size, stride, padding, data_format="NCHW"):
+            i2p = im2patches(
+                self.value,
+                patch_size,
+                stride=stride,
+                padding=padding,
+                data_format=data_format,
+            )
+            return DenseTensor(i2p)
+
+        def patches2im(
+            self,
+            patch_size,
+            stride,
+            padding,
+            img_size=None,
+            consolidation="SUM",
+            data_format="NCHW",
+        ):
+            p2i = patches2im(
+                self.value,
+                patch_size,
+                stride=stride,
+                padding=padding,
+                img_size=img_size,
+                consolidation=consolidation,
+                data_format=data_format,
+            )
+            return DenseTensor(p2i)
 
         def conv2d(self, other, stride: int, padding: str = "SAME"):
             if EXPLICIT_MODULUS is not None:
                 # TODO(Morten) any good reason this wasn't implemented for PrimeTensor?
                 raise NotImplementedError()
             x, y = _lift(self, other)
-            return conv2d(x, y, stride, padding)
+            return DenseTensor(conv2d(x.value, y.value, stride=stride, padding=padding))
 
         def batch_to_space_nd(self, block_shape, crops):
             value = tf.batch_to_space_nd(self.value, block_shape, crops)
@@ -347,6 +415,14 @@ def native_factory(
             values = tf.split(self.value, num_split, axis=axis)
             return [DenseTensor(value) for value in values]
 
+        def scatter_nd(self, indices, shape):
+            value = tf.scatter_nd(indices, self.value, shape)
+            return DenseTensor(value)
+
+        def reverse(self, axis):
+            value = tf.reverse(self.value, axis)
+            return DenseTensor(value)
+
         def reshape(self, axes: Union[tf.Tensor, List[int]]):
             return DenseTensor(tf.reshape(self.value, axes))
 
@@ -368,6 +444,10 @@ def native_factory(
             )
             if EXPLICIT_MODULUS is not None:
                 value %= EXPLICIT_MODULUS
+            return DenseTensor(value)
+
+        def reduce_max(self, axis=None, keepdims=False):
+            value = tf.reduce_max(self.value, axis, keepdims)
             return DenseTensor(value)
 
         def equal_zero(self, factory=None):
@@ -469,6 +549,10 @@ def native_factory(
             x = tf.bitwise.bitwise_and(x, mask)
             return DenseTensor(x)
 
+        def bit_reverse(self):
+            value = aux.bit_reverse(self.value)
+            return DenseTensor(value)
+
     class DenseTensor(Tensor):
         """Public native Tensor class."""
 
@@ -562,5 +646,8 @@ def native_factory(
         def assign_from_same(self, value: Tensor) -> tf.Operation:
             assert isinstance(value, Tensor), type(value)
             return tf.assign(self.variable, value.value).op
+
+        def read_value(self):
+            return DenseTensor(self.variable.read_value())
 
     return FACTORY

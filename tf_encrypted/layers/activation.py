@@ -91,3 +91,24 @@ class Tanh(Layer):
         :raises: NotImplementedError
         """
         raise NotImplementedError(backward_msg.format("Tanh"))
+
+
+class Softmax(Layer):
+    """
+    Softmax Layer
+
+    :See: tf.nn.softmax
+    """
+
+    def get_output_shape(self) -> List[int]:
+        return self.input_shape
+
+    def initialize(self):
+        pass
+
+    def forward(self, x):
+        self.layer_output = tfe.softmax(x)
+        return self.layer_output
+
+    def backward(self, d_y):
+        raise NotImplementedError(backward_msg.format("Softmax"))

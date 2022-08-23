@@ -6,6 +6,8 @@ from typing import Any
 from typing import Callable
 from typing import Optional
 
+import tensorflow as tf
+
 import tf_encrypted as tfe
 
 from ..tensor.factory import AbstractTensor
@@ -35,6 +37,52 @@ class Protocol(ABC):
     ) -> Optional[bool]:
         tfe.set_protocol(self.last_protocol)
 
+    def reset(self):
+        pass
+
+
+class TFETensor(ABC):
+    pass
+
+
+class TFEVariable(TFETensor):
+    pass
+
+
+class TFEPrivateTensor(TFETensor):
+    pass
+
+
+class TFEPrivateVariable(TFEPrivateTensor, TFEVariable):
+    pass
+
+
+class TFEPublicTensor(TFETensor):
+    pass
+
+
+class TFEPublicVariable(TFEPublicTensor, TFEVariable):
+    pass
+
+
+def make_hashable(x):
+    if isinstance(x, (tuple, list)):
+        return tuple([make_hashable(y) for y in x])
+    elif isinstance(x, dict):
+        return tuple(
+            sorted(
+                [(make_hashable(item[0]), make_hashable(item[1])) for item in x.items()]
+            )
+        )
+    elif isinstance(x, tf.TensorShape):
+        return tuple(x.as_list())
+    else:
+        try:
+            hash(x)
+            return x
+        except TypeError:
+            return id(x)
+
 
 def memoize(func: Callable) -> Callable:
     """
@@ -48,8 +96,9 @@ def memoize(func: Callable) -> Callable:
 
     @functools.wraps(func)
     def cache_nodes(self: Protocol, *args: Any, **kwargs: Any) -> AbstractTensor:
-        args = tuple(tuple(x) if isinstance(x, list) else x for x in args)
-        node_key = (func.__name__, args, tuple(sorted(kwargs.items())))
+        hashable_args = make_hashable(args)
+        hashable_kwargs = make_hashable(kwargs)
+        node_key = (func.__name__, hashable_args, hashable_kwargs)
 
         cached_result = nodes.get(node_key, None)
         if cached_result is not None:

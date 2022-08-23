@@ -8,6 +8,10 @@ def relu(x):
     return tfe.relu(x)
 
 
+def relu_deriv(y, d_y):
+    return tfe.select(y < 0, d_y, 0)
+
+
 def sigmoid(x):
     """Computes sigmoid of x element-wise"""
     return tfe.sigmoid(x)
@@ -25,6 +29,14 @@ def tanh(x):
 
 def linear(x):
     return x
+
+
+def linear_deriv(y, d_y):
+    return d_y
+
+
+def softmax(x):
+    return tfe.softmax(x)
 
 
 def get(identifier):
@@ -55,7 +67,11 @@ def get_deriv(identifier):
             "the activation function."
         )
     if isinstance(identifier, str):
-        activations = {"sigmoid": sigmoid_deriv}
+        activations = {
+            "sigmoid": sigmoid_deriv,
+            "relu": relu_deriv,
+            "linear": linear_deriv,
+        }
         if identifier not in activations.keys():
             raise NotImplementedError(
                 "Activation function {} not yet implemented "

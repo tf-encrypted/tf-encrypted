@@ -2,6 +2,7 @@
 import unittest
 
 import numpy as np
+import pytest
 import tensorflow as tf
 
 import tf_encrypted as tfe
@@ -11,6 +12,7 @@ from tf_encrypted.keras.testing_utils import layer_test
 np.random.seed(42)
 
 
+@pytest.mark.layers
 class TestDense(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()
@@ -48,10 +50,10 @@ class TestDense(unittest.TestCase):
         kernel = np.ones([5, 5])
         initializer = tf.keras.initializers.Constant(kernel)
 
-        with tfe.protocol.SecureNN() as prot:
+        with tf.name_scope("TFE"):
 
-            private_input = prot.define_private_variable(input_data)
-            w = prot.define_private_variable(weights_second_layer)
+            private_input = tfe.define_private_variable(input_data)
+            w = tfe.define_private_variable(weights_second_layer)
 
             tfe_layer = tfe.keras.layers.Dense(
                 5, input_shape=input_shape[1:], kernel_initializer=initializer,

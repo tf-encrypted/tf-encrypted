@@ -88,6 +88,15 @@ fixed64_ni = FixedpointConfig(
     use_noninteractive_truncation=True,
 )
 
+fixed64_heuristic = FixedpointConfig(
+    scaling_base=2,
+    precision_integral=11,
+    precision_fractional=16,
+    matmul_threshold=256,
+    truncation_gap=0,
+    use_noninteractive_truncation=False,
+)
+
 
 def _validate_fixedpoint_config(
     config: FixedpointConfig, tensor_factory: AbstractFactory

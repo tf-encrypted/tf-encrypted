@@ -3,6 +3,7 @@ from __future__ import absolute_import
 
 from .activation import Relu
 from .activation import Sigmoid
+from .activation import Softmax
 from .batchnorm import Batchnorm
 from .convolution import Conv2D
 from .dense import Dense
@@ -16,6 +17,7 @@ __all__ = [
     "Conv2D",
     "Dense",
     "Sigmoid",
+    "Softmax",
     "Relu",
     "Batchnorm",
     "Reshape",

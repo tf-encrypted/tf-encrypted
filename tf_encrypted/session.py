@@ -38,7 +38,7 @@ class Session(tf.compat.v1.Session):
     when executing the graph.
   """
 
-    def __init__(self, graph=None, config=None, target=None, **tf_config_kwargs):
+    def __init__(self, target=None, graph=None, config=None, **tf_config_kwargs):
         if config is None:
             config = get_config()
 
@@ -153,6 +153,7 @@ def set_tfe_trace_flag(trace: bool = False) -> None:
   set_tfe_trace_flag(trace)
 
   Set flag to enable or disable tracing in TF Encrypted.
+  The output can be loaded and viewed in chrome browser with URL `chrome://tracing`.
 
   :param bool trace: Enable or disable tracing, disabled by default.
   """

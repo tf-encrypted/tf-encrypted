@@ -20,7 +20,7 @@ class TestSequential(unittest.TestCase):
     def test_two_layers(self):
         shape = (1, 3)
         input_data = np.random.normal(size=shape)
-        with tfe.protocol.SecureNN():
+        with tf.name_scope("TFE"):
             model = Sequential()
             model.add(Dense(2, input_shape=shape))
             model.add(Dense(3))
@@ -33,7 +33,7 @@ class TestSequential(unittest.TestCase):
         input_data = np.random.normal(size=input_shape)
         expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
 
-        with tfe.protocol.SecureNN():
+        with tf.name_scope("TFE"):
             x = tfe.define_private_input(
                 "inputter", lambda: tf.convert_to_tensor(input_data)
             )
@@ -54,7 +54,7 @@ class TestSequential(unittest.TestCase):
         input_data = np.random.normal(size=input_shape)
         expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
 
-        with tfe.protocol.SecureNN():
+        with tf.name_scope("TFE"):
             x = tfe.define_private_input(
                 "inputter", lambda: tf.convert_to_tensor(input_data)
             )
@@ -79,7 +79,7 @@ class TestSequential(unittest.TestCase):
         model.add(tf.keras.layers.Dense(3))
         expected = model.predict(input_data)
 
-        with tfe.protocol.SecureNN():
+        with tf.name_scope("TFE"):
             x = tfe.define_private_input(
                 "inputter", lambda: tf.convert_to_tensor(input_data)
             )
@@ -99,7 +99,7 @@ class TestSequential(unittest.TestCase):
         input_data = np.random.normal(size=input_shape)
         expected, k_weights, k_config = _model_predict_keras(input_data, input_shape)
 
-        with tfe.protocol.SecureNN():
+        with tf.name_scope("TFE"):
             x = tfe.define_private_input(
                 "inputter", lambda: tf.convert_to_tensor(input_data)
             )
@@ -141,7 +141,7 @@ class TestSequential(unittest.TestCase):
             k_weights = model.get_weights()
             k_config = model.get_config()
 
-        with tfe.protocol.SecureNN():
+        with tf.name_scope("TFE"):
             x = tfe.define_private_input(
                 "inputter", lambda: tf.convert_to_tensor(input_data)
             )
@@ -157,6 +157,75 @@ class TestSequential(unittest.TestCase):
             np.testing.assert_allclose(actual, expected, rtol=1e-2, atol=1e-2)
 
         KE.clear_session()
+
+
+class TestSequentialABY3(unittest.TestCase):
+    def setUp(self):
+        tf.reset_default_graph()
+
+    def test_two_layer_training(self):
+        shape = (100, 3)
+        with tfe.protocol.ABY3():
+            tfe_model = Sequential()
+            tfe_model.add(Dense(2, batch_input_shape=shape, activation="sigmoid"))
+            tfe_model.add(Dense(1))
+
+            x = tfe.define_private_variable(np.random.normal(size=shape))
+            y = tfe.define_private_variable(np.random.normal(size=(shape[0], 1)))
+
+            loss = tfe.keras.losses.BinaryCrossentropy(from_logits=True)
+            optimizer = tfe.keras.optimizers.SGD(learning_rate=0.01)
+            tfe_model.compile(optimizer, loss)
+            tfe_model(x)
+
+            layer0_weights = [w.reveal() for w in tfe_model.layers[0].weights]
+            layer1_weights = [w.reveal() for w in tfe_model.layers[1].weights]
+
+            sess = KE.get_session()
+            sess.run(tf.global_variables_initializer())
+
+            weights0_init, weights1_init = sess.run([layer0_weights, layer1_weights])
+
+            fit_op, _ = tfe_model.fit_batch(x, y)
+            sess.run(fit_op)
+            weights0_updated, weights1_updated = sess.run(
+                [layer0_weights, layer1_weights]
+            )
+
+            x_value = sess.run(x.reveal())
+            y_value = sess.run(y.reveal())
+
+        tf.reset_default_graph()
+
+        with tf.Session() as sess:
+            plain_model = tf.keras.Sequential()
+            plain_model.add(
+                tf.keras.layers.Dense(2, batch_input_shape=shape, activation="sigmoid")
+            )
+            plain_model.add(tf.keras.layers.Dense(1))
+
+            plain_model(tf.Variable(np.random.normal(size=shape)))
+            plain_model.layers[0].set_weights(weights0_init)
+            plain_model.layers[1].set_weights(weights1_init)
+
+            loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+            optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
+            plain_model.compile(optimizer=optimizer, loss=loss)
+
+            plain_model.fit(x_value, y_value)
+
+            expected_weights0_updated, expected_weights1_updated = sess.run(
+                [plain_model.layers[0].weights, plain_model.layers[1].weights]
+            )
+
+        for i in range(len(weights0_updated)):
+            np.testing.assert_allclose(
+                weights0_updated[i], expected_weights0_updated[i], rtol=1e-3, atol=1e-3
+            )
+        for i in range(len(weights1_updated)):
+            np.testing.assert_allclose(
+                weights1_updated[i], expected_weights1_updated[i], rtol=1e-3, atol=1e-3
+            )
 
 
 def _model_predict_keras(input_data, input_shape):

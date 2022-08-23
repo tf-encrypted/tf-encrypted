@@ -2,6 +2,7 @@
 """Dense (i.e. fully connected) Layer implementation."""
 from tensorflow.python.keras import initializers
 
+import tf_encrypted as tfe
 from tf_encrypted.keras import activations
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
@@ -102,9 +103,9 @@ class Dense(Layer):
         self._layer_input = inputs
 
         if self.use_bias:
-            outputs = inputs.matmul(self.kernel) + self.bias
+            outputs = tfe.matmul(inputs, self.kernel) + self.bias
         else:
-            outputs = inputs.matmul(self.kernel)
+            outputs = tfe.matmul(inputs, self.kernel)
 
         if self.activation_identifier is not None:
             outputs = self.activation(outputs)
@@ -119,17 +120,22 @@ class Dense(Layer):
         y = self._layer_output
         kernel = self.weights[0]
         grad_weights = []
+        batch_size = int(x.shape[0])
 
         if self.activation_identifier is not None:
             self._activation_deriv = activations.get_deriv(self.activation_identifier)
             d_y = self._activation_deriv(y, d_y)
 
-        d_x = d_y.matmul(kernel.transpose())
-        d_weights = x.transpose().matmul(d_y)
+        d_x = tfe.matmul(d_y, kernel.transpose())
+        d_weights = tfe.matmul(x.transpose(), d_y)
+        if self.lazy_normalization:
+            d_weights = d_weights / batch_size
         grad_weights.append(d_weights)
 
         if self.use_bias:
             d_bias = d_y.reduce_sum(axis=0)
+            if self.lazy_normalization:
+                d_bias = d_bias / batch_size
             grad_weights.append(d_bias)
 
         return grad_weights, d_x

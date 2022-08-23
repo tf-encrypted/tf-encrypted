@@ -9,8 +9,6 @@ from .pond import PondPrivateVariable
 from .pond import PondPublicTensor
 from .pond import PondTensor
 from .pond import TFEInputter
-from .pond import TFETensor
-from .pond import TFEVariable
 from .pond import _type
 from .triple_sources import OnlineTripleSource
 from .triple_sources import QueuedOnlineTripleSource
@@ -23,8 +21,6 @@ __all__ = [
     "PondPrivateTensor",
     "PondPrivateVariable",
     "PondMaskedTensor",
-    "TFEVariable",
-    "TFETensor",
     "TFEInputter",
     "_type",
     "OnlineTripleSource",

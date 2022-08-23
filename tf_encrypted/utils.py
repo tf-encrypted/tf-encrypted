@@ -1,4 +1,6 @@
 """TF Encrypted utilities."""
+import inspect
+
 import tensorflow as tf
 
 
@@ -73,6 +75,30 @@ def unwrap_fetches(fetches):
 
     if isinstance(fetches, (list, tuple)):
         return [unwrap_fetches(fetch) for fetch in fetches]
-    if isinstance(fetches, (tf.Tensor, tf.Operation)):
+    if isinstance(fetches, (tf.Tensor, tf.Operation, tf.Variable)):
         return fetches
-    return fetches.to_native()
+    try:
+        native = getattr(fetches, "to_native")
+        return native()
+    except AttributeError:
+        return fetches
+
+
+def get_default_arg(func, arg):
+    signature = inspect.signature(func)
+    v = signature.parameters[arg]
+    if v.default is inspect.Parameter.empty:
+        raise ValueError("Parameter {} has no default value".format(arg))
+    return v.default
+
+
+def print_banner(title):
+    title_length = len(title)
+    banner_length = title_length + 2 * 10
+    banner_top = "+" + ("-" * (banner_length - 2)) + "+"
+    banner_middle = "|" + " " * 9 + title + " " * 9 + "|"
+
+    print()
+    print(banner_top)
+    print(banner_middle)
+    print(banner_top)

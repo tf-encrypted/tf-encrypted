@@ -4,8 +4,7 @@ import numpy as np
 
 import tf_encrypted as tfe
 
-from ..protocol.pond import PondMaskedTensor
-from ..protocol.pond import PondPrivateTensor
+from ..protocol import TFEPrivateTensor
 from .core import Layer
 
 
@@ -75,9 +74,8 @@ class Conv2D(Layer):
         """Initialize layer weights as needed."""
 
         def is_secret(x):
-            is_pvt = isinstance(x, PondPrivateTensor)
-            is_msk = isinstance(x, PondMaskedTensor)
-            return is_pvt or is_msk
+            is_pvt = isinstance(x, TFEPrivateTensor)
+            return is_pvt
 
         if initial_weights is None:
             initial_weights = self.filter_init(self.fshape)

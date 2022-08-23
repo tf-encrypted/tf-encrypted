@@ -1,4 +1,7 @@
 """Sequential model API."""
+import time
+
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras import utils
 
@@ -8,7 +11,7 @@ from tf_encrypted.keras import optimizers
 from tf_encrypted.keras.engine.base_layer import Layer
 from tf_encrypted.keras.engine.input_layer import Input
 from tf_encrypted.keras.engine.input_layer import InputLayer
-from tf_encrypted.protocol.pond import PondPrivateTensor
+from tf_encrypted.protocol import memoize
 
 
 class Sequential(Layer):
@@ -89,6 +92,9 @@ class Sequential(Layer):
         else:
             self._layers.append(layer)
 
+        # Add layer weights to model weights
+        self.weights.extend(layer.weights)
+
     def call(
         self, inputs, training=None, mask=None,
     ):  # pylint: disable=arguments-differ
@@ -97,6 +103,10 @@ class Sequential(Layer):
         if mask is not None:
             raise NotImplementedError()
         outputs = inputs  # handle the corner case where self.layers is empty
+        # Clear model weights.
+        # NOTE: this does NOT result in weights re-initialization if the model
+        # has been built before.
+        self.weights = []
         for layer in self.layers:
             # During each iteration, `inputs` are the inputs to `layer`, and `outputs`
             # are the outputs of `layer` applied to `inputs`. At the end of each
@@ -105,6 +115,9 @@ class Sequential(Layer):
 
             # `outputs` will be the inputs to the next layer.
             inputs = outputs
+
+            # Add layer weights to model weights
+            self.weights.extend(layer.weights)
 
         return outputs
 
@@ -119,9 +132,29 @@ class Sequential(Layer):
         return layers[:]
 
     def backward(self, d_y):
-        for layer in reversed(self.layers):
-            grad_weights, d_y = layer.backward(d_y)
-            self._optimizer.apply_gradients(layer.weights, grad_weights)
+        update_ops = []
+        # for layer in reversed(self.layers):
+        for i in range(len(self.layers) - 1, -1, -1):
+            with tf.name_scope(self.layers[i].name + "/backward"):
+                grad_weights, d_y = self.layers[i].backward(d_y)
+                if i > 0:
+                    # IMPORTANT: d_y should be computed before the weights are updated
+                    with tf.control_dependencies(d_y.flatten_to_native()):
+                        update_ops.append(
+                            self._optimizer.apply_gradients(
+                                self.layers[i].weights, grad_weights
+                            )
+                        )
+                else:
+                    # No need to wait for the computation of the last
+                    # backward d_y because it will not be used
+                    update_ops.append(
+                        self._optimizer.apply_gradients(
+                            self.layers[i].weights, grad_weights
+                        )
+                    )
+
+        return tf.group(*update_ops)
 
     def compile(self, optimizer, loss):
         """Configures the model for training.
@@ -135,6 +168,9 @@ class Sequential(Layer):
         assert self._optimizer is not None, "An optimizer must be specified."
         assert self._loss is not None, "A loss must be specified."
 
+        self._optimizer.compile(self.layers)
+
+    @memoize
     def fit_batch(self, x, y):
         """Trains the model on a single batch.
 
@@ -144,11 +180,10 @@ class Sequential(Layer):
     """
         y_pred = self.call(x)
         dy = self._loss.grad(y, y_pred)
-        self.backward(dy)
+        back_prop = self.backward(dy)
         loss = self._loss(y, y_pred)
 
-        sess = KE.get_session()
-        self._current_loss = sess.run(loss.reveal())
+        return back_prop, loss
 
     def fit(self, x, y, epochs=1, steps_per_epoch=1):
         """Trains the model for a given number of epochs
@@ -161,20 +196,77 @@ class Sequential(Layer):
       steps_per_epoch: Integer. Total number of steps (batches of samples)
         before declaring one epoch finished and starting the next epoch.
     """
-        assert isinstance(x, PondPrivateTensor), type(x)
-        assert isinstance(y, PondPrivateTensor), type(y)
 
         # Initialize variables before starting to train
         sess = KE.get_session()
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.global_variables_initializer(), tag="global-init")
+
+        fit_batch_op, loss = self.fit_batch(x, y)
 
         for e in range(epochs):
             print("Epoch {}/{}".format(e + 1, epochs))
             batch_size = x.shape.as_list()[0]
             progbar = utils.Progbar(batch_size * steps_per_epoch)
             for _ in range(steps_per_epoch):
-                self.fit_batch(x, y)
-                progbar.add(batch_size, values=[("loss", self._current_loss)])
+                start = time.time()
+                _, current_loss = sess.run(
+                    [fit_batch_op, loss.reveal()], tag="fit-batch"
+                )
+                end = time.time()
+                progbar.add(
+                    batch_size, values=[("loss", current_loss), ("time", end - start)]
+                )
+
+    def predict(self, x, reveal=False):
+        y_pred = self.call(x)
+
+        if reveal:
+            sess = KE.get_session()
+            y_pred = sess.run(y_pred.reveal())
+
+        return y_pred
+
+    def evaluate(self, x, y, steps=None, metrics=None):
+        if metrics is None:
+            return {}
+
+        result = {}
+        for metric in metrics:
+            if metric == "categorical_accuracy":
+                result[metric] = lambda y_true, y_pred: tf.reduce_mean(
+                    tf.keras.metrics.categorical_accuracy(y_true, y_pred)
+                )
+            if metric == "binary_accuracy":
+                result[metric] = lambda y_true, y_pred: tf.reduce_mean(
+                    tf.keras.metrics.binary_accuracy(y_true, y_pred)
+                )
+
+        y_pred = self.call(x)
+
+        sess = KE.get_session()
+        y_preds = []
+        y_trues = []
+        if steps is not None:
+            for i in range(steps):
+                y_true_, y_pred_ = sess.run([y, y_pred.reveal()])
+                y_preds.append(y_pred_)
+                y_trues.append(y_true_)
+        else:
+            while True:
+                try:
+                    y_true_, y_pred_ = sess.run([y, y_pred.reveal()])
+                    y_preds.append(y_pred_)
+                    y_trues.append(y_true_)
+                except tf.errors.OutOfRangeError:
+                    break
+
+        y_pred = np.concatenate(y_preds)
+        y_true = np.concatenate(y_trues)
+
+        for metric in result.keys():
+            result[metric] = sess.run(result[metric](y_true, y_pred))
+
+        return result
 
     def set_weights(self, weights, sess=None):
         """Sets the weights of the model.

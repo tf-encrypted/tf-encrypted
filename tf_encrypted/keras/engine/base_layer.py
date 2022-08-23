@@ -3,13 +3,13 @@ import logging
 from abc import ABC
 
 import numpy as np
+import tensorflow as tf
 from tensorflow.python.keras.utils import generic_utils
 
 import tf_encrypted as tfe
 from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
-from tf_encrypted.protocol.pond import PondMaskedTensor
-from tf_encrypted.protocol.pond import PondPrivateTensor
+from tf_encrypted.protocol import TFEPrivateTensor
 
 logger = logging.getLogger("tf_encrypted")
 
@@ -40,6 +40,7 @@ class Layer(ABC):
             "weights",
             "activity_regularizer",
             "dtype",
+            "lazy_normalization",
         }
         # Validate optional keyword arguments.
         for kwarg in kwargs:
@@ -55,6 +56,10 @@ class Layer(ABC):
             self._batch_input_shape = kwargs["input_shape"]
         if "batch_input_shape" in kwargs:
             self._batch_input_shape = kwargs["batch_input_shape"]
+
+        self.lazy_normalization = False
+        if "lazy_normalization" in kwargs:
+            self.lazy_normalization = kwargs["lazy_normalization"]
 
         self.trainable = trainable
         self._init_set_name(name)
@@ -101,7 +106,8 @@ class Layer(ABC):
 
             self.built = True
 
-        outputs = self.call(inputs, *args, **kargs)
+        with tf.name_scope(self._name):
+            outputs = self.call(inputs, *args, **kargs)
 
         return outputs
 
@@ -123,7 +129,7 @@ class Layer(ABC):
             of private variables
         sess: tfe session"""
 
-        weights_types = (np.ndarray, PondPrivateTensor, PondMaskedTensor)
+        weights_types = (np.ndarray, TFEPrivateTensor)
         assert isinstance(weights[0], weights_types), type(weights[0])
 
         # Assign new keras weights to existing weights defined by
@@ -137,7 +143,7 @@ class Layer(ABC):
                 tfe_weights_pl = tfe.define_private_placeholder(shape)
                 fd = tfe_weights_pl.feed(weights[i].reshape(shape))
                 sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
-        elif isinstance(weights[0], PondPrivateTensor):
+        elif isinstance(weights[0], TFEPrivateTensor):
             for i, w in enumerate(self.weights):
                 shape = w.shape.as_list()
                 sess.run(tfe.assign(w, weights[i].reshape(shape)))

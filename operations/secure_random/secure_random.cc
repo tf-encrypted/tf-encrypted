@@ -30,7 +30,7 @@ REGISTER_OP("SecureSeededRandomUniform")
     .Input("minval: dtype")
     .Input("maxval: dtype")
     .Output("output: dtype")
-    .Attr("dtype: {int32, int64} = DT_INT32")
+    .Attr("dtype: {int8, int16, int32, int64} = DT_INT32")
     .Attr("T: {int32, int64} = DT_INT32")
     .Attr("Tseed: {int32} = DT_INT32")
     .SetIsStateful()
@@ -41,14 +41,19 @@ REGISTER_OP("SecureRandomUniform")
     .Input("minval: dtype")
     .Input("maxval: dtype")
     .Output("output: dtype")
-    .Attr("dtype: {int32, int64} = DT_INT32")
+    .Attr("dtype: {int8, int16, int32, int64} = DT_INT32")
     .Attr("T: {int32, int64} = DT_INT32")
     .SetIsStateful()
     .SetShapeFn(RandomUniformShapeCommon);
 
 REGISTER_OP("SecureSeed")
+    .Output("output: int32")
     .SetIsStateful()
-    .Output("output: int32");
+    .SetShapeFn([](InferenceContext* c) {
+        if (!c) return errors::Internal("empty shape_inference::InferenceContext pointer");
+        c->set_output(0, c->MakeShape({c->MakeDim(NUMBER_OF_SEEDS)}));
+        return Status::OK();
+    });
 
 template <typename T, typename Gen>
 class SeededRandomUniformOp : public OpKernel {
@@ -168,6 +173,16 @@ public:
 REGISTER_KERNEL_BUILDER(
   Name("SecureSeededRandomUniform")
   .Device(DEVICE_CPU)
+  .TypeConstraint<int8>("dtype"),
+  SeededRandomUniformOp<int8, SeededGenerator<int8, int16>>);
+REGISTER_KERNEL_BUILDER(
+  Name("SecureSeededRandomUniform")
+  .Device(DEVICE_CPU)
+  .TypeConstraint<int16>("dtype"),
+  SeededRandomUniformOp<int16, SeededGenerator<int16, int32>>);
+REGISTER_KERNEL_BUILDER(
+  Name("SecureSeededRandomUniform")
+  .Device(DEVICE_CPU)
   .TypeConstraint<int32>("dtype"),
   SeededRandomUniformOp<int32, SeededGenerator<int32, int64>>);
 REGISTER_KERNEL_BUILDER(
@@ -176,6 +191,16 @@ REGISTER_KERNEL_BUILDER(
   .TypeConstraint<int64>("dtype"),
   SeededRandomUniformOp<int64, SeededGenerator<int64, __uint128_t>>);
 
+REGISTER_KERNEL_BUILDER(
+  Name("SecureRandomUniform")
+  .Device(DEVICE_CPU)
+  .TypeConstraint<int8>("dtype"),
+  RandomUniformOp<int8, Generator<int8, int16>>);
+REGISTER_KERNEL_BUILDER(
+  Name("SecureRandomUniform")
+  .Device(DEVICE_CPU)
+  .TypeConstraint<int16>("dtype"),
+  RandomUniformOp<int16, Generator<int16, int32>>);
 REGISTER_KERNEL_BUILDER(
   Name("SecureRandomUniform")
   .Device(DEVICE_CPU)

@@ -1,6 +1,6 @@
 # Private Predictions for MNIST
 
-This example illustrates how TF Encrypted can be used to perform private predictions using a simple neural network on the MNIST data set. It also shows how to integrate with ordinary TensorFlow, seamlessly linking local computations with secure computations.
+This example illustrates how TF Encrypted can be used to perform private training using a simple neural network on the MNIST data set. It also shows how to integrate with ordinary TensorFlow, seamlessly linking local computations with secure computations.
 
 Our scenario is split into two phases.
 

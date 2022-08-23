@@ -2,12 +2,14 @@
 import unittest
 
 import numpy as np
+import pytest
 import tensorflow as tf
 
 import tf_encrypted as tfe
 from tf_encrypted.layers import Batchnorm
 
 
+@pytest.mark.layers
 class TestBatchnorm(unittest.TestCase):
     def setUp(self):
         tf.reset_default_graph()

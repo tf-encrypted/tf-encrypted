@@ -37,8 +37,7 @@ def bool_factory():
                 return DenseTensor(value)
 
             value = np.array(value)
-            value = tf.convert_to_tensor(value)
-            value = tf.cast(value, self.native_type)
+            value = tf.convert_to_tensor(value, dtype=self.native_type)
             return DenseTensor(value)
 
         def constant(self, value):

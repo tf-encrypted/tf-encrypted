@@ -61,6 +61,7 @@ jobs:
   build:
     docker:
       - image: circleci/python:3.6
+    resource_class: large
     working_directory: ~/repo
     steps:
       - setup_remote_docker

@@ -17,7 +17,6 @@ from math import log2
 from typing import Any
 from typing import Callable
 from typing import List
-from typing import NewType
 from typing import Optional
 from typing import Tuple
 from typing import Union
@@ -43,15 +42,17 @@ from ...tensor.fixed import _validate_fixedpoint_config
 from ...tensor.helpers import inverse
 from ...utils import wrap_in_variables
 from ..protocol import Protocol
+from ..protocol import TFEPrivateTensor
+from ..protocol import TFEPrivateVariable
+from ..protocol import TFEPublicTensor
+from ..protocol import TFEPublicVariable
+from ..protocol import TFETensor
 from ..protocol import memoize
 from ..protocol import nodes
 from .triple_sources import OnlineTripleSource
 from .triple_sources import TripleSource
 
 TFEData = Union[np.ndarray, tf.Tensor]
-TFEVariable = Union["PondPublicVariable", "PondPrivateVariable", tf.Variable]
-TFEPublicTensor = NewType("TFEPublicTensor", "PondPublicTensor")
-TFETensor = Union[TFEPublicTensor, "PondPrivateTensor", "PondMaskedTensor"]
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 TF_INT_TYPES = [tf.int8, tf.int16, tf.int32, tf.int64]
 TripleSourceOrPlayer = Union[TripleSource, Player]
@@ -1617,7 +1618,7 @@ class AdditiveFIFOQueue(AbstractFIFOQueue):
 #
 
 
-class PondTensor(abc.ABC):
+class PondTensor(TFETensor):
     """
   This class functions mostly as a convenient way of exposing operations
   directly on the various tensor objects, ie allowing one to write `x + y`
@@ -1829,7 +1830,7 @@ class PondTensor(abc.ABC):
         return self.prot.reduce_max(self, axis)
 
 
-class PondPublicTensor(PondTensor):
+class PondPublicTensor(PondTensor, TFEPublicTensor):
     """
   This class represents a public tensor, known by at least the two servers
   but potentially known by more. Although there is only a single value we
@@ -1905,7 +1906,7 @@ class PondPublicTensor(PondTensor):
         return self.decode()
 
 
-class PondPrivateTensor(PondTensor):
+class PondPrivateTensor(PondTensor, TFEPrivateTensor):
     """
   This class represents a private value that may be unknown to everyone.
   """
@@ -1961,7 +1962,7 @@ class PondPrivateTensor(PondTensor):
         return self.prot.reveal(self)
 
 
-class PondMaskedTensor(PondTensor):
+class PondMaskedTensor(PondTensor, TFEPrivateTensor):
     """
   This class is part of an optimization where values are only ever masked
   once as opposed to for every operation in which they are used. As such
@@ -2130,7 +2131,7 @@ class PondPrivatePlaceholder(PondPrivateTensor):
         return {**feed0, **feed1}
 
 
-class PondPublicVariable(PondPublicTensor):
+class PondPublicVariable(PondPublicTensor, TFEPublicVariable):
     """
   This class essentially represents a public value, however it additionally
   records the fact that the backing tensor was declared as a variable in
@@ -2155,7 +2156,7 @@ class PondPublicVariable(PondPublicTensor):
         return "PondPublicVariable(shape={})".format(self.shape)
 
 
-class PondPrivateVariable(PondPrivateTensor):
+class PondPrivateVariable(PondPrivateTensor, TFEPrivateVariable):
     """
   This class essentially represents a private value, however it additionally
   records the fact that the backing tensor was declared as a variable in
@@ -3413,7 +3414,7 @@ def _avgpool2d_im2col_reduce(
         out_width = ceil((int(width) - pool_size[1] + 1) / strides[1])
 
     x_split = x.reshape((batch * channels, 1, height, width))
-    x_cols = x_split.im2col(pool_height, pool_width, padding, strides[0])
+    x_cols = x_split.im2col(pool_height, pool_width, strides[0], padding)
     x_cols_sum = x_cols.reduce_sum(axis=0)
     return x_cols_sum.reshape([out_height, out_width, batch, channels]).transpose(
         [2, 3, 0, 1]
