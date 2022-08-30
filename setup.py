@@ -17,7 +17,7 @@ setuptools.setup(
         "tensorflow >=1.12.0, <2",
         "numpy >=1.14.0",
         "pyyaml >=5.1",
-        "tf-big ~=0.1.0",
+        # "tf-big ~=0.1.0",
     ],
     extras_require={
         "tf": ["tensorflow>=1.12.0,<2"],
