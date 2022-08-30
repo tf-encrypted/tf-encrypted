@@ -921,7 +921,10 @@ class ABY3(Protocol):
 
         with tf.name_scope("share"):
             if share_type == ShareType.ARITHMETIC or share_type == ShareType.BOOLEAN:
-                randoms = secret.factory.sample_uniform([2] + secret.shape)
+                secret_shape = secret.shape
+                if isinstance(secret_shape, tf.TensorShape):
+                    secret_shape = secret_shape.as_list()
+                randoms = secret.factory.sample_uniform([2] + secret_shape)
                 share0 = randoms[0]
                 share1 = randoms[1]
                 if share_type == ShareType.ARITHMETIC:
