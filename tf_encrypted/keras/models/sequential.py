@@ -1,20 +1,16 @@
 """Sequential model API."""
-import time
-
-import numpy as np
 import tensorflow as tf
-from tensorflow.keras import utils
 
 import tf_encrypted as tfe
-from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras import optimizers
-from tf_encrypted.keras.engine.base_layer import Layer
+from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.engine.input_layer import Input
 from tf_encrypted.keras.engine.input_layer import InputLayer
-from tf_encrypted.protocol import memoize
+
+from .base_model import BaseModel
 
 
-class Sequential(Layer):
+class Sequential(BaseModel):
     """Model defined by a stack of layers in sequence."""
 
     def __init__(self, layers=None, name=None):
@@ -30,17 +26,17 @@ class Sequential(Layer):
     def add(self, layer):
         """Adds a layer instance on top of the layer stack.
 
-    Arguments:
-      layer: layer instance.
+        Arguments:
+          layer: layer instance.
 
-    Raises:
-      TypeError: If `layer` is not a layer instance.
-      ValueError: In case the `layer` argument does not
-        know its input shape.
-      ValueError: In case the `layer` argument has
-        multiple output tensors, or is already connected
-        somewhere else (forbidden in `Sequential` models).
-    """
+        Raises:
+          TypeError: If `layer` is not a layer instance.
+          ValueError: In case the `layer` argument does not
+            know its input shape.
+          ValueError: In case the `layer` argument has
+            multiple output tensors, or is already connected
+            somewhere else (forbidden in `Sequential` models).
+        """
         if not isinstance(layer, Layer):
             raise TypeError(
                 "The added layer must be "
@@ -93,20 +89,19 @@ class Sequential(Layer):
             self._layers.append(layer)
 
         # Add layer weights to model weights
-        self.weights.extend(layer.weights)
+        self.weights.append(layer.weights)
 
     def call(
-        self, inputs, training=None, mask=None,
+        self,
+        inputs,
+        training=None,
+        mask=None,
     ):  # pylint: disable=arguments-differ
         if training is not None:
             raise NotImplementedError()
         if mask is not None:
             raise NotImplementedError()
         outputs = inputs  # handle the corner case where self.layers is empty
-        # Clear model weights.
-        # NOTE: this does NOT result in weights re-initialization if the model
-        # has been built before.
-        self.weights = []
         for layer in self.layers:
             # During each iteration, `inputs` are the inputs to `layer`, and `outputs`
             # are the outputs of `layer` applied to `inputs`. At the end of each
@@ -115,193 +110,70 @@ class Sequential(Layer):
 
             # `outputs` will be the inputs to the next layer.
             inputs = outputs
-
-            # Add layer weights to model weights
-            self.weights.extend(layer.weights)
-
         return outputs
 
     @property
     def layers(self):
         """Historically, `sequential.layers` only returns layers that were added
-    via `add`, and omits the auto-generated `InputLayer` that comes at the
-    bottom of the stack."""
+        via `add`, and omits the auto-generated `InputLayer` that comes at the
+        bottom of the stack."""
         layers = self._layers
         if layers and isinstance(layers[0], InputLayer):
             return layers[1:]
         return layers[:]
 
     def backward(self, d_y):
-        update_ops = []
         # for layer in reversed(self.layers):
         for i in range(len(self.layers) - 1, -1, -1):
             with tf.name_scope(self.layers[i].name + "/backward"):
                 grad_weights, d_y = self.layers[i].backward(d_y)
-                if i > 0:
-                    # IMPORTANT: d_y should be computed before the weights are updated
-                    with tf.control_dependencies(d_y.flatten_to_native()):
-                        update_ops.append(
-                            self._optimizer.apply_gradients(
-                                self.layers[i].weights, grad_weights
-                            )
-                        )
-                else:
-                    # No need to wait for the computation of the last
-                    # backward d_y because it will not be used
-                    update_ops.append(
-                        self._optimizer.apply_gradients(
-                            self.layers[i].weights, grad_weights
-                        )
-                    )
-
-        return tf.group(*update_ops)
+                self._optimizer.apply_gradients(self.layers[i].weights, grad_weights)
 
     def compile(self, optimizer, loss):
         """Configures the model for training.
 
-      Arguments:
-        optimizer: Optimizer instance
-        loss: Objective function
-    """
+        Arguments:
+          optimizer: Optimizer instance
+          loss: Objective function
+        """
         self._optimizer = optimizers.get(optimizer)
         self._loss = loss
         assert self._optimizer is not None, "An optimizer must be specified."
         assert self._loss is not None, "A loss must be specified."
 
-        self._optimizer.compile(self.layers)
+        self._optimizer.compile(self.weights)
 
-    @memoize
-    def fit_batch(self, x, y):
-        """Trains the model on a single batch.
-
-    Arguments:
-      x: Private tensor of training data
-      y: Private tensor of target (label) data
-    """
-        y_pred = self.call(x)
-        dy = self._loss.grad(y, y_pred)
-        back_prop = self.backward(dy)
-        loss = self._loss(y, y_pred)
-
-        return back_prop, loss
-
-    def fit(self, x, y, epochs=1, steps_per_epoch=1):
-        """Trains the model for a given number of epochs
-    (iterations on a dataset).
-
-    Arguments:
-      x: Private tensor of training data
-      y: Private tensor of target (label) data
-      epochs: Integer. Number of epochs to train the model.
-      steps_per_epoch: Integer. Total number of steps (batches of samples)
-        before declaring one epoch finished and starting the next epoch.
-    """
-
-        # Initialize variables before starting to train
-        sess = KE.get_session()
-        sess.run(tf.global_variables_initializer(), tag="global-init")
-
-        fit_batch_op, loss = self.fit_batch(x, y)
-
-        for e in range(epochs):
-            print("Epoch {}/{}".format(e + 1, epochs))
-            batch_size = x.shape.as_list()[0]
-            progbar = utils.Progbar(batch_size * steps_per_epoch)
-            for _ in range(steps_per_epoch):
-                start = time.time()
-                _, current_loss = sess.run(
-                    [fit_batch_op, loss.reveal()], tag="fit-batch"
-                )
-                end = time.time()
-                progbar.add(
-                    batch_size, values=[("loss", current_loss), ("time", end - start)]
-                )
-
-    def predict(self, x, reveal=False):
-        y_pred = self.call(x)
-
-        if reveal:
-            sess = KE.get_session()
-            y_pred = sess.run(y_pred.reveal())
-
-        return y_pred
-
-    def evaluate(self, x, y, steps=None, metrics=None):
-        if metrics is None:
-            return {}
-
-        result = {}
-        for metric in metrics:
-            if metric == "categorical_accuracy":
-                result[metric] = lambda y_true, y_pred: tf.reduce_mean(
-                    tf.keras.metrics.categorical_accuracy(y_true, y_pred)
-                )
-            if metric == "binary_accuracy":
-                result[metric] = lambda y_true, y_pred: tf.reduce_mean(
-                    tf.keras.metrics.binary_accuracy(y_true, y_pred)
-                )
-
-        y_pred = self.call(x)
-
-        sess = KE.get_session()
-        y_preds = []
-        y_trues = []
-        if steps is not None:
-            for i in range(steps):
-                y_true_, y_pred_ = sess.run([y, y_pred.reveal()])
-                y_preds.append(y_pred_)
-                y_trues.append(y_true_)
-        else:
-            while True:
-                try:
-                    y_true_, y_pred_ = sess.run([y, y_pred.reveal()])
-                    y_preds.append(y_pred_)
-                    y_trues.append(y_true_)
-                except tf.errors.OutOfRangeError:
-                    break
-
-        y_pred = np.concatenate(y_preds)
-        y_true = np.concatenate(y_trues)
-
-        for metric in result.keys():
-            result[metric] = sess.run(result[metric](y_true, y_pred))
-
-        return result
-
-    def set_weights(self, weights, sess=None):
+    def set_weights(self, weights):
         """Sets the weights of the model.
 
-    Arguments:
-      weights: A list of Numpy arrays with shapes and types
-        matching the output of model.get_weights()
-      sess: tfe.Session instance.
-    """
-
-        if not sess:
-            sess = KE.get_session()
+        Arguments:
+          weights: A list of Numpy arrays with shapes and types
+            matching the output of model.get_weights()
+        """
+        if not isinstance(weights[0], list):
+            new_weights = []
+            for layer in self.layers:
+                new_weights.append(weights[: len(layer.weights)])
+                weights = weights[len(layer.weights) :]
+            weights = new_weights
 
         # Updated weights for each layer
-        for layer in self.layers:
-            num_param = len(layer.weights)
-            if num_param == 0:
+        for index, weight in enumerate(weights):
+            if len(weight) == 0:
                 continue
-            layer_weights = weights[:num_param]
-
-            layer.set_weights(layer_weights, sess)
-
-            weights = weights[num_param:]
+            self.layers[index].set_weights(weight)
 
     @classmethod
     def from_config(cls, config):
         """Instantiates a TFE Keras model from its config.
 
-    Arguments:
-      config: Configuration dictionary matching the output of
-        model.get_weights().
+        Arguments:
+          config: Configuration dictionary matching the output of
+            model.get_weights().
 
-    Returns:
-        A TFE Keras Sequential instance.
-    """
+        Returns:
+            A TFE Keras Sequential instance.
+        """
         tfe_model = model_from_config(config)
 
         return tfe_model
@@ -310,19 +182,21 @@ class Sequential(Layer):
 def model_from_config(config):
     """Instantiates a TFE Keras model from its config.
 
-  Arguments:
-    config: Configuration dictionary matching the output of
-        model.get_weights().
+    Arguments:
+      config: Configuration dictionary matching the output of
+          model.get_weights().
 
-  Returns:
-    A TFE Keras Sequential instance.
-  """
+    Returns:
+      A TFE Keras Sequential instance.
+    """
 
     tfe_model = tfe.keras.Sequential([])
 
     for k_l_c in config["layers"]:
-        tfe_layer = _instantiate_tfe_layer(k_l_c)
-        tfe_model.add(tfe_layer)
+        # [TODO] zjn: support InputLayer
+        if k_l_c["class_name"] != "InputLayer":
+            tfe_layer = _instantiate_tfe_layer(k_l_c)
+            tfe_model.add(tfe_layer)
 
     return tfe_model
 
@@ -330,13 +204,13 @@ def model_from_config(config):
 def clone_model(model):
     """Clone any tf.keras.Model into a tfe.keras.Sequenial model.
 
-  Arguments:
-    model: tf.keras.Sequential or tf.keras.Model instance.
+    Arguments:
+      model: tf.keras.Sequential or tf.keras.Model instance.
 
-  Returns:
-    A TFE Keras model instance reproducing the behavior of the
-    original model using newly instantiated weights.
-  """
+    Returns:
+      A TFE Keras model instance reproducing the behavior of the
+      original model using newly instantiated weights.
+    """
 
     config = model.get_config()
     weights = model.get_weights()
@@ -350,13 +224,13 @@ def clone_model(model):
 def _instantiate_tfe_layer(keras_layer_config):
     """instantiate TFE layer based on Keras layer config.
 
-  Arguments:
-    keras_layer_config: result of layer.get_config().
+    Arguments:
+      keras_layer_config: result of layer.get_config().
 
-  Returns:
-    A TFE Keras layer instance reproducing the behavior of the
-    original Keras layer.
-  """
+    Returns:
+      A TFE Keras layer instance reproducing the behavior of the
+      original Keras layer.
+    """
 
     # Identify tf.keras layer type, and grab the corresponding tfe.keras layer
     keras_layer_type = keras_layer_config["class_name"]

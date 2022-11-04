@@ -28,5 +28,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     config = RemoteConfig.load(args.config)
-    server = config.server(args.name, start=True)
+    server = config.start_server(args.name, start=True)
     server.join()

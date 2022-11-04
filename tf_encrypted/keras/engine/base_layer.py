@@ -7,9 +7,9 @@ import tensorflow as tf
 from tensorflow.python.keras.utils import generic_utils
 
 import tf_encrypted as tfe
-from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.engine.base_layer_utils import unique_object_name
 from tf_encrypted.protocol import TFEPrivateTensor
+from tf_encrypted.protocol import TFEPrivateVariable
 
 logger = logging.getLogger("tf_encrypted")
 
@@ -121,32 +121,25 @@ class Layer(ABC):
 
         return variable
 
-    def set_weights(self, weights, sess=None):
+    def set_weights(self, weights):
         """Sets the weights of the layer.
         Arguments:
         weights: A list of Numpy arrays with shapes and types
             matching the output of layer.get_weights() or a list
-            of private variables
-        sess: tfe session"""
-
+            of private tensors
+        """
         weights_types = (np.ndarray, TFEPrivateTensor)
         assert isinstance(weights[0], weights_types), type(weights[0])
 
-        # Assign new keras weights to existing weights defined by
-        # default when tfe layer was instantiated
-        if not sess:
-            sess = KE.get_session()
-
         if isinstance(weights[0], np.ndarray):
-            for i, w in enumerate(self.weights):
-                shape = w.shape.as_list()
-                tfe_weights_pl = tfe.define_private_placeholder(shape)
-                fd = tfe_weights_pl.feed(weights[i].reshape(shape))
-                sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
-        elif isinstance(weights[0], TFEPrivateTensor):
-            for i, w in enumerate(self.weights):
-                shape = w.shape.as_list()
-                sess.run(tfe.assign(w, weights[i].reshape(shape)))
+            for index, weight in enumerate(weights):
+                weights[index] = tfe.define_private_variable(weight)
+        if isinstance(weights[0], TFEPrivateVariable):
+            for index, weight in enumerate(weights):
+                weights[index] = weights[index].read_value()
+        for i, w in enumerate(self.weights):
+            shape = w.shape.as_list()
+            tfe.assign(w, weights[i].reshape(shape))
 
     @property
     def name(self):

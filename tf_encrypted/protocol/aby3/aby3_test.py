@@ -19,7 +19,6 @@ from tf_encrypted.protocol.aby3 import ShareType
 @pytest.mark.aby3
 class TestABY3(unittest.TestCase):
     def test_define_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -33,27 +32,23 @@ class TestABY3(unittest.TestCase):
         y = tfe.define_private_variable(np.ones(shape=(2, 2)))
         z = provide_input()
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(x.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 1], [1, 1]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = x.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 1], [1, 1]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(y.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 1], [1, 1]]), rtol=0.0, atol=0.01
-            )
+        result = y.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 1], [1, 1]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1.3, 1.3], [1.3, 1.3]]), rtol=0.0, atol=0.01
-            )
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1.3, 1.3], [1.3, 1.3]]), rtol=0.0, atol=0.01
+        )
 
     def test_add_private_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -69,17 +64,13 @@ class TestABY3(unittest.TestCase):
         # define computation
         z = x + y
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            # Should be [[2.3, 2.3], [2.3, 2.3]]
-            expected = np.array([[2.3, 2.3], [2.3, 2.3]])
-            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
+        # reveal result
+        result = z.reveal().to_native()
+        # Should be [[2.3, 2.3], [2.3, 2.3]]
+        expected = np.array([[2.3, 2.3], [2.3, 2.3]])
+        np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
 
     def test_add_private_public(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -92,16 +83,12 @@ class TestABY3(unittest.TestCase):
         z = x + y
         z = y + z
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            expected = np.array([[2.2, 2.4], [2.6, 2.8]])
-            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
+        # reveal result
+        result = z.reveal().to_native()
+        expected = np.array([[2.2, 2.4], [2.6, 2.8]])
+        np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
 
     def test_sub_private_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -115,16 +102,12 @@ class TestABY3(unittest.TestCase):
 
         z = x - y
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            expected = np.array([[-0.3, -0.3], [-0.3, -0.3]])
-            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
+        # reveal result
+        result = z.reveal().to_native()
+        expected = np.array([[-0.3, -0.3], [-0.3, -0.3]])
+        np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
 
     def test_sub_private_public(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -137,19 +120,15 @@ class TestABY3(unittest.TestCase):
         z1 = x - y
         z2 = y - x
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            z1_exp = np.array([[0.4, 0.3], [0.2, 0.1]])
-            np.testing.assert_allclose(result, z1_exp, rtol=0.0, atol=0.01)
-            result = sess.run(z2.reveal())
-            z2_exp = np.array([[-0.4, -0.3], [-0.2, -0.1]])
-            np.testing.assert_allclose(result, z2_exp, rtol=0.0, atol=0.01)
+        # reveal result
+        result = z1.reveal().to_native()
+        z1_exp = np.array([[0.4, 0.3], [0.2, 0.1]])
+        np.testing.assert_allclose(result, z1_exp, rtol=0.0, atol=0.01)
+        result = z2.reveal().to_native()
+        z2_exp = np.array([[-0.4, -0.3], [-0.2, -0.1]])
+        np.testing.assert_allclose(result, z2_exp, rtol=0.0, atol=0.01)
 
     def test_neg(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -162,19 +141,15 @@ class TestABY3(unittest.TestCase):
         z1 = -x
         z2 = -y
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            z1_exp = np.array([[-0.6, 0.7], [0.8, -0.9]])
-            np.testing.assert_allclose(result, z1_exp, rtol=0.0, atol=0.01)
-            result = sess.run(z2)
-            z2_exp = np.array([[-0.6, 0.7], [0.8, -0.9]])
-            np.testing.assert_allclose(result, z2_exp, rtol=0.0, atol=0.01)
+        # reveal result
+        result = z1.reveal().to_native()
+        z1_exp = np.array([[-0.6, 0.7], [0.8, -0.9]])
+        np.testing.assert_allclose(result, z1_exp, rtol=0.0, atol=0.01)
+        result = z2.to_native()
+        z2_exp = np.array([[-0.6, 0.7], [0.8, -0.9]])
+        np.testing.assert_allclose(result, z2_exp, rtol=0.0, atol=0.01)
 
     def test_mul_private_public(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -188,17 +163,13 @@ class TestABY3(unittest.TestCase):
         z1 = y * x  # mul_public_private
         z2 = z1 * w  # mul_private_public
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z2.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[2.4, 2.8], [3.2, 3.6]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z2.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[2.4, 2.8], [3.2, 3.6]]), rtol=0.0, atol=0.01
+        )
 
     def test_mul_private_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -217,17 +188,13 @@ class TestABY3(unittest.TestCase):
         # define computation
         z = y * x
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[2.6, 2.6], [2.6, 2.6]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[2.6, 2.6], [2.6, 2.6]]), rtol=0.0, atol=0.01
+        )
 
     def test_pow2_mul_div(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -241,29 +208,25 @@ class TestABY3(unittest.TestCase):
         z3 = x / 8
         z4 = x / 0.125
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[4.8, 5.6], [6.4, 7.2]]), rtol=0.0, atol=0.01
-            )
-            result = sess.run(z2.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[0.075, 0.0875], [0.1, 0.1125]]), rtol=0.0, atol=0.01
-            )
-            result = sess.run(z3.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[0.075, 0.0875], [0.1, 0.1125]]), rtol=0.0, atol=0.01
-            )
-            result = sess.run(z4.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[4.8, 5.6], [6.4, 7.2]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[4.8, 5.6], [6.4, 7.2]]), rtol=0.0, atol=0.01
+        )
+        result = z2.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[0.075, 0.0875], [0.1, 0.1125]]), rtol=0.0, atol=0.01
+        )
+        result = z3.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[0.075, 0.0875], [0.1, 0.1125]]), rtol=0.0, atol=0.01
+        )
+        result = z4.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[4.8, 5.6], [6.4, 7.2]]), rtol=0.0, atol=0.01
+        )
 
     def test_matmul_public_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -284,27 +247,23 @@ class TestABY3(unittest.TestCase):
         w = y.matmul(x)  # matmul_public_private
         z = w.matmul(v)  # matmul_private_public
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(w.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[2.3, 2.3], [2.7, 2.7], [3.1, 3.1]]),
-                rtol=0.0,
-                atol=0.01,
-            )
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[4.6, 4.6], [5.4, 5.4], [6.2, 6.2]]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        # reveal result
+        result = w.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[2.3, 2.3], [2.7, 2.7], [3.1, 3.1]]),
+            rtol=0.0,
+            atol=0.01,
+        )
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[4.6, 4.6], [5.4, 5.4], [6.2, 6.2]]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
     def test_matmul_private_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -315,17 +274,13 @@ class TestABY3(unittest.TestCase):
 
         z = tfe.matmul(x, y)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[58, 64], [139, 154]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[58, 64], [139, 154]]), rtol=0.0, atol=0.01
+        )
 
     def test_matmul_repeat(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -342,15 +297,11 @@ class TestABY3(unittest.TestCase):
         for i in range(10):
             m_z = m_z + tfe.matmul(m_xs[i], m_ys[i]) / 10
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(m_z.reveal())
-            np.testing.assert_allclose(result, z, rtol=0.0, atol=0.01)
+        # reveal result
+        result = m_z.reveal().to_native()
+        np.testing.assert_allclose(result, z, rtol=0.0, atol=0.01)
 
     def test_3d_matmul_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -361,20 +312,16 @@ class TestABY3(unittest.TestCase):
 
         z = tfe.matmul(x, y)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[[94, 100], [229, 244]], [[508, 532], [697, 730]]]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        # reveal result
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[[94, 100], [229, 244]], [[508, 532], [697, 730]]]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
     def test_cast(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -387,21 +334,17 @@ class TestABY3(unittest.TestCase):
         z1 = x.cast(prot.factories[tf.int32])
         z2 = y.cast(prot.factories[tf.int32])
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[0.6, -0.7], [-0.8, 0.9]]), rtol=0.0, atol=0.01
-            )
-            result = sess.run(z2)
-            np.testing.assert_allclose(
-                result, np.array([[0.6, -0.7], [-0.8, 0.9]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[0.6, -0.7], [-0.8, 0.9]]), rtol=0.0, atol=0.01
+        )
+        result = z2.to_native()
+        np.testing.assert_allclose(
+            result, np.array([[0.6, -0.7], [-0.8, 0.9]]), rtol=0.0, atol=0.01
+        )
 
     def test_boolean_sharing(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -417,22 +360,18 @@ class TestABY3(unittest.TestCase):
 
         z2 = tfe.and_(x, y)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[6, 10, 10], [14, 14, 10]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[6, 10, 10], [14, 14, 10]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z2.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 0, 1], [0, 1, 4]]), rtol=0.0, atol=0.01
-            )
+        result = z2.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 0, 1], [0, 1, 4]]), rtol=0.0, atol=0.01
+        )
 
     def test_not_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -451,19 +390,16 @@ class TestABY3(unittest.TestCase):
         z1 = ~x
         z2 = ~y
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[-2, -3, -4], [-5, -6, -7]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[-2, -3, -4], [-5, -6, -7]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z2.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[0, 1, 1], [1, 0, 1]]), rtol=0.0, atol=0.01
-            )
+        result = z2.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[0, 1, 1], [1, 0, 1]]), rtol=0.0, atol=0.01
+        )
 
     def test_native_ppa_sklansky(self):
         from math import log2
@@ -473,8 +409,8 @@ class TestABY3(unittest.TestCase):
         while n > 0:
             n = n - 1
 
-            x = randint(1, 2 ** 31)
-            y = randint(1, 2 ** 31)
+            x = randint(1, 2**31)
+            y = randint(1, 2**31)
             keep_masks = [
                 0x5555555555555555,
                 0x3333333333333333,
@@ -503,8 +439,8 @@ class TestABY3(unittest.TestCase):
                 G1 = (G & c_mask) << 1
                 P1 = (P & c_mask) << 1
                 for j in range(i):
-                    G1 = (G1 << (2 ** j)) ^ G1
-                    P1 = (P1 << (2 ** j)) ^ P1
+                    G1 = (G1 << (2**j)) ^ G1
+                    P1 = (P1 << (2**j)) ^ P1
                 # Two-round impl. using algo. specified in the slides that assume using OR gate is free, but in fact,
                 # here using OR gate cost one round.
                 # The PPA operator 'o' is defined as:
@@ -554,8 +490,8 @@ class TestABY3(unittest.TestCase):
         n = 10
         while n > 0:
             n = n - 1
-            x = randint(1, 2 ** 31)
-            y = randint(1, 2 ** 31)
+            x = randint(1, 2**31)
+            y = randint(1, 2**31)
             G = x & y
             P = x ^ y
             keep_masks = [
@@ -571,8 +507,8 @@ class TestABY3(unittest.TestCase):
                 k_mask = keep_masks[i]
                 # Copy the selected bit to 2^i positions:
                 # For example, when i=2, the 4-th bit is copied to the (5, 6, 7, 8)-th bits
-                G1 = G << (2 ** i)
-                P1 = P << (2 ** i)
+                G1 = G << (2**i)
+                P1 = P << (2**i)
 
                 # One-round impl. by modifying the PPA operator 'o' as:
                 # (G, P) o (G1, P1) = (G ^ (P*G1), P*P1), where '^' is XOR, '*' is AND
@@ -601,34 +537,29 @@ class TestABY3(unittest.TestCase):
             assert z == truth
 
     def test_error(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
 
-        a = tf.random_uniform(
-            [1], -(2 ** 44), 2 ** 44
+        a = tf.random.uniform(
+            [1], -(2**44), 2**44
         )  # Plus the 18-bit fractional scale, this will be encoded to 62-bit numbers
-        x = tfe.define_private_input("server0", lambda: a)
-
         amount = prot.fixedpoint_config.precision_fractional
-        y1 = tfe.truncate(x)
-        z = a / (2 ** amount)
+        truth = a / (2**amount)
 
-        with tfe.Session() as sess:
-            sess.run(tfe.global_variables_initializer())
-            error1 = 0
-            n = 100000
-            for i in range(n):
-                result1, truth = sess.run([y1.reveal(), z])
-                try:
-                    np.testing.assert_allclose(result1, truth, rtol=0.0, atol=0.1)
-                except:
-                    error1 += 1
-            print("Heuristic truncate error rate: ", error1 / n * 100, "%")
+        error1 = 0
+        n = 100000
+        for i in range(n):
+            x = tfe.define_private_input("server0", lambda: a)
+            y = tfe.truncate(x)
+            result = y.reveal().to_native()
+            try:
+                np.testing.assert_allclose(result, truth, rtol=0.0, atol=0.1)
+            except:
+                error1 += 1
+        print("Heuristic truncate error rate: ", error1 / n * 100, "%")
 
     def test_bit_gather(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -644,17 +575,13 @@ class TestABY3(unittest.TestCase):
         z1 = tfe.bit_gather(x, 0, 2)
         z2 = tfe.bit_gather(x, 1, 2)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_array_equal(result, np.array([0, 0x8F484]))
-            result = sess.run(z2.reveal())
-            np.testing.assert_array_equal(result, np.array([0xFF, 0x135F9]))
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_array_equal(result, np.array([0, 0x8F484]))
+        result = z2.reveal().to_native()
+        np.testing.assert_array_equal(result, np.array([0xFF, 0x135F9]))
 
     def test_bit_split_and_gather(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -669,51 +596,43 @@ class TestABY3(unittest.TestCase):
         # define computation
         z1 = tfe.bit_split_and_gather(x, 2)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_array_equal(
-                result, np.array([[0, 0x8F484, 0], [0xFF, 0x135F9, 0x1]])
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_array_equal(
+            result, np.array([[0, 0x8F484, 0], [0xFF, 0x135F9, 0x1]])
+        )
 
     def test_carry(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            tf.constant([[1, -(2 ** 63), -1], [-1, -2, 4]], dtype=tf.int64),
+            tf.constant([[1, -(2**63), -1], [-1, -2, 4]], dtype=tf.int64),
             apply_scaling=False,
             share_type=ShareType.BOOLEAN,
         )
         y1 = tfe.define_private_variable(
-            tf.constant([[7, -(2 ** 63), 1], [-1, 1, -1]], dtype=tf.int64),
+            tf.constant([[7, -(2**63), 1], [-1, 1, -1]], dtype=tf.int64),
             apply_scaling=False,
             share_type=ShareType.BOOLEAN,
         )
         y2 = tfe.define_constant(
-            np.array([[7, -(2 ** 63), 1], [-1, 1, -1]], dtype=np.int64),
+            np.array([[7, -(2**63), 1], [-1, 1, -1]], dtype=np.int64),
             apply_scaling=False,
         )
 
         z1 = tfe.carry(x, y1).cast(prot.factories[tf.int8])
         z2 = tfe.carry(x, y2).cast(prot.factories[tf.int8])
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_array_equal(result, np.array([[0, 1, 1], [1, 0, 1]]))
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_array_equal(result, np.array([[0, 1, 1], [1, 0, 1]]))
 
-            result = sess.run(z2.reveal())
-            np.testing.assert_array_equal(result, np.array([[0, 1, 1], [1, 0, 1]]))
+        result = z2.reveal().to_native()
+        np.testing.assert_array_equal(result, np.array([[0, 1, 1], [1, 0, 1]]))
 
     def test_lshift_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -724,17 +643,13 @@ class TestABY3(unittest.TestCase):
 
         z = x << 1
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[2, 4, 6], [8, 10, 12]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[2, 4, 6], [8, 10, 12]]), rtol=0.0, atol=0.01
+        )
 
     def test_rshift_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -752,42 +667,38 @@ class TestABY3(unittest.TestCase):
         w = y >> 1
         s = y.logical_rshift(1)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array(
-                    [[0.5, 1, 1.5], [2, 2.5, 3]]
-                ),  # NOTE: x is scaled and treated as fixed-point number
-                rtol=0.0,
-                atol=0.01,
-            )
-            result = sess.run(w.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[-1, -1, -2], [-2, 2, 3]]), rtol=0.0, atol=0.01
-            )
-            result = sess.run(s.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array(
+        # reveal result
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array(
+                [[0.5, 1, 1.5], [2, 2.5, 3]]
+            ),  # NOTE: x is scaled and treated as fixed-point number
+            rtol=0.0,
+            atol=0.01,
+        )
+        result = w.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[-1, -1, -2], [-2, 2, 3]]), rtol=0.0, atol=0.01
+        )
+        result = s.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array(
+                [
                     [
-                        [
-                            (-1 & ((1 << prot.default_nbits) - 1)) >> 1,
-                            (-2 & ((1 << prot.default_nbits) - 1)) >> 1,
-                            (-3 & ((1 << prot.default_nbits) - 1)) >> 1,
-                        ],
-                        [(-4 & ((1 << prot.default_nbits) - 1)) >> 1, 2, 3],
-                    ]
-                ),
-                rtol=0.0,
-                atol=0.01,
-            )
+                        (-1 & ((1 << prot.default_nbits) - 1)) >> 1,
+                        (-2 & ((1 << prot.default_nbits) - 1)) >> 1,
+                        (-3 & ((1 << prot.default_nbits) - 1)) >> 1,
+                    ],
+                    [(-4 & ((1 << prot.default_nbits) - 1)) >> 1, 2, 3],
+                ]
+            ),
+            rtol=0.0,
+            atol=0.01,
+        )
 
     def test_ppa_private_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -803,22 +714,18 @@ class TestABY3(unittest.TestCase):
         z1 = tfe.ppa(x, y, topology="sklansky")
         z2 = tfe.ppa(x, y, topology="kogge_stone")
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[8, 10, 12], [14, 16, 18]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[8, 10, 12], [14, 16, 18]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z2.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[8, 10, 12], [14, 16, 18]]), rtol=0.0, atol=0.01
-            )
+        result = z2.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[8, 10, 12], [14, 16, 18]]), rtol=0.0, atol=0.01
+        )
 
     def test_a2b_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -830,17 +737,13 @@ class TestABY3(unittest.TestCase):
         z = tfe.a2b(x)
         assert z.share_type == ShareType.BOOLEAN
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
+        )
 
     def test_b2a_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -857,19 +760,15 @@ class TestABY3(unittest.TestCase):
             x2, nbits=prot.fixedpoint_config.precision_fractional, method="single"
         )
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
-            )
-            result = sess.run(z2.reveal())
-            np.testing.assert_allclose(result, np.array([0]), rtol=0.0, atol=0.01)
+        # reveal result
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
+        )
+        result = z2.reveal().to_native()
+        np.testing.assert_allclose(result, np.array([0]), rtol=0.0, atol=0.01)
 
     def test_b2a_single_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -883,24 +782,20 @@ class TestABY3(unittest.TestCase):
         y = tfe.b2a_single(x)
         assert y.share_type == ShareType.ARITHMETIC
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(y.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[0, 1, 0], [1, 0, 1]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = y.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[0, 1, 0], [1, 0, 1]]), rtol=0.0, atol=0.01
+        )
 
     def test_truncate_heuristic(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
 
         scale = prot.fixedpoint_config.precision_fractional
-        a = tf.random_uniform(
-            [1], 0, 2 ** 20
+        a = tf.random.uniform(
+            [1], 0, 2**20
         )  # Plus the 20-bit fractional scale, this will be encoded to 40-bit numbers
         x = tfe.define_private_input("server0", lambda: a)
 
@@ -911,17 +806,14 @@ class TestABY3(unittest.TestCase):
         x2 = x << amount
         y2 = tfe.truncate(x2, method="heuristic", amount=amount)
 
-        with tfe.Session() as sess:
-            sess.run(tfe.global_variables_initializer())
-            n = 1000
-            for i in range(n):
-                result1, truth = sess.run([y1.reveal(), a])
-                np.testing.assert_allclose(result1, truth, rtol=0.0, atol=0.1)
-                result2, truth = sess.run([y2.reveal(), a])
-                np.testing.assert_allclose(result2, truth, rtol=0.0, atol=0.1)
+        n = 1000
+        for i in range(n):
+            result1 = y1.reveal().to_native()
+            np.testing.assert_allclose(result1, a, rtol=0.0, atol=0.1)
+            result2 = y2.reveal().to_native()
+            np.testing.assert_allclose(result2, a, rtol=0.0, atol=0.1)
 
     def test_truncate_msb0_cheetah(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -934,30 +826,26 @@ class TestABY3(unittest.TestCase):
 
         z = tfe.truncate_msb0(y, method="cheetah")
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(y.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array(
-                    [
-                        [1 * (2 ** scale), 2 * (2 ** scale), 3 * (2 ** scale)],
-                        [4 * (2 ** scale), 5 * (2 ** scale), 6 * (2 ** scale)],
-                    ]
-                ),
-                rtol=0.0001,
-                atol=0.0001 * (2 ** scale),
-            )
+        # reveal result
+        result = y.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array(
+                [
+                    [1 * (2**scale), 2 * (2**scale), 3 * (2**scale)],
+                    [4 * (2**scale), 5 * (2**scale), 6 * (2**scale)],
+                ]
+            ),
+            rtol=0.0001,
+            atol=0.0001 * (2**scale),
+        )
 
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.00, atol=0.001
-            )
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.00, atol=0.001
+        )
 
     def test_truncate_msb0_secureq8(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -970,30 +858,26 @@ class TestABY3(unittest.TestCase):
 
         z = tfe.truncate_msb0(y, method="secureq8")
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(y.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array(
-                    [
-                        [1 * (2 ** scale), 2 * (2 ** scale), 3 * (2 ** scale)],
-                        [4 * (2 ** scale), 5 * (2 ** scale), 6 * (2 ** scale)],
-                    ]
-                ),
-                rtol=0.0001,
-                atol=0.0001 * (2 ** scale),
-            )
+        # reveal result
+        result = y.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array(
+                [
+                    [1 * (2**scale), 2 * (2**scale), 3 * (2**scale)],
+                    [4 * (2**scale), 5 * (2**scale), 6 * (2**scale)],
+                ]
+            ),
+            rtol=0.0001,
+            atol=0.0001 * (2**scale),
+        )
 
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.00, atol=0.001
-            )
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.00, atol=0.001
+        )
 
     def test_ot(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1028,19 +912,13 @@ class TestABY3(unittest.TestCase):
             prot.pairwise_nonces()[0],
         )
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(
-                prot._decode(m_c, False)
-            )  # pylint: disable=protected-access
-            np.testing.assert_allclose(
-                result, np.array([[2, 2, 4], [4, 6, 6]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = prot._decode(m_c, False)  # pylint: disable=protected-access
+        np.testing.assert_allclose(
+            result, np.array([[2, 2, 4], [4, 6, 6]]), rtol=0.0, atol=0.01
+        )
 
     def test_mul_ab_public_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1055,23 +933,20 @@ class TestABY3(unittest.TestCase):
 
         z = tfe.mul_ab(x, y)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 0, 0], [0, 5, 0]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 0, 0], [0, 5, 0]]), rtol=0.0, atol=0.01
+        )
 
     def test_mul_ab_private_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            np.array([[1, 2, 3], [4, 5, 6]]), share_type=ShareType.ARITHMETIC,
+            np.array([[1, 2, 3], [4, 5, 6]]),
+            share_type=ShareType.ARITHMETIC,
         )
         y = tfe.define_private_variable(
             tf.constant([[1, 0, 0], [0, 1, 0]]),
@@ -1082,23 +957,20 @@ class TestABY3(unittest.TestCase):
 
         z = tfe.mul_ab(x, y)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 0, 0], [0, 5, 0]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 0, 0], [0, 5, 0]]), rtol=0.0, atol=0.01
+        )
 
     def test_bit_extract(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            np.array([[1, -2, 3], [-4, -5, 6]]), share_type=ShareType.ARITHMETIC,
+            np.array([[1, -2, 3], [-4, -5, 6]]),
+            share_type=ShareType.ARITHMETIC,
         )
         y = tfe.define_private_variable(
             np.array([[1, -2, 3], [-4, -5, 6]]),
@@ -1111,53 +983,46 @@ class TestABY3(unittest.TestCase):
         )  # The sign bit. Since x is scaled, you should be more careful about extracting other bits.
         w = tfe.bit_extract(y, 1)  # y is not scaled
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            for i in range(1000):
-                result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result.astype(int),
-                np.array([[0, 1, 0], [1, 1, 0]]),
-                rtol=0.0,
-                atol=0.01,
-            )
-            for i in range(1000):
-                result = sess.run(w.reveal())
-            np.testing.assert_allclose(
-                result.astype(int),
-                np.array([[0, 1, 1], [0, 1, 1]]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        # reveal result
+        for i in range(1000):
+            result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result.numpy().astype(int),
+            np.array([[0, 1, 0], [1, 1, 0]]),
+            rtol=0.0,
+            atol=0.01,
+        )
+        for i in range(1000):
+            result = w.reveal().to_native()
+        np.testing.assert_allclose(
+            result.numpy().astype(int),
+            np.array([[0, 1, 1], [0, 1, 1]]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
     def test_msb(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(
-            np.array([[1, -2, 3], [-4, -5, 6]]), share_type=ShareType.ARITHMETIC,
+            np.array([[1, -2, 3], [-4, -5, 6]]),
+            share_type=ShareType.ARITHMETIC,
         )
 
         s = tfe.msb(x)  # Sign bit
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(s.reveal())
-            np.testing.assert_allclose(
-                result.astype(int),
-                np.array([[0, 1, 0], [1, 1, 0]]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        # reveal result
+        result = s.reveal().to_native()
+        np.testing.assert_allclose(
+            result.numpy().astype(int),
+            np.array([[0, 1, 0], [1, 1, 0]]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
     def test_equal_zero(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1170,20 +1035,16 @@ class TestABY3(unittest.TestCase):
         z = tfe.equal_zero(x)
         w = tfe.equal_zero(y)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            result = sess.run(z.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[0, 0, 1], [0, 1, 0]])
-            )
-            result = sess.run(w.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[1, 0, 0], [1, 0, 0]])
-            )
+        result = z.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([[0, 0, 1], [0, 1, 0]])
+        )
+        result = w.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([[1, 0, 0], [1, 0, 0]])
+        )
 
     def test_comparison(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1201,82 +1062,74 @@ class TestABY3(unittest.TestCase):
         z8 = x < 0
         z9 = x <= 0
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[1, 0, 0], [0, 1, 0]])
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([[1, 0, 0], [0, 1, 0]])
+        )
 
-            result = sess.run(z2.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[0, 0, 1], [1, 0, 0]])
-            )
+        result = z2.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([[0, 0, 1], [1, 0, 0]])
+        )
 
-            result = sess.run(z3.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[1, 1, 0], [0, 1, 1]])
-            )
+        result = z3.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([[1, 1, 0], [0, 1, 1]])
+        )
 
-            result = sess.run(z4.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[0, 1, 1], [1, 0, 1]])
-            )
+        result = z4.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([[0, 1, 1], [1, 0, 1]])
+        )
 
-            result = sess.run(z5.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[0, 1, 0], [0, 0, 1]])
-            )
+        result = z5.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([[0, 1, 0], [0, 0, 1]])
+        )
 
-            result = sess.run(z6.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[1, 0, 0], [0, 0, 1]])
-            )
+        result = z6.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([[1, 0, 0], [0, 0, 1]])
+        )
 
-            result = sess.run(z7.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[1, 0, 1], [0, 1, 1]])
-            )
+        result = z7.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([[1, 0, 1], [0, 1, 1]])
+        )
 
-            result = sess.run(z8.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[0, 1, 0], [1, 0, 0]])
-            )
+        result = z8.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([[0, 1, 0], [1, 0, 0]])
+        )
 
-            result = sess.run(z9.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[0, 1, 1], [1, 1, 0]])
-            )
+        result = z9.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([[0, 1, 1], [1, 1, 0]])
+        )
 
     def test_pow_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
 
         x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
 
-        y = x ** 2
-        z = x ** 3
+        y = x**2
+        z = x**3
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(y.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 4, 9], [16, 25, 36]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = y.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 4, 9], [16, 25, 36]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 8, 27], [64, 125, 216]]), rtol=0.0, atol=0.01
-            )
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 8, 27], [64, 125, 216]]), rtol=0.0, atol=0.01
+        )
 
     def test_polynomial_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1284,32 +1137,28 @@ class TestABY3(unittest.TestCase):
         x = tfe.define_private_variable(tf.constant([[1, 2, 3], [4, 5, 6]]))
 
         # Friendly version
-        y = 1 + 1.2 * x + 3 * (x ** 2) + 0.5 * (x ** 3)
+        y = 1 + 1.2 * x + 3 * (x**2) + 0.5 * (x**3)
         # More optimized version: No truncation for multiplying integer coefficients (e.g., '3' in this example)
         z = tfe.polynomial(x, [1, 1.2, 3, 0.5])
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(y.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[5.7, 19.4, 45.1], [85.8, 144.5, 224.2]]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        # reveal result
+        result = y.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[5.7, 19.4, 45.1], [85.8, 144.5, 224.2]]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
-            result = sess.run(z.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[5.7, 19.4, 45.1], [85.8, 144.5, 224.2]]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[5.7, 19.4, 45.1], [85.8, 144.5, 224.2]]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
     def test_polynomial_piecewise(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1327,28 +1176,27 @@ class TestABY3(unittest.TestCase):
         z2 = tfe.sigmoid(x)
         z3 = tfe.relu(x)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[0, 0, 0.25], [0.5, 0.75, 1]]), rtol=0.0, atol=0.01
-            )
-            result = sess.run(z2.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[0.288, 0.394, 0.447], [0.5, 0.553, 0.851]]),
-                rtol=0.0,
-                atol=0.01,
-            )
-            result = sess.run(z3.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[0, 0, 0], [0, 0.25, 2]]), rtol=0.0, atol=0.01,
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[0, 0, 0.25], [0.5, 0.75, 1]]), rtol=0.0, atol=0.01
+        )
+        result = z2.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[0.288, 0.394, 0.447], [0.5, 0.553, 0.851]]),
+            rtol=0.0,
+            atol=0.01,
+        )
+        result = z3.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[0, 0, 0], [0, 0.25, 2]]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
     def test_reciprocal(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1359,15 +1207,11 @@ class TestABY3(unittest.TestCase):
         x = tfe.define_private_input("server0", lambda: tf.constant(_x))
         y = tfe.reciprocal(x)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(y.reveal())
-            np.testing.assert_allclose(result, 1.0 / _x, rtol=0.01, atol=0.01)
+        # reveal result
+        result = y.reveal().to_native()
+        np.testing.assert_allclose(result, 1.0 / _x, rtol=0.01, atol=0.01)
 
     def test_transpose(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1378,22 +1222,18 @@ class TestABY3(unittest.TestCase):
         z1 = x.transpose()
         z2 = tfe.transpose(y)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 4], [2, 5], [3, 6]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 4], [2, 5], [3, 6]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z2)
-            np.testing.assert_allclose(
-                result, np.array([[1, 4], [2, 5], [3, 6]]), rtol=0.0, atol=0.01
-            )
+        result = z2.to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 4], [2, 5], [3, 6]]), rtol=0.0, atol=0.01
+        )
 
     def test_reduce_sum(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1405,23 +1245,17 @@ class TestABY3(unittest.TestCase):
         z2 = tfe.reduce_sum(y, axis=0, keepdims=False)
         z3 = tfe.reduce_sum(x)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[6], [15]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(result, np.array([[6], [15]]), rtol=0.0, atol=0.01)
 
-            result = sess.run(z2)
-            np.testing.assert_allclose(result, np.array([5, 7, 9]), rtol=0.0, atol=0.01)
+        result = z2.to_native()
+        np.testing.assert_allclose(result, np.array([5, 7, 9]), rtol=0.0, atol=0.01)
 
-            result = sess.run(z3.reveal())
-            np.testing.assert_allclose(result, np.array(21), rtol=0.0, atol=0.01)
+        result = z3.reveal().to_native()
+        np.testing.assert_allclose(result, np.array(21), rtol=0.0, atol=0.01)
 
     def test_concat(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1434,22 +1268,18 @@ class TestABY3(unittest.TestCase):
         z1 = tfe.concat([x1, x2], axis=1)
         z2 = tfe.concat([y1, y2], axis=0)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z2)
-            np.testing.assert_allclose(
-                result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
-            )
+        result = z2.to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
+        )
 
     def test_stack(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1462,25 +1292,21 @@ class TestABY3(unittest.TestCase):
         z1 = tfe.stack([x1, x2], axis=1)
         z2 = tfe.stack([y1, y2], axis=0)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[[1, 2], [5, 6]], [[3, 4], [7, 8]]]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[[1, 2], [5, 6]], [[3, 4], [7, 8]]]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
-            result = sess.run(z2)
-            np.testing.assert_allclose(
-                result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
-            )
+        result = z2.to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 2, 3], [4, 5, 6]]), rtol=0.0, atol=0.01
+        )
 
     def test_expand_dims(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1491,22 +1317,18 @@ class TestABY3(unittest.TestCase):
         z1 = tfe.expand_dims(x, axis=1)
         z2 = tfe.expand_dims(y, axis=1)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[[1, 2]], [[3, 4]]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[[1, 2]], [[3, 4]]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z2)
-            np.testing.assert_allclose(
-                result, np.array([[1], [2], [3]]), rtol=0.0, atol=0.01
-            )
+        result = z2.to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1], [2], [3]]), rtol=0.0, atol=0.01
+        )
 
     def test_squeeze(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1517,20 +1339,16 @@ class TestABY3(unittest.TestCase):
         z1 = tfe.squeeze(x)
         z2 = tfe.squeeze(y, axis=[1])
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 2], [3, 4]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 2], [3, 4]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z2)
-            np.testing.assert_allclose(result, np.array([1, 2, 3]), rtol=0.0, atol=0.01)
+        result = z2.to_native()
+        np.testing.assert_allclose(result, np.array([1, 2, 3]), rtol=0.0, atol=0.01)
 
     def test_strided_slice(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1545,27 +1363,21 @@ class TestABY3(unittest.TestCase):
         z2 = tfe.strided_slice(x, [1, 0, 0], [2, 2, 3], [1, 1, 1])
         z3 = tfe.strided_slice(x, [1, -1, 0], [2, -3, 3], [1, -1, 1])
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[[3, 3, 3]]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(result, np.array([[[3, 3, 3]]]), rtol=0.0, atol=0.01)
 
-            result = sess.run(z2.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[[3, 3, 3], [4, 4, 4]]]), rtol=0.0, atol=0.01
-            )
+        result = z2.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[[3, 3, 3], [4, 4, 4]]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z3.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[[4, 4, 4], [3, 3, 3]]]), rtol=0.0, atol=0.01
-            )
+        result = z3.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[[4, 4, 4], [3, 3, 3]]]), rtol=0.0, atol=0.01
+        )
 
     def test_gather(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1576,22 +1388,18 @@ class TestABY3(unittest.TestCase):
         z1 = tfe.gather(x, [0, 2], axis=1)
         z2 = tfe.gather(y, [0, 2], axis=1)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 3], [4, 6]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 3], [4, 6]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z2)
-            np.testing.assert_allclose(
-                result, np.array([[1, 3], [4, 6]]), rtol=0.0, atol=0.01
-            )
+        result = z2.to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 3], [4, 6]]), rtol=0.0, atol=0.01
+        )
 
     def test_split(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1606,38 +1414,34 @@ class TestABY3(unittest.TestCase):
         assert len(w) == 3
         assert len(z) == 3
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(w[0].reveal())
-            np.testing.assert_allclose(
-                result, np.array([[1, 2], [7, 8]]), rtol=0.0, atol=0.01
-            )
-            result = sess.run(w[1].reveal())
-            np.testing.assert_allclose(
-                result, np.array([[3, 4], [9, 10]]), rtol=0.0, atol=0.01
-            )
-            result = sess.run(w[2].reveal())
-            np.testing.assert_allclose(
-                result, np.array([[5, 6], [11, 12]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = w[0].reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 2], [7, 8]]), rtol=0.0, atol=0.01
+        )
+        result = w[1].reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[3, 4], [9, 10]]), rtol=0.0, atol=0.01
+        )
+        result = w[2].reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[5, 6], [11, 12]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z[0])
-            np.testing.assert_allclose(
-                result, np.array([[1, 2], [7, 8]]), rtol=0.0, atol=0.01
-            )
-            result = sess.run(z[1])
-            np.testing.assert_allclose(
-                result, np.array([[3, 4], [9, 10]]), rtol=0.0, atol=0.01
-            )
-            result = sess.run(z[2])
-            np.testing.assert_allclose(
-                result, np.array([[5, 6], [11, 12]]), rtol=0.0, atol=0.01
-            )
+        result = z[0].to_native()
+        np.testing.assert_allclose(
+            result, np.array([[1, 2], [7, 8]]), rtol=0.0, atol=0.01
+        )
+        result = z[1].to_native()
+        np.testing.assert_allclose(
+            result, np.array([[3, 4], [9, 10]]), rtol=0.0, atol=0.01
+        )
+        result = z[2].to_native()
+        np.testing.assert_allclose(
+            result, np.array([[5, 6], [11, 12]]), rtol=0.0, atol=0.01
+        )
 
     def test_tile(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1648,28 +1452,24 @@ class TestABY3(unittest.TestCase):
         z1 = tfe.tile(x, [1, 2])
         z2 = tfe.tile(y, [1, 2])
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[1, 2, 3, 1, 2, 3], [4, 5, 6, 4, 5, 6]]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[1, 2, 3, 1, 2, 3], [4, 5, 6, 4, 5, 6]]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
-            result = sess.run(z2)
-            np.testing.assert_allclose(
-                result,
-                np.array([[1, 2, 3, 1, 2, 3], [4, 5, 6, 4, 5, 6]]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        result = z2.to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[1, 2, 3, 1, 2, 3], [4, 5, 6, 4, 5, 6]]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
     def test_im2col(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1677,8 +1477,8 @@ class TestABY3(unittest.TestCase):
         x = tfe.define_private_variable(tf.random.uniform([128, 3, 27, 27]))
         y = tfe.define_constant(np.random.uniform(size=[128, 3, 27, 27]))
 
-        z1 = tfe.im2col(x, 5, 5, stride=2, padding="SAME")
-        z2 = tfe.im2col(y, 5, 5, stride=2, padding="VALID")
+        z1 = tfe.im2col(x, 5, 5, strides=[2, 2], padding="SAME")
+        z2 = tfe.im2col(y, 5, 5, strides=[2, 2], padding="VALID")
 
         n_rows_same = math.ceil(27 / 2)
         n_cols_same = math.ceil(27 / 2)
@@ -1688,7 +1488,6 @@ class TestABY3(unittest.TestCase):
         assert z2.shape == [5 * 5 * 3, n_rows_valid * n_cols_valid * 128]
 
     def test_simple_lr_model(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1701,7 +1500,7 @@ class TestABY3(unittest.TestCase):
         )
         y = tfe.define_private_variable(y_raw, name="y")
         w = tfe.define_private_variable(
-            tf.random_uniform([10, 1], -0.01, 0.01, seed=100), name="w"
+            tf.random.uniform([10, 1], -0.01, 0.01, seed=100), name="w"
         )
         b = tfe.define_private_variable(tf.zeros([1]), name="b")
         learning_rate = 0.01
@@ -1718,15 +1517,10 @@ class TestABY3(unittest.TestCase):
             db = tfe.reduce_sum(dy, axis=0) / batch_size
             upd1 = dw * learning_rate
             upd2 = db * learning_rate
-            assign_ops = [tfe.assign(w, w - upd1), tfe.assign(b, b - upd2)]
-
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            sess.run(assign_ops)
+            tfe.assign(w, w - upd1)
+            tfe.assign(b, b - upd2)
 
     def test_mul_trunc2_private_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1745,17 +1539,13 @@ class TestABY3(unittest.TestCase):
         # define computation
         z = tfe.mul_trunc2(x, y)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z.reveal(), tag="mul_trunc2")
-            np.testing.assert_allclose(
-                result, np.array([[2.6, 2.6], [2.6, 2.6]]), rtol=0.0, atol=0.01
-            )
+        # reveal result
+        result = z.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[2.6, 2.6], [2.6, 2.6]]), rtol=0.0, atol=0.01
+        )
 
     def test_write_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1771,20 +1561,12 @@ class TestABY3(unittest.TestCase):
         x = provide_input()
 
         _, tmp_filename = tempfile.mkstemp()
-        write_op = x.write(tmp_filename)
-
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            sess.run(write_op)
+        x.write(tmp_filename)
 
         os.remove(tmp_filename)
 
     def test_read_private(self):
 
-        tf.reset_default_graph()
-
         prot = ABY3()
         tfe.set_protocol(prot)
 
@@ -1796,29 +1578,21 @@ class TestABY3(unittest.TestCase):
         x = provide_input()
 
         _, tmp_filename = tempfile.mkstemp()
-        write_op = x.write(tmp_filename)
-
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            sess.run(write_op)
+        x.write(tmp_filename)
 
         x = tfe.read(tmp_filename, batch_size=5, n_columns=2)
-        with tfe.Session() as sess:
-            result = sess.run(x.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array(list(range(0, 8)) + [0, 1]).reshape([5, 2]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        result = x.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array(list(range(0, 8)) + [0, 1]).reshape([5, 2]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
         os.remove(tmp_filename)
 
     @unittest.skip
     def test_iterate_private(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1831,30 +1605,21 @@ class TestABY3(unittest.TestCase):
         x = provide_input()
 
         _, tmp_filename = tempfile.mkstemp()
-        write_op = x.write(tmp_filename)
-
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            sess.run(write_op)
+        x.write(tmp_filename)
 
         x = tfe.read(tmp_filename, batch_size=5, n_columns=2)
         y = tfe.iterate(x, batch_size=3, repeat=True, shuffle=False)
         z = tfe.iterate(x, batch_size=3, repeat=True, shuffle=True)
-        with tfe.Session() as sess:
-            sess.run(tfe.global_variables_initializer())
-            # TODO: fix this test
-            print(sess.run(x.reveal()))
-            print(sess.run(y.reveal()))
-            print(sess.run(y.reveal()))
-            print(sess.run(x.reveal()))
-            print(sess.run(z.reveal()))
+        # TODO: fix this test
+        print(x.reveal().to_native())
+        print(y.reveal().to_native())
+        print(y.reveal().to_native())
+        print(x.reveal().to_native())
+        print(z.reveal().to_native())
 
         os.remove(tmp_filename)
 
     def test_conv2d(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1866,50 +1631,44 @@ class TestABY3(unittest.TestCase):
         input_conv = np.random.normal(size=input_shape).astype(np.float32)
 
         # filters
-        h_filter, w_filter, strides = 2, 2, 2
+        h_filter, w_filter = 2, 2
+        strides = [2, 2]
         filter_shape = (h_filter, w_filter, channels_in, channels_out)
         filter_values = np.random.normal(size=filter_shape)
 
         conv_input = prot.define_private_variable(input_conv)
         private_filter = prot.define_private_variable(filter_values)
         conv_output_tfe1 = tfe.conv2d(
-            conv_input, filter_values, strides=2, padding="SAME"
+            conv_input, filter_values, strides=strides, padding="SAME"
         )
         conv_output_tfe2 = tfe.conv2d(
-            conv_input, private_filter, strides=2, padding="SAME"
+            conv_input, private_filter, strides=strides, padding="SAME"
         )
 
-        with tfe.Session() as sess:
+        # outputs
+        output_tfe1 = conv_output_tfe1.reveal().to_native()
+        output_tfe2 = conv_output_tfe2.reveal().to_native()
 
-            sess.run(tf.global_variables_initializer())
-            # outputs
-            output_tfe1 = sess.run(conv_output_tfe1.reveal())
-            output_tfe2 = sess.run(conv_output_tfe2.reveal())
+        # conv input
+        x = tf.Variable(input_conv, dtype=tf.float32)
+        x_nhwc = tf.transpose(x, (0, 2, 3, 1))
 
-        # reset graph
-        tf.reset_default_graph()
+        # convolution Tensorflow
+        filters_tf = tf.Variable(filter_values, dtype=tf.float32)
 
-        # convolution tensorflow
-        with tf.Session() as sess:
-            # conv input
-            x = tf.Variable(input_conv, dtype=tf.float32)
-            x_nhwc = tf.transpose(x, (0, 2, 3, 1))
+        conv_out_tf = tf.nn.conv2d(
+            x_nhwc,
+            filters_tf,
+            strides=[1, strides[0], strides[1], 1],
+            padding="SAME",
+        )
 
-            # convolution Tensorflow
-            filters_tf = tf.Variable(filter_values, dtype=tf.float32)
-
-            conv_out_tf = tf.nn.conv2d(
-                x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME",
-            )
-
-            sess.run(tf.global_variables_initializer())
-            output_tensorflow = sess.run(conv_out_tf).transpose(0, 3, 1, 2)
+        output_tensorflow = tf.transpose(conv_out_tf, (0, 3, 1, 2))
 
         np.testing.assert_allclose(output_tfe1, output_tensorflow, atol=0.01)
         np.testing.assert_allclose(output_tfe2, output_tensorflow, atol=0.01)
 
     def test_maximum(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1919,16 +1678,12 @@ class TestABY3(unittest.TestCase):
 
         z = tfe.maximum(x, y)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            result = sess.run(z.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[1, -2, 3], [0, 0, 6]])
-            )
+        result = z.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([[1, -2, 3], [0, 0, 6]])
+        )
 
     def test_reduce_max(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1942,29 +1697,25 @@ class TestABY3(unittest.TestCase):
         z5 = tfe.reduce_max(x)
         z6 = tfe.reduce_max(x, keepdims=True)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            result = sess.run(z1.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([1, 0, 6]))
+        result = z1.reveal().to_native()
+        np.testing.assert_array_equal(result.numpy().astype(int), np.array([1, 0, 6]))
 
-            result = sess.run(z2.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[1, 0, 6]]))
+        result = z2.reveal().to_native()
+        np.testing.assert_array_equal(result.numpy().astype(int), np.array([[1, 0, 6]]))
 
-            result = sess.run(z3.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([1, 6]))
+        result = z3.reveal().to_native()
+        np.testing.assert_array_equal(result.numpy().astype(int), np.array([1, 6]))
 
-            result = sess.run(z4.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[1], [6]]))
+        result = z4.reveal().to_native()
+        np.testing.assert_array_equal(result.numpy().astype(int), np.array([[1], [6]]))
 
-            result = sess.run(z5.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array(6))
+        result = z5.reveal().to_native()
+        np.testing.assert_array_equal(result.numpy().astype(int), np.array(6))
 
-            result = sess.run(z6.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([[6]]))
+        result = z6.reveal().to_native()
+        np.testing.assert_array_equal(result.numpy().astype(int), np.array([[6]]))
 
     def test_argmax(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -1978,27 +1729,27 @@ class TestABY3(unittest.TestCase):
         z3 = tfe.argmax(x, axis=0, output_style="normal")
         z4 = tfe.argmax(x, axis=1, output_style="normal")
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            result = sess.run(z1.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 1]])
-            )
+        result = z1.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int),
+            np.array([[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 1]]),
+        )
 
-            result = sess.run(z2.reveal())
-            np.testing.assert_array_equal(
-                result.astype(int), np.array([[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]])
-            )
+        result = z2.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int),
+            np.array([[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]]),
+        )
 
-            result = sess.run(z3.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([2, 1, 0, 2]))
+        result = z3.reveal().to_native()
+        np.testing.assert_array_equal(
+            result.numpy().astype(int), np.array([2, 1, 0, 2])
+        )
 
-            result = sess.run(z4.reveal())
-            np.testing.assert_array_equal(result.astype(int), np.array([2, 1, 0]))
+        result = z4.reveal().to_native()
+        np.testing.assert_array_equal(result.numpy().astype(int), np.array([2, 1, 0]))
 
     def test_reduce_max_with_argmax(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2010,22 +1761,18 @@ class TestABY3(unittest.TestCase):
         y1, z1 = tfe.reduce_max_with_argmax(x, axis=1, output_style="onehot")
         y2, z2 = tfe.reduce_max_with_argmax(x, axis=1, output_style="normal")
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            result1, result2 = sess.run([y1.reveal(), z1.reveal()])
-            np.testing.assert_array_equal(result1.astype(int), np.array([9, 8, 10]))
-            np.testing.assert_array_equal(
-                result2.astype(int),
-                np.array([[0, 0, 1, 0], [0, 0, 0, 1], [0, 0, 0, 1]]),
-            )
+        result1, result2 = (y1.reveal().to_native(), z1.reveal().to_native())
+        np.testing.assert_array_equal(result1.numpy().astype(int), np.array([9, 8, 10]))
+        np.testing.assert_array_equal(
+            result2.numpy().astype(int),
+            np.array([[0, 0, 1, 0], [0, 0, 0, 1], [0, 0, 0, 1]]),
+        )
 
-            result1, result2 = sess.run([y2.reveal(), z2.reveal()])
-            np.testing.assert_array_equal(result1.astype(int), np.array([9, 8, 10]))
-            np.testing.assert_array_equal(result2.astype(int), np.array([2, 3, 3]))
+        result1, result2 = (y2.reveal().to_native(), z2.reveal().to_native())
+        np.testing.assert_array_equal(result1.numpy().astype(int), np.array([9, 8, 10]))
+        np.testing.assert_array_equal(result2.numpy().astype(int), np.array([2, 3, 3]))
 
     def test_maxpool2d(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2054,29 +1801,28 @@ class TestABY3(unittest.TestCase):
         x = tfe.define_private_variable(data)
 
         z3, z3_arg = tfe.maxpool2d_with_argmax(
-            x, pool_size=(2, 2), strides=(2, 2), padding="VALID",
+            x,
+            pool_size=(2, 2),
+            strides=(2, 2),
+            padding="VALID",
         )
         assert z3_arg.backing_dtype == prot.factories[tf.bool]
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            actual, expected = sess.run([z1.reveal(), tf_z1])
-            np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
+        actual, expected = (z1.reveal().to_native(), tf_z1)
+        np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
 
-            actual, expected = sess.run([z2.reveal(), tf_z2])
-            np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
+        actual, expected = (z2.reveal().to_native(), tf_z2)
+        np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
 
-            actual = sess.run(z3.reveal())
-            expected = np.array([[[[7, 9]]]])
-            np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
+        actual = z3.reveal().to_native()
+        expected = np.array([[[[7, 9]]]])
+        np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
 
-            actual = sess.run(z3_arg.reveal())
-            expected = np.array([[[[[0, 0, 1, 0], [1, 0, 0, 0]]]]])
-            np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
+        actual = z3_arg.reveal().to_native()
+        expected = np.array([[[[[0, 0, 1, 0], [1, 0, 0, 0]]]]])
+        np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)
 
     def test_avgpool2d(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2091,21 +1837,17 @@ class TestABY3(unittest.TestCase):
         z1 = tfe.avgpool2d(x, pool_size=(2, 2), strides=(2, 2), padding="VALID")
         z2 = tfe.avgpool2d(x, pool_size=(2, 2), strides=(2, 2), padding="SAME")
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[[[3.5, 5.5]]]]), rtol=0.0, atol=0.01
-            )
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[[[3.5, 5.5]]]]), rtol=0.0, atol=0.01
+        )
 
-            result = sess.run(z2.reveal())
-            np.testing.assert_allclose(
-                result, np.array([[[[3.5, 5.5], [4.75, 5.75]]]]), rtol=0.0, atol=0.01
-            )
+        result = z2.reveal().to_native()
+        np.testing.assert_allclose(
+            result, np.array([[[[3.5, 5.5], [4.75, 5.75]]]]), rtol=0.0, atol=0.01
+        )
 
     def test_expand(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2124,14 +1866,10 @@ class TestABY3(unittest.TestCase):
         z = tf.scatter_nd(indices, plain_x, tf.constant([7, 7, 1, 3]))
         z = tf.transpose(z, [2, 3, 0, 1])
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            y, z = sess.run([y.reveal(), z])
-            np.testing.assert_array_equal(y, z)
+        y = y.reveal().to_native()
+        np.testing.assert_array_equal(y, z)
 
     def test_reverse(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2145,14 +1883,10 @@ class TestABY3(unittest.TestCase):
         plain_x = tf.constant(x)
         z = tf.reverse(plain_x, [0, 1])
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            y, z = sess.run([y.reveal(), z])
-            np.testing.assert_array_equal(y, z)
+        y = y.reveal().to_native()
+        np.testing.assert_array_equal(y, z)
 
     def test_exp2_pade(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2164,14 +1898,10 @@ class TestABY3(unittest.TestCase):
 
         y_expected = np.power(np.ones(data.shape) * 2, data)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            y = sess.run(y.reveal())
-            np.testing.assert_allclose(y, y_expected, rtol=0.0, atol=0.01)
+        y = y.reveal().to_native()
+        np.testing.assert_allclose(y, y_expected, rtol=0.0, atol=0.01)
 
     def test_exp2(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2187,38 +1917,34 @@ class TestABY3(unittest.TestCase):
         z1 = tfe.exp2(x1, approx_type="as2019")
         z2 = tfe.exp2(x2, approx_type="mp-spdz")
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([0.0625, 0.70710678, 1.0, 2.46228883, 4.0, 49.52207979]),
-                rtol=0.0,
-                atol=0.01,
-            )
-            result = sess.run(z2.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array(
-                    [
-                        0,
-                        1.52587890625e-05,
-                        0.0625,
-                        0.70710678,
-                        1.0,
-                        2.46228883,
-                        4.0,
-                        49.52207979,
-                    ]
-                ),
-                rtol=0.0,
-                atol=0.01,
-            )
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([0.0625, 0.70710678, 1.0, 2.46228883, 4.0, 49.52207979]),
+            rtol=0.0,
+            atol=0.01,
+        )
+        result = z2.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array(
+                [
+                    0,
+                    1.52587890625e-05,
+                    0.0625,
+                    0.70710678,
+                    1.0,
+                    2.46228883,
+                    4.0,
+                    49.52207979,
+                ]
+            ),
+            rtol=0.0,
+            atol=0.01,
+        )
 
     def test_exp(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2236,19 +1962,15 @@ class TestABY3(unittest.TestCase):
         z2 = tfe.exp(x2, approx_type="as2019")
         z3 = tfe.exp(x3, approx_type="mp-spdz")
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(z1.reveal())
-            np.testing.assert_allclose(result, np.e ** data1, rtol=0.0, atol=0.01)
-            result = sess.run(z2.reveal())
-            np.testing.assert_allclose(result, np.e ** data2, rtol=0.001, atol=0.01)
-            result = sess.run(z3.reveal())
-            np.testing.assert_allclose(result, np.e ** data3, rtol=0.0, atol=0.01)
+        # reveal result
+        result = z1.reveal().to_native()
+        np.testing.assert_allclose(result, np.e**data1, rtol=0.0, atol=0.01)
+        result = z2.reveal().to_native()
+        np.testing.assert_allclose(result, np.e**data2, rtol=0.001, atol=0.01)
+        result = z3.reveal().to_native()
+        np.testing.assert_allclose(result, np.e**data3, rtol=0.0, atol=0.01)
 
     def test_softmax(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2301,25 +2023,21 @@ class TestABY3(unittest.TestCase):
         expected_a = tf.nn.softmax(a)
         expected_b = tf.nn.softmax(b)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result, expected = sess.run([z1_a.reveal(), expected_a])
-            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
-            result, expected = sess.run([z1_b.reveal(), expected_b])
-            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
-            result, expected = sess.run([z2_a.reveal(), expected_a])
-            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
-            result, expected = sess.run([z2_b.reveal(), expected_b])
-            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
-            result, expected = sess.run([z3_a.reveal(), expected_a])
-            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
-            result, expected = sess.run([z3_b.reveal(), expected_b])
-            np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.01)
+        # reveal result
+        result = z1_a.reveal().to_native()
+        np.testing.assert_allclose(result, expected_a, rtol=0.0, atol=0.01)
+        result = z1_b.reveal().to_native()
+        np.testing.assert_allclose(result, expected_b, rtol=0.0, atol=0.01)
+        result = z2_a.reveal().to_native()
+        np.testing.assert_allclose(result, expected_a, rtol=0.0, atol=0.01)
+        result = z2_b.reveal().to_native()
+        np.testing.assert_allclose(result, expected_b, rtol=0.0, atol=0.01)
+        result = z3_a.reveal().to_native()
+        np.testing.assert_allclose(result, expected_a, rtol=0.0, atol=0.01)
+        result = z3_b.reveal().to_native()
+        np.testing.assert_allclose(result, expected_b, rtol=0.0, atol=0.01)
 
     def test_bit_reverse(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2329,13 +2047,11 @@ class TestABY3(unittest.TestCase):
             tf.constant(_x), apply_scaling=False, share_type=ShareType.BOOLEAN
         )
         y = prot.bit_reverse(prot.bit_reverse(x)).reveal()
-        with tfe.Session() as sess:
-            sess.run(tfe.global_variables_initializer())
-            y = sess.run(y)
-            np.testing.assert_allclose(y, _x, rtol=0.0, atol=0.01)
+
+        y = y.to_native()
+        np.testing.assert_allclose(y, _x, rtol=0.0, atol=0.01)
 
     def test_while_loop(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2351,22 +2067,17 @@ class TestABY3(unittest.TestCase):
         y = x * 1
         r1, r2 = tfe.while_loop(cond, body, [i, y])
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(r1)
-            np.testing.assert_allclose(result, np.array(10), rtol=0.0, atol=0.01)
-            result = sess.run(r2.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[101, 102, 103], [104, 105, 106]]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        # reveal result
+        np.testing.assert_allclose(r1, np.array(10), rtol=0.0, atol=0.01)
+        result = r2.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[101, 102, 103], [104, 105, 106]]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
     def test_inv_sqrt(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2378,15 +2089,11 @@ class TestABY3(unittest.TestCase):
         x = tfe.define_private_input("server0", lambda: tf.constant(_x))
         y = tfe.inv_sqrt(x)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(y.reveal())
-            np.testing.assert_allclose(result, 1.0 / np.sqrt(_x), rtol=0.01, atol=0.01)
+        # reveal result
+        result = y.reveal().to_native()
+        np.testing.assert_allclose(result, 1.0 / np.sqrt(_x), rtol=0.01, atol=0.01)
 
     def test_xor_indices(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2403,13 +2110,11 @@ class TestABY3(unittest.TestCase):
             tf.constant(_x), apply_scaling=False, share_type=ShareType.BOOLEAN
         )
         y = prot.xor_indices(x).reveal()
-        with tfe.Session() as sess:
-            sess.run(tfe.global_variables_initializer())
-            y = sess.run(y)
-            np.testing.assert_allclose(y, expected, rtol=0.0, atol=0.01)
+
+        y = y.to_native()
+        np.testing.assert_allclose(y, expected, rtol=0.0, atol=0.01)
 
     def test_sort1(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2423,41 +2128,37 @@ class TestABY3(unittest.TestCase):
         y2 = tfe.sort(x, axis=1, acc=False)
         y3 = tfe.sort(x, axis=0, acc=False)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(y0.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]),
-                rtol=0.0,
-                atol=0.01,
-            )
-            result = sess.run(y1.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[3, 1, 5, 2, 6, 4], [11, 8, 10, 12, 9, 7]]),
-                rtol=0.0,
-                atol=0.01,
-            )
-            result = sess.run(y2.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[6, 5, 4, 3, 2, 1], [12, 11, 10, 9, 8, 7]]),
-                rtol=0.0,
-                atol=0.01,
-            )
-            result = sess.run(y3.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([[11, 8, 10, 12, 9, 7], [3, 1, 5, 2, 6, 4]]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        # reveal result
+        result = y0.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]),
+            rtol=0.0,
+            atol=0.01,
+        )
+        result = y1.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[3, 1, 5, 2, 6, 4], [11, 8, 10, 12, 9, 7]]),
+            rtol=0.0,
+            atol=0.01,
+        )
+        result = y2.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[6, 5, 4, 3, 2, 1], [12, 11, 10, 9, 8, 7]]),
+            rtol=0.0,
+            atol=0.01,
+        )
+        result = y3.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([[11, 8, 10, 12, 9, 7], [3, 1, 5, 2, 6, 4]]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
     def test_sort2(self):
-        tf.reset_default_graph()
 
         prot = ABY3()
         tfe.set_protocol(prot)
@@ -2468,17 +2169,14 @@ class TestABY3(unittest.TestCase):
 
         y = tfe.sort(x, axis=0, acc=True)
 
-        with tfe.Session() as sess:
-            # initialize variables
-            sess.run(tfe.global_variables_initializer())
-            # reveal result
-            result = sess.run(y.reveal())
-            np.testing.assert_allclose(
-                result,
-                np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
-                rtol=0.0,
-                atol=0.01,
-            )
+        # reveal result
+        result = y.reveal().to_native()
+        np.testing.assert_allclose(
+            result,
+            np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+            rtol=0.0,
+            atol=0.01,
+        )
 
 
 if __name__ == "__main__":
@@ -2486,4 +2184,5 @@ if __name__ == "__main__":
     Run these tests with:
     python aby3_test.py
     """
+    tfe.get_config().set_debug_mode(True)
     unittest.main()

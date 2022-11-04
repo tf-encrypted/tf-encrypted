@@ -6,14 +6,10 @@ import tensorflow as tf
 
 import tf_encrypted as tfe
 
-np.random.seed(42)
-tf.random.set_random_seed(42)
+tf.keras.utils.set_random_seed(42)
 
 
 class TestLosses(unittest.TestCase):
-    def setUp(self):
-        tf.reset_default_graph()
-
     def test_binary_crossentropy(self):
 
         y_true_np = np.array([1, 1, 0, 0]).astype(float)
@@ -26,22 +22,14 @@ class TestLosses(unittest.TestCase):
         out = loss(y_true, y_pred)
         der_for_y_pred = loss.grad(y_true, y_pred)
 
-        with tfe.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            actual = sess.run(out.reveal())
-            actual_der = sess.run(der_for_y_pred.reveal())
+        actual = out.reveal().to_native()
+        actual_der = der_for_y_pred.reveal().to_native()
 
-        tf.reset_default_graph()
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            y_true = tf.convert_to_tensor(y_true_np)
-            y_pred = tf.convert_to_tensor(y_pred_np)
-            loss = tf.keras.losses.BinaryCrossentropy()
-            out = loss(y_true, y_pred)
-            der_for_y_pred = (y_true * (y_pred - 1) + (1 - y_true) * y_pred) / 4
-
-            expected = sess.run(out)
-            expected_der = sess.run(der_for_y_pred)
+        y_true = tf.convert_to_tensor(y_true_np)
+        y_pred = tf.convert_to_tensor(y_pred_np)
+        loss = tf.keras.losses.BinaryCrossentropy()
+        expected = loss(y_true, y_pred)
+        expected_der = (y_true * (y_pred - 1) + (1 - y_true) * y_pred) / 4
 
         np.testing.assert_allclose(actual, expected, rtol=1e-1, atol=1e-1)
         np.testing.assert_allclose(actual_der, expected_der, rtol=1e-1, atol=1e-1)
@@ -58,22 +46,14 @@ class TestLosses(unittest.TestCase):
         out = loss(y_true, y_pred)
         der_for_y_pred = loss.grad(y_true, y_pred)
 
-        with tfe.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            actual = sess.run(out.reveal())
-            actual_der = sess.run(der_for_y_pred.reveal())
+        actual = out.reveal().to_native()
+        actual_der = der_for_y_pred.reveal().to_native()
 
-        tf.reset_default_graph()
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            y_true = tf.convert_to_tensor(y_true_np)
-            y_pred = tf.convert_to_tensor(y_pred_np)
-            loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-            out = loss(y_true, y_pred)
-            der_for_y_pred = (tf.sigmoid(y_pred) - y_true) / 4
-
-            expected = sess.run(out)
-            expected_der = sess.run(der_for_y_pred)
+        y_true = tf.convert_to_tensor(y_true_np)
+        y_pred = tf.convert_to_tensor(y_pred_np)
+        loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        expected = loss(y_true, y_pred)
+        expected_der = (tf.sigmoid(y_pred) - y_true) / 4
 
         np.testing.assert_allclose(actual, expected, rtol=1e-1, atol=1e-1)
         np.testing.assert_allclose(actual_der, expected_der, rtol=1e-1, atol=1e-1)
@@ -87,20 +67,13 @@ class TestLosses(unittest.TestCase):
 
         loss = tfe.keras.losses.MeanSquaredError()
         out = loss(y_true, y_pred)
+        actual = out.reveal().to_native()
 
-        with tfe.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            actual = sess.run(out.reveal())
+        y_true = tf.convert_to_tensor(y_true_np)
+        y_pred = tf.convert_to_tensor(y_pred_np)
 
-        tf.reset_default_graph()
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            y_true = tf.convert_to_tensor(y_true_np)
-            y_pred = tf.convert_to_tensor(y_pred_np)
-
-            loss = tf.keras.losses.MeanSquaredError()
-            out = loss(y_true, y_pred)
-            expected = sess.run(out)
+        loss = tf.keras.losses.MeanSquaredError()
+        expected = loss(y_true, y_pred)
 
         np.testing.assert_allclose(actual, expected, rtol=1e-1, atol=1e-1)
 
@@ -117,22 +90,14 @@ class TestLosses(unittest.TestCase):
             out = loss(y_true, y_pred)
             der_for_y_pred = loss.grad(y_true, y_pred)
 
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                actual = sess.run(out.reveal())
-                actual_der = sess.run(der_for_y_pred.reveal())
+            actual = out.reveal().to_native()
+            actual_der = der_for_y_pred.reveal().to_native()
 
-        tf.reset_default_graph()
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            y_true = tf.convert_to_tensor(y_true_np)
-            y_pred = tf.convert_to_tensor(y_pred_np)
-            loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
-            out = loss(y_true, y_pred)
-            der_for_y_pred = (tf.keras.activations.softmax(y_pred) - y_true) / 2
-
-            expected = sess.run(out)
-            expected_der = sess.run(der_for_y_pred)
+        y_true = tf.convert_to_tensor(y_true_np)
+        y_pred = tf.convert_to_tensor(y_pred_np)
+        loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+        expected = loss(y_true, y_pred)
+        expected_der = (tf.keras.activations.softmax(y_pred) - y_true) / 2
 
         np.testing.assert_allclose(actual, expected, rtol=1e-1, atol=1e-1)
         np.testing.assert_allclose(actual_der, expected_der, rtol=1e-1, atol=1e-1)

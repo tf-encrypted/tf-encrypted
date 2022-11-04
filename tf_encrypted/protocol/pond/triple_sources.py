@@ -7,34 +7,15 @@ import random
 import tensorflow as tf
 
 from ...config import get_config
-from ...utils import reachable_nodes
-from ...utils import unwrap_fetches
-from ...utils import wrap_in_variables
 
 logger = logging.getLogger("tf_encrypted")
 
 
-class TripleSource(abc.ABC):
-    """Base class for triples sources."""
-
-    @abc.abstractmethod
-    def cache(self, a, cache_updater):
-        pass
-
-    @abc.abstractmethod
-    def initializer(self):
-        pass
-
-    @abc.abstractmethod
-    def generate_triples(self, fetches):
-        pass
-
-
-class BaseTripleSource(TripleSource):
+class BaseTripleSource(abc.ABC):
     """
-  Partial triple source adding graph nodes for constructing and keeping track
-  of triples and their use. Subclasses must implement `_build_queues`.
-  """
+    Partial triple source adding graph nodes for constructing and keeping track
+    of triples and their use. Subclasses must implement `_build_queues`.
+    """
 
     def __init__(self, player0, player1, producer):
         config = get_config()
@@ -193,31 +174,23 @@ class BaseTripleSource(TripleSource):
     @abc.abstractmethod
     def _build_queues(self, c0, c1):
         """
-    Method used to inject buffers between mask generating and use
-    (ie online vs offline). `c0` and `c1` represent the generated
-    masks and the method is expected to return a similar pair of
-    of tensors.
-    """
+        Method used to inject buffers between mask generating and use
+        (ie online vs offline). `c0` and `c1` represent the generated
+        masks and the method is expected to return a similar pair of
+        of tensors.
+        """
 
 
 class OnlineTripleSource(BaseTripleSource):
     """
-  This triple source will generate triples as part of the online phase
-  using a dedicated third-party `producer`.
+    This triple source will generate triples as part of the online phase
+    using a dedicated third-party `producer`.
 
-  There is no need to call `generate_triples` nor `initialize`.
-  """
+    There is no need to call `generate_triples` nor `initialize`.
+    """
 
     def __init__(self, producer):
         super().__init__(None, None, producer)
-
-    def cache(self, a, cache_updater):
-        with tf.device(self.producer.device_name):
-            updater, [a_cached] = wrap_in_variables(a)
-        return updater, a_cached
-
-    def initializer(self):
-        return tf.no_op()
 
     def generate_triples(self, fetches):
         return []
@@ -226,110 +199,75 @@ class OnlineTripleSource(BaseTripleSource):
         return c0, c1
 
 
-class QueuedOnlineTripleSource(BaseTripleSource):
-    """
-  Similar to `OnlineTripleSource` but with in-memory buffering backed by
-  `tf.FIFOQueue`s.
-  """
+# TODO(zjn) support queue triple source
+# class QueuedOnlineTripleSource(BaseTripleSource):
+#     """
+#   Similar to `OnlineTripleSource` but with in-memory buffering backed by
+#   `tf.FIFOQueue`s.
+#   """
 
-    def __init__(self, player0, player1, producer, capacity=10):
-        super().__init__(player0, player1, producer)
-        self.capacity = capacity
-        self.queues = list()
-        self.triggers = dict()
+#     def __init__(self, player0, player1, producer, capacity=10):
+#         super().__init__(player0, player1, producer)
+#         self.capacity = capacity
+#         self.queues = list()
+#         self.triggers = dict()
 
-    def cache(self, a, cache_updater):
-        with tf.device(self.producer.device_name):
-            offline_updater, [a_cached] = wrap_in_variables(a)
-        self.triggers[cache_updater] = offline_updater
-        return tf.no_op(), a_cached
+#     def generate_triples(self, fetches):
+#         if isinstance(fetches, (list, tuple)) and len(fetches) > 1:
+#             logger.warning(
+#                 "Generating triples for a run involving more than "
+#                 "one fetch may introduce non-determinism that can "
+#                 "break the correspondence between the two phases "
+#                 "of the computation."
+#             )
 
-    def initializer(self):
-        return tf.no_op()
+#         unwrapped_fetches = unwrap_fetches(fetches)
+#         reachable_operations = [
+#             node
+#             for node in reachable_nodes(unwrapped_fetches)
+#             if isinstance(node, tf.Operation)
+#         ]
+#         reachable_triggers = [
+#             self.triggers[op] for op in reachable_operations if op in self.triggers
+#         ]
+#         return reachable_triggers
 
-    def generate_triples(self, fetches):
-        if isinstance(fetches, (list, tuple)) and len(fetches) > 1:
-            logger.warning(
-                "Generating triples for a run involving more than "
-                "one fetch may introduce non-determinism that can "
-                "break the correspondence between the two phases "
-                "of the computation."
-            )
+#     def _build_triple_store(self, mask, player_id):
+#         """
+#     Adds a tf.FIFOQueue to store mask locally on player.
+#     """
 
-        unwrapped_fetches = unwrap_fetches(fetches)
-        reachable_operations = [
-            node
-            for node in reachable_nodes(unwrapped_fetches)
-            if isinstance(node, tf.Operation)
-        ]
-        reachable_triggers = [
-            self.triggers[op] for op in reachable_operations if op in self.triggers
-        ]
-        return reachable_triggers
+#         # TODO(Morten) taking `value` doesn't work for int100
+#         raw_mask = mask.value
+#         factory = mask.factory
+#         dtype = mask.factory.native_type
+#         shape = mask.shape
 
-    def _build_triple_store(self, mask, player_id):
-        """
-    Adds a tf.FIFOQueue to store mask locally on player.
-    """
+#         with tf.name_scope("triple-store-{}".format(player_id)):
 
-        # TODO(Morten) taking `value` doesn't work for int100
-        raw_mask = mask.value
-        factory = mask.factory
-        dtype = mask.factory.native_type
-        shape = mask.shape
+#             q = tf.queue.FIFOQueue(
+#                 capacity=self.capacity, dtypes=[dtype], shapes=[shape],
+#             )
+#             e = q.enqueue(raw_mask)
+#             d = q.dequeue()
+#             d_wrapped = factory.tensor(d)
 
-        with tf.name_scope("triple-store-{}".format(player_id)):
+#         self.queues += [q]
+#         self.triggers[d.op] = e
+#         return d_wrapped
 
-            q = tf.queue.FIFOQueue(
-                capacity=self.capacity, dtypes=[dtype], shapes=[shape],
-            )
-            e = q.enqueue(raw_mask)
-            d = q.dequeue()
-            d_wrapped = factory.tensor(d)
+#     def _build_queues(self, c0, c1):
 
-        self.queues += [q]
-        self.triggers[d.op] = e
-        return d_wrapped
+#         if context.executing_eagerly():
+#             return c0, c1
 
-    def _build_queues(self, c0, c1):
+#         with tf.device(self.player0.device_name):
+#             d0 = self._build_triple_store(c0, "0")
 
-        with tf.device(self.player0.device_name):
-            d0 = self._build_triple_store(c0, "0")
+#         with tf.device(self.player1.device_name):
+#             d1 = self._build_triple_store(c1, "1")
 
-        with tf.device(self.player1.device_name):
-            d1 = self._build_triple_store(c1, "1")
-
-        return d0, d1
-
-
-"""
-class PlaceholderTripleSource(BaseTripleSource):
-
-    # TODO(Morten) manually unwrap and re-wrap of values, should be hidden away
-
-    def __init__(self, player0, player1, producer):
-        super().__init__(player0, player1, producer)
-        self.placeholders = list()
-
-    def _build_queues(self, c0, c1):
-
-        with tf.device(self.player0.device_name):
-            r0 = tf.placeholder(
-                dtype=c0.factory.native_type,
-                shape=c0.shape,
-            )
-            d0 = c0.factory.tensor(r0)
-
-        with tf.device(self.player1.device_name):
-            r1 = tf.placeholder(
-                dtype=c1.factory.native_type,
-                shape=c1.shape,
-            )
-            d1 = c1.factory.tensor(r1)
-
-        self.placeholders += [r0, r1]
-        return d0, d1
-"""  # pylint: disable=pointless-string-statement
+#         return d0, d1
 
 
 """

@@ -8,8 +8,8 @@ import tf_encrypted as tfe
 class BloomRegressor:
     """Secure multi-party linear regression at plaintext speed.
 
-  Computes the necessary components of the normal equations solution to a
-  linear regression."""
+    Computes the necessary components of the normal equations solution to a
+    linear regression."""
 
     def __init__(self):
         self.components = [
@@ -29,13 +29,13 @@ class BloomRegressor:
     def fit(self, training_players, summary=0, validation_split=None):
         """Trains the linear regressor.
 
-    Arguments:
-      training_players: Data owners used for joint training. Must implement the
-          compute_estimators as a tfe.local_computation.
-      summary: Controls what kind of summary statistics are generated after the
-          linear regression fit.
-      validation_split: Mimics the behavior of the Keras validation_split kwarg.
-    """
+        Arguments:
+          training_players: Data owners used for joint training. Must implement the
+              compute_estimators as a tfe.local_computation.
+          summary: Controls what kind of summary statistics are generated after the
+              linear regression fit.
+          validation_split: Mimics the behavior of the Keras validation_split kwarg.
+        """
         if validation_split is not None:
             raise NotImplementedError()
 
@@ -92,7 +92,11 @@ class DataOwner:
     """Contains code meant to be executed by a data owner Player."""
 
     def __init__(
-        self, player_name, num_features, training_set_size, test_set_size,
+        self,
+        player_name,
+        num_features,
+        training_set_size,
+        test_set_size,
     ):
         self.player_name = player_name
         self.num_features = num_features
@@ -102,8 +106,8 @@ class DataOwner:
     def _build_training_data(self):
         """Preprocess training dataset
 
-    Return single batch of training dataset
-    """
+        Return single batch of training dataset
+        """
 
         def cast(x, y):
             return tf.cast(x, tf.float32), y
@@ -121,8 +125,8 @@ class DataOwner:
     def _build_testing_data(self):
         """Preprocess testing dataset
 
-    Return single batch of testing dataset
-    """
+        Return single batch of testing dataset
+        """
 
         def cast(x, y):
             return tf.cast(x, tf.float32), tf.expand_dims(y, 0)

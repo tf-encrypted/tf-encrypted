@@ -20,9 +20,8 @@ class SGD:
         self.momentum = momentum
         self.Vs = {}
 
-    def compile(self, layers):
-        for layer in layers:
-            W = layer.weights
+    def compile(self, weights):
+        for W in weights:
             self.Vs[id(W)] = [
                 tfe.define_private_variable(
                     np.zeros(list(map(int, W[i].shape.as_list()))),
@@ -37,13 +36,12 @@ class SGD:
         if id(W) not in self.Vs:
             raise RuntimeError("Unregonized layer weights")
 
-        V = self.Vs[id(W)]
-        ops = []
-        for i in range(len(W)):
-            op = tfe.assign(V[i], self.momentum * V[i] + self.learning_rate * G[i])
-            with tf.control_dependencies([op]):
-                ops.append(tfe.assign(W[i], W[i] - V[i].read_value()))
-        return tf.group(*ops)
+        with tf.name_scope("SGD-apply-gradients"):
+            V = self.Vs[id(W)]
+            for i in range(len(W)):
+                diff = self.momentum * V[i].read_value()
+                tfe.assign(W[i], W[i].read_value() - (diff + self.learning_rate * G[i]))
+                tfe.assign(V[i], diff + self.learning_rate * G[i])
 
 
 class AMSgrad:
@@ -65,9 +63,8 @@ class AMSgrad:
         self.Vhats = {}
         self.epsilon = 2 ** -tfe.get_protocol().fixedpoint_config.precision_fractional
 
-    def compile(self, layers):
-        for layer in layers:
-            W = layer.weights
+    def compile(self, weights):
+        for W in weights:
             self.Vs[id(W)] = [
                 tfe.define_private_variable(
                     np.zeros(list(map(int, W[i].shape.as_list()))),
@@ -100,28 +97,23 @@ class AMSgrad:
         if id(W) not in self.Vs:
             raise RuntimeError("Unregonized layer weights")
 
-        M = self.Ms[id(W)]
-        V = self.Vs[id(W)]
-        Vhat = self.Vhats[id(W)]
-        ops = []
-        for i in range(len(W)):
-            op1 = tfe.assign(M[i], self.beta1 * M[i] + (1 - self.beta1) * G[i])
-            op2 = tfe.assign(V[i], self.beta2 * V[i] + (1 - self.beta2) * G[i] * G[i])
-            with tf.control_dependencies([op2]):
-                # need to use read_value here to use the updated lastest value
-                # of variable, otherwise it might use cached copy of the variable,
-                # leading to totally wrong result (i.e., some device uses the
-                # cached copy, some device uses updated value, such that the sharing
-                # is completely wrong). The documentation of `read_value` says:
-                # "Can be different from value() if it's on another device,
-                # with control dependencies, etc."
+        with tf.name_scope("AMSgard-apply-gradients"):
+            M = self.Ms[id(W)]
+            V = self.Vs[id(W)]
+            Vhat = self.Vhats[id(W)]
+            for i in range(len(W)):
+                tfe.assign(
+                    M[i], self.beta1 * M[i].read_value() + (1 - self.beta1) * G[i]
+                )
+                tfe.assign(
+                    V[i],
+                    self.beta2 * V[i].read_value() + (1 - self.beta2) * G[i] * G[i],
+                )
                 v_max = tfe.maximum(Vhat[i].read_value(), V[i].read_value())
-                op3 = tfe.assign(Vhat[i], v_max)
-            with tf.control_dependencies([op1, op3]):
+                tfe.assign(Vhat[i], v_max)
                 vhat_add_e = Vhat[i].read_value() + self.epsilon
-                diff = self.learning_rate * M[i] * tfe.inv_sqrt(vhat_add_e)
-                ops.append(tfe.assign(W[i], W[i] - diff))
-        return tf.group(*ops)
+                diff = self.learning_rate * M[i].read_value() * tfe.inv_sqrt(vhat_add_e)
+                tfe.assign(W[i], W[i].read_value() - diff)
 
 
 class Adam:
@@ -145,9 +137,8 @@ class Adam:
         self.beta2_pow = {}
         self.epsilon = 2 ** -tfe.get_protocol().fixedpoint_config.precision_fractional
 
-    def compile(self, layers):
-        for layer in layers:
-            W = layer.weights
+    def compile(self, weights):
+        for W in weights:
             self.Vs[id(W)] = [
                 tfe.define_private_variable(
                     np.zeros(list(map(int, W[i].shape.as_list()))),
@@ -178,25 +169,26 @@ class Adam:
         if id(W) not in self.Vs:
             raise RuntimeError("Unregonized layer weights")
 
-        beta1_pow = self.beta1_pow[id(W)]
-        beta2_pow = self.beta2_pow[id(W)]
-        beta1_op = tfe.assign(beta1_pow, beta1_pow * self.beta1)
-        beta2_op = tfe.assign(beta2_pow, beta2_pow * self.beta2)
+        with tf.name_scope("adam-apply-gradients"):
+            beta1_pow = self.beta1_pow[id(W)]
+            beta2_pow = self.beta2_pow[id(W)]
+            tfe.assign(beta1_pow, beta1_pow.read_value() * self.beta1)
+            tfe.assign(beta2_pow, beta2_pow.read_value() * self.beta2)
 
-        M = self.Ms[id(W)]
-        V = self.Vs[id(W)]
-        ops = []
-        for i in range(len(W)):
-            op1 = tfe.assign(M[i], self.beta1 * M[i] + (1 - self.beta1) * G[i])
-            op2 = tfe.assign(V[i], self.beta2 * V[i] + (1 - self.beta2) * G[i] * G[i])
-            with tf.control_dependencies([op1, beta1_op]):
-                mhat = M[i].read_value() / (1 - beta1_pow)
-            with tf.control_dependencies([op2, beta2_op]):
-                vhat = V[i].read_value() / (1 - beta2_pow)
-
-            diff = self.learning_rate * mhat * tfe.inv_sqrt(vhat + self.epsilon)
-            ops.append(tfe.assign(W[i], W[i] - diff))
-        return tf.group(*ops)
+            M = self.Ms[id(W)]
+            V = self.Vs[id(W)]
+            for i in range(len(W)):
+                tfe.assign(
+                    M[i], self.beta1 * M[i].read_value() + (1 - self.beta1) * G[i]
+                )
+                tfe.assign(
+                    V[i],
+                    self.beta2 * V[i].read_value() + (1 - self.beta2) * G[i] * G[i],
+                )
+                mhat = M[i].read_value() / (1 - beta1_pow.read_value())
+                vhat = V[i].read_value() / (1 - beta2_pow.read_value())
+                diff = self.learning_rate * mhat * tfe.inv_sqrt(vhat + self.epsilon)
+                tfe.assign(W[i], W[i].read_value() - diff)
 
 
 _known_optimizers = {

@@ -23,10 +23,10 @@ class Loss:
     def __call__(self, y_true, y_pred):
         """Invokes the `Loss` instance.
 
-    Args:
-      y_true: Ground truth values.
-      y_pred: The predicted values.
-    """
+        Args:
+          y_true: Ground truth values.
+          y_pred: The predicted values.
+        """
         return self.call(y_true, y_pred)
 
 

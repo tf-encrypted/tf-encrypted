@@ -96,7 +96,9 @@ class Ciphertext:
 
 
 def encrypt(
-    ek: EncryptionKey, plaintext: tf.Tensor, randomness: Optional[Randomness] = None,
+    ek: EncryptionKey,
+    plaintext: tf.Tensor,
+    randomness: Optional[Randomness] = None,
 ) -> Ciphertext:
     x = tf_big.import_tensor(plaintext)
 
@@ -134,7 +136,10 @@ def refresh(ek: EncryptionKey, ciphertext: Ciphertext) -> Ciphertext:
 
 
 def add(
-    ek: EncryptionKey, lhs: Ciphertext, rhs: Ciphertext, do_refresh: bool = True,
+    ek: EncryptionKey,
+    lhs: Ciphertext,
+    rhs: Ciphertext,
+    do_refresh: bool = True,
 ) -> Ciphertext:
     c0 = lhs.raw
     c1 = rhs.raw
@@ -147,7 +152,10 @@ def add(
 
 
 def mul(
-    ek: EncryptionKey, lhs: Ciphertext, rhs: tf.Tensor, do_refresh: bool = True,
+    ek: EncryptionKey,
+    lhs: Ciphertext,
+    rhs: tf.Tensor,
+    do_refresh: bool = True,
 ) -> Ciphertext:
     c = lhs.raw
     k = tf_big.import_tensor(rhs)

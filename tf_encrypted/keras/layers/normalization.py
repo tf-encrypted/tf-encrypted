@@ -4,87 +4,87 @@ import tensorflow as tf
 from tensorflow.python.keras import initializers
 
 import tf_encrypted as tfe
-from tf_encrypted.keras import backend as KE
 from tf_encrypted.keras.engine import Layer
 from tf_encrypted.keras.layers.layers_utils import default_args_check
 from tf_encrypted.protocol import TFEPublicTensor
+from tf_encrypted.protocol import TFEPublicVariable
 
 
 class BatchNormalization(Layer):
     """Batch normalization layer (Ioffe and Szegedy, 2014).
-  Normalize the activations of the previous layer at each batch,
-  i.e. applies a transformation that maintains the mean activation
-  close to 0 and the activation standard deviation close to 1.
-  Arguments:
-    axis: Integer, the axis that should be normalized
-        (typically the features axis).
-        For instance, after a `Conv2D` layer with
-        `data_format="channels_first"`,
-        set `axis=1` in `BatchNormalization`.
-    momentum: Momentum for the moving average.
-    epsilon: Small float added to variance to avoid dividing by zero.
-    center: If True, add offset of `beta` to normalized tensor.
-        If False, `beta` is ignored.
-    scale: If True, multiply by `gamma`.
-        If False, `gamma` is not used.
-        When the next layer is linear (also e.g. `nn.relu`),
-        this can be disabled since the scaling
-        will be done by the next layer.
-    beta_initializer: Initializer for the beta weight.
-    gamma_initializer: Initializer for the gamma weight.
-    moving_mean_initializer: Initializer for the moving mean.
-    moving_variance_initializer: Initializer for the moving variance.
-    beta_regularizer: Optional regularizer for the beta weight.
-    gamma_regularizer: Optional regularizer for the gamma weight.
-    beta_constraint: Optional constraint for the beta weight.
-    gamma_constraint: Optional constraint for the gamma weight.
-    renorm: Whether to use Batch Renormalization
-      (https://arxiv.org/abs/1702.03275). This adds extra variables during
-      training. The inference is the same for either value of this parameter.
-    renorm_clipping: A dictionary that may map keys 'rmax', 'rmin', 'dmax' to
-      scalar `Tensors` used to clip the renorm correction. The correction
-      `(r, d)` is used as `corrected_value = normalized_value * r + d`, with
-      `r` clipped to [rmin, rmax], and `d` to [-dmax, dmax]. Missing rmax, rmin,
-      dmax are set to inf, 0, inf, respectively.
-    renorm_momentum: Momentum used to update the moving means and standard
-      deviations with renorm. Unlike `momentum`, this affects training
-      and should be neither too small (which would add noise) nor too large
-      (which would give stale estimates). Note that `momentum` is still applied
-      to get the means and variances for inference.
-    fused: if `True`, use a faster, fused implementation, or raise a ValueError
-      if the fused implementation cannot be used. If `None`, use the faster
-      implementation if possible. If False, do not used the fused
-      implementation.
-    trainable: Boolean, if `True` also add variables to the graph collection
-      `GraphKeys.TRAINABLE_VARIABLES` (see tf.Variable).
-    virtual_batch_size: An `int`. By default, `virtual_batch_size` is `None`,
-      which means batch normalization is performed across the whole batch. When
-      `virtual_batch_size` is not `None`, instead perform "Ghost Batch
-      Normalization", which creates virtual sub-batches which are each
-      normalized separately (with shared gamma, beta, and moving statistics).
-      Must divide the actual batch size during execution.
-    adjustment: A function taking the `Tensor` containing the (dynamic) shape of
-      the input tensor and returning a pair (scale, bias) to apply to the
-      normalized values (before gamma and beta), only during training. For
-      example, if axis==-1,
-        `adjustment = lambda shape: (
-          tf.random_uniform(shape[-1:], 0.93, 1.07),
-          tf.random_uniform(shape[-1:], -0.1, 0.1))`
-      will scale the normalized value by up to 7% up or down, then shift the
-      result by up to 0.1 (with independent scaling and bias for each feature
-      but shared across all examples), and finally apply gamma and/or beta. If
-      `None`, no adjustment is applied. Cannot be specified if
-      virtual_batch_size is specified.
-  Input shape:
-      Arbitrary. Use the keyword argument `input_shape`
-      (tuple of integers, does not include the samples axis)
-      when using this layer as the first layer in a model.
-  Output shape:
-      Same shape as input.
-  References:
-      - [Batch Normalization: Accelerating Deep Network Training by Reducing
-        Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
-  """
+    Normalize the activations of the previous layer at each batch,
+    i.e. applies a transformation that maintains the mean activation
+    close to 0 and the activation standard deviation close to 1.
+    Arguments:
+      axis: Integer, the axis that should be normalized
+          (typically the features axis).
+          For instance, after a `Conv2D` layer with
+          `data_format="channels_first"`,
+          set `axis=1` in `BatchNormalization`.
+      momentum: Momentum for the moving average.
+      epsilon: Small float added to variance to avoid dividing by zero.
+      center: If True, add offset of `beta` to normalized tensor.
+          If False, `beta` is ignored.
+      scale: If True, multiply by `gamma`.
+          If False, `gamma` is not used.
+          When the next layer is linear (also e.g. `nn.relu`),
+          this can be disabled since the scaling
+          will be done by the next layer.
+      beta_initializer: Initializer for the beta weight.
+      gamma_initializer: Initializer for the gamma weight.
+      moving_mean_initializer: Initializer for the moving mean.
+      moving_variance_initializer: Initializer for the moving variance.
+      beta_regularizer: Optional regularizer for the beta weight.
+      gamma_regularizer: Optional regularizer for the gamma weight.
+      beta_constraint: Optional constraint for the beta weight.
+      gamma_constraint: Optional constraint for the gamma weight.
+      renorm: Whether to use Batch Renormalization
+        (https://arxiv.org/abs/1702.03275). This adds extra variables during
+        training. The inference is the same for either value of this parameter.
+      renorm_clipping: A dictionary that may map keys 'rmax', 'rmin', 'dmax' to
+        scalar `Tensors` used to clip the renorm correction. The correction
+        `(r, d)` is used as `corrected_value = normalized_value * r + d`, with
+        `r` clipped to [rmin, rmax], and `d` to [-dmax, dmax]. Missing rmax, rmin,
+        dmax are set to inf, 0, inf, respectively.
+      renorm_momentum: Momentum used to update the moving means and standard
+        deviations with renorm. Unlike `momentum`, this affects training
+        and should be neither too small (which would add noise) nor too large
+        (which would give stale estimates). Note that `momentum` is still applied
+        to get the means and variances for inference.
+      fused: if `True`, use a faster, fused implementation, or raise a ValueError
+        if the fused implementation cannot be used. If `None`, use the faster
+        implementation if possible. If False, do not used the fused
+        implementation.
+      trainable: Boolean, if `True` also add variables to the graph collection
+        `GraphKeys.TRAINABLE_VARIABLES` (see tf.Variable).
+      virtual_batch_size: An `int`. By default, `virtual_batch_size` is `None`,
+        which means batch normalization is performed across the whole batch. When
+        `virtual_batch_size` is not `None`, instead perform "Ghost Batch
+        Normalization", which creates virtual sub-batches which are each
+        normalized separately (with shared gamma, beta, and moving statistics).
+        Must divide the actual batch size during execution.
+      adjustment: A function taking the `Tensor` containing the (dynamic) shape of
+        the input tensor and returning a pair (scale, bias) to apply to the
+        normalized values (before gamma and beta), only during training. For
+        example, if axis==-1,
+          `adjustment = lambda shape: (
+            tf.random_uniform(shape[-1:], 0.93, 1.07),
+            tf.random_uniform(shape[-1:], -0.1, 0.1))`
+        will scale the normalized value by up to 7% up or down, then shift the
+        result by up to 0.1 (with independent scaling and bias for each feature
+        but shared across all examples), and finally apply gamma and/or beta. If
+        `None`, no adjustment is applied. Cannot be specified if
+        virtual_batch_size is specified.
+    Input shape:
+        Arbitrary. Use the keyword argument `input_shape`
+        (tuple of integers, does not include the samples axis)
+        when using this layer as the first layer in a model.
+    Output shape:
+        Same shape as input.
+    References:
+        - [Batch Normalization: Accelerating Deep Network Training by Reducing
+          Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
+    """
 
     def __init__(
         self,
@@ -101,13 +101,8 @@ class BatchNormalization(Layer):
         gamma_regularizer=None,
         beta_constraint=None,
         gamma_constraint=None,
-        renorm=False,
-        renorm_clipping=None,
-        renorm_momentum=0.99,
         fused=None,  # pylint: disable=unused-argument
         trainable=False,
-        virtual_batch_size=None,
-        adjustment=None,
         name=None,
         **kwargs,
     ):
@@ -121,28 +116,24 @@ class BatchNormalization(Layer):
         self.moving_variance_initializer = initializers.get(moving_variance_initializer)
 
         default_args_check(
-            beta_regularizer, "beta_regularizer", "BatchNormalization",
+            beta_regularizer,
+            "beta_regularizer",
+            "BatchNormalization",
         )
         default_args_check(
-            gamma_regularizer, "gamma_regularizer", "BatchNormalization",
+            gamma_regularizer,
+            "gamma_regularizer",
+            "BatchNormalization",
         )
         default_args_check(
-            beta_constraint, "beta_constraint", "BatchNormalization",
+            beta_constraint,
+            "beta_constraint",
+            "BatchNormalization",
         )
         default_args_check(
-            gamma_constraint, "gamma_constraint", "BatchNormalization",
-        )
-        default_args_check(
-            renorm, "renorm", "BatchNormalization",
-        )
-        default_args_check(
-            renorm_clipping, "renorm_clipping", "BatchNormalization",
-        )
-        default_args_check(
-            virtual_batch_size, "virtual_batch_size", "BatchNormalization",
-        )
-        default_args_check(
-            adjustment, "adjustment", "BatchNormalization",
+            gamma_constraint,
+            "gamma_constraint",
+            "BatchNormalization",
         )
 
         # Axis from get_config can be in ListWrapper format even if
@@ -160,7 +151,6 @@ class BatchNormalization(Layer):
         self.center = center
         self.epsilon = epsilon
         self.momentum = momentum
-        self.renorm_momentum = renorm_momentum
 
     def build(self, input_shape):
         c = input_shape[self.axis]
@@ -199,13 +189,24 @@ class BatchNormalization(Layer):
 
     def call(self, inputs):
         if self.beta is None and self.gamma is None:
-            out = (inputs - self.moving_mean) * self.denom
+            out = (inputs - self.moving_mean.read_value()) * self.denom.read_value()
         elif self.gamma is None:
-            out = (inputs - self.moving_mean) * self.denom + self.beta
+            out = (
+                inputs - self.moving_mean.read_value()
+            ) * self.denom.read_value() + self.beta.read_value()
         elif self.beta is None:
-            out = self.gamma * (inputs - self.moving_mean) * self.denom
+            out = (
+                self.gamma.read_value()
+                * (inputs - self.moving_mean.read_value())
+                * self.denom.read_value()
+            )
         else:
-            out = self.gamma * (inputs - self.moving_mean) * self.denom + self.beta
+            out = (
+                self.gamma.read_value()
+                * (inputs - self.moving_mean.read_value())
+                * self.denom.read_value()
+                + self.beta.read_value()
+            )
         return out
 
     def backward(self, d_y):
@@ -214,44 +215,31 @@ class BatchNormalization(Layer):
     def compute_output_shape(self, input_shape):
         return input_shape
 
-    def set_weights(self, weights, sess=None):
-        """Update layer weights from numpy array or Public Tensors
-      including denom.
+    def set_weights(self, weights):
+        """Update layer weights from numpy array or Public Tensors including denom.
 
-    Arguments:
-      weights: A list of Numpy arrays with shapes and types
+        Arguments:
+          weights: A list of Numpy arrays with shapes and types
           matching the output of layer.get_weights() or a list
           of private variables
-      sess: tfe session"""
+        """
 
-        if not sess:
-            sess = KE.get_session()
-
+        weights_types = (np.ndarray, TFEPublicTensor)
+        assert isinstance(weights[0], weights_types), type(weights[0])
         if isinstance(weights[0], np.ndarray):
-            for i, w in enumerate(self.weights):
-                if isinstance(w, TFEPublicTensor):
-                    shape = w.shape.as_list()
-                    tfe_weights_pl = tfe.define_public_placeholder(shape)
-                    fd = tfe_weights_pl.feed(weights[i].reshape(shape))
-                    sess.run(tfe.assign(w, tfe_weights_pl), feed_dict=fd)
-                else:
-                    raise TypeError(
-                        (
-                            "Don't know how to handle weights "
-                            "of type {}. Batchnorm expects public tensors"
-                            "as weights"
-                        ).format(type(w))
-                    )
-
-        elif isinstance(weights[0], TFEPublicTensor):
-            for i, w in enumerate(self.weights):
-                shape = w.shape.as_list()
-                sess.run(tfe.assign(w, weights[i].reshape(shape)))
+            for index, weight in enumerate(weights):
+                weights[index] = tfe.define_public_variable(weight)
+        if isinstance(weights[0], TFEPublicVariable):
+            for index, weight in enumerate(weights):
+                weights[index] = weights[index].read_value()
+        for i, w in enumerate(self.weights):
+            shape = w.shape.as_list()
+            tfe.assign(w, weights[i].reshape(shape))
 
         # Compute denom on public tensors before being lifted to private tensor
         denomtemp = tfe.reciprocal(
-            tfe.sqrt(tfe.add(self.moving_variance, self.epsilon))
+            tfe.sqrt(tfe.add(self.moving_variance.read_value(), self.epsilon))
         )
 
         # Update denom as well when moving variance gets updated
-        sess.run(tfe.assign(self.denom, denomtemp))
+        tfe.assign(self.denom, denomtemp)
