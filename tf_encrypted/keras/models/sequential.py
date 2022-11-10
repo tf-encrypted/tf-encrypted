@@ -1,7 +1,4 @@
 """Sequential model API."""
-import time
-
-import numpy as np
 import tensorflow as tf
 
 import tf_encrypted as tfe
@@ -105,10 +102,6 @@ class Sequential(BaseModel):
         if mask is not None:
             raise NotImplementedError()
         outputs = inputs  # handle the corner case where self.layers is empty
-        # Clear model weights.
-        # NOTE: this does NOT result in weights re-initialization if the model
-        # has been built before.
-        self.weights = []
         for layer in self.layers:
             # During each iteration, `inputs` are the inputs to `layer`, and `outputs`
             # are the outputs of `layer` applied to `inputs`. At the end of each

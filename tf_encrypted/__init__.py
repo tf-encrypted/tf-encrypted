@@ -91,10 +91,6 @@ def set_config(config: Config) -> None:
 
     set_global_config(config)
     set_protocol(None)
-    # Reset the graph to clear all ops that were created under
-    # previous config that might use different devices,
-    # otherwise there might be invalid device error.
-    reset_default_graph()
 
 
 # from .protocol import Pond

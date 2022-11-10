@@ -18,7 +18,7 @@ variables:
 
         bash Miniconda3-latest-MacOSX-x86_64.sh -b -f
         ../miniconda3/bin/conda create -n py38 python=3.8 --yes 2> /dev/null || true
-        ../miniconda3/envs/py36/bin/python -m venv venv
+        ../miniconda3/envs/py38/bin/python -m venv venv
         . venv/bin/activate
 
         HOMEBREW_NO_AUTO_UPDATE=1 brew install libtool automake
