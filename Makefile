@@ -10,7 +10,7 @@ all: test
 # Rules for bootstrapping the Makefile such as checking for docker, python versions, etc.
 # ###############################################
 DOCKER_REQUIRED_VERSION=18.
-PYTHON_REQUIRED_VERSION=3.6.
+PYTHON_REQUIRED_VERSION=3.8.
 SHELL := /bin/bash
 
 CURRENT_DIR=$(shell pwd)
@@ -91,20 +91,8 @@ SPHINX_BUILD_GOOGLE_DOCSTRINGS = sphinx-apidoc
 SPHINX_NAPOLEAN_BUILD_DIR = docs/source/gen
 SPHINX_PROJECT_DIR = tf_encrypted
 
-CONVERT_DIR=tf_encrypted/convert
-BUILD_RESERVED_SCOPES=$(CONVERT_DIR)/specops.yaml
-$(BUILD_RESERVED_SCOPES): pythoncheck
-	python -m tf_encrypted.convert.gen.generate_reserved_scopes
-
-BUILD_CONVERTER_README=$(CONVERT_DIR)/gen/readme_template.md
-$(BUILD_CONVERTER_README): $(BUILD_RESERVED_SCOPES) pythoncheck
-	python -m tf_encrypted.convert.gen.generate_reserved_scopes
-
-google-docstrings:
+docs:
 	@$(SPHINX_BUILD_GOOGLE_DOCSTRINGS) -fMeET "$(SPHINX_PROJECT_DIR)" -o "$(SPHINX_NAPOLEAN_BUILD_DIR)"
-
-docs: $(BUILD_CONVERTER_README) google-docstrings
-	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 .PHONY: docs
 
@@ -118,7 +106,7 @@ docs: $(BUILD_CONVERTER_README) google-docstrings
 VERSION=$(shell [ -d .git ] && git describe --tags --abbrev=0 2> /dev/null | sed 's/^v//')
 EXACT_TAG=$(shell [ -d .git ] && git describe --exact-match --tags HEAD 2> /dev/null | sed 's/^v//')
 ifeq (,$(VERSION))
-    VERSION=dev
+    VERSION=0.7.0
 endif
 NOT_RC=$(shell git tag --points-at HEAD | grep -v -e -rc)
 
@@ -326,7 +314,7 @@ SECURE_IN_H = operations/secure_random/generators.h
 $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECURE_IN_H)
 	mkdir -p tf_encrypted/operations/secure_random
 
-	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
+	g++ -std=c++14 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
 		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
 
 secure_random : $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so 
@@ -339,7 +327,7 @@ AUX_IN = $(wildcard operations/aux/*.cc)
 
 $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so: $(AUX_IN)
 	mkdir -p tf_encrypted/operations/aux
-	g++ -std=c++11 -shared $(AUX_IN) -o $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so \
+	g++ -std=c++14 -shared $(AUX_IN) -o $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so \
 		-fPIC  $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2
 
 aux : $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so
@@ -354,9 +342,9 @@ aux : $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so
 build: secure_random aux 
 
 build-all:
-	pip install tensorflow==1.15.2
-	$(MAKE) $(SECURE_OUT_PRE)1.15.2.so
-	$(MAKE) $(AUX_OUT_PRE)1.15.2.so
+	pip install tensorflow==2.9.1
+	$(MAKE) $(SECURE_OUT_PRE)2.9.1.so
+	$(MAKE) $(AUX_OUT_PRE)2.9.1.so
 
 .PHONY: build build-all
 

@@ -5,9 +5,7 @@ remainder theorem.
 
 Currently, we only use the CRT for an int100 tensor, although other
 high-precision tensor types are possible."""
-from __future__ import absolute_import
 
-import abc
 import math
 from functools import partial
 from functools import reduce
@@ -22,7 +20,6 @@ import tensorflow as tf
 from ..operations import secure_random
 from .factory import AbstractConstant
 from .factory import AbstractFactory
-from .factory import AbstractPlaceholder
 from .factory import AbstractTensor
 from .factory import AbstractVariable
 from .helpers import inverse
@@ -170,9 +167,10 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
     def _construct_backing_from_chunks(chunk_sizes, chunk_values):
         backing = _crt_decompose(0)
         for chunk_size, chunk_value in zip(chunk_sizes, chunk_values):
-            scale = 2 ** chunk_size
+            scale = 2**chunk_size
             backing = _crt_add(
-                _crt_mul(backing, _crt_decompose(scale)), _crt_decompose(chunk_value),
+                _crt_mul(backing, _crt_decompose(scale)),
+                _crt_decompose(chunk_value),
             )
         return backing
 
@@ -181,11 +179,11 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
         def zero(self):
             backing = [tf.constant(0, dtype=INT_TYPE)] * len(MODULI)
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def one(self):
             backing = [tf.constant(1, dtype=INT_TYPE)] * len(MODULI)
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def sample_uniform(
             self, shape, minval: Optional[int] = None, maxval: Optional[int] = None
@@ -195,22 +193,36 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
             if secure_random.supports_seeded_randomness():
                 seeds = [secure_random.secure_seed() for _ in MODULI]
-                return UniformTensor(shape, seeds)
+                backing = [
+                    secure_random.seeded_random_uniform(
+                        shape, minval=0, maxval=mi, seed=seed, dtype=INT_TYPE
+                    )
+                    for (mi, seed) in zip(MODULI, seeds)
+                ]
+                return Tensor(backing)
 
             if secure_random.supports_secure_randomness():
                 backing = [
                     secure_random.random_uniform(
-                        shape, minval=0, maxval=mi, dtype=INT_TYPE,
+                        shape,
+                        minval=0,
+                        maxval=mi,
+                        dtype=INT_TYPE,
                     )
                     for mi in MODULI
                 ]
-                return DenseTensor(backing)
+                return Tensor(backing)
 
             backing = [
-                tf.random_uniform(shape, minval=0, maxval=mi, dtype=INT_TYPE,)
+                tf.random.uniform(
+                    shape,
+                    minval=0,
+                    maxval=mi,
+                    dtype=INT_TYPE,
+                )
                 for mi in MODULI
             ]
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def sample_bounded(self, shape, bitlength: int):
 
@@ -223,7 +235,19 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
             if secure_random.supports_seeded_randomness():
                 seeds = [secure_random.secure_seed() for _ in chunk_sizes]
-                return BoundedTensor(shape=shape, seeds=seeds, chunk_sizes=chunk_sizes)
+                sampler = partial(
+                    secure_random.seeded_random_uniform,
+                    shape,
+                    minval=0,
+                    dtype=INT_TYPE,
+                )
+                zipped = zip(chunk_sizes, seeds)
+                chunk_values = [
+                    sampler(maxval=2**chunk_size, seed=seed_value)
+                    for (chunk_size, seed_value) in zipped
+                ]
+                backing = _construct_backing_from_chunks(chunk_sizes, chunk_values)
+                return Tensor(backing)
 
             if secure_random.supports_secure_randomness():
                 sampler = secure_random.random_uniform
@@ -231,27 +255,33 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                 sampler = tf.random_uniform
 
             chunk_values = [
-                sampler(shape=shape, minval=0, maxval=2 ** chunk_size, dtype=INT_TYPE)
+                sampler(shape=shape, minval=0, maxval=2**chunk_size, dtype=INT_TYPE)
                 for chunk_size in chunk_sizes
             ]
             backing = _construct_backing_from_chunks(chunk_sizes, chunk_values)
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def stack(self, xs: list, axis: int = 0):
             assert all(isinstance(x, Tensor) for x in xs)
             backing = [
-                tf.stack([x.backing[i] for x in xs], axis=axis,)
+                tf.stack(
+                    [x.backing[i] for x in xs],
+                    axis=axis,
+                )
                 for i in range(len(xs[0].backing))
             ]
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def concat(self, xs: list, axis: int = 0):
             assert all(isinstance(x, Tensor) for x in xs)
             backing = [
-                tf.concat([x.backing[i] for x in xs], axis=axis,)
+                tf.concat(
+                    [x.backing[i] for x in xs],
+                    axis=axis,
+                )
                 for i in range(len(xs[0].backing))
             ]
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def tensor(self, value):
 
@@ -260,39 +290,52 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                     tf.cast(component, dtype=INT_TYPE)
                     for component in _crt_decompose(value)
                 ]
-                return DenseTensor(backing)
+                return Tensor(backing)
 
             if isinstance(value, np.ndarray):
                 backing = [
                     tf.convert_to_tensor(component, dtype=INT_TYPE)
                     for component in _crt_decompose(value)
                 ]
-                return DenseTensor(backing)
+                return Tensor(backing)
 
             raise TypeError(("Don't know how to handle ", "{}".format(type(value))))
 
-        def constant(self, value):
+        def constant(self, initial_value):
 
-            if isinstance(value, np.ndarray):
-                backing = [
-                    tf.constant(v, dtype=INT_TYPE) for v in _crt_decompose(value)
+            if isinstance(initial_value, (tf.Tensor, np.ndarray)):
+                constant_backing = [
+                    tf.constant(backing_value, dtype=INT_TYPE)
+                    for backing_value in _crt_decompose(initial_value)
                 ]
-                return Constant(backing)
+                return Constant(constant_backing)
 
-            raise TypeError(("Don't know how to handle {}".format(type(value))))
+            if isinstance(initial_value, Tensor):
+                constant_backing = [
+                    tf.constant(backing_value, dtype=INT_TYPE)
+                    for backing_value in initial_value.backing
+                ]
+                return Constant(constant_backing)
+
+            raise TypeError(("Don't know how to handle {}".format(type(initial_value))))
 
         def variable(self, initial_value):
 
             if isinstance(initial_value, (tf.Tensor, np.ndarray)):
-                return Variable(_crt_decompose(initial_value))
+                variable_backing = [
+                    tf.Variable(backing_value, dtype=INT_TYPE)
+                    for backing_value in _crt_decompose(initial_value)
+                ]
+                return Variable(variable_backing)
 
             if isinstance(initial_value, Tensor):
-                return Variable(initial_value.backing)
+                variable_backing = [
+                    tf.Variable(backing_value, dtype=INT_TYPE)
+                    for backing_value in initial_value.backing
+                ]
+                return Variable(variable_backing)
 
             raise TypeError(("Don't know how to handle {}".format(type(initial_value))))
-
-        def placeholder(self, shape):
-            return Placeholder(shape)
 
         @property
         def min(self):
@@ -312,7 +355,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
     master_factory = Factory()
 
-    def _lift(x, y) -> Tuple["Tensor", "Tensor"]:
+    def _lift(x, y) -> Tuple["Tensor", "Tensor"]:  # noqa:F821
 
         if isinstance(x, Tensor) and isinstance(y, Tensor):
             return x, y
@@ -332,19 +375,20 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
     class Tensor(AbstractTensor):
         """Base class for other CRT tensor classes."""
 
-        @abc.abstractproperty
+        def __init__(self, backing):
+            self._backing = backing
+
         @property
         def backing(self):
-            pass
+            return self._backing
 
-        @abc.abstractproperty
         @property
         def shape(self):
-            pass
+            return self.backing[0].shape
 
         def identity(self):
             backing = [tf.identity(x) for x in self.backing]
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         @property
         def modulus(self):
@@ -355,7 +399,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
             return master_factory
 
         def to_native(self) -> Union[tf.Tensor, np.ndarray]:
-            return crt_recombine_explicit(self.backing, 2 ** 32)
+            return crt_recombine_explicit(self.backing, 2**32)
 
         def bits(
             self,
@@ -373,7 +417,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                 max_chunk_bitsize = 16
                 q, r = BITSIZE // max_chunk_bitsize, BITSIZE % max_chunk_bitsize
                 chunk_bitsizes = [max_chunk_bitsize] * q + ([r] if r > 0 else [])
-                chunks_modulus = [2 ** bitsize for bitsize in chunk_bitsizes]
+                chunks_modulus = [2**bitsize for bitsize in chunk_bitsizes]
 
                 remaining = self
 
@@ -424,7 +468,11 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                     # pick between corrected and uncorrected based on MSB
                     msb = chunks[-1][0] >= (chunks_modulus[-1]) // 2
                     chunks = [
-                        tf.where(msb, chunk[1], chunk[0],)  # corrected  # uncorrected
+                        tf.where(
+                            msb,
+                            chunk[1],
+                            chunk[0],
+                        )  # corrected  # uncorrected
                         for chunk in chunks
                     ]
 
@@ -443,7 +491,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
             return crt_recombine_lagrange(self.backing)
 
         def __getitem__(self, slc):
-            return DenseTensor([x[slc] for x in self.backing])
+            return Tensor([x[slc] for x in self.backing])
 
         def __repr__(self) -> str:
             return "Tensor({})".format(self.shape)
@@ -477,15 +525,15 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
         def add(self, other):
             x, y = _lift(self, other)
-            return DenseTensor(_crt_add(x.backing, y.backing))
+            return Tensor(_crt_add(x.backing, y.backing))
 
         def sub(self, other):
             x, y = _lift(self, other)
-            return DenseTensor(_crt_sub(x.backing, y.backing))
+            return Tensor(_crt_sub(x.backing, y.backing))
 
         def mul(self, other):
             x, y = _lift(self, other)
-            return DenseTensor(_crt_mul(x.backing, y.backing))
+            return Tensor(_crt_mul(x.backing, y.backing))
 
         def matmul(self, other):
             """Matmul with other."""
@@ -494,7 +542,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
             if x.shape[1] <= MATMUL_THRESHOLD:
                 # perform matmul directly (we have enough room)
                 z_backing = _crt_matmul(x.backing, y.backing)
-                return DenseTensor(z_backing)
+                return Tensor(z_backing)
 
             # we need to split the tensors, process independently, and then recombine
 
@@ -521,11 +569,11 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                 split_products = [_crt_matmul(xi, yi) for (xi, yi) in z_split]
                 z_backing = reduce(_crt_add, split_products)
 
-            return DenseTensor(z_backing)
+            return Tensor(z_backing)
 
         def mod(self, k: int):
             backing = _crt_decompose(crt_mod(self.backing, k))
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def reduce_sum(self, axis, keepdims=None):
             with tf.name_scope("crt_reduce_sum"):
@@ -533,7 +581,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                     tf.reduce_sum(xi, axis, keepdims) % mi
                     for (xi, mi) in zip(self.backing, MODULI)
                 ]
-                return DenseTensor(backing)
+                return Tensor(backing)
 
         def cumsum(self, axis, exclusive, reverse):
             with tf.name_scope("crt_cumsum"):
@@ -541,7 +589,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                     tf.cumsum(xi, axis=axis, exclusive=exclusive, reverse=reverse) % mi
                     for (xi, mi) in zip(self.backing, MODULI)
                 ]
-                return DenseTensor(backing)
+                return Tensor(backing)
 
         def equal_zero(self, factory=None):
             """Check equality with zero."""
@@ -573,21 +621,21 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
             return factory.tensor(all_matches)
 
-        def im2col(self, h_filter: int, w_filter: int, stride: int, padding: str):
+        def im2col(self, h_filter: int, w_filter: int, strides: list, padding: str):
             with tf.name_scope("crt_im2col"):
                 backing = [
                     im2col(
                         xi,
                         h_filter=h_filter,
                         w_filter=w_filter,
-                        stride=stride,
+                        strides=strides,
                         padding=padding,
                     )
                     for xi in self.backing
                 ]
-                return DenseTensor(backing)
+                return Tensor(backing)
 
-        def conv2d(self, other, stride: int, padding: str = "SAME"):
+        def conv2d(self, other, strides: list, padding: str = "SAME"):
             x, y = _lift(self, other)
             with tf.name_scope("conv2d"):
 
@@ -599,15 +647,19 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                     out_filters = in_filters
 
                 if padding == "SAME":
-                    h_out = int(math.ceil(float(h_x) / float(stride)))
-                    w_out = int(math.ceil(float(w_x) / float(stride)))
+                    h_out = int(math.ceil(float(h_x) / float(strides[0])))
+                    w_out = int(math.ceil(float(w_x) / float(strides[1])))
                 elif padding == "VALID":
-                    h_out = int(math.ceil(float(h_x - h_filter + 1) / float(stride)))
-                    w_out = int(math.ceil(float(w_x - w_filter + 1) / float(stride)))
+                    h_out = int(
+                        math.ceil(float(h_x - h_filter + 1) / float(strides[0]))
+                    )
+                    w_out = int(
+                        math.ceil(float(w_x - w_filter + 1) / float(strides[1]))
+                    )
                 else:
                     raise ValueError("Don't know padding method '{}'".format(padding))
 
-                x_col = x.im2col(h_filter, w_filter, stride, padding)
+                x_col = x.im2col(h_filter, w_filter, strides, padding)
                 w_col = y.transpose([3, 2, 0, 1]).reshape([int(out_filters), -1])
                 out = w_col.matmul(x_col)
 
@@ -616,56 +668,56 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
                 return out
 
-        def batch_to_space_nd(self, block_shape, crops):
+        def batch_to_space(self, block_shape, crops):
             with tf.name_scope("crt_batch_to_space_nd"):
                 backing = [
-                    tf.batch_to_space_nd(xi, block_shape=block_shape, crops=crops)
+                    tf.batch_to_space(xi, block_shape=block_shape, crops=crops)
                     for xi in self.backing
                 ]
-                return DenseTensor(backing)
+                return Tensor(backing)
 
-        def space_to_batch_nd(self, block_shape, paddings):
+        def space_to_batch(self, block_shape, paddings):
             with tf.name_scope("crt_space_to_batch_nd"):
                 backing = [
-                    tf.space_to_batch_nd(xi, block_shape=block_shape, paddings=paddings)
+                    tf.space_to_batch(xi, block_shape=block_shape, paddings=paddings)
                     for xi in self.backing
                 ]
-                return DenseTensor(backing)
+                return Tensor(backing)
 
         def transpose(self, perm):
             backing = [tf.transpose(xi, perm=perm) for xi in self.backing]
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def strided_slice(self, args, kwargs):
             backing = [tf.strided_slice(xi, *args, **kwargs) for xi in self.backing]
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def gather(self, indices: list, axis: int = 0):
             backing = [tf.gather(xi, indices, axis=axis) for xi in self.backing]
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def split(self, num_split: Union[int, list], axis: int = 0):
             backings = zip(*[tf.split(xi, num_split, axis=axis) for xi in self.backing])
-            return [DenseTensor(backing) for backing in backings]
+            return [Tensor(backing) for backing in backings]
 
         def reshape(self, axes: List[int]):
             backing = [tf.reshape(xi, axes) for xi in self.backing]
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def negative(self):
             backing = [tf.negative(xi) % mi for xi, mi in zip(self.backing, MODULI)]
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def expand_dims(self, axis: Optional[int] = None):
             backing = [tf.expand_dims(xi, axis) for xi in self.backing]
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def squeeze(self, axis: Optional[List[int]] = None):
             backing = [tf.squeeze(xi, axis=axis) for xi in self.backing]
-            return DenseTensor(backing)
+            return Tensor(backing)
 
         def truncate(self, amount, base=2):
-            factor = base ** amount
+            factor = base**amount
             factor_inverse = inverse(factor, MODULUS)
             return (self - (self % factor)) * factor_inverse
 
@@ -678,134 +730,45 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                 return self
             raise ValueError("Don't know how to cast into {}".format(factory))
 
-    class DenseTensor(Tensor):
-        """Public CRT Tensor class."""
-
-        def __init__(self, backing):
-            self._backing = backing
-
-        @property
-        def shape(self):
-            return self._backing[0].shape
-
-        @property
-        def backing(self):
-            return self._backing
-
-        @property
-        def support(self):
-            return self._backing
-
-    class UniformTensor(Tensor):
-        """Class representing a uniform-random, lazily sampled tensor.
-
-    Lazy sampling optimizes communication by sending seeds in place of
-    fully-expanded tensors."""
-
-        def __init__(self, shape, seeds):
-            self._seeds = seeds
-            self._shape = shape
-
-        @property
-        def shape(self):
-            return self._shape
-
-        @property
-        def backing(self):
-            with tf.name_scope("expand-seed"):
-                return [
-                    secure_random.seeded_random_uniform(
-                        self._shape, minval=0, maxval=mi, seed=seed, dtype=INT_TYPE
-                    )
-                    for (mi, seed) in zip(MODULI, self._seeds)
-                ]
-
-        @property
-        def support(self):
-            return self._seeds
-
-    class BoundedTensor(Tensor):
-        """CRT bounded-randomness tensor."""
-
-        def __init__(self, shape, seeds, chunk_sizes):
-            self._shape = shape
-            self._seeds = seeds
-            self._chunk_sizes = chunk_sizes
-
-        @property
-        def shape(self):
-            return self._shape
-
-        @property
-        def backing(self):
-            with tf.name_scope("expand-seed"):
-                sampler = partial(
-                    secure_random.seeded_random_uniform,
-                    self._shape,
-                    minval=0,
-                    dtype=INT_TYPE,
-                )
-                zipped = zip(self._chunk_sizes, self._seeds)
-                chunk_values = [
-                    sampler(maxval=2 ** chunk_size, seed=seed_value)
-                    for (chunk_size, seed_value) in zipped
-                ]
-                return _construct_backing_from_chunks(self._chunk_sizes, chunk_values)
-
-        @property
-        def support(self):
-            return self._seeds
-
-    class Constant(DenseTensor, AbstractConstant):
+    class Constant(Tensor, AbstractConstant):
         """CRT Constant class."""
 
-        def __init__(self, backing) -> None:
-            assert all(isinstance(component, tf.Tensor) for component in backing)
-            super(Constant, self).__init__(backing)
+        def __init__(self, constant_backing) -> None:
+            assert all(
+                isinstance(component, tf.Tensor) for component in constant_backing
+            )
+            super(Constant, self).__init__(constant_backing)
 
         def __repr__(self) -> str:
             return "Constant({})".format(self.shape)
 
-    class Placeholder(DenseTensor, AbstractPlaceholder):
-        """CRT Placeholder class."""
-
-        def __init__(self, shape) -> None:
-            self.placeholders = [tf.placeholder(INT_TYPE, shape=shape) for _ in MODULI]
-            super(Placeholder, self).__init__(self.placeholders)
-
-        def __repr__(self):
-            return "Placeholder({})".format(self.shape)
-
-        def feed(self, value):
-            assert isinstance(value, np.ndarray), type(value)
-            backing = _crt_decompose(value)
-            return dict(zip(self.placeholders, backing))
-
-    class Variable(DenseTensor, AbstractVariable):
+    class Variable(Tensor, AbstractVariable):
         """CRT Variable class."""
 
-        def __init__(self, initial_backing) -> None:
-            self.variables = [
-                tf.Variable(val, dtype=INT_TYPE, trainable=False)
-                for val in initial_backing
-            ]
-            self.initializer = tf.group(*[var.initializer for var in self.variables])
+        def __init__(self, variable_backing) -> None:
+            assert all(
+                isinstance(component, tf.Variable) for component in variable_backing
+            )
+            self.variables = variable_backing
             backing = [var.read_value() for var in self.variables]
             super(Variable, self).__init__(backing)
 
         def __repr__(self):
             return "Variable({})".format(self.shape)
 
-        def assign_from_native(self, value: np.ndarray):
-            assert isinstance(value, np.ndarray), type(value)
-            return self.assign_from_same(master_factory.tensor(value))
+        def assign(self, value: Union[Tensor, np.ndarray]) -> None:
+            if isinstance(value, Tensor):
+                for (variable, vi) in zip(self.variables, value.backing):
+                    variable.assign(vi)
+            if isinstance(value, np.ndarray):
+                for (variable, vi) in zip(self.variables, value):
+                    variable.assign(vi)
 
-        def assign_from_same(self, value: Tensor):
-            assert isinstance(value, Tensor), type(value)
-            assign_ops = [
-                tf.assign(xi, vi).op for (xi, vi) in zip(self.variables, value.backing)
-            ]
-            return tf.group(*assign_ops)
+            raise TypeError("Don't know how to handle {}".format(type(value)))
+
+        def read_value(self) -> Tensor:
+            backing = [var.read_value() for var in self.variables]
+            return Tensor(backing)
 
     return master_factory
 

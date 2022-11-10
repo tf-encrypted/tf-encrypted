@@ -1,21 +1,18 @@
-# Private Training for MNIST
+# Private Training
 
-This benchmark illustrates how TF Encrypted can be used to perform private training using several neural network models on the MNIST data set.
+This benchmark illustrates how TF Encrypted can be used to perform private training using several neural network models and datasets.
 
 ## Running
 
-Make sure to have the training and test data sets downloaded before running the example:
+Start the private training with the startup script `run-remote-network.sh` or `run-remote-network-4-cores.sh` (restrict each party to use 4 cores), 
+and you must explicitly specify which model to train and which dataset to use
 
 ```sh
-python3 examples/benchmark/training/download.py
+./examples/benchmark/mnist/run-remote-network.sh network_a Mnist
 ```
 
-which will place the converted files in the `./data` subdirectory.
-
-Then start the private training with the startup script `run-remote-network.sh` or `run-remote-network-4-cores.sh` (restrict each party to use 4 cores)
+You can also specify how many epochs to run, which tfe protocol to use and which remote config file to use
 
 ```sh
-./examples/benchmark/training/run-remote-network.sh
+./examples/benchmark/mnist/run-remote-network.sh network_a Mnist --epochs 10 --protocol ABY3 --config config.json
 ```
-
-You can play with 4 different network models (A, B, C, D) and 3 different optimizers (SGD, AMSgrad, Adam) by modifying corresponding lines in `private_network_training.py`.

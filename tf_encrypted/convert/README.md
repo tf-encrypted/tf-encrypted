@@ -1,105 +1,74 @@
 Convert
 ===========
-A Converter for constructing TF Encrypted Sessions from TensorFlow Graphs.
-
-## Contents
-1. [Reserved scopes](#reserved-scopes)
-2. [General workflow](#general-workflow)
-2. [Adding a conversion](#adding-an-op)
-   - [Adding the conversion function](#adding-the-conversion-function)
-   - [Adding the conversion test](#adding-the-conversion-test)
-3. [Adding a special op](#adding-a-special-op)
-   - [Registering the special op](#registering-the-special-op)
-
-## Reserved scopes
-The following name scopes are reserved for use by the TF Encrypted Converter.  If you don't see the one you want, please file a feature request or submit a PR [implementing a conversion for it](#adding-a-special-op).
-
-Reserved Scope | TF Counterpart
----------------|---------------
-`batch_normalization_v1`|[tf.keras.layers.BatchNormalization](https://www.tensorflow.org/api_docs/python/tf/keras/layers/BatchNormalization)
-`conv2d`|[tf.keras.layers.Conv2D](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Conv2D)
-`dense`|[tf.keras.layers.Dense](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Dense)
-`depthwise_conv2d`|[tf.keras.layers.DepthwiseConv2D](https://www.tensorflow.org/api_docs/python/tf/keras/layers/DepthwiseConv2D)
-`flatten`|[tf.keras.layers.Flatten](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Flatten)
-`required_space_to_batch_paddings`|[tf.required_space_to_batch_paddings](https://www.tensorflow.org/api_docs/python/tf/required_space_to_batch_paddings)
-
+A Converter for constructing TF Encrypted models from TensorFlow/ONNX models.
 
 ## General workflow
-1. Train a model in TensorFlow or Keras, or import one into TensorFlow through [`onnx-tensorflow`](https://github.com/onnx/onnx-tensorflow).
-2. Export in SavedModel format.
-3. Run the `freeze_graph.py` script to produce a GraphDef protobuf  with weights included (e.g. as `model.pb`).
-4. Ensure that conversion is possible, which means either:
-  1. All TensorFlow Ops in the graph have implementations in TF Encrypted and conversion functions registered in `register.py`.
-  2. All special ops, i.e. higher-level subgraphs, have corresponding Ops in TF Encrypted and conversion functions registered in `specops.yaml`.
-5. Feed your frozen GraphDef as the `--model_url` flag in `bin/run`, or use the `tfe.convert.Converter.convert` method in your own TF Encrypted script.
+1. Train a model in TensorFlow or Keras, or any other machine learning framework and convert it to a onnx model.
+2. Optionally save model as file in tensorflow(e.g. as model.pb) or in onnx(e.g. as model.onnx).
+3. Ensure that conversion is possible, which means either:
+   1. All ONNX nodes in the model's graph have implementations registered in `nodes.py`.
+   2. If using model for inference, only implement `forward` is enough. To realize model training, both `forward` and `backward` must be implemented.
+4. Using a Converter's `convert` method to convert tensorflow/onnx model to TFE model.
 
-## Adding a conversion
-Suppose you wanted to add a conversion for the [`tf.squeeze`](https://www.tensorflow.org/api_docs/python/tf/squeeze) op from TensorFlow.
-
-#### Adding the conversion function
-First, you'll write the conversion function.  These functions accept a `converter` instance, a NodeDef `node`, and a list of `inputs` NodeDefs. The function should construct and output a valid TF Encrypted operation for `node` NodeDefs from `inputs` using the current TFE protocol, config, and session information specified by the `converter`. You can use the `converter.outputs` dictionary to find and use previously constructed TFE tensors for your list of `inputs`. For example,
+## Adding a node
+Suppose you wanted to add a node for the [`tf.squeeze`](https://www.tensorflow.org/api_docs/python/tf/squeeze) op from TensorFlow.
+### Adding the node definition
+First, you'll define a SqueezeNode class inherited from BaseNode.  
+Its constructor accept a NodeProto `node`, a list of `inputs` ordered by `node.inputs` and a `model_provider` player.
+`inputs` include this node's all inputs, if a input is other node's output, it will be substituted with a tensor shape.
+`model_provider` is the player who will act as the model provider, or a string identifier for the player.
+This class should implement encrypted `forward` and `backward`(optional) using the current TFE protocol, 
+config and information specified by the `node` and `inputs`.
+For example,
 ```python
-def squeeze(converter, node, inputs) -> Any:
-    input = converter.outputs[inputs[0]]
-    axis = node.attr["squeeze_dims"].list.i
-    return converter.protocol.squeeze(input, list(axis))
+class SqueezeNode(BaseNode):
+
+    def __init__(self, node: NodeProto, inputs: List[tf.Tensor], model_provider: Player) -> None:
+        super(SqueezeNode, self).__init__(node, inputs, model_provider)
+        assert isinstance(inputs[0], list), "input shape must be a list"
+        self._input_shapes.append(inputs[0])
+
+        if len(inputs) == 2:
+            self.axes = list(inputs[1].numpy())
+        else:
+            self.axes = None
+        
+        output_shape = []
+        for index, dim in enumerate(self._input_shapes[0]):
+            if dim == 1 and (self.axes is None or index in self.axes):
+                continue
+            output_shape.append(dim)
+        self._output_shapes.append(output_shape)
+    
+    def forward(self, x):
+        return [tfe.squeeze(x[0], axis=self.axes)]
+    
+    def backward(self, d_y):
+        return [], [tfe.reshape(d_y[0], self._input_shapes[0])]
 ```
 
-Once you've defined this function, place it in the dictionary provided by the `registry` in register.py.  It should be keyed by the corresponding Op name (for normal ops) or the reserved scope of the special op (see below).
+Once you've implement this class, place it in the dictionary provided by the `nodes_dict` in `nodes.py`.
+It should be keyed by the corresponding node name.
 
-#### Adding the conversion test
-1. Write a function called `export_squeeze` accepting args `filename` and `input_shape` and returning a call to the `export` function from `test_convert.py`.  The `export` function accepts the output tf.Operation of the graph, a string representing the filename (you don't need to worry about this here), and an optional tf.Session object to use when exporting.
-2. Write a function called `run_squeeze` accepting an `input` ndarray and produces the `output` of the op as an ndarray.
-3. Write a function `test_squeeze_convert` that instantiates an example numpy array and feeds it to a call to `_test_with_ndarray_input_fn`. Be mindful here: the name you pass as the first argument needs to match the name in your `run_*` and `export_*` functions exactly in order for the test to run successfully.
+### Adding the node test
+1. Write a function called `squeeze_model` accepting args `inputs` which is a list of tf.Tensor 
+and returning a tensorflow model include `squeeze` op that will be tested
+1. Write a function called `test_squeeze` that instantiates an example tensor and feeds it to a call to `_build_test`. Be mindful here: the name you pass as the first argument needs to match the name in your `*_model` functions exactly in order for the test to run successfully.
 
 Here is an example for `tf.squeeze` in full:
 
 ```python
 class TestConvert(unittest.TestCase):
     [...]
-    def test_squeeze_convert(self):
-        test_input = np.ones([1, 2, 3, 1])
-        self._test_with_ndarray_input_fn('squeeze', test_input, protocol='Pond')
+    def test_squeeze(self):
+        test_input = [tf.random.uniform([1, 2, 3, 1])]
+        self._build_test("squeeze", test_input)
 
 [...]
 
-def run_squeeze(input):
-    a = tf.placeholder(tf.float32, shape=input.shape, name="input")
-    x = tf.squeeze(a, axis=[0, 3])
-    with tf.Session() as sess:
-        output = sess.run(x, feed_dict=dict(a=input))
-    return output
-
-def export_squeeze(filename, input_shape):
-    a = tf.placeholder(tf.float32, shape=input_shape, name="input")
-    x = tf.squeeze(a, axis=[0, 3])
-    return export(x, filename)
+def squeeze_model(inputs: List[tf.Tensor]) -> tf.Module:
+    x = tf.keras.layers.Input(shape=inputs[0].shape[1:])
+    res = tf.squeeze(x, axis=[0, 3])
+    model = tf.keras.models.Model(inputs=x, outputs=res)
+    return model
 ```
-
-## Adding a special op
-Special ops (or `specops` in our code) are higher-level scopes from either TensorFlow or Keras that do not have individual Ops defined in the TF backend, usually because they were written in Python. In a GraphDef, these often manifest as subgraphs containing Ops that we do not wish to replace with secure equivalents themselves, but as a whole can be replaced with secure versions of various ops from TF Encrypted.
-
-A good example is the Keras Conv2D layer: although TF Encrypted implements the Conv2D Op from TensorFlow (which Keras's Conv2D depends on), there are additional Cond Ops that are only used during graph construction and should be ignored during inference.
-
-Adding a special op requires three steps:
-1. [Registering the special op](#registering-interior-nodes). See below.  Note that reserved scopes must match up with those in the `registry` from `register.py`.
-2. [Writing a conversion function](#adding-the-conversion-function). This is similar to the previous section, except the `node` argument will be replaced with an OrderedDict called `interiors`.  You can use this argument to extract NodeDefs of ops that are interior to the special op subgraph. See the `keras_conv2d` function in `register.py` for an example.
-3. [Writing a conversion test](#adding-the-conversion-test).  This is done identically to the single op case
-
-**Developer's Note:** If you're submitting the conversion in a PR, ensure that you run `make` (or just `make lint`) before committing your code.  This will auto-populate the above table with your new special op.
-
-
-#### Registering the special op
-Special ops are registered in `specops.yaml`.  This file has a two-level structure:
-```yaml
-scope:
-    interiors:
-        - Op1    # optional array of interior Op names
-        - ...
-    tf-name:
-        name     # required value
-    hyperlink:
-        URL      # required value
-```
-
-The top level of the yaml entry must match with a [reserved scope](#reserved-scopes); these are scopes that capture the entire subgraph of the special op you wish to convert.  These also must match with a key of the `registry` in `register.py`, otherwise the converter will fail to identify and provide the correct NodeDefs for your conversion function.  Meanwhile, `tf-name` and `hyperlink` values help users identify which higher-level TensorFlow Op or layer have existing conversion implementations.

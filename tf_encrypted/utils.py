@@ -4,20 +4,6 @@ import inspect
 import tensorflow as tf
 
 
-def wrap_in_variables(*tensors):
-    """Wrap a list of tensors in Variables"""
-    variables = [
-        tensor.factory.variable(
-            tf.zeros(shape=tensor.shape, dtype=tensor.factory.native_type)
-        )
-        for tensor in tensors
-    ]
-    group_updater = tf.group(
-        *[var.assign_from_same(tensor) for var, tensor in zip(variables, tensors)]
-    )
-    return group_updater, variables
-
-
 def flatten(xs):
     """
     Flatten any recursive list or tuple into a single list.
@@ -82,14 +68,6 @@ def unwrap_fetches(fetches):
         return native()
     except AttributeError:
         return fetches
-
-
-def get_default_arg(func, arg):
-    signature = inspect.signature(func)
-    v = signature.parameters[arg]
-    if v.default is inspect.Parameter.empty:
-        raise ValueError("Parameter {} has no default value".format(arg))
-    return v.default
 
 
 def print_banner(title):

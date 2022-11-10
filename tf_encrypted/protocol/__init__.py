@@ -13,6 +13,7 @@ from .protocol import TFEPublicTensor
 from .protocol import TFEPublicVariable
 from .protocol import TFETensor
 from .protocol import TFEVariable
+from .protocol import function
 from .protocol import memoize
 from .securenn import SecureNN
 
@@ -34,6 +35,7 @@ def get_all_funcs():
 __all__ = [
     "Protocol",
     "memoize",
+    "function",
     "Pond",
     "SecureNN",
     "TFEVariable",

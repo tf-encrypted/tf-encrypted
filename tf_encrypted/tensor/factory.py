@@ -9,9 +9,9 @@ import tensorflow as tf
 
 class AbstractTensor(abc.ABC):
     """
-  An abstraction to use when building tensor classes and subclasses
-  in factories.
-  """
+    An abstraction to use when building tensor classes and subclasses
+    in factories.
+    """
 
     @property
     @abc.abstractproperty
@@ -23,11 +23,6 @@ class AbstractTensor(abc.ABC):
     def shape(self):
         pass
 
-    @property
-    @abc.abstractproperty
-    def support(self):
-        pass
-
     @abc.abstractmethod
     def identity(self):
         pass
@@ -37,10 +32,6 @@ class AbstractTensor(abc.ABC):
 
 
 class AbstractConstant(AbstractTensor):
-    pass
-
-
-class AbstractPlaceholder(AbstractTensor):
     pass
 
 
@@ -75,10 +66,6 @@ class AbstractFactory(abc.ABC):
     @abc.abstractmethod
     def variable(self, initial_value):
         """Create a variable of this data type using raw `initial_value`."""
-
-    @abc.abstractmethod
-    def placeholder(self, shape):
-        """Create a placeholder of this data type."""
 
     @abc.abstractmethod
     def sample_uniform(

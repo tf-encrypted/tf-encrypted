@@ -10,36 +10,36 @@ from tf_encrypted.keras.layers.layers_utils import default_args_check
 
 class Dense(Layer):
     """Just your regular densely-connected NN layer.
-  `Dense` implements the operation:
-  `output = activation(dot(input, kernel) + bias)`
-  where `activation` is the element-wise activation function
-  passed as the `activation` argument, `kernel` is a weights matrix
-  created by the layer, and `bias` is a bias vector created by the layer
-  (only applicable if `use_bias` is `True`).
+    `Dense` implements the operation:
+    `output = activation(dot(input, kernel) + bias)`
+    where `activation` is the element-wise activation function
+    passed as the `activation` argument, `kernel` is a weights matrix
+    created by the layer, and `bias` is a bias vector created by the layer
+    (only applicable if `use_bias` is `True`).
 
-  Arguments:
-      units: Positive integer, dimensionality of the output space.
-      activation: Activation function to use.
-          If you don't specify anything, no activation is applied
-          (ie. "linear" activation: `a(x) = x`).
-      use_bias: Boolean, whether the layer uses a bias vector.
-      kernel_initializer: Initializer for the `kernel` weights matrix.
-      bias_initializer: Initializer for the bias vector.
-      kernel_regularizer: Regularizer function applied to
-          the `kernel` weights matrix.
-      bias_regularizer: Regularizer function applied to the bias vector.
-      activity_regularizer: Regularizer function applied to
-          the output of the layer (its "activation").
-      kernel_constraint: Constraint function applied to
-          the `kernel` weights matrix.
-      bias_constraint: Constraint function applied to the bias vector.
+    Arguments:
+        units: Positive integer, dimensionality of the output space.
+        activation: Activation function to use.
+            If you don't specify anything, no activation is applied
+            (ie. "linear" activation: `a(x) = x`).
+        use_bias: Boolean, whether the layer uses a bias vector.
+        kernel_initializer: Initializer for the `kernel` weights matrix.
+        bias_initializer: Initializer for the bias vector.
+        kernel_regularizer: Regularizer function applied to
+            the `kernel` weights matrix.
+        bias_regularizer: Regularizer function applied to the bias vector.
+        activity_regularizer: Regularizer function applied to
+            the output of the layer (its "activation").
+        kernel_constraint: Constraint function applied to
+            the `kernel` weights matrix.
+        bias_constraint: Constraint function applied to the bias vector.
 
-  Input shape:
-      2D tensor with shape: `(batch_size, input_dim)`.
+    Input shape:
+        2D tensor with shape: `(batch_size, input_dim)`.
 
-  Output shape:
-      2D tensor with shape: `(batch_size, units)`.
-  """
+    Output shape:
+        2D tensor with shape: `(batch_size, units)`.
+    """
 
     def __init__(
         self,
@@ -103,9 +103,11 @@ class Dense(Layer):
         self._layer_input = inputs
 
         if self.use_bias:
-            outputs = tfe.matmul(inputs, self.kernel) + self.bias
+            outputs = (
+                tfe.matmul(inputs, self.kernel.read_value()) + self.bias.read_value()
+            )
         else:
-            outputs = tfe.matmul(inputs, self.kernel)
+            outputs = tfe.matmul(inputs, self.kernel.read_value())
 
         if self.activation_identifier is not None:
             outputs = self.activation(outputs)
@@ -118,7 +120,7 @@ class Dense(Layer):
         """dense backward"""
         x = self._layer_input
         y = self._layer_output
-        kernel = self.weights[0]
+        kernel = self.weights[0].read_value()
         grad_weights = []
         batch_size = int(x.shape[0])
 

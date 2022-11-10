@@ -7,9 +7,12 @@ import numpy as np
 import tensorflow as tf
 
 
-def binarize(tensor: tf.Tensor, bitsize: Optional[int] = None,) -> tf.Tensor:
+def binarize(
+    tensor: tf.Tensor,
+    bitsize: Optional[int] = None,
+) -> tf.Tensor:
     """Extract bits of values in `tensor`, returning a `tf.Tensor` with same
-  dtype."""
+    dtype."""
 
     with tf.name_scope("binarize"):
         bitsize = bitsize or (tensor.dtype.size * 8)
@@ -25,7 +28,10 @@ def binarize(tensor: tf.Tensor, bitsize: Optional[int] = None,) -> tf.Tensor:
         return val
 
 
-def bits(tensor: tf.Tensor, bitsize: Optional[int] = None,) -> list:
+def bits(
+    tensor: tf.Tensor,
+    bitsize: Optional[int] = None,
+) -> list:
     """Extract bits of values in `tensor`, returning a list of tensors."""
 
     with tf.name_scope("bits"):
@@ -38,21 +44,21 @@ def bits(tensor: tf.Tensor, bitsize: Optional[int] = None,) -> list:
         # return tf.stack(bits, axis=-1)
 
 
-def im2patches(x, patch_size, stride=1, padding="SAME", data_format="NCHW"):
+def im2patches(x, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"):
     """
     :param x: a 4-D Tensor.
     """
 
-    with tf.variable_scope("im2patches"):
+    with tf.name_scope("im2patches"):
         # To NHWC
         if data_format == "NCHW":
             x = tf.transpose(x, [0, 2, 3, 1])
 
         # we need NHWC because tf.extract_image_patches expects this
-        patches = tf.image.extract_image_patches(
+        patches = tf.image.extract_patches(
             images=x,
-            ksizes=[1, patch_size[0], patch_size[1], 1],
-            strides=[1, stride, stride, 1],
+            sizes=[1, patch_size[0], patch_size[1], 1],
+            strides=[1, strides[0], strides[1], 1],
             rates=[1, 1, 1, 1],
             padding=padding,
         )
@@ -66,7 +72,7 @@ def im2patches(x, patch_size, stride=1, padding="SAME", data_format="NCHW"):
 def patches2im(
     patches,
     patch_size,
-    stride=1,
+    strides=[1, 1],
     padding="SAME",
     img_size=None,
     consolidation="SUM",
@@ -81,7 +87,7 @@ def patches2im(
     :param img_size: a tuple (height, width) representing output image size
         (optional). If `None`, image size will be inferred from inputs.
     """
-    with tf.variable_scope("patches2im"):
+    with tf.name_scope("patches2im"):
         # To NHWC.
         if data_format == "NCHW":
             patches = tf.transpose(patches, [0, 2, 3, 1])
@@ -99,16 +105,16 @@ def patches2im(
         patches = tf.reshape(patches, (bs, -1, ps_h, ps_w, col_ch))
 
         # Recalculate output shape of "extract_image_patches" including padded pixels
-        wout = (_w - 1) * stride + ps_w
+        wout = (_w - 1) * strides[0] + ps_w
         # Recalculate output shape of "extract_image_patches" including padded pixels
-        hout = (_h - 1) * stride + ps_h
+        hout = (_h - 1) * strides[1] + ps_h
 
         x, y = tf.meshgrid(tf.range(ps_w), tf.range(ps_h))
         x = tf.reshape(x, (1, 1, ps_h, ps_w, 1, 1))
         y = tf.reshape(y, (1, 1, ps_h, ps_w, 1, 1))
         xstart, ystart = tf.meshgrid(
-            tf.range(0, (wout - ps_w) + 1, stride),
-            tf.range(0, (hout - ps_h) + 1, stride),
+            tf.range(0, (wout - ps_w) + 1, strides[0]),
+            tf.range(0, (hout - ps_h) + 1, strides[1]),
         )
 
         bb = tf.zeros((1, np, ps_h, ps_w, col_ch, 1), dtype=tf.int32) + tf.reshape(
@@ -210,7 +216,7 @@ def im2col(
     x: Union[tf.Tensor, np.ndarray],
     h_filter: int,
     w_filter: int,
-    stride: int = 1,
+    strides: list = [1, 1],
     padding: str = "SAME",
     data_format="NCHW",
 ) -> tf.Tensor:
@@ -223,7 +229,11 @@ def im2col(
         channels = int(x.shape[3])
 
         patch_tensor = im2patches(
-            x, (h_filter, w_filter), stride=stride, padding=padding, data_format="NHWC"
+            x,
+            (h_filter, w_filter),
+            strides=strides,
+            padding=padding,
+            data_format="NHWC",
         )
 
         patch_tensor = tf.reshape(
@@ -235,7 +245,10 @@ def im2col(
             patch_tensor = tf.transpose(patch_tensor, [2, 0, 1, 3])
 
         # reshape to x_col
-        x_col_tensor = tf.reshape(patch_tensor, (channels * h_filter * w_filter, -1),)
+        x_col_tensor = tf.reshape(
+            patch_tensor,
+            (channels * h_filter * w_filter, -1),
+        )
 
         return x_col_tensor
 
@@ -253,7 +266,7 @@ def out_size(in_size, pool_size, strides, padding):
     return [out_height, out_width]
 
 
-def conv2d(x, y, stride=1, padding="SAME", data_format="NCHW"):
+def conv2d(x, y, strides=[1, 1], padding="SAME", data_format="NCHW"):
     """
     Generic convolution implementation with im2col over AbstractTensors.
     """
@@ -265,12 +278,10 @@ def conv2d(x, y, stride=1, padding="SAME", data_format="NCHW"):
         h_filter, w_filter, in_filters, out_filters = map(int, y.shape)
         n_x, h_x, w_x, c_x = map(int, x.shape)
 
-        h_out, w_out = out_size(
-            [h_x, w_x], [h_filter, w_filter], [stride, stride], padding
-        )
+        h_out, w_out = out_size([h_x, w_x], [h_filter, w_filter], strides, padding)
 
         x_col = im2col(
-            x, h_filter, w_filter, stride=stride, padding=padding, data_format="NHWC"
+            x, h_filter, w_filter, strides=strides, padding=padding, data_format="NHWC"
         )
         w_col = tf.reshape(tf.transpose(y, [3, 0, 1, 2]), [int(out_filters), -1])
         out = tf.matmul(w_col, x_col)

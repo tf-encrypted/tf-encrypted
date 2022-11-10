@@ -1,10 +1,12 @@
 #include "tensorflow/core/util/work_sharder.h"
+#include "tensorflow/core/framework/tensor_util.h"
 
 #include "generators.h"
 
 using shape_inference::DimensionHandle;
 using shape_inference::ShapeHandle;
 using shape_inference::InferenceContext;
+using tensorflow::tensor::MakeShape;
 
 static Status RandomUniformShapeCommon(InferenceContext* context) {
   // Set output shape
@@ -33,7 +35,6 @@ REGISTER_OP("SecureSeededRandomUniform")
     .Attr("dtype: {int8, int16, int32, int64} = DT_INT32")
     .Attr("T: {int32, int64} = DT_INT32")
     .Attr("Tseed: {int32} = DT_INT32")
-    .SetIsStateful()
     .SetShapeFn(SeededRandomUniformShape);
 
 REGISTER_OP("SecureRandomUniform")
@@ -43,7 +44,6 @@ REGISTER_OP("SecureRandomUniform")
     .Output("output: dtype")
     .Attr("dtype: {int8, int16, int32, int64} = DT_INT32")
     .Attr("T: {int32, int64} = DT_INT32")
-    .SetIsStateful()
     .SetShapeFn(RandomUniformShapeCommon);
 
 REGISTER_OP("SecureSeed")

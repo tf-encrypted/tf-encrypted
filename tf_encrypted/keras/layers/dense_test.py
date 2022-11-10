@@ -14,9 +14,6 @@ np.random.seed(42)
 
 @pytest.mark.layers
 class TestDense(unittest.TestCase):
-    def setUp(self):
-        tf.reset_default_graph()
-
     def test_dense_bias(self):
         self._core_dense(use_bias=True)
 
@@ -27,8 +24,8 @@ class TestDense(unittest.TestCase):
         self._core_dense(activation="relu")
 
     def _core_dense(self, **layer_kwargs):
-        input_shape = [4, 5]
-        kernel = np.random.normal(input_shape[::-1])
+        batch_input_shape = [4, 5]
+        kernel = np.random.normal(size=batch_input_shape[::-1])
         initializer = tf.keras.initializers.Constant(kernel)
 
         base_kwargs = {
@@ -37,17 +34,21 @@ class TestDense(unittest.TestCase):
         }
         kwargs = {**base_kwargs, **layer_kwargs}
         agreement_test(
-            tfe.keras.layers.Dense, kwargs=kwargs, input_shape=input_shape,
+            tfe.keras.layers.Dense,
+            kwargs=kwargs,
+            batch_input_shape=batch_input_shape,
         )
         layer_test(
-            tfe.keras.layers.Dense, kwargs=kwargs, batch_input_shape=input_shape,
+            tfe.keras.layers.Dense,
+            kwargs=kwargs,
+            batch_input_shape=batch_input_shape,
         )
 
     def test_backward(self):
         input_shape = [1, 5]
-        input_data = np.ones(input_shape)
-        weights_second_layer = np.ones(shape=[1, 5])
-        kernel = np.ones([5, 5])
+        input_data = np.random.normal(size=input_shape)
+        weights_second_layer = np.random.normal(size=(1, 5))
+        kernel = np.random.normal(size=(5, 5))
         initializer = tf.keras.initializers.Constant(kernel)
 
         with tf.name_scope("TFE"):
@@ -56,7 +57,9 @@ class TestDense(unittest.TestCase):
             w = tfe.define_private_variable(weights_second_layer)
 
             tfe_layer = tfe.keras.layers.Dense(
-                5, input_shape=input_shape[1:], kernel_initializer=initializer,
+                5,
+                input_shape=input_shape[1:],
+                kernel_initializer=initializer,
             )
 
             dense_out_pond = tfe_layer(private_input)
@@ -64,43 +67,35 @@ class TestDense(unittest.TestCase):
             loss = dense_out_pond * w
 
             # backward
-            d_out = w
-            grad, d_x = tfe_layer.backward(d_out)
+            grad, d_x = tfe_layer.backward(w)
 
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                tfe_loss = sess.run(loss.reveal())
-                tfe_d_k = sess.run(grad[0].reveal())
-                tfe_d_b = sess.run(grad[1].reveal())
-                tfe_d_x = sess.run(d_x.reveal())
+            tfe_loss = loss.reveal().to_native()
+            tfe_d_k = grad[0].reveal().to_native()
+            tfe_d_b = grad[1].reveal().to_native()
+            tfe_d_x = d_x.reveal().to_native()
 
-        # reset graph
-        tf.reset_default_graph()
-
-        with tf.Session() as sess:
+        with tf.name_scope("TF"):
 
             initializer = tf.keras.initializers.Constant(kernel)
 
             tf_layer = tf.keras.layers.Dense(
-                5, input_shape=input_shape[1:], kernel_initializer=initializer,
+                5,
+                input_shape=input_shape[1:],
+                kernel_initializer=initializer,
             )
             x = tf.Variable(input_data, dtype=tf.float32)
-            y = tf_layer(x)
-
             w = tf.Variable(weights_second_layer, dtype=tf.float32)
-            loss = y * w
-            k, b = tf_layer.trainable_weights
 
-            # backward
-            d_x, d_k, d_b = tf.gradients(xs=[x, k, b], ys=loss)
+            with tf.GradientTape() as tape:
+                y = tf_layer(x)
+                loss = y * w
+                k, b = tf_layer.trainable_weights
+                d_x, d_k, d_b = tape.gradient(loss, [x, k, b])
 
-            sess.run(tf.global_variables_initializer())
-            tf_loss, tf_d_x, tf_d_k, tf_d_b = sess.run([loss, d_x, d_k, d_b])
-
-            np.testing.assert_array_almost_equal(tfe_loss, tf_loss, decimal=2)
-            np.testing.assert_array_almost_equal(tfe_d_k, tf_d_k, decimal=2)
-            np.testing.assert_array_almost_equal(tfe_d_b, tf_d_b, decimal=2)
-            np.testing.assert_array_almost_equal(tfe_d_x, tf_d_x, decimal=2)
+            np.testing.assert_array_almost_equal(tfe_loss, loss, decimal=2)
+            np.testing.assert_array_almost_equal(tfe_d_k, d_k, decimal=2)
+            np.testing.assert_array_almost_equal(tfe_d_b, d_b, decimal=2)
+            np.testing.assert_array_almost_equal(tfe_d_x, d_x, decimal=2)
 
 
 if __name__ == "__main__":

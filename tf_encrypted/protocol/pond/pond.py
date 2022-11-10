@@ -28,55 +28,57 @@ from ...config import get_config
 from ...config import tensorflow_supports_int64
 from ...player import Player
 from ...queue.fifo import AbstractFIFOQueue
+from ...queue.fifo import TFFIFOQueue
 from ...tensor import fixed64
 from ...tensor import fixed100
 from ...tensor import int64factory
 from ...tensor import int100factory
+from ...tensor.boolfactory import bool_factory
 from ...tensor.factory import AbstractConstant
 from ...tensor.factory import AbstractFactory
-from ...tensor.factory import AbstractPlaceholder
 from ...tensor.factory import AbstractTensor
 from ...tensor.factory import AbstractVariable
 from ...tensor.fixed import FixedpointConfig
 from ...tensor.fixed import _validate_fixedpoint_config
 from ...tensor.helpers import inverse
-from ...utils import wrap_in_variables
+from ...tensor.native import native_factory
 from ..protocol import Protocol
 from ..protocol import TFEPrivateTensor
 from ..protocol import TFEPrivateVariable
 from ..protocol import TFEPublicTensor
 from ..protocol import TFEPublicVariable
 from ..protocol import TFETensor
+from ..protocol import TFETensorBone
 from ..protocol import memoize
 from ..protocol import nodes
+from .triple_sources import BaseTripleSource
 from .triple_sources import OnlineTripleSource
-from .triple_sources import TripleSource
 
 TFEData = Union[np.ndarray, tf.Tensor]
 TFEInputter = Callable[[], Union[List[tf.Tensor], tf.Tensor]]
 TF_INT_TYPES = [tf.int8, tf.int16, tf.int32, tf.int64]
-TripleSourceOrPlayer = Union[TripleSource, Player]
+TripleSourceOrPlayer = Union[BaseTripleSource, Player]
 
 _THISMODULE = sys.modules[__name__]
 
 
 class Pond(Protocol):
     """Pond is similar to SPDZ except it has been vectorized plus a few more
-  optimizations.
+    optimizations.
 
-  Pond works with 2 parties for computation and one crypto producer for
-  triples.
+    Pond works with 2 parties for computation and one crypto producer for
+    triples.
 
-  :param Player server_0: The "alice" of MPC.
-  :param Player server_1: The "bob" of MPC.
-  :param Player triple_source: the entity responsible for producing triples in
-      `Pond` protocol. The valid values can be of type `TripleSource` or
-      `Player`. If a `Player` is passed, it will be the host that is used as an
-      `OnlineTripleSource` producer.
-  :param AbstractFactory tensor_factory: Which backing type of tensor you would
-      like to use, e.g. `int100` or `int64`
-  :param Player fixedpoint_config: Parameters for fixed-point precision tensors
-  """  # noqa:E501
+    :param Player server_0: The "alice" of MPC.
+    :param Player server_1: The "bob" of MPC.
+    :param Player triple_source: the entity responsible for producing triples in
+        `Pond` protocol. The valid values can be of type `TripleSource` or
+        `Player`. If a `Player` is passed, it will be the host that is used as an
+        `OnlineTripleSource` producer.
+    :param AbstractFactory tensor_factory: Which backing type of tensor you would
+        like to use, e.g. `int100` or `int64`
+    :param Player fixedpoint_config: Parameters for fixed-point precision tensors
+    """  # noqa:E501
 
     def __init__(
         self,
@@ -100,7 +102,7 @@ class Pond(Protocol):
             if isinstance(triple_source, Player):
                 self.triple_source = OnlineTripleSource(triple_source)
             else:
-                assert isinstance(triple_source, TripleSource)
+                assert isinstance(triple_source, BaseTripleSource)
                 self.triple_source = triple_source
 
         if tensor_factory is None:
@@ -131,6 +133,17 @@ class Pond(Protocol):
         self.fixedpoint_config = fixedpoint_config
         self.tensor_factory = tensor_factory
 
+        self.factories = {
+            0: bool_factory(),
+            1: native_factory(tf.int8),
+            2: native_factory(tf.int8),
+            4: native_factory(tf.int8),
+            8: native_factory(tf.int8),
+            16: native_factory(tf.int16),
+            32: native_factory(tf.int32),
+            64: int64factory,
+        }
+
     def define_constant(
         self,
         value: np.ndarray,
@@ -139,22 +152,22 @@ class Pond(Protocol):
         factory: Optional[AbstractFactory] = None,
     ):
         """
-    define_constant(value, apply_scaling, name, factory) -> PondConstant
+        define_constant(value, apply_scaling, name, factory) -> PondConstant
 
-    Define a constant to use in computation.
+        Define a constant to use in computation.
 
-    .. code-block:: python
+        .. code-block:: python
 
-        x = prot.define_constant(np.array([1,2,3,4]), apply_scaling=False)
+            x = prot.define_constant(np.array([1,2,3,4]), apply_scaling=False)
 
-    :See: tf.constant
+        :See: tf.constant
 
-    :param np.ndarray value: The value to define as a constant.
-    :param bool apply_scaling: Whether or not to scale the value.
-    :param str name: What name to give to this node in the graph.
-    :param AbstractFactory factory: Which tensor type to represent this value
-        with.
-    """
+        :param np.ndarray value: The value to define as a constant.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value
+            with.
+        """
         assert isinstance(value, np.ndarray), type(value)
 
         factory = factory or self.tensor_factory
@@ -171,77 +184,48 @@ class Pond(Protocol):
 
         return PondConstant(self, x_on_0, x_on_1, apply_scaling)
 
-    def define_public_placeholder(
-        self,
-        shape,
-        apply_scaling: bool = True,
-        name: Optional[str] = None,
-        factory: Optional[AbstractFactory] = None,
-    ):
-        """Define a `public` placeholder to use in computation. This will be known
-    to both parties.
+    # def define_public_tensor(
+    #     self,
+    #     initial_value,
+    #     apply_scaling: bool = True,
+    #     name: Optional[str] = None,
+    #     factory: Optional[AbstractFactory] = None,
+    # ):
+    #     assert isinstance(
+    #         initial_value, (np.ndarray, tf.Tensor, PondPublicTensor)
+    #     ), type(initial_value)
 
-    .. code-block:: python
+    #     factory = factory or self.tensor_factory
 
-        x = prot.define_public_placeholder(shape=(1024, 1024))
+    #     with tf.name_scope("public-var{}".format("-" + name if name else "")):
 
-    :See: tf.placeholder
+    #         if isinstance(initial_value, np.ndarray):
+    #             v = self._encode(initial_value, apply_scaling)
+    #             v_on_0, v_on_1 = v, v
 
-    :param List[int] shape: The shape of the placeholder.
-    :param bool apply_scaling: Whether or not to scale the value.
-    :param str name: What name to give to this node in the graph.
-    :param AbstractFactory factory: Which tensor type to represent this value
-        with.
-    """
+    #         elif isinstance(initial_value, tf.Tensor):
+    #             inttype = factory.native_type
+    #             v = self._encode(initial_value, apply_scaling, tf_int_type=inttype)
+    #             v_on_0, v_on_1 = v, v
 
-        factory = factory or self.tensor_factory
-        suffix = "-" + name if name else ""
+    #         elif isinstance(initial_value, PondPublicTensor):
+    #             v_on_0, v_on_1 = initial_value.unwrapped
 
-        with tf.name_scope("public-placeholder{}".format(suffix)):
+    #         else:
+    #             raise TypeError(
+    #                 ("Don't know how to turn {} into a " "public variable").format(
+    #                     type(initial_value)
+    #                 )
+    #             )
 
-            with tf.device(self.server_0.device_name):
-                x_on_0 = factory.placeholder(shape)
+    #         with tf.device(self.server_0.device_name):
+    #             x_on_0 = factory.tensor(v_on_0)
 
-            with tf.device(self.server_1.device_name):
-                x_on_1 = factory.placeholder(shape)
+    #         with tf.device(self.server_1.device_name):
+    #             x_on_1 = factory.tensor(v_on_1)
 
-        return PondPublicPlaceholder(self, x_on_0, x_on_1, apply_scaling)
-
-    def define_private_placeholder(
-        self,
-        shape,
-        apply_scaling: bool = True,
-        name: Optional[str] = None,
-        factory: Optional[AbstractFactory] = None,
-    ):
-        """Define a `private` placeholder to use in computation. This will only be
-    known by the party that defines it.
-
-    .. code-block:: python
-
-        x = prot.define_private_placeholder(shape=(1024, 1024))
-
-    :See: tf.placeholder
-
-    :param List[int] shape: The shape of the placeholder.
-    :param bool apply_scaling: Whether or not to scale the value.
-    :param str name: What name to give to this node in the graph.
-    :param AbstractFactory factory: Which tensor type to represent this value
-        with.
-    """
-
-        factory = factory or self.tensor_factory
-
-        suffix = "-" + name if name else ""
-        with tf.name_scope("private-placeholder{}".format(suffix)):
-
-            with tf.device(self.server_0.device_name):
-                x0 = factory.placeholder(shape)
-
-            with tf.device(self.server_1.device_name):
-                x1 = factory.placeholder(shape)
-
-        return PondPrivatePlaceholder(self, x0, x1, apply_scaling)
+    #     x = PondPublicTensor(self, x_on_0, x_on_1, apply_scaling)
+    #     return x
 
     def define_public_variable(
         self,
@@ -252,25 +236,25 @@ class Pond(Protocol):
     ):
         """Define a public variable.
 
-    This is like defining a variable in tensorflow except it creates one that
-    can be used by the protocol.
+        This is like defining a variable in tensorflow except it creates one that
+        can be used by the protocol.
 
-    For most cases, you can think of this as the same as the one from
-    TensorFlow and you don't generally need to consider the difference.
+        For most cases, you can think of this as the same as the one from
+        TensorFlow and you don't generally need to consider the difference.
 
-    For those curious, under the hood, the major difference is that this
-    function will pin your data to a specific device which will be used to
-    optimize the graph later on.
+        For those curious, under the hood, the major difference is that this
+        function will pin your data to a specific device which will be used to
+        optimize the graph later on.
 
-    :see: tf.Variable
+        :see: tf.Variable
 
-    :param Union[np.ndarray,tf.Tensor,PondPublicTensor] initial_value: The
-        initial value.
-    :param bool apply_scaling: Whether or not to scale the value.
-    :param str name: What name to give to this node in the graph.
-    :param AbstractFactory factory: Which tensor type to represent this value
-        with.
-    """
+        :param Union[np.ndarray,tf.Tensor,PondPublicTensor] initial_value: The
+            initial value.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value
+            with.
+        """
         assert isinstance(
             initial_value, (np.ndarray, tf.Tensor, PondPublicTensor)
         ), type(initial_value)
@@ -311,26 +295,27 @@ class Pond(Protocol):
         self,
         initial_value,
         apply_scaling: bool = True,
+        share_type: str = None,
         name: Optional[str] = None,
         factory: Optional[AbstractFactory] = None,
     ):
         """Define a private variable.
 
-    This will take the passed value and construct shares that will be split up
-    between those involved in the computation.
+        This will take the passed value and construct shares that will be split up
+        between those involved in the computation.
 
-    For example, in a two party architecture, this will split the value into
-    two sets of shares and transfer them between each party in a secure manner.
+        For example, in a two party architecture, this will split the value into
+        two sets of shares and transfer them between each party in a secure manner.
 
-    :see tf.Variable
+        :see tf.Variable
 
-    :param Union[np.ndarray,tf.Tensor,PondPublicTensor] initial_value: The
-        initial value.
-    :param bool apply_scaling: Whether or not to scale the value.
-    :param str name: What name to give to this node in the graph.
-    :param AbstractFactory factory: Which tensor type to represent this value
-        with.
-    """
+        :param Union[np.ndarray,tf.Tensor,PondPublicTensor] initial_value: The
+            initial value.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        :param AbstractFactory factory: Which tensor type to represent this value
+            with.
+        """
         init_val_types = (np.ndarray, tf.Tensor, PondPublicTensor, PondPrivateTensor)
         assert isinstance(initial_value, init_val_types), type(initial_value)
 
@@ -346,7 +331,9 @@ class Pond(Protocol):
             elif isinstance(initial_value, tf.Tensor):
                 v = factory.tensor(
                     self._encode(
-                        initial_value, apply_scaling, tf_int_type=factory.native_type,
+                        initial_value,
+                        apply_scaling,
+                        tf_int_type=factory.native_type,
                     )
                 )
                 v0, v1 = self._share(v)
@@ -398,13 +385,13 @@ class Pond(Protocol):
     ):
         """Define a public input.
 
-    This represents a `public` input owned by the specified player into the
-    graph.
+        This represents a `public` input owned by the specified player into the
+        graph.
 
-    :param Union[str,Player] player: Which player owns this input.
-    :param bool apply_scaling: Whether or not to scale the value.
-    :param str name: What name to give to this node in the graph.
-    """
+        :param Union[str,Player] player: Which player owns this input.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name: What name to give to this node in the graph.
+        """
         if isinstance(player, str):
             player = get_config().get_player(player)
         assert isinstance(player, Player)
@@ -446,41 +433,41 @@ class Pond(Protocol):
     def local_computation(self, player_name=None, **kwargs):
         """Annotate a function `compute_func` for local computation.
 
-    This decorator can be used to pin a function's code to a specific player's
-    device for remote execution.  This is useful when defining player-specific
-    handlers for e.g. providing model weights, or input and output tensors.
+        This decorator can be used to pin a function's code to a specific player's
+        device for remote execution.  This is useful when defining player-specific
+        handlers for e.g. providing model weights, or input and output tensors.
 
-    The decorator can handle global functions, normal object methods, or
-    classmethods. If wrapping a method, it's presumed that the method's object
-    has an attribute named `player_name`, or that the user will provide the
-    `player_name` later on as a kwarg to the `compute_func`.
+        The decorator can handle global functions, normal object methods, or
+        classmethods. If wrapping a method, it's presumed that the method's object
+        has an attribute named `player_name`, or that the user will provide the
+        `player_name` later on as a kwarg to the `compute_func`.
 
-    Example:
-      ```
-      @tfe.local_computation('input-provider')
-      def provide_input():
-        return tf.random.normal((3, 3))
+        Example:
+          ```
+          @tfe.local_computation('input-provider')
+          def provide_input():
+            return tf.random.normal((3, 3))
 
-      @tfe.local_computation
-      def receive_output(logits):
-        return tf.print(tf.argmax(logits, axis=-1))
+          @tfe.local_computation
+          def receive_output(logits):
+            return tf.print(tf.argmax(logits, axis=-1))
 
-      x = provide_input()
-      y = model(x)
-      receive_op = receive_output(y, player_name='output-receiver')
-      with tfe.Session():
-        sess.run(receive_op)
-      ```
+          x = provide_input()
+          y = model(x)
+          receive_op = receive_output(y, player_name='output-receiver')
+          with tfe.Session():
+            sess.run(receive_op)
+          ```
 
-    Arguments:
-      player_name: Name of the player who should execute the function.
-      kwargs: Keyword arguments to use when encoding or encrypting
-        inputs/outputs to compute_func: see tfe.define_local_computation for
-        details.
+        Arguments:
+          player_name: Name of the player who should execute the function.
+          kwargs: Keyword arguments to use when encoding or encrypting
+            inputs/outputs to compute_func: see tfe.define_local_computation for
+            details.
 
-    Returns:
-      The compute_func, but decorated for remote execution.
-    """
+        Returns:
+          The compute_func, but decorated for remote execution.
+        """
         if callable(player_name):
             # The user has called us as a standard decorator:
             #
@@ -551,15 +538,15 @@ class Pond(Protocol):
         factory=None,
     ):
         """
-    Define a local computation that happens on plaintext tensors.
+        Define a local computation that happens on plaintext tensors.
 
-    :param player: Who performs the computation and gets to see the values in
-        plaintext.
-    :param apply_scaling: Whether or not to scale the outputs.
-    :param name_scope: Optional name to give to this node in the graph.
-    :param masked: Whether or not to produce masked outputs.
-    :param factory: Backing tensor type to use for outputs.
-    """  # noqa:E501
+        :param player: Who performs the computation and gets to see the values in
+            plaintext.
+        :param apply_scaling: Whether or not to scale the outputs.
+        :param name_scope: Optional name to give to this node in the graph.
+        :param masked: Whether or not to produce masked outputs.
+        :param factory: Backing tensor type to use for outputs.
+        """  # noqa:E501
 
         factory = factory or self.tensor_factory
 
@@ -624,14 +611,12 @@ class Pond(Protocol):
                     if not isinstance(arguments, (list, tuple)):
                         arguments = [arguments]
 
-                    inputs = tf.contrib.framework.nest.map_structure(
-                        reconstruct_input, arguments
-                    )
+                    inputs = [reconstruct_input(x) for x in arguments]
 
                 outputs = computation_fn(*inputs)
 
-                if isinstance(outputs, tf.Operation):
-                    return outputs
+                if outputs is None:
+                    return None
 
                 if isinstance(outputs, tf.Tensor):
                     return share_output(outputs)
@@ -654,18 +639,18 @@ class Pond(Protocol):
         factory: Optional[AbstractFactory] = None,
     ):
         """
-    Define a private input.
+        Define a private input.
 
-    This represents a `private` input owned by the specified player into the
-    graph.
+        This represents a `private` input owned by the specified player into the
+        graph.
 
-    :param Union[str,Player] player: Which player owns this input.
-    :param bool apply_scaling: Whether or not to scale the value.
-    :param str name_scope: What name to give to this node in the graph.
-    :param bool masked: Whether or not to mask the input.
-    :param AbstractFactory factory: Which backing type to use for this input
-        (e.g. `int100` or `int64`).
-    """
+        :param Union[str,Player] player: Which player owns this input.
+        :param bool apply_scaling: Whether or not to scale the value.
+        :param str name_scope: What name to give to this node in the graph.
+        :param bool masked: Whether or not to mask the input.
+        :param AbstractFactory factory: Which backing type to use for this input
+            (e.g. `int100` or `int64`).
+        """
         return self.define_local_computation(
             player=player,
             computation_fn=inputter_fn,
@@ -677,26 +662,107 @@ class Pond(Protocol):
         )
 
     def define_output(
-        self, player, arguments, outputter_fn, name_scope=None,
+        self,
+        player,
+        arguments,
+        outputter_fn,
+        name_scope=None,
     ):
         """
-    Define an output for this graph.
+        Define an output for this graph.
 
-    :param player: Which player this output will be sent to.
-    """
-
-        def result_wrapper(*args):
-            op = outputter_fn(*args)
-            # wrap in tf.group to prevent sending back any tensors
-            # (which might hence be leaked)
-            return tf.group(op)
+        :param player: Which player this output will be sent to.
+        """
 
         return self.define_local_computation(
             player=player,
-            computation_fn=result_wrapper,
+            computation_fn=outputter_fn,
             arguments=arguments,
             name_scope=name_scope if name_scope else "output",
         )
+
+    def from_bone(self, tensor_bone):
+        factory = self.factories[tensor_bone.factory]
+        if isinstance(tensor_bone, PondPublicTensorBone):
+            with tf.device(self.server_0.device_name):
+                value_0 = factory.tensor(tensor_bone.values[0])
+            with tf.device(self.server_1.device_name):
+                value_1 = factory.tensor(tensor_bone.values[1])
+            return PondPublicTensor(
+                self, value_0, value_1, is_scaled=tensor_bone.is_scaled
+            )
+        elif isinstance(tensor_bone, PondPublicVariableBone):
+            with tf.device(self.server_0.device_name):
+                value_0 = factory.variable(tensor_bone.values[0])
+            with tf.device(self.server_1.device_name):
+                value_1 = factory.variable(tensor_bone.values[1])
+            return PondPublicVariable(
+                self, value_0, value_1, is_scaled=tensor_bone.is_scaled
+            )
+        elif isinstance(tensor_bone, PondConstantBone):
+            with tf.device(self.server_0.device_name):
+                value_0 = factory.consant(tensor_bone.values[0])
+            with tf.device(self.server_1.device_name):
+                value_1 = factory.consant(tensor_bone.values[1])
+            return PondConstant(self, value_0, value_1, is_scaled=tensor_bone.is_scaled)
+        elif isinstance(tensor_bone, PondPrivateTensorBone):
+            with tf.device(self.server_0.device_name):
+                value_0 = factory.tensor(tensor_bone.values[0])
+            with tf.device(self.server_1.device_name):
+                value_1 = factory.tensor(tensor_bone.values[1])
+            return PondPrivateTensor(
+                self, value_0, value_1, is_scaled=tensor_bone.is_scaled
+            )
+        elif isinstance(tensor_bone, PondPrivateVariableBone):
+            with tf.device(self.server_0.device_name):
+                value_0 = factory.variable(tensor_bone.values[0])
+            with tf.device(self.server_1.device_name):
+                value_1 = factory.variable(tensor_bone.values[1])
+            return PondPrivateVariable(
+                self, value_0, value_1, is_scaled=tensor_bone.is_scaled
+            )
+        elif isinstance(tensor_bone, PondMaskedTensorBone):
+            with tf.device(self.server_0.device_name):
+                a0 = factory.tensor(tensor_bone.a0)
+                alpha_on_0 = factory.tensor(tensor_bone.alpha_on_0)
+            with tf.device(self.server_1.device_name):
+                a1 = factory.tensor(tensor_bone.a1)
+                alpha_on_1 = factory.tensor(tensor_bone.alpha_on_1)
+            with tf.device(self.triple_source.producer.device_name):
+                a = factory.tensor(tensor_bone.a)
+            return PondMaskedTensor(
+                self,
+                self.from_bone(tensor_bone.unmasked),
+                a,
+                a0,
+                a1,
+                alpha_on_0,
+                alpha_on_1,
+                is_scaled=tensor_bone.is_scaled,
+            )
+        elif isinstance(tensor_bone, PondMaskedVariableBone):
+            with tf.device(self.server_0.device_name):
+                a0 = factory.variable(tensor_bone.a0)
+                alpha_on_0 = factory.variable(tensor_bone.alpha_on_0)
+            with tf.device(self.server_1.device_name):
+                a1 = factory.variable(tensor_bone.a1)
+                alpha_on_1 = factory.variable(tensor_bone.alpha_on_1)
+            with tf.device(self.triple_source.producer.device_name):
+                a = factory.variable(tensor_bone.a)
+            return PondMaskedVariable(
+                self,
+                self.from_bone(tensor_bone.unmasked),
+                a,
+                a0,
+                a1,
+                alpha_on_0,
+                alpha_on_1,
+                is_scaled=tensor_bone.is_scaled,
+            )
+        else:
+            raise TypeError(
+                "Don't know how to handle type {}".format(type(tensor_bone))
+            )
 
     def _encode(
         self,
@@ -705,44 +771,60 @@ class Pond(Protocol):
         tf_int_type=None,
     ) -> Union[tf.Tensor, np.ndarray]:
         """
-    Encode tensor of rational numbers into tensor of ring elements. Output is
-    of same type as input to allow function to be used for constants.
-    """
+        Encode tensor of rational numbers into tensor of ring elements. Output is
+        of same type as input to allow function to be used for constants.
+        """
 
         with tf.name_scope("encode"):
 
-            # we first scale as needed
-
-            if apply_scaling:
-                scaled = rationals * self.fixedpoint_config.scaling_factor
-            else:
-                scaled = rationals
-
-            # and then we round to integers
-
-            if isinstance(scaled, np.ndarray):
-                integers = scaled.astype(np.int64)
-
-            elif isinstance(scaled, tf.Tensor):
+            if isinstance(rationals, np.ndarray):
+                if apply_scaling:
+                    # First converting to float64, otherwise the scaling
+                    # would not work as expected for input np array of type int32
+                    scaled = rationals.astype(np.float64)
+                    scaled = scaled * self.fixedpoint_config.scaling_factor
+                else:
+                    scaled = rationals
+                integers = np.array(scaled).astype(np.int64)
+            elif isinstance(rationals, tf.Tensor):
                 tf_int_type = tf_int_type or (
                     scaled.dtype
                     if scaled.dtype in TF_INT_TYPES
                     else self.tensor_factory.native_type
                 )
                 assert tf_int_type in TF_INT_TYPES
+                if apply_scaling:
+                    # First converting to float64, otherwise the scaling
+                    # would not work as expected for input np array of type int32
+                    scaled = tf.cast(rationals, tf.float64)
+                    scaled = scaled * self.fixedpoint_config.scaling_factor
+                else:
+                    scaled = rationals
                 integers = tf.cast(scaled, dtype=tf_int_type)
-
             else:
-                raise TypeError("Don't know how to encode {}".format(type(rationals)))
+                # give it a last try
+                try:
+                    scaled = np.array(rationals)
+                    if apply_scaling:
+                        # First converting to float64, otherwise the scaling
+                        # would not work as expected for input np array of type int32
+                        scaled = scaled.astype(np.float64)
+                        scaled = np.array(
+                            scaled * self.fixedpoint_config.scaling_factor
+                        )
+                    integers = scaled.astype(np.int64)
+                except:  # noqa:E722
+                    raise TypeError(
+                        "Don't know how to encode {}".format(type(rationals))
+                    )
 
-            # pylint: disable=unidiomatic-typecheck
-            assert type(rationals) == type(integers), (type(rationals), type(integers))
-            # pylint: enable=unidiomatic-typecheck
             return integers
 
     @memoize
     def _decode(
-        self, elements: AbstractTensor, is_scaled: bool,
+        self,
+        elements: AbstractTensor,
+        is_scaled: bool,
     ) -> Union[tf.Tensor, np.ndarray]:
         """Decode tensor of ring elements into tensor of rational numbers."""
 
@@ -756,15 +838,18 @@ class Pond(Protocol):
 
             return scaled / self.fixedpoint_config.scaling_factor
 
-    def _share(self, secret: AbstractTensor,) -> Tuple[AbstractTensor, AbstractTensor]:
+    def _share(
+        self,
+        secret: AbstractTensor,
+    ) -> Tuple[AbstractTensor, AbstractTensor]:
         """Secret-share an AbstractTensor.
 
-    Args:
-      secret: `AbstractTensor`, the tensor to share.
+        Args:
+          secret: `AbstractTensor`, the tensor to share.
 
-    Returns:
-      A pair of `AbstractTensor`, the shares.
-    """
+        Returns:
+          A pair of `AbstractTensor`, the shares.
+        """
 
         with tf.name_scope("share"):
             share0 = secret.factory.sample_uniform(secret.shape)
@@ -778,7 +863,9 @@ class Pond(Protocol):
         return share0, share1
 
     def _share_and_wrap(
-        self, secret: AbstractTensor, is_scaled: bool,
+        self,
+        secret: AbstractTensor,
+        is_scaled: bool,
     ) -> "PondPrivateTensor":
         s0, s1 = self._share(secret)
         return PondPrivateTensor(self, s0, s1, is_scaled)
@@ -789,7 +876,9 @@ class Pond(Protocol):
 
     @memoize
     def assign(
-        self, variable: Union["PondPrivateVariable", "PondPublicVariable"], value,
+        self,
+        variable: Union["PondPrivateVariable", "PondPublicVariable"],
+        value,
     ) -> tf.Operation:
         """See tf.assign."""
 
@@ -803,43 +892,28 @@ class Pond(Protocol):
             val0, val1 = value.share0, value.share1
 
             with tf.name_scope("assign"):
-
-                # Having this control_dependencies is important in order to avoid that
-                # computationally-dependent shares are updated in different pace
-                # (e.g., share0 is computed from share1, and we need to make sure that
-                # share1 is NOT already updated).
-                # See https://github.com/tf-encrypted/tf-encrypted/pull/665 for details.
-                with tf.control_dependencies(val0.support + val1.support):
-
-                    with tf.device(self.server_0.device_name):
-                        op0 = var0.assign_from_same(val0)
-
-                    with tf.device(self.server_1.device_name):
-                        op1 = var1.assign_from_same(val1)
-
-                    op = tf.group(op0, op1)
+                with tf.device(self.server_0.device_name):
+                    var0.assign(val0)
+                with tf.device(self.server_1.device_name):
+                    var1.assign(val1)
 
         elif isinstance(variable, PondPublicVariable):
             assert isinstance(value, PondPublicTensor), type(value)
             assert (
                 variable.is_scaled == value.is_scaled
-            ), "Scaling must match: {}, {}".format(variable.is_scaled, value.is_scaled,)
+            ), "Scaling must match: {}, {}".format(
+                variable.is_scaled,
+                value.is_scaled,
+            )
 
             var0, var1 = variable.variable_on_0, variable.variable_on_1
             val0, val1 = value.value_on_0, value.value_on_1
 
             with tf.name_scope("assign"):
-
-                with tf.control_dependencies(val0.support + val1.support):
-
-                    with tf.device(self.server_0.device_name):
-                        op0 = var0.assign_from_same(val0)
-
-                    with tf.device(self.server_1.device_name):
-                        op1 = var1.assign_from_same(val1)
-
-                    op = tf.group(op0, op1)
-
+                with tf.device(self.server_0.device_name):
+                    var0.assign(val0)
+                with tf.device(self.server_1.device_name):
+                    var1.assign(val1)
         else:
             raise TypeError(
                 ("Don't know how to handle variable " "of type {}").format(
@@ -847,49 +921,37 @@ class Pond(Protocol):
                 )
             )
 
-        return op
-
-    def identity(
-        self, x, control_dependencies_0=None, control_dependencies_1=None,
-    ):
-        return self.dispatch(
-            "identity",
-            x,
-            control_dependencies_0=control_dependencies_0,
-            control_dependencies_1=control_dependencies_1,
-        )
-
     @memoize
     def add(self, x, y):
         """
-    add(x, y) -> PondTensor
+        add(x, y) -> PondTensor
 
-    Adds two tensors `x` and `y`.
+        Adds two tensors `x` and `y`.
 
-    :param PondTensor x: The first operand.
-    :param PondTensor y: The second operand.
-    """
+        :param PondTensor x: The first operand.
+        :param PondTensor y: The second operand.
+        """
         x, y = self.lift(x, y)
         return self.dispatch("add", x, y)
 
     # pylint: disable=inconsistent-return-statements
     def lift(self, x, y=None, apply_scaling: Optional[bool] = None):
         """
-    lift(x, y=None, apply_scaling=None) -> PondTensor(s)
+        lift(x, y=None, apply_scaling=None) -> PondTensor(s)
 
-    Convenience method for working with mixed typed tensors in programs:
-    combining any of the Pond objects together with e.g. ints and floats
-    will automatically lift the latter into Pond objects.
+        Convenience method for working with mixed typed tensors in programs:
+        combining any of the Pond objects together with e.g. ints and floats
+        will automatically lift the latter into Pond objects.
 
-    :param int,float,PondTensor x: Python object to lift.
-    :param int,float,PondTensor y: Second Python object to lift, optional.
-    :param bool apply_scaling: Whether to apply scaling to the input object(s).
-    """
+        :param int,float,PondTensor x: Python object to lift.
+        :param int,float,PondTensor y: Second Python object to lift, optional.
+        :param bool apply_scaling: Whether to apply scaling to the input object(s).
+        """
 
         if y is None:
 
             if isinstance(x, (int, float)):
-                return self.define_constant(np.array([x]))
+                return self.define_constant(np.array(x))
 
             if isinstance(x, PondTensor):
                 return x
@@ -899,13 +961,13 @@ class Pond(Protocol):
         if isinstance(x, (int, float)):
 
             if isinstance(y, (int, float)):
-                x = self.define_constant(np.array([x]))
-                y = self.define_constant(np.array([y]))
+                x = self.define_constant(np.array(x))
+                y = self.define_constant(np.array(y))
                 return x, y
 
             if isinstance(y, PondTensor):
                 x = self.define_constant(
-                    np.array([x]),
+                    np.array(x),
                     apply_scaling=apply_scaling or y.is_scaled,
                     factory=y.backing_dtype,
                 )
@@ -919,7 +981,7 @@ class Pond(Protocol):
 
             if isinstance(y, (int, float)):
                 y = self.define_constant(
-                    np.array([y]),
+                    np.array(y),
                     apply_scaling=apply_scaling or x.is_scaled,
                     factory=x.backing_dtype,
                 )
@@ -949,7 +1011,11 @@ class Pond(Protocol):
     @memoize
     def cumsum(self, x, axis=0, exclusive=False, reverse=False):
         return self.dispatch(
-            "cumsum", x, axis=axis, exclusive=exclusive, reverse=reverse,
+            "cumsum",
+            x,
+            axis=axis,
+            exclusive=exclusive,
+            reverse=reverse,
         )
 
     @memoize
@@ -1000,11 +1066,11 @@ class Pond(Protocol):
     @memoize
     def div(self, x, y):
         """
-    Performs a true division of `x` by `y` where `y` is public.
+        Performs a true division of `x` by `y` where `y` is public.
 
-    No flooring is performing if `y` is an integer type as it is implicitly
-    treated as a float.
-    """
+        No flooring is performing if `y` is an integer type as it is implicitly
+        treated as a float.
+        """
 
         assert isinstance(x, PondTensor)
 
@@ -1022,12 +1088,12 @@ class Pond(Protocol):
     @memoize
     def sqrt(self, x):
         """
-    sqrt(x) -> PondTensor
+        sqrt(x) -> PondTensor
 
-    Computes numerical square root value element-wise.
+        Computes numerical square root value element-wise.
 
-    :param PondTensor x: Input tensor.
-    """
+        :param PondTensor x: Input tensor.
+        """
         return self.dispatch("sqrt", x)
 
     @memoize
@@ -1040,13 +1106,13 @@ class Pond(Protocol):
 
     def transpose(self, x, perm=None) -> "PondTensor":
         """
-    transpose(x, perm=None) -> PondTensor
+        transpose(x, perm=None) -> PondTensor
 
-    Transposes the input `x`, or permutes the axes of `x` if `perm` is given.
+        Transposes the input `x`, or permutes the axes of `x` if `perm` is given.
 
-    :param PondTensor x: The tensor to transpose or permute.
-    :param List perm: A permutation of axis indices.
-    """
+        :param PondTensor x: The tensor to transpose or permute.
+        :param List perm: A permutation of axis indices.
+        """
 
         node_key = ("transpose", x)
         x_t = nodes.get(node_key, None)
@@ -1072,13 +1138,13 @@ class Pond(Protocol):
     @memoize
     def reshape(self, x: "PondTensor", shape: List[int]):
         """
-    reshape(x, shape) -> PondTensor
+        reshape(x, shape) -> PondTensor
 
-    Reshape `x` into a tensor with a new `shape`.
+        Reshape `x` into a tensor with a new `shape`.
 
-    :param PondTensor x: Input tensor.
-    :param (int,...) shape: Shape of output tensor.
-    """
+        :param PondTensor x: Input tensor.
+        :param (int,...) shape: Shape of output tensor.
+        """
 
         if isinstance(x, PondPublicTensor):
             return _reshape_public(self, x, shape)
@@ -1094,12 +1160,12 @@ class Pond(Protocol):
     @memoize
     def negative(self, x: "PondTensor"):
         """
-    negative(x) -> PondTensor
+        negative(x) -> PondTensor
 
-    Computes numerical negative value element-wise.
+        Computes numerical negative value element-wise.
 
-    :param PondTensor x: Input tensor.
-    """
+        :param PondTensor x: Input tensor.
+        """
         return self.dispatch("negative", x)
 
     @memoize
@@ -1134,11 +1200,11 @@ class Pond(Protocol):
 
     def strided_slice(self, x: "PondTensor", *args: Any, **kwargs: Any):
         """
-    strided_slice(x, *args, **kwargs) -> PondTensor
+        strided_slice(x, *args, **kwargs) -> PondTensor
 
-    See https://www.tensorflow.org/api_docs/python/tf/strided_slice for further
-    documentation.
-    """
+        See https://www.tensorflow.org/api_docs/python/tf/strided_slice for further
+        documentation.
+        """
 
         node_key = ("strided_slice", x)
 
@@ -1278,8 +1344,8 @@ class Pond(Protocol):
     @memoize
     def tanh(self, x: "PondTensor"):
         """
-    A Chebyshev polynomial approximation of the hyperbolic tangent function.
-    """
+        A Chebyshev polynomial approximation of the hyperbolic tangent function.
+        """
         assert isinstance(x, PondTensor), type(x)
 
         w0 = 0.0
@@ -1307,8 +1373,8 @@ class Pond(Protocol):
 
     def log(self, x: "PondTensor"):
         """
-    A Chebyshev polynomial approximation of the hyperbolic tangent function.
-    """
+        A Chebyshev polynomial approximation of the hyperbolic tangent function.
+        """
         assert isinstance(x, PondTensor), type(x)
 
         w0 = -3.35674972
@@ -1340,43 +1406,9 @@ class Pond(Protocol):
     def reveal(self, x):
         return self.dispatch("reveal", x)
 
-    def cache(self, xs):
-        """
-    Wraps all input tensors, including private and masked, in variables so
-    that computation and masking of these can be reused between different
-    runs.
-
-    For private predictions this may be used to avoid re-masking model
-    weights between each run, thereby saving on communication.
-    For private training this may be used to avoid re-masked the traning
-    data between each iteration, again saving on communication.
-    """
-
-        if isinstance(xs, (list, tuple)):
-            # apply recursively
-            updaters, cached = zip(*[self.cache(x) for x in xs])
-            return tf.group(*updaters), cached
-
-        # base case
-        node_key = ("cache", xs)
-        cached = nodes.get(node_key, None)
-
-        if cached is not None:
-            return cached
-
-        dispatch = {
-            PondPublicTensor: _cache_public,
-            PondPrivateTensor: _cache_private,
-            PondMaskedTensor: _cache_masked,
-        }
-        func = dispatch.get(_type(xs), None)
-        if func is None:
-            raise TypeError("Don't know how to cache {}".format(type(xs)))
-
-        updater, cached = func(self, xs)
-        nodes[node_key] = cached
-
-        return updater, cached
+    @memoize
+    def identity(self, x):
+        return self.dispatch("identity", x)
 
     def conv2d(self, x, w, strides, padding):
         """See tf.nn.conv2d."""
@@ -1436,11 +1468,11 @@ class Pond(Protocol):
 
         return z
 
-    def batch_to_space_nd(self, x, block_shape, crops):
-        return self.dispatch("batch_to_space_nd", x, block_shape, crops)
+    def batch_to_space(self, x, block_shape, crops):
+        return self.dispatch("batch_to_space", x, block_shape, crops)
 
-    def space_to_batch_nd(self, x, block_shape, paddings):
-        return self.dispatch("space_to_batch_nd", x, block_shape, paddings)
+    def space_to_batch(self, x, block_shape, paddings):
+        return self.dispatch("space_to_batch", x, block_shape, paddings)
 
     @memoize
     def equal(self, x, y):
@@ -1449,9 +1481,9 @@ class Pond(Protocol):
 
     def dispatch(self, base_name, *args, container=None, **kwargs):
         """
-    Finds the correct protocol logic to perform based on the dispatch_id
-    attribute of the input tensors in args.
-    """
+        Finds the correct protocol logic to perform based on the dispatch_id
+        attribute of the input tensors in args.
+        """
         suffix = "_".join(
             [arg.dispatch_id for arg in args if hasattr(arg, "dispatch_id")]
         )
@@ -1542,11 +1574,18 @@ class Pond(Protocol):
 
 class AdditiveFIFOQueue(AbstractFIFOQueue):
     """
-  FIFOQueue for holding two-additive shared tensors.
-  """
+    FIFOQueue for holding two-additive shared tensors.
+    """
 
     def __init__(
-        self, protocol, server_0, server_1, capacity, dtype, shape, shared_name,
+        self,
+        protocol,
+        server_0,
+        server_1,
+        capacity,
+        dtype,
+        shape,
+        shared_name,
     ):
 
         self.protocol = protocol
@@ -1562,7 +1601,7 @@ class AdditiveFIFOQueue(AbstractFIFOQueue):
         native_shape = shape
 
         with tf.device(self.server_0.device_name):
-            self.queue0 = tf.queue.FIFOQueue(
+            self.queue0 = TFFIFOQueue(
                 capacity=capacity,
                 dtypes=[native_dtype],
                 shapes=[native_shape],
@@ -1570,7 +1609,7 @@ class AdditiveFIFOQueue(AbstractFIFOQueue):
             )
 
         with tf.device(self.server_1.device_name):
-            self.queue1 = tf.queue.FIFOQueue(
+            self.queue1 = TFFIFOQueue(
                 capacity=capacity,
                 dtypes=[native_dtype],
                 shapes=[native_shape],
@@ -1610,7 +1649,12 @@ class AdditiveFIFOQueue(AbstractFIFOQueue):
             raw_tensor1 = self.queue1.dequeue()
             tensor_1 = self.dtype.tensor(raw_tensor1)
 
-        return PondPrivateTensor(self.protocol, tensor_0, tensor_1, self.is_scaled,)
+        return PondPrivateTensor(
+            self.protocol,
+            tensor_0,
+            tensor_1,
+            self.is_scaled,
+        )
 
 
 #
@@ -1618,61 +1662,72 @@ class AdditiveFIFOQueue(AbstractFIFOQueue):
 #
 
 
+class PondTensorBone(tf.experimental.ExtensionType, TFETensorBone):
+    is_scaled: bool
+    factory: int
+
+
 class PondTensor(TFETensor):
     """
-  This class functions mostly as a convenient way of exposing operations
-  directly on the various tensor objects, ie allowing one to write `x + y`
-  instead of `prot.add(x, y)`. Since this functionality is shared among all
-  tensors we put it in this superclass.
+    This class functions mostly as a convenient way of exposing operations
+    directly on the various tensor objects, ie allowing one to write `x + y`
+    instead of `prot.add(x, y)`. Since this functionality is shared among all
+    tensors we put it in this superclass.
 
-  This class should never be instantiated on its own.
-  Instead you should use your chosen protocols factory methods::
+    This class should never be instantiated on its own.
+    Instead you should use your chosen protocols factory methods::
 
-      x = prot.define_private_input(tf.constant(np.array([1,2,3,4])))
-      y = prot.define_public_input(tf.constant(np.array([4,5,6,7])))
+        x = prot.define_private_input(tf.constant(np.array([1,2,3,4])))
+        y = prot.define_public_input(tf.constant(np.array([4,5,6,7])))
 
-      z = x + y
+        z = x + y
 
-      with config.Session() as sess:
-          answer = z.reveal().eval(sess)
+        with config.Session() as sess:
+            answer = z.reveal().eval(sess)
 
-          print(answer) # => [5, 7, 9, 11]
-  """
+            print(answer) # => [5, 7, 9, 11]
+    """
 
     def __init__(self, prot, is_scaled):
         self.prot = prot
         self.is_scaled = is_scaled
+        self.share_type = None
 
     @property
     @abc.abstractmethod
     def shape(self) -> List[int]:
         """
-    :rtype: List[int]
-    :returns: The shape of this tensor.
-    """
+        :rtype: List[int]
+        :returns: The shape of this tensor.
+        """
 
     @property
     @abc.abstractmethod
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
         pass
 
+    @property
+    @abc.abstractmethod
+    def bone(self) -> PondTensorBone:
+        pass
+
     def add(self, other):
         """
-    Add `other` to this PondTensor.  This can be another tensor with the same
-    backing or a primitive.
+        Add `other` to this PondTensor.  This can be another tensor with the same
+        backing or a primitive.
 
-    This function returns a new PondTensor and does not modify this one.
+        This function returns a new PondTensor and does not modify this one.
 
-    :param PondTensor other: a or primitive (e.g. a float)
-    :return: A new PondTensor with `other` added.
-    :rtype: PondTensor
-    """
+        :param PondTensor other: a or primitive (e.g. a float)
+        :return: A new PondTensor with `other` added.
+        :rtype: PondTensor
+        """
         return self.prot.add(self, other)
 
     def __add__(self, other):
         """
-    See :meth:`~tf_encrypted.protocol.pond.PondTensor.add`
-    """
+        See :meth:`~tf_encrypted.protocol.pond.PondTensor.add`
+        """
         return self.prot.add(self, other)
 
     def __radd__(self, other):
@@ -1680,29 +1735,29 @@ class PondTensor(TFETensor):
 
     def reduce_sum(self, axis=None, keepdims=None):
         """
-    Like :meth:`tensorflow.reduce_sum`
+        Like :meth:`tensorflow.reduce_sum`
 
-    :param int axis:  The axis to reduce along
-    :param bool keepdims: If true, retains reduced dimensions with length 1.
-    :return: A new PondTensor
-    :rtype: PondTensor
-    """
+        :param int axis:  The axis to reduce along
+        :param bool keepdims: If true, retains reduced dimensions with length 1.
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.reduce_sum(self, axis, keepdims)
 
     def sum(self, axis=None, keepdims=None):
         """
-    See :meth:`PondTensor.reduce_sum`
-    """
+        See :meth:`PondTensor.reduce_sum`
+        """
         return self.reduce_sum(axis, keepdims)
 
     def sub(self, other):
         """
-    Subtract `other` from this tensor.
+        Subtract `other` from this tensor.
 
-    :param PondTensor other: to subtract
-    :return: A new PondTensor
-    :rtype: PondTensor
-    """
+        :param PondTensor other: to subtract
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.sub(self, other)
 
     def __sub__(self, other):
@@ -1713,12 +1768,12 @@ class PondTensor(TFETensor):
 
     def mul(self, other):
         """
-    Multiply this tensor with `other`
+        Multiply this tensor with `other`
 
-    :param PondTensor other: to multiply
-    :return: A new PondTensor
-    :rtype: PondTensor
-    """
+        :param PondTensor other: to multiply
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.mul(self, other)
 
     def __mul__(self, other):
@@ -1735,32 +1790,32 @@ class PondTensor(TFETensor):
 
     def square(self):
         """
-    Square this tensor.
+        Square this tensor.
 
-    :return: A new PondTensor
-    :rtype: PondTensor
-    """
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.square(self)
 
     def matmul(self, other):
         """
-    MatMul this tensor with `other`.  This will perform matrix multiplication,
-    rather than elementwise like
-    :meth:`~tf_encrypted.protocol.pond.PondTensor.mul`
+        MatMul this tensor with `other`.  This will perform matrix multiplication,
+        rather than elementwise like
+        :meth:`~tf_encrypted.protocol.pond.PondTensor.mul`
 
-    :param PondTensor other: to subtract
-    :return: A new PondTensor
-    :rtype: PondTensor
-    """
+        :param PondTensor other: to subtract
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.matmul(self, other)
 
     def dot(self, other):
         """
-    Alias for :meth:`~tf_encrypted.protocol.pond.PondTensor.matmul`
+        Alias for :meth:`~tf_encrypted.protocol.pond.PondTensor.matmul`
 
-    :return: A new PondTensor
-    :rtype: PondTensor
-    """
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.matmul(other)
 
     def __getitem__(self, slc):
@@ -1768,75 +1823,79 @@ class PondTensor(TFETensor):
 
     def transpose(self, perm=None):
         """
-    Transpose this tensor.
+        Transpose this tensor.
 
-    See :meth:`tensorflow.transpose`
+        See :meth:`tensorflow.transpose`
 
-    :param List[int]: A permutation of the dimensions of this tensor.
+        :param List[int]: A permutation of the dimensions of this tensor.
 
-    :return: A new PondTensor
-    :rtype: PondTensor
-    """
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.transpose(self, perm)
 
     def truncate(self):
         """
-    Truncate this tensor.
+        Truncate this tensor.
 
-    `TODO`
+        `TODO`
 
-    :return: A new PondTensor
-    :rtype: PondTensor
-    """
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.truncate(self)
 
     def expand_dims(self, axis=None):
         """
-    :See: tf.expand_dims
+        :See: tf.expand_dims
 
-    :return: A new PondTensor
-    :rtype: PondTensor
-    """
+        :return: A new PondTensor
+        :rtype: PondTensor
+        """
         return self.prot.expand_dims(self, axis=axis)
 
     def reshape(self, shape: List[int]) -> "PondTensor":
         """
-    :See: tf.reshape
+        :See: tf.reshape
 
-    :param List[int] shape: The new shape of the tensor.
-    :rtype: PondTensor
-    :returns: A new tensor with the contents of this tensor, but with the new
-        specified shape.
-    """
+        :param List[int] shape: The new shape of the tensor.
+        :rtype: PondTensor
+        :returns: A new tensor with the contents of this tensor, but with the new
+            specified shape.
+        """
         return self.prot.reshape(self, shape)
 
     def negative(self) -> "PondTensor":
         """
-    :See: tf.negative
+        :See: tf.negative
 
-    :rtype: PondTensor
-    :returns: A new tensor with numerical negative value element-wise computed.
-    """
+        :rtype: PondTensor
+        :returns: A new tensor with numerical negative value element-wise computed.
+        """
         return self.prot.negative(self)
 
     def reduce_max(self, axis: int) -> "PondTensor":
         """
-    :See: tf.reduce_max
+        :See: tf.reduce_max
 
-    :param int axis: The axis to take the max along
-    :rtype: PondTensor
-    :returns: A new pond tensor with the max value from each axis.
-    """
+        :param int axis: The axis to take the max along
+        :rtype: PondTensor
+        :returns: A new pond tensor with the max value from each axis.
+        """
         return self.prot.reduce_max(self, axis)
+
+
+class PondPublicTensorBone(PondTensorBone):
+    values: Tuple[tf.Tensor, tf.Tensor]
 
 
 class PondPublicTensor(PondTensor, TFEPublicTensor):
     """
-  This class represents a public tensor, known by at least the two servers
-  but potentially known by more. Although there is only a single value we
-  replicate it on both servers to avoid sending it from one to the other
-  in the operations where it's needed by both (eg multiplication).
-  """
+    This class represents a public tensor, known by at least the two servers
+    but potentially known by more. Although there is only a single value we
+    replicate it on both servers to avoid sending it from one to the other
+    in the operations where it's needed by both (eg multiplication).
+    """
 
     dispatch_id = "public"
 
@@ -1869,35 +1928,46 @@ class PondPublicTensor(PondTensor, TFEPublicTensor):
     @property
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
         """
-    Unwrap the tensor.
+        Unwrap the tensor.
 
-    This will return the value for each of the parties that collectively own
-    the tensor.
+        This will return the value for each of the parties that collectively own
+        the tensor.
 
-    In most cases, this will be the same value on each device.
+        In most cases, this will be the same value on each device.
 
-    .. code-block:: python
+        .. code-block:: python
 
-        x_0, y_0 = tensor.unwrapped
-        # x_0 == 10 with the value pinned to player_0's device.
-        # y_0 == 10 with the value pinned to player_1's device.
+            x_0, y_0 = tensor.unwrapped
+            # x_0 == 10 with the value pinned to player_0's device.
+            # y_0 == 10 with the value pinned to player_1's device.
 
-    In most cases you will want to work on this data on the specified device.
+        In most cases you will want to work on this data on the specified device.
 
-    .. code-block:: python
+        .. code-block:: python
 
-        x_0, y_0 = tensor.unwrapped
+            x_0, y_0 = tensor.unwrapped
 
-        with tf.device(prot.player_0.device_name):
-            # act on x_0
+            with tf.device(prot.player_0.device_name):
+                # act on x_0
 
-        with tf.device(prot.player_1.device_name):
-            # act on y_0
+            with tf.device(prot.player_1.device_name):
+                # act on y_0
 
-    In most cases you will not need to use this method.  All functions
-    will hide this functionality for you (e.g. `add`, `mul`, etc).
-    """
+        In most cases you will not need to use this method.  All functions
+        will hide this functionality for you (e.g. `add`, `mul`, etc).
+        """
         return (self.value_on_0, self.value_on_1)
+
+    @property
+    def bone(self) -> PondPublicTensorBone:
+        values = [None, None]
+        with tf.device(self.prot.server_0.device_name):
+            values[0] = self.value_on_0.to_native()
+        with tf.device(self.prot.server_1.device_name):
+            values[1] = self.value_on_1.to_native()
+        return PondPublicTensorBone(
+            self.is_scaled, self.unwrapped[0].factory.nbits, values
+        )
 
     def decode(self) -> Union[np.ndarray, tf.Tensor]:
         return self.prot._decode(self.value_on_0, self.is_scaled)
@@ -1906,10 +1976,14 @@ class PondPublicTensor(PondTensor, TFEPublicTensor):
         return self.decode()
 
 
+class PondPrivateTensorBone(PondTensorBone):
+    values: Tuple[tf.Tensor, tf.Tensor]
+
+
 class PondPrivateTensor(PondTensor, TFEPrivateTensor):
     """
-  This class represents a private value that may be unknown to everyone.
-  """
+    This class represents a private value that may be unknown to everyone.
+    """
 
     dispatch_id = "private"
 
@@ -1942,35 +2016,55 @@ class PondPrivateTensor(PondTensor, TFEPrivateTensor):
     @property
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
         """
-    Unwrap the tensor.
+        Unwrap the tensor.
 
-    This will return the shares for each of the parties that collectively own
-    he tensor.
+        This will return the shares for each of the parties that collectively own
+        he tensor.
 
-    .. code-block:: python
+        .. code-block:: python
 
-        x_0, y_0 = tensor.unwrapped
-        # x_0 == private shares of the value pinned to player_0's device.
-        # y_0 == private shares of the value pinned to player_1's device.
+            x_0, y_0 = tensor.unwrapped
+            # x_0 == private shares of the value pinned to player_0's device.
+            # y_0 == private shares of the value pinned to player_1's device.
 
-    In most cases you will not need to use this method. All functions
-    will hide this functionality for you (e.g. `add`, `mul`, etc).
-    """
+        In most cases you will not need to use this method. All functions
+        will hide this functionality for you (e.g. `add`, `mul`, etc).
+        """
         return (self.share0, self.share1)
+
+    @property
+    def bone(self) -> PondPrivateTensorBone:
+        values = [None, None]
+        with tf.device(self.prot.server_0.device_name):
+            values[0] = self.share0.to_native()
+        with tf.device(self.prot.server_1.device_name):
+            values[1] = self.share1.to_native()
+        return PondPrivateTensorBone(
+            self.is_scaled, self.unwrapped[0].factory.nbits, values
+        )
 
     def reveal(self) -> PondPublicTensor:
         return self.prot.reveal(self)
 
 
+class PondMaskedTensorBone(PondTensorBone):
+    unmasked: PondPrivateTensorBone
+    a: tf.Tensor
+    a0: tf.Tensor
+    a1: tf.Tensor
+    alpha_on_0: tf.Tensor
+    alpha_on_1: tf.Tensor
+
+
 class PondMaskedTensor(PondTensor, TFEPrivateTensor):
     """
-  This class is part of an optimization where values are only ever masked
-  once as opposed to for every operation in which they are used. As such
-  it represents a private value with additional data associated, namely
-  the masks used for the shares on the two servers as well as on the
-  crypto provider. For convenience it keeps a reference to the unmasked
-  value as well (in the form of a private tensor).
-  """
+    This class is part of an optimization where values are only ever masked
+    once as opposed to for every operation in which they are used. As such
+    it represents a private value with additional data associated, namely
+    the masks used for the shares on the two servers as well as on the
+    crypto provider. For convenience it keeps a reference to the unmasked
+    value as well (in the form of a private tensor).
+    """
 
     dispatch_id = "masked"
 
@@ -2010,6 +2104,27 @@ class PondMaskedTensor(PondTensor, TFEPrivateTensor):
     def unwrapped(self) -> Tuple[AbstractTensor, ...]:
         return (self.a, self.a0, self.a1, self.alpha_on_0, self.alpha_on_1)
 
+    @property
+    def bone(self) -> PondMaskedTensorBone:
+        with tf.device(self.prot.triple_source.producer.device_name):
+            a = self.a.to_native()
+        with tf.device(self.prot.server_0.device_name):
+            a0 = self.a0.to_native()
+            alpha_on_0 = self.alpha_on_0.to_native()
+        with tf.device(self.prot.server_1.device_name):
+            a1 = self.a1.to_native()
+            alpha_on_1 = self.alpha_on_1.to_native()
+        return PondMaskedTensorBone(
+            self.is_scaled,
+            self.unwrapped[0].factory.nbits,
+            self.unmasked.bone,
+            a,
+            a0,
+            a1,
+            alpha_on_0,
+            alpha_on_1,
+        )
+
     def reveal(self) -> PondPublicTensor:
         return self.prot.reveal(self.unmasked)
 
@@ -2020,11 +2135,15 @@ class PondMaskedTensor(PondTensor, TFEPrivateTensor):
 #
 
 
+class PondConstantBone(PondTensorBone):
+    values: Tuple[tf.Tensor, tf.Tensor]
+
+
 class PondConstant(PondPublicTensor):
     """
-  This class essentially represents a public value, however it additionally
-  records the fact that the underlying value was declared as a constant.
-  """
+    This class essentially represents a public value, however it additionally
+    records the fact that the underlying value was declared as a constant.
+    """
 
     def __init__(self, prot, constant_on_0, constant_on_1, is_scaled):
         assert isinstance(constant_on_0, AbstractConstant), type(constant_on_0)
@@ -2032,7 +2151,10 @@ class PondConstant(PondPublicTensor):
         assert constant_on_0.shape == constant_on_1.shape
 
         super(PondConstant, self).__init__(
-            prot, constant_on_0, constant_on_1, is_scaled,
+            prot,
+            constant_on_0,
+            constant_on_1,
+            is_scaled,
         )
         self.constant_on_0 = constant_on_0
         self.constant_on_1 = constant_on_1
@@ -2040,103 +2162,26 @@ class PondConstant(PondPublicTensor):
     def __repr__(self) -> str:
         return "PondConstant(shape={})".format(self.shape)
 
-
-class PondPublicPlaceholder(PondPublicTensor):
-    """
-  This class essentially represents a public value, however it additionally
-  records the fact that the backing tensor was declared as a placeholder in
-  order to allow treating it as a placeholder itself.
-  """
-
-    def __init__(self, prot, placeholder_on_0, placeholder_on_1, is_scaled):
-        assert isinstance(placeholder_on_0, AbstractPlaceholder), type(placeholder_on_0)
-        assert isinstance(placeholder_on_0, AbstractPlaceholder), type(placeholder_on_1)
-        assert placeholder_on_0.shape == placeholder_on_1.shape
-
-        super(PondPublicPlaceholder, self).__init__(
-            prot, placeholder_on_0, placeholder_on_1, is_scaled,
-        )
-        self.placeholder_on_0 = placeholder_on_0
-        self.placeholder_on_1 = placeholder_on_1
-
-    def __repr__(self) -> str:
-        return "PondPublicPlaceholder(shape={})".format(self.shape)
-
-    def feed(self, value):
-        """
-    Feed `value` to placeholder
-    """
-        assert isinstance(value, np.ndarray), type(value)
-        enc = self.prot._encode(value, self.is_scaled)
-        feed0 = self.placeholder_on_0.feed(enc)
-        feed1 = self.placeholder_on_1.feed(enc)
-        return {**feed0, **feed1}
+    @property
+    def bone(self) -> PondConstantBone:
+        values = [None, None]
+        with tf.device(self.prot.server_0.device_name):
+            values[0] = self.constant_on_0.to_native()
+        with tf.device(self.prot.server_1.device_name):
+            values[1] = self.constant_on_1.to_native()
+        return PondConstantBone(self.is_scaled, self.unwrapped[0].factory.nbits, values)
 
 
-class PondPrivatePlaceholder(PondPrivateTensor):
-    """
-  This class essentially represents a private value, however it additionally
-  records the fact that the backing tensor was declared as a placeholder in
-  order to allow treating it as a placeholder itself.
-  """
-
-    def __init__(self, prot, placeholder0, placeholder1, is_scaled):
-        assert isinstance(placeholder0, AbstractPlaceholder), type(placeholder0)
-        assert isinstance(placeholder1, AbstractPlaceholder), type(placeholder1)
-        assert placeholder0.shape == placeholder1.shape
-
-        super().__init__(prot, placeholder0, placeholder1, is_scaled)
-        self.placeholder0 = placeholder0
-        self.placeholder1 = placeholder1
-
-    def __repr__(self) -> str:
-        return "PondPrivatePlaceholder(shape={})".format(self.shape)
-
-    def feed(self, value):
-        """
-    Feed `value` to placeholder
-    """
-        assert isinstance(value, np.ndarray), type(value)
-        enc = self.prot._encode(value, self.is_scaled)
-        assert isinstance(enc, np.ndarray)
-
-        # x0, x1 = self.prot._share(enc)
-        # assert isinstance(x0, np.ndarray), type(x0)
-        # assert isinstance(x1, np.ndarray), type(x1)
-
-        # TODO(Morten)
-        #
-        # This is a huge hack and it would be better to use `_share` as above.
-        # However, _share currently expects its inputs to be TFE tensors backed
-        # by tf.Tensors in order to have extra information attached, and not sure
-        # we should change this until we've least considered what will happen with
-        # TF2 and eager mode.
-        #
-        # So, to ensure that feeding can be done locally *outside* the TF graph,
-        # in the mean time we manually share values here, avoiding a call to
-        # `factory.tensor` as that's where tensors are converted to tf.Tensors.
-        shape = self.shape
-        minval = self.backing_dtype.min
-        maxval = self.backing_dtype.max
-        # TODO(Morten) not using secure randomness here; reconsider after TF2
-        x0 = np.array(
-            [random.randrange(minval, maxval) for _ in range(np.product(shape))]
-        ).reshape(shape)
-        x1 = enc - x0
-        assert isinstance(x0, np.ndarray)
-        assert isinstance(x1, np.ndarray)
-
-        feed0 = self.placeholder0.feed(x0)
-        feed1 = self.placeholder1.feed(x1)
-        return {**feed0, **feed1}
+class PondPublicVariableBone(PondTensorBone):
+    values: Tuple[tf.Tensor, tf.Tensor]
 
 
 class PondPublicVariable(PondPublicTensor, TFEPublicVariable):
     """
-  This class essentially represents a public value, however it additionally
-  records the fact that the backing tensor was declared as a variable in
-  order to allow treating it as a variable itself.
-  """
+    This class essentially represents a public value, however it additionally
+    records the fact that the backing tensor was declared as a variable in
+    order to allow treating it as a variable itself.
+    """
 
     def __init__(self, prot, variable_on_0, variable_on_1, is_scaled):
         assert isinstance(variable_on_0, AbstractVariable), type(variable_on_0)
@@ -2144,24 +2189,49 @@ class PondPublicVariable(PondPublicTensor, TFEPublicVariable):
         assert variable_on_0.shape == variable_on_1.shape
 
         super(PondPublicVariable, self).__init__(
-            prot, variable_on_0, variable_on_1, is_scaled,
+            prot,
+            variable_on_0,
+            variable_on_1,
+            is_scaled,
         )
         self.variable_on_0 = variable_on_0
         self.variable_on_1 = variable_on_1
-        self.initializer = tf.group(
-            *[var.initializer for var in [variable_on_0, variable_on_1]]
-        )
 
     def __repr__(self) -> str:
         return "PondPublicVariable(shape={})".format(self.shape)
 
+    def read_value(self):
+        with tf.device(self.prot.server_0.device_name):
+            value_on_0 = self.variable_on_0.read_value()
+
+        with tf.device(self.prot.server_1.device_name):
+            value_on_1 = self.variable_on_1.read_value()
+
+        y = PondPublicTensor(self.prot, value_on_0, value_on_1, self.is_scaled)
+        return y
+
+    @property
+    def bone(self) -> PondPublicVariableBone:
+        values = [None, None]
+        with tf.device(self.prot.server_0.device_name):
+            values[0] = self.variable_on_0.read_value().to_native()
+        with tf.device(self.prot.server_1.device_name):
+            values[1] = self.variable_on_1.read_value().to_native()
+        return PondPublicVariableBone(
+            self.is_scaled, self.unwrapped[0].factory.nbits, values
+        )
+
+
+class PondPrivateVariableBone(PondTensorBone):
+    values: Tuple[tf.Tensor, tf.Tensor]
+
 
 class PondPrivateVariable(PondPrivateTensor, TFEPrivateVariable):
     """
-  This class essentially represents a private value, however it additionally
-  records the fact that the backing tensor was declared as a variable in
-  order to allow treating it as a variable itself.
-  """
+    This class essentially represents a private value, however it additionally
+    records the fact that the backing tensor was declared as a variable in
+    order to allow treating it as a variable itself.
+    """
 
     def __init__(self, prot, variable0, variable1, is_scaled):
         assert isinstance(variable0, AbstractVariable), type(variable0)
@@ -2169,71 +2239,125 @@ class PondPrivateVariable(PondPrivateTensor, TFEPrivateVariable):
         assert variable0.shape == variable1.shape
 
         super(PondPrivateVariable, self).__init__(
-            prot, variable0, variable1, is_scaled,
+            prot,
+            variable0,
+            variable1,
+            is_scaled,
         )
         self.variable0 = variable0
         self.variable1 = variable1
-        self.initializer = tf.group(
-            *[var.initializer for var in [variable0, variable1]]
-        )
 
     def __repr__(self) -> str:
         return "PondPrivateVariable(shape={})".format(self.shape)
 
+    def read_value(self):
+        with tf.device(self.prot.server_0.device_name):
+            value_on_0 = self.variable0.read_value()
 
-class PondCachedPublicTensor(PondPublicTensor):
-    """A PondPublicTensor that has been cached for reuse."""
+        with tf.device(self.prot.server_1.device_name):
+            value_on_1 = self.variable1.read_value()
 
-    def __init__(self, prot, x_on_0, x_on_1, is_scaled, updater):
-        assert isinstance(x_on_0, AbstractTensor), type(x_on_0)
-        assert isinstance(x_on_1, AbstractTensor), type(x_on_1)
-        assert isinstance(updater, tf.Operation), type(updater)
+        y = PondPrivateTensor(self.prot, value_on_0, value_on_1, self.is_scaled)
+        return y
 
-        super(PondCachedPublicTensor, self).__init__(
-            prot, x_on_0, x_on_1, is_scaled,
+    @property
+    def bone(self) -> PondPrivateVariableBone:
+        values = [None, None]
+        with tf.device(self.prot.server_0.device_name):
+            values[0] = self.variable0.read_value().to_native()
+        with tf.device(self.prot.server_1.device_name):
+            values[1] = self.variable1.read_value().to_native()
+        return PondPrivateVariableBone(
+            self.is_scaled, self.unwrapped[0].factory.nbits, values
         )
-        self.updater = updater
-
-    def __repr__(self) -> str:
-        return "PondCachedPublicTensor(shape={})".format(self.shape)
 
 
-class PondCachedPrivateTensor(PondPrivateTensor):
-    """A PondPrivateTensor that has been cached for reuse."""
-
-    def __init__(self, prot, x0, x1, is_scaled, updater):
-        assert isinstance(x0, AbstractTensor), type(x0)
-        assert isinstance(x1, AbstractTensor), type(x1)
-        assert isinstance(updater, tf.Operation), type(updater)
-
-        super(PondCachedPrivateTensor, self).__init__(prot, x0, x1, is_scaled)
-        self.updater = updater
-
-    def __repr__(self) -> str:
-        return "PondCachedPrivateTensor(shape={})".format(self.shape)
+class PondMaskedVariableBone(PondTensorBone):
+    unmasked: PondPrivateVariableBone
+    a: tf.Tensor
+    a0: tf.Tensor
+    a1: tf.Tensor
+    alpha_on_0: tf.Tensor
+    alpha_on_1: tf.Tensor
 
 
-class PondCachedMaskedTensor(PondMaskedTensor):
-    """A PondMaskedTensor that has been cached for reuse."""
+class PondMaskedVariable(PondMaskedTensor, TFEPrivateVariable):
+    """
+    This class essentially represents a masked value, however it additionally
+    records the fact that the backing tensor was declared as a variable in
+    order to allow treating it as a variable itself.
+    """
 
     def __init__(
-        self, prot, unmasked, a, a0, a1, alpha_on_0, alpha_on_1, is_scaled, updater,
-    ):
-        assert isinstance(unmasked, PondPrivateTensor), type(unmasked)
-        assert isinstance(a, AbstractTensor), type(a)
-        assert isinstance(a0, AbstractTensor), type(a0)
-        assert isinstance(a1, AbstractTensor), type(a1)
-        assert isinstance(alpha_on_0, AbstractTensor), type(alpha_on_0)
-        assert isinstance(alpha_on_1, AbstractTensor), type(alpha_on_1)
-        assert isinstance(updater, tf.Operation), type(updater)
+        self,
+        prot: Pond,
+        unmasked: PondPrivateVariable,
+        a: AbstractTensor,
+        a0: AbstractTensor,
+        a1: AbstractTensor,
+        alpha_on_0: AbstractTensor,
+        alpha_on_1: AbstractTensor,
+        is_scaled: bool,
+    ) -> None:
+        assert isinstance(a, AbstractVariable), type(a)
+        assert isinstance(a0, AbstractVariable), type(a0)
+        assert isinstance(a1, AbstractVariable), type(a1)
+        assert isinstance(alpha_on_0, AbstractVariable), type(alpha_on_0)
+        assert isinstance(alpha_on_1, AbstractVariable), type(alpha_on_1)
 
-        super(PondCachedMaskedTensor, self).__init__(
-            prot, unmasked, a, a0, a1, alpha_on_0, alpha_on_1, is_scaled,
+        super(PondMaskedVariable, self).__init__(
+            prot,
+            unmasked,
+            a,
+            a0,
+            a1,
+            alpha_on_0,
+            alpha_on_1,
+            is_scaled,
         )
-        self.updater = updater
+        self.var_a = a1
+        self.var_a0 = a0
+        self.var_a1 = a1
+        self.var_alpha_on_0 = alpha_on_0
+        self.var_alpha_on_1 = alpha_on_1
 
     def __repr__(self) -> str:
-        return "PondCachedMaskedTensor(shape={})".format(self.shape)
+        return "PondMaskedVariable(shape={})".format(self.shape)
+
+    def read_value(self):
+        with tf.device(self.prot.triple_source.producer.device_name):
+            a = self.var_a.read_value()
+        with tf.device(self.prot.server_0.device_name):
+            a0 = self.var_a0.read_value()
+            alpha_on_0 = self.var_alpha_on_0.read_value()
+        with tf.device(self.prot.server_1.device_name):
+            a1 = self.var_a1.read_value()
+            alpha_on_1 = self.var_alpha_on_1.read_value()
+        y = PondMaskedTensor(
+            self.prot, a, a0, a1, alpha_on_0, alpha_on_1, self.is_scaled
+        )
+        return y
+
+    @property
+    def bone(self) -> PondMaskedVariableBone:
+        with tf.device(self.prot.triple_source.producer.device_name):
+            a = self.a.read_value().to_native()
+        with tf.device(self.prot.server_0.device_name):
+            a0 = self.a0.read_value().to_native()
+            alpha_on_0 = self.alpha_on_0.read_value().to_native()
+        with tf.device(self.prot.server_1.device_name):
+            a1 = self.a1.read_value().to_native()
+            alpha_on_1 = self.alpha_on_1.read_value().to_native()
+        return PondMaskedVariableBone(
+            self.is_scaled,
+            self.unwrapped[0].factory.nbits,
+            self.unmasked.bone,
+            a,
+            a0,
+            a1,
+            alpha_on_0,
+            alpha_on_1,
+        )
 
 
 #
@@ -2285,7 +2409,8 @@ def debug(x: PondTensor, summarize=None, message=""):
 
 
 def _identity_public(
-    prot, x, control_dependencies_0, control_dependencies_1,
+    prot,
+    x,
 ):
     assert isinstance(x, PondPublicTensor), type(x)
 
@@ -2294,25 +2419,18 @@ def _identity_public(
     with tf.name_scope("identity"):
 
         with tf.device(prot.server_0.device_name):
-            if control_dependencies_0:
-                with tf.control_dependencies(control_dependencies_0):
-                    y_on_0 = x_on_0.identity()
-            else:
-                y_on_0 = x_on_0.identity()
+            y_on_0 = x_on_0.identity()
 
         with tf.device(prot.server_1.device_name):
-            if control_dependencies_1:
-                with tf.control_dependencies(control_dependencies_1):
-                    y_on_1 = x_on_1.identity()
-            else:
-                y_on_1 = x_on_1.identity()
+            y_on_1 = x_on_1.identity()
 
         y = PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
         return y
 
 
 def _identity_private(
-    prot, x, control_dependencies_0, control_dependencies_1,
+    prot,
+    x,
 ):
     assert isinstance(x, PondPrivateTensor), type(x)
 
@@ -2321,107 +2439,13 @@ def _identity_private(
     with tf.name_scope("identity"):
 
         with tf.device(prot.server_0.device_name):
-            if control_dependencies_0:
-                with tf.control_dependencies(control_dependencies_0):
-                    y0 = x0.identity()
-            else:
-                y0 = x0.identity()
+            y0 = x0.identity()
 
         with tf.device(prot.server_1.device_name):
-            if control_dependencies_1:
-                with tf.control_dependencies(control_dependencies_1):
-                    y1 = x1.identity()
-            else:
-                y1 = x1.identity()
+            y1 = x1.identity()
 
         y = PondPrivateTensor(prot, y0, y1, x.is_scaled)
         return y
-
-
-#
-# cache
-#
-
-
-def _cache_public(prot, x):
-    assert isinstance(x, PondPublicTensor), type(x)
-
-    x_on_0, x_on_1 = x.unwrapped
-
-    with tf.name_scope("cache"):
-
-        with tf.device(prot.server_0.device_name):
-            updater0, [x_on_0_cached] = wrap_in_variables(x_on_0)
-
-        with tf.device(prot.server_1.device_name):
-            updater1, [x_on_1_cached] = wrap_in_variables(x_on_1)
-
-        combined_updater = tf.group(updater0, updater1)
-
-    return (
-        combined_updater,
-        PondCachedPublicTensor(
-            prot, x_on_0_cached, x_on_1_cached, x.is_scaled, combined_updater,
-        ),
-    )
-
-
-def _cache_private(prot, x):
-    assert isinstance(x, PondPrivateTensor), type(x)
-
-    x0, x1 = x.unwrapped
-
-    with tf.name_scope("cache"):
-
-        with tf.device(prot.server_0.device_name):
-            updater0, [x0_cached] = wrap_in_variables(x0)
-
-        with tf.device(prot.server_1.device_name):
-            updater1, [x1_cached] = wrap_in_variables(x1)
-
-        combined_updater = tf.group(updater0, updater1)
-
-    return (
-        combined_updater,
-        PondCachedPrivateTensor(
-            prot, x0_cached, x1_cached, x.is_scaled, combined_updater,
-        ),
-    )
-
-
-def _cache_masked(prot, x):
-    assert isinstance(x, PondMaskedTensor), type(x)
-
-    a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
-
-    with tf.name_scope("cache"):
-
-        with tf.device(prot.server_0.device_name):
-            updater0, [a0_cached, alpha_on_0_cached] = wrap_in_variables(a0, alpha_on_0)
-
-        with tf.device(prot.server_1.device_name):
-            updater1, [a1_cached, alpha_on_1_cached] = wrap_in_variables(a1, alpha_on_1)
-
-        unmasked_updater, unmasked_cached = prot.cache(x.unmasked)
-        online_updater = tf.group(updater0, updater1, unmasked_updater)
-
-        offline_updater, a_cached = prot.triple_source.cache(a, online_updater)
-        combined_updater = tf.group(online_updater, offline_updater)
-
-    return (
-        combined_updater,
-        PondCachedMaskedTensor(
-            prot,
-            unmasked_cached,
-            a_cached,
-            a0_cached,
-            a1_cached,
-            alpha_on_0_cached,
-            alpha_on_1_cached,
-            x.is_scaled,
-            combined_updater,
-        ),
-    )
 
 
 #
@@ -2429,7 +2453,10 @@ def _cache_masked(prot, x):
 #
 
 
-def _truncate_public(prot: Pond, x: PondPublicTensor,) -> PondPublicTensor:
+def _truncate_public(
+    prot: Pond,
+    x: PondPublicTensor,
+) -> PondPublicTensor:
     assert isinstance(x, PondPublicTensor)
 
     base = prot.fixedpoint_config.scaling_base
@@ -2447,7 +2474,10 @@ def _truncate_public(prot: Pond, x: PondPublicTensor,) -> PondPublicTensor:
     return PondPublicTensor(prot, y_on_0, y_on_1, x.is_scaled)
 
 
-def _truncate_private(prot: Pond, x: PondPrivateTensor,) -> PondPrivateTensor:
+def _truncate_private(
+    prot: Pond,
+    x: PondPrivateTensor,
+) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
     if prot.fixedpoint_config.use_noninteractive_truncation:
@@ -2457,7 +2487,8 @@ def _truncate_private(prot: Pond, x: PondPrivateTensor,) -> PondPrivateTensor:
 
 
 def _truncate_private_noninteractive(
-    prot: Pond, x: PondPrivateTensor,
+    prot: Pond,
+    x: PondPrivateTensor,
 ) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
@@ -2477,11 +2508,12 @@ def _truncate_private_noninteractive(
 
 
 def _truncate_private_interactive(
-    prot: Pond, a: PondPrivateTensor,
+    prot: Pond,
+    a: PondPrivateTensor,
 ) -> PondPrivateTensor:
     """See protocol TruncPr (3.1) in
-  "Secure Computation With Fixed-Point Numbers" by Octavian Catrina and Amitabh
-  Saxena, FC'10."""
+    "Secure Computation With Fixed-Point Numbers" by Octavian Catrina and Amitabh
+    Saxena, FC'10."""
 
     with tf.name_scope("truncate-i"):
 
@@ -2540,7 +2572,10 @@ def _truncate_private_interactive(
     return PondPrivateTensor(prot, d0, d1, a.is_scaled)
 
 
-def _truncate_masked(prot: Pond, x: PondMaskedTensor,) -> PondMaskedTensor:
+def _truncate_masked(
+    prot: Pond,
+    x: PondMaskedTensor,
+) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
     return prot.truncate(x.unmasked)
 
@@ -2800,7 +2835,12 @@ def _cumsum_masked(
     exclusive: Optional[bool] = None,
     reverse: Optional[bool] = None,
 ) -> PondPrivateTensor:
-    return prot.cumsum(x.unmasked, axis=axis, exclusive=exclusive, reverse=reverse,)
+    return prot.cumsum(
+        x.unmasked,
+        axis=axis,
+        exclusive=exclusive,
+        reverse=reverse,
+    )
 
 
 #
@@ -3148,7 +3188,9 @@ def _square_masked(prot, x):
 
 
 def _matmul_public_public(
-    prot, x: PondPublicTensor, y: PondPublicTensor,
+    prot,
+    x: PondPublicTensor,
+    y: PondPublicTensor,
 ) -> PondPublicTensor:
 
     x_on_0, x_on_1 = x.unwrapped
@@ -3335,7 +3377,10 @@ def _conv2d_masked_masked(prot, x, y, strides, padding):
     with tf.name_scope("conv2d"):
 
         a_conv2d_b0, a_conv2d_b1 = prot.triple_source.conv2d_triple(
-            a, b, strides, padding,
+            a,
+            b,
+            strides,
+            padding,
         )
 
         with tf.device(prot.server_0.device_name):
@@ -3380,7 +3425,7 @@ def _avgpool2d_core(
     _, _, h, w = x.shape
     scalar = 1 / (pool_size[0] * pool_size[1])
     siamese = pool_size == strides and pool_size[0] == pool_size[1]
-    even = h.value % pool_size[0] == 0 and w.value % pool_size[1] == 0
+    even = h % pool_size[0] == 0 and w % pool_size[1] == 0
 
     if siamese and even:
         pooler = _avgpool2d_reshape_reduce
@@ -3414,7 +3459,7 @@ def _avgpool2d_im2col_reduce(
         out_width = ceil((int(width) - pool_size[1] + 1) / strides[1])
 
     x_split = x.reshape((batch * channels, 1, height, width))
-    x_cols = x_split.im2col(pool_height, pool_width, strides[0], padding)
+    x_cols = x_split.im2col(pool_height, pool_width, strides, padding)
     x_cols_sum = x_cols.reduce_sum(axis=0)
     return x_cols_sum.reshape([out_height, out_width, batch, channels]).transpose(
         [2, 3, 0, 1]
@@ -3456,7 +3501,13 @@ def _avgpool2d_private(
 ) -> PondPrivateTensor:
 
     with tf.name_scope("avgpool2d"):
-        y_on_0, y_on_1, scalar = _avgpool2d_core(prot, x, pool_size, strides, padding,)
+        y_on_0, y_on_1, scalar = _avgpool2d_core(
+            prot,
+            x,
+            pool_size,
+            strides,
+            padding,
+        )
         return PondPrivateTensor(prot, y_on_0, y_on_1, x.is_scaled) * scalar
 
 
@@ -3476,91 +3527,109 @@ def _avgpool2d_masked(
 
 
 #
-# batch_to_space_nd and space_to_batch_nd helpers
+# batch_to_space and space_to_batch helpers
 #
 
 
-def _batch_to_space_nd_core(prot, tensor, block_shape, crops):
+def _batch_to_space_core(prot, tensor, block_shape, crops):
     tensor_on_0, tensor_on_1 = tensor.unwrapped
 
     with tf.device(prot.server_0.device_name):
-        space_on_0 = tensor_on_0.batch_to_space_nd(block_shape, crops)
+        space_on_0 = tensor_on_0.batch_to_space(block_shape, crops)
 
     with tf.device(prot.server_1.device_name):
-        space_on_1 = tensor_on_1.batch_to_space_nd(block_shape, crops)
+        space_on_1 = tensor_on_1.batch_to_space(block_shape, crops)
 
     return space_on_0, space_on_1
 
 
-def _batch_to_space_nd_public(prot, tensor, block_shape, crops):
+def _batch_to_space_public(prot, tensor, block_shape, crops):
 
-    with tf.name_scope("batch_to_space_nd"):
-        space_on_0, space_on_1 = _batch_to_space_nd_core(
-            prot, tensor, block_shape, crops,
+    with tf.name_scope("batch_to_space"):
+        space_on_0, space_on_1 = _batch_to_space_core(
+            prot,
+            tensor,
+            block_shape,
+            crops,
         )
 
     return PondPublicTensor(prot, space_on_0, space_on_1, tensor.is_scaled)
 
 
-def _batch_to_space_nd_private(prot, tensor, block_shape, crops):
+def _batch_to_space_private(prot, tensor, block_shape, crops):
 
-    with tf.name_scope("batch_to_space_nd"):
-        space_on_0, space_on_1 = _batch_to_space_nd_core(
-            prot, tensor, block_shape, crops,
+    with tf.name_scope("batch_to_space"):
+        space_on_0, space_on_1 = _batch_to_space_core(
+            prot,
+            tensor,
+            block_shape,
+            crops,
         )
 
     return PondPrivateTensor(prot, space_on_0, space_on_1, tensor.is_scaled)
 
 
-def _batch_to_space_nd_masked(prot, tensor, block_shape, crops):
+def _batch_to_space_masked(prot, tensor, block_shape, crops):
 
-    with tf.name_scope("batch_to_space_nd"):
-        space_on_0, space_on_1 = _batch_to_space_nd_core(
-            prot, tensor.unmasked, block_shape, crops,
+    with tf.name_scope("batch_to_space"):
+        space_on_0, space_on_1 = _batch_to_space_core(
+            prot,
+            tensor.unmasked,
+            block_shape,
+            crops,
         )
 
     return PondPrivateTensor(prot, space_on_0, space_on_1, tensor.is_scaled)
 
 
-def _space_to_batch_nd_core(prot, tensor, block_shape, paddings):
+def _space_to_batch_core(prot, tensor, block_shape, paddings):
     tensor_on_0, tensor_on_1 = tensor.unwrapped
 
-    with tf.name_scope("space_to_batch_nd"):
+    with tf.name_scope("space_to_batch"):
 
         with tf.device(prot.server_0.device_name):
-            batch_on_0 = tensor_on_0.space_to_batch_nd(block_shape, paddings)
+            batch_on_0 = tensor_on_0.space_to_batch(block_shape, paddings)
 
         with tf.device(prot.server_1.device_name):
-            batch_on_1 = tensor_on_1.space_to_batch_nd(block_shape, paddings)
+            batch_on_1 = tensor_on_1.space_to_batch(block_shape, paddings)
 
     return batch_on_0, batch_on_1
 
 
-def _space_to_batch_nd_public(prot, tensor, block_shape, paddings):
+def _space_to_batch_public(prot, tensor, block_shape, paddings):
 
-    with tf.name_scope("space_to_batch_nd"):
-        batch_on_0, batch_on_1 = _space_to_batch_nd_core(
-            prot, tensor, block_shape, paddings,
+    with tf.name_scope("space_to_batch"):
+        batch_on_0, batch_on_1 = _space_to_batch_core(
+            prot,
+            tensor,
+            block_shape,
+            paddings,
         )
 
     return PondPublicTensor(prot, batch_on_0, batch_on_1, tensor.is_scaled)
 
 
-def _space_to_batch_nd_private(prot, tensor, block_shape, paddings):
+def _space_to_batch_private(prot, tensor, block_shape, paddings):
 
-    with tf.name_scope("space_to_batch_nd"):
-        batch_on_0, batch_on_1 = _space_to_batch_nd_core(
-            prot, tensor, block_shape, paddings,
+    with tf.name_scope("space_to_batch"):
+        batch_on_0, batch_on_1 = _space_to_batch_core(
+            prot,
+            tensor,
+            block_shape,
+            paddings,
         )
 
     return PondPrivateTensor(prot, batch_on_0, batch_on_1, tensor.is_scaled)
 
 
-def _space_to_batch_nd_masked(prot, tensor, block_shape, paddings):
+def _space_to_batch_masked(prot, tensor, block_shape, paddings):
 
-    with tf.name_scope("space_to_batch_nd"):
-        batch_on_0, batch_on_1 = _space_to_batch_nd_core(
-            prot, tensor.unmasked, block_shape, paddings,
+    with tf.name_scope("space_to_batch"):
+        batch_on_0, batch_on_1 = _space_to_batch_core(
+            prot,
+            tensor.unmasked,
+            block_shape,
+            paddings,
         )
 
     return PondPrivateTensor(prot, batch_on_0, batch_on_1, tensor.is_scaled)
@@ -3763,7 +3832,10 @@ def _strided_slice_masked(prot, x: PondMaskedTensor, args: Any, kwargs: Any):
 
 
 def _gather_public(
-    prot: Pond, x: PondPublicTensor, indices: list, axis: int = 0,
+    prot: Pond,
+    x: PondPublicTensor,
+    indices: list,
+    axis: int = 0,
 ) -> PondPublicTensor:
 
     x_on_0, x_on_1 = x.unwrapped
@@ -3780,7 +3852,10 @@ def _gather_public(
 
 
 def _gather_private(
-    prot: Pond, x: PondPrivateTensor, indices: list, axis: int = 0,
+    prot: Pond,
+    x: PondPrivateTensor,
+    indices: list,
+    axis: int = 0,
 ) -> PondPrivateTensor:
 
     x0, x1 = x.unwrapped
@@ -3797,7 +3872,10 @@ def _gather_private(
 
 
 def _gather_masked(
-    prot: Pond, x: PondMaskedTensor, indices: list, axis: int = 0,
+    prot: Pond,
+    x: PondMaskedTensor,
+    indices: list,
+    axis: int = 0,
 ) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
@@ -3832,7 +3910,10 @@ def _gather_masked(
 
 
 def _split_public(
-    prot: Pond, x: PondPublicTensor, num_split: Union[int, list], axis: int = 0,
+    prot: Pond,
+    x: PondPublicTensor,
+    num_split: Union[int, list],
+    axis: int = 0,
 ) -> List[PondPublicTensor]:
 
     x_on_0, x_on_1 = x.unwrapped
@@ -3851,7 +3932,10 @@ def _split_public(
 
 
 def _split_private(
-    prot: Pond, x: PondPrivateTensor, num_split: Union[int, list], axis: int = 0,
+    prot: Pond,
+    x: PondPrivateTensor,
+    num_split: Union[int, list],
+    axis: int = 0,
 ) -> List[PondPrivateTensor]:
 
     x0, x1 = x.unwrapped
@@ -3870,7 +3954,10 @@ def _split_private(
 
 
 def _split_masked(
-    prot: Pond, x: PondMaskedTensor, num_split: Union[int, list], axis=0,
+    prot: Pond,
+    x: PondMaskedTensor,
+    num_split: Union[int, list],
+    axis=0,
 ) -> List[PondMaskedTensor]:
 
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
@@ -3892,7 +3979,12 @@ def _split_masked(
         return [
             PondMaskedTensor(prot, y, b, b0, b1, beta_on_0, beta_on_1, x.is_scaled)
             for (y, b, b0, b1, beta_on_0, beta_on_1) in zip(
-                ys, bs, bs0, bs1, betas_on_0, betas_on_1,
+                ys,
+                bs,
+                bs0,
+                bs1,
+                betas_on_0,
+                betas_on_1,
             )
         ]
 
@@ -3902,7 +3994,11 @@ def _split_masked(
 #
 
 
-def _stack_public(prot: Pond, xs: List[PondPublicTensor], axis=0,) -> PondPublicTensor:
+def _stack_public(
+    prot: Pond,
+    xs: List[PondPublicTensor],
+    axis=0,
+) -> PondPublicTensor:
     assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
 
     factory = xs[0].backing_dtype
@@ -3921,7 +4017,9 @@ def _stack_public(prot: Pond, xs: List[PondPublicTensor], axis=0,) -> PondPublic
 
 
 def _stack_private(
-    prot: Pond, xs: List[PondPrivateTensor], axis=0,
+    prot: Pond,
+    xs: List[PondPrivateTensor],
+    axis=0,
 ) -> PondPrivateTensor:
     assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
 
@@ -3940,7 +4038,11 @@ def _stack_private(
         return PondPrivateTensor(prot, x0_stacked, x1_stacked, is_scaled)
 
 
-def _stack_masked(prot: Pond, xs: List[PondMaskedTensor], axis=0,) -> PondMaskedTensor:
+def _stack_masked(
+    prot: Pond,
+    xs: List[PondMaskedTensor],
+    axis=0,
+) -> PondMaskedTensor:
     assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
 
     factory = xs[0].backing_dtype
@@ -3977,7 +4079,9 @@ def _stack_masked(prot: Pond, xs: List[PondMaskedTensor], axis=0,) -> PondMasked
 
 
 def _concat_public(
-    prot: Pond, xs: List[PondPublicTensor], axis: int,
+    prot: Pond,
+    xs: List[PondPublicTensor],
+    axis: int,
 ) -> PondPublicTensor:
     assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
 
@@ -3997,7 +4101,9 @@ def _concat_public(
 
 
 def _concat_private(
-    prot: Pond, xs: List[PondPrivateTensor], axis,
+    prot: Pond,
+    xs: List[PondPrivateTensor],
+    axis,
 ) -> PondPrivateTensor:
     assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
 
@@ -4017,7 +4123,9 @@ def _concat_private(
 
 
 def _concat_masked(
-    prot: Pond, xs: List[PondMaskedTensor], axis: int,
+    prot: Pond,
+    xs: List[PondMaskedTensor],
+    axis: int,
 ) -> PondMaskedTensor:
     assert all(x.is_scaled for x in xs) or all(not x.is_scaled for x in xs)
 
@@ -4077,7 +4185,16 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
             with tf.device(prot.server_1.device_name):
                 alpha_on_1 = alpha0 + alpha1
 
-    return PondMaskedTensor(prot, x, a, a0, a1, alpha_on_0, alpha_on_1, x.is_scaled,)
+    return PondMaskedTensor(
+        prot,
+        x,
+        a,
+        a0,
+        a1,
+        alpha_on_0,
+        alpha_on_1,
+        x.is_scaled,
+    )
 
 
 #
@@ -4126,7 +4243,9 @@ def _sqrt_public(prot, x):
 
 
 def _reshape_public(
-    prot: Pond, x: PondPublicTensor, shape: List[int],
+    prot: Pond,
+    x: PondPublicTensor,
+    shape: List[int],
 ) -> PondPublicTensor:
     assert isinstance(x, PondPublicTensor)
 
@@ -4140,11 +4259,18 @@ def _reshape_public(
         with tf.device(prot.server_1.device_name):
             x_on_1_reshaped = x_on_1.reshape(shape)
 
-        return PondPublicTensor(prot, x_on_0_reshaped, x_on_1_reshaped, x.is_scaled,)
+        return PondPublicTensor(
+            prot,
+            x_on_0_reshaped,
+            x_on_1_reshaped,
+            x.is_scaled,
+        )
 
 
 def _reshape_private(
-    prot: Pond, x: PondPrivateTensor, shape: List[int],
+    prot: Pond,
+    x: PondPrivateTensor,
+    shape: List[int],
 ) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
@@ -4162,7 +4288,9 @@ def _reshape_private(
 
 
 def _reshape_masked(
-    prot: Pond, x: PondMaskedTensor, shape: List[int],
+    prot: Pond,
+    x: PondMaskedTensor,
+    shape: List[int],
 ) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
@@ -4209,7 +4337,12 @@ def _negative_public(prot: Pond, x: PondPublicTensor) -> PondPublicTensor:
         with tf.device(prot.server_1.device_name):
             x_on_1_negative = x_on_1.negative()
 
-        return PondPublicTensor(prot, x_on_0_negative, x_on_1_negative, x.is_scaled,)
+        return PondPublicTensor(
+            prot,
+            x_on_0_negative,
+            x_on_1_negative,
+            x.is_scaled,
+        )
 
 
 def _negative_private(prot: Pond, x: PondPrivateTensor) -> PondPrivateTensor:
@@ -4262,7 +4395,9 @@ def _negative_masked(prot: Pond, x: PondMaskedTensor) -> PondMaskedTensor:
 
 
 def _expand_dims_public(
-    prot: Pond, x: PondPublicTensor, axis: Optional[int] = None,
+    prot: Pond,
+    x: PondPublicTensor,
+    axis: Optional[int] = None,
 ) -> PondPublicTensor:
     assert isinstance(x, PondPublicTensor)
 
@@ -4280,7 +4415,9 @@ def _expand_dims_public(
 
 
 def _expand_dims_private(
-    prot: Pond, x: PondPrivateTensor, axis: Optional[int] = None,
+    prot: Pond,
+    x: PondPrivateTensor,
+    axis: Optional[int] = None,
 ) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
@@ -4298,7 +4435,9 @@ def _expand_dims_private(
 
 
 def _expand_dims_masked(
-    prot: Pond, x: PondMaskedTensor, axis: Optional[int] = None,
+    prot: Pond,
+    x: PondMaskedTensor,
+    axis: Optional[int] = None,
 ) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
     a, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
@@ -4333,7 +4472,9 @@ def _expand_dims_masked(
 
 
 def _squeeze_public(
-    prot: Pond, x: PondPublicTensor, axis: Optional[int] = None,
+    prot: Pond,
+    x: PondPublicTensor,
+    axis: Optional[int] = None,
 ) -> PondPublicTensor:
     assert isinstance(x, PondPublicTensor)
 
@@ -4347,11 +4488,18 @@ def _squeeze_public(
         with tf.device(prot.server_1.device_name):
             x_on_1_squeezed = x_on_1.squeeze(axis)
 
-        return PondPublicTensor(prot, x_on_0_squeezed, x_on_1_squeezed, x.is_scaled,)
+        return PondPublicTensor(
+            prot,
+            x_on_0_squeezed,
+            x_on_1_squeezed,
+            x.is_scaled,
+        )
 
 
 def _squeeze_private(
-    prot: Pond, x: PondPrivateTensor, axis: Optional[int] = None,
+    prot: Pond,
+    x: PondPrivateTensor,
+    axis: Optional[int] = None,
 ) -> PondPrivateTensor:
     assert isinstance(x, PondPrivateTensor)
 
@@ -4368,7 +4516,11 @@ def _squeeze_private(
         return PondPrivateTensor(prot, x0_squeezed, x1_squeezed, x.is_scaled)
 
 
-def _squeeze_masked(prot: Pond, x: PondMaskedTensor, axis=None,) -> PondMaskedTensor:
+def _squeeze_masked(
+    prot: Pond,
+    x: PondMaskedTensor,
+    axis=None,
+) -> PondMaskedTensor:
     assert isinstance(x, PondMaskedTensor)
 
     _, a0, a1, alpha_on_0, alpha_on_1 = x.unwrapped
@@ -4403,7 +4555,9 @@ def _squeeze_masked(prot: Pond, x: PondMaskedTensor, axis=None,) -> PondMaskedTe
 
 
 def _equal_public_public(
-    prot: Pond, x: PondPublicTensor, y: PondPublicTensor,
+    prot: Pond,
+    x: PondPublicTensor,
+    y: PondPublicTensor,
 ) -> PondPublicTensor:
 
     x_on_0, x_on_1 = x.unwrapped

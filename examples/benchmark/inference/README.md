@@ -1,11 +1,19 @@
-# Convert TF Graph to TFE Graph and Make Private Prediction
+# Convert TF Model to TFE Model and Make Private Prediction
 
-This benchmark illustrates how TF Encrypted can be used to perform inference with a very complicated neural network model (Resnet50), by converting a plain TF model into a private one in TFE.
+This benchmark illustrates how TF Encrypted can be used to perform inference with very complicated neural network model, by converting a plain TF model into a private one in TFE.
 
 ## Running
 
-Start the benchmark with the startup script `run-remote.sh` or `run-remote-4-cores.sh` (restrict each party to use 4 cores)
+Start the benchmark with the startup script `run-remote.sh` or `run-remote-4-cores.sh` (restrict each party to use 4 cores),
+and you must explicitly specify which model to infer
 
 ```sh
-./examples/benchmark/inference/run-remote.sh
+./examples/benchmark/convert/run-remote.sh resnet50
 ```
+
+You can also specify which tfe protocol to use and which remote config file to use
+
+```sh
+./examples/benchmark/convert/run-remote.sh resnet50 --protocol ABY3 --config config.json
+```
+

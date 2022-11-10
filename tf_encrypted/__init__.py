@@ -6,13 +6,11 @@ import os.path
 from typing import Any
 from typing import Optional
 
-import tensorflow as tf
 from pkg_resources import DistributionNotFound
 from pkg_resources import get_distribution
 
 from . import convert
 from . import keras
-from . import layers
 from . import operations
 from . import protocol
 from . import queue
@@ -23,10 +21,7 @@ from .config import RemoteConfig
 from .config import get_config
 from .player import player
 from .protocol import ABY3
-from .session import Session
-from .session import set_log_directory
-from .session import set_tfe_events_flag
-from .session import set_tfe_trace_flag
+from .protocol import function
 
 try:
     _dist = get_distribution("tf_encrypted")
@@ -102,32 +97,9 @@ def set_config(config: Config) -> None:
     reset_default_graph()
 
 
-def global_variables_initializer() -> tf.Operation:
-    return tf.global_variables_initializer()
-
-
-def reset_default_graph():
-    globals()["tf_reset_default_graph"]()
-    # Reset the protocol to clear any previously created nodes in the old graph
-    if get_protocol() is not None:
-        get_protocol().reset()
-
-
-def hook_tf():
-    """
-    Hook functions in TF. This is currently only a partial hook.
-    TODO(Zico): Extend to a full hook?
-    """
-    globals()["tf_reset_default_graph"] = tf.reset_default_graph
-    globals()["tf_Session"] = tf.Session
-    tf.reset_default_graph = reset_default_graph
-    tf.Session = Session
-
-
 # from .protocol import Pond
 # set_protocol(Pond())
 set_protocol(ABY3())
-hook_tf()
 
 __all__ = [
     "LocalConfig",
@@ -137,15 +109,13 @@ __all__ = [
     "set_log_directory",
     "get_config",
     "set_config",
+    "function",
     "set_protocol",
-    "Session",
     "player",
     "primitives",
     "protocol",
-    "layers",
     "convert",
     "operations",
-    "global_variables_initializer",
     "keras",
     "queue",
     "serving",

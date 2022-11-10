@@ -17,27 +17,27 @@ from ...tensor.shared import binarize
 
 def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
     """
-  Produces a Factory for OddTensors with underlying tf.dtype NATIVE_TYPE.
-  """
+    Produces a Factory for OddTensors with underlying tf.dtype NATIVE_TYPE.
+    """
 
     assert NATIVE_TYPE in (tf.int32, tf.int64)
 
     class Factory:
         """
-    Represents a native integer data type. It is currently not considered for
-    general use, but only to support subprotocols of SecureNN.
+        Represents a native integer data type. It is currently not considered for
+        general use, but only to support subprotocols of SecureNN.
 
-    One value of the native dtype is removed in order to obtain an odd modulus.
-    More concretely, this data type wraps either tf.int32 or tf.int64 but
-    removes -1, which is instead mapped to 0.
-    """
+        One value of the native dtype is removed in order to obtain an odd modulus.
+        More concretely, this data type wraps either tf.int32 or tf.int64 but
+        removes -1, which is instead mapped to 0.
+        """
 
         def tensor(self, value):
             """
-      Wrap `value` in this data type, performing type conversion as needed.
-      Internal use should consider explicit construction as an optimization that
-      avoids redundant correction.
-      """
+            Wrap `value` in this data type, performing type conversion as needed.
+            Internal use should consider explicit construction as an optimization that
+            avoids redundant correction.
+            """
 
             if isinstance(value, tf.Tensor):
                 if value.dtype is not NATIVE_TYPE:
@@ -62,10 +62,10 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
         def modulus(self):
 
             if NATIVE_TYPE is tf.int32:
-                return 2 ** 32 - 1
+                return 2**32 - 1
 
             if NATIVE_TYPE is tf.int64:
-                return 2 ** 64 - 1
+                return 2**64 - 1
 
             raise NotImplementedError("Incorrect native type {}.".format(NATIVE_TYPE))
 
@@ -105,11 +105,11 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
     class OddTensor(AbstractTensor):
         """
-    Base class for the concrete odd tensors types.
+        Base class for the concrete odd tensors types.
 
-    Implements basic functionality needed by SecureNN subprotocols from a few
-    abstract properties implemented by concrete types below.
-    """
+        Implements basic functionality needed by SecureNN subprotocols from a few
+        abstract properties implemented by concrete types below.
+        """
 
         @property
         def factory(self):
@@ -131,7 +131,9 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
         def __repr__(self) -> str:
             return "{}(shape={}, NATIVE_TYPE={})".format(
-                type(self), self.shape, NATIVE_TYPE,
+                type(self),
+                self.shape,
+                NATIVE_TYPE,
             )
 
         def __getitem__(self, slc):
@@ -209,11 +211,11 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
     class OddDenseTensor(OddTensor):
         """
-    Represents a tensor with explicit values, as opposed to OddUniformTensor
-    with implicit values.
+        Represents a tensor with explicit values, as opposed to OddUniformTensor
+        with implicit values.
 
-    Internal use only and assume that invalid values have already been mapped.
-    """
+        Internal use only and assume that invalid values have already been mapped.
+        """
 
         def __init__(self, value):
             assert isinstance(value, tf.Tensor)
@@ -233,10 +235,10 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
     class OddUniformTensor(OddTensor):
         """
-    Represents a tensor with uniform values defined implicitly through a seed.
+        Represents a tensor with uniform values defined implicitly through a seed.
 
-    Internal use only.
-    """
+        Internal use only.
+        """
 
         def __init__(self, shape, seed):
             self._seed = seed
@@ -262,8 +264,8 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
     def _lift(x, y) -> Tuple[OddTensor, OddTensor]:
         """
-    Attempts to lift x and y to compatible OddTensors for further processing.
-    """
+        Attempts to lift x and y to compatible OddTensors for further processing.
+        """
 
         if isinstance(x, OddTensor) and isinstance(y, OddTensor):
             assert x.factory == y.factory, "Incompatible types: {} and {}".format(
@@ -301,10 +303,10 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
 
     def _lessthan_as_unsigned(x, y, bitlength):
         """
-    Performs comparison `x < y` on signed integers *as if* they were unsigned,
-    e.g. `1 < -1`. Taken from Section 2-12, page 23, of
-    [Hacker's Delight](https://www.hackersdelight.org/).
-    """
+        Performs comparison `x < y` on signed integers *as if* they were unsigned,
+        e.g. `1 < -1`. Taken from Section 2-12, page 23, of
+        [Hacker's Delight](https://www.hackersdelight.org/).
+        """
         with tf.name_scope("unsigned-compare"):
             not_x = tf.bitwise.invert(x)
             lhs = tf.bitwise.bitwise_and(not_x, y)
