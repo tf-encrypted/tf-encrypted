@@ -540,19 +540,22 @@ class TestABY3(unittest.TestCase):
 
         prot = ABY3()
         tfe.set_protocol(prot)
-
-        a = tf.random.uniform(
-            [1], -(2**44), 2**44
-        )  # Plus the 18-bit fractional scale, this will be encoded to 62-bit numbers
-        amount = prot.fixedpoint_config.precision_fractional
-        truth = a / (2**amount)
+        
+        @tfe.function
+        def error_func():
+            a = tf.random.uniform(
+                [1], -(2**44), 2**44
+            )  # Plus the 18-bit fractional scale, this will be encoded to 62-bit numbers
+            amount = prot.fixedpoint_config.precision_fractional
+            truth = a / (2**amount)
+            x = tfe.define_private_input("server0", lambda: a)
+            y = tfe.truncate(x)
+            return truth, y.reveal().to_native()
 
         error1 = 0
         n = 100000
         for i in range(n):
-            x = tfe.define_private_input("server0", lambda: a)
-            y = tfe.truncate(x)
-            result = y.reveal().to_native()
+            truth, result = error_func()
             try:
                 np.testing.assert_allclose(result, truth, rtol=0.0, atol=0.1)
             except:
