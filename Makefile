@@ -106,7 +106,7 @@ docs:
 VERSION=$(shell [ -d .git ] && git describe --tags --abbrev=0 2> /dev/null | sed 's/^v//')
 EXACT_TAG=$(shell [ -d .git ] && git describe --exact-match --tags HEAD 2> /dev/null | sed 's/^v//')
 ifeq (,$(VERSION))
-    VERSION=0.7.0
+    VERSION=dev
 endif
 NOT_RC=$(shell git tag --points-at HEAD | grep -v -e -rc)
 
