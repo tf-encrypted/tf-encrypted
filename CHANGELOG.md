@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
-## [0.8.0]
+## [0.8.0-rc0]
 **Added**
 - Graph conversion from native TF graph to TFE graph (Resnet50 tested)
 - Auto backward propagation for neural network model training
