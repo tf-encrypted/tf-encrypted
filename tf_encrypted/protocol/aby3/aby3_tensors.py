@@ -405,6 +405,8 @@ class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
     def __init__(self, prot, values: List[AbstractTensor], is_scaled: bool) -> None:
         assert all(isinstance(v, AbstractTensor) for v in values)
         assert all((v.shape == values[0].shape) for v in values)
+        # check values device
+        assert all((values[i].device == prot.servers[i].device_name) for i in range(3))
 
         super(ABY3PublicTensor, self).__init__(prot, is_scaled, ShareType.PUBLIC)
         self.values = values
@@ -491,10 +493,6 @@ class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
         return result
 
 
-class ABY3ConstantBone(ABY3TensorBone):
-    values: Tuple[tf.Tensor, tf.Tensor, tf.Tensor]
-
-
 class ABY3Constant(ABY3PublicTensor):
     """
     This class essentially represents a public value, however it additionally
@@ -512,23 +510,6 @@ class ABY3Constant(ABY3PublicTensor):
         return "ABY3Constant(shape={}, share_type={})".format(
             self.shape, self.share_type
         )
-
-    @property
-    def bone(self) -> ABY3ConstantBone:
-        values = [None, None, None]
-        with tf.device(self.prot.servers[0].device_name):
-            values[0] = self.constants[0].to_native()
-        with tf.device(self.prot.servers[1].device_name):
-            values[1] = self.constants[1].to_native()
-        with tf.device(self.prot.servers[2].device_name):
-            values[2] = self.constants[2].to_native()
-        return ABY3ConstantBone(
-            self.is_scaled, self.share_type, self.unwrapped[0].factory.nbits, values
-        )
-
-
-class ABY3PublicVariableBone(ABY3TensorBone):
-    values: Tuple[tf.Tensor, tf.Tensor, tf.Tensor]
 
 
 class ABY3PublicVariable(ABY3PublicTensor, TFEPublicVariable):
@@ -551,19 +532,6 @@ class ABY3PublicVariable(ABY3PublicTensor, TFEPublicVariable):
 
     def __repr__(self) -> str:
         return "ABY3PublicVariable(shape={})".format(self.shape)
-
-    @property
-    def bone(self) -> ABY3PublicVariableBone:
-        values = [None, None, None]
-        with tf.device(self.prot.servers[0].device_name):
-            values[0] = self.variables[0].read_value().to_native()
-        with tf.device(self.prot.servers[1].device_name):
-            values[1] = self.variables[1].read_value().to_native()
-        with tf.device(self.prot.servers[2].device_name):
-            values[2] = self.variables[2].read_value().to_native()
-        return ABY3PublicVariableBone(
-            self.is_scaled, self.share_type, self.unwrapped[0].factory.nbits, values
-        )
 
     def read_value(self) -> ABY3PublicTensor:
         values = [None, None, None]
@@ -596,6 +564,12 @@ class ABY3PrivateTensor(ABY3Tensor, TFEPrivateTensor):
         assert all(
             (ss.shape == shares[0][0].shape) for s in shares for ss in s
         ), "Shares have different shapes."
+        # check share device
+        assert all(
+            (shares[i][j].device == prot.servers[i].device_name)
+            for i in range(3)
+            for j in range(2)
+        ), "Shares device wrong"
 
         super(ABY3PrivateTensor, self).__init__(prot, is_scaled, share_type)
         self.shares = shares
@@ -640,14 +614,6 @@ class ABY3PrivateTensor(ABY3Tensor, TFEPrivateTensor):
         return self.prot.reveal(self)
 
 
-class ABY3PrivateVariableBone(ABY3TensorBone):
-    shares: Tuple[
-        Tuple[tf.Tensor, tf.Tensor],
-        Tuple[tf.Tensor, tf.Tensor],
-        Tuple[tf.Tensor, tf.Tensor],
-    ]
-
-
 class ABY3PrivateVariable(ABY3PrivateTensor, TFEPrivateVariable):
     """
     This class essentially represents a private value, however it additionally
@@ -663,22 +629,6 @@ class ABY3PrivateVariable(ABY3PrivateTensor, TFEPrivateVariable):
     def __repr__(self) -> str:
         return "ABY3PrivateVariable(shape={}, share_type={})".format(
             self.shape, self.share_type
-        )
-
-    @property
-    def bone(self) -> ABY3PrivateVariableBone:
-        shares = [[None, None], [None, None], [None, None]]
-        with tf.device(self.prot.servers[0].device_name):
-            shares[0][0] = self.shares[0][0].read_value().to_native()
-            shares[0][1] = self.shares[0][1].read_value().to_native()
-        with tf.device(self.prot.servers[1].device_name):
-            shares[1][0] = self.shares[1][0].read_value().to_native()
-            shares[1][1] = self.shares[1][1].read_value().to_native()
-        with tf.device(self.prot.servers[2].device_name):
-            shares[2][0] = self.shares[2][0].read_value().to_native()
-            shares[2][1] = self.shares[2][1].read_value().to_native()
-        return ABY3PrivateVariableBone(
-            self.is_scaled, self.share_type, self.unwrapped[0][0].factory.nbits, shares
         )
 
     def read_value(self) -> ABY3PrivateTensor:

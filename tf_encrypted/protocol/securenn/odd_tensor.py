@@ -116,6 +116,10 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
             return master_factory
 
         @property
+        def device(self):
+            pass
+
+        @property
         @abc.abstractproperty
         def value(self) -> tf.Tensor:
             pass
@@ -232,6 +236,10 @@ def odd_factory(NATIVE_TYPE):  # pylint: disable=invalid-name
         @property
         def support(self):
             return [self._value]
+
+        @property
+        def device(self):
+            return self._value.device
 
     class OddUniformTensor(OddTensor):
         """

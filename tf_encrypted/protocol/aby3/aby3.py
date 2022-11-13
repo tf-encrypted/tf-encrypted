@@ -26,12 +26,10 @@ from tensorflow.python.ops.while_v2 import glob_stateful_parallelism
 from ...config import get_config
 from ...operations import secure_random as crypto
 from ...player import Player
-from ...tensor import fixed64
+from ...tensor import factories
 from ...tensor import fixed64_heuristic
-from ...tensor.boolfactory import bool_factory
 from ...tensor.factory import AbstractFactory
 from ...tensor.factory import AbstractTensor
-from ...tensor.native import native_factory
 from ...tensor.shared import out_size
 from ..protocol import Protocol
 from ..protocol import memoize
@@ -75,28 +73,8 @@ class ABY3(Protocol):
         self.servers[2] = config.get_player(server_2 if server_2 else "server2")
 
         self.fixedpoint_config = fixed64_heuristic
-
-        self.factories = {
-            0: bool_factory(),
-            1: native_factory(tf.int8),
-            2: native_factory(tf.int8),
-            4: native_factory(tf.int8),
-            8: native_factory(tf.int8),
-            16: native_factory(tf.int16),
-            32: native_factory(tf.int32),
-            64: native_factory(tf.int64),
-        }
-        self.factories.update(
-            {
-                tf.bool: self.factories[0],
-                tf.int8: self.factories[8],
-                tf.int16: self.factories[16],
-                tf.int32: self.factories[32],
-                tf.int64: self.factories[64],
-            }
-        )
         self.default_nbits = 64
-        self.default_factory = self.factories[self.default_nbits]
+        self.default_factory = factories[self.default_nbits]
 
         self.reset()
 
@@ -312,13 +290,22 @@ class ABY3(Protocol):
         value = self._encode(value, apply_scaling)
         with tf.name_scope("constant{}".format("-" + name if name else "")):
             with tf.device(self.servers[0].device_name):
-                x_on_0 = factory.constant(value)
+                if isinstance(value, tf.Tensor):
+                    x_on_0 = factory.constant(tf.identity(value))
+                else:
+                    x_on_0 = factory.constant(value)
 
             with tf.device(self.servers[1].device_name):
-                x_on_1 = factory.constant(value)
+                if isinstance(value, tf.Tensor):
+                    x_on_1 = factory.constant(tf.identity(value))
+                else:
+                    x_on_1 = factory.constant(value)
 
             with tf.device(self.servers[2].device_name):
-                x_on_2 = factory.constant(value)
+                if isinstance(value, tf.Tensor):
+                    x_on_2 = factory.constant(tf.identity(value))
+                else:
+                    x_on_2 = factory.constant(value)
 
         return ABY3Constant(self, [x_on_0, x_on_1, x_on_2], apply_scaling)
 
@@ -751,45 +738,26 @@ class ABY3(Protocol):
         )
 
     def from_bone(self, tensor_bone: ABY3TensorBone) -> ABY3Tensor:
-        factory = self.factories[tensor_bone.factory]
+        factory = factories[tensor_bone.factory]
         if isinstance(tensor_bone, ABY3PublicTensorBone):
+            values = [None, None, None]
+            for i in range(3):
+                with tf.device(self.servers[i].device_name):
+                    values[i] = factory.tensor(tensor_bone.values[i]).identity()
             return ABY3PublicTensor(
                 self,
-                [factory.tensor(share) for share in tensor_bone.values],
+                values,
                 is_scaled=tensor_bone.is_scaled,
-                share_type=tensor_bone.share_type,
-            )
-        elif isinstance(tensor_bone, ABY3PublicVariableBone):
-            return ABY3PublicVariable(
-                self,
-                [factory.variable(share) for share in tensor_bone.values],
-                is_scaled=tensor_bone.is_scaled,
-                share_type=tensor_bone.share_type,
-            )
-        elif isinstance(tensor_bone, ABY3ConstantBone):
-            return ABY3Constant(
-                self,
-                [factory.consant(share) for share in tensor_bone.values],
-                is_scaled=tensor_bone.is_scaled,
-                share_type=tensor_bone.share_type,
             )
         elif isinstance(tensor_bone, ABY3PrivateTensorBone):
+            shares = [[None, None], [None, None], [None, None]]
+            for i in range(3):
+                with tf.device(self.servers[i].device_name):
+                    shares[i][0] = factory.tensor(tensor_bone.shares[i][0]).identity()
+                    shares[i][1] = factory.tensor(tensor_bone.shares[i][1]).identity()
             return ABY3PrivateTensor(
                 self,
-                [
-                    [factory.tensor(share[0]), factory.tensor(share[1])]
-                    for share in tensor_bone.shares
-                ],
-                is_scaled=tensor_bone.is_scaled,
-                share_type=tensor_bone.share_type,
-            )
-        elif isinstance(tensor_bone, ABY3PrivateVariableBone):
-            return ABY3PrivateVariable(
-                self,
-                [
-                    [factory.variable(share[0]), factory.tensor(share[1])]
-                    for share in tensor_bone.shares
-                ],
+                shares,
                 is_scaled=tensor_bone.is_scaled,
                 share_type=tensor_bone.share_type,
             )
@@ -884,7 +852,16 @@ class ABY3(Protocol):
                 elif share_type == ShareType.BOOLEAN:
                     share2 = secret ^ share0 ^ share1
                 # Replicated sharing
-                shares = ((share0, share1), (share1, share2), (share2, share0))
+                shares = [[None, None], [None, None], [None, None]]
+                with tf.device(self.servers[0].device_name):
+                    shares[0][0] = share0.identity()
+                    shares[0][1] = share1.identity()
+                with tf.device(self.servers[1].device_name):
+                    shares[1][0] = share1.identity()
+                    shares[1][1] = share2.identity()
+                with tf.device(self.servers[2].device_name):
+                    shares[2][0] = share2.identity()
+                    shares[2][1] = share0.identity()
                 return shares
 
             else:
@@ -1094,8 +1071,8 @@ class ABY3(Protocol):
         assert m0.shape == m1.shape, "m0 shape {}, m1 shape {}".format(
             m0.shape, m1.shape
         )
-        assert c_on_receiver.factory == self.factories[tf.bool]
-        assert c_on_helper.factory == self.factories[tf.bool]
+        assert c_on_receiver.factory == factories[tf.bool]
+        assert c_on_helper.factory == factories[tf.bool]
         assert m0.factory == m1.factory
 
         factory = m0.factory
@@ -1263,10 +1240,7 @@ class ABY3(Protocol):
             return self.mul_pow2(x, int(math.log2(y)))
         elif isinstance(x, (int, float)) and is_power_of_two(x):
             return self.mul_pow2(y, int(math.log2(x)))
-        elif (
-            isinstance(y, ABY3PrivateTensor)
-            and y.backing_dtype == self.factories[tf.bool]
-        ):
+        elif isinstance(y, ABY3PrivateTensor) and y.backing_dtype == factories[tf.bool]:
             return self.mul_ab(x, y)
 
         x, y = self.lift(x, y)
@@ -1807,7 +1781,7 @@ class ABY3(Protocol):
             if (
                 x.share_type == ShareType.BOOLEAN
                 or y.share_type == ShareType.BOOLEAN
-                or x.backing_dtype == self.factories[tf.bool]
+                or x.backing_dtype == factories[tf.bool]
             ):
                 return ((x ^ y) & choice_bit) ^ x
             else:
@@ -2315,7 +2289,8 @@ def _sub_public_public(prot, x, y):
     z = [None] * 3
     with tf.name_scope("sub"):
         for i in range(3):
-            z[i] = x_shares[i] - y_shares[i]
+            with tf.device(prot.servers[i].device_name):
+                z[i] = x_shares[i] - y_shares[i]
 
     return ABY3PublicTensor(prot, z, x.is_scaled)
 
@@ -2478,13 +2453,13 @@ def _mul_private_private(prot, x, y):
         # Re-sharing
         with tf.device(prot.servers[0].device_name):
             z[0][0] = z0
-            z[0][1] = z1
+            z[0][1] = z1.identity()
         with tf.device(prot.servers[1].device_name):
             z[1][0] = z1
-            z[1][1] = z2
+            z[1][1] = z2.identity()
         with tf.device(prot.servers[2].device_name):
             z[2][0] = z2
-            z[2][1] = z0
+            z[2][1] = z0.identity()
 
         z = ABY3PrivateTensor(prot, z, x.is_scaled or y.is_scaled, x.share_type)
         z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
@@ -2659,13 +2634,13 @@ def _matmul_private_private(prot, x, y):
         # Re-sharing
         with tf.device(prot.servers[0].device_name):
             z[0][0] = z0
-            z[0][1] = z1
+            z[0][1] = z1.identity()
         with tf.device(prot.servers[1].device_name):
             z[1][0] = z1
-            z[1][1] = z2
+            z[1][1] = z2.identity()
         with tf.device(prot.servers[2].device_name):
             z[2][0] = z2
-            z[2][1] = z0
+            z[2][1] = z0.identity()
 
         z = ABY3PrivateTensor(prot, z, x.is_scaled or y.is_scaled, x.share_type)
         z = prot.truncate(z) if x.is_scaled and y.is_scaled else z
@@ -2764,7 +2739,7 @@ def _truncate_msb0_cheetah_private(
 ) -> ABY3PrivateTensor:
     assert x.share_type == ShareType.ARITHMETIC, x.share_type
 
-    bfactory = prot.factories[tf.bool]
+    bfactory = factories[tf.bool]
 
     if amount is None:
         amount = prot.fixedpoint_config.precision_fractional
@@ -2856,7 +2831,7 @@ def _truncate_msb0_secureq8_private(
     with tf.name_scope("trunc-msb0-secureq8"):
 
         ifactory = x.backing_dtype
-        bfactory = prot.factories[tf.bool]
+        bfactory = factories[tf.bool]
 
         if amount is None:
             amount = prot.fixedpoint_config.precision_fractional
@@ -2941,8 +2916,8 @@ def _truncate_msb0_secureq8_private(
             y[1][1] = y2
 
         with tf.device(prot.servers[2].device_name):
-            y[2][0] = y2
-            y[2][1] = y0
+            y[2][0] = y2.identity()
+            y[2][1] = y0.identity()
 
         y = ABY3PrivateTensor(prot, y, x.is_scaled, ShareType.ARITHMETIC)
     return y
@@ -3153,13 +3128,13 @@ def _and_private_private(prot: ABY3, x: ABY3PrivateTensor, y: ABY3PrivateTensor)
         # Re-sharing
         with tf.device(prot.servers[0].device_name):
             z[0][0] = z0
-            z[0][1] = z1
+            z[0][1] = z1.identity()
         with tf.device(prot.servers[1].device_name):
             z[1][0] = z1
-            z[1][1] = z2
+            z[1][1] = z2.identity()
         with tf.device(prot.servers[2].device_name):
             z[2][0] = z2
-            z[2][1] = z0
+            z[2][1] = z0.identity()
 
         z = ABY3PrivateTensor(prot, z, x.is_scaled or y.is_scaled, x.share_type)
         return z
@@ -3541,9 +3516,7 @@ def _carry_computation(prot, x, y, pos=None):
             pos = x.backing_dtype.nbits - 1
 
         if pos < 0:
-            return _zeros_public(
-                prot, x.shape, False, ShareType.PUBLIC, prot.factories[1]
-            )
+            return _zeros_public(prot, x.shape, False, ShareType.PUBLIC, factories[1])
 
         # k is the bit length
         k = next_power_of_two(pos + 1)
@@ -3551,14 +3524,14 @@ def _carry_computation(prot, x, y, pos=None):
             x = x << (k - pos - 1)
             y = y << (k - pos - 1)
         if k != x.backing_dtype.nbits:
-            x = x.cast(prot.factories[k])
-            y = y.cast(prot.factories[k])
+            x = x.cast(factories[k])
+            y = y.cast(factories[k])
 
         G = x & y
         P = x ^ y
         while k > 1:
-            Gs = prot.bit_split_and_gather(G, 2).cast(prot.factories[k // 2])
-            Ps = prot.bit_split_and_gather(P, 2).cast(prot.factories[k // 2])
+            Gs = prot.bit_split_and_gather(G, 2).cast(factories[k // 2])
+            Ps = prot.bit_split_and_gather(P, 2).cast(factories[k // 2])
             G = Gs[1] ^ (Gs[0] & Ps[1])
             P = Ps[0] & Ps[1]
             k = k // 2
@@ -3612,25 +3585,25 @@ def _while_loop_(prot, cond, body, loop_vars):
                 index += 3
                 shares = [None, None, None]
                 with tf.device(prot.servers[0].device_name):
-                    shares[0] = aux[i]["factory"].tensor(values[0])
+                    shares[0] = aux[i]["factory"].tensor(tf.identity(values[0]))
                 with tf.device(prot.servers[1].device_name):
-                    shares[1] = aux[i]["factory"].tensor(values[1])
+                    shares[1] = aux[i]["factory"].tensor(tf.identity(values[1]))
                 with tf.device(prot.servers[2].device_name):
-                    shares[2] = aux[i]["factory"].tensor(values[2])
+                    shares[2] = aux[i]["factory"].tensor(tf.identity(values[2]))
                 var = ABY3PublicTensor(prot, shares, aux[i]["is_scaled"])
             elif issubclass(aux[i]["class"], ABY3PrivateTensor):
                 values = native[index : index + 6]
                 index += 6
                 shares = [[None, None], [None, None], [None, None]]
                 with tf.device(prot.servers[0].device_name):
-                    shares[0][0] = aux[i]["factory"].tensor(values[0])
-                    shares[0][1] = aux[i]["factory"].tensor(values[1])
+                    shares[0][0] = aux[i]["factory"].tensor(tf.identity(values[0]))
+                    shares[0][1] = aux[i]["factory"].tensor(tf.identity(values[1]))
                 with tf.device(prot.servers[1].device_name):
-                    shares[1][0] = aux[i]["factory"].tensor(values[2])
-                    shares[1][1] = aux[i]["factory"].tensor(values[3])
+                    shares[1][0] = aux[i]["factory"].tensor(tf.identity(values[2]))
+                    shares[1][1] = aux[i]["factory"].tensor(tf.identity(values[3]))
                 with tf.device(prot.servers[2].device_name):
-                    shares[2][0] = aux[i]["factory"].tensor(values[4])
-                    shares[2][1] = aux[i]["factory"].tensor(values[5])
+                    shares[2][0] = aux[i]["factory"].tensor(tf.identity(values[4]))
+                    shares[2][1] = aux[i]["factory"].tensor(tf.identity(values[5]))
                 var = ABY3PrivateTensor(
                     prot, shares, aux[i]["is_scaled"], aux[i]["share_type"]
                 )
@@ -3718,21 +3691,21 @@ def _a2b_private(prot, x, nbits):
         with tf.device(prot.servers[0].device_name):
             x0_plus_x1 = x_shares[0][0] + x_shares[0][1]
             operand1[0][0] = x0_plus_x1 ^ a0
-            operand1[0][1] = a1
+            operand1[0][1] = a1.identity()
 
             operand2[0][0] = zero_on_0
             operand2[0][1] = zero_on_0
 
         with tf.device(prot.servers[1].device_name):
             operand1[1][0] = a1
-            operand1[1][1] = a2
+            operand1[1][1] = a2.identity()
 
             operand2[1][0] = zero_on_1
             operand2[1][1] = x_shares[1][1]
 
         with tf.device(prot.servers[2].device_name):
             operand1[2][0] = a2
-            operand1[2][1] = operand1[0][0]
+            operand1[2][1] = operand1[0][0].identity()
 
             operand2[2][0] = x_shares[2][0]
             operand2[2][1] = zero_on_2
@@ -3772,8 +3745,8 @@ def _a2b_private(prot, x, nbits):
 # result = [[None, None], [None, None], [None, None]]
 # for i in range(3):
 # with tf.device(prot.servers[i].device_name):
-# result[i][0] = x_shares[i][0].cast(prot.factories[tf.bool])
-# result[i][1] = x_shares[i][1].cast(prot.factories[tf.bool])
+# result[i][0] = x_shares[i][0].cast(factories[tf.bool])
+# result[i][1] = x_shares[i][1].cast(factories[tf.bool])
 # result = ABY3PrivateTensor(prot, result, False, ShareType.BOOLEAN)
 
 # return result
@@ -3790,7 +3763,7 @@ def _bit_extract_private(prot, x, i):
 
         if x.share_type == ShareType.BOOLEAN:
             z = (x >> i) & mask
-            z = z.cast(prot.factories[tf.bool])
+            z = z.cast(factories[tf.bool])
 
         elif x.share_type == ShareType.ARITHMETIC:
             x_shares = x.unwrapped
@@ -3809,21 +3782,21 @@ def _bit_extract_private(prot, x, i):
             with tf.device(prot.servers[0].device_name):
                 x0_plus_x1 = x_shares[0][0] + x_shares[0][1]
                 operand1[0][0] = x0_plus_x1 ^ a0
-                operand1[0][1] = a1
+                operand1[0][1] = a1.identity()
 
                 operand2[0][0] = zero_on_0
                 operand2[0][1] = zero_on_0
 
             with tf.device(prot.servers[1].device_name):
                 operand1[1][0] = a1
-                operand1[1][1] = a2
+                operand1[1][1] = a2.identity()
 
                 operand2[1][0] = zero_on_1
                 operand2[1][1] = x_shares[1][1]
 
             with tf.device(prot.servers[2].device_name):
                 operand1[2][0] = a2
-                operand1[2][1] = operand1[0][0]
+                operand1[2][1] = operand1[0][0].identity()
 
                 operand2[2][0] = x_shares[2][0]
                 operand2[2][1] = zero_on_2
@@ -3834,7 +3807,7 @@ def _bit_extract_private(prot, x, i):
             # Step 2: Carry circuit that requires log(i+1) rounds of communication
             carry = prot.carry(operand1, operand2, pos=i - 1)
             P = (((operand1 ^ operand2) >> i) & mask).cast(carry.backing_dtype)
-            z = (carry ^ P).cast(prot.factories[tf.bool])
+            z = (carry ^ P).cast(factories[tf.bool])
 
         z.is_scaled = False
 
@@ -3930,7 +3903,7 @@ def _b2a_private(prot, x, nbits, method="ppa"):
 
 def _b2a_single_private(prot, x):
     assert x.share_type == ShareType.BOOLEAN
-    assert x.backing_dtype == prot.factories[tf.bool]
+    assert x.backing_dtype == factories[tf.bool]
 
     # TODO: this can be improved with 3pc COT
 
@@ -3994,8 +3967,8 @@ def __mul_ab_routine(prot, a, b, sender_idx):
         idx1 = (sender_idx + 1) % 3
         idx2 = (sender_idx + 2) % 3
         with tf.device(prot.servers[idx0].device_name):
-            z[idx0][0] = s[idx2]
-            z[idx0][1] = s[idx1]
+            z[idx0][0] = s[idx2].identity()
+            z[idx0][1] = s[idx1].identity()
             tmp = (b_shares[idx0][0] ^ b_shares[idx0][1]).cast(a.factory) * a
             m0 = tmp + s[idx0]
             m1 = -tmp + a + s[idx0]
@@ -4931,7 +4904,7 @@ def _conv2d_private_private(prot, x, w, strides, padding):
 
         for i in range(3):
             with tf.device(prot.servers[i].device_name):
-                z[i][1] = z[(i + 1) % 3][0]
+                z[i][1] = z[(i + 1) % 3][0].identity()
 
         z = ABY3PrivateTensor(prot, z, x.is_scaled or w.is_scaled, x.share_type)
         z = prot.truncate(z) if x.is_scaled and w.is_scaled else z
@@ -5089,10 +5062,10 @@ def _reduce_max_with_argmax_private(
                 prot.define_constant(
                     np.tile(np.reshape(np.eye(n)[i], idx_init_shape), tile_shape),
                     apply_scaling=False,
-                    factory=prot.factories[tf.bool],
+                    factory=factories[tf.bool],
                 )
                 for i, _ in enumerate(tensors)
-                # prot.define_constant(np.reshape(np.eye(n)[i], idx_init_shape), apply_scaling=False, factory=prot.factories[tf.bool])
+                # prot.define_constant(np.reshape(np.eye(n)[i], idx_init_shape), apply_scaling=False, factory=factories[tf.bool])
                 # for i, _ in enumerate(tensors)
             ]
         elif output_style == "normal":
@@ -5545,7 +5518,7 @@ def _pow2_from_bits_private(prot, bits):
 def _exp2_private(prot, x, approx_type="mp-spdz", sign=None):
     # TODO: is x scaled or not?
     nbits = x.backing_dtype.nbits
-    bfactory = prot.factories[tf.bool]
+    bfactory = factories[tf.bool]
     scale = prot.fixedpoint_config.precision_fractional
     # Only consider at most 5 bits on the exponent, we cannot represent any bigger number anyway.
     n_int_bits = 5
@@ -5647,7 +5620,7 @@ def _exp_private(prot, x, approx_type="mp-spdz", sign=None):
 
 def _bits_private(prot, x, bitsize=None):
     assert x.share_type == ShareType.BOOLEAN, x.share_type
-    bfactory = prot.factories[tf.bool]
+    bfactory = factories[tf.bool]
 
     x_shares = x.unwrapped
     y = [[None, None], [None, None], [None, None]]

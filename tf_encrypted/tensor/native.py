@@ -44,7 +44,7 @@ def native_factory(
                     initial_value = tf.cast(initial_value, dtype=self.native_type)
                     return Tensor(initial_value)
                 else:
-                    return Tensor(tf.identity(initial_value))
+                    return Tensor(initial_value)
             elif isinstance(initial_value, np.ndarray):
                 initial_value = tf.convert_to_tensor(
                     initial_value, dtype=self.native_type
@@ -63,7 +63,7 @@ def native_factory(
                     initial_value = tf.cast(initial_value, dtype=self.native_type)
                     return Constant(initial_value)
                 else:
-                    return Constant(tf.identity(initial_value))
+                    return Constant(initial_value)
             elif isinstance(initial_value, np.ndarray):
                 constant_value = tf.constant(initial_value, dtype=self.native_type)
                 return Constant(constant_value)
@@ -293,6 +293,10 @@ def native_factory(
         @property
         def factory(self):
             return FACTORY
+
+        @property
+        def device(self):
+            return self._value.device
 
         def __add__(self, other):
             x, y = _lift(self, other)

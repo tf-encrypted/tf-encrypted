@@ -29,11 +29,11 @@ from ...config import tensorflow_supports_int64
 from ...player import Player
 from ...queue.fifo import AbstractFIFOQueue
 from ...queue.fifo import TFFIFOQueue
+from ...tensor import factories
 from ...tensor import fixed64
 from ...tensor import fixed100
 from ...tensor import int64factory
 from ...tensor import int100factory
-from ...tensor.boolfactory import bool_factory
 from ...tensor.factory import AbstractConstant
 from ...tensor.factory import AbstractFactory
 from ...tensor.factory import AbstractTensor
@@ -41,7 +41,6 @@ from ...tensor.factory import AbstractVariable
 from ...tensor.fixed import FixedpointConfig
 from ...tensor.fixed import _validate_fixedpoint_config
 from ...tensor.helpers import inverse
-from ...tensor.native import native_factory
 from ..protocol import Protocol
 from ..protocol import TFEPrivateTensor
 from ..protocol import TFEPrivateVariable
@@ -132,17 +131,6 @@ class Pond(Protocol):
         _validate_fixedpoint_config(fixedpoint_config, tensor_factory)
         self.fixedpoint_config = fixedpoint_config
         self.tensor_factory = tensor_factory
-
-        self.factories = {
-            0: bool_factory(),
-            1: native_factory(tf.int8),
-            2: native_factory(tf.int8),
-            4: native_factory(tf.int8),
-            8: native_factory(tf.int8),
-            16: native_factory(tf.int16),
-            32: native_factory(tf.int32),
-            64: int64factory,
-        }
 
     def define_constant(
         self,
@@ -682,74 +670,33 @@ class Pond(Protocol):
         )
 
     def from_bone(self, tensor_bone):
-        factory = self.factories[tensor_bone.factory]
+        factory = factories[tensor_bone.factory]
         if isinstance(tensor_bone, PondPublicTensorBone):
             with tf.device(self.server_0.device_name):
-                value_0 = factory.tensor(tensor_bone.values[0])
+                value_0 = factory.tensor(tensor_bone.values[0]).identity()
             with tf.device(self.server_1.device_name):
-                value_1 = factory.tensor(tensor_bone.values[1])
+                value_1 = factory.tensor(tensor_bone.values[1]).identity()
             return PondPublicTensor(
                 self, value_0, value_1, is_scaled=tensor_bone.is_scaled
             )
-        elif isinstance(tensor_bone, PondPublicVariableBone):
-            with tf.device(self.server_0.device_name):
-                value_0 = factory.variable(tensor_bone.values[0])
-            with tf.device(self.server_1.device_name):
-                value_1 = factory.variable(tensor_bone.values[1])
-            return PondPublicVariable(
-                self, value_0, value_1, is_scaled=tensor_bone.is_scaled
-            )
-        elif isinstance(tensor_bone, PondConstantBone):
-            with tf.device(self.server_0.device_name):
-                value_0 = factory.consant(tensor_bone.values[0])
-            with tf.device(self.server_1.device_name):
-                value_1 = factory.consant(tensor_bone.values[1])
-            return PondConstant(self, value_0, value_1, is_scaled=tensor_bone.is_scaled)
         elif isinstance(tensor_bone, PondPrivateTensorBone):
             with tf.device(self.server_0.device_name):
-                value_0 = factory.tensor(tensor_bone.values[0])
+                value_0 = factory.tensor(tensor_bone.values[0]).identity()
             with tf.device(self.server_1.device_name):
-                value_1 = factory.tensor(tensor_bone.values[1])
+                value_1 = factory.tensor(tensor_bone.values[1]).identity()
             return PondPrivateTensor(
-                self, value_0, value_1, is_scaled=tensor_bone.is_scaled
-            )
-        elif isinstance(tensor_bone, PondPrivateVariableBone):
-            with tf.device(self.server_0.device_name):
-                value_0 = factory.variable(tensor_bone.values[0])
-            with tf.device(self.server_1.device_name):
-                value_1 = factory.variable(tensor_bone.values[1])
-            return PondPrivateVariable(
                 self, value_0, value_1, is_scaled=tensor_bone.is_scaled
             )
         elif isinstance(tensor_bone, PondMaskedTensorBone):
             with tf.device(self.server_0.device_name):
-                a0 = factory.tensor(tensor_bone.a0)
-                alpha_on_0 = factory.tensor(tensor_bone.alpha_on_0)
+                a0 = factory.tensor(tensor_bone.a0).identity()
+                alpha_on_0 = factory.tensor(tensor_bone.alpha_on_0).identity()
             with tf.device(self.server_1.device_name):
-                a1 = factory.tensor(tensor_bone.a1)
-                alpha_on_1 = factory.tensor(tensor_bone.alpha_on_1)
+                a1 = factory.tensor(tensor_bone.a1).identity()
+                alpha_on_1 = factory.tensor(tensor_bone.alpha_on_1).identity()
             with tf.device(self.triple_source.producer.device_name):
-                a = factory.tensor(tensor_bone.a)
+                a = factory.tensor(tensor_bone.a).identity()
             return PondMaskedTensor(
-                self,
-                self.from_bone(tensor_bone.unmasked),
-                a,
-                a0,
-                a1,
-                alpha_on_0,
-                alpha_on_1,
-                is_scaled=tensor_bone.is_scaled,
-            )
-        elif isinstance(tensor_bone, PondMaskedVariableBone):
-            with tf.device(self.server_0.device_name):
-                a0 = factory.variable(tensor_bone.a0)
-                alpha_on_0 = factory.variable(tensor_bone.alpha_on_0)
-            with tf.device(self.server_1.device_name):
-                a1 = factory.variable(tensor_bone.a1)
-                alpha_on_1 = factory.variable(tensor_bone.alpha_on_1)
-            with tf.device(self.triple_source.producer.device_name):
-                a = factory.variable(tensor_bone.a)
-            return PondMaskedVariable(
                 self,
                 self.from_bone(tensor_bone.unmasked),
                 a,
@@ -1908,6 +1855,8 @@ class PondPublicTensor(PondTensor, TFEPublicTensor):
     ) -> None:
         assert isinstance(value_on_0, AbstractTensor), type(value_on_0)
         assert isinstance(value_on_1, AbstractTensor), type(value_on_1)
+        assert value_on_0.device == prot.server_0.device_name
+        assert value_on_1.device == prot.server_1.device_name
         assert value_on_0.shape == value_on_1.shape
 
         super(PondPublicTensor, self).__init__(prot, is_scaled)
@@ -1996,6 +1945,8 @@ class PondPrivateTensor(PondTensor, TFEPrivateTensor):
     ) -> None:
         assert isinstance(share0, AbstractTensor), type(share0)
         assert isinstance(share1, AbstractTensor), type(share1)
+        assert share0.device == prot.server_0.device_name
+        assert share1.device == prot.server_1.device_name
         assert share0.shape == share1.shape
 
         super(PondPrivateTensor, self).__init__(prot, is_scaled)
@@ -2080,6 +2031,11 @@ class PondMaskedTensor(PondTensor, TFEPrivateTensor):
         is_scaled: bool,
     ) -> None:
         assert isinstance(unmasked, PondPrivateTensor)
+        assert a.device == prot.triple_source.producer.device_name
+        assert a0.device == prot.server_0.device_name
+        assert alpha_on_0.device == prot.server_0.device_name
+        assert a1.device == prot.server_1.device_name
+        assert alpha_on_1.device == prot.server_1.device_name
 
         super(PondMaskedTensor, self).__init__(prot, is_scaled)
         self.unmasked = unmasked
@@ -2135,10 +2091,6 @@ class PondMaskedTensor(PondTensor, TFEPrivateTensor):
 #
 
 
-class PondConstantBone(PondTensorBone):
-    values: Tuple[tf.Tensor, tf.Tensor]
-
-
 class PondConstant(PondPublicTensor):
     """
     This class essentially represents a public value, however it additionally
@@ -2161,19 +2113,6 @@ class PondConstant(PondPublicTensor):
 
     def __repr__(self) -> str:
         return "PondConstant(shape={})".format(self.shape)
-
-    @property
-    def bone(self) -> PondConstantBone:
-        values = [None, None]
-        with tf.device(self.prot.server_0.device_name):
-            values[0] = self.constant_on_0.to_native()
-        with tf.device(self.prot.server_1.device_name):
-            values[1] = self.constant_on_1.to_native()
-        return PondConstantBone(self.is_scaled, self.unwrapped[0].factory.nbits, values)
-
-
-class PondPublicVariableBone(PondTensorBone):
-    values: Tuple[tf.Tensor, tf.Tensor]
 
 
 class PondPublicVariable(PondPublicTensor, TFEPublicVariable):
@@ -2210,21 +2149,6 @@ class PondPublicVariable(PondPublicTensor, TFEPublicVariable):
         y = PondPublicTensor(self.prot, value_on_0, value_on_1, self.is_scaled)
         return y
 
-    @property
-    def bone(self) -> PondPublicVariableBone:
-        values = [None, None]
-        with tf.device(self.prot.server_0.device_name):
-            values[0] = self.variable_on_0.read_value().to_native()
-        with tf.device(self.prot.server_1.device_name):
-            values[1] = self.variable_on_1.read_value().to_native()
-        return PondPublicVariableBone(
-            self.is_scaled, self.unwrapped[0].factory.nbits, values
-        )
-
-
-class PondPrivateVariableBone(PondTensorBone):
-    values: Tuple[tf.Tensor, tf.Tensor]
-
 
 class PondPrivateVariable(PondPrivateTensor, TFEPrivateVariable):
     """
@@ -2259,26 +2183,6 @@ class PondPrivateVariable(PondPrivateTensor, TFEPrivateVariable):
 
         y = PondPrivateTensor(self.prot, value_on_0, value_on_1, self.is_scaled)
         return y
-
-    @property
-    def bone(self) -> PondPrivateVariableBone:
-        values = [None, None]
-        with tf.device(self.prot.server_0.device_name):
-            values[0] = self.variable0.read_value().to_native()
-        with tf.device(self.prot.server_1.device_name):
-            values[1] = self.variable1.read_value().to_native()
-        return PondPrivateVariableBone(
-            self.is_scaled, self.unwrapped[0].factory.nbits, values
-        )
-
-
-class PondMaskedVariableBone(PondTensorBone):
-    unmasked: PondPrivateVariableBone
-    a: tf.Tensor
-    a0: tf.Tensor
-    a1: tf.Tensor
-    alpha_on_0: tf.Tensor
-    alpha_on_1: tf.Tensor
 
 
 class PondMaskedVariable(PondMaskedTensor, TFEPrivateVariable):
@@ -2337,27 +2241,6 @@ class PondMaskedVariable(PondMaskedTensor, TFEPrivateVariable):
             self.prot, a, a0, a1, alpha_on_0, alpha_on_1, self.is_scaled
         )
         return y
-
-    @property
-    def bone(self) -> PondMaskedVariableBone:
-        with tf.device(self.prot.triple_source.producer.device_name):
-            a = self.a.read_value().to_native()
-        with tf.device(self.prot.server_0.device_name):
-            a0 = self.a0.read_value().to_native()
-            alpha_on_0 = self.alpha_on_0.read_value().to_native()
-        with tf.device(self.prot.server_1.device_name):
-            a1 = self.a1.read_value().to_native()
-            alpha_on_1 = self.alpha_on_1.read_value().to_native()
-        return PondMaskedVariableBone(
-            self.is_scaled,
-            self.unwrapped[0].factory.nbits,
-            self.unmasked.bone,
-            a,
-            a0,
-            a1,
-            alpha_on_0,
-            alpha_on_1,
-        )
 
 
 #

@@ -13,6 +13,7 @@ import tensorflow as tf
 
 import tf_encrypted as tfe
 from tf_encrypted.protocol.aby3 import ABY3
+from tf_encrypted.tensor import factories
 from tf_encrypted.protocol.aby3 import ShareType
 
 
@@ -331,8 +332,8 @@ class TestABY3(unittest.TestCase):
         y = tfe.define_constant(np.array([[0.6, -0.7], [-0.8, 0.9]]))
 
         # define computation
-        z1 = x.cast(prot.factories[tf.int32])
-        z2 = y.cast(prot.factories[tf.int32])
+        z1 = x.cast(factories[tf.int32])
+        z2 = y.cast(factories[tf.int32])
 
         # reveal result
         result = z1.reveal().to_native()
@@ -385,7 +386,7 @@ class TestABY3(unittest.TestCase):
             tf.constant([[1, 0, 0], [0, 1, 0]]),
             apply_scaling=False,
             share_type=ShareType.BOOLEAN,
-            factory=prot.factories[tf.bool],
+            factory=factories[tf.bool],
         )
         z1 = ~x
         z2 = ~y
@@ -540,7 +541,7 @@ class TestABY3(unittest.TestCase):
 
         prot = ABY3()
         tfe.set_protocol(prot)
-        
+
         @tfe.function
         def error_func():
             a = tf.random.uniform(
@@ -625,8 +626,8 @@ class TestABY3(unittest.TestCase):
             apply_scaling=False,
         )
 
-        z1 = tfe.carry(x, y1).cast(prot.factories[tf.int8])
-        z2 = tfe.carry(x, y2).cast(prot.factories[tf.int8])
+        z1 = tfe.carry(x, y1).cast(factories[tf.int8])
+        z2 = tfe.carry(x, y2).cast(factories[tf.int8])
 
         # reveal result
         result = z1.reveal().to_native()
@@ -780,7 +781,7 @@ class TestABY3(unittest.TestCase):
             tf.constant([[0, 1, 0], [1, 0, 1]]),
             share_type=ShareType.BOOLEAN,
             apply_scaling=False,
-            factory=prot.factories[tf.bool],
+            factory=factories[tf.bool],
         )
         y = tfe.b2a_single(x)
         assert y.share_type == ShareType.ARITHMETIC
@@ -894,12 +895,12 @@ class TestABY3(unittest.TestCase):
         c_on_receiver = prot.define_constant(
             np.array([[1, 0, 1], [0, 1, 0]]),
             apply_scaling=False,
-            factory=prot.factories[tf.bool],
+            factory=factories[tf.bool],
         ).unwrapped[0]
         c_on_helper = prot.define_constant(
             np.array([[1, 0, 1], [0, 1, 0]]),
             apply_scaling=False,
-            factory=prot.factories[tf.bool],
+            factory=factories[tf.bool],
         ).unwrapped[0]
 
         m_c = prot._ot(  # pylint: disable=protected-access
@@ -931,7 +932,7 @@ class TestABY3(unittest.TestCase):
             tf.constant([[1, 0, 0], [0, 1, 0]]),
             apply_scaling=False,
             share_type=ShareType.BOOLEAN,
-            factory=prot.factories[tf.bool],
+            factory=factories[tf.bool],
         )
 
         z = tfe.mul_ab(x, y)
@@ -955,7 +956,7 @@ class TestABY3(unittest.TestCase):
             tf.constant([[1, 0, 0], [0, 1, 0]]),
             apply_scaling=False,
             share_type=ShareType.BOOLEAN,
-            factory=prot.factories[tf.bool],
+            factory=factories[tf.bool],
         )
 
         z = tfe.mul_ab(x, y)
@@ -1809,7 +1810,7 @@ class TestABY3(unittest.TestCase):
             strides=(2, 2),
             padding="VALID",
         )
-        assert z3_arg.backing_dtype == prot.factories[tf.bool]
+        assert z3_arg.backing_dtype == factories[tf.bool]
 
         actual, expected = (z1.reveal().to_native(), tf_z1)
         np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.01)

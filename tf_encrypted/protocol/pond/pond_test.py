@@ -140,7 +140,7 @@ class TestMasked(unittest.TestCase):
         a1 = dtype.sample_uniform(plain_tensor.shape)
         a = a0 + a1
         alpha = plain_tensor - a
-        x = PondMaskedTensor(self, unmasked, a, a0, a1, alpha, alpha, False)
+        x = PondMaskedTensor(prot, unmasked, a, a0, a1, alpha, alpha, False)
         return prot, x
 
     def test_transpose_masked(self):

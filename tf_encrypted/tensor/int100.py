@@ -376,6 +376,9 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
         """Base class for other CRT tensor classes."""
 
         def __init__(self, backing):
+            assert all((b.shape == backing[0].shape) for b in backing)
+            assert all((b.device == backing[0].device) for b in backing)
+
             self._backing = backing
 
         @property
@@ -397,6 +400,10 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
         @property
         def factory(self):
             return master_factory
+
+        @property
+        def device(self):
+            return self._backing[0].device
 
         def to_native(self) -> Union[tf.Tensor, np.ndarray]:
             return crt_recombine_explicit(self.backing, 2**32)

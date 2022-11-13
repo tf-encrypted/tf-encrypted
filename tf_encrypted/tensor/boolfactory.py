@@ -202,6 +202,10 @@ def bool_factory():
             return FACTORY
 
         @property
+        def device(self):
+            return self._value.device
+
+        @property
         def dtype(self):
             return self.factory.native_type
 

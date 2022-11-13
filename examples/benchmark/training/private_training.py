@@ -4,6 +4,8 @@
 import argparse
 import sys
 
+from lr_mnist_dataset import LRMnistDataset  # noqa:F403,F401
+
 import tf_encrypted as tfe
 from tf_encrypted.keras.datasets import *  # noqa:F403,F401
 from tf_encrypted.player import DataOwner

@@ -617,8 +617,13 @@ def _lsb_private(prot, x: PondPrivateTensor):
             with tf.device(prot.server_2.device_name):
                 r0 = odd_dtype.sample_uniform(x.shape)
                 r1 = odd_dtype.sample_uniform(x.shape)
-                r = PondPrivateTensor(prot, r0, r1, False)
+            with tf.device(prot.server_0.device_name):
+                r0 = r0.identity()
+            with tf.device(prot.server_1.device_name):
+                r1 = r1.identity()
+            r = PondPrivateTensor(prot, r0, r1, False)
 
+            with tf.device(prot.server_2.device_name):
                 r_raw = r0 + r1
                 rbits_raw = r_raw.bits(factory=prime_dtype)
                 rbits = prot._share_and_wrap(rbits_raw, False)

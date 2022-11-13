@@ -8,19 +8,6 @@ from tf_encrypted.protocol import ABY3  # noqa:F403,F401
 from tf_encrypted.protocol import Pond  # noqa:F403,F401
 from tf_encrypted.protocol import SecureNN  # noqa:F403,F401
 
-
-@tfe.local_computation(name_scope="provide_input")
-def provide_input() -> tf.Tensor:
-    # pick random tensor to be averaged
-    return tf.random.normal(shape=(10,))
-
-
-@tfe.local_computation(player_name="result-receiver", name_scope="receive_output")
-def receive_output(average: tf.Tensor):
-    # simply print average
-    tf.print("Average:", average)
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Train a TF Encrypted model")
@@ -51,6 +38,9 @@ if __name__ == "__main__":
         # Always best practice to preset all players to avoid invalid device errors
         config = tfe.LocalConfig(
             player_names=[
+                "server0",
+                "server1",
+                "server2",
                 "inputter-0",
                 "inputter-1",
                 "inputter-2",
@@ -63,6 +53,16 @@ if __name__ == "__main__":
 
     # set tfe protocol
     tfe.set_protocol(globals()[args.protocol]())
+
+    @tfe.local_computation(name_scope="provide_input")
+    def provide_input() -> tf.Tensor:
+        # pick random tensor to be averaged
+        return tf.random.normal(shape=(10,))
+
+    @tfe.local_computation(player_name="result-receiver", name_scope="receive_output")
+    def receive_output(average: tf.Tensor):
+        # simply print average
+        tf.print("Average:", average)
 
     # get input from inputters as private values
     inputs = [
