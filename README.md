@@ -68,13 +68,13 @@ x = provide_input()
 
 # eager execution
 y = tfe.matmul(x, w)
-res = y.reveal().to_natie()
+res = y.reveal().to_native()
 
 # build graph and run graph
 @tfe.function
 def matmul_func(x, w)
     y = tfe.matmul(x, w)
-    return y.reveal().to_natie()
+    return y.reveal().to_native()
 
 res = matmul_func(x, w)
 ```

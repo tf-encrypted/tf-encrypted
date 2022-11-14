@@ -7,7 +7,7 @@ This directory contains various examples of using TF Encrypted:
   - [federated-learning](./application/federated-learning/) secure aggregation for federated learning
   - [house-credit-default](./application/house-credit-default/) private predictions with a logistic regression model
   - [joint-inference](./application/joint-inference/) joint inference with model owner and prediction client
-  - [joint-train](./application/joint-train/) joint train with horizontally or vertically splited dataset
+  - [joint-train](./application/joint-train/) joint train with horizontally or vertically split dataset
 - [benchmark](./benchmark/) examples of benchmark TF Encrypted's performance
   - [operation](./benchmark/operation/) benchmark performance of basic mpc operations
   - [inference](./benchmark/inference/) benchmark performance of big neural networks inference

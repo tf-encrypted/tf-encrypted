@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Changed**
+
+- Remove all TF1 like TFE features, e.g. `tfe.Session`, `tfe.Placeholder`...
+- Rely on Tensorflow 2.9.1
+- Eager execution
+- Auto add dependency for stateful op, e.g. `assign`, `read_value`...
+- Define a graph by `tfe.function`
+- Build TFE model from ONNX model, support both train and inference
+
+**Fixed**
+
+- share's device bug
+
 
 ## [0.8.0]
 **Added**
