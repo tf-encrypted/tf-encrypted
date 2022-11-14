@@ -166,16 +166,14 @@ class RemoteConfig(Config):
             )
 
         self._job_name = job_name
+        device_str = "/job:{job_name}/replica:0/task:{task_id}/device:CPU:0"
         self._players = OrderedDict(
             (
                 name,
                 Player(
                     name=name,
                     index=index,
-                    device_name="/job:{job_name}/replica:0\
-                        /task:{task_id}/device:CPU:0".format(
-                        job_name=job_name, task_id=index
-                    ),
+                    device_name=device_str.format(job_name=job_name, task_id=index),
                     host=host,
                 ),
             )
