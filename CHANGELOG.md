@@ -5,11 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+
+## [0.8.0]
 **Added**
 - Graph conversion from native TF graph to TFE graph (Resnet50 tested)
 - Auto backward propagation for neural network model training
 - Various necessary functions for neural network training in the ABY3 protocol
 - 3PC Benchmark
+
+**Fixed**
+- Compatibility with tf 1.13.2
 
 
 ## [0.7.0]
