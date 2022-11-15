@@ -16,7 +16,8 @@ setuptools.setup(
     install_requires=[
         "tensorflow >=2.9.1",
         "numpy >=1.22.4",
-        "pyyaml >=6.0"
+        "pyyaml >=6.0",
+        "tf2onnx==1.12.0"
     ],
     extras_require={
         "tf": ["tensorflow>=2.9.1"],
