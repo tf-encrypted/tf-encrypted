@@ -16,36 +16,26 @@ from tf_encrypted.tensor import int64factory
 from tf_encrypted.tensor import int100factory
 from tf_encrypted.tensor import native_factory
 
-from .pond import _gather_masked
-from .pond import _indexer_masked
-from .pond import _negative_masked
-
 
 @pytest.mark.pond
 class TestPond(unittest.TestCase):
     def test_encode(self):
+        prot = tfe.protocol.Pond()
+        tfe.set_protocol(prot)
 
-        with tf.Graph().as_default():
-            prot = tfe.protocol.Pond()
-
-            expected = np.array([1234567.9875])
-            x = prot.define_constant(expected)
-
-            with tfe.Session() as sess:
-                actual = sess.run(x)
-                np.testing.assert_array_almost_equal(actual, expected, decimal=3)
+        expected = np.array([1234567.9875])
+        x = prot.define_constant(expected)
+        actual = x.to_native()
+        np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
 
 @pytest.mark.pond
 class TestTruncate(unittest.TestCase):
-    def setUp(self):
-        tf.reset_default_graph()
-
     def test_interactive_truncate(self):
-
         prot = tfe.protocol.Pond(
-            tensor_factory=int100factory, fixedpoint_config=fixed100,
+            tensor_factory=int100factory, fixedpoint_config=fixed100
         )
+        tfe.set_protocol(prot)
 
         # TODO[Morten] remove this condition
         if prot.tensor_factory not in [tfe.tensor.int64factory]:
@@ -56,108 +46,74 @@ class TestTruncate(unittest.TestCase):
                 expected * prot.fixedpoint_config.scaling_factor
             )  # double precision
             v = prot.truncate(w)  # single precision
-
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                actual = sess.run(v.reveal())
-
+            actual = v.reveal().to_native()
             np.testing.assert_allclose(actual, expected)
 
     def test_noninteractive_truncate(self):
-
         prot = tfe.protocol.Pond(
-            tensor_factory=int100factory, fixedpoint_config=fixed100_ni,
+            tensor_factory=int100factory, fixedpoint_config=fixed100_ni
         )
+        tfe.set_protocol(prot)
 
-        with tfe.Session() as sess:
-
-            expected = np.array([12345.6789])
-
-            w = prot.define_private_variable(
-                expected * prot.fixedpoint_config.scaling_factor
-            )  # double precision
-            v = prot.truncate(w)  # single precision
-
-            sess.run(tf.global_variables_initializer())
-            actual = sess.run(v.reveal())
-
-            np.testing.assert_allclose(actual, expected)
+        expected = np.array([12345.6789])
+        w = prot.define_private_variable(
+            expected * prot.fixedpoint_config.scaling_factor
+        )  # double precision
+        v = prot.truncate(w)  # single precision
+        actual = v.reveal().to_native()
+        np.testing.assert_allclose(actual, expected)
 
 
 @pytest.mark.pond
 class TestPondPublicEqual(unittest.TestCase):
     def test_public_compare(self):
+        prot = tfe.protocol.Pond()
+        tfe.set_protocol(prot)
 
         expected = np.array([1, 0, 1, 0])
-
-        with tfe.protocol.Pond() as prot:
-
-            x_raw = prot.tensor_factory.constant(np.array([100, 200, 100, 300]))
-            x = PondPublicTensor(
-                prot, value_on_0=x_raw, value_on_1=x_raw, is_scaled=False
-            )
-
-            res = prot.equal(x, 100)
-
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                answer = sess.run(res)
-
-            assert np.array_equal(answer, expected)
+        x_raw = prot.tensor_factory.constant(np.array([100, 200, 100, 300]))
+        x = PondPublicTensor(prot, value_on_0=x_raw, value_on_1=x_raw, is_scaled=False)
+        res = prot.equal(x, 100)
+        answer = res.to_native()
+        assert np.array_equal(answer, expected)
 
 
 @pytest.mark.pond
 class TestPondPublicDivision(unittest.TestCase):
     def test_public_division(self):
+        prot = tfe.protocol.Pond()
+        tfe.set_protocol(prot)
 
         x_raw = np.array([10.0, 20.0, 30.0, 40.0])
         y_raw = np.array([1.0, 2.0, 3.0, 4.0])
         expected = x_raw / y_raw
-
-        with tfe.protocol.Pond() as prot:
-
-            x = prot.define_private_variable(x_raw)
-            y = prot.define_constant(y_raw)
-            z = x / y
-
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                actual = sess.run(z.reveal())
-
-            np.testing.assert_array_almost_equal(actual, expected, decimal=2)
+        x = prot.define_private_variable(x_raw)
+        y = prot.define_constant(y_raw)
+        z = x / y
+        actual = z.reveal().to_native()
+        np.testing.assert_array_almost_equal(actual, expected, decimal=2)
 
     def test_public_reciprocal(self):
+        prot = tfe.protocol.Pond()
+        tfe.set_protocol(prot)
 
         x_raw = np.array([10.0, 20.0, 30.0, 40.0])
         expected = 1.0 / x_raw
-
-        with tfe.protocol.Pond() as prot:
-
-            x = prot.define_constant(x_raw)
-            y = prot.reciprocal(x)
-
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                actual = sess.run(y)
-
-            np.testing.assert_array_almost_equal(actual, expected, decimal=3)
+        x = prot.define_constant(x_raw)
+        y = prot.reciprocal(x)
+        actual = y.to_native()
+        np.testing.assert_array_almost_equal(actual, expected, decimal=3)
 
 
 @pytest.mark.pond
 class TestShare(unittest.TestCase):
-    def setUp(self):
-        tf.reset_default_graph()
-
     def _core_test_sharing(self, dtype):
+        prot = tfe.protocol.Pond()
+        tfe.set_protocol(prot)
 
         expected = np.array([[1, 2, 3], [4, 5, 6]])
-
-        with tfe.protocol.Pond() as prot:
-
-            with tfe.Session() as sess:
-                shares = prot._share(dtype.tensor(expected))
-                actual = sess.run(prot._reconstruct(*shares).to_native())
-
+        shares = prot._share(dtype.tensor(expected))
+        actual = prot._reconstruct(*shares).to_native()
         np.testing.assert_array_equal(actual, expected)
 
     def test_int64(self):
@@ -174,6 +130,8 @@ class TestShare(unittest.TestCase):
 class TestMasked(unittest.TestCase):
     def _setup(self, dtype):
         prot = tfe.protocol.Pond()
+        tfe.set_protocol(prot)
+
         plain_tensor = dtype.tensor(np.array([[1, 2, 3], [4, 5, 6]]))
         # pylint: disable=protected-access
         unmasked = prot._share_and_wrap(plain_tensor, False)
@@ -182,85 +140,58 @@ class TestMasked(unittest.TestCase):
         a1 = dtype.sample_uniform(plain_tensor.shape)
         a = a0 + a1
         alpha = plain_tensor - a
-        x = PondMaskedTensor(self, unmasked, a, a0, a1, alpha, alpha, False)
+        x = PondMaskedTensor(prot, unmasked, a, a0, a1, alpha, alpha, False)
         return prot, x
 
     def test_transpose_masked(self):
 
-        with tf.Graph().as_default():
-
-            prot, x = self._setup(int64factory)
-            transpose = prot.transpose(x)
-
-            with tfe.Session() as sess:
-                actual = sess.run(transpose.reveal().to_native())
-                expected = np.array([[1, 4], [2, 5], [3, 6]])
-                np.testing.assert_array_equal(actual, expected)
+        prot, x = self._setup(int64factory)
+        transpose = prot.transpose(x)
+        actual = transpose.reveal().to_native()
+        expected = np.array([[1, 4], [2, 5], [3, 6]])
+        np.testing.assert_array_equal(actual, expected)
 
     def test_indexer(self):
 
-        with tf.Graph().as_default():
-
-            prot, x = self._setup(int64factory)
-            indexed = _indexer_masked(prot, x, 0)
-
-            with tfe.Session() as sess:
-                actual = sess.run(indexed.reveal().to_native())
-                expected = np.array([1, 2, 3])
-                np.testing.assert_array_equal(actual, expected)
+        prot, x = self._setup(int64factory)
+        indexed = tfe.indexer(x, 0)
+        actual = indexed.reveal().to_native()
+        expected = np.array([1, 2, 3])
+        np.testing.assert_array_equal(actual, expected)
 
     def test_gather(self):
 
-        with tf.Graph().as_default():
-
-            prot, x = self._setup(int64factory)
-            gathered = _gather_masked(prot, x, [0, 2], axis=1)
-
-            with tfe.Session() as sess:
-                actual = sess.run(gathered.reveal().to_native())
-                expected = np.array([[1, 3], [4, 6]])
-                np.testing.assert_array_equal(actual, expected)
+        prot, x = self._setup(int64factory)
+        gathered = tfe.gather(x, [0, 2], axis=1)
+        actual = gathered.reveal().to_native()
+        expected = np.array([[1, 3], [4, 6]])
+        np.testing.assert_array_equal(actual, expected)
 
     def test_negative_masked(self):
 
-        with tf.Graph().as_default():
-
-            prot, x = self._setup(int64factory)
-            negative = _negative_masked(prot, x)
-
-            with tfe.Session() as sess:
-                actual = sess.run(negative.reveal().to_native())
-                expected = np.array([[-1, -2, -3], [-4, -5, -6]])
-                np.testing.assert_array_equal(actual, expected)
+        prot, x = self._setup(int64factory)
+        negative = tfe.negative(x)
+        actual = negative.reveal().to_native()
+        expected = np.array([[-1, -2, -3], [-4, -5, -6]])
+        np.testing.assert_array_equal(actual, expected)
 
 
 @pytest.mark.pond
 class TestIdentity(unittest.TestCase):
-    def setUp(self):
-        tf.reset_default_graph()
-
     def test_same_value_different_instance(self):
+        prot = tfe.protocol.Pond()
+        tfe.set_protocol(prot)
 
         expected = np.array([[1, 2, 3], [4, 5, 6]])
-
-        with tfe.protocol.Pond() as prot:
-
-            x = prot.define_private_variable(expected)
-            y = prot.identity(x)
-
-            with tfe.Session() as sess:
-                sess.run(tf.global_variables_initializer())
-                actual = sess.run(y.reveal())
-
+        x = prot.define_private_variable(expected)
+        y = prot.identity(x)
+        actual = y.reveal().to_native()
         assert x is not y
         np.testing.assert_array_equal(actual, expected)
 
 
 @pytest.mark.pond
 class TestPondAssign(unittest.TestCase):
-    def setUp(self):
-        tf.reset_default_graph()
-
     def test_assign_synchronization(self):
         # from https://github.com/tf-encrypted/tf-encrypted/pull/665
 
@@ -284,31 +215,22 @@ class TestPondAssign(unittest.TestCase):
 
         a = prot.define_private_variable(tf.ones(shape=(1, 1)))
         b = prot.define_private_variable(tf.ones(shape=(1, 1)))
-
-        op = prot.assign(a, poc(a, b))
-
-        with tfe.Session() as sess:
-            sess.run(tfe.global_variables_initializer())
-
-            for _ in range(100):
-                sess.run(op)
-
-            result = sess.run(a.reveal())
-            assert result == np.array([101.0])
+        for _ in range(100):
+            prot.assign(a, poc(a.read_value(), b.read_value()))
+        result = a.read_value().reveal().to_native()
+        assert result == np.array([101.0])
 
     def test_public_assign(self):
-
-        with tfe.protocol.Pond() as prot:
-            x_var = prot.define_public_variable(np.zeros(shape=(2, 2)))
-            data = np.ones((2, 2))
-            x_pl = tfe.define_public_placeholder(shape=(2, 2))
-            fd = x_pl.feed(data.reshape((2, 2)))
-
-            with tfe.Session() as sess:
-                sess.run(tfe.assign(x_var, x_pl), feed_dict=fd)
-                result = sess.run(x_var)
-                np.testing.assert_array_equal(result, np.ones([2, 2]))
+        prot = tfe.protocol.Pond()
+        tfe.set_protocol(prot)
+        x_var = prot.define_public_variable(np.zeros(shape=(2, 2)))
+        data = np.ones((2, 2))
+        x = tfe.define_constant(data)
+        tfe.assign(x_var, x)
+        result = x_var.read_value().to_native()
+        np.testing.assert_array_equal(result, np.ones([2, 2]))
 
 
 if __name__ == "__main__":
+    tfe.get_config().set_debug_mode(True)
     unittest.main()

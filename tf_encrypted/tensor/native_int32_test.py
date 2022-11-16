@@ -8,13 +8,10 @@ from tf_encrypted.tensor import int32factory
 
 
 class TestInt32Tensor(unittest.TestCase):
-    def setUp(self):
-        tf.reset_default_graph()
-
     def test_binarize(self) -> None:
         x = int32factory.tensor(
             np.array(
-                [2 ** 32 + 3, 2 ** 31 - 1, 2 ** 31, -3]  # == 3  # max  # min
+                [2**32 + 3, 2**31 - 1, 2**31, -3]  # == 3  # max  # min
             ).reshape(2, 2)
         )
 
@@ -33,21 +30,17 @@ class TestInt32Tensor(unittest.TestCase):
         ]).reshape([2, 2, 32])
         # fmt: on
 
-        with tf.Session() as sess:
-            actual = sess.run(y.to_native())
-
-        np.testing.assert_array_equal(actual, expected)
+        np.testing.assert_array_equal(y.to_native(), expected)
 
     def test_random_binarize(self) -> None:
-        x_in = np.random.uniform(low=2 ** 31 + 1, high=2 ** 31 - 1, size=2000,).astype(
-            "int32"
-        )
+        x_in = np.random.uniform(
+            low=2**31 + 1,
+            high=2**31 - 1,
+            size=2000,
+        ).astype("int32")
         x = int32factory.tensor(x_in)
-
         y = x.bits()
-
-        with tf.Session() as sess:
-            actual = sess.run(y.to_native())
+        actual = y.to_native()
 
         j = 0
         for i in x_in.tolist():
@@ -62,9 +55,6 @@ class TestInt32Tensor(unittest.TestCase):
 
 
 class TestConv2D(unittest.TestCase):
-    def setUp(self):
-        tf.reset_default_graph()
-
     def test_forward(self) -> None:
         # input
         batch_size, channels_in, channels_out = 32, 3, 64
@@ -73,35 +63,31 @@ class TestConv2D(unittest.TestCase):
         input_conv = np.random.normal(size=input_shape).astype(np.int32)
 
         # filters
-        h_filter, w_filter, strides = 2, 2, 2
+        h_filter, w_filter = 2, 2
+        strides = [2, 2]
         filter_shape = (h_filter, w_filter, channels_in, channels_out)
         filter_values = np.random.normal(size=filter_shape).astype(np.int32)
 
         inp = int32factory.tensor(input_conv)
         out = inp.conv2d(int32factory.tensor(filter_values), strides)
-        with tf.Session() as sess:
-            actual = sess.run(out.to_native())
+        actual = out.to_native()
 
-        # reset graph
-        tf.reset_default_graph()
+        # conv input
+        x = tf.Variable(input_conv, dtype=tf.int32)
+        x_nhwc = tf.transpose(x, (0, 2, 3, 1))
 
-        # convolution tensorflow
-        with tf.Session() as sess:
-            # conv input
-            x = tf.Variable(input_conv, dtype=tf.float32)
-            x_nhwc = tf.transpose(x, (0, 2, 3, 1))
+        # conv filter
+        filters_tf = tf.Variable(filter_values, dtype=tf.int32)
 
-            # convolution Tensorflow
-            filters_tf = tf.Variable(filter_values, dtype=tf.float32)
+        conv_out_tf = tf.nn.conv2d(
+            x_nhwc,
+            filters_tf,
+            strides=[1, strides[0], strides[1], 1],
+            padding="SAME",
+        )
 
-            conv_out_tf = tf.nn.conv2d(
-                x_nhwc, filters_tf, strides=[1, strides, strides, 1], padding="SAME",
-            )
-
-            sess.run(tf.global_variables_initializer())
-            out_tensorflow = sess.run(conv_out_tf).transpose(0, 3, 1, 2)
-
-        np.testing.assert_array_almost_equal(actual, out_tensorflow, decimal=3)
+        out_tensorflow = tf.transpose(conv_out_tf, perm=[0, 3, 1, 2])
+        np.testing.assert_array_equal(actual, out_tensorflow)
 
 
 if __name__ == "__main__":

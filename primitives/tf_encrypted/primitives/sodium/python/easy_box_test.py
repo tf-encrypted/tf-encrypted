@@ -11,7 +11,8 @@ from tf_encrypted.test import tf_execution_context
 
 class TestEasyBox(parameterized.TestCase):
     @parameterized.parameters(
-        {"run_eagerly": True}, {"run_eagerly": False},
+        {"run_eagerly": True},
+        {"run_eagerly": False},
     )
     def test_gen_keypair(self, run_eagerly):
         context = tf_execution_context(run_eagerly)
@@ -29,7 +30,8 @@ class TestEasyBox(parameterized.TestCase):
         assert sk.raw.shape == (32,)
 
     @parameterized.parameters(
-        {"run_eagerly": True}, {"run_eagerly": False},
+        {"run_eagerly": True},
+        {"run_eagerly": False},
     )
     def test_gen_nonce(self, run_eagerly):
         context = tf_execution_context(run_eagerly)

@@ -9,7 +9,7 @@ def relu(x):
 
 
 def relu_deriv(y, d_y):
-    return tfe.select(y < 0, d_y, 0)
+    return tfe.select(y <= 0, d_y, 0)
 
 
 def sigmoid(x):
@@ -51,6 +51,7 @@ def get(identifier):
             "sigmoid": sigmoid,
             "tanh": tanh,
             "linear": linear,
+            "softmax": softmax,
         }
         return activations[identifier]
 

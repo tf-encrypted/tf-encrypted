@@ -1,407 +1,262 @@
-"""Module for automatically building TFE graphs from
-their corresponding TF GraphDefs.
+"""Module for automatically building TFE Model from
+their corresponding TF Model.
 
 See README.md for details on usage and extension."""
-import re
-from collections import OrderedDict
+import functools
 from typing import Any
 from typing import List
 from typing import Optional
 from typing import Union
 
+import numpy as np
+import onnx
+import tensorflow as tf
+import tf2onnx
+from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
+from onnx.onnx_ml_pb2 import ModelProto
+from tf2onnx import optimizer
+
 import tf_encrypted as tfe
 from tf_encrypted.config import Config
 from tf_encrypted.config import get_config
-from tf_encrypted.convert.register import REGISTERED_SPECOPS
+from tf_encrypted.keras import optimizers
+from tf_encrypted.keras.models import BaseModel
 from tf_encrypted.player import Player
 from tf_encrypted.protocol import Protocol
-from tf_encrypted.protocol.pond import TFEInputter
+from tf_encrypted.protocol.protocol import TFETensor
+
+from .nodes import build_node
 
 
 class Converter:
     """The TFE Converter.
 
     Args:
-        registry: An OrderedDict mapping from scope names to TFE conversion
-            functions. Idiomatic behavior is to use tf.convert.registry(), however
-            custom layers and operations can be added to create new conversion
-            registries.
         config: `Config` to use when constructing the TFE graph.
             Defaults to the current global TFE config.
         protocol: `Protocol` to use when constructing the TFE graph.
             Defaults to the current global TFE protocol.
-        model_provider: The Player who will act as the model provider, or a string
-            identifier for the Player.
     """
 
     def __init__(
-        self,
-        registry,
-        config: Optional[Config] = None,
-        protocol: Optional[Protocol] = None,
-        model_provider: Optional[Union[str, Player]] = None,
+        self, config: Optional[Config] = None, protocol: Optional[Protocol] = None
     ) -> None:
         self.config = config if config is not None else get_config()
         if protocol is not None:
             tfe.set_protocol(protocol)
-        if model_provider is None:
-            self.model_provider = self.config.get_player("model-provider")
-        elif isinstance(model_provider, str):
-            self.model_provider = self.config.get_player(model_provider)
-        else:
-            self.model_provider = model_provider
-        self.registry = registry
-        self.outputs = {}
+        self.initializers = {}
+        self.trainable_weights = []
+        self.node_op = {}
 
     def convert(
         self,
-        graph_def: Any,
-        input_player: Union[str, Player],
-        inputter_fn: Optional[Union[TFEInputter, List[TFEInputter]]] = None,
+        model: Any,
+        input_shapes: Union[List[int], List[List[int]]],
+        model_provider: Optional[Union[str, Player]] = None,
     ) -> Any:
-        """Convert a frozen GraphDef to a TFE Graph."""
-        if not graph_def.node:
-            raise ValueError("An empty model was passed to the converter.")
+        """Convert a plaintext model to a TFE model.
 
-        if isinstance(input_player, str):
-            input_player = get_config().get_player("input-provider")
-        assert isinstance(input_player, Player)
+        Args:
+            model: palin tensorflow model, plain onnx model or model file path
+            input_shapes: model's input shapes
+            model_provider: The Player who will act as the model provider, or a string
+            identifier for the Player.
+        """
+        if not isinstance(input_shapes[0], list):
+            input_shapes = [input_shapes]
 
-        if inputter_fn is None:
-            inputs = []
-        elif isinstance(inputter_fn, (list, tuple)):
-            inputs = inputter_fn
+        if model_provider is None:
+            model_provider = self.config.get_player("weights-provider")
+        elif isinstance(model_provider, str):
+            model_provider = self.config.get_player(model_provider)
         else:
-            inputs = [inputter_fn]
-        inputs_iterable = enumerate(inputs)
+            model_provider = model_provider
+        assert isinstance(model_provider, Player)
 
-        # Identify if there are special ops in pb file,
-        # e.g. required_space_to_batch_paddings
-        # If yes, identify the inputs and outputs of these special ops.
-        output_name = graph_def.node[-1].name  # Assume output is last node.
-        specop_dict, specop_inputs, specop_outputs = find_specops(
-            graph_def, output_name
-        )
-
-        # Create a dictionary excluding all the sub ops related to
-        # required_space_to_batch_paddings. Except the sub ops related to the input
-        # or output of this special ops.
-        pb_trimmed, graph_def = select_relevant_ops(
-            specop_inputs, specop_outputs, graph_def
-        )
-        node_list = pb_trimmed.values()
-
-        # If the ops are not related to the special ops, use the existing approach
-        # to register them. Otherwise for the special ops replace the output from
-        # the sub ops by the output from the high level operation then register.
-        for node in node_list:
-            if node.name not in specop_outputs:
-                self._register_op(node, inputs_iterable, input_player, graph_def)
-
+        if isinstance(model, str):
+            if model.endswith(".pb"):
+                model = tf.keras.load_model(model)
+                input_spec = []
+                for input_shape in input_shapes:
+                    input_spec.append(
+                        tf.TensorSpec(input_shape, tf.float32, name="input")
+                    )
+                onnx_optimizers = optimizer._get_optimizers()
+                # uncomment this line to disable batchnorm fuse
+                # onnx_optimizers.pop("remove_back_to_back")
+                model_proto, _ = tf2onnx.convert.from_keras(
+                    model, input_signature=input_spec, optimizers=onnx_optimizers
+                )
+            elif model.endswith(".onnx"):
+                model_proto = onnx.load(model)
             else:
-                # Register high level special operations
-                for s in specop_dict:
-                    # If this node is the output of the current specop, register it
-                    if match_numbered_scope(
-                        s, node.name, return_group=False, numbered=False
-                    ):
-                        self._register_specop(node, specop_dict[s])
-
-        return self.outputs[output_name]
-
-    def _register_op(self, node, inputs_iterable, input_player, graph_def):
-        """Register single ops."""
-        output = strip_tensor_info(node.name)
-        if node.op == "Placeholder":
-            try:
-                _, item = inputs_iterable.__next__()
-            except StopIteration:
-                raise InvalidArgumentError("Not enough placeholders supplied")
-
-            x = tfe.define_private_input(input_player, item)
-            self.outputs[output] = x
-            return
-
-        out = self.registry[node.op](self, node, node.input)
-
-        # if the operation returns a list or tuple with several ouputs,
-        # identify the outputs node name
-        if isinstance(out, (list, tuple)):
-            output_name = find_output_names(graph_def, node.name, len(out))
-            # If output_name is empty, it means this node
-            # is the last one in the graph
-            if not output_name:
-                self.outputs[output] = out
-            else:
-                for i, _ in enumerate(out):
-                    self.outputs[output_name[i]] = out[i]
+                raise ValueError("Don't konw model type " + model)
+        elif isinstance(model, tf.keras.Model):
+            input_spec = []
+            for input_shape in input_shapes:
+                input_spec.append(tf.TensorSpec(input_shape, tf.float32, name="input"))
+            onnx_optimizers = optimizer._get_optimizers()
+            # uncomment this line to disable batchnorm fuse
+            # onnx_optimizers.pop("remove_back_to_back")
+            model_proto, _ = tf2onnx.convert.from_keras(
+                model, input_signature=input_spec, optimizers=onnx_optimizers
+            )
+        elif isinstance(model, ModelProto):
+            model_proto = model
         else:
-            self.outputs[output] = out
+            raise ValueError("Unknow model")
+        assert isinstance(model_proto, ModelProto)
 
-    def _register_specop(self, node, specop_scope_dict):
-        """Handle special op registration."""
-        input_list = specop_scope_dict["inputs"]
-        output_list = specop_scope_dict["outputs"]
+        class DefinedModel(BaseModel):
+            """Model defined by a plain model."""
 
-        # Handle edge cases if the ops return multiple outputs
-        op_handler = self.registry[specop_scope_dict["op"]]
-
-        nodes = specop_scope_dict["interiors"]
-        if not nodes:
-            nodes = node
-        outs = op_handler(self, nodes, input_list)
-        if isinstance(outs, (list, tuple)):
-            for i, x in enumerate(outs):
-                self.outputs[output_list[i]] = x
-        else:
-            self.outputs[output_list[0]] = outs
-
-
-def select_relevant_ops(all_specop_inputs, all_specop_outputs, graph_def):
-    """
-    Prune out subgraphs that have been identified as special ops from the
-    graph_def, and return the pruned graph_def.
-    """
-
-    trimmed_graph = OrderedDict()
-    ordered_graph = OrderedDict()
-
-    for n in graph_def.node:
-        ordered_graph[n.name] = n
-        for op in REGISTERED_SPECOPS:
-
-            matched = False
-            # If the node falls under a specop scope,
-            # only add if it's an input or output to the specop.
-            if match_numbered_scope(op, n.name, return_group=False):
-                matched = True
-                is_input = n.name in all_specop_inputs
-                is_output = n.name in all_specop_outputs
-                if is_input or is_output:
-                    trimmed_graph[n.name] = n
-                break
-        # Otherwise, just add it
-        if not matched:
-            trimmed_graph[n.name] = n
-
-    return trimmed_graph, ordered_graph
-
-
-def find_specops(graph_def, output_name):
-    """
-    For special ops defined in REGISTERED_SPECOPS, assemble necessary info to
-    convert them and place into the specops_dict. Also returns these ops'
-    collective inputs and outputs together in separate arrays.
-    """
-
-    specops_dict = OrderedDict()
-    all_specop_inputs = []
-    all_specop_outputs = []
-    namespace = specop_namespace(graph_def)
-
-    for scope, subscope_map in namespace.items():
-        specops_dict[scope] = {}
-        specops_dict[scope]["op"] = specop_from_numberedscope(scope)
-        specops_dict[scope]["interiors"] = get_interiors(scope, namespace)
-        inputs, outputs = find_leaves(scope, subscope_map)
-
-        specops_dict[scope]["inputs"] = inputs
-        all_specop_inputs += inputs
-        # if no outputs found assume output to model is the special op output
-        if not outputs:
-            outputs = [output_name]
-        specops_dict[scope]["outputs"] = outputs
-        all_specop_outputs += outputs
-
-    return specops_dict, all_specop_inputs, all_specop_outputs
-
-
-def specop_namespace(graph_def):
-    """
-    Gathers all subgraphs corresponding to registered special ops.
-
-    For each specop scope matching `{specop}_[0-9]+/`, assemble all ops
-    falling under that scope into a map of op name to op node, and add the
-    map to the namespace keyed by its scope.
-
-    Returns an OrderedDict[scope --> ops_map],
-    where ops_map is an OrderedDict[NodeDef.name --> NodeDef].
-    """
-
-    namespace = OrderedDict()
-    for node in graph_def.node:
-        for specop in REGISTERED_SPECOPS:
-            node_name = node.name
-            this_scope = match_numbered_scope(specop, node_name)
-            if this_scope is None:
-                continue
-            if this_scope not in namespace:
-                namespace[this_scope] = OrderedDict()
-            namespace[this_scope][node_name] = node
-
-    return namespace
-
-
-def get_interiors(specop_scope, subscope_map):
-    """
-    An interior (op/node) of a subgraph is an op that is neither
-    an input or an output for all ops outside of that subgraph.
-
-    Given a specop_scope, look for registered interior ops in the
-    corresponding value of subscope_map and collect their NodeDefs
-    into an OrderedDict keyed by the registered interior op name.
-    """
-    specop = specop_from_numberedscope(specop_scope)
-    if specop is None:
-        return None
-    interior_names = REGISTERED_SPECOPS[specop]["interiors"]
-    interiors = OrderedDict()
-    if interior_names is None:
-        return interiors
-    subscope_ops_map = subscope_map[specop_scope]
-    for op in interior_names:
-        for node_name in subscope_ops_map:
-            if match_numbered_leaf(op, node_name) is not None:
-                interiors[op] = subscope_ops_map[node_name]
-                break
-    return interiors
-
-
-def find_leaves(scope, subscope_map):
-    """Assemble input and output leaf nodes of the subgraph represented by
-    subscope_map.
-    """
-
-    input_leaves = []
-    output_leaves = list(subscope_map.keys())
-    for _, node in subscope_map.items():
-        for inp in node.input:
-
-            if (
-                match_numbered_scope(scope, inp) is None
-                and re.search("(.*/)*keras_learning_phase$", inp) is None
+            def __init__(
+                self, tfe_nodes, forward_func, backward_builder=None, name=None
             ):
-                # edge case - the keras_learning_phase node is an input to other
-                # batchnorm nodes, but is irrelevent to the converter
-                # and therefore can be ignored
-                input_leaves.append(inp)
+                super(DefinedModel, self).__init__(name=name)
+                self.tfe_nodes = tfe_nodes
+                self.forward_func = forward_func
+                self.weights = []
+                for tfe_node in self.tfe_nodes.values():
+                    self.weights.append(tfe_node.weights)
+                self.backward_func = None
+                self.backward_builder = backward_builder
 
-            if re.search(r":\d+$", inp) is not None:
-                inp = inp.split(":")[0]
-            if inp in output_leaves:
-                output_leaves.remove(inp)
+            def call(self, inputs):
+                if isinstance(inputs, TFETensor):
+                    inputs = [inputs]
+                assert isinstance(inputs[0], TFETensor)
+                res = self.forward_func(inputs)
+                if len(res) == 1:
+                    res = res[0]
+                return res
 
-    seen = set()
-    adder = seen.add
-    input_leaves = [x for x in input_leaves if not (x in seen or adder(x))]
+            def backward(self, d_y):
+                if isinstance(d_y, TFETensor):
+                    d_y = [d_y]
+                assert isinstance(d_y[0], TFETensor)
+                if self.backward_func is None:
+                    raise NotImplementedError(
+                        "Please compile this model before backward!"
+                    )
+                return self.backward_func(d_y)
 
-    return input_leaves, output_leaves
+            def compile(self, optimizer, loss):
+                if self.backward_builder is None:
+                    raise NotImplementedError("Backward is not support")
+                self._optimizer = optimizers.get(optimizer)
+                self._loss = loss
+                assert self._optimizer is not None, "An optimizer must be specified."
+                assert self._loss is not None, "A loss must be specified."
 
+                self._optimizer.compile(self.weights)
+                self.backward_func = self.backward_builder(optimizer=self._optimizer)
 
-def match_numbered_scope(specop, search_string, return_group=True, numbered=True):
-    """
-    Find a numbered scope matching a specop from REGISTERED_SPECOPS,
-    and return it if found.
-        Example: 'conv2d' will match '...conv2d_345/...' and return 'conv2d_345'.
-
-    Args:
-        specop: the specop to match.
-        search_string: the op name to search.
-        return group: if True, returns the last matching group, otherwise return
-            the match object.
-        numbered: only match exact numbering  -
-            i.e. conv2d_1 will only match conv2d_1 and not conv2d etc.
-
-    """
-    if numbered:
-        # TF's auto names could be like: conv2d, conv2d_1, conv2d_1_1
-        expr = "^(.*/)*({0})/|(^(.*/)*({0}_[0-9]+))/|(^(.*/)*({0}_[0-9]+_[0-9]+))/".format(  # noqa
-            specop
+        for input_shape in input_shapes:
+            input_shape[0] = -1
+        initializers = self._build_initializer(model_proto)
+        tfe_nodes, nodes_output = self._build_node(
+            input_shapes, model_proto, initializers, model_provider
         )
-    else:
-        expr = "^(.*/)*({0})/".format(specop)
+        forward_func = self._build_forward(model_proto, tfe_nodes)
+        backward_builder = functools.partial(
+            self._build_backward,
+            model_proto=model_proto,
+            tfe_nodes=tfe_nodes,
+            nodes_output=nodes_output,
+        )
+        model = DefinedModel(tfe_nodes, forward_func, backward_builder)
+        return model
 
-    match = re.search(expr, search_string)
-    if match is not None:
-        if not return_group:
-            return match
-        for grp in reversed(match.groups()):
-            if grp is not None:
-                return grp
-    return match
+    def _build_initializer(self, model_proto) -> None:
+        initializers = {}
 
+        for initializer in model_proto.graph.initializer:
+            name = initializer.name
+            shape = initializer.dims
+            data_type = TENSOR_TYPE_TO_NP_TYPE[initializer.data_type]
+            data = np.frombuffer(initializer.raw_data, dtype=data_type)
+            data = data.reshape(shape)
+            data = tf.convert_to_tensor(data)
+            initializers[name] = data
+        return initializers
 
-def match_numbered_leaf(leaf_to_match, search_string):
-    """
-    Find a numbered leaf matching a tf.Operation and return it if found.
+    def _build_node(
+        self, model_input_shapes, model_proto, model_initializers, model_providers
+    ):
+        tfe_nodes = {}
+        input_shapes = {}
+        for index, input in enumerate(model_proto.graph.input):
+            input_shapes[input.name] = model_input_shapes[index]
 
-    Example: 'Conv2D' will match '.../Conv2D_5' and return 'Conv2D_5'
-    """
-    expr = "/({0}$)|/({0}_[0-9]+$)".format(leaf_to_match)
-    match = re.search(expr, search_string)
-    if match is not None:
-        return match.group(1)
-    return match
+        for node in model_proto.graph.node:
+            inputs = []
+            for input in node.input:
+                if input in model_initializers.keys():
+                    inputs.append(model_initializers[input])
+                elif input in input_shapes.keys():
+                    inputs.append(input_shapes[input])
+                else:
+                    raise KeyError(
+                        "Node " + node.name + " input: " + input + " doesn't found!"
+                    )
+            tfe_node = build_node(node, inputs, model_providers)
+            tfe_nodes[node.name] = tfe_node
+            for index, output in enumerate(node.output):
+                input_shapes[output] = tfe_node.output_shape[index]
 
+        return tfe_nodes, input_shapes.keys()
 
-def specop_from_numberedscope(scope):
-    """
-    An inverse for `match_numbered_scope`.
+    def _build_forward(self, model_proto, tfe_nodes):
+        nodes = model_proto.graph.node
 
-    Example: 'conv2d_4' will produce 'conv2d'. Also, 'conv2d_1_1' will produce 'conv2d'.
-    """
-    expr = "[_a-zA-Z0-9]+?(?=_[0-9]+)"
-    match = re.search(expr, scope)
-    if match is not None:
-        return match.group(0)
-    return scope
+        def forward_function(x):
+            node_outputs = {}
+            for index, input in enumerate(model_proto.graph.input):
+                node_outputs[input.name] = x[index]
+            for node in nodes:
+                inputs = []
+                for input in node.input:
+                    if input in node_outputs.keys():
+                        inputs.append(node_outputs[input])
+                with tf.name_scope(node.name + "/forward"):
+                    res = tfe_nodes[node.name].forward(inputs)
+                for i, output in enumerate(node.output):
+                    node_outputs[output] = res[i]
+            res = []
+            for output in model_proto.graph.output:
+                res.append(node_outputs[output.name])
+            return res
 
+        return forward_function
 
-def strip_tensor_info(node_name: str) -> str:
-    if node_name.startswith("^"):
-        return node_name[1:]
-    return node_name.split(":")[0]
+    def _build_backward(self, model_proto, tfe_nodes, nodes_output, optimizer):
+        nodes = model_proto.graph.node
+        graph_input = model_proto.graph.input
 
+        def backward_function(d_y):
+            dy_dict = {}
+            for index, output in enumerate(model_proto.graph.output):
+                dy_dict[output.name] = d_y[index]
+            for node in reversed(nodes):
+                d_y = []
+                tfe_node = tfe_nodes[node.name]
+                for output in node.output:
+                    d_y.append(dy_dict[output])
 
-class InvalidArgumentError(Exception):
-    pass
+                with tf.name_scope(node.name + "/backward"):
+                    grad_weights, d_y = tfe_node.backward(d_y)
+                    optimizer.apply_gradients(tfe_node.weights, grad_weights)
 
+                index = 0
+                for input in node.input:
+                    if input in nodes_output:
+                        dy_dict[input] = d_y[index]
+                        index += 1
 
-def find_output_names(graph_def, node_name, num_outputs):
-    """
-    List output names for a specific node.
+            res_dy = []
+            for input in graph_input:
+                res_dy.append(dy_dict[input.name])
+            return res_dy
 
-    Add to the output name list if the input name starts with the
-    node name (namespace) of the ops we are registering but
-    not included in the name of the node we are inspecting.
-
-    For example, for the op `split`, based on the node below, the
-    output names are `split` and `split:1`
-
-    node {
-        name: "output/input"
-        op: "Pack"
-        input: "split"
-        input: "split:1"
-        }
-    """
-    output_node = [None] * num_outputs
-    node_name_list = list(graph_def.keys())
-    n_i = node_name_list.index(node_name)
-    # Forward lookahead from the node we want register
-    for n in node_name_list[n_i + 1 :]:
-        if not n.startswith(node_name):
-            gdf = graph_def[n]
-            for x in gdf.input:
-                # we insert the names by their index,
-                # and not by the order of appearance in the graph
-                if x.startswith(node_name):
-                    if ":" not in x:
-                        output_node[0] = x
-                    else:
-                        output_node[int(x.split(":")[-1])] = x
-
-    # assert if not all output nodes appear in the graph
-    assert None not in output_node
-
-    return output_node
+        return backward_function

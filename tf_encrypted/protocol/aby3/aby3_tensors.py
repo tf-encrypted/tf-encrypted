@@ -7,7 +7,6 @@ import numpy as np
 import tensorflow as tf
 
 from ...tensor.factory import AbstractConstant
-from ...tensor.factory import AbstractPlaceholder
 from ...tensor.factory import AbstractTensor
 from ...tensor.factory import AbstractVariable
 from ..protocol import TFEPrivateTensor
@@ -15,6 +14,7 @@ from ..protocol import TFEPrivateVariable
 from ..protocol import TFEPublicTensor
 from ..protocol import TFEPublicVariable
 from ..protocol import TFETensor
+from ..protocol import TFETensorBone
 
 
 class ShareType:
@@ -34,6 +34,12 @@ class ShareType:
 #
 # Classes representing the base values in the ABY3 protocol.
 #
+
+
+class ABY3TensorBone(tf.experimental.ExtensionType, TFETensorBone):
+    is_scaled: bool
+    share_type: str
+    factory: int
 
 
 class ABY3Tensor(TFETensor):
@@ -92,6 +98,11 @@ class ABY3Tensor(TFETensor):
 
     @abc.abstractmethod
     def flatten_to_native(self) -> Tuple[tf.Tensor, ...]:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def bone(self) -> ABY3TensorBone:
         pass
 
     def add(self, other):
@@ -377,6 +388,10 @@ class ABY3Tensor(TFETensor):
         return self.prot.reciprocal(self, nonsigned=nonsigned)
 
 
+class ABY3PublicTensorBone(ABY3TensorBone):
+    values: Tuple[tf.Tensor, tf.Tensor, tf.Tensor]
+
+
 class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
     """
     This class represents a public tensor, known by at least by the three servers
@@ -390,6 +405,8 @@ class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
     def __init__(self, prot, values: List[AbstractTensor], is_scaled: bool) -> None:
         assert all(isinstance(v, AbstractTensor) for v in values)
         assert all((v.shape == values[0].shape) for v in values)
+        # check values device
+        assert all((values[i].device == prot.servers[i].device_name) for i in range(3))
 
         super(ABY3PublicTensor, self).__init__(prot, is_scaled, ShareType.PUBLIC)
         self.values = values
@@ -444,8 +461,21 @@ class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
         """
         return self.values
 
-    def flatten_to_native(self) -> Tuple[AbstractTensor, ...]:
+    def flatten_to_native(self) -> Tuple[tf.Tensor, ...]:
         return [v.value for v in self.values]
+
+    @property
+    def bone(self) -> ABY3PublicTensorBone:
+        values = [None, None, None]
+        with tf.device(self.prot.servers[0].device_name):
+            values[0] = self.values[0].to_native()
+        with tf.device(self.prot.servers[1].device_name):
+            values[1] = self.values[1].to_native()
+        with tf.device(self.prot.servers[2].device_name):
+            values[2] = self.values[2].to_native()
+        return ABY3PublicTensorBone(
+            self.is_scaled, self.share_type, self.unwrapped[0].factory.nbits, values
+        )
 
     def decode(self) -> Union[np.ndarray, tf.Tensor]:
         return self.prot._decode(
@@ -484,23 +514,42 @@ class ABY3Constant(ABY3PublicTensor):
 
 class ABY3PublicVariable(ABY3PublicTensor, TFEPublicVariable):
     """
-  This class essentially represents a public value, however it additionally
-  records the fact that the backing tensor was declared as a variable in
-  order to allow treating it as a variable itself.
-  """
+    This class essentially represents a public value, however it additionally
+    records the fact that the backing tensor was declared as a variable in
+    order to allow treating it as a variable itself.
+    """
 
     def __init__(self, prot, variables, is_scaled):
         assert all(isinstance(v, AbstractVariable) for v in variables)
         assert all((v.shape == variables[0].shape) for v in variables)
 
         super(ABY3PublicVariable, self).__init__(
-            prot, variables, is_scaled,
+            prot,
+            variables,
+            is_scaled,
         )
         self.variables = variables
-        self.initializer = tf.group(*[var.initializer for var in variables])
 
     def __repr__(self) -> str:
         return "ABY3PublicVariable(shape={})".format(self.shape)
+
+    def read_value(self) -> ABY3PublicTensor:
+        values = [None, None, None]
+        with tf.device(self.prot.servers[0].device_name):
+            values[0] = self.variables[0].read_value()
+        with tf.device(self.prot.servers[1].device_name):
+            values[1] = self.variables[1].read_value()
+        with tf.device(self.prot.servers[2].device_name):
+            values[2] = self.variables[2].read_value()
+        return ABY3PublicTensor(self.prot, values, self.is_scaled)
+
+
+class ABY3PrivateTensorBone(ABY3TensorBone):
+    shares: Tuple[
+        Tuple[tf.Tensor, tf.Tensor],
+        Tuple[tf.Tensor, tf.Tensor],
+        Tuple[tf.Tensor, tf.Tensor],
+    ]
 
 
 class ABY3PrivateTensor(ABY3Tensor, TFEPrivateTensor):
@@ -515,6 +564,12 @@ class ABY3PrivateTensor(ABY3Tensor, TFEPrivateTensor):
         assert all(
             (ss.shape == shares[0][0].shape) for s in shares for ss in s
         ), "Shares have different shapes."
+        # check share device
+        assert all(
+            (shares[i][j].device == prot.servers[i].device_name)
+            for i in range(3)
+            for j in range(2)
+        ), "Shares device wrong"
 
         super(ABY3PrivateTensor, self).__init__(prot, is_scaled, share_type)
         self.shares = shares
@@ -539,6 +594,22 @@ class ABY3PrivateTensor(ABY3Tensor, TFEPrivateTensor):
     def flatten_to_native(self):
         return [ss.value for s in self.shares for ss in s]
 
+    @property
+    def bone(self) -> ABY3PrivateTensorBone:
+        shares = [[None, None], [None, None], [None, None]]
+        with tf.device(self.prot.servers[0].device_name):
+            shares[0][0] = self.shares[0][0].to_native()
+            shares[0][1] = self.shares[0][1].to_native()
+        with tf.device(self.prot.servers[1].device_name):
+            shares[1][0] = self.shares[1][0].to_native()
+            shares[1][1] = self.shares[1][1].to_native()
+        with tf.device(self.prot.servers[2].device_name):
+            shares[2][0] = self.shares[2][0].to_native()
+            shares[2][1] = self.shares[2][1].to_native()
+        return ABY3PrivateTensorBone(
+            self.is_scaled, self.share_type, self.unwrapped[0][0].factory.nbits, shares
+        )
+
     def reveal(self) -> ABY3PublicTensor:
         return self.prot.reveal(self)
 
@@ -554,9 +625,6 @@ class ABY3PrivateVariable(ABY3PrivateTensor, TFEPrivateVariable):
 
         super(ABY3PrivateVariable, self).__init__(prot, shares, is_scaled, share_type)
         self.shares = shares
-        self.initializer = tf.group(
-            *[var.initializer for share in shares for var in share]
-        )
 
     def __repr__(self) -> str:
         return "ABY3PrivateVariable(shape={}, share_type={})".format(
@@ -564,101 +632,14 @@ class ABY3PrivateVariable(ABY3PrivateTensor, TFEPrivateVariable):
         )
 
     def read_value(self) -> ABY3PrivateTensor:
-        values = [
-            [self.shares[0][0].read_value(), self.shares[0][1].read_value()],
-            [self.shares[1][0].read_value(), self.shares[1][1].read_value()],
-            [self.shares[2][0].read_value(), self.shares[2][1].read_value()],
-        ]
+        values = [[None, None], [None, None], [None, None]]
+        with tf.device(self.prot.servers[0].device_name):
+            values[0][0] = self.shares[0][0].read_value()
+            values[0][1] = self.shares[0][1].read_value()
+        with tf.device(self.prot.servers[1].device_name):
+            values[1][0] = self.shares[1][0].read_value()
+            values[1][1] = self.shares[1][1].read_value()
+        with tf.device(self.prot.servers[2].device_name):
+            values[2][0] = self.shares[2][0].read_value()
+            values[2][1] = self.shares[2][1].read_value()
         return ABY3PrivateTensor(self.prot, values, self.is_scaled, self.share_type)
-
-
-class ABY3PublicPlaceholder(ABY3PublicTensor):
-    """
-  This class essentially represents a public value, however it additionally
-  records the fact that the backing tensor was declared as a placeholder in
-  order to allow treating it as a placeholder itself.
-  """
-
-    def __init__(self, prot, placeholders, is_scaled):
-        assert all(
-            isinstance(p, AbstractPlaceholder) for p in placeholders
-        ), "Shares should be AbstractPlaceholder"
-
-        super(ABY3PublicPlaceholder, self).__init__(
-            prot, placeholders, is_scaled,
-        )
-
-    def __repr__(self) -> str:
-        return "ABY3PublicPlaceholder(shape={})".format(self.shape)
-
-    def feed(self, value):
-        """
-    Feed `value` to placeholder
-    """
-        assert isinstance(value, np.ndarray), type(value)
-        enc = self.prot._encode(value, self.is_scaled)
-        feed0 = self.values[0].feed(enc)
-        feed1 = self.values[1].feed(enc)
-        feed2 = self.values[2].feed(enc)
-        return {**feed0, **feed1, **feed2}
-
-
-class ABY3PrivatePlaceholder(ABY3PrivateTensor):
-    """
-  This class essentially represents a private value, however it additionally
-  records the fact that the backing tensor was declared as a placeholder in
-  order to allow treating it as a placeholder itself.
-  """
-
-    def __init__(self, prot, shares, is_scaled, share_type):
-        assert all(
-            isinstance(ss, AbstractPlaceholder) for s in shares for ss in s
-        ), "Shares should be AbstractPlaceholder."
-
-        super().__init__(prot, shares, is_scaled, share_type)
-        self.shares = shares
-
-    def __repr__(self) -> str:
-        return "PondPrivatePlaceholder(shape={})".format(self.shape)
-
-    def feed(self, value):
-        """
-    Feed `value` to placeholder
-    """
-        assert isinstance(value, np.ndarray), type(value)
-        enc = self.prot._encode(value, self.is_scaled)
-        assert isinstance(enc, np.ndarray)
-
-        # x0, x1 = self.prot._share(enc)
-        # assert isinstance(x0, np.ndarray), type(x0)
-        # assert isinstance(x1, np.ndarray), type(x1)
-
-        # TODO(Morten)
-        #
-        # This is a huge hack and it would be better to use `_share` as above.
-        # However, _share currently expects its inputs to be TFE tensors backed
-        # by tf.Tensors in order to have extra information attached, and not sure
-        # we should change this until we've least considered what will happen with
-        # TF2 and eager mode.
-        #
-        # So, to ensure that feeding can be done locally *outside* the TF graph,
-        # in the mean time we manually share values here, avoiding a call to
-        # `factory.tensor` as that's where tensors are converted to tf.Tensors.
-        shape = self.shape
-        minval = self.backing_dtype.min
-        maxval = self.backing_dtype.max
-        # TODO(Morten) not using secure randomness here; reconsider after TF2
-        x0 = np.random.randint(minval, maxval, size=shape)
-        x1 = np.random.randint(minval, maxval, size=shape)
-        if self.share_type == ShareType.ARITHMETIC:
-            x2 = enc - x0 - x1
-        else:
-            x2 = enc ^ x0 ^ x1
-
-        feed00 = self.shares[0][0].feed(x0)
-        feed01 = self.shares[0][1].feed(x1)
-        feed10 = self.shares[1][0].feed(x1)
-        feed11 = self.shares[1][1].feed(x2)
-        feed20 = self.shares[2][0].feed(x2)
-        feed21 = self.shares[2][1].feed(x0)
-        return {**feed00, **feed01, **feed10, **feed11, **feed20, **feed21}

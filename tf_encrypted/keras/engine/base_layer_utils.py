@@ -16,7 +16,7 @@
 import collections
 import weakref
 
-import tensorflow as tf
+from tensorflow.python.framework import ops
 
 # A global dictionary mapping graph objects to an index of counters used
 # for various layer/optimizer names in each graph.
@@ -25,7 +25,7 @@ PER_GRAPH_OBJECT_NAME_UIDS = weakref.WeakKeyDictionary()
 
 
 def _get_default_graph_uid_map():
-    graph = tf.get_default_graph()
+    graph = ops.get_default_graph()
     name_uid_map = PER_GRAPH_OBJECT_NAME_UIDS.get(graph, None)
     if name_uid_map is None:
         name_uid_map = collections.defaultdict(int)
@@ -34,28 +34,32 @@ def _get_default_graph_uid_map():
 
 
 def unique_object_name(
-    name, name_uid_map=None, avoid_names=None, namespace="", zero_based=False,
+    name,
+    name_uid_map=None,
+    avoid_names=None,
+    namespace="",
+    zero_based=False,
 ):
     """Makes a object name (or arbitrary string) unique within a TensorFlow graph.
-  Arguments:
-    name: String name to make unique.
-    name_uid_map: An optional defaultdict(int) to use when creating unique
-      names. If None (default), uses a per-Graph dictionary.
-    avoid_names: An optional set or dict with names which should not be used. If
-      None (default) does not avoid any names.
-    namespace: Gets a name which is unique within the (graph, namespace). Layers
-      which are not Networks use a blank namespace and so get graph-global
-      names.
-    zero_based: If True, name sequences start with no suffix (e.g. "dense",
-      "dense_1"). If False, naming is one-based ("dense_1", "dense_2").
-  Returns:
-    Unique string name.
-  Example:
-  ```python
-  _unique_layer_name('dense')  # dense_1
-  _unique_layer_name('dense')  # dense_2
-  ```
-  """
+    Arguments:
+      name: String name to make unique.
+      name_uid_map: An optional defaultdict(int) to use when creating unique
+        names. If None (default), uses a per-Graph dictionary.
+      avoid_names: An optional set or dict with names which should not be used. If
+        None (default) does not avoid any names.
+      namespace: Gets a name which is unique within the (graph, namespace). Layers
+        which are not Networks use a blank namespace and so get graph-global
+        names.
+      zero_based: If True, name sequences start with no suffix (e.g. "dense",
+        "dense_1"). If False, naming is one-based ("dense_1", "dense_2").
+    Returns:
+      Unique string name.
+    Example:
+    ```python
+    _unique_layer_name('dense')  # dense_1
+    _unique_layer_name('dense')  # dense_2
+    ```
+    """
     if name_uid_map is None:
         name_uid_map = _get_default_graph_uid_map()
     if avoid_names is None:

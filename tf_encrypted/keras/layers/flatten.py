@@ -9,17 +9,17 @@ from tf_encrypted.keras.engine import Layer
 
 class Flatten(Layer):
     """Flattens the input. Does not affect the batch size.
-  If inputs are shaped `(batch,)` without a channel dimension, then flattening
-  adds an extra channel dimension and output shapes are `(batch, 1)`.
-  Arguments:
-      data_format: A string,
-          one of `channels_last` (default) or `channels_first`.
-          The ordering of the dimensions in the inputs.
-          `channels_last` corresponds to inputs with shape
-          `(batch, ..., channels)` while `channels_first` corresponds to
-          inputs with shape `(batch, channels, ...)`.
-          If you never set it, then it will be "channels_last".
-  """
+    If inputs are shaped `(batch,)` without a channel dimension, then flattening
+    adds an extra channel dimension and output shapes are `(batch, 1)`.
+    Arguments:
+        data_format: A string,
+            one of `channels_last` (default) or `channels_first`.
+            The ordering of the dimensions in the inputs.
+            `channels_last` corresponds to inputs with shape
+            `(batch, ..., channels)` while `channels_first` corresponds to
+            inputs with shape `(batch, channels, ...)`.
+            If you never set it, then it will be "channels_last".
+    """
 
     def __init__(self, data_format=None, **kwargs):
         super(Flatten, self).__init__(**kwargs)

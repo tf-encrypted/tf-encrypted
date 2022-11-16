@@ -1,3 +1,3 @@
 Bloom's method
 ==================================
-TODO
+TODO(zjn): update to based on tensorflow 2

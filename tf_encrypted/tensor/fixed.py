@@ -11,9 +11,9 @@ from .factory import AbstractFactory
 #      into signed int32
 class FixedpointConfig:
     """
-  Helper class containing various parameters of fixed-point precision
-  tensors.
-  """
+    Helper class containing various parameters of fixed-point precision
+    tensors.
+    """
 
     def __init__(
         self,
@@ -47,7 +47,7 @@ class FixedpointConfig:
 
     @property
     def scaling_factor(self) -> int:
-        return self.scaling_base ** self.precision_fractional
+        return self.scaling_base**self.precision_fractional
 
 
 fixed100 = FixedpointConfig(
@@ -102,9 +102,9 @@ def _validate_fixedpoint_config(
     config: FixedpointConfig, tensor_factory: AbstractFactory
 ) -> bool:
     """
-  Ensure the given FixedpointConfig is compatible with the current
-  tensor_factory, preventing silent errors.
-  """
+    Ensure the given FixedpointConfig is compatible with the current
+    tensor_factory, preventing silent errors.
+    """
     no_issues = True
 
     check_32bit = ceil(log2(config.bound_single_precision)) > 31

@@ -2,7 +2,6 @@
 import logging
 
 import tensorflow as tf
-
 from regressor import BloomRegressor
 from regressor import DataOwner
 

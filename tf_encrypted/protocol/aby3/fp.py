@@ -32,6 +32,12 @@ def _fp_div_private_public(
     return a / b
 
 
+def _fp_div_public_public(
+    prot, a: "TFEPublicTensor", b: "TFEPublicTensor", nonsigned: bool
+):
+    return a / b
+
+
 def _fp_sqrt2(prot, a: "TFEPrivateTensor"):
     c15 = prot.define_constant(1.5)
     c05 = prot.define_constant(0.5)
@@ -54,10 +60,10 @@ def _fp_sqrt2(prot, a: "TFEPrivateTensor"):
 
 def _fp_recip_private(prot, x: "TFEPrivateTensor", nonsigned):
     """
-        Approxiamtedly compute 1/x from x.
+    Approxiamtedly compute 1/x from x.
 
-        Apply the quintic iteration from
-        http://numbers.computation.free.fr/Constants/Algorithms/inverse.html
+    Apply the quintic iteration from
+    http://numbers.computation.free.fr/Constants/Algorithms/inverse.html
     """
     with tf.name_scope("fp_reciprocal"):
         sgf, exp = __fp_normalize(
@@ -71,8 +77,9 @@ def _fp_recip_private(prot, x: "TFEPrivateTensor", nonsigned):
         inv_sgf = 2.9281928 - two * sgf
         appr_recip = inv_sgf * exp  # ~ 1/x
         for _ in range(1):
-            """ One iteration should give us very good approximation (10^{-5} relative error ratio).
-                More iterations, more precision. """
+            """One iteration should give us very good approximation
+            (10^{-5} relative error ratio).
+            More iterations, more precision."""
             res = one - x * appr_recip
             res2 = res * res
             appr_recip = appr_recip + appr_recip * (one + res2) * (
@@ -136,7 +143,7 @@ def _do_fp_log_private(prot, x: "TFEPrivateTensor", base: "float"):
         exponent.is_scaled = True
 
         log_exponent = (
-            prot.b2a(prot.xor_indices(z_bits), logn) * 2 ** k
+            prot.b2a(prot.xor_indices(z_bits), logn) * 2**k
         )  # j + k with k-bit precision
         log_exponent.is_scaled = True
         log_exponent = log_exponent - k
@@ -167,8 +174,8 @@ def _fp_ln_private(prot, x: "TFEPrivateTensor"):
 
 def __fp_normalize(prot, b: "TFEPrivateTensor", nonsigned=False):
     r"""
-        Given [b], to compute [sgf], and [exp] such that b = sgf / exp
-        where sgf \in [0.5, 1)
+    Given [b], to compute [sgf], and [exp] such that b = sgf / exp
+    where sgf \in [0.5, 1)
     """
     k = prot.fixedpoint_config.precision_fractional
     m = k + prot.fixedpoint_config.precision_integral

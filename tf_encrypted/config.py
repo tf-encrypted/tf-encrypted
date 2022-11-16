@@ -8,7 +8,6 @@ from collections import OrderedDict
 from pathlib import Path
 
 import tensorflow as tf
-from tensorflow.core.protobuf import rewriter_config_pb2
 
 from .player import Player
 
@@ -17,13 +16,12 @@ logger = logging.getLogger("tf_encrypted")
 
 def tensorflow_supports_int64():
     """Test if int64 is supported by this build of TensorFlow. Hacky."""
-    with tf.Graph().as_default():
-        x = tf.constant([1], shape=(1, 1), dtype=tf.int64)
-        try:
-            tf.matmul(x, x)
-        except TypeError:
-            return False
-        return True
+    x = tf.constant([1], shape=(1, 1), dtype=tf.int64)
+    try:
+        tf.matmul(x, x)
+    except TypeError:
+        return False
+    return True
 
 
 def _get_docker_cpu_quota():
@@ -53,6 +51,9 @@ def _get_docker_cpu_quota():
 class Config(ABC):
     """The main tfe.Config abstraction."""
 
+    def __init__(self, debug_mode: bool) -> None:
+        self.debug_mode = debug_mode
+
     @property
     @abstractmethod
     def players(self):
@@ -66,28 +67,18 @@ class Config(ABC):
         which will simply be returned as-is if the player is known already.
         """
 
-    @abstractmethod
-    def get_tf_config(
-        self, log_device_placement=False, disable_optimizations=False,
-    ):
-        """Extract the underlying :class:`tf.ConfigProto`."""
+    @property
+    def debug(self) -> bool:
+        """
+        When debug is True, '@tf.function' decorator will not be used to build graph,
+        which makes developers get info easier with python code.
+        At the same time, '@memoize' decorator will not cache intermediate results
+        to prevent use too much memory.
+        """
+        return self.debug_mode
 
-    @classmethod
-    def build_graph_options(cls, disable_optimizations):
-        if not disable_optimizations:
-            return tf.GraphOptions()
-
-        return tf.GraphOptions(
-            optimizer_options=tf.OptimizerOptions(
-                opt_level=tf.OptimizerOptions.L0,
-                do_common_subexpression_elimination=False,
-                do_constant_folding=False,
-                do_function_inlining=False,
-            ),
-            rewrite_options=rewriter_config_pb2.RewriterConfig(
-                arithmetic_optimization=rewriter_config_pb2.RewriterConfig.OFF
-            ),
-        )
+    def set_debug_mode(self, debug_mode: bool) -> None:
+        self.debug_mode = debug_mode
 
 
 class LocalConfig(Config):
@@ -106,8 +97,13 @@ class LocalConfig(Config):
     """
 
     def __init__(
-        self, player_names=None, job_name="localhost", auto_add_unknown_players=True,
+        self,
+        player_names=None,
+        job_name="localhost",
+        auto_add_unknown_players=True,
+        debug_mode=False,
     ) -> None:
+        super(LocalConfig, self).__init__(debug_mode)
         self._job_name = job_name
         self._auto_add_unknown_players = auto_add_unknown_players
         self._players = []
@@ -118,11 +114,11 @@ class LocalConfig(Config):
 
     def add_player(self, name):
         index = len(self._players)
-        dv_str = "/job:{job_name}/replica:0/task:0/device:CPU:{cpu_id}"
+        dv_str = "/job:{job_name}/replica:0/task:0/device:CPU:0"
         player = Player(
             name=name,
             index=index,
-            device_name=dv_str.format(job_name=self._job_name, cpu_id=index),
+            device_name=dv_str.format(job_name=self._job_name),
         )
         self._players.append(player)
         return player
@@ -151,19 +147,6 @@ class LocalConfig(Config):
         assert isinstance(names, list)
         return [player for player in self._players if player.name in names]
 
-    def get_tf_config(
-        self, log_device_placement=False, disable_optimizations=False,
-    ):
-        logger.info("Players: %s", [player.name for player in self.players])
-        target = ""
-        config = tf.ConfigProto(
-            log_device_placement=log_device_placement,
-            allow_soft_placement=False,
-            device_count={"CPU": len(self._players)},
-            graph_options=self.build_graph_options(disable_optimizations),
-        )
-        return (target, config)
-
 
 class RemoteConfig(Config):
     """Configure TF Encrypted to use network hosts for the different players.
@@ -173,9 +156,8 @@ class RemoteConfig(Config):
     :param str job_name: The name of the job.
     """
 
-    def __init__(
-        self, hostmap, job_name="tfe",
-    ):
+    def __init__(self, hostmap, job_name="tfe", debug_mode=False):
+        super(RemoteConfig, self).__init__(debug_mode)
         assert isinstance(hostmap, dict)
         if not isinstance(hostmap, OrderedDict):
             logger.warning(
@@ -184,15 +166,14 @@ class RemoteConfig(Config):
             )
 
         self._job_name = job_name
+        device_str = "/job:{job_name}/replica:0/task:{task_id}/device:CPU:0"
         self._players = OrderedDict(
             (
                 name,
                 Player(
                     name=name,
                     index=index,
-                    device_name="/job:{job_name}/replica:0/task:{task_id}/cpu:0".format(
-                        job_name=job_name, task_id=index
-                    ),
+                    device_name=device_str.format(job_name=job_name, task_id=index),
                     host=host,
                 ),
             )
@@ -246,8 +227,8 @@ class RemoteConfig(Config):
         assert isinstance(names, list)
         return [player for name, player in self._players.items() if name in names]
 
-    def server(self, name, start=True):
-        """Construct a :class:`tf.train.Server` object for the corresponding
+    def start_server(self, name, start=True):
+        """Construct a :class:`tf.distribute.Server` object for the corresponding
         :class:`Player`.
 
         :param str name: Name of player.
@@ -256,36 +237,22 @@ class RemoteConfig(Config):
         assert player is not None, "'{}' not found in configuration".format(name)
         cluster = tf.train.ClusterSpec({self._job_name: self.hosts})
         logger.debug("Creating server for '%s' using %s", name, cluster)
-        server = tf.train.Server(
+        server = tf.distribute.Server(
             cluster, job_name=self._job_name, task_index=player.index, start=start
         )
         logger.info(
-            "Created server for '%s' as device '%s'; own session target is '%s'",
+            "Created server for '%s' as device '%s'; host address is '%s'",
             name,
             player.device_name,
             server.target,
         )
         return server
 
-    def get_tf_config(self, log_device_placement=False, disable_optimizations=False):
-        # always use the first host as master; change config to match
-        target = "grpc://{}".format(self.hosts[0])
-        cpu_cores = _get_docker_cpu_quota()
-        if cpu_cores is None:
-            config = tf.ConfigProto(
-                log_device_placement=log_device_placement,
-                allow_soft_placement=False,
-                graph_options=self.build_graph_options(disable_optimizations),
-            )
-        else:
-            config = tf.ConfigProto(
-                log_device_placement=log_device_placement,
-                allow_soft_placement=False,
-                inter_op_parallelism_threads=cpu_cores,
-                intra_op_parallelism_threads=cpu_cores,
-                graph_options=self.build_graph_options(disable_optimizations),
-            )
-        return (target, config)
+    def connect_servers(self):
+        cluster = tf.train.ClusterSpec({self._job_name: self.hosts})
+        logger.debug("Connect to cluster %s", cluster)
+        tf.config.experimental_connect_to_host(self.hosts, job_name=self._job_name)
+        logger.debug("Connect to cluster %s succeed", cluster)
 
 
 __config__ = LocalConfig()

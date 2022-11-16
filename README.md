@@ -6,9 +6,20 @@ See below for more [background material](#background--further-reading), explore 
 
 [![Website](https://img.shields.io/website/https/tf-encrypted.io.svg)](https://tf-encrypted.io) [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://tf-encrypted.readthedocs.io/en/latest/) [![PyPI](https://img.shields.io/pypi/v/tf-encrypted.svg)](https://pypi.org/project/tf-encrypted/) [![CircleCI Badge](https://circleci.com/gh/tf-encrypted/tf-encrypted/tree/master.svg?style=svg)](https://circleci.com/gh/tf-encrypted/tf-encrypted/tree/master)
 
+# Now, TF Encrypted is based on tensorflow 2 !
+
+TF1 execute computation by building a graph first, then run this graph in a session.
+This is hard to use for a lot of developers, especially for researchers not major in computer science.
+Therefore, TF1 has very few users and is not maintained any more.
+Since TF Encrypted based on TF1, it face the same problem that TF1 has encountered.
+So we update TF Encrypted, to rely on TF2 to support eager execution which makes development on TF Encrypted more easier.
+At the same time, it also supports building graph implicitly by `tfe.function` to realize nearly the same performance as TF Encrypted based on TF1.
+Unfortunately, after updated, TF1 features like session and placeholder are not supported by TFE any more.
+For those developers who want to use TF1 like TFE, we suggest them to use [version 0.8.0](https://github.com/tf-encrypted/tf-encrypted/tree/0.8.0).
+
 # Installation
 
-TF Encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.5+ and TensorFlow 1.12.0+:
+TF Encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.8+ and TensorFlow 2.9.1+:
 
 ```bash
 pip install tf-encrypted
@@ -17,7 +28,7 @@ pip install tf-encrypted
 Creating a conda environment to run TF Encrypted code can be done using:
 
 ```
-conda create -n tfe python=3.6
+conda create -n tfe python=3.8
 conda activate tfe
 conda install tensorflow notebook
 pip install tf-encrypted
@@ -32,11 +43,13 @@ pip install -e .
 make build
 ```
 
-This latter is useful on platforms for which the pip package has not yet been compiled but is also needed for [development](./docs/CONTRIBUTING.md). Note that this will get you a working basic installation, yet a few more steps are required to match the performance and security of the version shipped in the pip package, see the [installation instructions](./docs/INSTALL.md).
+This latter is useful on platforms for which the pip package has not yet been compiled but is also needed for [development](./docs/CONTRIBUTING.md).
+Note that this will get you a working basic installation, yet a few more steps are required to match the performance and security of the version shipped in the pip package, see the [installation instructions](./docs/INSTALL.md).
 
 # Usage
 
-The following is an example of simple matmul on encrypted data using TF Encrypted:
+The following is an example of simple matmul on encrypted data using TF Encrypted based on TF2, 
+you could execute matmul in eager mode or building a graph by `@tfe.function`. 
 
 ```python
 import tensorflow as tf
@@ -49,82 +62,86 @@ def provide_input():
     # case on the machine of the input provider
     return tf.ones(shape=(5, 10))
 
-# define inputs
+# provide inputs
 w = tfe.define_private_variable(tf.ones(shape=(10,10)))
 x = provide_input()
 
-# define computation
+# eager execution
 y = tfe.matmul(x, w)
+res = y.reveal().to_native()
 
-with tfe.Session() as sess:
-    # initialize variables
-    sess.run(tfe.global_variables_initializer())
-    # reveal result
-    result = sess.run(y.reveal())
+# build graph and run graph
+@tfe.function
+def matmul_func(x, w)
+    y = tfe.matmul(x, w)
+    return y.reveal().to_native()
+
+res = matmul_func(x, w)
 ```
 
 For more information, check out the [documentation](./docs/) or the [examples](./examples/).
 
 # Performance
 
-All tests are performed by using the ABY3 protocol among 3 machines, each with 4 cores (Intel Xeon Platinum 8369B CPU @ 2.70GHz), Ubuntu 18.04 (64bit), TensorFlow 1.15.5, Python 3.6.9 and pip 21.3.1. The LAN environment has a bandwidth of 40 Gbps and a RTT of 0.02 ms, and the WAN environment has a bandwidth of 352 Mbps and a RTT of 40 ms.
+All tests are performed by using the ABY3 protocol among 3 machines, each with 4 cores (Intel Xeon Platinum 8369B CPU @ 2.70GHz), Ubuntu 18.04 (64bit), TensorFlow 2.9.1, Python 3.8.13 and pip 21.1.2. The LAN environment has a bandwidth of 40 Gbps and a RTT of 0.02 ms, and the WAN environment has a bandwidth of 352 Mbps and a RTT of 40 ms.
 
 You can find source code of the following benchmarks in [`./examples/benchmark/`](./examples/benchmark/) and corresponding guidelines of how to reproduce them.
 
 ## Benchmark 1: Sort and Max
 
-Graph building is a one-time cost, while LAN or WAN timings are average running time across multiple runs. For example, it takes 58.63 seconds to build the graph for Resnet50 model, and afterwards, it only takes 4.742 seconds to predict each image.
-
-|                                        | Build graph<br/>(seconds) | LAN<br/>(seconds) | WAN<br/>(seconds) |
-| -------------------------------------- | ------------------------- | ----------------- | ----------------- |
-| Sort/Max (1,000)<sup>1</sup>           | 0.90                      | 0.13              | 11.51             |
-| Sort/Max (1,000,000)<sup>1</sup>       | 74.70                     | 117.451           | 1133.00           |
-| Max (1,000 $\times$ 4)<sup>2</sup>     | 2.02                      | 0.01              | 0.51              |
-| Max (1,000,000 $\times$ 4)<sup>2</sup> | 2.05                      | 3.66              | 15.28             |
+Graph building is a one-time cost, while LAN or WAN timings are average running time across multiple runs. 
+For example, it takes 152.5 seconds to build the graph for Resnet50 model, and afterwards, it only takes 19.1 seconds to predict each image.
+|                                   | Build graph<br/>(seconds) | LAN<br/>(seconds) | WAN<br/>(seconds) |
+| --------------------------------- | ------------------------- | ----------------- | ----------------- |
+| Sort/Max (2^10)<sup>1</sup>       | 5.26                      | 0.14              | 10.37             |
+| Sort/Max (2^16)<sup>1</sup>       | 14.06                     | 7.37              | 41.97             |
+| Max (2^10 $\times$ 4)<sup>2</sup> | 5.63                      | 0.01              | 0.55              |
+| Max (2^16 $\times$ 4)<sup>2</sup> | 5.81                      | 0.29              | 1.14              |
 
 <sup>1</sup> `Max` is implemented by using a sorting network, hence its performance is essentially the same as `Sort`. Sorting network can be efficiently constructed as a TF graph. The traditional way of computing `Max` by using a binary comparison tree does not work well in a TF graph, because the graph becomes huge when the number of elements is large.
 
-<sup>2</sup> This means 1,000 (respectively, 1,000,000) invocations of `max` on 4 elements, which is essentially a `MaxPool` with pool size of `2 x 2`.
+<sup>2</sup> This means 2^10 (respectively, 2^16) invocations of `max` on 4 elements, which is essentially a `MaxPool` with pool size of `2 x 2`.
 
 ## Benchmark 2: Neural Network Inference
 
-We show the strength of TFE by loading a normal TF model (RESNET50) and run private inference on top of it.
+We show the strength of TFE by loading big TF models (e.g. RESNET50) and run private inference on top of it.
 
-|                                   | Build graph<br/> | LAN<br/>          | WAN<br/> |
-| --------------------------------- | ---------------- | ----------------- | -------- |
-| RESNET50 inference time (seconds) | 57.79            | 13.55<sup>1</sup> | 126.89   |
+|                                      | Build graph<br/> | LAN<br/>          | WAN<br/>     |
+| ------------------------------------ | ---------------- | ----------------- | ------------ |
+| VGG19 inference time (seconds)       | 105.18           | 49.63             | 139.63       |
+| RESNET50 inference time (seconds)    | 150.47           | 19.07<sup>1</sup> | 84.29        |
+| DENSENET121 inference time (seconds) | 344.55           | 33.53             | 151.43       |
 
 <sup>1</sup> This is currently one of the fastest implementation of secure RESNET50 inference (three-party). Comparable with [CryptGPU](https://eprint.iacr.org/2021/533) , [SecureQ8](https://eprint.iacr.org/2019/131), and faster than [CryptFLOW](https://arxiv.org/abs/1909.07814).
 
 ## Benchmark 3: Neural Network Training
 
-We benchmark the performance of training several neural network models on the MNIST dataset (60k training images, 10k test images, and batch size is 128). The definitions of these models can be found in [`examples/benchmark/training/private_network_training.py`](examples/benchmark/training/private_network_training.py).
+We benchmark the performance of training several neural network models on the MNIST dataset (60k training images, 10k test images, and batch size is 128). 
+The definitions of these models can be found in [`examples/models`](examples/models).
 
-We compare the performance with another highly optimized MPC library [MP-SPDZ](https://github.com/data61/MP-SPDZ).
+|              | Accuracy (epochs) | Accuracy (epochs) | Seconds per Batch (LAN) | Seconds per Batch (LAN) | Seconds per Batch (WAN) | Seconds per Batch (WAN) |
+|:------------ |:-----------------:|:-----------------:|:-----------------------:|:-----------------------:|:-----------------------:|:-----------------------:|
+|              | MP-SPDZ           | TFE               | MP-SPDZ                 | TFE                     |  MP-SPDZ                | TFE                     |
+| A  (SGD)     | 96.7% (5)         | 96.5% (5)         | 0.098                   | 0.167                   | 9.724                   | 4.510                   |
+| A  (AMSgrad) | 97.8% (5)         | 97.4% (5)         | 0.228                   | 0.717                   | 21.038                  | 15.472                  |
+| A  (Adam )   | 97.4% (5)         | 97.4% (5)         | 0.221                   | 0.535                   | 50.963                  | 15.153                  |
+| B  (SGD)     | 97.5% (5)         | 98.6% (5)         | 0.571                   | 5.332                   | 60.755                  | 18.656                  |
+| B  (AMSgrad) | 98.6% (5)         | 98.7% (5)         | 0.680                   | 5.722                   | 71.983                  | 21.647                  |
+| B  (Adam)    | 98.8% (5)         | 98.8% (5)         | 0.772                   | 5.733                   | 98.108                  | 21.130                  |
+| C  (SGD)     | 98.5% (5)         | 98.7% (5)         | 1.175                   | 8.198                   | 91.341                  | 27.102                  |
+| C  (AMSgrad) | 98.9% (5)         | 98.9% (5)         | 1.568                   | 10.053                  | 119.271                 | 66.357                  |
+| C  (Adam)    | 99.0% (5)         | 99.1% (5)         | 2.825                   | 9.893                   | 195.013                 | 65.320                  |
+| D  (SGD)     | 97.6% (5)         | 97.1% (5)         | 0.134                   | 0.439                   | 15.083                  | 5.465                   |
+| D  (AMSgrad) | 98.4% (5)         | 97.4% (5)         | 0.228                   | 0.900                   | 26.099                  | 14.693                  |
+| D  (Adam)    | 98.2% (5)         | 97.6% (5)         | 0.293                   | 0.710                   | 54.404                  | 14.515                  |
 
-|             | Accuracy (epochs) | Accuracy (epochs) | Seconds per Batch (LAN) | Seconds per Batch (LAN) | Seconds per Batch (WAN) | Seconds per Batch (WAN) |
-|:----------- |:-----------------:|:-----------------:|:-----------------------:|:-----------------------:|:-----------------------:|:-----------------------:|
-|             | MP-SPDZ           | TFE               | MP-SPDZ                 | TFE                     | MP-SPDZ                 | TFE                     |
-| A (SGD)     | 96.7% (5)         | 96.8% (5)         | 0.098                   | 0.138                   | 9.724                   | 5.075                   |
-| A (AMSgrad) | 97.8% (5)         | 97.3% (5)         | 0.228                   | 0.567                   | 21.038                  | 17.780                  |
-| A (Adam )   | 97.4% (5)         | 97.3% (5)         | 0.221                   | 0.463                   | 50.963                  | 16.958                  |
-| B (SGD)     | 97.5% (5)         | 98.7% (5)         | 0.571                   | 4.000                   | 60.755                  | 25.300                  |
-| B (AMSgrad) | 98.6% (5)         | 99.0% (5)         | 0.680                   | 4.170                   | 71.983                  | 28.424                  |
-| B (Adam)    | 98.8% (5)         | 98.8% (5)         | 0.772                   | 4.075                   | 98.108                  | 28.184                  |
-| C (SGD)     | 98.5% (5)         | 98.8% (5)         | 1.175                   | 6.223                   | 91.341                  | 37.678                  |
-| C (AMSgrad) | 98.9% (5)         | 99.0% (5)         | 1.568                   | 7.336                   | 119.271                 | 83.695                  |
-| C (Adam)    | 99.0% (5)         | 99.1% (5)         | 2.825                   | 6.858                   | 195.013                 | 81.275                  |
-| D (SGD)     | 97.6% (5)         | 97.5% (5)         | 0.134                   | 0.355                   | 15.083                  | 6.112                   |
-| D (AMSgrad) | 98.4% (5)         | 98.1% (5)         | 0.228                   | 0.682                   | 26.099                  | 17.063                  |
-| D (Adam)    | 98.2% (5)         | 98.0% (5)         | 0.293                   | 0.605                   | 54.404                  | 16.190                  |
-
-We also give the performance of training a logistic regression model in the following table. This model is trained to classify two classes: small digits (0-4) vs large digits (5-9). Details can be found in [`examples/benchmark/training/private_lr_training.py`](examples/benchmark/training/private_lr_training.py)
+We also give the performance of training a logistic regression model in the following table. This model is trained to classify two classes: small digits (0-4) vs large digits (5-9). Dataset can be found in [`examples/benchmark/training/lr_mnist_dataset.py`](examples/benchmark/training/lr_mnist_dataset.py)
 
 |              | Accuracy (epochs) | Seconds per Batch (LAN) | Seconds per Batch (WAN) |
 |:------------ |:-----------------:|:-----------------------:|:-----------------------:|
-| LR (SGD)     | 84.1% (5)         | 0.012                   | 0.760                   |
-| LR (AMSgrad) | 85.5% (5)         | 0.025                   | 1.567                   |
-| LR (Adam)    | 85.8% (5)         | 0.021                   | 1.353                   |
+| LR (SGD)     | 84.8% (5)         | 0.010                   | 0.844                   |
+| LR (AMSgrad) | 85.0% (5)         | 0.023                   | 1.430                   |
+| LR (Adam)    | 85.2% (5)         | 0.019                   | 1.296                   |
 
 # Roadmap
 
