@@ -165,7 +165,7 @@ def native_factory(
             maxval = self.max if maxval is None else maxval
 
             if secure_random.supports_seeded_randomness():
-                # Don't use UniformTensor for lazy sampling here, because the `seed`
+                # Don't use lazy sampling here, because the `seed`
                 # might be something (e.g., key) we want to protect, and we cannot
                 # send it to another party
                 value = secure_random.seeded_random_uniform(
@@ -179,13 +179,13 @@ def native_factory(
             else:
                 if NATIVE_TYPE not in (tf.int32, tf.int64):
                     value = tf.random.stateless_uniform(
-                        shape, seed[6:8], minval=minval, maxval=maxval, dtype=tf.int32
+                        shape, seed, minval=minval, maxval=maxval, dtype=tf.int32
                     )
                     value = tf.cast(value, NATIVE_TYPE)
                 else:
                     value = tf.random.stateless_uniform(
                         shape,
-                        seed[6:8],
+                        seed,
                         minval=minval,
                         maxval=maxval,
                         dtype=NATIVE_TYPE,
