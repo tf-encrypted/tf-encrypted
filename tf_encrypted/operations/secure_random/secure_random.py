@@ -11,14 +11,14 @@ import tf_encrypted as tfe
 
 logger = logging.getLogger("tf_encrypted")
 
-SO_PATH = "{dn}/operations/secure_random/secure_random_module_tf_{tfv}.so"
+SO_PATH = "{dn}/operations/secure_random/secure_random_module.so"
 
 
 def _try_load_secure_random_module():
     """
     Attempt to load and return secure random module; returns None if failed.
     """
-    so_file = SO_PATH.format(dn=os.path.dirname(tfe.__file__), tfv=tf.__version__)
+    so_file = SO_PATH.format(dn=os.path.dirname(tfe.__file__))
     if not os.path.exists(so_file):
         logger.warning(
             (

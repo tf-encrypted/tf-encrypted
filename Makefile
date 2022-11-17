@@ -319,30 +319,30 @@ endif
 # Rules for the shared object for secure random.
 # ###############################################
 
-SECURE_OUT_PRE = tf_encrypted/operations/secure_random/secure_random_module_tf_
+SECURE_OUT_PRE = tf_encrypted/operations/secure_random/secure_random_module
 SECURE_IN = operations/secure_random/secure_random.cc
 SECURE_IN_H = operations/secure_random/generators.h
 
-$(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECURE_IN_H)
+$(SECURE_OUT_PRE).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECURE_IN_H)
 	mkdir -p tf_encrypted/operations/secure_random
 
-	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
+	g++ -std=c++11 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE).so \
 		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
 
-secure_random : $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so 
+secure_random : $(SECURE_OUT_PRE).so 
 
 # ###############################################
 # Aux ops 
 # ###############################################
-AUX_OUT_PRE = tf_encrypted/operations/aux/aux_module_tf_
+AUX_OUT_PRE = tf_encrypted/operations/aux/aux_module
 AUX_IN = $(wildcard operations/aux/*.cc)
 
-$(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so: $(AUX_IN)
+$(AUX_OUT_PRE).so: $(AUX_IN)
 	mkdir -p tf_encrypted/operations/aux
-	g++ -std=c++11 -shared $(AUX_IN) -o $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so \
+	g++ -std=c++11 -shared $(AUX_IN) -o $(AUX_OUT_PRE).so \
 		-fPIC  $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2
 
-aux : $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so
+aux : $(AUX_OUT_PRE).so
 
 .PHONY: aux
 
@@ -355,8 +355,8 @@ build: secure_random aux
 
 build-all:
 	pip install tensorflow==1.15.2
-	$(MAKE) $(SECURE_OUT_PRE)1.15.2.so
-	$(MAKE) $(AUX_OUT_PRE)1.15.2.so
+	$(MAKE) $(SECURE_OUT_PRE).so
+	$(MAKE) $(AUX_OUT_PRE).so
 
 .PHONY: build build-all
 

@@ -8,14 +8,14 @@ import tf_encrypted as tfe
 
 logger = logging.getLogger("tf_encrypted")
 
-SO_PATH = "{dn}/operations/aux/aux_module_tf_{tfv}.so"
+SO_PATH = "{dn}/operations/aux/aux_module.so"
 
 
 def _try_load_aux_module():
     """
     Attempt to load and return aux module; returns None if failed.
     """
-    so_file = SO_PATH.format(dn=os.path.dirname(tfe.__file__), tfv=tf.__version__)
+    so_file = SO_PATH.format(dn=os.path.dirname(tfe.__file__))
     if not os.path.exists(so_file):
         logger.warning(
             (
