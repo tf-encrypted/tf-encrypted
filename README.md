@@ -15,7 +15,7 @@ Since TF Encrypted based on TF1, it face the same problem that TF1 has encounter
 So we update TF Encrypted, to rely on TF2 to support eager execution which makes development on TF Encrypted more easier.
 At the same time, it also supports building graph implicitly by `tfe.function` to realize nearly the same performance as TF Encrypted based on TF1.
 Unfortunately, after updated, TF1 features like session and placeholder are not supported by TFE any more.
-For those developers who want to use TF1 like TFE, we suggest them to use [version 0.8.0](https://github.com/tf-encrypted/tf-encrypted/tree/0.8.0).
+For those developers who want to use TF1 like TFE, we suggest them to use [version 0.8.1](https://github.com/tf-encrypted/tf-encrypted/tree/0.8.1).
 
 # Installation
 
