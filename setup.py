@@ -14,13 +14,12 @@ setuptools.setup(
     ]},
     python_requires=">=3.6",
     install_requires=[
-        "tensorflow >=1.12.0, <2",
+        "tensorflow >=1.15.0, <2",
         "numpy >=1.14.0",
         "pyyaml >=5.1",
-        # "tf-big ~=0.1.0",
     ],
     extras_require={
-        "tf": ["tensorflow>=1.12.0,<2"],
+        "tf": ["tensorflow>=1.15.0,<2"],
     },
     license="Apache License 2.0",
     url="https://github.com/tf-encrypted/tf-encrypted",

@@ -8,7 +8,7 @@ See below for more [background material](#background--further-reading), explore 
 
 # Installation
 
-TF Encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.5+ and TensorFlow 1.12.0+:
+TF Encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.5+ and TensorFlow 1.15.0+:
 
 ```bash
 pip install tf-encrypted
