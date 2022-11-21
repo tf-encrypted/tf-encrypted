@@ -13,4 +13,5 @@ recommonmark==0.6.0
 sphinx-rtd-theme==0.4.3
 sphinx==2.4.3
 tensorflow==1.15.0
+tf-big==0.1.0
 yapf==0.29.0
