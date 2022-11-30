@@ -174,43 +174,43 @@ REGISTER_KERNEL_BUILDER(
   Name("SecureSeededRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int8>("dtype"),
-  SeededRandomUniformOp<int8, SeededGenerator<int8, int16>>);
+  SeededRandomUniformOp<int8, SeededGenerator<int8>>);
 REGISTER_KERNEL_BUILDER(
   Name("SecureSeededRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int16>("dtype"),
-  SeededRandomUniformOp<int16, SeededGenerator<int16, int32>>);
+  SeededRandomUniformOp<int16, SeededGenerator<int16>>);
 REGISTER_KERNEL_BUILDER(
   Name("SecureSeededRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int32>("dtype"),
-  SeededRandomUniformOp<int32, SeededGenerator<int32, int64>>);
+  SeededRandomUniformOp<int32, SeededGenerator<int32>>);
 REGISTER_KERNEL_BUILDER(
   Name("SecureSeededRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int64>("dtype"),
-  SeededRandomUniformOp<int64, SeededGenerator<int64, __uint128_t>>);
+  SeededRandomUniformOp<int64, SeededGenerator<int64>>);
 
 REGISTER_KERNEL_BUILDER(
   Name("SecureRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int8>("dtype"),
-  RandomUniformOp<int8, Generator<int8, int16>>);
+  RandomUniformOp<int8, Generator<int8>>);
 REGISTER_KERNEL_BUILDER(
   Name("SecureRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int16>("dtype"),
-  RandomUniformOp<int16, Generator<int16, int32>>);
+  RandomUniformOp<int16, Generator<int16>>);
 REGISTER_KERNEL_BUILDER(
   Name("SecureRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int32>("dtype"),
-  RandomUniformOp<int32, Generator<int32, int64>>);
+  RandomUniformOp<int32, Generator<int32>>);
 REGISTER_KERNEL_BUILDER(
   Name("SecureRandomUniform")
   .Device(DEVICE_CPU)
   .TypeConstraint<int64>("dtype"),
-  RandomUniformOp<int64, Generator<int64, __uint128_t>>);
+  RandomUniformOp<int64, Generator<int64>>);
 
 REGISTER_KERNEL_BUILDER(
   Name("SecureSeed")

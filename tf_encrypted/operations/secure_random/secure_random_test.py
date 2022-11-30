@@ -25,9 +25,9 @@ dontskip = secure_random.supports_seeded_randomness()
 class TestSeededRandom(unittest.TestCase):
     def test_wrapper(self):
         expected = [
-            [6610, 5100, 676],
-            [6111, 9801, 5407],
-            [9678, 7188, 8280],
+            [7738, 4010, 3717],
+            [7182,  302, 6300],
+            [3270, 1433, 6475],
         ]
 
         output = secure_random.seeded_random_uniform(
@@ -40,9 +40,9 @@ class TestSeededRandom(unittest.TestCase):
 
     def test_min_val(self):
         expected = [
-            [3220, 200, -8648],
-            [2223, 9603, 815],
-            [9356, 4377, 6561],
+            [7738, 4010, -6283],
+            [-2818, 302, -3700],
+            [-6730, -8567, 6475],
         ]
 
         output = secure_random.seeded_random_uniform(

@@ -26,14 +26,14 @@ except NotFoundError:
 @unittest.skipIf(secure_random_module is None, notfound_msg)
 class TestSeededRandomUniform(unittest.TestCase):
     def test_int32_return(self):
-        expected = [[608, 425, 925], [198, 891, 721]]
+        expected = [[749, 945, 451], [537, 795, 111]]
 
         output = seeded_random_uniform([2, 3], [1, 1, 1, 1, 1, 1, 1, 2], 0, 1000)
 
         np.testing.assert_array_equal(output, expected)
 
     def test_int64_return(self):
-        expected = [[425, 198, 721], [911, 617, 113]]
+        expected = [[469, 403, 651], [801, 843, 806]]
 
         minval = tf.constant(0, dtype=tf.int64)
         maxval = tf.constant(1000, dtype=tf.int64)
@@ -61,13 +61,22 @@ class TestSeededRandomUniform(unittest.TestCase):
             seeded_random_uniform([2, 3], [1, 1, 1, 1, 1, 1, 1, 2], minval, maxval)
 
     def test_negative_numbers(self):
-        expected = [[-1575, -1802, -1279], [-1089, -1383, -1887]]
+        expected = [[-1531, -1597, -1349], [-1199, -1157, -1194]]
         minval = tf.constant(-2000, dtype=tf.int64)
         maxval = tf.constant(-1000, dtype=tf.int64)
 
         output = seeded_random_uniform([2, 3], [1, 1, 1, 1, 1, 1, 1, 2], minval, maxval)
 
         np.testing.assert_array_equal(output, expected)
+    
+    def test_big_tensor(self):
+        minval = tf.constant(tf.int64.min, dtype=tf.int64)
+        maxval = tf.constant(tf.int64.max, dtype=tf.int64)
+
+        output0 = seeded_random_uniform([20000, 20000], [1, 1, 1, 1, 1, 1, 1, 2], minval, maxval)
+        output1 = seeded_random_uniform([20000, 20000], [1, 1, 1, 1, 1, 1, 1, 2], minval, maxval)
+        
+        np.testing.assert_array_equal(output0, output1)
 
 
 @unittest.skipIf(secure_random_module is None, notfound_msg)
