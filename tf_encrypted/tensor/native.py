@@ -22,7 +22,6 @@ from .helpers import inverse
 from .shared import binarize
 from .shared import conv2d
 from .shared import im2col
-from .shared import im2patches
 from .shared import patches2im
 
 
@@ -35,60 +34,46 @@ def native_factory(
     class Factory(AbstractFactory):
         """Native tensor factory."""
 
-        def tensor(self, initial_value):
+        def tensor(self, initial_value, encode: bool=True):
+            if encode:
+                initial_value = self._encode(initial_value)
+            return Tensor(initial_value)
 
+        def constant(self, initial_value, encode: bool=True):
+            if encode:
+                initial_value = self._encode(initial_value)
+            return Constant(initial_value)
+
+        def variable(self, initial_value, encode: bool=True):
             if isinstance(initial_value, Tensor):
-                return initial_value
-            elif isinstance(initial_value, tf.Tensor):
-                if initial_value.dtype is not self.native_type:
-                    initial_value = tf.cast(initial_value, dtype=self.native_type)
-                    return Tensor(initial_value)
-                else:
-                    return Tensor(initial_value)
-            elif isinstance(initial_value, np.ndarray):
-                initial_value = tf.convert_to_tensor(
-                    initial_value, dtype=self.native_type
-                )
-                return Tensor(initial_value)
+                initial_value = initial_value.value
+                encode = False
+            if encode:
+                initial_value = self._encode(initial_value)
+            variable_value = tf.Variable(
+                initial_value, dtype=self.native_type, trainable=False
+            )
+            return Variable(variable_value)
+        
+        def _encode(self, scaled_value):
+            if isinstance(scaled_value, (int, float)):
+                scaled_value = np.array(scaled_value)
+                return tf.convert_to_tensor(scaled_value, dtype=self.native_type)
+            elif isinstance(scaled_value, np.ndarray):
+                return tf.convert_to_tensor(scaled_value, dtype=self.native_type)
+            elif isinstance(scaled_value, tf.Tensor):
+                return tf.cast(scaled_value, dtype=self.native_type)
             else:
                 raise TypeError(
-                    "Don't know how to handle {}".format(type(initial_value))
+                    "Don't know how to handle {}".format(type(scaled_value))
                 )
-
-        def constant(self, initial_value):
-            if isinstance(initial_value, Tensor):
-                return initial_value
-            elif isinstance(initial_value, tf.Tensor):
-                if initial_value.dtype is not self.native_type:
-                    initial_value = tf.cast(initial_value, dtype=self.native_type)
-                    return Constant(initial_value)
-                else:
-                    return Constant(initial_value)
-            elif isinstance(initial_value, np.ndarray):
-                constant_value = tf.constant(initial_value, dtype=self.native_type)
-                return Constant(constant_value)
+        
+        def _decode(self, encode_value):
+            if isinstance(encode_value, tf.Tensor):
+                return encode_value
             else:
                 raise TypeError(
-                    "Don't know how to handle {}".format(type(initial_value))
-                )
-
-        def variable(self, initial_value):
-
-            if isinstance(initial_value, tf.Variable):
-                return Variable(initial_value)
-            elif isinstance(initial_value, (tf.Tensor, np.ndarray)):
-                variable_value = tf.Variable(
-                    initial_value, dtype=self.native_type, trainable=False
-                )
-                return Variable(variable_value)
-            elif isinstance(initial_value, Tensor):
-                variable_value = tf.Variable(
-                    initial_value.value, dtype=self.native_type, trainable=False
-                )
-                return Variable(variable_value)
-            else:
-                raise TypeError(
-                    "Don't know how to handle {}".format(type(initial_value))
+                    "Don't know how to handle {}".format(type(encode_value))
                 )
 
         @property
@@ -237,6 +222,8 @@ def native_factory(
             return Tensor(tf.tile(x.value, multiples))
 
         def scatter_nd(self, indices, updates, shape):
+            if isinstance(indices, Tensor):
+                indices = indices.value
             return Tensor(tf.scatter_nd(indices, updates.value, shape))
 
     FACTORY = Factory()
@@ -277,7 +264,7 @@ def native_factory(
             return Tensor(value)
 
         def to_native(self) -> tf.Tensor:
-            return self.value
+            return self.factory._decode(self.value)
 
         def bits(self, factory=None, bitsize=None) -> AbstractTensor:
             factory = factory or FACTORY
@@ -375,17 +362,23 @@ def native_factory(
             i2c = im2col(
                 self.value, h_filter, w_filter, strides=strides, padding=padding
             )
-            return Tensor(i2c)
+            return i2c
 
-        def im2patches(self, patch_size, strides, padding, data_format="NCHW"):
-            i2p = im2patches(
-                self.value,
-                patch_size,
-                strides=strides,
+        def im2patches(self, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"):
+            if data_format == "NCHW":
+                x = tf.transpose(self.value, [0, 2, 3, 1])
+            else:
+                x = self.value
+            patches = tf.image.extract_patches(
+                images=x,
+                sizes=[1, patch_size[0], patch_size[1], 1],
+                strides=[1, strides[0], strides[1], 1],
+                rates=[1, 1, 1, 1],
                 padding=padding,
-                data_format=data_format,
             )
-            return Tensor(i2p)
+            if data_format == "NCHW":
+                patches = tf.transpose(patches, [0, 3, 1, 2])
+            return Tensor(patches)
 
         def patches2im(
             self,
@@ -435,6 +428,8 @@ def native_factory(
             return Tensor(tf.strided_slice(self.value, *args, **kwargs))
 
         def gather(self, indices: list, axis: int = 0):
+            if isinstance(indices, Tensor):
+                indices = indices.value
             return Tensor(tf.gather(self.value, indices, axis=axis))
 
         def split(self, num_split: Union[int, list], axis: int = 0):
@@ -442,6 +437,8 @@ def native_factory(
             return [Tensor(value) for value in values]
 
         def scatter_nd(self, indices, shape):
+            if isinstance(indices, Tensor):
+                indices = indices.value
             value = tf.scatter_nd(indices, self.value, shape)
             return Tensor(value)
 

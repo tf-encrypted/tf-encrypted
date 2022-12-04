@@ -7,17 +7,20 @@ from .boolfactory import bool_factory
 from .fixed import _validate_fixedpoint_config
 from .fixed import fixed64
 from .fixed import fixed64_heuristic
+from .fixed import fixed128_heuristic
 from .fixed import fixed64_ni
 from .fixed import fixed100
 from .fixed import fixed100_ni
 from .int100 import int100factory
 from .native import native_factory
+from .int128 import int128_factory
 
 int1factory = bool_factory()
 int8factory = native_factory(tf.int8)
 int16factory = native_factory(tf.int16)
 int32factory = native_factory(tf.int32)
 int64factory = native_factory(tf.int64)
+int128factory = int128_factory()
 
 factories = {
     0: int1factory,
@@ -28,6 +31,7 @@ factories = {
     16: int16factory,
     32: int32factory,
     64: int64factory,
+    128: int128factory
 }
 factories.update(
     {
@@ -52,5 +56,6 @@ __all__ = [
     "int32factory",
     "int64factory",
     "int100factory",
+    "int128factory"
     "factories",
 ]

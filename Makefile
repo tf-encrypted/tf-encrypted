@@ -314,7 +314,7 @@ SECURE_IN_H = operations/secure_random/generators.h
 $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECURE_IN_H)
 	mkdir -p tf_encrypted/operations/secure_random
 
-	g++ -std=c++14 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
+	g++ -std=gnu++14 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
 		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
 
 secure_random : $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so 
@@ -334,12 +334,29 @@ aux : $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so
 
 .PHONY: aux
 
+# ###############################################
+# Int128
+# Rules for building int128 operations as TF Ops.
+# ###############################################
+I128_OUT_PRE = tf_encrypted/operations/tf_i128/tf_i128_module_tf_
+I128_IN = $(wildcard operations/tf_i128/*.cc)
+I128_IN_H = $(wildcard operations/tf_i128/*.h)
+
+$(I128_OUT_PRE)$(CURRENT_TF_VERSION).so: $(I128_IN) $(I128_IN_H)
+	mkdir -p tf_encrypted/operations/tf_i128
+	g++ -std=c++14 -shared -fopenmp $(I128_IN) -o $(I128_OUT_PRE)$(CURRENT_TF_VERSION).so \
+		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2
+
+int128 : $(I128_OUT_PRE)$(CURRENT_TF_VERSION).so
+
+.PHONY: int128
+
 
 # ###############################################
 # Build
 # ###############################################
 
-build: secure_random aux 
+build: secure_random aux int128
 
 build-all:
 	pip install tensorflow==2.9.1

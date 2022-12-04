@@ -43,32 +43,6 @@ def bits(
         return the_bits
         # return tf.stack(bits, axis=-1)
 
-
-def im2patches(x, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"):
-    """
-    :param x: a 4-D Tensor.
-    """
-
-    with tf.name_scope("im2patches"):
-        # To NHWC
-        if data_format == "NCHW":
-            x = tf.transpose(x, [0, 2, 3, 1])
-
-        # we need NHWC because tf.extract_image_patches expects this
-        patches = tf.image.extract_patches(
-            images=x,
-            sizes=[1, patch_size[0], patch_size[1], 1],
-            strides=[1, strides[0], strides[1], 1],
-            rates=[1, 1, 1, 1],
-            padding=padding,
-        )
-        # To NCHW
-        if data_format == "NCHW":
-            patches = tf.transpose(patches, [0, 3, 1, 2])
-
-    return patches
-
-
 def patches2im(
     patches,
     patch_size,
@@ -213,7 +187,7 @@ def pad_size(input_size, kernel_size, strides):
 
 
 def im2col(
-    x: Union[tf.Tensor, np.ndarray],
+    x,
     h_filter: int,
     w_filter: int,
     strides: list = [1, 1],
@@ -225,29 +199,26 @@ def im2col(
     with tf.name_scope("im2col"):
 
         if data_format == "NCHW":
-            x = tf.transpose(x, [0, 2, 3, 1])
+            x = x.transpose([0, 2, 3, 1])
         channels = int(x.shape[3])
 
-        patch_tensor = im2patches(
-            x,
+        patch_tensor = x.im2patches(
             (h_filter, w_filter),
             strides=strides,
             padding=padding,
             data_format="NHWC",
         )
 
-        patch_tensor = tf.reshape(
-            tf.transpose(patch_tensor, [3, 1, 2, 0]), (h_filter, w_filter, channels, -1)
-        )
+        patch_tensor = patch_tensor.transpose([3, 1, 2, 0])
+        patch_tensor = patch_tensor.reshape((h_filter, w_filter, channels, -1))
 
         if data_format == "NCHW":
             # Put channel first for each patch
-            patch_tensor = tf.transpose(patch_tensor, [2, 0, 1, 3])
+            patch_tensor = patch_tensor.transpose([2, 0, 1, 3])
 
         # reshape to x_col
-        x_col_tensor = tf.reshape(
-            patch_tensor,
-            (channels * h_filter * w_filter, -1),
+        x_col_tensor = patch_tensor.reshape(
+            (channels * h_filter * w_filter, -1)
         )
 
         return x_col_tensor
@@ -273,7 +244,7 @@ def conv2d(x, y, strides=[1, 1], padding="SAME", data_format="NCHW"):
 
     with tf.name_scope("conv2d"):
         if data_format == "NCHW":
-            x = tf.transpose(x, [0, 2, 3, 1])
+            x = x.transpose([0, 2, 3, 1])
 
         h_filter, w_filter, in_filters, out_filters = map(int, y.shape)
         n_x, h_x, w_x, c_x = map(int, x.shape)
@@ -283,14 +254,14 @@ def conv2d(x, y, strides=[1, 1], padding="SAME", data_format="NCHW"):
         x_col = im2col(
             x, h_filter, w_filter, strides=strides, padding=padding, data_format="NHWC"
         )
-        w_col = tf.reshape(tf.transpose(y, [3, 0, 1, 2]), [int(out_filters), -1])
-        out = tf.matmul(w_col, x_col)
+        w_col = y.transpose([3, 0, 1, 2]).reshape([int(out_filters), -1])
+        out = w_col.matmul(x_col)
 
-        out = tf.reshape(out, [out_filters, h_out, w_out, n_x])
+        out = out.reshape([out_filters, h_out, w_out, n_x])
 
         if data_format == "NCHW":
-            out = tf.transpose(out, [3, 0, 1, 2])
+            out = out.transpose([3, 0, 1, 2])
         else:
-            out = tf.transpose(out, [3, 1, 2, 0])
+            out = out.transpose([3, 1, 2, 0])
 
         return out
