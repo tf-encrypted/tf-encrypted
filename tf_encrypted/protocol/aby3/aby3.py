@@ -846,9 +846,10 @@ class ABY3(Protocol):
                 secret_shape = secret.shape
                 if isinstance(secret_shape, tf.TensorShape):
                     secret_shape = secret_shape.as_list()
-                randoms = secret.factory.sample_uniform([2] + secret_shape)
-                share0 = randoms[0]
-                share1 = randoms[1]
+                seed0 = crypto.secure_seed()
+                seed1 = crypto.secure_seed()
+                share0 = secret.factory.sample_seeded_uniform(secret_shape, seed0)
+                share1 = secret.factory.sample_seeded_uniform(secret_shape, seed1)
                 if share_type == ShareType.ARITHMETIC:
                     share2 = secret - share0 - share1
                 elif share_type == ShareType.BOOLEAN:
@@ -856,14 +857,14 @@ class ABY3(Protocol):
                 # Replicated sharing
                 shares = [[None, None], [None, None], [None, None]]
                 with tf.device(self.servers[0].device_name):
-                    shares[0][0] = share0.identity()
-                    shares[0][1] = share1.identity()
+                    shares[0][0] = secret.factory.sample_seeded_uniform(secret_shape, seed0)
+                    shares[0][1] = secret.factory.sample_seeded_uniform(secret_shape, seed1)
                 with tf.device(self.servers[1].device_name):
-                    shares[1][0] = share1.identity()
+                    shares[1][0] = secret.factory.sample_seeded_uniform(secret_shape, seed1)
                     shares[1][1] = share2.identity()
                 with tf.device(self.servers[2].device_name):
                     shares[2][0] = share2.identity()
-                    shares[2][1] = share0.identity()
+                    shares[2][1] = secret.factory.sample_seeded_uniform(secret_shape, seed0)
                 return shares
 
             else:
