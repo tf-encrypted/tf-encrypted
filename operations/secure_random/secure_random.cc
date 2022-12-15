@@ -86,7 +86,6 @@ REGISTER_OP("I128SecureSeededRandomUniform")
     .Attr("dtype: {int64} = DT_INT64")
     .Attr("T: {int32, int64} = DT_INT32")
     .Attr("Tseed: {int32} = DT_INT32")
-    .SetIsStateful()
     .SetShapeFn(I128SeededRandomUniformShape);
 
 REGISTER_OP("I128SecureRandomUniform")
@@ -96,7 +95,6 @@ REGISTER_OP("I128SecureRandomUniform")
     .Output("output: dtype")
     .Attr("dtype: {int64} = DT_INT64")
     .Attr("T: {int32, int64} = DT_INT32")
-    .SetIsStateful()
     .SetShapeFn(I128RandomUniformShapeCommon);
 
 REGISTER_OP("SecureSeed")

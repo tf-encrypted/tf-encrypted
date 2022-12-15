@@ -10,7 +10,8 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     package_data={'tf_encrypted': [
         'operations/secure_random/*.so',
-        'operations/aux/*.so'
+        'operations/aux/*.so',
+        'operations/tf_i128/*.so'
     ]},
     python_requires=">=3.8",
     install_requires=[
