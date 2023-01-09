@@ -11,14 +11,15 @@ setuptools.setup(
     package_data={'tf_encrypted': [
         'operations/secure_random/*.so',
         'operations/aux/*.so',
-        'operations/tf_i128/*.so'
+        'operations/tf_i128/*.so',
+        'operations/dataset/*.so'
     ]},
     python_requires=">=3.8",
     install_requires=[
         "tensorflow >=2.9.1",
         "numpy >=1.22.4",
         "pyyaml >=6.0",
-        "tf2onnx==1.12.0"
+        "tf2onnx >=1.12.0"
     ],
     extras_require={
         "tf": ["tensorflow>=2.9.1"],

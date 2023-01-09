@@ -6,6 +6,8 @@ Implementation of the ABY3 framework.
 from __future__ import absolute_import
 
 import math
+import random
+import string
 import sys
 from functools import reduce
 from functools import wraps
@@ -25,6 +27,7 @@ from tensorflow.python.ops.while_v2 import glob_stateful_parallelism
 
 from ...config import get_config
 from ...operations import secure_random as crypto
+from ...operations import dataset
 from ...player import Player
 from ...tensor import factories
 from ...tensor import fixed64_heuristic, fixed128_heuristic
@@ -1600,13 +1603,13 @@ class ABY3(Protocol):
         """See tf.tile."""
         return self.dispatch("tile", x, multiples)
 
-    def write(self, x, filename_prefix):
+    def write(self, x, filename_prefix, append=False):
         if not isinstance(x, ABY3PrivateTensor):
             raise TypeError("Only support writing ABY3PrivateTensor to disk.")
-        return self.dispatch("write", x, filename_prefix)
+        return self.dispatch("write", x, filename_prefix, append)
 
-    def read(self, filename_prefix, batch_size, n_columns):
-        return self.dispatch("read", filename_prefix, batch_size, n_columns)
+    def read(self, filenames_prefix, file_batch, output_shape, buffer_num=1):
+        return self.dispatch("read", filenames_prefix, file_batch, output_shape, buffer_num)
 
     def iterate(
         self,
@@ -3650,6 +3653,9 @@ def _while_loop_(prot, cond, body, loop_vars):
     body_graph.outputs.extend(body_graph.internal_captures)
     output_shapes = [var.shape for var in native_vars]
 
+    cond_graph.name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+    body_graph.name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+
     if glob_stateful_parallelism == "stateless_cond":
         stateful_parallelism = not any(
             op._is_stateful for op in cond_graph.get_operations()
@@ -4660,58 +4666,57 @@ def _split_private(prot, x, num_split, axis=0):
         ]
 
 
-def _write_private(prot, x, filename_prefix):
+def _write_private(prot, x, filename_prefix, append):
     assert isinstance(x, ABY3PrivateTensor), type(x)
-
-    def encode(feature_row):
-        # Converting a row to a string seems to be the only way of writing out
-        # the dataset in a distributed way
-        feature = tf.strings.reduce_join(
-            tf.as_string(tf.reshape(feature_row, [-1])), separator=","
-        )
-        return feature
 
     x_shares = x.unwrapped
     for i in range(3):
         with tf.device(prot.servers[i].device_name):
             for j in range(2):
-                data = tf.data.Dataset.from_tensor_slices(x_shares[i][j].value).map(
-                    encode
+                dataset.write_record(
+                    "{}_share{}{}".format(filename_prefix, i, j),
+                    tf.io.serialize_tensor(x_shares[i][j].value),
+                    append=append
                 )
-                writer = tf.data.experimental.TFRecordWriter(
-                    "{}_share{}{}".format(filename_prefix, i, j)
-                )
-                writer.write(data)
 
+def _read_(prot, filenames_prefix, file_batch, output_shape, buffer_num):
 
-def _read_(prot, filename_prefix, batch_size, n_columns):
+    buffer_size = buffer_num
+    for d in output_shape:
+        buffer_size *= d
+    buffer_size *= (prot.default_nbits // 8)
 
-    row_shape = [n_columns]
+    if prot.default_nbits == 128:
+        output_shape.append(2)
 
-    def decode(line):
-        fields = tf.compat.v1.string_split([line], ",").values
-        fields = tf.strings.to_number(fields, tf.int64)
-        fields = tf.reshape(fields, row_shape)
-        return fields
+    def decode(str_tensor):
+        return tf.io.parse_tensor(str_tensor, out_type=tf.int64)
 
+    def shaping(input):
+        return tf.reshape(input, output_shape)
+    
     batch = [[None] * 2 for _ in range(3)]
     for i in range(3):
         with tf.device(prot.servers[i].device_name):
             for j in range(2):
-                data = (
-                    tf.data.TFRecordDataset(
-                        ["{}_share{}{}".format(filename_prefix, i, j)]
-                    )
-                    .map(decode)
-                    .repeat()
-                    .batch(batch_size=batch_size)
-                )
-                it = tf.compat.v1.data.make_one_shot_iterator(data)
-                batch[i][j] = it.get_next()
-                batch[i][j] = tf.reshape(batch[i][j], [batch_size] + row_shape)
-                batch[i][j] = prot.default_factory.tensor(batch[i][j], encode=False)
-
-    return ABY3PrivateTensor(prot, batch, True, ShareType.ARITHMETIC)
+                dataset = tf.data.TFRecordDataset(["{}_share{}{}".format(prefix, i, j) for prefix in filenames_prefix], buffer_size=buffer_size)
+                dataset = dataset.map(decode)
+                dataset = dataset.batch(batch_size=(output_shape[0] // file_batch))
+                dataset = dataset.map(shaping)
+                dataset = dataset.repeat()
+                dataset = dataset.prefetch(buffer_num)
+                batch[i][j] = iter(dataset)
+    
+    def encode_tensor(batch):
+        while True:
+            share = [[None] * 2 for _ in range(3)]
+            for i in range(3):
+                with tf.device(prot.servers[i].device_name):
+                    share[i][0] = prot.default_factory.tensor(next(batch[i][0]), encode=False)
+                    share[i][1] = prot.default_factory.tensor(next(batch[i][1]), encode=False)
+            yield ABY3PrivateTensor(prot, share, True, ShareType.ARITHMETIC)
+        
+    return encode_tensor(batch)
 
 
 def _iterate_private(
@@ -5281,23 +5286,21 @@ def __avgpool2d_computation(
 
 def _ones_private(prot, shape, apply_scaling, share_type, factory) -> ABY3PrivateTensor:
 
-    ones_array = np.ones(shape)
-    zeros_array = np.zeros(shape)
     factory = factory or prot.default_factory
 
     with tf.name_scope("ones"):
         x = [[None, None], [None, None], [None, None]]
         with tf.device(prot.servers[0].device_name):
-            x[0][0] = factory.tensor(prot._encode(ones_array, apply_scaling))
-            x[0][1] = factory.tensor(prot._encode(zeros_array, apply_scaling))
+            x[0][0] = factory.tensor(prot._encode(tf.ones(shape), apply_scaling))
+            x[0][1] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
 
         with tf.device(prot.servers[1].device_name):
-            x[1][0] = factory.tensor(prot._encode(zeros_array, apply_scaling))
-            x[1][1] = factory.tensor(prot._encode(zeros_array, apply_scaling))
+            x[1][0] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
+            x[1][1] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
 
         with tf.device(prot.servers[2].device_name):
-            x[2][0] = factory.tensor(prot._encode(zeros_array, apply_scaling))
-            x[2][1] = factory.tensor(prot._encode(ones_array, apply_scaling))
+            x[2][0] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
+            x[2][1] = factory.tensor(prot._encode(tf.ones(shape), apply_scaling))
 
     x = ABY3PrivateTensor(prot, x, apply_scaling, share_type)
     return x
@@ -5305,17 +5308,16 @@ def _ones_private(prot, shape, apply_scaling, share_type, factory) -> ABY3Privat
 
 def _ones_public(prot, shape, apply_scaling, share_type, factory) -> ABY3PublicTensor:
 
-    ones_array = np.ones(shape)
     factory = factory or prot.default_factory
 
     with tf.name_scope("ones"):
         x = [None, None, None]
         with tf.device(prot.servers[0].device_name):
-            x[0] = factory.tensor(prot._encode(ones_array, apply_scaling))
+            x[0] = factory.tensor(prot._encode(tf.ones(shape), apply_scaling))
         with tf.device(prot.servers[1].device_name):
-            x[1] = factory.tensor(prot._encode(ones_array, apply_scaling))
+            x[1] = factory.tensor(prot._encode(tf.ones(shape), apply_scaling))
         with tf.device(prot.servers[2].device_name):
-            x[2] = factory.tensor(prot._encode(ones_array, apply_scaling))
+            x[2] = factory.tensor(prot._encode(tf.ones(shape), apply_scaling))
 
     x = ABY3PublicTensor(prot, x, apply_scaling, share_type)
     return x
@@ -5325,22 +5327,21 @@ def _zeros_private(
     prot, shape, apply_scaling, share_type, factory
 ) -> ABY3PrivateTensor:
 
-    zeros_array = np.zeros(shape)
     factory = factory or prot.default_factory
 
     with tf.name_scope("zeros"):
         x = [[None, None], [None, None], [None, None]]
         with tf.device(prot.servers[0].device_name):
-            x[0][0] = factory.tensor(prot._encode(zeros_array, apply_scaling))
-            x[0][1] = factory.tensor(prot._encode(zeros_array, apply_scaling))
+            x[0][0] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
+            x[0][1] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
 
         with tf.device(prot.servers[1].device_name):
-            x[1][0] = factory.tensor(prot._encode(zeros_array, apply_scaling))
-            x[1][1] = factory.tensor(prot._encode(zeros_array, apply_scaling))
+            x[1][0] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
+            x[1][1] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
 
         with tf.device(prot.servers[2].device_name):
-            x[2][0] = factory.tensor(prot._encode(zeros_array, apply_scaling))
-            x[2][1] = factory.tensor(prot._encode(zeros_array, apply_scaling))
+            x[2][0] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
+            x[2][1] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
 
     x = ABY3PrivateTensor(prot, x, apply_scaling, share_type)
     return x
@@ -5348,17 +5349,16 @@ def _zeros_private(
 
 def _zeros_public(prot, shape, apply_scaling, share_type, factory) -> ABY3PublicTensor:
 
-    zeros_array = np.zeros(shape)
     factory = factory or prot.default_factory
 
     with tf.name_scope("zeros"):
         x = [None, None, None]
         with tf.device(prot.servers[0].device_name):
-            x[0] = factory.tensor(prot._encode(zeros_array, apply_scaling))
+            x[0] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
         with tf.device(prot.servers[1].device_name):
-            x[1] = factory.tensor(prot._encode(zeros_array, apply_scaling))
+            x[1] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
         with tf.device(prot.servers[2].device_name):
-            x[2] = factory.tensor(prot._encode(zeros_array, apply_scaling))
+            x[2] = factory.tensor(prot._encode(tf.zeros(shape), apply_scaling))
 
     x = ABY3PublicTensor(prot, x, apply_scaling, share_type)
     return x

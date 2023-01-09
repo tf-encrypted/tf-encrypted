@@ -351,12 +351,28 @@ int128 : $(I128_OUT_PRE)$(CURRENT_TF_VERSION).so
 
 .PHONY: int128
 
+# ###############################################
+# Dataset
+# Rules for building Dataset operations as TF Ops.
+# ###############################################
+DATASET_OUT_PRE = tf_encrypted/operations/dataset/tf_dataset_module_tf_
+DATASET_IN = $(wildcard operations/dataset/*.cc)
+
+$(DATASET_OUT_PRE)$(CURRENT_TF_VERSION).so: $(DATASET_IN)
+	mkdir -p tf_encrypted/operations/dataset
+	g++ -std=c++14 -shared $(DATASET_IN) -o $(DATASET_OUT_PRE)$(CURRENT_TF_VERSION).so \
+		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2
+
+dataset : $(DATASET_OUT_PRE)$(CURRENT_TF_VERSION).so
+
+.PHONY: dataset
+
 
 # ###############################################
 # Build
 # ###############################################
 
-build: secure_random aux int128
+build: secure_random aux int128 dataset
 
 build-all:
 	pip install tensorflow==2.9.1
