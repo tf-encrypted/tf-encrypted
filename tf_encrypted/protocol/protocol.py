@@ -123,38 +123,22 @@ def memoize(func: Callable) -> Callable:
 
 
 def unwrap_func(wrap_args):
-    if wrap_args is None:
-        return None
-
     if isinstance(wrap_args, (list, tuple)):
         return [unwrap_func(arg) for arg in wrap_args]
     elif isinstance(wrap_args, TFETensor):
         return wrap_args.bone
-    elif isinstance(wrap_args, tf.Tensor):
-        return wrap_args
-    elif isinstance(wrap_args, (float, int, str)):
-        return wrap_args
     else:
-        raise TypeError("Don't know how to unwrap {}".format(type(wrap_args)))
-
+        return wrap_args
 
 def wrap_func(unwrap_args):
-    if unwrap_args is None:
-        return None
-
     prot = tfe.get_protocol()
 
     if isinstance(unwrap_args, (list, tuple)):
         return [wrap_func(arg) for arg in unwrap_args]
     elif isinstance(unwrap_args, TFETensorBone):
         return prot.from_bone(unwrap_args)
-    elif isinstance(unwrap_args, tf.Tensor):
-        return unwrap_args
-    elif isinstance(unwrap_args, (float, int, str)):
-        return unwrap_args
     else:
-        raise TypeError("Don't know how to wrap {}".format(type(unwrap_args)))
-
+        return unwrap_args
 
 def input_unwrap(wrap_args, wrap_kwargs):
 
