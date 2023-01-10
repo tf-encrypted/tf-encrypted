@@ -195,10 +195,10 @@ class ABY3Tensor(TFETensor):
         return self.prot.mul(self, other)
 
     def __mul__(self, other):
-        return self.prot.mul(self, other)
+        return self.mul(other)
 
     def __rmul__(self, other):
-        return self.prot.mul(other, self)
+        return self.mul(other)
 
     def __truediv__(self, other):
         return self.prot.div(self, other)
@@ -253,14 +253,14 @@ class ABY3Tensor(TFETensor):
         """
         return self.prot.transpose(self, perm)
 
-    def truncate(self, trunc_type="trunc2"):
+    def truncate(self, amount=None):
         """
         Truncate this tensor.
 
         :return: A new ABY3Tensor
         :rtype: ABY3Tensor
         """
-        return self.prot.truncate(self, trunc_type)
+        return self.prot.truncate(self, amount=amount)
 
     def expand_dims(self, axis=None):
         """
