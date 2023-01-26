@@ -22,6 +22,7 @@ from .helpers import inverse
 from .shared import binarize
 from .shared import conv2d
 from .shared import im2col
+from .shared import im2patches
 from .shared import patches2im
 
 
@@ -166,7 +167,7 @@ def native_factory(
                     value = tf.random.stateless_uniform(
                         shape, seed, minval=minval, maxval=maxval, dtype=tf.int32
                     )
-                    value = tf.cast(value, NATIVE_TYPE)
+                    value = Tensor(tf.cast(value, NATIVE_TYPE))
                 else:
                     value = tf.random.stateless_uniform(
                         shape,
@@ -360,25 +361,19 @@ def native_factory(
 
         def im2col(self, h_filter, w_filter, strides, padding):
             i2c = im2col(
-                self.value, h_filter, w_filter, strides=strides, padding=padding
+                self, h_filter, w_filter, strides=strides, padding=padding
             )
             return i2c
 
         def im2patches(self, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"):
-            if data_format == "NCHW":
-                x = tf.transpose(self.value, [0, 2, 3, 1])
-            else:
-                x = self.value
-            patches = tf.image.extract_patches(
-                images=x,
-                sizes=[1, patch_size[0], patch_size[1], 1],
-                strides=[1, strides[0], strides[1], 1],
-                rates=[1, 1, 1, 1],
+            i2p = im2patches(
+                self.value,
+                patch_size,
+                strides=strides,
                 padding=padding,
+                data_format=data_format,
             )
-            if data_format == "NCHW":
-                patches = tf.transpose(patches, [0, 3, 1, 2])
-            return Tensor(patches)
+            return Tensor(i2p)
 
         def patches2im(
             self,
@@ -405,7 +400,7 @@ def native_factory(
                 # TODO(Morten) any good reason this wasn't implemented for PrimeTensor?
                 raise NotImplementedError()
             x, y = _lift(self, other)
-            return Tensor(conv2d(x.value, y.value, strides=strides, padding=padding))
+            return conv2d(x, y, strides=strides, padding=padding)
 
         def batch_to_space(self, block_shape, crops):
             value = tf.batch_to_space(self.value, block_shape, crops)

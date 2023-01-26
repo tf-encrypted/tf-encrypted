@@ -43,6 +43,31 @@ def bits(
         return the_bits
         # return tf.stack(bits, axis=-1)
 
+
+def im2patches(x, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"):
+    """
+    :param x: a 4-D Tensor.
+    """
+
+    with tf.name_scope("im2patches"):
+        # To NHWC
+        if data_format == "NCHW":
+            x = tf.transpose(x, [0, 2, 3, 1])
+
+        # we need NHWC because tf.extract_image_patches expects this
+        patches = tf.image.extract_patches(
+            images=x,
+            sizes=[1, patch_size[0], patch_size[1], 1],
+            strides=[1, strides[0], strides[1], 1],
+            rates=[1, 1, 1, 1],
+            padding=padding,
+        )
+        # To NCHW
+        if data_format == "NCHW":
+            patches = tf.transpose(patches, [0, 3, 1, 2])
+
+    return patches
+
 def patches2im(
     patches,
     patch_size,

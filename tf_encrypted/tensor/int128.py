@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from typing import Union, List, Tuple, Optional
 
-from .shared import binarize, conv2d, im2col
+from .shared import binarize, conv2d, im2col, im2patches, patches2im
 from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
                       AbstractConstant)
 from .helpers import inverse
@@ -387,28 +387,52 @@ def int128_factory():  # pylint: disable=invalid-name
             return i2c
         
         def im2patches(self, patch_size, strides, padding, data_format="NCHW"):
-            if data_format == "NCHW":
-                x = tf.transpose(self.value, [0, 2, 3, 1, 4])
-            else:
-                x = self.value
-            patch0 = tf.image.extract_patches(
-                images=tf.gather(x, 0, axis=-1),
-                sizes=[1, patch_size[0], patch_size[1], 1],
-                strides=[1, strides[0], strides[1], 1],
-                rates=[1, 1, 1, 1],
+            patch0 = im2patches(
+                tf.gather(self.value, 0, axis=-1),
+                patch_size,
+                strides=strides,
                 padding=padding,
+                data_format=data_format,
             )
-            patch1 = tf.image.extract_patches(
-                images=tf.gather(x, 1, axis=-1),
-                sizes=[1, patch_size[0], patch_size[1], 1],
-                strides=[1, strides[0], strides[1], 1],
-                rates=[1, 1, 1, 1],
+            patch1 = im2patches(
+                tf.gather(self.value, 1, axis=-1),
+                patch_size,
+                strides=strides,
                 padding=padding,
+                data_format=data_format,
             )
             patches = tf.stack([patch0, patch1], axis=-1)
-            if data_format == "NCHW":
-                patches = tf.transpose(patches, [0, 3, 1, 2, 4])
             return Tensor(patches)
+        
+        def patches2im(
+            self,
+            patch_size,
+            strides,
+            padding,
+            img_size=None,
+            consolidation="SUM",
+            data_format="NCHW",
+        ):
+            p2i0 = patches2im(
+                tf.gather(self.value, 0, axis=-1),
+                patch_size,
+                strides=strides,
+                padding=padding,
+                img_size=img_size,
+                consolidation=consolidation,
+                data_format=data_format,
+            )
+            p2i1 = patches2im(
+                tf.gather(self.value, 1, axis=-1),
+                patch_size,
+                strides=strides,
+                padding=padding,
+                img_size=img_size,
+                consolidation=consolidation,
+                data_format=data_format,
+            )
+            p2is = tf.stack([p2i0, p2i1], axis=-1)
+            return Tensor(p2is)
 
         def conv2d(self, other, stride: int, padding: str = 'SAME'):
             x, y = _lift(self, other)
@@ -427,7 +451,7 @@ def int128_factory():  # pylint: disable=invalid-name
             if perm is None:
                 perm = list(range(n_dims-1, -1, -1)) + [n_dims]
             else:
-                perm = perm + [n_dims]
+                perm = list(perm) + [n_dims]
             return Tensor(tf.transpose(self.value, perm))
 
         def strided_slice(self, args, kwargs):
@@ -464,7 +488,7 @@ def int128_factory():  # pylint: disable=invalid-name
             elif isinstance(axes, list):
                 axes = axes + [self.factory.native_size]
             elif isinstance(axes, tf.TensorShape):
-                axes = axes.tolist() + [self.factory.native_size]
+                axes = axes.as_list() + [self.factory.native_size]
             else:
                 raise TypeError("axes has unexpected type: {}".format(type(axes)))
             return Tensor(tf.reshape(self.value, axes))
@@ -490,7 +514,7 @@ def int128_factory():  # pylint: disable=invalid-name
             return (self - (self % factor)) * factor_inverse
 
         def expand_dims(self, axis):
-            axis = _lift_axis(axis, len(self.shape))
+            axis = _lift_axis(axis, len(self.shape)+1)
             return Tensor(tf.expand_dims(self.value, axis))
 
         def squeeze(self, axis: Optional[List[int]] = None):
