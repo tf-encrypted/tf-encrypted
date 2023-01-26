@@ -640,10 +640,17 @@ def _lsb_private(prot, x: PondPrivateTensor):
         with tf.name_scope("compare"):
 
             # ask either server0 and server1 to generate beta (distributing load)
-            server = random.choice([prot.server_0, prot.server_1])
-            with tf.device(server.device_name):
-                beta_raw = prime_dtype.sample_bits(x.shape)
-                beta = PondPublicTensor(prot, beta_raw, beta_raw, is_scaled=False)
+            if random.random() < 0.5:
+                with tf.device(prot.server_0.device_name):
+                    beta_raw0 = prime_dtype.sample_bits(x.shape)
+                with tf.device(prot.server_1.device_name):
+                    beta_raw1 = beta_raw0.identity()
+            else:
+                with tf.device(prot.server_1.device_name):
+                    beta_raw1 = prime_dtype.sample_bits(x.shape)
+                with tf.device(prot.server_0.device_name):
+                    beta_raw0 = beta_raw1.identity()
+            beta = PondPublicTensor(prot, beta_raw0, beta_raw1, is_scaled=False)
 
             greater_xor_beta = _private_compare(prot, rbits, c, beta)
             clsb = prot.lsb(c)
@@ -736,8 +743,10 @@ def _private_compare(
 
             # generate multiplicative mask to hide non-zero values
             with tf.device(prot.server_0.device_name):
-                mask_raw = prime_dtype.sample_uniform(c.shape, minval=1)
-                mask = PondPublicTensor(prot, mask_raw, mask_raw, False)
+                mask_raw0 = prime_dtype.sample_uniform(c.shape, minval=1)
+            with tf.device(prot.server_1.device_name):
+                mask_raw1 = mask_raw0.identity()
+            mask = PondPublicTensor(prot, mask_raw0, mask_raw1, False)
 
             # mask non-zero values; this is safe when we're in a prime dtype
             # (since it's a field)

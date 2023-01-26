@@ -41,6 +41,7 @@ from ...tensor.factory import AbstractVariable
 from ...tensor.fixed import FixedpointConfig
 from ...tensor.fixed import _validate_fixedpoint_config
 from ...tensor.helpers import inverse
+from ...operations import secure_random as crypto
 from ..protocol import Protocol
 from ..protocol import TFEPrivateTensor
 from ..protocol import TFEPrivateVariable
@@ -395,7 +396,11 @@ class Pond(Protocol):
             )
             enc = self._encode(v, apply_scaling, tf_int_type=factory.native_type)
             w = factory.tensor(enc)
-            return PondPublicTensor(self, w, w, apply_scaling)
+            with tf.device(self.server_0.device_name):
+                w0 = w.identity()
+            with tf.device(self.server_1.device_name):
+                w1 = w.identity()
+            return PondPublicTensor(self, w0, w1, apply_scaling)
 
         with tf.name_scope("public-input{}".format(suffix)):
 
@@ -556,11 +561,20 @@ class Pond(Protocol):
             if not masked:
                 return x
             with tf.name_scope("local_mask"):
-                a0 = factory.sample_uniform(v.shape)
-                a1 = factory.sample_uniform(v.shape)
-                a = a0 + a1
-                alpha = w - a
-            return PondMaskedTensor(self, x, a, a0, a1, alpha, alpha, apply_scaling)
+                with tf.device(self.triple_source.producer.device_name):
+                    seed0 = crypto.secure_seed()
+                    seed1 = crypto.secure_seed()
+                    a = factory.sample_seeded_uniform(v.shape, seed0) 
+                    + factory.sample_seeded_uniform(v.shape, seed1)
+                    alpha = w - a
+                with tf.device(self.server_0.device_name):
+                    a0 = factory.sample_seeded_uniform(v.shape, seed0)
+                    alpha0 = alpha.identity()
+                with tf.device(self.server_1.device_name):
+                    a1 = factory.sample_seeded_uniform(v.shape, seed1)
+                    alpha1 = alpha.identity()
+                
+            return PondMaskedTensor(self, x, a, a0, a1, alpha0, alpha1, apply_scaling)
 
         def reconstruct_input(x):
 
@@ -673,29 +687,29 @@ class Pond(Protocol):
         factory = factories[tensor_bone.factory]
         if isinstance(tensor_bone, PondPublicTensorBone):
             with tf.device(self.server_0.device_name):
-                value_0 = factory.tensor(tensor_bone.values[0]).identity()
+                value_0 = factory.tensor(tensor_bone.values[0], encode=False).identity()
             with tf.device(self.server_1.device_name):
-                value_1 = factory.tensor(tensor_bone.values[1]).identity()
+                value_1 = factory.tensor(tensor_bone.values[1], encode=False).identity()
             return PondPublicTensor(
                 self, value_0, value_1, is_scaled=tensor_bone.is_scaled
             )
         elif isinstance(tensor_bone, PondPrivateTensorBone):
             with tf.device(self.server_0.device_name):
-                value_0 = factory.tensor(tensor_bone.values[0]).identity()
+                value_0 = factory.tensor(tensor_bone.values[0], encode=False).identity()
             with tf.device(self.server_1.device_name):
-                value_1 = factory.tensor(tensor_bone.values[1]).identity()
+                value_1 = factory.tensor(tensor_bone.values[1], encode=False).identity()
             return PondPrivateTensor(
                 self, value_0, value_1, is_scaled=tensor_bone.is_scaled
             )
         elif isinstance(tensor_bone, PondMaskedTensorBone):
             with tf.device(self.server_0.device_name):
-                a0 = factory.tensor(tensor_bone.a0).identity()
-                alpha_on_0 = factory.tensor(tensor_bone.alpha_on_0).identity()
+                a0 = factory.tensor(tensor_bone.a0, encode=False).identity()
+                alpha_on_0 = factory.tensor(tensor_bone.alpha_on_0, encode=False).identity()
             with tf.device(self.server_1.device_name):
-                a1 = factory.tensor(tensor_bone.a1).identity()
-                alpha_on_1 = factory.tensor(tensor_bone.alpha_on_1).identity()
+                a1 = factory.tensor(tensor_bone.a1, encode=False).identity()
+                alpha_on_1 = factory.tensor(tensor_bone.alpha_on_1, encode=False).identity()
             with tf.device(self.triple_source.producer.device_name):
-                a = factory.tensor(tensor_bone.a).identity()
+                a = factory.tensor(tensor_bone.a, encode=False).identity()
             return PondMaskedTensor(
                 self,
                 self.from_bone(tensor_bone.unmasked),
@@ -799,13 +813,22 @@ class Pond(Protocol):
         """
 
         with tf.name_scope("share"):
-            share0 = secret.factory.sample_uniform(secret.shape)
+            seed = crypto.secure_seed()
+            share0 = secret.factory.sample_seeded_uniform(secret.shape, seed)
             share1 = secret - share0
 
             # randomized swap to distribute load between two servers wrt who gets
             # the seed
             if random.random() < 0.5:
-                share0, share1 = share1, share0
+                with tf.device(self.server_0.device_name):
+                    share0 = secret.factory.sample_seeded_uniform(secret.shape, seed)
+                with tf.device(self.server_1.device_name):
+                    share1 = share1.identity()
+            else:
+                with tf.device(self.server_0.device_name):
+                    share0 = share1.identity()
+                with tf.device(self.server_1.device_name):
+                    share1 = secret.factory.sample_seeded_uniform(secret.shape, seed)
 
         return share0, share1
 
@@ -1590,11 +1613,11 @@ class AdditiveFIFOQueue(AbstractFIFOQueue):
 
         with tf.device(self.server_0.device_name):
             raw_tensor0 = self.queue0.dequeue()
-            tensor_0 = self.dtype.tensor(raw_tensor0)
+            tensor_0 = self.dtype.tensor(raw_tensor0, encode=False)
 
         with tf.device(self.server_1.device_name):
             raw_tensor1 = self.queue1.dequeue()
-            tensor_1 = self.dtype.tensor(raw_tensor1)
+            tensor_1 = self.dtype.tensor(raw_tensor1, encode=False)
 
         return PondPrivateTensor(
             self.protocol,
@@ -4057,9 +4080,11 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
         with tf.name_scope("online"):
 
             with tf.device(prot.server_0.device_name):
+                a0 = a0.identity()
                 alpha0 = x0 - a0
 
             with tf.device(prot.server_1.device_name):
+                a1 = a1.identity()
                 alpha1 = x1 - a1
 
             with tf.device(prot.server_0.device_name):
