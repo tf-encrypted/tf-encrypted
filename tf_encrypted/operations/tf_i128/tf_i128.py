@@ -107,19 +107,26 @@ def __is_scalar_tensor(x):
 
 def reduce_sum(x: tf.Tensor, axis=None, keepdims=False):
     if axis is None:
-        axis = -1
+        axis = [i for i in range(len(x.shape)-1)]
+    if not isinstance(axis, list):
+        axis = [axis]
     assert __is_tf_tensor(x)
-    assert axis < len(x.shape) - 1
+    assert all(a < len(x.shape)-1 for a in axis)
     assert x.shape[-1] == 2
+    axis = sorted(axis)
 
     def shape_after_reduce(shape, axis, keepdims):
-        if axis < 0:
-            return [1] * len(shape) if keepdims else []
-        if keepdims:
-            shape[axis] = 1
-        else:
-            shape = shape[:axis] + shape[axis+1:]
-        return shape
+        index_axis = 0
+        new_shape = []
+        for index, s in enumerate(shape):
+            if index == axis[index_axis]:
+                if keepdims:
+                    new_shape.append(1)
+                if index_axis+1 < len(axis):
+                    index_axis+=1
+            else:
+                new_shape.append(s)
+        return new_shape
 
     t = tf_i128.i128_reduce_sum(x, axis=axis, keepdims=bool(keepdims))
     reduced_shape = shape_after_reduce(x.shape.as_list()[:-1], axis, bool(keepdims))

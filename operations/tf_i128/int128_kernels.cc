@@ -10,21 +10,15 @@ static bool IsValidateI128Tensor(TensorShape const& shape) {
     return shape.dims() > 0 && shape.dim_size(shape.dims() - 1) == tf_i128::N_LIMBS;
 }
 
-static TensorShape shapeAfterReduction(TensorShape in, long axis, bool keepdim) {
-    if (axis < 0) {
-        if (keepdim) {
-            for (long d = 0; d < in.dims() - 1; ++d) in.set_dim(d, 1);
-            in.set_dim(in.dims() - 1, tf_i128::N_LIMBS);
-            return in;
-        } else {
-            return TensorShape({tf_i128::N_LIMBS});
+static TensorShape shapeAfterReduction(TensorShape in, const long* axis_vec, long axis_num, bool keepdim) {
+    for(long i = 0; i < axis_num; i++){
+        long axis = *(axis_vec+i);
+        if(keepdim){
+            in.set_dim(axis, 1);
+        }else{
+            in.RemoveDim(axis-i);
         }
     }
-
-    if (keepdim)
-        in.set_dim(axis, 1);
-    else
-        in.RemoveDim(axis);
     return in;
 }
 
@@ -102,7 +96,7 @@ static Status _broadcast(shape_inference::InferenceContext* c) {
             CHECK(IsValidateI128Tensor(op0.shape()));                           \
             Tensor* output;                                                     \
             OP_REQUIRES_OK(ctx, ctx->allocate_output(0, op0.shape(), &output)); \
-            Method(*output, op0);                                             \
+            Method(*output, op0);                                               \
         }                                                                       \
     }
 
@@ -120,12 +114,12 @@ static Status _broadcast(shape_inference::InferenceContext* c) {
             TensorShape out_shape;                                            \
             CHECK(binaryOpShape(out_shape, shape0, shape1).ok());             \
             OP_REQUIRES_OK(ctx, ctx->allocate_output(0, out_shape, &output)); \
-            Method(*output, op0, op1);                                    \
+            Method(*output, op0, op1);                                        \
         }                                                                     \
     }
 
 
-#define DEFINE_I128_ShiftOP(OpName, Method)                                 \
+#define DEFINE_I128_ShiftOP(OpName, Method)                                     \
     class OpName : public OpKernel {                                            \
     public:                                                                     \
         explicit OpName(OpKernelConstruction* context) : OpKernel(context) {}   \
@@ -139,28 +133,34 @@ static Status _broadcast(shape_inference::InferenceContext* c) {
             Tensor* output;                                                     \
             TensorShape out_shape;                                              \
             CHECK(binaryOpShape(out_shape, op0I128Shape, shape1).ok());         \
-            out_shape.AddDim(2);                                             \
+            out_shape.AddDim(2);                                                \
             OP_REQUIRES_OK(ctx, ctx->allocate_output(0, out_shape, &output));   \
             Method(*output, op0, op1);                                          \
         }                                                                       \
     }
 
 
-#define DEFINE_I128_ReduceOP(OpName, Method)                                   \
-    class OpName : public OpKernel {                                           \
-    public:                                                                    \
-        explicit OpName(OpKernelConstruction* context) : OpKernel(context) {}  \
-        void Compute(OpKernelContext* ctx) override {                          \
-            const Tensor& op0        = ctx->input(0);                          \
-            const TensorShape& shape = op0.shape();                            \
-            CHECK(IsValidateI128Tensor(shape));                                \
-            long axis    = ctx->input(1).scalar<int64>()();                    \
-            bool keepdim = ctx->input(2).scalar<bool>()();                     \
-            TensorShape out_shape {shapeAfterReduction(shape, axis, keepdim)}; \
-            Tensor* output;                                                    \
-            OP_REQUIRES_OK(ctx, ctx->allocate_output(0, out_shape, &output));  \
-            Method(*output, op0, axis, keepdim);                             \
-        }                                                                      \
+#define DEFINE_I128_ReduceOP(OpName, Method)                                                 \
+    class OpName : public OpKernel {                                                         \
+    public:                                                                                  \
+        explicit OpName(OpKernelConstruction* context) : OpKernel(context) {}                \
+        void Compute(OpKernelContext* ctx) override {                                        \
+            const Tensor& op0        = ctx->input(0);                                        \
+            const TensorShape& shape = op0.shape();                                          \
+            CHECK(IsValidateI128Tensor(shape));                                              \
+            const Tensor& axis = ctx->input(1);                                              \
+            OP_REQUIRES(ctx, (TensorShapeUtils::IsVector(axis.shape())                       \
+            || TensorShapeUtils::IsScalar(axis.shape())),                                    \
+            errors::InvalidArgument("axis input must be 1-D, not ",                          \
+                                axis.shape().DebugString()));                                \
+            long axis_num = axis.NumElements();                                              \
+            const long* axis_vec = axis.flat<long>().data();                                 \
+            bool keepdim       = ctx->input(2).scalar<bool>()();                             \
+            TensorShape out_shape {shapeAfterReduction(shape, axis_vec, axis_num, keepdim)}; \
+            Tensor* output;                                                                  \
+            OP_REQUIRES_OK(ctx, ctx->allocate_output(0, out_shape, &output));                \
+            Method(*output, op0, axis_vec, axis_num, keepdim);                               \
+        }                                                                                    \
     }
 
 //! Juhous: Add, Sub, Mul will be casted to AddScalar, SubScalar and MulScalar
@@ -389,7 +389,11 @@ REGISTER_OP("I128LogicRightShift")
     .Output("output: int64")
     .SetShapeFn(shape_inference::UnchangedShape);
 
-REGISTER_OP("I128ReduceSum").Input("op0: int64").Input("axis: int64").Input("keepdims: bool").Output("output: int64");
+REGISTER_OP("I128ReduceSum")
+    .Input("op0: int64")
+    .Input("axis: int64")
+    .Input("keepdims: bool")
+    .Output("output: int64");
 
 REGISTER_OP("I128MulScalar")
     .Input("op0: int64")

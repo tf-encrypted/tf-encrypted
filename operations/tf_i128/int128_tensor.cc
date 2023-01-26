@@ -639,50 +639,136 @@ bool i128TensorAbs(tf::Tensor& out, tf::Tensor const& in) {
 }
 
 
-template <int N>
-void i128TensorReduceSumCompute(I128TensorView &out_view, const I128TensorView &in_view, long axis) {
+template <int N, long D>
+void i128TensorReduceSumCompute(I128TensorView &out_view, const I128TensorView &in_view, const long* axis_vec) {
     CHECK(N > 0);
     TensorView<N> in_eigen_view = in_view.view<N>();
     TensorView<1> out_eigen_view = out_view.view<1>(std::array<int64_t, 1>{out_view.numElements()});
 
-    if (axis < 0) {
-        TensorType<0> result = in_eigen_view.sum();
-        *out_eigen_view.data() = *result.data();
+    std::array<int64_t, D> reduce_dims;
+    for(long i = 0; i < D; i++){
+        reduce_dims[i] = *(axis_vec+i);
     }
-    else {
-        std::array<int64_t, 1> reduce_dim {axis};
-        TensorType<N-1> result = in_eigen_view.sum(reduce_dim);
-        out_eigen_view = TensorView<1>(result.data(), std::array<int64_t, 1>{out_view.numElements()});
-    }
+    TensorType<N-D> result = in_eigen_view.sum(reduce_dims);
+    out_eigen_view = TensorView<1>(result.data(), std::array<int64_t, 1>{out_view.numElements()});
 }
 
-bool i128TensorReduceSum(tf::Tensor& out, tf::Tensor const& in, long axis, bool keepdims) {
+bool i128TensorReduceSum(tf::Tensor& out, tf::Tensor const& in, const long* axis_vec, long axis_num, bool keepdims) {
     I128TensorView in_view(in), out_view(out);
-
+    
+    // TODO(zjn) This is pretty ugly, need a better implementation.
     switch (in_view.dims()) {
         case 0:
             *out_view.data() = *in_view.data();
             break;
         case 1:
-            i128TensorReduceSumCompute<1>(out_view, in_view, axis);
+            switch (axis_num){
+                case 1:
+                    i128TensorReduceSumCompute<1, 1>(out_view, in_view, axis_vec);
+                    break;
+                default:
+                    std::cout << "input axis num not support " << axis_num << std::endl;
+                    CHECK((axis_num <= in_view.dims()) && "Unsupported axis nums");
+            }
+            i128TensorReduceSumCompute<1, 1>(out_view, in_view, axis_vec);
             break;
         case 2:
-            i128TensorReduceSumCompute<2>(out_view, in_view, axis);
+            switch (axis_num){
+                case 1:
+                    i128TensorReduceSumCompute<2, 1>(out_view, in_view, axis_vec);
+                    break;
+                case 2:
+                    i128TensorReduceSumCompute<2, 2>(out_view, in_view, axis_vec);
+                    break;
+                default:
+                    std::cout << "input axis num not support " << axis_num << std::endl;
+                    CHECK((axis_num <= in_view.dims()) && "Unsupported axis nums");
+            }
             break;
         case 3:
-            i128TensorReduceSumCompute<3>(out_view, in_view, axis);
+            switch (axis_num){
+                case 1:
+                    i128TensorReduceSumCompute<3, 1>(out_view, in_view, axis_vec);
+                    break;
+                case 2:
+                    i128TensorReduceSumCompute<3, 2>(out_view, in_view, axis_vec);
+                    break;
+                case 3:
+                    i128TensorReduceSumCompute<3, 3>(out_view, in_view, axis_vec);
+                    break;
+                default:
+                    std::cout << "input axis num not support " << axis_num << std::endl;
+                    CHECK((axis_num <= in_view.dims()) && "Unsupported axis nums");
+            }
             break;
         case 4:
-            i128TensorReduceSumCompute<4>(out_view, in_view, axis);
+            switch (axis_num){
+                case 1:
+                    i128TensorReduceSumCompute<4, 1>(out_view, in_view, axis_vec);
+                    break;
+                case 2:
+                    i128TensorReduceSumCompute<4, 2>(out_view, in_view, axis_vec);
+                    break;
+                case 3:
+                    i128TensorReduceSumCompute<4, 3>(out_view, in_view, axis_vec);
+                    break;
+                case 4:
+                    i128TensorReduceSumCompute<4, 4>(out_view, in_view, axis_vec);
+                    break;
+                default:
+                    std::cout << "input axis num not support " << axis_num << std::endl;
+                    CHECK((axis_num <= in_view.dims()) && "Unsupported axis nums");
+            }
             break;
         case 5:
-            i128TensorReduceSumCompute<5>(out_view, in_view, axis);
+            switch (axis_num){
+                case 1:
+                    i128TensorReduceSumCompute<5, 1>(out_view, in_view, axis_vec);
+                    break;
+                case 2:
+                    i128TensorReduceSumCompute<5, 2>(out_view, in_view, axis_vec);
+                    break;
+                case 3:
+                    i128TensorReduceSumCompute<5, 3>(out_view, in_view, axis_vec);
+                    break;
+                case 4:
+                    i128TensorReduceSumCompute<5, 4>(out_view, in_view, axis_vec);
+                    break;
+                case 5:
+                    i128TensorReduceSumCompute<5, 5>(out_view, in_view, axis_vec);
+                    break;
+                default:
+                    std::cout << "input axis num not support " << axis_num << std::endl;
+                    CHECK((axis_num <= in_view.dims()) && "Unsupported axis nums");
+            }
             break;
         case 6:
-            i128TensorReduceSumCompute<6>(out_view, in_view, axis);
+            switch (axis_num){
+                case 1:
+                    i128TensorReduceSumCompute<6, 1>(out_view, in_view, axis_vec);
+                    break;
+                case 2:
+                    i128TensorReduceSumCompute<6, 2>(out_view, in_view, axis_vec);
+                    break;
+                case 3:
+                    i128TensorReduceSumCompute<6, 3>(out_view, in_view, axis_vec);
+                    break;
+                case 4:
+                    i128TensorReduceSumCompute<6, 4>(out_view, in_view, axis_vec);
+                    break;
+                case 5:
+                    i128TensorReduceSumCompute<6, 5>(out_view, in_view, axis_vec);
+                    break;
+                case 6:
+                    i128TensorReduceSumCompute<6, 6>(out_view, in_view, axis_vec);
+                    break;
+                default:
+                    std::cout << "input axis num not support " << axis_num << std::endl;
+                    CHECK((axis_num <= in_view.dims()) && "Unsupported axis nums");
+            }
             break;
         default:
-            std::cout << "inout tesor dims not support " << in_view.dims() << std::endl;
+            std::cout << "input tesor dims not support " << in_view.dims() << std::endl;
             CHECK((in_view.dims() >=0 && in_view.dims() <= 6) && "Unsupported tensor dims");
     }
     

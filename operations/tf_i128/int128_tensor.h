@@ -96,7 +96,7 @@ bool i128TensorLeftShift(tf::Tensor& out, tf::Tensor const& in, tf::Tensor const
 bool i128TensorRightShift(tf::Tensor& out, tf::Tensor const& in, tf::Tensor const& shmt);
 bool i128TensorLogicalRightShift(tf::Tensor& out, tf::Tensor const& in, tf::Tensor const& shmt);
 
-bool i128TensorReduceSum(tf::Tensor& out, tf::Tensor const& in, long axis, bool keepdims);
+bool i128TensorReduceSum(tf::Tensor& out, tf::Tensor const& in, const long* axis_vec, long axis_num, bool keepdims);
 
 bool i128TensorNegate(tf::Tensor& out, tf::Tensor const& in); 
 bool i128TensorAbs(tf::Tensor &out, tf::Tensor const &in);
