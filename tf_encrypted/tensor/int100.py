@@ -26,6 +26,7 @@ from .helpers import inverse
 from .helpers import prod
 from .shared import binarize
 from .shared import im2col
+from .shared import im2patches
 
 
 def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
@@ -223,6 +224,37 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                 for mi in MODULI
             ]
             return Tensor(backing)
+        
+        def sample_seeded_uniform(
+            self, shape, seed, minval: Optional[int] = None, maxval: Optional[int] = None
+        ):
+            assert minval is None
+            assert maxval is None
+            
+            if secure_random.supports_seeded_randomness():
+                shape = list(shape) + [len(MODULI)]
+                value = secure_random.seeded_random_uniform(
+                    shape=shape,
+                    dtype=INT_TYPE,
+                    minval=0,
+                    maxval=mi,
+                    seed=seed,
+                )
+                backing = tf.split(value, len(MODULI), axis=-1)
+                backing = [tf.squeeze(b, axis=-1) for b in backing]
+                return Tensor(backing)
+            else:
+                shape = list(shape) + [len(MODULI)]
+                value = tf.random.stateless_uniform(
+                    shape=shape,
+                    dtype=INT_TYPE,
+                    minval=0,
+                    maxval=mi,
+                    seed=seed,
+                )
+                backing = tf.split(value, len(MODULI), axis=-1)
+                backing = [tf.squeeze(b, axis=-1) for b in backing]
+                return Tensor(backing)
 
         def sample_bounded(self, shape, bitlength: int):
 
@@ -331,7 +363,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                 )
         
         def _decode(self, encode_value):
-            if isinstance(encode_value, tf.Tensor):
+            if isinstance(encode_value, list):
                 return crt_recombine_explicit(encode_value, 2**32)
             else:
                 raise TypeError(
@@ -407,7 +439,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
             return self._backing[0].device
 
         def to_native(self) -> Union[tf.Tensor, np.ndarray]:
-            return self.factory._decode(self.value)
+            return self.factory._decode(self.backing)
 
         def bits(
             self,
@@ -631,17 +663,26 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
         def im2col(self, h_filter: int, w_filter: int, strides: list, padding: str):
             with tf.name_scope("crt_im2col"):
-                backing = [
-                    im2col(
-                        xi,
-                        h_filter=h_filter,
-                        w_filter=w_filter,
-                        strides=strides,
-                        padding=padding,
-                    )
-                    for xi in self.backing
-                ]
-                return Tensor(backing)
+                return im2col(
+                    self,
+                    h_filter=h_filter,
+                    w_filter=w_filter,
+                    strides=strides,
+                    padding=padding,
+                )
+        
+        def im2patches(self, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"):
+            backing = [
+                im2patches(
+                    xi,
+                    patch_size,
+                    strides=strides,
+                    padding=padding,
+                    data_format=data_format,
+                )
+                for xi in self.backing
+            ]
+            return Tensor(backing)
 
         def conv2d(self, other, strides: list, padding: str = "SAME"):
             x, y = _lift(self, other)

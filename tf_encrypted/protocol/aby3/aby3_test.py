@@ -333,8 +333,8 @@ class TestABY3(unittest.TestCase):
         y = tfe.define_constant(np.array([[0.6, -0.7], [-0.8, 0.9]]))
 
         # define computation
-        z1 = x.cast(factories[tf.int32])
-        z2 = y.cast(factories[tf.int32])
+        z1 = x.cast(factories[prot.default_nbits // 2])
+        z2 = y.cast(factories[prot.default_nbits // 2])
 
         # reveal result
         result = z1.reveal().to_native()
@@ -653,7 +653,8 @@ class TestABY3(unittest.TestCase):
         np.testing.assert_allclose(
             result, np.array([[2, 4, 6], [8, 10, 12]]), rtol=0.0, atol=0.01
         )
-
+    
+    @unittest.skipIf(tfe.get_protocol().default_nbits == 128, "unavailable for i128")
     def test_rshift_private(self):
 
         prot = ABY3()
@@ -1550,7 +1551,6 @@ class TestABY3(unittest.TestCase):
             result, np.array([[2.6, 2.6], [2.6, 2.6]]), rtol=0.0, atol=0.01
         )
     
-    @unittest.skipIf(tfe.get_protocol().default_nbits == 128, "128 bits tensor not write and read")
     def test_write_private(self):
 
         prot = ABY3()
@@ -1571,7 +1571,6 @@ class TestABY3(unittest.TestCase):
 
         os.remove(tmp_filename)
     
-    @unittest.skipIf(tfe.get_protocol().default_nbits == 128, "128 bits tensor not write and read")
     def test_read_private(self):
 
         prot = ABY3()
@@ -1587,11 +1586,11 @@ class TestABY3(unittest.TestCase):
         _, tmp_filename = tempfile.mkstemp()
         x.write(tmp_filename)
 
-        x = tfe.read(tmp_filename, batch_size=5, n_columns=2)
+        x = next(tfe.read(tmp_filename, file_batch=1, output_shape=[4, 2]))
         result = x.reveal().to_native()
         np.testing.assert_allclose(
             result,
-            np.array(list(range(0, 8)) + [0, 1]).reshape([5, 2]),
+            np.array(list(range(0, 8))).reshape([4, 2]),
             rtol=0.0,
             atol=0.01,
         )
@@ -1614,7 +1613,7 @@ class TestABY3(unittest.TestCase):
         _, tmp_filename = tempfile.mkstemp()
         x.write(tmp_filename)
 
-        x = tfe.read(tmp_filename, batch_size=5, n_columns=2)
+        x = next(tfe.read(tmp_filename, file_batch=4, output_shape=[4, 2]))
         y = tfe.iterate(x, batch_size=3, repeat=True, shuffle=False)
         z = tfe.iterate(x, batch_size=3, repeat=True, shuffle=True)
         # TODO: fix this test

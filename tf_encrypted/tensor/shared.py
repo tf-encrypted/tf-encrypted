@@ -89,7 +89,7 @@ def patches2im(
     with tf.name_scope("patches2im"):
         # To NHWC.
         if data_format == "NCHW":
-            patches = tf.transpose(patches, [0, 2, 3, 1])
+            patches = patches.transpose([0, 2, 3, 1])
 
         _h = patches.shape[1]
         _w = patches.shape[2]
@@ -101,7 +101,7 @@ def patches2im(
         col_ch = patches.shape[3] // (ps_h * ps_w)  # Colour channel count
         assert patches.shape[3] % (ps_h * ps_w) == 0, "Unexpected patch size"
 
-        patches = tf.reshape(patches, (bs, -1, ps_h, ps_w, col_ch))
+        patches = patches.reshape((bs, -1, ps_h, ps_w, col_ch))
 
         # Recalculate output shape of "extract_image_patches" including padded pixels
         wout = (_w - 1) * strides[0] + ps_w
@@ -138,21 +138,21 @@ def patches2im(
 
         idx = tf.concat([bb, yy, xx, cc, dd], -1)
 
-        stratified_img = tf.scatter_nd(idx, patches, (bs, hout, wout, col_ch, np))
-        stratified_img = tf.transpose(stratified_img, (0, 4, 1, 2, 3))
+        stratified_img = patches.scatter_nd(idx, (bs, hout, wout, col_ch, np))
+        stratified_img = stratified_img.transpose((0, 4, 1, 2, 3))
 
-        stratified_img_count = tf.scatter_nd(
-            idx, tf.ones_like(patches), (bs, hout, wout, col_ch, np)
+        stratified_img_count = patches.factory.ones_like(patches).scatter_nd(
+            idx, (bs, hout, wout, col_ch, np)
         )
-        stratified_img_count = tf.transpose(stratified_img_count, (0, 4, 1, 2, 3))
+        stratified_img_count = stratified_img_count.transpose((0, 4, 1, 2, 3))
 
         with tf.name_scope("consolidate"):
-            sum_stratified_img = tf.reduce_sum(stratified_img, axis=1)
+            sum_stratified_img = stratified_img.reduce_sum(axis=1)
             if consolidation == "SUM":
                 reconstructed_img = sum_stratified_img
             elif consolidation == "AVG":
-                stratified_img_count = tf.reduce_sum(stratified_img_count, axis=1)
-                reconstructed_img = tf.divide(sum_stratified_img, stratified_img_count)
+                stratified_img_count = stratified_img_count.reduce_sum(axis=1)
+                reconstructed_img = sum_stratified_img / stratified_img_count
             else:
                 raise NotImplementedError(
                     "Unknown consolidation method: {}".format(consolidation)
@@ -163,7 +163,7 @@ def patches2im(
             if img_h > hout:
                 # This happens when padding is 'VALID' and the image has been cropped,
                 # hence we will just pad 0 at the end
-                reconstructed_img = tf.pad(
+                reconstructed_img = reconstructed_img.factory.pad(
                     reconstructed_img, [[0, 0], [0, img_h - hout], [0, 0], [0, 0]]
                 )
             elif img_h < hout:
@@ -174,7 +174,7 @@ def patches2im(
                 ]
 
             if img_w > wout:
-                reconstructed_img = tf.pad(
+                reconstructed_img = reconstructed_img.factory.pad(
                     reconstructed_img, [[0, 0], [0, 0], [0, img_w - hout], [0, 0]]
                 )
             elif img_w < wout:
@@ -186,7 +186,7 @@ def patches2im(
 
         # To NCHW.
         if data_format == "NCHW":
-            reconstructed_img = tf.transpose(reconstructed_img, [0, 3, 1, 2])
+            reconstructed_img = reconstructed_img.transpose([0, 3, 1, 2])
 
         return reconstructed_img
 

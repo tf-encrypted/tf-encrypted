@@ -188,6 +188,10 @@ def int128_factory():  # pylint: disable=invalid-name
             else:
                 new_shape = tf.TensorShape(shape.as_list() + [self.native_size])
             return Tensor(tf.zeros(new_shape, self.native_type))
+        
+        def pad(self, tensor, paddings):
+            paddings = paddings + [[0, 0]]
+            return Tensor(tf.pad(tensor.value), paddings)
 
         def ones_like(self, x: 'Tensor'):
             return self.ones(x.shape)
@@ -413,8 +417,8 @@ def int128_factory():  # pylint: disable=invalid-name
             consolidation="SUM",
             data_format="NCHW",
         ):
-            p2i0 = patches2im(
-                tf.gather(self.value, 0, axis=-1),
+            p2i = patches2im(
+                self,
                 patch_size,
                 strides=strides,
                 padding=padding,
@@ -422,17 +426,7 @@ def int128_factory():  # pylint: disable=invalid-name
                 consolidation=consolidation,
                 data_format=data_format,
             )
-            p2i1 = patches2im(
-                tf.gather(self.value, 1, axis=-1),
-                patch_size,
-                strides=strides,
-                padding=padding,
-                img_size=img_size,
-                consolidation=consolidation,
-                data_format=data_format,
-            )
-            p2is = tf.stack([p2i0, p2i1], axis=-1)
-            return Tensor(p2is)
+            return p2i
 
         def conv2d(self, other, stride: int, padding: str = 'SAME'):
             x, y = _lift(self, other)

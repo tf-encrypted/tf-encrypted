@@ -25,6 +25,8 @@ from .shared import im2col
 from .shared import im2patches
 from .shared import patches2im
 
+from tensorflow.python.framework.tensor_shape import TensorShape
+
 
 def native_factory(
     NATIVE_TYPE,
@@ -211,6 +213,25 @@ def native_factory(
             assert all(isinstance(x, Tensor) for x in xs)
             value = tf.concat([x.value for x in xs], axis=axis)
             return Tensor(value)
+        
+        def ones(self, shape):
+            if not isinstance(shape, (list, tuple, TensorShape)):
+                raise TypeError("shape must be a list or tuple of integers")
+            return Tensor(tf.ones(shape, self.native_type))
+
+        def zeros(self, shape):
+            if not isinstance(shape, (list, tuple, TensorShape)):
+                raise TypeError("shape must be a list or tuple of integers")
+            return Tensor(tf.ones(shape, self.native_type))
+        
+        def pad(self, tensor, paddings):
+            return Tensor(tf.pad(tensor.value), paddings)
+
+        def ones_like(self, x: 'Tensor'):
+            return self.ones(x.shape)
+
+        def zeros_like(self, x: 'Tensor'):
+            return self.zeros(x.shape)
 
         def where(self, condition, x, y):
             if not isinstance(condition, tf.Tensor):
@@ -385,7 +406,7 @@ def native_factory(
             data_format="NCHW",
         ):
             p2i = patches2im(
-                self.value,
+                self,
                 patch_size,
                 strides=strides,
                 padding=padding,
@@ -393,7 +414,7 @@ def native_factory(
                 consolidation=consolidation,
                 data_format=data_format,
             )
-            return Tensor(p2i)
+            return p2i
 
         def conv2d(self, other, strides: list, padding: str = "SAME"):
             if EXPLICIT_MODULUS is not None:

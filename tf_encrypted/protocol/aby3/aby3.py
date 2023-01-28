@@ -4194,7 +4194,7 @@ def _relu_with_cmp_private(prot, x):
     return result, cmp
 
 
-def _sqrt_public(prot, x, approx_type):
+def _sqrt_public(prot, x, approx_type, precision):
     assert isinstance(x, ABY3PublicTensor), type(x)
 
     backing_dtype = x.backing_dtype
@@ -4214,8 +4214,7 @@ def _sqrt_public(prot, x, approx_type):
                 ys[i] = backing_dtype.tensor(
                     prot._encode(
                         yi_decoded,
-                        apply_scaling=is_scaled,
-                        factory=backing_dtype,
+                        apply_scaling=is_scaled
                     )
                 )
 
@@ -4244,7 +4243,6 @@ def _reciprocal_public(prot, x):
                     prot._encode(
                         yi_decoded,
                         apply_scaling=is_scaled,
-                        factory=backing_dtype,
                     )
                 )
 
@@ -4685,6 +4683,9 @@ def _read_(prot, filenames_prefix, file_batch, output_shape, buffer_num):
     for d in output_shape:
         buffer_size *= d
     buffer_size *= (prot.default_nbits // 8)
+
+    if isinstance(filenames_prefix, str):
+        filenames_prefix = [filenames_prefix]
 
     if prot.default_nbits == 128:
         output_shape.append(2)
