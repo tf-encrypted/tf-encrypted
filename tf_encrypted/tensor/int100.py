@@ -224,13 +224,17 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                 for mi in MODULI
             ]
             return Tensor(backing)
-        
+
         def sample_seeded_uniform(
-            self, shape, seed, minval: Optional[int] = None, maxval: Optional[int] = None
+            self,
+            shape,
+            seed,
+            minval: Optional[int] = None,
+            maxval: Optional[int] = None,
         ):
             assert minval is None
             assert maxval is None
-            
+
             if secure_random.supports_seeded_randomness():
                 shape = list(shape) + [len(MODULI)]
                 value = secure_random.seeded_random_uniform(
@@ -314,29 +318,28 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                 for i in range(len(xs[0].backing))
             ]
             return Tensor(backing)
-        
-        def tensor(self, initial_value, encode: bool=True):
+
+        def tensor(self, initial_value, encode: bool = True):
             if encode:
                 initial_value = self._encode(initial_value)
             return Tensor(initial_value)
 
-        def constant(self, initial_value, encode: bool=True):
+        def constant(self, initial_value, encode: bool = True):
             if encode:
                 initial_value = self._encode(initial_value)
             return Constant(initial_value)
 
-        def variable(self, initial_value, encode: bool=True):
+        def variable(self, initial_value, encode: bool = True):
             if isinstance(initial_value, Tensor):
                 initial_value = initial_value.backing
                 encode = False
             if encode:
                 initial_value = self._encode(initial_value)
             variable_value = [
-                tf.Variable(value, dtype=INT_TYPE)
-                for value in initial_value
+                tf.Variable(value, dtype=INT_TYPE) for value in initial_value
             ]
             return Variable(variable_value)
-        
+
         def _encode(self, scaled_value):
             if isinstance(scaled_value, (int, float)):
                 scaled_value = np.array(scaled_value)
@@ -361,7 +364,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                 raise TypeError(
                     "Don't know how to handle {}".format(type(scaled_value))
                 )
-        
+
         def _decode(self, encode_value):
             if isinstance(encode_value, list):
                 return crt_recombine_explicit(encode_value, 2**32)
@@ -670,8 +673,10 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
                     strides=strides,
                     padding=padding,
                 )
-        
-        def im2patches(self, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"):
+
+        def im2patches(
+            self, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"
+        ):
             backing = [
                 im2patches(
                     xi,

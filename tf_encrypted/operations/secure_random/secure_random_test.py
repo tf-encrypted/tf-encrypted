@@ -26,7 +26,7 @@ class TestSeededRandom(unittest.TestCase):
     def test_wrapper(self):
         expected = [
             [7738, 4010, 3717],
-            [7182,  302, 6300],
+            [7182, 302, 6300],
             [3270, 1433, 6475],
         ]
 

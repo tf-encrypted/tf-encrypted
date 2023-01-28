@@ -1,9 +1,7 @@
 """Commonly used tensor functions."""
 import math
 from typing import Optional
-from typing import Union
 
-import numpy as np
 import tensorflow as tf
 
 
@@ -67,6 +65,7 @@ def im2patches(x, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"
             patches = tf.transpose(patches, [0, 3, 1, 2])
 
     return patches
+
 
 def patches2im(
     patches,
@@ -242,9 +241,7 @@ def im2col(
             patch_tensor = patch_tensor.transpose([2, 0, 1, 3])
 
         # reshape to x_col
-        x_col_tensor = patch_tensor.reshape(
-            (channels * h_filter * w_filter, -1)
-        )
+        x_col_tensor = patch_tensor.reshape((channels * h_filter * w_filter, -1))
 
         return x_col_tensor
 

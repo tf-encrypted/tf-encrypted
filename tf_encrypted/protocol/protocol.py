@@ -130,6 +130,7 @@ def unwrap_func(wrap_args):
     else:
         return wrap_args
 
+
 def wrap_func(unwrap_args):
     prot = tfe.get_protocol()
 
@@ -139,6 +140,7 @@ def wrap_func(unwrap_args):
         return prot.from_bone(unwrap_args)
     else:
         return unwrap_args
+
 
 def input_unwrap(wrap_args, wrap_kwargs):
 

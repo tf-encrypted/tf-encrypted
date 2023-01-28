@@ -26,14 +26,15 @@ from tensorflow.python.ops.while_v2 import _build_while_op
 from tensorflow.python.ops.while_v2 import glob_stateful_parallelism
 
 from ...config import get_config
-from ...operations import secure_random as crypto
 from ...operations import dataset
+from ...operations import secure_random as crypto
 from ...player import Player
 from ...tensor import factories
-from ...tensor import fixed64_heuristic, fixed128_heuristic
-from ...tensor.fixed import FixedpointConfig
+from ...tensor.fixed import fixed64_heuristic
+from ...tensor.fixed import fixed128_heuristic
 from ...tensor.factory import AbstractFactory
 from ...tensor.factory import AbstractTensor
+from ...tensor.fixed import FixedpointConfig
 from ...tensor.shared import out_size
 from ..protocol import Protocol
 from ..protocol import memoize
@@ -65,18 +66,14 @@ class ABY3(Protocol):
     """ABY3 framework."""
 
     def __init__(
-        self,
-        server_0=None,
-        server_1=None,
-        server_2=None,
-        fixedpoint_config=None
+        self, server_0=None, server_1=None, server_2=None, fixedpoint_config=None
     ):
         config = get_config()
         self.servers = [None, None, None]
         self.servers[0] = config.get_player(server_0 if server_0 else "server0")
         self.servers[1] = config.get_player(server_1 if server_1 else "server1")
         self.servers[2] = config.get_player(server_2 if server_2 else "server2")
-        
+
         if fixedpoint_config is None:
             self.fixedpoint_config = fixed64_heuristic
         elif isinstance(fixedpoint_config, int):
@@ -85,7 +82,9 @@ class ABY3(Protocol):
             elif fixedpoint_config == 128:
                 fixedpoint_config = fixed128_heuristic
             else:
-                raise ValueError("Only support 64 or 128 bits, get {}".format(fixedpoint_config))
+                raise ValueError(
+                    "Only support 64 or 128 bits, get {}".format(fixedpoint_config)
+                )
         elif isinstance(fixedpoint_config, FixedpointConfig):
             self.fixedpoint_config = fixedpoint_config
         else:
@@ -760,7 +759,9 @@ class ABY3(Protocol):
             values = [None, None, None]
             for i in range(3):
                 with tf.device(self.servers[i].device_name):
-                    values[i] = factory.tensor(tensor_bone.values[i], encode=False).identity()
+                    values[i] = factory.tensor(
+                        tensor_bone.values[i], encode=False
+                    ).identity()
             return ABY3PublicTensor(
                 self,
                 values,
@@ -770,8 +771,12 @@ class ABY3(Protocol):
             shares = [[None, None], [None, None], [None, None]]
             for i in range(3):
                 with tf.device(self.servers[i].device_name):
-                    shares[i][0] = factory.tensor(tensor_bone.shares[i][0], encode=False).identity()
-                    shares[i][1] = factory.tensor(tensor_bone.shares[i][1], encode=False).identity()
+                    shares[i][0] = factory.tensor(
+                        tensor_bone.shares[i][0], encode=False
+                    ).identity()
+                    shares[i][1] = factory.tensor(
+                        tensor_bone.shares[i][1], encode=False
+                    ).identity()
             return ABY3PrivateTensor(
                 self,
                 shares,
@@ -784,9 +789,7 @@ class ABY3(Protocol):
             )
 
     def _encode(
-        self,
-        rationals: Union[tf.Tensor, np.ndarray],
-        apply_scaling: bool
+        self, rationals: Union[tf.Tensor, np.ndarray], apply_scaling: bool
     ) -> Union[tf.Tensor, np.ndarray]:
         """
         Encode tensor of rational numbers into tensor of ring elements. Output is
@@ -860,14 +863,22 @@ class ABY3(Protocol):
                 # Replicated sharing
                 shares = [[None, None], [None, None], [None, None]]
                 with tf.device(self.servers[0].device_name):
-                    shares[0][0] = secret.factory.sample_seeded_uniform(secret_shape, seed0)
-                    shares[0][1] = secret.factory.sample_seeded_uniform(secret_shape, seed1)
+                    shares[0][0] = secret.factory.sample_seeded_uniform(
+                        secret_shape, seed0
+                    )
+                    shares[0][1] = secret.factory.sample_seeded_uniform(
+                        secret_shape, seed1
+                    )
                 with tf.device(self.servers[1].device_name):
-                    shares[1][0] = secret.factory.sample_seeded_uniform(secret_shape, seed1)
+                    shares[1][0] = secret.factory.sample_seeded_uniform(
+                        secret_shape, seed1
+                    )
                     shares[1][1] = share2.identity()
                 with tf.device(self.servers[2].device_name):
                     shares[2][0] = share2.identity()
-                    shares[2][1] = secret.factory.sample_seeded_uniform(secret_shape, seed0)
+                    shares[2][1] = secret.factory.sample_seeded_uniform(
+                        secret_shape, seed0
+                    )
                 return shares
 
             else:
@@ -1568,7 +1579,9 @@ class ABY3(Protocol):
         if x.dispatch_id == "public":
             return self.dispatch("reciprocal", x)
         elif x.dispatch_id == "private":
-            return self.dispatch("fp_recip", x, nonsigned, precision=precision, container=fp)
+            return self.dispatch(
+                "fp_recip", x, nonsigned, precision=precision, container=fp
+            )
         else:
             raise TypeError("Don't know how to dispatch reciprocal: {}".format(type(x)))
 
@@ -1609,7 +1622,9 @@ class ABY3(Protocol):
         return self.dispatch("write", x, filename_prefix, append)
 
     def read(self, filenames_prefix, file_batch, output_shape, buffer_num=1):
-        return self.dispatch("read", filenames_prefix, file_batch, output_shape, buffer_num)
+        return self.dispatch(
+            "read", filenames_prefix, file_batch, output_shape, buffer_num
+        )
 
     def iterate(
         self,
@@ -2661,7 +2676,7 @@ def _truncate_heuristic_private(
             scale = prot.fixedpoint_config.precision_fractional
         else:
             scale = 0
-        
+
         if amount is None:
             amount = prot.fixedpoint_config.precision_fractional
 
@@ -3352,21 +3367,41 @@ def _ppa_sklansky_private_private(prot, x, y, n_bits):
 
     with tf.name_scope("ppa"):
         if x.backing_dtype.nbits == 64:
-            keep_masks = [0x5555555555555555, 0x3333333333333333, 0x0f0f0f0f0f0f0f0f,
-                          0x00ff00ff00ff00ff, 0x0000ffff0000ffff, 0x00000000ffffffff]
-            copy_masks = [0x5555555555555555, 0x2222222222222222, 0x0808080808080808,
-                          0x0080008000800080, 0x0000800000008000, 0x0000000080000000]
+            keep_masks = [
+                0x5555555555555555,
+                0x3333333333333333,
+                0x0F0F0F0F0F0F0F0F,
+                0x00FF00FF00FF00FF,
+                0x0000FFFF0000FFFF,
+                0x00000000FFFFFFFF,
+            ]
+            copy_masks = [
+                0x5555555555555555,
+                0x2222222222222222,
+                0x0808080808080808,
+                0x0080008000800080,
+                0x0000800000008000,
+                0x0000000080000000,
+            ]
         elif x.backing_dtype.nbits == 128:
             keep_masks = [
-                    0x55555555555555555555555555555555, 0x33333333333333333333333333333333,
-                    0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f, 0x00ff00ff00ff00ff00ff00ff00ff00ff,
-                    0x0000ffff0000ffff0000ffff0000ffff, 0x00000000ffffffff00000000ffffffff,
-                    0x0000000000000000ffffffffffffffff]
+                0x55555555555555555555555555555555,
+                0x33333333333333333333333333333333,
+                0x0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F,
+                0x00FF00FF00FF00FF00FF00FF00FF00FF,
+                0x0000FFFF0000FFFF0000FFFF0000FFFF,
+                0x00000000FFFFFFFF00000000FFFFFFFF,
+                0x0000000000000000FFFFFFFFFFFFFFFF,
+            ]
             copy_masks = [
-                    0x55555555555555555555555555555555, 0x22222222222222222222222222222222,
-                    0x08080808080808080808080808080808, 0x00800080008000800080008000800080,
-                    0x00008000000080000000800000008000, 0x00000000800000000000000080000000,
-                    0x00000000000000008000000000000000]
+                0x55555555555555555555555555555555,
+                0x22222222222222222222222222222222,
+                0x08080808080808080808080808080808,
+                0x00800080008000800080008000800080,
+                0x00008000000080000000800000008000,
+                0x00000000800000000000000080000000,
+                0x00000000000000008000000000000000,
+            ]
 
         G = x & y
         P = x ^ y
@@ -3595,25 +3630,43 @@ def _while_loop_(prot, cond, body, loop_vars):
                 index += 3
                 shares = [None, None, None]
                 with tf.device(prot.servers[0].device_name):
-                    shares[0] = aux[i]["factory"].tensor(tf.identity(values[0]), encode=False)
+                    shares[0] = aux[i]["factory"].tensor(
+                        tf.identity(values[0]), encode=False
+                    )
                 with tf.device(prot.servers[1].device_name):
-                    shares[1] = aux[i]["factory"].tensor(tf.identity(values[1]), encode=False)
+                    shares[1] = aux[i]["factory"].tensor(
+                        tf.identity(values[1]), encode=False
+                    )
                 with tf.device(prot.servers[2].device_name):
-                    shares[2] = aux[i]["factory"].tensor(tf.identity(values[2]), encode=False)
+                    shares[2] = aux[i]["factory"].tensor(
+                        tf.identity(values[2]), encode=False
+                    )
                 var = ABY3PublicTensor(prot, shares, aux[i]["is_scaled"])
             elif issubclass(aux[i]["class"], ABY3PrivateTensor):
                 values = native[index : index + 6]
                 index += 6
                 shares = [[None, None], [None, None], [None, None]]
                 with tf.device(prot.servers[0].device_name):
-                    shares[0][0] = aux[i]["factory"].tensor(tf.identity(values[0]), encode=False)
-                    shares[0][1] = aux[i]["factory"].tensor(tf.identity(values[1]), encode=False)
+                    shares[0][0] = aux[i]["factory"].tensor(
+                        tf.identity(values[0]), encode=False
+                    )
+                    shares[0][1] = aux[i]["factory"].tensor(
+                        tf.identity(values[1]), encode=False
+                    )
                 with tf.device(prot.servers[1].device_name):
-                    shares[1][0] = aux[i]["factory"].tensor(tf.identity(values[2]), encode=False)
-                    shares[1][1] = aux[i]["factory"].tensor(tf.identity(values[3]), encode=False)
+                    shares[1][0] = aux[i]["factory"].tensor(
+                        tf.identity(values[2]), encode=False
+                    )
+                    shares[1][1] = aux[i]["factory"].tensor(
+                        tf.identity(values[3]), encode=False
+                    )
                 with tf.device(prot.servers[2].device_name):
-                    shares[2][0] = aux[i]["factory"].tensor(tf.identity(values[4]), encode=False)
-                    shares[2][1] = aux[i]["factory"].tensor(tf.identity(values[5]), encode=False)
+                    shares[2][0] = aux[i]["factory"].tensor(
+                        tf.identity(values[4]), encode=False
+                    )
+                    shares[2][1] = aux[i]["factory"].tensor(
+                        tf.identity(values[5]), encode=False
+                    )
                 var = ABY3PrivateTensor(
                     prot, shares, aux[i]["is_scaled"], aux[i]["share_type"]
                 )
@@ -3653,8 +3706,12 @@ def _while_loop_(prot, cond, body, loop_vars):
     body_graph.outputs.extend(body_graph.internal_captures)
     output_shapes = [var.shape for var in native_vars]
 
-    cond_graph.name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-    body_graph.name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+    cond_graph.name = "".join(
+        random.choices(string.ascii_uppercase + string.digits, k=10)
+    )
+    body_graph.name = "".join(
+        random.choices(string.ascii_uppercase + string.digits, k=10)
+    )
 
     if glob_stateful_parallelism == "stateless_cond":
         stateful_parallelism = not any(
@@ -4212,10 +4269,7 @@ def _sqrt_public(prot, x, approx_type, precision):
                 yi_decoded = tf.math.sqrt(xi_decoded)
                 # re-encode and re-wrap
                 ys[i] = backing_dtype.tensor(
-                    prot._encode(
-                        yi_decoded,
-                        apply_scaling=is_scaled
-                    )
+                    prot._encode(yi_decoded, apply_scaling=is_scaled)
                 )
 
         y = ABY3PublicTensor(prot, ys, is_scaled)
@@ -4674,15 +4728,16 @@ def _write_private(prot, x, filename_prefix, append):
                 dataset.write_record(
                     "{}_share{}{}".format(filename_prefix, i, j),
                     tf.io.serialize_tensor(x_shares[i][j].value),
-                    append=append
+                    append=append,
                 )
+
 
 def _read_(prot, filenames_prefix, file_batch, output_shape, buffer_num):
 
     buffer_size = buffer_num
     for d in output_shape:
         buffer_size *= d
-    buffer_size *= (prot.default_nbits // 8)
+    buffer_size *= prot.default_nbits // 8
 
     if isinstance(filenames_prefix, str):
         filenames_prefix = [filenames_prefix]
@@ -4695,28 +4750,38 @@ def _read_(prot, filenames_prefix, file_batch, output_shape, buffer_num):
 
     def shaping(input):
         return tf.reshape(input, output_shape)
-    
+
     batch = [[None] * 2 for _ in range(3)]
     for i in range(3):
         with tf.device(prot.servers[i].device_name):
             for j in range(2):
-                dataset = tf.data.TFRecordDataset(["{}_share{}{}".format(prefix, i, j) for prefix in filenames_prefix], buffer_size=buffer_size)
+                dataset = tf.data.TFRecordDataset(
+                    [
+                        "{}_share{}{}".format(prefix, i, j)
+                        for prefix in filenames_prefix
+                    ],
+                    buffer_size=buffer_size,
+                )
                 dataset = dataset.map(decode)
                 dataset = dataset.batch(batch_size=(output_shape[0] // file_batch))
                 dataset = dataset.map(shaping)
                 dataset = dataset.repeat()
                 dataset = dataset.prefetch(buffer_num)
                 batch[i][j] = iter(dataset)
-    
+
     def encode_tensor(batch):
         while True:
             share = [[None] * 2 for _ in range(3)]
             for i in range(3):
                 with tf.device(prot.servers[i].device_name):
-                    share[i][0] = prot.default_factory.tensor(next(batch[i][0]), encode=False)
-                    share[i][1] = prot.default_factory.tensor(next(batch[i][1]), encode=False)
+                    share[i][0] = prot.default_factory.tensor(
+                        next(batch[i][0]), encode=False
+                    )
+                    share[i][1] = prot.default_factory.tensor(
+                        next(batch[i][1]), encode=False
+                    )
             yield ABY3PrivateTensor(prot, share, True, ShareType.ARITHMETIC)
-        
+
     return encode_tensor(batch)
 
 

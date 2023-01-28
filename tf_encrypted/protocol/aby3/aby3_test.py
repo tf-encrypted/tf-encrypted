@@ -13,8 +13,8 @@ import tensorflow as tf
 
 import tf_encrypted as tfe
 from tf_encrypted.protocol.aby3 import ABY3
-from tf_encrypted.tensor import factories
 from tf_encrypted.protocol.aby3 import ShareType
+from tf_encrypted.tensor import factories
 
 
 @pytest.mark.aby3
@@ -301,8 +301,10 @@ class TestABY3(unittest.TestCase):
         # reveal result
         result = m_z.reveal().to_native()
         np.testing.assert_allclose(result, z, rtol=0.0, atol=0.01)
-    
-    @unittest.skipIf(tfe.get_protocol().default_nbits == 128, "128 bits tensor not support 3d matmul")
+
+    @unittest.skipIf(
+        tfe.get_protocol().default_nbits == 128, "128 bits tensor not support 3d matmul"
+    )
     def test_3d_matmul_private(self):
 
         prot = ABY3()
@@ -653,7 +655,7 @@ class TestABY3(unittest.TestCase):
         np.testing.assert_allclose(
             result, np.array([[2, 4, 6], [8, 10, 12]]), rtol=0.0, atol=0.01
         )
-    
+
     @unittest.skipIf(tfe.get_protocol().default_nbits == 128, "unavailable for i128")
     def test_rshift_private(self):
 
@@ -1550,7 +1552,7 @@ class TestABY3(unittest.TestCase):
         np.testing.assert_allclose(
             result, np.array([[2.6, 2.6], [2.6, 2.6]]), rtol=0.0, atol=0.01
         )
-    
+
     def test_write_private(self):
 
         prot = ABY3()
@@ -1570,7 +1572,7 @@ class TestABY3(unittest.TestCase):
         x.write(tmp_filename)
 
         os.remove(tmp_filename)
-    
+
     def test_read_private(self):
 
         prot = ABY3()

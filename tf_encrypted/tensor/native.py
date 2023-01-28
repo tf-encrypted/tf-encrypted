@@ -11,6 +11,7 @@ from typing import Union
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.framework.tensor_shape import TensorShape
 
 from ..operations import aux
 from ..operations import secure_random
@@ -25,8 +26,6 @@ from .shared import im2col
 from .shared import im2patches
 from .shared import patches2im
 
-from tensorflow.python.framework.tensor_shape import TensorShape
-
 
 def native_factory(
     NATIVE_TYPE,
@@ -37,17 +36,17 @@ def native_factory(
     class Factory(AbstractFactory):
         """Native tensor factory."""
 
-        def tensor(self, initial_value, encode: bool=True):
+        def tensor(self, initial_value, encode: bool = True):
             if encode:
                 initial_value = self._encode(initial_value)
             return Tensor(initial_value)
 
-        def constant(self, initial_value, encode: bool=True):
+        def constant(self, initial_value, encode: bool = True):
             if encode:
                 initial_value = self._encode(initial_value)
             return Constant(initial_value)
 
-        def variable(self, initial_value, encode: bool=True):
+        def variable(self, initial_value, encode: bool = True):
             if isinstance(initial_value, Tensor):
                 initial_value = initial_value.value
                 encode = False
@@ -57,7 +56,7 @@ def native_factory(
                 initial_value, dtype=self.native_type, trainable=False
             )
             return Variable(variable_value)
-        
+
         def _encode(self, scaled_value):
             if isinstance(scaled_value, (int, float)):
                 scaled_value = np.array(scaled_value)
@@ -70,7 +69,7 @@ def native_factory(
                 raise TypeError(
                     "Don't know how to handle {}".format(type(scaled_value))
                 )
-        
+
         def _decode(self, encode_value):
             if isinstance(encode_value, tf.Tensor):
                 return encode_value
@@ -213,7 +212,7 @@ def native_factory(
             assert all(isinstance(x, Tensor) for x in xs)
             value = tf.concat([x.value for x in xs], axis=axis)
             return Tensor(value)
-        
+
         def ones(self, shape):
             if not isinstance(shape, (list, tuple, TensorShape)):
                 raise TypeError("shape must be a list or tuple of integers")
@@ -223,14 +222,14 @@ def native_factory(
             if not isinstance(shape, (list, tuple, TensorShape)):
                 raise TypeError("shape must be a list or tuple of integers")
             return Tensor(tf.ones(shape, self.native_type))
-        
+
         def pad(self, tensor, paddings):
             return Tensor(tf.pad(tensor.value), paddings)
 
-        def ones_like(self, x: 'Tensor'):
+        def ones_like(self, x: "Tensor"):
             return self.ones(x.shape)
 
-        def zeros_like(self, x: 'Tensor'):
+        def zeros_like(self, x: "Tensor"):
             return self.zeros(x.shape)
 
         def where(self, condition, x, y):
@@ -381,12 +380,12 @@ def native_factory(
             return Tensor(value)
 
         def im2col(self, h_filter, w_filter, strides, padding):
-            i2c = im2col(
-                self, h_filter, w_filter, strides=strides, padding=padding
-            )
+            i2c = im2col(self, h_filter, w_filter, strides=strides, padding=padding)
             return i2c
 
-        def im2patches(self, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"):
+        def im2patches(
+            self, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"
+        ):
             i2p = im2patches(
                 self.value,
                 patch_size,

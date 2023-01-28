@@ -24,17 +24,17 @@ def bool_factory():
     class Factory(AbstractFactory):
         """Native tensor factory."""
 
-        def tensor(self, initial_value, encode: bool=True):
+        def tensor(self, initial_value, encode: bool = True):
             if encode:
                 initial_value = self._encode(initial_value)
             return Tensor(initial_value)
 
-        def constant(self, initial_value, encode: bool=True):
+        def constant(self, initial_value, encode: bool = True):
             if encode:
                 initial_value = self._encode(initial_value)
             return Constant(initial_value)
 
-        def variable(self, initial_value, encode: bool=True):
+        def variable(self, initial_value, encode: bool = True):
             if isinstance(initial_value, Tensor):
                 initial_value = initial_value.value
                 encode = False
@@ -44,7 +44,7 @@ def bool_factory():
                 initial_value, dtype=self.native_type, trainable=False
             )
             return Variable(variable_value)
-        
+
         def _encode(self, scaled_value):
             if isinstance(scaled_value, (int, float)):
                 scaled_value = np.array(scaled_value)
@@ -57,7 +57,7 @@ def bool_factory():
                 raise TypeError(
                     "Don't know how to handle {}".format(type(scaled_value))
                 )
-        
+
         def _decode(self, encode_value):
             if isinstance(encode_value, tf.Tensor):
                 return encode_value

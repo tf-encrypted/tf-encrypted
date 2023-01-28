@@ -2,19 +2,27 @@
 
 These use TensorFlow's native dtypes tf.int64 for the given float
 encoding being used (fixed-point, etc.)."""
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Union
+
 import numpy as np
 import tensorflow as tf
-
-from typing import Union, List, Tuple, Optional
-
-from .shared import binarize, conv2d, im2col, im2patches, patches2im
-from .factory import (AbstractFactory, AbstractTensor, AbstractVariable,
-                      AbstractConstant)
-from .helpers import inverse
-from ..operations import tf_i128
-from ..operations import secure_random
-
 from tensorflow.python.framework.tensor_shape import TensorShape
+
+from ..operations import secure_random
+from ..operations import tf_i128
+from .factory import AbstractConstant
+from .factory import AbstractFactory
+from .factory import AbstractTensor
+from .factory import AbstractVariable
+from .helpers import inverse
+from .shared import binarize
+from .shared import conv2d
+from .shared import im2col
+from .shared import im2patches
+from .shared import patches2im
 
 
 def int128_factory():  # pylint: disable=invalid-name
@@ -23,17 +31,17 @@ def int128_factory():  # pylint: disable=invalid-name
     class Factory(AbstractFactory):
         """128 bits tensor factory."""
 
-        def tensor(self, initial_value, encode: bool=True):
+        def tensor(self, initial_value, encode: bool = True):
             if encode:
                 initial_value = self._encode(initial_value)
             return Tensor(initial_value)
 
-        def constant(self, initial_value, encode: bool=True):
+        def constant(self, initial_value, encode: bool = True):
             if encode:
                 initial_value = self._encode(initial_value)
             return Constant(initial_value)
 
-        def variable(self, initial_value, encode: bool=True):
+        def variable(self, initial_value, encode: bool = True):
             if isinstance(initial_value, Tensor):
                 initial_value = initial_value.value
                 encode = False
@@ -43,7 +51,7 @@ def int128_factory():  # pylint: disable=invalid-name
                 initial_value, dtype=self.native_type, trainable=False
             )
             return Variable(variable_value)
-        
+
         def _encode(self, scaled_value):
             if isinstance(scaled_value, (int, float)):
                 scaled_value = np.array(scaled_value)
@@ -58,7 +66,7 @@ def int128_factory():  # pylint: disable=invalid-name
                 raise TypeError(
                     "Don't know how to handle {}".format(type(scaled_value))
                 )
-        
+
         def _decode(self, encode_value):
             if isinstance(encode_value, tf.Tensor):
                 return tf_i128.from_i128(encode_value)
@@ -69,11 +77,11 @@ def int128_factory():  # pylint: disable=invalid-name
 
         @property
         def min(self):
-            return -2**127
+            return -(2**127)
 
         @property
         def max(self):
-            return 2**127-1
+            return 2**127 - 1
 
         @property
         def min_as_int64(self):
@@ -100,46 +108,37 @@ def int128_factory():  # pylint: disable=invalid-name
         def nbits(self):
             return self.native_size * self.native_type.size * 8
 
-        def sample_uniform(self,
-                           shape,
-                           minval=None,
-                           maxval=None):
+        def sample_uniform(self, shape, minval=None, maxval=None):
             minval = self.min_as_int64 if minval is None else minval
             maxval = self.max_as_int64 if maxval is None else maxval
 
             seed = secure_random.secure_seed()
-            return Tensor(secure_random.i128_seeded_random_uniform(
-                shape=shape,
-                seed=seed,
-                minval=minval,
-                maxval=maxval,
-                ))
+            return Tensor(
+                secure_random.i128_seeded_random_uniform(
+                    shape=shape,
+                    seed=seed,
+                    minval=minval,
+                    maxval=maxval,
+                )
+            )
 
-        def sample_seeded_uniform(self,
-                                  shape,
-                                  seed,
-                                  minval=None,
-                                  maxval=None):
+        def sample_seeded_uniform(self, shape, seed, minval=None, maxval=None):
             minval = self.min_as_int64 if minval is None else minval
             maxval = self.max_as_int64 if maxval is None else maxval
 
-            # Don't use UniformTensor for lazy sampling here, because the `seed` might be something (e.g., key) we
+            # Don't use UniformTensor for lazy sampling here,
+            # because the `seed` might be something (e.g., key) we
             # want to protect, and we cannot send it to another party
             value = secure_random.i128_seeded_random_uniform(
-                shape=shape,
-                seed=seed,
-                minval=minval,
-                maxval=maxval
+                shape=shape, seed=seed, minval=minval, maxval=maxval
             )
             return Tensor(value)
 
-        def sample_seeded_bounded(self,
-                                  shape,
-                                  seed,
-                                  bitlength: int):
+        def sample_seeded_bounded(self, shape, seed, bitlength: int):
             assert bitlength <= 128
 
-            # Don't use UniformTensor for lazy sampling here, because the `seed` might be something (e.g., key) we
+            # Don't use UniformTensor for lazy sampling here,
+            # because the `seed` might be something (e.g., key) we
             # want to protect, and we cannot send it to another party
             value = secure_random.i128_seeded_random_uniform(
                 shape=shape,
@@ -188,15 +187,15 @@ def int128_factory():  # pylint: disable=invalid-name
             else:
                 new_shape = tf.TensorShape(shape.as_list() + [self.native_size])
             return Tensor(tf.zeros(new_shape, self.native_type))
-        
+
         def pad(self, tensor, paddings):
             paddings = paddings + [[0, 0]]
             return Tensor(tf.pad(tensor.value), paddings)
 
-        def ones_like(self, x: 'Tensor'):
+        def ones_like(self, x: "Tensor"):
             return self.ones(x.shape)
 
-        def zeros_like(self, x: 'Tensor'):
+        def zeros_like(self, x: "Tensor"):
             return self.zeros(x.shape)
 
         def where(self, condition, x, y):
@@ -221,17 +220,16 @@ def int128_factory():  # pylint: disable=invalid-name
             else:
                 raise TypeError("multiples must be a tuple, a list or a tf.Tensor")
             return Tensor(tf.tile(input.value, multiples))
-        
+
         def scatter_nd(self, indices, updates, shape):
             if isinstance(indices, Tensor):
                 indices = tf.gather(indices.value, 0, axis=-1)
-            
+
             r0 = tf.scatter_nd(indices, tf.gather(updates.value, 0, axis=-1), shape)
             r1 = tf.scatter_nd(indices, tf.gather(updates.value, 1, axis=-1), shape)
             return Tensor(tf.stack([r0, r1], axis=-1))
 
-
-    def _lift(x, y) -> Tuple['Tensor', 'Tensor']:
+    def _lift(x, y) -> Tuple["Tensor", "Tensor"]:  # noqa:F821
 
         if isinstance(x, Tensor) and isinstance(y, Tensor):
             return x, y
@@ -243,7 +241,7 @@ def int128_factory():  # pylint: disable=invalid-name
             return y.factory.tensor(np.array(x)), y
 
         raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
-    
+
     def _lift_axis(axis, dims):
         if isinstance(axis, (list, tuple)):
             new_axis = []
@@ -275,7 +273,7 @@ def int128_factory():  # pylint: disable=invalid-name
         @property
         def shape(self):
             # Remove the last dimension
-            return self._value.shape[0:len(self._value.shape)-1]
+            return self._value.shape[0 : len(self._value.shape) - 1]
 
         @property
         def native_shape(self):
@@ -287,7 +285,7 @@ def int128_factory():  # pylint: disable=invalid-name
 
         def to_native(self) -> tf.Tensor:
             return self.factory._decode(self.value)
-        
+
         def bits(self, factory=None, bitsize=128) -> AbstractTensor:
             factory = factory or FACTORY
             if bitsize <= 64:
@@ -301,12 +299,12 @@ def int128_factory():  # pylint: disable=invalid-name
                 return factory.tensor(tf.stack([t0, t1], axis=-1))
 
         def __repr__(self) -> str:
-            return '{}(shape={})'.format(type(self), self.shape)
+            return "{}(shape={})".format(type(self), self.shape)
 
         @property
         def factory(self):
             return FACTORY
-        
+
         @property
         def device(self):
             return self._value.device
@@ -375,7 +373,7 @@ def int128_factory():  # pylint: disable=invalid-name
         def bit_gather(self, start, stride):
             value = tf_i128.i128_bit_gather(self.value, start, stride)
             return Tensor(value)
-        
+
         def bit_split_and_gather(self, stride):
             value = tf_i128.i128_bit_split_and_gather(self.value, stride)
             return Tensor(value)
@@ -385,11 +383,9 @@ def int128_factory():  # pylint: disable=invalid-name
             return Tensor(value)
 
         def im2col(self, h_filter, w_filter, strides, padding):
-            i2c = im2col(
-                self, h_filter, w_filter, strides=strides, padding=padding
-            )
+            i2c = im2col(self, h_filter, w_filter, strides=strides, padding=padding)
             return i2c
-        
+
         def im2patches(self, patch_size, strides, padding, data_format="NCHW"):
             patch0 = im2patches(
                 tf.gather(self.value, 0, axis=-1),
@@ -407,7 +403,7 @@ def int128_factory():  # pylint: disable=invalid-name
             )
             patches = tf.stack([patch0, patch1], axis=-1)
             return Tensor(patches)
-        
+
         def patches2im(
             self,
             patch_size,
@@ -428,7 +424,7 @@ def int128_factory():  # pylint: disable=invalid-name
             )
             return p2i
 
-        def conv2d(self, other, stride: int, padding: str = 'SAME'):
+        def conv2d(self, other, stride: int, padding: str = "SAME"):
             x, y = _lift(self, other)
             return conv2d(x, y, stride, padding)
 
@@ -443,7 +439,7 @@ def int128_factory():  # pylint: disable=invalid-name
         def transpose(self, perm):
             n_dims = len(self.shape)
             if perm is None:
-                perm = list(range(n_dims-1, -1, -1)) + [n_dims]
+                perm = list(range(n_dims - 1, -1, -1)) + [n_dims]
             else:
                 perm = list(perm) + [n_dims]
             return Tensor(tf.transpose(self.value, perm))
@@ -462,7 +458,7 @@ def int128_factory():  # pylint: disable=invalid-name
             axis = _lift_axis(axis, len(self.shape))
             values = tf.split(self.value, num_split, axis=axis)
             return [Tensor(value) for value in values]
-        
+
         def scatter_nd(self, indices, shape):
             if isinstance(indices, Tensor):
                 indices = tf.gather(indices.value, 0, axis=-1)
@@ -470,7 +466,7 @@ def int128_factory():  # pylint: disable=invalid-name
             r0 = tf.scatter_nd(indices, tf.gather(self.value, 0, axis=-1), shape)
             r1 = tf.scatter_nd(indices, tf.gather(self.value, 1, axis=-1), shape)
             return Tensor(tf.stack([r0, r1], axis=-1))
-        
+
         def reverse(self, axis):
             axis = _lift_axis(axis, len(self.shape))
             value = tf.reverse(self.value, axis)
@@ -508,7 +504,7 @@ def int128_factory():  # pylint: disable=invalid-name
             return (self - (self % factor)) * factor_inverse
 
         def expand_dims(self, axis):
-            axis = _lift_axis(axis, len(self.shape)+1)
+            axis = _lift_axis(axis, len(self.shape) + 1)
             return Tensor(tf.expand_dims(self.value, axis))
 
         def squeeze(self, axis: Optional[List[int]] = None):
@@ -521,8 +517,7 @@ def int128_factory():  # pylint: disable=invalid-name
             elif factory.native_type == tf.bool:
                 split_bool = tf.cast(self.value, tf.bool)
                 merge_bool = tf.math.logical_or(
-                        tf.gather(split_bool, 0, axis=-1),
-                        tf.gather(split_bool, 1, axis=-1)
+                    tf.gather(split_bool, 0, axis=-1), tf.gather(split_bool, 1, axis=-1)
                 )
                 return factory.tensor(merge_bool)
             else:
@@ -548,7 +543,8 @@ def int128_factory():  # pylint: disable=invalid-name
             return self.bitwise_and(other)
 
         def bitwise_and(self, other):
-            # Because "and" is a keyword in Python, the naming "and_" follows the way how Python handles this:
+            # Because "and" is a keyword in Python,
+            # the naming "and_" follows the way how Python handles this:
             # https://docs.python.org/3.4/library/operator.html
             x, y = _lift(self, other)
             value = tf.bitwise.bitwise_and(x.value, y.value)
@@ -568,12 +564,12 @@ def int128_factory():  # pylint: disable=invalid-name
             return Tensor(tf_i128.left_shift(self.value, bitlength))
 
         def __rshift__(self, bitlength):
-          """
-          Arithmetic shift.
-          Please refer to `self.logical_rshift` if a logical right shift is desired.
-          """
-          return self.right_shift(bitlength)
-        
+            """
+            Arithmetic shift.
+            Please refer to `self.logical_rshift` if a logical right shift is desired.
+            """
+            return self.right_shift(bitlength)
+
         def right_shift(self, bitlength):
             return Tensor(tf_i128.right_shift(self.value, bitlength))
 
@@ -588,7 +584,7 @@ def int128_factory():  # pylint: disable=invalid-name
             super(Constant, self).__init__(constant)
 
         def __repr__(self) -> str:
-            return 'Constant(shape={})'.format(self.shape)
+            return "Constant(shape={})".format(self.shape)
 
     class Variable(Tensor, AbstractVariable):
         """Native Variable class."""
@@ -601,7 +597,7 @@ def int128_factory():  # pylint: disable=invalid-name
             self.variable = variable_value
 
         def __repr__(self) -> str:
-            return 'Variable(shape={})'.format(self.shape)
+            return "Variable(shape={})".format(self.shape)
 
         def assign(self, value: Union[Tensor, np.ndarray]) -> None:
             if isinstance(value, Tensor):

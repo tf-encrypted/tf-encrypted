@@ -68,14 +68,18 @@ class TestSeededRandomUniform(unittest.TestCase):
         output = seeded_random_uniform([2, 3], [1, 1, 1, 1, 1, 1, 1, 2], minval, maxval)
 
         np.testing.assert_array_equal(output, expected)
-    
+
     def test_big_tensor(self):
         minval = tf.constant(tf.int64.min, dtype=tf.int64)
         maxval = tf.constant(tf.int64.max, dtype=tf.int64)
 
-        output0 = seeded_random_uniform([20000, 20000], [1, 1, 1, 1, 1, 1, 1, 2], minval, maxval)
-        output1 = seeded_random_uniform([20000, 20000], [1, 1, 1, 1, 1, 1, 1, 2], minval, maxval)
-        
+        output0 = seeded_random_uniform(
+            [20000, 20000], [1, 1, 1, 1, 1, 1, 1, 2], minval, maxval
+        )
+        output1 = seeded_random_uniform(
+            [20000, 20000], [1, 1, 1, 1, 1, 1, 1, 2], minval, maxval
+        )
+
         np.testing.assert_array_equal(output0, output1)
 
 

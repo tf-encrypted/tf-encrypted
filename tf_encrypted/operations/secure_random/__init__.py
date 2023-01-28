@@ -1,9 +1,9 @@
 """Secure random API."""
-from .secure_random import random_uniform
 from .secure_random import i128_random_uniform
+from .secure_random import i128_seeded_random_uniform
+from .secure_random import random_uniform
 from .secure_random import secure_seed
 from .secure_random import seeded_random_uniform
-from .secure_random import i128_seeded_random_uniform
 from .secure_random import supports_secure_randomness
 from .secure_random import supports_seeded_randomness
 

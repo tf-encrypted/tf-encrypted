@@ -157,11 +157,16 @@ def random_uniform(
         name=name,
     )
 
+
 def i128_seeded_random_uniform(shape, seed, minval, maxval):
-    return secure_random_module.i128_secure_seeded_random_uniform(shape, seed, minval, maxval)
+    return secure_random_module.i128_secure_seeded_random_uniform(
+        shape, seed, minval, maxval
+    )
+
 
 def i128_random_uniform(shape, minval, maxval):
     return secure_random_module.i128_secure_random_uniform(shape, minval, maxval)
+
 
 def secure_seed(name=None):
     return secure_random_module.secure_seed(name=name)

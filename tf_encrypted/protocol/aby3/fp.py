@@ -9,32 +9,58 @@ from ..protocol import TFEPrivateTensor
 from ..protocol import TFEPublicTensor
 
 
-def _fp_div(prot, a: "TFEPrivateTensor", b: "TFEPrivateTensor", nonsigned: bool, precision: int=1):
+def _fp_div(
+    prot,
+    a: "TFEPrivateTensor",
+    b: "TFEPrivateTensor",
+    nonsigned: bool,
+    precision: int = 1,
+):
     with tf.name_scope("fp_div"):
         return a * _fp_recip_private(prot, b, nonsigned, precision=precision)
 
+
 def _fp_div_private_private(
-    prot, a: "TFEPrivateTensor", b: "TFEPrivateTensor", nonsigned: bool, precision: int=1
+    prot,
+    a: "TFEPrivateTensor",
+    b: "TFEPrivateTensor",
+    nonsigned: bool,
+    precision: int = 1,
 ):
     return _fp_div(prot, a, b, nonsigned, precision=precision)
+
 
 def _fp_div_public_private(
-    prot, a: "TFEPublicTensor", b: "TFEPrivateTensor", nonsigned: bool, precision: int=1
+    prot,
+    a: "TFEPublicTensor",
+    b: "TFEPrivateTensor",
+    nonsigned: bool,
+    precision: int = 1,
 ):
     return _fp_div(prot, a, b, nonsigned, precision=precision)
 
+
 def _fp_div_private_public(
-    prot, a: "TFEPrivateTensor", b: "TFEPublicTensor", nonsigned: bool, precision: int=1
+    prot,
+    a: "TFEPrivateTensor",
+    b: "TFEPublicTensor",
+    nonsigned: bool,
+    precision: int = 1,
 ):
     return a / b
+
 
 def _fp_div_public_public(
-    prot, a: "TFEPublicTensor", b: "TFEPublicTensor", nonsigned: bool, precision: int=1
+    prot,
+    a: "TFEPublicTensor",
+    b: "TFEPublicTensor",
+    nonsigned: bool,
+    precision: int = 1,
 ):
     return a / b
 
 
-def _fp_sqrt2(prot, a: "TFEPrivateTensor", precision: int=1):
+def _fp_sqrt2(prot, a: "TFEPrivateTensor", precision: int = 1):
     c15 = prot.define_constant(1.5)
     c05 = prot.define_constant(0.5)
 
@@ -54,7 +80,7 @@ def _fp_sqrt2(prot, a: "TFEPrivateTensor", precision: int=1):
     return g, h
 
 
-def _fp_recip_private(prot, x: "TFEPrivateTensor", nonsigned, precision: int=1):
+def _fp_recip_private(prot, x: "TFEPrivateTensor", nonsigned, precision: int = 1):
     """
     Approxiamtedly compute 1/x from x.
 
@@ -84,7 +110,7 @@ def _fp_recip_private(prot, x: "TFEPrivateTensor", nonsigned, precision: int=1):
         return appr_recip
 
 
-def _fp_inv_sqrt_private(prot, a: "TFEPrivateTensor", precision: int=1):
+def _fp_inv_sqrt_private(prot, a: "TFEPrivateTensor", precision: int = 1):
     # low precision
     return approx_sqrt_inv(prot, a, precision=precision)
     # high precision with extra 3 rounds of communication
@@ -93,7 +119,7 @@ def _fp_inv_sqrt_private(prot, a: "TFEPrivateTensor", precision: int=1):
     # return h * two
 
 
-def _fp_sqrt_private(prot, a: "TFEPrivateTensor", precision: int=1):
+def _fp_sqrt_private(prot, a: "TFEPrivateTensor", precision: int = 1):
     g, _ = _fp_sqrt2(prot, a, precision=precision)
     return g
 
@@ -115,7 +141,7 @@ def prefix_ORs(b: "TFEPrivateTensor", k: int):
     return b
 
 
-def _do_fp_log_private(prot, x: "TFEPrivateTensor", base: "float", precision: int=1):
+def _do_fp_log_private(prot, x: "TFEPrivateTensor", base: "float", precision: int = 1):
     k = prot.fixedpoint_config.precision_fractional
     m = k + prot.fixedpoint_config.precision_integral
     n = prot.int_factory.nbits
@@ -220,7 +246,7 @@ def __fp_normalize(prot, b: "TFEPrivateTensor", nonsigned=False):
     return sgf, exp
 
 
-def approx_sqrt_inv(prot, x: "TFEPrivateTensor", precision: int=1):
+def approx_sqrt_inv(prot, x: "TFEPrivateTensor", precision: int = 1):
     """
     From x, to compute an approximation of 1/sqrt(x).
     """
@@ -235,7 +261,7 @@ def approx_sqrt_inv(prot, x: "TFEPrivateTensor", precision: int=1):
     k = prot.fixedpoint_config.precision_fractional
     n = x.backing_dtype.nbits
     # using top half bits as integer, bottom half bits as fraction.
-    s = ((n // 2) - k)
+    s = (n // 2) - k
     xs = x << s
     assert k >= s
     assert n % 2 == 0
@@ -254,7 +280,7 @@ def approx_sqrt_inv(prot, x: "TFEPrivateTensor", precision: int=1):
         # do truncate manually here.
         frac.is_scaled = False
         normalized = frac * x  # normalized \in [0.25, 0.5)
-        normalized = prot.truncate(normalized, amount=k+s)
+        normalized = prot.truncate(normalized, amount=k + s)
         normalized.is_scaled = True
         """
         f(b) = 4.7979 * b^2 - 5.9417 * b + 3.1855 approixmates 1/sqrt(b) in [0.25, 0.5)
@@ -266,7 +292,8 @@ def approx_sqrt_inv(prot, x: "TFEPrivateTensor", precision: int=1):
             sqrt_inv = sqrt_inv * (3 - normalized * sqrt_inv * sqrt_inv)
             sqrt_inv = sqrt_inv * 0.5
         """
-            Indeed, the exponetent part is 2^{j+k+s} where k is the scaling factor, s = (n // 2) - k
+            Indeed, the exponetent part is 2^{j+k+s}
+            where k is the scaling factor, s = (n // 2) - k
             We want to compute sqrt(2^{-j}) with k-bit precision,
             i.e., sqrt(2^{-j}) * 2^k.
             In other words, we compute sqrt(2^{-j}) * 2^k from 2^{j+k+s}.
@@ -283,14 +310,15 @@ def approx_sqrt_inv(prot, x: "TFEPrivateTensor", precision: int=1):
                If lsb(j+k+s) = 1 <-> j is odd. Then
                2^{floor(-j/2)} * 2^{-1/2} = sqrt(2^{-j}).
 
-               Suppose k+s is odd: We need 2^{(s-k)//2} * 2 to cancel 2^{floor(-(k+s)/2)}.
+               Suppose k+s is odd,
+               We need 2^{(s-k)//2} * 2 to cancel 2^{floor(-(k+s)/2)}.
                If lsb(j+k+s) = 0 <-> j is odd. In this case,
                2^{floor(-j/2)} * 2^{-1/2} = sqrt(2^{-j}).
                If lsb(j+k+s) = 1 <-> j is even. Then
                2^{floor(-j/2)} = 2^{-j/2} = sqrt(2^{-j}).
         """
         sum_jks = prot.xor_indices(z_bits)
-        lsb = prot.bit_extract(sum_jks, 0) # lsb = 0 <-> j+k+s is even
+        lsb = prot.bit_extract(sum_jks, 0)  # lsb = 0 <-> j+k+s is even
         exponet = prot.b2a(
             prot.bit_gather(rev_z_bits | rev_z_bits >> 1, 0, 2), k + s
         )  # 2^{floor(-(j+k+s)/2)}
@@ -298,8 +326,6 @@ def approx_sqrt_inv(prot, x: "TFEPrivateTensor", precision: int=1):
         if (k + s) & 1 == 0:  # k+s is even which means lsb = 1 <=> j is odd
             exponet = exponet * select(esk, esk * np.sqrt(2.0), lsb)
         else:  # k+s is odd which means lsb = 1 <=> j is even
-            exponet = exponet * select(
-                esk * np.sqrt(2.0), esk * 2, lsb
-            )
+            exponet = exponet * select(esk * np.sqrt(2.0), esk * 2, lsb)
 
     return sqrt_inv * exponet

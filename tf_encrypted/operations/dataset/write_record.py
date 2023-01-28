@@ -20,8 +20,8 @@ def _try_load_dataset_module():
     if not os.path.exists(so_file):
         logger.warning(
             (
-                "Could not find dataset module for the installed version of TensorFlow. "
-                "Fix this by compiling custom ops. Missing file was '%s'"
+                "Could not find dataset module for the installed version of TensorFlow."
+                " Fix this by compiling custom ops. Missing file was '%s'"
             ),
             so_file,
         )
@@ -35,7 +35,7 @@ def _try_load_dataset_module():
     except NotFoundError as ex:
         logger.warning(
             (
-                "Could not find dataset module for the installed version of TensorFlow. "
+                "Could not find dataset module for the installed version of TensorFlow."
                 "Fix this by compiling custom ops. Missing file was '%s', "
                 'error was "%s".'
             ),
@@ -56,6 +56,7 @@ def _try_load_dataset_module():
 
 
 dataset_module = _try_load_dataset_module()
+
 
 def write_record(filename, record, append=True):
     return dataset_module.write_record(filename, record, append)
