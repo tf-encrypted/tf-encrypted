@@ -101,7 +101,7 @@ class Pond(Protocol):
             else:
                 assert isinstance(triple_source, BaseTripleSource)
                 self.triple_source = triple_source
-        
+
         if fixedpoint_config is None:
             self.fixedpoint_config = fixed64
             self.tensor_factory = int64factory
@@ -114,7 +114,9 @@ class Pond(Protocol):
                 self.tensor_factory = int100factory
             else:
                 raise ValueError(
-                    "Only support low or high as argument, get {}".format(fixedpoint_config)
+                    "Only support low or high as argument, get {}".format(
+                        fixedpoint_config
+                    )
                 )
         elif isinstance(fixedpoint_config, FixedpointConfig):
             self.fixedpoint_config = fixedpoint_config
