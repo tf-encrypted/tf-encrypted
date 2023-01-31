@@ -17,3 +17,11 @@ You can also specify which tfe protocol to use and which remote config file to u
 ./examples/benchmark/convert/run-remote.sh resnet50 --protocol ABY3 --config config.json
 ```
 
+By default, inference uses 64 bits for secret sharing, this gives enough precision in most cases.
+We also give a option to use 128 bits for secret sharing by setting `--precision high`,
+this will give you more precision, but at a cost of more computation time.
+
+```sh
+./examples/benchmark/aby3_profile/run-remote.sh resnet50 --precision high
+```
+

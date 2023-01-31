@@ -10,19 +10,18 @@ import tf_encrypted as tfe
 from tf_encrypted.protocol.pond import PondPrivateTensor
 from tf_encrypted.protocol.pond import PondPublicTensor
 from tf_encrypted.protocol.securenn.securenn import _private_compare
-from tf_encrypted.tensor import int100factory
 
 
 @pytest.mark.securenn
 class TestPrivateCompare(unittest.TestCase):
     def test_int64(self):
-        self._core_test(tfe.tensor.int64factory)
+        self._core_test("low")
 
     def test_int100(self):
-        self._core_test(tfe.tensor.int100factory)
+        self._core_test("high")
 
-    def _core_test(self, tensor_factory):
-        prot = tfe.protocol.SecureNN(tensor_factory=tensor_factory)
+    def _core_test(self, fixedpoint_config):
+        prot = tfe.protocol.SecureNN(fixedpoint_config=fixedpoint_config)
         tfe.set_protocol(prot)
 
         bit_dtype = prot.prime_factory
@@ -86,7 +85,7 @@ class TestSelectShare(unittest.TestCase):
 
 @pytest.mark.securenn
 class TestLSB(unittest.TestCase):
-    def _core_lsb(self, tensor_factory, prime_factory):
+    def _core_lsb(self, fixedpoint_config, prime_factory):
 
         f_bin = np.vectorize(np.binary_repr)
         f_get = np.vectorize(lambda x, ix: x[ix])
@@ -96,7 +95,7 @@ class TestLSB(unittest.TestCase):
         expected_lsb = f_get(f_bin(raw), -1).astype(np.int32)
 
         with tfe.protocol.SecureNN(
-            tensor_factory=tensor_factory,
+            fixedpoint_config=fixedpoint_config,
             prime_factory=prime_factory,
         ) as prot:
 
@@ -108,7 +107,7 @@ class TestLSB(unittest.TestCase):
             np.testing.assert_array_equal(actual_lsb, expected_lsb)
 
     def test_lsb_int100(self):
-        self._core_lsb(int100factory, None)
+        self._core_lsb("high", None)
 
 
 @pytest.mark.securenn

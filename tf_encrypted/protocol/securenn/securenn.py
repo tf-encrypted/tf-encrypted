@@ -47,7 +47,6 @@ class SecureNN(Pond):
         server_0: Optional[Player] = None,
         server_1: Optional[Player] = None,
         server_2: Optional[Player] = None,
-        tensor_factory: Optional[AbstractFactory] = None,
         prime_factory: Optional[AbstractFactory] = None,
         odd_factory: Optional[AbstractFactory] = None,
         **kwargs,
@@ -68,7 +67,6 @@ class SecureNN(Pond):
             server_0=server_0,
             server_1=server_1,
             triple_source=server_2,
-            tensor_factory=tensor_factory,
             **kwargs,
         )
         self.server_2 = server_2

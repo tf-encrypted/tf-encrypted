@@ -30,11 +30,11 @@ from ...operations import dataset
 from ...operations import secure_random as crypto
 from ...player import Player
 from ...tensor import factories
-from ...tensor.fixed import fixed64_heuristic
-from ...tensor.fixed import fixed128_heuristic
 from ...tensor.factory import AbstractFactory
 from ...tensor.factory import AbstractTensor
 from ...tensor.fixed import FixedpointConfig
+from ...tensor.fixed import fixed64_heuristic
+from ...tensor.fixed import fixed128_heuristic
 from ...tensor.shared import out_size
 from ..protocol import Protocol
 from ..protocol import memoize
@@ -76,14 +76,16 @@ class ABY3(Protocol):
 
         if fixedpoint_config is None:
             self.fixedpoint_config = fixed64_heuristic
-        elif isinstance(fixedpoint_config, int):
-            if fixedpoint_config == 64:
-                fixedpoint_config = fixed64_heuristic
-            elif fixedpoint_config == 128:
-                fixedpoint_config = fixed128_heuristic
+        elif isinstance(fixedpoint_config, str):
+            if fixedpoint_config == "l" or fixedpoint_config == "low":
+                self.fixedpoint_config = fixed64_heuristic
+            elif fixedpoint_config == "h" or fixedpoint_config == "high":
+                self.fixedpoint_config = fixed128_heuristic
             else:
                 raise ValueError(
-                    "Only support 64 or 128 bits, get {}".format(fixedpoint_config)
+                    "Only support low or high as argument, get {}".format(
+                        fixedpoint_config
+                    )
                 )
         elif isinstance(fixedpoint_config, FixedpointConfig):
             self.fixedpoint_config = fixedpoint_config

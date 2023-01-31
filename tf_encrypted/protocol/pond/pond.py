@@ -7,7 +7,6 @@ helper."""
 from __future__ import absolute_import
 
 import abc
-import logging
 import random
 import sys
 from functools import reduce
@@ -25,7 +24,6 @@ import numpy as np
 import tensorflow as tf
 
 from ...config import get_config
-from ...config import tensorflow_supports_int64
 from ...operations import secure_random as crypto
 from ...player import Player
 from ...queue.fifo import AbstractFIFOQueue
@@ -84,9 +82,8 @@ class Pond(Protocol):
         self,
         server_0=None,
         server_1=None,
-        triple_source: Optional[TripleSourceOrPlayer] = None,
-        tensor_factory: Optional[AbstractFactory] = None,
-        fixedpoint_config: Optional[FixedpointConfig] = None,
+        triple_source=None,
+        fixedpoint_config=None,
     ) -> None:
         config = get_config()
         self.server_0 = config.get_player(server_0 if server_0 else "server0")
@@ -104,34 +101,27 @@ class Pond(Protocol):
             else:
                 assert isinstance(triple_source, BaseTripleSource)
                 self.triple_source = triple_source
-
-        if tensor_factory is None:
-            if tensorflow_supports_int64():
-                tensor_factory = int64factory
-            else:
-                logging.warning(
-                    "Falling back to using int100 tensors due to lack of int64 "
-                    "support. Performance may be improved by installing a version of "
-                    "TensorFlow supporting this (1.13+ or custom build)."
-                )
-                tensor_factory = int100factory
-
+        
         if fixedpoint_config is None:
-            if tensor_factory is int64factory:
-                fixedpoint_config = fixed64
-            elif tensor_factory is int100factory:
-                fixedpoint_config = fixed100
+            self.fixedpoint_config = fixed64
+            self.tensor_factory = int64factory
+        elif isinstance(fixedpoint_config, str):
+            if fixedpoint_config == "l" or fixedpoint_config == "low":
+                self.fixedpoint_config = fixed64
+                self.tensor_factory = int64factory
+            elif fixedpoint_config == "h" or fixedpoint_config == "high":
+                self.fixedpoint_config = fixed100
+                self.tensor_factory = int100factory
             else:
                 raise ValueError(
-                    (
-                        "Don't know how to pick fixedpoint configuration "
-                        "for tensor type {}"
-                    ).format(tensor_factory)
+                    "Only support low or high as argument, get {}".format(fixedpoint_config)
                 )
-
-        _validate_fixedpoint_config(fixedpoint_config, tensor_factory)
-        self.fixedpoint_config = fixedpoint_config
-        self.tensor_factory = tensor_factory
+        elif isinstance(fixedpoint_config, FixedpointConfig):
+            self.fixedpoint_config = fixedpoint_config
+            self.tensor_factory = factories[self.fixedpoint_config.nbits]
+        else:
+            raise ValueError("Don't know how to handle {}".format(fixedpoint_config))
+        _validate_fixedpoint_config(self.fixedpoint_config, self.tensor_factory)
 
     def define_constant(
         self,

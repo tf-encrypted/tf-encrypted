@@ -30,6 +30,7 @@ factories = {
     16: int16factory,
     32: int32factory,
     64: int64factory,
+    100: int100factory,
     128: int128factory,
 }
 factories.update(
