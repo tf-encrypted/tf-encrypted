@@ -341,10 +341,16 @@ aux : $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so
 I128_OUT_PRE = tf_encrypted/operations/tf_i128/tf_i128_module_tf_
 I128_IN = $(wildcard operations/tf_i128/*.cc)
 I128_IN_H = $(wildcard operations/tf_i128/*.h)
+ifeq ($(UNAME_S),Linux)
+	OPENMP_FLAGS = -fopenmp
+endif
+ifeq ($(UNAME_S),Darwin)
+	OPENMP_FLAGS = -Xclang -fopenmp -lomp
+endif
 
 $(I128_OUT_PRE)$(CURRENT_TF_VERSION).so: $(I128_IN) $(I128_IN_H)
 	mkdir -p tf_encrypted/operations/tf_i128
-	g++ -std=c++14 -shared -fopenmp $(I128_IN) -o $(I128_OUT_PRE)$(CURRENT_TF_VERSION).so \
+	g++ -std=c++14 -shared $(OPENMP_FLAGS) $(I128_IN) -o $(I128_OUT_PRE)$(CURRENT_TF_VERSION).so \
 		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2
 
 int128 : $(I128_OUT_PRE)$(CURRENT_TF_VERSION).so
