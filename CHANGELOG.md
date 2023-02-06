@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1]
+
+**Added**
+
+- support 128 bits ring size for aby3 protocol to provide more precision
+- support appending to TFRecord dataset as a tensorflow op
+
+**Fixed**
+
+- pond protocol device assertion error
+- tfe.function decorator with argument not tfe tensor
+- secure random with really big tensor shape
+
 
 ## [0.9.0]
 
