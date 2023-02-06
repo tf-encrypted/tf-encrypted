@@ -320,8 +320,8 @@ SECURE_IN_H = operations/secure_random/generators.h
 $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECURE_IN_H)
 	mkdir -p tf_encrypted/operations/secure_random
 
-	g++ -std=gnu++$(CPP_VERSION) -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
-		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
+	g++ -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
+		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -std=gnu++$(CPP_VERSION) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
 
 secure_random : $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so 
 
