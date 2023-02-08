@@ -26,6 +26,7 @@ from .helpers import inverse
 from .helpers import prod
 from .shared import binarize
 from .shared import im2col
+from .shared import im2patches
 
 
 def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
@@ -224,6 +225,41 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
             ]
             return Tensor(backing)
 
+        def sample_seeded_uniform(
+            self,
+            shape,
+            seed,
+            minval: Optional[int] = None,
+            maxval: Optional[int] = None,
+        ):
+            assert minval is None
+            assert maxval is None
+
+            if secure_random.supports_seeded_randomness():
+                shape = list(shape) + [len(MODULI)]
+                value = secure_random.seeded_random_uniform(
+                    shape=shape,
+                    dtype=INT_TYPE,
+                    minval=0,
+                    maxval=mi,
+                    seed=seed,
+                )
+                backing = tf.split(value, len(MODULI), axis=-1)
+                backing = [tf.squeeze(b, axis=-1) for b in backing]
+                return Tensor(backing)
+            else:
+                shape = list(shape) + [len(MODULI)]
+                value = tf.random.stateless_uniform(
+                    shape=shape,
+                    dtype=INT_TYPE,
+                    minval=0,
+                    maxval=mi,
+                    seed=seed,
+                )
+                backing = tf.split(value, len(MODULI), axis=-1)
+                backing = [tf.squeeze(b, axis=-1) for b in backing]
+                return Tensor(backing)
+
         def sample_bounded(self, shape, bitlength: int):
 
             # TODO[Morten]
@@ -283,59 +319,59 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
             ]
             return Tensor(backing)
 
-        def tensor(self, value):
+        def tensor(self, initial_value, encode: bool = True):
+            if encode:
+                initial_value = self._encode(initial_value)
+            return Tensor(initial_value)
 
-            if isinstance(value, tf.Tensor):
-                backing = [
-                    tf.cast(component, dtype=INT_TYPE)
-                    for component in _crt_decompose(value)
-                ]
-                return Tensor(backing)
+        def constant(self, initial_value, encode: bool = True):
+            if encode:
+                initial_value = self._encode(initial_value)
+            return Constant(initial_value)
 
-            if isinstance(value, np.ndarray):
+        def variable(self, initial_value, encode: bool = True):
+            if isinstance(initial_value, Tensor):
+                initial_value = initial_value.backing
+                encode = False
+            if encode:
+                initial_value = self._encode(initial_value)
+            variable_value = [
+                tf.Variable(value, dtype=INT_TYPE) for value in initial_value
+            ]
+            return Variable(variable_value)
+
+        def _encode(self, scaled_value):
+            if isinstance(scaled_value, (int, float)):
+                scaled_value = np.array(scaled_value)
                 backing = [
                     tf.convert_to_tensor(component, dtype=INT_TYPE)
-                    for component in _crt_decompose(value)
+                    for component in _crt_decompose(scaled_value)
                 ]
-                return Tensor(backing)
-
-            raise TypeError(("Don't know how to handle ", "{}".format(type(value))))
-
-        def constant(self, initial_value):
-
-            if isinstance(initial_value, (tf.Tensor, np.ndarray)):
-                constant_backing = [
-                    tf.constant(backing_value, dtype=INT_TYPE)
-                    for backing_value in _crt_decompose(initial_value)
+                return backing
+            elif isinstance(scaled_value, np.ndarray):
+                backing = [
+                    tf.convert_to_tensor(component, dtype=INT_TYPE)
+                    for component in _crt_decompose(scaled_value)
                 ]
-                return Constant(constant_backing)
-
-            if isinstance(initial_value, Tensor):
-                constant_backing = [
-                    tf.constant(backing_value, dtype=INT_TYPE)
-                    for backing_value in initial_value.backing
+                return backing
+            elif isinstance(scaled_value, tf.Tensor):
+                backing = [
+                    tf.cast(component, dtype=INT_TYPE)
+                    for component in _crt_decompose(scaled_value)
                 ]
-                return Constant(constant_backing)
+                return backing
+            else:
+                raise TypeError(
+                    "Don't know how to handle {}".format(type(scaled_value))
+                )
 
-            raise TypeError(("Don't know how to handle {}".format(type(initial_value))))
-
-        def variable(self, initial_value):
-
-            if isinstance(initial_value, (tf.Tensor, np.ndarray)):
-                variable_backing = [
-                    tf.Variable(backing_value, dtype=INT_TYPE)
-                    for backing_value in _crt_decompose(initial_value)
-                ]
-                return Variable(variable_backing)
-
-            if isinstance(initial_value, Tensor):
-                variable_backing = [
-                    tf.Variable(backing_value, dtype=INT_TYPE)
-                    for backing_value in initial_value.backing
-                ]
-                return Variable(variable_backing)
-
-            raise TypeError(("Don't know how to handle {}".format(type(initial_value))))
+        def _decode(self, encode_value):
+            if isinstance(encode_value, list):
+                return crt_recombine_explicit(encode_value, 2**32)
+            else:
+                raise TypeError(
+                    "Don't know how to handle {}".format(type(encode_value))
+                )
 
         @property
         def min(self):
@@ -406,7 +442,7 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
             return self._backing[0].device
 
         def to_native(self) -> Union[tf.Tensor, np.ndarray]:
-            return crt_recombine_explicit(self.backing, 2**32)
+            return self.factory._decode(self.backing)
 
         def bits(
             self,
@@ -630,17 +666,28 @@ def crt_factory(INT_TYPE, MODULI):  # pylint: disable=invalid-name
 
         def im2col(self, h_filter: int, w_filter: int, strides: list, padding: str):
             with tf.name_scope("crt_im2col"):
-                backing = [
-                    im2col(
-                        xi,
-                        h_filter=h_filter,
-                        w_filter=w_filter,
-                        strides=strides,
-                        padding=padding,
-                    )
-                    for xi in self.backing
-                ]
-                return Tensor(backing)
+                return im2col(
+                    self,
+                    h_filter=h_filter,
+                    w_filter=w_filter,
+                    strides=strides,
+                    padding=padding,
+                )
+
+        def im2patches(
+            self, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"
+        ):
+            backing = [
+                im2patches(
+                    xi,
+                    patch_size,
+                    strides=strides,
+                    padding=padding,
+                    data_format=data_format,
+                )
+                for xi in self.backing
+            ]
+            return Tensor(backing)
 
         def conv2d(self, other, strides: list, padding: str = "SAME"):
             x, y = _lift(self, other)

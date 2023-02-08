@@ -7,7 +7,6 @@ helper."""
 from __future__ import absolute_import
 
 import abc
-import logging
 import random
 import sys
 from functools import reduce
@@ -25,7 +24,7 @@ import numpy as np
 import tensorflow as tf
 
 from ...config import get_config
-from ...config import tensorflow_supports_int64
+from ...operations import secure_random as crypto
 from ...player import Player
 from ...queue.fifo import AbstractFIFOQueue
 from ...queue.fifo import TFFIFOQueue
@@ -83,9 +82,8 @@ class Pond(Protocol):
         self,
         server_0=None,
         server_1=None,
-        triple_source: Optional[TripleSourceOrPlayer] = None,
-        tensor_factory: Optional[AbstractFactory] = None,
-        fixedpoint_config: Optional[FixedpointConfig] = None,
+        triple_source=None,
+        fixedpoint_config=None,
     ) -> None:
         config = get_config()
         self.server_0 = config.get_player(server_0 if server_0 else "server0")
@@ -104,33 +102,28 @@ class Pond(Protocol):
                 assert isinstance(triple_source, BaseTripleSource)
                 self.triple_source = triple_source
 
-        if tensor_factory is None:
-            if tensorflow_supports_int64():
-                tensor_factory = int64factory
-            else:
-                logging.warning(
-                    "Falling back to using int100 tensors due to lack of int64 "
-                    "support. Performance may be improved by installing a version of "
-                    "TensorFlow supporting this (1.13+ or custom build)."
-                )
-                tensor_factory = int100factory
-
         if fixedpoint_config is None:
-            if tensor_factory is int64factory:
-                fixedpoint_config = fixed64
-            elif tensor_factory is int100factory:
-                fixedpoint_config = fixed100
+            self.fixedpoint_config = fixed64
+            self.tensor_factory = int64factory
+        elif isinstance(fixedpoint_config, str):
+            if fixedpoint_config == "l" or fixedpoint_config == "low":
+                self.fixedpoint_config = fixed64
+                self.tensor_factory = int64factory
+            elif fixedpoint_config == "h" or fixedpoint_config == "high":
+                self.fixedpoint_config = fixed100
+                self.tensor_factory = int100factory
             else:
                 raise ValueError(
-                    (
-                        "Don't know how to pick fixedpoint configuration "
-                        "for tensor type {}"
-                    ).format(tensor_factory)
+                    "Only support low or high as argument, get {}".format(
+                        fixedpoint_config
+                    )
                 )
-
-        _validate_fixedpoint_config(fixedpoint_config, tensor_factory)
-        self.fixedpoint_config = fixedpoint_config
-        self.tensor_factory = tensor_factory
+        elif isinstance(fixedpoint_config, FixedpointConfig):
+            self.fixedpoint_config = fixedpoint_config
+            self.tensor_factory = factories[self.fixedpoint_config.nbits]
+        else:
+            raise ValueError("Don't know how to handle {}".format(fixedpoint_config))
+        _validate_fixedpoint_config(self.fixedpoint_config, self.tensor_factory)
 
     def define_constant(
         self,
@@ -395,7 +388,11 @@ class Pond(Protocol):
             )
             enc = self._encode(v, apply_scaling, tf_int_type=factory.native_type)
             w = factory.tensor(enc)
-            return PondPublicTensor(self, w, w, apply_scaling)
+            with tf.device(self.server_0.device_name):
+                w0 = w.identity()
+            with tf.device(self.server_1.device_name):
+                w1 = w.identity()
+            return PondPublicTensor(self, w0, w1, apply_scaling)
 
         with tf.name_scope("public-input{}".format(suffix)):
 
@@ -556,11 +553,20 @@ class Pond(Protocol):
             if not masked:
                 return x
             with tf.name_scope("local_mask"):
-                a0 = factory.sample_uniform(v.shape)
-                a1 = factory.sample_uniform(v.shape)
-                a = a0 + a1
-                alpha = w - a
-            return PondMaskedTensor(self, x, a, a0, a1, alpha, alpha, apply_scaling)
+                with tf.device(self.triple_source.producer.device_name):
+                    seed0 = crypto.secure_seed()
+                    seed1 = crypto.secure_seed()
+                    a = factory.sample_seeded_uniform(v.shape, seed0)
+                    +factory.sample_seeded_uniform(v.shape, seed1)
+                    alpha = w - a
+                with tf.device(self.server_0.device_name):
+                    a0 = factory.sample_seeded_uniform(v.shape, seed0)
+                    alpha0 = alpha.identity()
+                with tf.device(self.server_1.device_name):
+                    a1 = factory.sample_seeded_uniform(v.shape, seed1)
+                    alpha1 = alpha.identity()
+
+            return PondMaskedTensor(self, x, a, a0, a1, alpha0, alpha1, apply_scaling)
 
         def reconstruct_input(x):
 
@@ -673,29 +679,33 @@ class Pond(Protocol):
         factory = factories[tensor_bone.factory]
         if isinstance(tensor_bone, PondPublicTensorBone):
             with tf.device(self.server_0.device_name):
-                value_0 = factory.tensor(tensor_bone.values[0]).identity()
+                value_0 = factory.tensor(tensor_bone.values[0], encode=False).identity()
             with tf.device(self.server_1.device_name):
-                value_1 = factory.tensor(tensor_bone.values[1]).identity()
+                value_1 = factory.tensor(tensor_bone.values[1], encode=False).identity()
             return PondPublicTensor(
                 self, value_0, value_1, is_scaled=tensor_bone.is_scaled
             )
         elif isinstance(tensor_bone, PondPrivateTensorBone):
             with tf.device(self.server_0.device_name):
-                value_0 = factory.tensor(tensor_bone.values[0]).identity()
+                value_0 = factory.tensor(tensor_bone.values[0], encode=False).identity()
             with tf.device(self.server_1.device_name):
-                value_1 = factory.tensor(tensor_bone.values[1]).identity()
+                value_1 = factory.tensor(tensor_bone.values[1], encode=False).identity()
             return PondPrivateTensor(
                 self, value_0, value_1, is_scaled=tensor_bone.is_scaled
             )
         elif isinstance(tensor_bone, PondMaskedTensorBone):
             with tf.device(self.server_0.device_name):
-                a0 = factory.tensor(tensor_bone.a0).identity()
-                alpha_on_0 = factory.tensor(tensor_bone.alpha_on_0).identity()
+                a0 = factory.tensor(tensor_bone.a0, encode=False).identity()
+                alpha_on_0 = factory.tensor(
+                    tensor_bone.alpha_on_0, encode=False
+                ).identity()
             with tf.device(self.server_1.device_name):
-                a1 = factory.tensor(tensor_bone.a1).identity()
-                alpha_on_1 = factory.tensor(tensor_bone.alpha_on_1).identity()
+                a1 = factory.tensor(tensor_bone.a1, encode=False).identity()
+                alpha_on_1 = factory.tensor(
+                    tensor_bone.alpha_on_1, encode=False
+                ).identity()
             with tf.device(self.triple_source.producer.device_name):
-                a = factory.tensor(tensor_bone.a).identity()
+                a = factory.tensor(tensor_bone.a, encode=False).identity()
             return PondMaskedTensor(
                 self,
                 self.from_bone(tensor_bone.unmasked),
@@ -799,13 +809,22 @@ class Pond(Protocol):
         """
 
         with tf.name_scope("share"):
-            share0 = secret.factory.sample_uniform(secret.shape)
+            seed = crypto.secure_seed()
+            share0 = secret.factory.sample_seeded_uniform(secret.shape, seed)
             share1 = secret - share0
 
             # randomized swap to distribute load between two servers wrt who gets
             # the seed
             if random.random() < 0.5:
-                share0, share1 = share1, share0
+                with tf.device(self.server_0.device_name):
+                    share0 = secret.factory.sample_seeded_uniform(secret.shape, seed)
+                with tf.device(self.server_1.device_name):
+                    share1 = share1.identity()
+            else:
+                with tf.device(self.server_0.device_name):
+                    share0 = share1.identity()
+                with tf.device(self.server_1.device_name):
+                    share1 = secret.factory.sample_seeded_uniform(secret.shape, seed)
 
         return share0, share1
 
@@ -1590,11 +1609,11 @@ class AdditiveFIFOQueue(AbstractFIFOQueue):
 
         with tf.device(self.server_0.device_name):
             raw_tensor0 = self.queue0.dequeue()
-            tensor_0 = self.dtype.tensor(raw_tensor0)
+            tensor_0 = self.dtype.tensor(raw_tensor0, encode=False)
 
         with tf.device(self.server_1.device_name):
             raw_tensor1 = self.queue1.dequeue()
-            tensor_1 = self.dtype.tensor(raw_tensor1)
+            tensor_1 = self.dtype.tensor(raw_tensor1, encode=False)
 
         return PondPrivateTensor(
             self.protocol,
@@ -4057,9 +4076,11 @@ def _mask_private(prot: Pond, x: PondPrivateTensor) -> PondMaskedTensor:
         with tf.name_scope("online"):
 
             with tf.device(prot.server_0.device_name):
+                a0 = a0.identity()
                 alpha0 = x0 - a0
 
             with tf.device(prot.server_1.device_name):
+                a1 = a1.identity()
                 alpha1 = x1 - a1
 
             with tf.device(prot.server_0.device_name):

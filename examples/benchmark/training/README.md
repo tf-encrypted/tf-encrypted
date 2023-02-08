@@ -9,13 +9,21 @@ and you must explicitly specify which model to train and which dataset to use.
 
 
 ```sh
-./examples/benchmark/mnist/run-remote-network.sh network_a Mnist
+./examples/benchmark/mnist/run-remote.sh network_a Mnist
 ```
 
 You can also specify how many epochs to run, which tfe protocol to use and which remote config file to use
 
 ```sh
-./examples/benchmark/mnist/run-remote-network.sh network_a Mnist --epochs 10 --protocol ABY3 --config config.json
+./examples/benchmark/mnist/run-remote.sh network_a Mnist --epochs 10 --protocol ABY3 --config config.json
+```
+
+By default, training uses 64 bits for secret sharing, this gives enough precision in most cases.
+We also give a option to use 128 bits for secret sharing by setting `--precision high`,
+this will give you more precision, but at a cost of more computation time.
+
+```sh
+./examples/benchmark/aby3_profile/run-remote.sh network_a Mnist --precision high
 ```
 
 You can play with 4 different models:

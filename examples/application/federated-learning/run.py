@@ -227,6 +227,13 @@ if __name__ == "__main__":
         default="./config.json",
         help="path to configuration file",
     )
+    parser.add_argument(
+        "--precision",
+        choices=["l", "h", "low", "high"],
+        type=str,
+        default="l",
+        help="use 64 or 128 bits for computation",
+    )
     args = parser.parse_args()
 
     # import all models
@@ -256,7 +263,7 @@ if __name__ == "__main__":
         tfe.set_config(config)
 
     # set tfe protocol
-    tfe.set_protocol(globals()[args.protocol]())
+    tfe.set_protocol(globals()[args.protocol](fixedpoint_config=args.precision))
 
     # set model owner and data owners
     model_owner = ModelOwner("model-owner", args.model_name, args.data_name)

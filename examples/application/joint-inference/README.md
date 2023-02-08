@@ -75,16 +75,24 @@ Instances of these are then linked together in a secure computation performing a
 
 ## Running
 
-Start the private joint inference with the startup script `run-remote-network.sh`, and you must explicitly specify which model to inference and which dataset to use.
+Start the private joint inference with the startup script `run-remote.sh`, and you must explicitly specify which model to inference and which dataset to use.
 
 ```sh
-./examples/application/joint-inference/run-remote-network.sh network_a Mnist
+./examples/application/joint-inference/run-remote.sh network_a Mnist
 ```
 
 You can also specify which tfe protocol to use and which remote config file to use
 
 ```sh
-./examples/application/joint-inference/run-remote-network.sh network_a Mnist --protocol ABY3 --config config.json
+./examples/application/joint-inference/run-remote.sh network_a Mnist --protocol ABY3 --config config.json
+```
+
+By default, inference uses 64 bits for secret sharing, this gives enough precision in most cases.
+We also give a option to use 128 bits for secret sharing by setting `--precision high`,
+this will give you more precision, but at a cost of more computation time.
+
+```sh
+./examples/benchmark/aby3_profile/run-remote.sh network_a Mnist --precision high
 ```
 
 See more details in the [documentation](/docs/RUNNING.md).

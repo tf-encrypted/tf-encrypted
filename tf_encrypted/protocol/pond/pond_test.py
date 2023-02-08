@@ -32,9 +32,7 @@ class TestPond(unittest.TestCase):
 @pytest.mark.pond
 class TestTruncate(unittest.TestCase):
     def test_interactive_truncate(self):
-        prot = tfe.protocol.Pond(
-            tensor_factory=int100factory, fixedpoint_config=fixed100
-        )
+        prot = tfe.protocol.Pond(fixedpoint_config=fixed100)
         tfe.set_protocol(prot)
 
         # TODO[Morten] remove this condition
@@ -50,9 +48,7 @@ class TestTruncate(unittest.TestCase):
             np.testing.assert_allclose(actual, expected)
 
     def test_noninteractive_truncate(self):
-        prot = tfe.protocol.Pond(
-            tensor_factory=int100factory, fixedpoint_config=fixed100_ni
-        )
+        prot = tfe.protocol.Pond(fixedpoint_config=fixed100_ni)
         tfe.set_protocol(prot)
 
         expected = np.array([12345.6789])

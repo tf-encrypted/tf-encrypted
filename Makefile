@@ -17,6 +17,12 @@ CURRENT_DIR=$(shell pwd)
 PIP_PATH=$(shell which pip)
 DOCKER_PATH=$(shell which docker)
 CURRENT_TF_VERSION=$(shell python -c 'import tensorflow as tf; print(tf.__version__)' 2>/dev/null)
+TF_VER_MINOR := $(shell echo $(CURRENT_TF_VERSION) | cut -f2 -d.)
+USING_CPP17 := $(shell [ $(TF_VER_MINOR) -gt 9 ] && echo true)
+CPP_VERSION = 14
+ifeq ($(USING_CPP17),true)
+   CPP_VERSION = 17
+endif
 
 # Default platform
 # PYPI doesn't allow linux build tags to be pushed and doesn't support
@@ -314,8 +320,8 @@ SECURE_IN_H = operations/secure_random/generators.h
 $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so: $(LIBSODIUM_OUT) $(SECURE_IN) $(SECURE_IN_H)
 	mkdir -p tf_encrypted/operations/secure_random
 
-	g++ -std=c++14 -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
-		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
+	g++ -shared $(SECURE_IN) -o $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so \
+		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -std=gnu++$(CPP_VERSION) -O2 -I$(LIBSODIUM_INSTALL)/include -L$(LIBSODIUM_INSTALL)/lib -lsodium
 
 secure_random : $(SECURE_OUT_PRE)$(CURRENT_TF_VERSION).so 
 
@@ -327,19 +333,58 @@ AUX_IN = $(wildcard operations/aux/*.cc)
 
 $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so: $(AUX_IN)
 	mkdir -p tf_encrypted/operations/aux
-	g++ -std=c++14 -shared $(AUX_IN) -o $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so \
+	g++ -std=c++$(CPP_VERSION) -shared $(AUX_IN) -o $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so \
 		-fPIC  $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2
 
 aux : $(AUX_OUT_PRE)$(CURRENT_TF_VERSION).so
 
 .PHONY: aux
 
+# ###############################################
+# Int128
+# Rules for building int128 operations as TF Ops.
+# ###############################################
+I128_OUT_PRE = tf_encrypted/operations/tf_i128/tf_i128_module_tf_
+I128_IN = $(wildcard operations/tf_i128/*.cc)
+I128_IN_H = $(wildcard operations/tf_i128/*.h)
+ifeq ($(UNAME_S),Linux)
+	OPENMP_FLAGS = -fopenmp
+endif
+ifeq ($(UNAME_S),Darwin)
+	OPENMP_FLAGS = -Xclang -fopenmp -lomp
+endif
+
+$(I128_OUT_PRE)$(CURRENT_TF_VERSION).so: $(I128_IN) $(I128_IN_H)
+	mkdir -p tf_encrypted/operations/tf_i128
+	g++ -std=c++$(CPP_VERSION) -shared $(OPENMP_FLAGS) $(I128_IN) -o $(I128_OUT_PRE)$(CURRENT_TF_VERSION).so \
+		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2
+
+int128 : $(I128_OUT_PRE)$(CURRENT_TF_VERSION).so
+
+.PHONY: int128
+
+# ###############################################
+# Dataset
+# Rules for building Dataset operations as TF Ops.
+# ###############################################
+DATASET_OUT_PRE = tf_encrypted/operations/dataset/tf_dataset_module_tf_
+DATASET_IN = $(wildcard operations/dataset/*.cc)
+
+$(DATASET_OUT_PRE)$(CURRENT_TF_VERSION).so: $(DATASET_IN)
+	mkdir -p tf_encrypted/operations/dataset
+	g++ -std=c++$(CPP_VERSION) -shared $(DATASET_IN) -o $(DATASET_OUT_PRE)$(CURRENT_TF_VERSION).so \
+		-fPIC $(TF_CFLAGS) $(FINAL_TF_LFLAGS) -O2
+
+dataset : $(DATASET_OUT_PRE)$(CURRENT_TF_VERSION).so
+
+.PHONY: dataset
+
 
 # ###############################################
 # Build
 # ###############################################
 
-build: secure_random aux 
+build: secure_random aux int128 dataset
 
 build-all:
 	pip install tensorflow==2.9.1

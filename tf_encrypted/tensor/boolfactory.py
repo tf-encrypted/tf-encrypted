@@ -24,53 +24,47 @@ def bool_factory():
     class Factory(AbstractFactory):
         """Native tensor factory."""
 
-        def tensor(self, value):
-            if isinstance(value, Tensor):
-                return value
+        def tensor(self, initial_value, encode: bool = True):
+            if encode:
+                initial_value = self._encode(initial_value)
+            return Tensor(initial_value)
 
-            if isinstance(value, tf.Tensor):
-                if value.dtype is not self.native_type:
-                    value = tf.cast(value, dtype=self.native_type)
-                return Tensor(value)
+        def constant(self, initial_value, encode: bool = True):
+            if encode:
+                initial_value = self._encode(initial_value)
+            return Constant(initial_value)
 
-            if isinstance(value, np.ndarray):
-                value = tf.convert_to_tensor(value, dtype=self.native_type)
-                return Tensor(value)
-
-            if isinstance(value, (int, float, list)):
-                value = np.array(value)
-                value = tf.convert_to_tensor(value, dtype=self.native_type)
-                return Tensor(value)
-
-            raise TypeError("Don't know how to handle {}".format(type(value)))
-
-        def constant(self, initial_value):
-
-            if isinstance(initial_value, (tf.Tensor, np.ndarray)):
-                constant_value = tf.constant(initial_value, dtype=self.native_type)
-                return Constant(constant_value)
-
+        def variable(self, initial_value, encode: bool = True):
             if isinstance(initial_value, Tensor):
-                constant_value = tf.constant(
-                    initial_value.value, dtype=self.native_type
+                initial_value = initial_value.value
+                encode = False
+            if encode:
+                initial_value = self._encode(initial_value)
+            variable_value = tf.Variable(
+                initial_value, dtype=self.native_type, trainable=False
+            )
+            return Variable(variable_value)
+
+        def _encode(self, scaled_value):
+            if isinstance(scaled_value, (int, float)):
+                scaled_value = np.array(scaled_value)
+                return tf.convert_to_tensor(scaled_value, dtype=self.native_type)
+            elif isinstance(scaled_value, np.ndarray):
+                return tf.convert_to_tensor(scaled_value, dtype=self.native_type)
+            elif isinstance(scaled_value, tf.Tensor):
+                return tf.cast(scaled_value, dtype=self.native_type)
+            else:
+                raise TypeError(
+                    "Don't know how to handle {}".format(type(scaled_value))
                 )
-                return Constant(constant_value)
 
-            raise TypeError("Don't know how to handle {}".format(type(initial_value)))
-
-        def variable(self, initial_value):
-
-            if isinstance(initial_value, (tf.Tensor, np.ndarray)):
-                variable_value = tf.Variable(initial_value, dtype=self.native_type)
-                return Variable(variable_value)
-
-            if isinstance(initial_value, Tensor):
-                variable_value = tf.Variable(
-                    initial_value.value, dtype=self.native_type
+        def _decode(self, encode_value):
+            if isinstance(encode_value, tf.Tensor):
+                return encode_value
+            else:
+                raise TypeError(
+                    "Don't know how to handle {}".format(type(encode_value))
                 )
-                return Variable(variable_value)
-
-            raise TypeError("Don't know how to handle {}".format(type(initial_value)))
 
         @property
         def native_type(self):
@@ -192,7 +186,7 @@ def bool_factory():
             return Tensor(value)
 
         def to_native(self) -> tf.Tensor:
-            return self.value
+            return self.factory._decode(self.value)
 
         def __repr__(self) -> str:
             return "{}(shape={})".format(type(self), self.shape)

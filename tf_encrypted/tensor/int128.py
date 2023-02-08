@@ -1,9 +1,7 @@
 """Native tensors and their factory.
 
-These use TensorFlow's native dtypes tf.int32 and tf.int64 for the given float
+These use TensorFlow's native dtypes tf.int64 for the given float
 encoding being used (fixed-point, etc.)."""
-
-import math
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -13,8 +11,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework.tensor_shape import TensorShape
 
-from ..operations import aux
 from ..operations import secure_random
+from ..operations import tf_i128
 from .factory import AbstractConstant
 from .factory import AbstractFactory
 from .factory import AbstractTensor
@@ -27,14 +25,11 @@ from .shared import im2patches
 from .shared import patches2im
 
 
-def native_factory(
-    NATIVE_TYPE,
-    EXPLICIT_MODULUS=None,
-):  # pylint: disable=invalid-name
-    """Constructs the native tensor Factory."""
+def int128_factory():  # pylint: disable=invalid-name
+    """Constructs the 128 bits tensor Factory."""
 
     class Factory(AbstractFactory):
-        """Native tensor factory."""
+        """128 bits tensor factory."""
 
         def tensor(self, initial_value, encode: bool = True):
             if encode:
@@ -60,11 +55,13 @@ def native_factory(
         def _encode(self, scaled_value):
             if isinstance(scaled_value, (int, float)):
                 scaled_value = np.array(scaled_value)
-                return tf.convert_to_tensor(scaled_value, dtype=self.native_type)
+                encode_value = tf_i128.encode(scaled_value)
+                return tf.convert_to_tensor(encode_value, dtype=self.native_type)
             elif isinstance(scaled_value, np.ndarray):
-                return tf.convert_to_tensor(scaled_value, dtype=self.native_type)
+                encode_value = tf_i128.encode(scaled_value)
+                return tf.convert_to_tensor(encode_value, dtype=self.native_type)
             elif isinstance(scaled_value, tf.Tensor):
-                return tf.cast(scaled_value, dtype=self.native_type)
+                return tf_i128.to_i128(scaled_value)
             else:
                 raise TypeError(
                     "Don't know how to handle {}".format(type(scaled_value))
@@ -72,7 +69,7 @@ def native_factory(
 
         def _decode(self, encode_value):
             if isinstance(encode_value, tf.Tensor):
-                return encode_value
+                return tf_i128.from_i128(encode_value)
             else:
                 raise TypeError(
                     "Don't know how to handle {}".format(type(encode_value))
@@ -80,150 +77,119 @@ def native_factory(
 
         @property
         def min(self):
-            if EXPLICIT_MODULUS is not None:
-                return 0
-            return NATIVE_TYPE.min
+            return -(2**127)
 
         @property
         def max(self):
-            if EXPLICIT_MODULUS is not None:
-                return EXPLICIT_MODULUS
-            return NATIVE_TYPE.max
+            return 2**127 - 1
+
+        @property
+        def min_as_int64(self):
+            return tf.constant([0, tf.int64.min], dtype=tf.int64)
+
+        @property
+        def max_as_int64(self):
+            return tf.constant([-1, tf.int64.max], dtype=tf.int64)
 
         @property
         def modulus(self) -> int:
-            if EXPLICIT_MODULUS is not None:
-                return EXPLICIT_MODULUS
-            return NATIVE_TYPE.max - NATIVE_TYPE.min + 1
+            return self.max - self.min + 1
 
         @property
         def native_type(self):
-            return NATIVE_TYPE
+            return tf.int64
+
+        @property
+        def native_size(self):
+            # Number of native_type elements needed to represent one composed element
+            return 2
 
         @property
         def nbits(self):
-            return NATIVE_TYPE.size * 8
+            return self.native_size * self.native_type.size * 8
 
-        def sample_uniform(
-            self, shape, minval: Optional[int] = None, maxval: Optional[int] = None
-        ):
-            minval = self.min if minval is None else minval
-            # TODO(Morten) believe this should be native_type.max+1
-            maxval = self.max if maxval is None else maxval
+        def sample_uniform(self, shape, minval=None, maxval=None):
+            minval = self.min_as_int64 if minval is None else minval
+            maxval = self.max_as_int64 if maxval is None else maxval
 
-            if secure_random.supports_seeded_randomness():
-                value = secure_random.seeded_random_uniform(
+            seed = secure_random.secure_seed()
+            return Tensor(
+                secure_random.i128_seeded_random_uniform(
                     shape=shape,
-                    dtype=NATIVE_TYPE,
+                    seed=seed,
                     minval=minval,
                     maxval=maxval,
-                    seed=secure_random.secure_seed(),
                 )
-                return Tensor(value)
+            )
 
-            if secure_random.supports_secure_randomness():
-                sampler = secure_random.random_uniform
-            else:
-                sampler = tf.random.uniform
-            value = sampler(
-                shape=shape, minval=minval, maxval=maxval, dtype=NATIVE_TYPE
+        def sample_seeded_uniform(self, shape, seed, minval=None, maxval=None):
+            minval = self.min_as_int64 if minval is None else minval
+            maxval = self.max_as_int64 if maxval is None else maxval
+
+            # Don't use UniformTensor for lazy sampling here,
+            # because the `seed` might be something (e.g., key) we
+            # want to protect, and we cannot send it to another party
+            value = secure_random.i128_seeded_random_uniform(
+                shape=shape, seed=seed, minval=minval, maxval=maxval
             )
             return Tensor(value)
 
-        def sample_seeded_uniform(
-            self,
-            shape,
-            seed,
-            minval: Optional[int] = None,
-            maxval: Optional[int] = None,
-        ):
-            """Seeded sample of a random tensor.
+        def sample_seeded_bounded(self, shape, seed, bitlength: int):
+            assert bitlength <= 128
 
-            Arguments:
-                shape (tuple of ints), shape of the tensor to sample
-                seed (int), seed for the sampler to use
-                minval (int), the a in the interval [a,b]
-                maxval (int), the b in the interval [a,b]
+            # Don't use UniformTensor for lazy sampling here,
+            # because the `seed` might be something (e.g., key) we
+            # want to protect, and we cannot send it to another party
+            value = secure_random.i128_seeded_random_uniform(
+                shape=shape,
+                seed=seed,
+                minval=self.min_as_int64,
+                maxval=self.max_as_int64,
+            )
 
-            Returns a tensor of shape `shape` drawn from a uniform distribution over
-            the interval [minval,maxval].
-            """
-            minval = self.min if minval is None else minval
-            maxval = self.max if maxval is None else maxval
-
-            if secure_random.supports_seeded_randomness():
-                # Don't use lazy sampling here, because the `seed`
-                # might be something (e.g., key) we want to protect, and we cannot
-                # send it to another party
-                value = secure_random.seeded_random_uniform(
-                    shape=shape,
-                    dtype=NATIVE_TYPE,
-                    minval=minval,
-                    maxval=maxval,
-                    seed=seed,
-                )
-                return Tensor(value)
-            else:
-                if NATIVE_TYPE not in (tf.int32, tf.int64):
-                    value = tf.random.stateless_uniform(
-                        shape, seed, minval=minval, maxval=maxval, dtype=tf.int32
-                    )
-                    value = Tensor(tf.cast(value, NATIVE_TYPE))
-                else:
-                    value = tf.random.stateless_uniform(
-                        shape,
-                        seed,
-                        minval=minval,
-                        maxval=maxval,
-                        dtype=NATIVE_TYPE,
-                    )
-                return Tensor(value)
+            r = Tensor(value).logical_rshift(128 - bitlength)
+            return r
 
         def sample_bounded(self, shape, bitlength: int):
-            maxval = 2**bitlength
-            assert maxval <= self.max
-
-            if secure_random.supports_seeded_randomness():
-                value = secure_random.seeded_random_uniform(
-                    shape=shape,
-                    dtype=NATIVE_TYPE,
-                    minval=0,
-                    maxval=maxval,
-                    seed=secure_random.secure_seed(),
-                )
-                return Tensor(value)
-
-            if secure_random.supports_secure_randomness():
-                sampler = secure_random.random_uniform
-            else:
-                sampler = tf.random.uniform
-            value = sampler(shape=shape, minval=0, maxval=maxval, dtype=NATIVE_TYPE)
-            return Tensor(value)
+            seed = secure_random.secure_seed()
+            return self.sample_seeded_bounded(shape, seed, bitlength)
 
         def sample_bits(self, shape):
             return self.sample_bounded(shape, bitlength=1)
 
         def stack(self, xs: list, axis: int = 0):
             assert all(isinstance(x, Tensor) for x in xs)
+            axis = _lift_axis(axis, len(xs[0].shape))
+
             value = tf.stack([x.value for x in xs], axis=axis)
             return Tensor(value)
 
         def concat(self, xs: list, axis: int):
             assert all(isinstance(x, Tensor) for x in xs)
+            axis = _lift_axis(axis, len(xs[0].shape))
+
             value = tf.concat([x.value for x in xs], axis=axis)
             return Tensor(value)
 
         def ones(self, shape):
             if not isinstance(shape, (list, tuple, TensorShape)):
                 raise TypeError("shape must be a list or tuple of integers")
-            return Tensor(tf.ones(shape, self.native_type))
+            lo = tf.ones(shape, self.native_type)
+            hi = tf.zeros(shape, self.native_type)
+            value = tf.stack([lo, hi], axis=len(shape))
+            return Tensor(value)
 
         def zeros(self, shape):
             if not isinstance(shape, (list, tuple, TensorShape)):
                 raise TypeError("shape must be a list or tuple of integers")
-            return Tensor(tf.ones(shape, self.native_type))
+            if isinstance(shape, (list, tuple)):
+                new_shape = tf.TensorShape(list(shape) + [self.native_size])
+            else:
+                new_shape = tf.TensorShape(shape.as_list() + [self.native_size])
+            return Tensor(tf.zeros(new_shape, self.native_type))
 
         def pad(self, tensor, paddings):
+            paddings = paddings + [[0, 0]]
             return Tensor(tf.pad(tensor.value), paddings)
 
         def ones_like(self, x: "Tensor"):
@@ -236,18 +202,32 @@ def native_factory(
             if not isinstance(condition, tf.Tensor):
                 msg = "Don't know how to handle `condition` of type {}"
                 raise TypeError(msg.format(type(condition)))
+            # Replicate the condition so that it is compatible with the shape of x and y
+            condition = tf.stack([condition, condition], axis=len(condition.shape))
             value = tf.where(condition, x.value, y.value)
             return Tensor(value)
 
-        def tile(self, x, multiples):
-            return Tensor(tf.tile(x.value, multiples))
+        def tile(self, input, multiples):
+            if isinstance(multiples, tf.TensorShape):
+                multiples = multiples.as_list()
+
+            if isinstance(multiples, tuple):
+                multiples = multiples + (1,)
+            elif isinstance(multiples, list):
+                multiples = multiples + [1]
+            elif isinstance(multiples, tf.Tensor):
+                multiples = tf.concat([multiples, tf.constant([1])], axis=0)
+            else:
+                raise TypeError("multiples must be a tuple, a list or a tf.Tensor")
+            return Tensor(tf.tile(input.value, multiples))
 
         def scatter_nd(self, indices, updates, shape):
             if isinstance(indices, Tensor):
-                indices = indices.value
-            return Tensor(tf.scatter_nd(indices, updates.value, shape))
+                indices = tf.gather(indices.value, 0, axis=-1)
 
-    FACTORY = Factory()
+            r0 = tf.scatter_nd(indices, tf.gather(updates.value, 0, axis=-1), shape)
+            r1 = tf.scatter_nd(indices, tf.gather(updates.value, 1, axis=-1), shape)
+            return Tensor(tf.stack([r0, r1], axis=-1))
 
     def _lift(x, y) -> Tuple["Tensor", "Tensor"]:  # noqa:F821
 
@@ -255,21 +235,35 @@ def native_factory(
             return x, y
 
         if isinstance(x, Tensor):
-
-            if isinstance(y, int):
-                return x, x.factory.tensor(np.array(y))
+            return x, x.factory.tensor(np.array(y))
 
         if isinstance(y, Tensor):
-
-            if isinstance(x, int):
-                return y.factory.tensor(np.array(x)), y
+            return y.factory.tensor(np.array(x)), y
 
         raise TypeError("Don't know how to lift {} {}".format(type(x), type(y)))
+
+    def _lift_axis(axis, dims):
+        if isinstance(axis, (list, tuple)):
+            new_axis = []
+            for a in axis:
+                if a == -1:
+                    new_axis.append(dims - 1)
+                else:
+                    assert a < dims, "# dimensions: {}, got axis: {}".format(dims, axis)
+                    new_axis.append(a)
+            return new_axis
+        if axis == -1:
+            return dims - 1
+        if axis is not None:
+            assert axis < dims, "# dimensions: {}, got axis: {}".format(dims, axis)
+        return axis
+
+    FACTORY = Factory()  # pylint: disable=invalid-name
 
     class Tensor(AbstractTensor):
         """Base class for other native tensor classes."""
 
-        def __init__(self, value: tf.Tensor):
+        def __init__(self, value) -> None:
             self._value = value
 
         @property
@@ -278,6 +272,11 @@ def native_factory(
 
         @property
         def shape(self):
+            # Remove the last dimension
+            return self._value.shape[0 : len(self._value.shape) - 1]
+
+        @property
+        def native_shape(self):
             return self._value.shape
 
         def identity(self):
@@ -287,13 +286,17 @@ def native_factory(
         def to_native(self) -> tf.Tensor:
             return self.factory._decode(self.value)
 
-        def bits(self, factory=None, bitsize=None) -> AbstractTensor:
+        def bits(self, factory=None, bitsize=128) -> AbstractTensor:
             factory = factory or FACTORY
-            if EXPLICIT_MODULUS is None:
-                return factory.tensor(binarize(self.value, bitsize))
-            if bitsize is None:
-                bitsize = math.ceil(math.log2(EXPLICIT_MODULUS))
-            return factory.tensor(binarize(self.value % EXPLICIT_MODULUS, bitsize))
+            if bitsize <= 64:
+                t = tf.gather(self.value, indices=0, axis=-1)
+                return factory.tensor(binarize(t, bitsize))
+            else:
+                t0 = tf.gather(self.value, 0, axis=-1)
+                t1 = tf.gather(self.value, 1, axis=-1)
+                t0 = binarize(t0, bitsize)
+                t1 = binarize(t1, bitsize)
+                return factory.tensor(tf.stack([t0, t1], axis=-1))
 
         def __repr__(self) -> str:
             return "{}(shape={})".format(type(self), self.shape)
@@ -305,6 +308,10 @@ def native_factory(
         @property
         def device(self):
             return self._value.device
+
+        @property
+        def dtype(self):
+            return self.factory.native_type
 
         def __add__(self, other):
             x, y = _lift(self, other)
@@ -334,66 +341,68 @@ def native_factory(
             return self.mod(k)
 
         def __neg__(self):
-            return self.mul(-1)
+            return self.negative()
 
         def __getitem__(self, slc):
             return Tensor(self.value[slc])
 
         def add(self, other):
             x, y = _lift(self, other)
-            value = x.value + y.value
-            if EXPLICIT_MODULUS is not None:
-                value %= EXPLICIT_MODULUS
+            value = tf_i128.add(x.value, y.value)
             return Tensor(value)
 
         def sub(self, other):
             x, y = _lift(self, other)
-            value = x.value - y.value
-            if EXPLICIT_MODULUS is not None:
-                value %= EXPLICIT_MODULUS
+            value = tf_i128.sub(x.value, y.value)
             return Tensor(value)
 
         def mul(self, other):
             x, y = _lift(self, other)
-            value = x.value * y.value
-            if EXPLICIT_MODULUS is not None:
-                value %= EXPLICIT_MODULUS
+            value = tf_i128.mul(x.value, y.value)
             return Tensor(value)
 
         def matmul(self, other):
             x, y = _lift(self, other)
-            value = tf.matmul(x.value, y.value)
-            if EXPLICIT_MODULUS is not None:
-                value %= EXPLICIT_MODULUS
+            value = tf_i128.matmul(x.value, y.value)
+            return Tensor(value)
+
+        def bit_reverse(self):
+            value = tf_i128.i128_bit_reverse(self.value)
             return Tensor(value)
 
         def bit_gather(self, start, stride):
-            value = aux.bit_gather(self.value, start, stride)
+            value = tf_i128.i128_bit_gather(self.value, start, stride)
             return Tensor(value)
 
         def bit_split_and_gather(self, stride):
-            value = aux.bit_split_and_gather(self.value, stride)
+            value = tf_i128.i128_bit_split_and_gather(self.value, stride)
             return Tensor(value)
 
         def xor_indices(self):
-            value = aux.xor_indices(self.value)
+            value = tf_i128.i128_xor_indices(self.value)
             return Tensor(value)
 
         def im2col(self, h_filter, w_filter, strides, padding):
             i2c = im2col(self, h_filter, w_filter, strides=strides, padding=padding)
             return i2c
 
-        def im2patches(
-            self, patch_size, strides=[1, 1], padding="SAME", data_format="NCHW"
-        ):
-            i2p = im2patches(
-                self.value,
+        def im2patches(self, patch_size, strides, padding, data_format="NCHW"):
+            patch0 = im2patches(
+                tf.gather(self.value, 0, axis=-1),
                 patch_size,
                 strides=strides,
                 padding=padding,
                 data_format=data_format,
             )
-            return Tensor(i2p)
+            patch1 = im2patches(
+                tf.gather(self.value, 1, axis=-1),
+                patch_size,
+                strides=strides,
+                padding=padding,
+                data_format=data_format,
+            )
+            patches = tf.stack([patch0, patch1], axis=-1)
+            return Tensor(patches)
 
         def patches2im(
             self,
@@ -415,12 +424,9 @@ def native_factory(
             )
             return p2i
 
-        def conv2d(self, other, strides: list, padding: str = "SAME"):
-            if EXPLICIT_MODULUS is not None:
-                # TODO(Morten) any good reason this wasn't implemented for PrimeTensor?
-                raise NotImplementedError()
+        def conv2d(self, other, stride: int, padding: str = "SAME"):
             x, y = _lift(self, other)
-            return conv2d(x, y, strides=strides, padding=padding)
+            return conv2d(x, y, stride, padding)
 
         def batch_to_space(self, block_shape, crops):
             value = tf.batch_to_space(self.value, block_shape, crops)
@@ -430,13 +436,12 @@ def native_factory(
             value = tf.space_to_batch(self.value, block_shape, paddings)
             return Tensor(value)
 
-        def mod(self, k: int):
-            value = self.value % k
-            if EXPLICIT_MODULUS is not None:
-                value %= EXPLICIT_MODULUS
-            return Tensor(value)
-
         def transpose(self, perm):
+            n_dims = len(self.shape)
+            if perm is None:
+                perm = list(range(n_dims - 1, -1, -1)) + [n_dims]
+            else:
+                perm = list(perm) + [n_dims]
             return Tensor(tf.transpose(self.value, perm))
 
         def strided_slice(self, args, kwargs):
@@ -444,62 +449,52 @@ def native_factory(
 
         def gather(self, indices: list, axis: int = 0):
             if isinstance(indices, Tensor):
-                indices = indices.value
+                indices = tf.gather(indices.value, 0, axis=-1)
+
+            axis = _lift_axis(axis, len(self.shape))
             return Tensor(tf.gather(self.value, indices, axis=axis))
 
         def split(self, num_split: Union[int, list], axis: int = 0):
+            axis = _lift_axis(axis, len(self.shape))
             values = tf.split(self.value, num_split, axis=axis)
             return [Tensor(value) for value in values]
 
         def scatter_nd(self, indices, shape):
             if isinstance(indices, Tensor):
-                indices = indices.value
-            value = tf.scatter_nd(indices, self.value, shape)
-            return Tensor(value)
+                indices = tf.gather(indices.value, 0, axis=-1)
+
+            r0 = tf.scatter_nd(indices, tf.gather(self.value, 0, axis=-1), shape)
+            r1 = tf.scatter_nd(indices, tf.gather(self.value, 1, axis=-1), shape)
+            return Tensor(tf.stack([r0, r1], axis=-1))
 
         def reverse(self, axis):
+            axis = _lift_axis(axis, len(self.shape))
             value = tf.reverse(self.value, axis)
             return Tensor(value)
 
-        def reshape(self, axes: Union[tf.Tensor, List[int]]):
+        def reshape(self, axes: Union[tf.Tensor, List[int], Tuple[int]]):
+            if isinstance(axes, tuple):
+                axes = axes + (self.factory.native_size,)
+            elif isinstance(axes, list):
+                axes = axes + [self.factory.native_size]
+            elif isinstance(axes, tf.TensorShape):
+                axes = axes.as_list() + [self.factory.native_size]
+            else:
+                raise TypeError("axes has unexpected type: {}".format(type(axes)))
             return Tensor(tf.reshape(self.value, axes))
 
         def negative(self):
-            value = tf.negative(self.value)
-            if EXPLICIT_MODULUS is not None:
-                value %= EXPLICIT_MODULUS
+            value = tf_i128.negate(self.value)
             return Tensor(value)
 
         def reduce_sum(self, axis, keepdims=None):
-            value = tf.reduce_sum(self.value, axis, keepdims)
-            if EXPLICIT_MODULUS is not None:
-                value %= EXPLICIT_MODULUS
+            axis = _lift_axis(axis, len(self.shape))
+            value = tf_i128.reduce_sum(self.value, axis, keepdims)
             return Tensor(value)
 
-        def cumsum(self, axis, exclusive, reverse):
-            value = tf.cumsum(
-                self.value, axis=axis, exclusive=exclusive, reverse=reverse
-            )
-            if EXPLICIT_MODULUS is not None:
-                value %= EXPLICIT_MODULUS
-            return Tensor(value)
-
-        def reduce_max(self, axis=None, keepdims=False):
-            value = tf.reduce_max(self.value, axis, keepdims)
-            return Tensor(value)
-
-        def equal_zero(self, factory=None):
-            factory = factory or FACTORY
-            return factory.tensor(
-                tf.cast(tf.equal(self.value, 0), dtype=factory.native_type)
-            )
-
-        def equal(self, other, factory=None):
+        def equal(self, other):
             x, y = _lift(self, other)
-            factory = factory or FACTORY
-            return factory.tensor(
-                tf.cast(tf.equal(x.value, y.value), dtype=factory.native_type)
-            )
+            return tf_i128.equal(x.value, y.value)
 
         def truncate(self, amount, base=2):
             if base == 2:
@@ -508,17 +503,25 @@ def native_factory(
             factor_inverse = inverse(factor, self.factory.modulus)
             return (self - (self % factor)) * factor_inverse
 
-        def right_shift(self, bitlength):
-            return Tensor(tf.bitwise.right_shift(self.value, bitlength))
-
-        def expand_dims(self, axis: Optional[int] = None):
+        def expand_dims(self, axis):
+            axis = _lift_axis(axis, len(self.shape) + 1)
             return Tensor(tf.expand_dims(self.value, axis))
 
         def squeeze(self, axis: Optional[List[int]] = None):
+            axis = _lift_axis(axis, len(self.shape))
             return Tensor(tf.squeeze(self.value, axis=axis))
 
         def cast(self, factory):
-            return factory.tensor(self.value)
+            if factory == self.factory:
+                return self
+            elif factory.native_type == tf.bool:
+                split_bool = tf.cast(self.value, tf.bool)
+                merge_bool = tf.math.logical_or(
+                    tf.gather(split_bool, 0, axis=-1), tf.gather(split_bool, 1, axis=-1)
+                )
+                return factory.tensor(merge_bool)
+            else:
+                return factory.tensor(tf.gather(self.value, 0, axis=-1))
 
         def __or__(self, other):
             return self.bitwise_or(other)
@@ -540,6 +543,9 @@ def native_factory(
             return self.bitwise_and(other)
 
         def bitwise_and(self, other):
+            # Because "and" is a keyword in Python,
+            # the naming "and_" follows the way how Python handles this:
+            # https://docs.python.org/3.4/library/operator.html
             x, y = _lift(self, other)
             value = tf.bitwise.bitwise_and(x.value, y.value)
             return Tensor(value)
@@ -552,50 +558,30 @@ def native_factory(
             return Tensor(value)
 
         def __lshift__(self, bitlength):
-            return self.left_shift(bitlength)
+            return self.lshift(bitlength)
 
-        def left_shift(self, bitlength):
-            return Tensor(tf.bitwise.left_shift(self.value, bitlength))
+        def lshift(self, bitlength):
+            return Tensor(tf_i128.left_shift(self.value, bitlength))
 
         def __rshift__(self, bitlength):
             """
             Arithmetic shift.
-            Please refer to `self.logical_rshift` for a logical right shift.
+            Please refer to `self.logical_rshift` if a logical right shift is desired.
             """
             return self.right_shift(bitlength)
 
-        def logical_rshift(self, bitlength):
-            """Computes a bitshift to the right."""
-            # There is some bug in TF when casting from int to uint: the uint result
-            # becomes 0 so the following code does not work.
-            # Bug report: https://github.com/tensorflow/tensorflow/issues/30215
-            #
-            # cast_map = {tf.int8: tf.uint8, tf.int16: tf.uint16,
-            #             tf.int32: tf.uint32, tf.int64: tf.uint64}
-            # x = tf.bitwise.right_shift(
-            #     tf.cast(self.value, dtype=cast_map[NATIVE_TYPE]), bitlength)
-            # x = tf.cast(x, NATIVE_TYPE)
-            #
-            # Instead, we have to do the following slightly more sophisticated stuff.
-            if bitlength < 0:
-                raise ValueError("Unsupported shift steps.")
-            if bitlength == 0:
-                return self
-            total = NATIVE_TYPE.size * 8
-            mask = ~((-1) << (total - bitlength))
-            x = tf.bitwise.right_shift(self.value, bitlength)
-            x = tf.bitwise.bitwise_and(x, mask)
-            return Tensor(x)
+        def right_shift(self, bitlength):
+            return Tensor(tf_i128.right_shift(self.value, bitlength))
 
-        def bit_reverse(self):
-            value = aux.bit_reverse(self.value)
-            return Tensor(value)
+        def logical_rshift(self, bitlength):
+            return Tensor(tf_i128.logic_right_shift(self.value, bitlength))
 
     class Constant(Tensor, AbstractConstant):
         """Native Constant class."""
 
-        def __init__(self, constant_value: tf.Tensor) -> None:
-            super(Constant, self).__init__(constant_value)
+        def __init__(self, constant: tf.Tensor) -> None:
+            assert isinstance(constant, tf.Tensor)
+            super(Constant, self).__init__(constant)
 
         def __repr__(self) -> str:
             return "Constant(shape={})".format(self.shape)

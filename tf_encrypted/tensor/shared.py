@@ -1,9 +1,7 @@
 """Commonly used tensor functions."""
 import math
 from typing import Optional
-from typing import Union
 
-import numpy as np
 import tensorflow as tf
 
 
@@ -90,7 +88,7 @@ def patches2im(
     with tf.name_scope("patches2im"):
         # To NHWC.
         if data_format == "NCHW":
-            patches = tf.transpose(patches, [0, 2, 3, 1])
+            patches = patches.transpose([0, 2, 3, 1])
 
         _h = patches.shape[1]
         _w = patches.shape[2]
@@ -102,7 +100,7 @@ def patches2im(
         col_ch = patches.shape[3] // (ps_h * ps_w)  # Colour channel count
         assert patches.shape[3] % (ps_h * ps_w) == 0, "Unexpected patch size"
 
-        patches = tf.reshape(patches, (bs, -1, ps_h, ps_w, col_ch))
+        patches = patches.reshape((bs, -1, ps_h, ps_w, col_ch))
 
         # Recalculate output shape of "extract_image_patches" including padded pixels
         wout = (_w - 1) * strides[0] + ps_w
@@ -139,21 +137,21 @@ def patches2im(
 
         idx = tf.concat([bb, yy, xx, cc, dd], -1)
 
-        stratified_img = tf.scatter_nd(idx, patches, (bs, hout, wout, col_ch, np))
-        stratified_img = tf.transpose(stratified_img, (0, 4, 1, 2, 3))
+        stratified_img = patches.scatter_nd(idx, (bs, hout, wout, col_ch, np))
+        stratified_img = stratified_img.transpose((0, 4, 1, 2, 3))
 
-        stratified_img_count = tf.scatter_nd(
-            idx, tf.ones_like(patches), (bs, hout, wout, col_ch, np)
+        stratified_img_count = patches.factory.ones_like(patches).scatter_nd(
+            idx, (bs, hout, wout, col_ch, np)
         )
-        stratified_img_count = tf.transpose(stratified_img_count, (0, 4, 1, 2, 3))
+        stratified_img_count = stratified_img_count.transpose((0, 4, 1, 2, 3))
 
         with tf.name_scope("consolidate"):
-            sum_stratified_img = tf.reduce_sum(stratified_img, axis=1)
+            sum_stratified_img = stratified_img.reduce_sum(axis=1)
             if consolidation == "SUM":
                 reconstructed_img = sum_stratified_img
             elif consolidation == "AVG":
-                stratified_img_count = tf.reduce_sum(stratified_img_count, axis=1)
-                reconstructed_img = tf.divide(sum_stratified_img, stratified_img_count)
+                stratified_img_count = stratified_img_count.reduce_sum(axis=1)
+                reconstructed_img = sum_stratified_img / stratified_img_count
             else:
                 raise NotImplementedError(
                     "Unknown consolidation method: {}".format(consolidation)
@@ -164,7 +162,7 @@ def patches2im(
             if img_h > hout:
                 # This happens when padding is 'VALID' and the image has been cropped,
                 # hence we will just pad 0 at the end
-                reconstructed_img = tf.pad(
+                reconstructed_img = reconstructed_img.factory.pad(
                     reconstructed_img, [[0, 0], [0, img_h - hout], [0, 0], [0, 0]]
                 )
             elif img_h < hout:
@@ -175,7 +173,7 @@ def patches2im(
                 ]
 
             if img_w > wout:
-                reconstructed_img = tf.pad(
+                reconstructed_img = reconstructed_img.factory.pad(
                     reconstructed_img, [[0, 0], [0, 0], [0, img_w - hout], [0, 0]]
                 )
             elif img_w < wout:
@@ -187,7 +185,7 @@ def patches2im(
 
         # To NCHW.
         if data_format == "NCHW":
-            reconstructed_img = tf.transpose(reconstructed_img, [0, 3, 1, 2])
+            reconstructed_img = reconstructed_img.transpose([0, 3, 1, 2])
 
         return reconstructed_img
 
@@ -213,7 +211,7 @@ def pad_size(input_size, kernel_size, strides):
 
 
 def im2col(
-    x: Union[tf.Tensor, np.ndarray],
+    x,
     h_filter: int,
     w_filter: int,
     strides: list = [1, 1],
@@ -225,30 +223,25 @@ def im2col(
     with tf.name_scope("im2col"):
 
         if data_format == "NCHW":
-            x = tf.transpose(x, [0, 2, 3, 1])
+            x = x.transpose([0, 2, 3, 1])
         channels = int(x.shape[3])
 
-        patch_tensor = im2patches(
-            x,
+        patch_tensor = x.im2patches(
             (h_filter, w_filter),
             strides=strides,
             padding=padding,
             data_format="NHWC",
         )
 
-        patch_tensor = tf.reshape(
-            tf.transpose(patch_tensor, [3, 1, 2, 0]), (h_filter, w_filter, channels, -1)
-        )
+        patch_tensor = patch_tensor.transpose([3, 1, 2, 0])
+        patch_tensor = patch_tensor.reshape((h_filter, w_filter, channels, -1))
 
         if data_format == "NCHW":
             # Put channel first for each patch
-            patch_tensor = tf.transpose(patch_tensor, [2, 0, 1, 3])
+            patch_tensor = patch_tensor.transpose([2, 0, 1, 3])
 
         # reshape to x_col
-        x_col_tensor = tf.reshape(
-            patch_tensor,
-            (channels * h_filter * w_filter, -1),
-        )
+        x_col_tensor = patch_tensor.reshape((channels * h_filter * w_filter, -1))
 
         return x_col_tensor
 
@@ -273,7 +266,7 @@ def conv2d(x, y, strides=[1, 1], padding="SAME", data_format="NCHW"):
 
     with tf.name_scope("conv2d"):
         if data_format == "NCHW":
-            x = tf.transpose(x, [0, 2, 3, 1])
+            x = x.transpose([0, 2, 3, 1])
 
         h_filter, w_filter, in_filters, out_filters = map(int, y.shape)
         n_x, h_x, w_x, c_x = map(int, x.shape)
@@ -283,14 +276,14 @@ def conv2d(x, y, strides=[1, 1], padding="SAME", data_format="NCHW"):
         x_col = im2col(
             x, h_filter, w_filter, strides=strides, padding=padding, data_format="NHWC"
         )
-        w_col = tf.reshape(tf.transpose(y, [3, 0, 1, 2]), [int(out_filters), -1])
-        out = tf.matmul(w_col, x_col)
+        w_col = y.transpose([3, 0, 1, 2]).reshape([int(out_filters), -1])
+        out = w_col.matmul(x_col)
 
-        out = tf.reshape(out, [out_filters, h_out, w_out, n_x])
+        out = out.reshape([out_filters, h_out, w_out, n_x])
 
         if data_format == "NCHW":
-            out = tf.transpose(out, [3, 0, 1, 2])
+            out = out.transpose([3, 0, 1, 2])
         else:
-            out = tf.transpose(out, [3, 1, 2, 0])
+            out = out.transpose([3, 1, 2, 0])
 
         return out

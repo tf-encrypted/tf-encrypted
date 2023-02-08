@@ -1,4 +1,4 @@
-# This file include the  floating-point operations
+# This file include the floating-point operations
 from math import ceil
 from math import log2
 
@@ -9,43 +9,65 @@ from ..protocol import TFEPrivateTensor
 from ..protocol import TFEPublicTensor
 
 
-def _fp_div(prot, a: "TFEPrivateTensor", b: "TFEPrivateTensor", nonsigned: bool):
+def _fp_div(
+    prot,
+    a: "TFEPrivateTensor",
+    b: "TFEPrivateTensor",
+    nonsigned: bool,
+    precision: int = 1,
+):
     with tf.name_scope("fp_div"):
-        return a * _fp_recip_private(prot, b, nonsigned)
+        return a * _fp_recip_private(prot, b, nonsigned, precision=precision)
 
 
 def _fp_div_private_private(
-    prot, a: "TFEPrivateTensor", b: "TFEPrivateTensor", nonsigned: bool
+    prot,
+    a: "TFEPrivateTensor",
+    b: "TFEPrivateTensor",
+    nonsigned: bool,
+    precision: int = 1,
 ):
-    return _fp_div(prot, a, b, nonsigned)
+    return _fp_div(prot, a, b, nonsigned, precision=precision)
 
 
 def _fp_div_public_private(
-    prot, a: "TFEPublicTensor", b: "TFEPrivateTensor", nonsigned: bool
+    prot,
+    a: "TFEPublicTensor",
+    b: "TFEPrivateTensor",
+    nonsigned: bool,
+    precision: int = 1,
 ):
-    return _fp_div(prot, a, b, nonsigned)
+    return _fp_div(prot, a, b, nonsigned, precision=precision)
 
 
 def _fp_div_private_public(
-    prot, a: "TFEPrivateTensor", b: "TFEPublicTensor", nonsigned: bool
+    prot,
+    a: "TFEPrivateTensor",
+    b: "TFEPublicTensor",
+    nonsigned: bool,
+    precision: int = 1,
 ):
     return a / b
 
 
 def _fp_div_public_public(
-    prot, a: "TFEPublicTensor", b: "TFEPublicTensor", nonsigned: bool
+    prot,
+    a: "TFEPublicTensor",
+    b: "TFEPublicTensor",
+    nonsigned: bool,
+    precision: int = 1,
 ):
     return a / b
 
 
-def _fp_sqrt2(prot, a: "TFEPrivateTensor"):
+def _fp_sqrt2(prot, a: "TFEPrivateTensor", precision: int = 1):
     c15 = prot.define_constant(1.5)
     c05 = prot.define_constant(0.5)
 
-    y = approx_sqrt_inv(prot, a)  # y approixmates 1 / sqrt(a)
+    y = approx_sqrt_inv(prot, a, precision=precision)  # y approixmates 1 / sqrt(a)
     g = a * y
     h = y * c05
-    for _ in range(1):
+    for _ in range(precision):
         """
         Over iterations,
             g -> sqrt(b)
@@ -58,7 +80,7 @@ def _fp_sqrt2(prot, a: "TFEPrivateTensor"):
     return g, h
 
 
-def _fp_recip_private(prot, x: "TFEPrivateTensor", nonsigned):
+def _fp_recip_private(prot, x: "TFEPrivateTensor", nonsigned, precision: int = 1):
     """
     Approxiamtedly compute 1/x from x.
 
@@ -76,7 +98,7 @@ def _fp_recip_private(prot, x: "TFEPrivateTensor", nonsigned):
         # By using integer factor '2', we can save one truncation.
         inv_sgf = 2.9281928 - two * sgf
         appr_recip = inv_sgf * exp  # ~ 1/x
-        for _ in range(1):
+        for _ in range(precision):
             """One iteration should give us very good approximation
             (10^{-5} relative error ratio).
             More iterations, more precision."""
@@ -88,17 +110,17 @@ def _fp_recip_private(prot, x: "TFEPrivateTensor", nonsigned):
         return appr_recip
 
 
-def _fp_inv_sqrt_private(prot, a: "TFEPrivateTensor"):
+def _fp_inv_sqrt_private(prot, a: "TFEPrivateTensor", precision: int = 1):
     # low precision
-    return approx_sqrt_inv(prot, a)
+    return approx_sqrt_inv(prot, a, precision=precision)
     # high precision with extra 3 rounds of communication
     # two = prot.define_constant(2, apply_scaling=False)
     # _, h = _fp_sqrt2(prot, a)
     # return h * two
 
 
-def _fp_sqrt_private(prot, a: "TFEPrivateTensor"):
-    g, _ = _fp_sqrt2(prot, a)
+def _fp_sqrt_private(prot, a: "TFEPrivateTensor", precision: int = 1):
+    g, _ = _fp_sqrt2(prot, a, precision=precision)
     return g
 
 
@@ -119,7 +141,7 @@ def prefix_ORs(b: "TFEPrivateTensor", k: int):
     return b
 
 
-def _do_fp_log_private(prot, x: "TFEPrivateTensor", base: "float"):
+def _do_fp_log_private(prot, x: "TFEPrivateTensor", base: "float", precision: int = 1):
     k = prot.fixedpoint_config.precision_fractional
     m = k + prot.fixedpoint_config.precision_integral
     n = prot.int_factory.nbits
@@ -224,79 +246,86 @@ def __fp_normalize(prot, b: "TFEPrivateTensor", nonsigned=False):
     return sgf, exp
 
 
-def approx_sqrt_inv(prot, x: "TFEPrivateTensor"):
+def approx_sqrt_inv(prot, x: "TFEPrivateTensor", precision: int = 1):
     """
     From x, to compute an approximation of 1/sqrt(x).
     """
 
     def select(x, y, bit):
         """
-        return x if bit = 0 else y.
+        return y if bit = 0 else x.
         """
         c = np.ones(shape=bit.shape) * (x - y)
-        return prot.mul_ab(prot.define_constant(c, apply_scaling=False), bit) + y
+        return prot.mul_ab(prot.define_constant(c), bit) + y
 
     k = prot.fixedpoint_config.precision_fractional
-    f = prot.fixedpoint_config.precision_integral
-    m = k + f
     n = x.backing_dtype.nbits
+    # using top half bits as integer, bottom half bits as fraction.
+    s = (n // 2) - k
+    xs = x << s
+    assert k >= s
+    assert n % 2 == 0
     assert x.is_scaled, "Er.. tricky here."
-    assert (
-        2 * k > m
-    ), "We assume 2^{-j} can be represent with 2k-bit precisions for all j in [0, m)"
-    with tf.name_scope("normalize_for_sqrt"):
-        # bit-decomposition. Make sure the higher bits are all 0 via shifting.
-        x_bits = (prot.a2b(x, m) << (n - m)) >> (n - m)
-        y_bits = prefix_ORs(x_bits, m)
+    with tf.name_scope("inv_sqrt"):
+        # bit-decomposition.
+        x_bits = prot.a2b(xs, n)
+        y_bits = prefix_ORs(x_bits, n)
         z_bits = (
             y_bits ^ (y_bits >> 1)
         ) << 1  # note: x = c * 2^m where c \in [0.25, 0.5)
-        rev_z_bits = prot.bit_reverse(z_bits) >> (n - 2 * k)
+        rev_z_bits = prot.bit_reverse(z_bits)
 
-        frac = prot.b2a(rev_z_bits, 2 * k)
-        frac.is_scaled = True
+        frac = prot.b2a(rev_z_bits, n)
+        # By default, bottom k bits used as fraction,
+        # do truncate manually here.
+        frac.is_scaled = False
         normalized = frac * x  # normalized \in [0.25, 0.5)
+        normalized = prot.truncate(normalized, amount=k + s)
+        normalized.is_scaled = True
         """
         f(b) = 4.7979 * b^2 - 5.9417 * b + 3.1855 approixmates 1/sqrt(b) in [0.25, 0.5)
         with less than 0.7% relative error
         """
         sqrt_inv = ((4.7979 * normalized) - 5.9417) * normalized + 3.1855
+        # more iteration, more precision
+        for i in range(precision):
+            sqrt_inv = sqrt_inv * (3 - normalized * sqrt_inv * sqrt_inv)
+            sqrt_inv = sqrt_inv * 0.5
         """
-            Indeed, the exponetent part is 2^{j+k} where k is the scaling factor.
+            Indeed, the exponetent part is 2^{j+k+s}
+            where k is the scaling factor, s = (n // 2) - k
             We want to compute sqrt(2^{-j}) with k-bit precision,
             i.e., sqrt(2^{-j}) * 2^k.
-            In other words, we compute sqrt(2^{-j}) * 2^k from 2^{j+k}.
+            In other words, we compute sqrt(2^{-j}) * 2^k from 2^{j+k+s}.
 
-            1. We first obtain 2^{-(j+k)} from 2^{j + k}.
-            2. Then we compute 2^{floor(-(j+k)/2)}. Rewrite it as
-               2^{floor(-(j+k)/2)} = c * 2^{floor(-j/2)} * 2^{floor(-k/2)}
-               where c depends on the parity of j, and k.
-            3. We compute the parity of j + k, i.e., check the LSB of j + k.
-            4. Suppose k is even, 2^{floor(-k/2)} = 2^{-k/2}.
-               Then we can cancel this term via 2^{k/2}.
-               If lsb(j + k) = 0 <-> j is even. In this case,
+            1. We first obtain 2^{-(j+k+s)} from 2^{j+k+s}.
+            2. Then we compute 2^{floor(-(j+k+s)/2)}. Rewrite it as
+               2^{floor(-(j+k+s)/2)} = c * 2^{floor(-j/2)} * 2^{floor(-(k+s)/2)}
+               where c depends on the parity of j, and k + s.
+            3. We compute the parity of j+k+s, i.e., check the LSB of j+k+s.
+            4. Suppose k+s is even, 2^{floor((s-k)/2)} = 2^{(s-k)/2}.
+               Then we can cancel this term via 2^{s-k/2}.
+               If lsb(j+k+s) = 0 <-> j is even. In this case,
                2^{floor(-j/2)} = 2^{-j/2} = sqrt(2^{-j}).
-               If lsb(j + k) = 1 <-> j is odd. Then
-               2^{floor(-j/2)} * 2^{-1} = sqrt(2^{-j}).
+               If lsb(j+k+s) = 1 <-> j is odd. Then
+               2^{floor(-j/2)} * 2^{-1/2} = sqrt(2^{-j}).
 
-               Suppose k is odd: We need 2^{k//2} * 2 to cancel 2^{floor(-k/2)}.
-               If lsb(j + k) = 0 <-> j is odd. In this case,
-               2^{floor(-j/2)} * 2^{-1} = sqrt(2^{-j}).
-               If lsb(j + k) = 1 <-> j is odd. Then
+               Suppose k+s is odd,
+               We need 2^{(s-k)//2} * 2 to cancel 2^{floor(-(k+s)/2)}.
+               If lsb(j+k+s) = 0 <-> j is odd. In this case,
+               2^{floor(-j/2)} * 2^{-1/2} = sqrt(2^{-j}).
+               If lsb(j+k+s) = 1 <-> j is even. Then
                2^{floor(-j/2)} = 2^{-j/2} = sqrt(2^{-j}).
         """
-        j_add_k = prot.xor_indices(z_bits)  # j + k
-        lsb = prot.bit_extract(j_add_k, 0)  # lsb = 0 <-> j + k is even
+        sum_jks = prot.xor_indices(z_bits)
+        lsb = prot.bit_extract(sum_jks, 0)  # lsb = 0 <-> j+k+s is even
         exponet = prot.b2a(
-            prot.bit_gather(rev_z_bits | rev_z_bits >> 1, 0, 2), k
-        )  # 2^{floor(-(j+k)/2)}
-        exponet.is_scaled = False  # Stop truncation
-        if k & 1 == 0:  # k is even which means lsb = 1 <=> j is odd
-            exponet = exponet * select(2 ** (k // 2), 2 ** (k // 2) * np.sqrt(2.0), lsb)
-        else:  # k is odd which means lsb = 1 <=> j is even
-            exponet = exponet * select(
-                2 ** (k // 2) * np.sqrt(2.0), 2 ** (k // 2 + 1), lsb
-            )
-        exponet.is_scaled = True  # 2^{-j/2} with k-bit precision
+            prot.bit_gather(rev_z_bits | rev_z_bits >> 1, 0, 2), k + s
+        )  # 2^{floor(-(j+k+s)/2)}
+        esk = 2 ** ((k - s) // 2)
+        if (k + s) & 1 == 0:  # k+s is even which means lsb = 1 <=> j is odd
+            exponet = exponet * select(esk, esk * np.sqrt(2.0), lsb)
+        else:  # k+s is odd which means lsb = 1 <=> j is even
+            exponet = exponet * select(esk * np.sqrt(2.0), esk * 2, lsb)
 
     return sqrt_inv * exponet

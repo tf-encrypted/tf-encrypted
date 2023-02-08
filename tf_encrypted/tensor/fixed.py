@@ -18,6 +18,7 @@ class FixedpointConfig:
     def __init__(
         self,
         scaling_base: int,
+        nbits: int,
         precision_integral: int,
         precision_fractional: int,
         matmul_threshold: int,
@@ -25,6 +26,7 @@ class FixedpointConfig:
         use_noninteractive_truncation: bool,
     ) -> None:
         self.scaling_base = scaling_base
+        self.nbits = nbits
         self.precision_integral = precision_integral
         self.precision_fractional = precision_fractional
         self.matmul_threshold = matmul_threshold
@@ -52,6 +54,7 @@ class FixedpointConfig:
 
 fixed100 = FixedpointConfig(
     scaling_base=2,
+    nbits=100,
     precision_integral=14,
     precision_fractional=16,
     matmul_threshold=1024,
@@ -61,6 +64,7 @@ fixed100 = FixedpointConfig(
 
 fixed100_ni = FixedpointConfig(
     scaling_base=2,
+    nbits=100,
     precision_integral=14,
     precision_fractional=16,
     matmul_threshold=1024,
@@ -72,6 +76,7 @@ fixed100_ni = FixedpointConfig(
 
 fixed64 = FixedpointConfig(
     scaling_base=3,
+    nbits=64,
     precision_integral=7,
     precision_fractional=8,
     matmul_threshold=256,
@@ -81,6 +86,7 @@ fixed64 = FixedpointConfig(
 
 fixed64_ni = FixedpointConfig(
     scaling_base=2,
+    nbits=64,
     precision_integral=10,
     precision_fractional=13,
     matmul_threshold=256,
@@ -90,8 +96,19 @@ fixed64_ni = FixedpointConfig(
 
 fixed64_heuristic = FixedpointConfig(
     scaling_base=2,
+    nbits=64,
     precision_integral=11,
     precision_fractional=16,
+    matmul_threshold=256,
+    truncation_gap=0,
+    use_noninteractive_truncation=False,
+)
+
+fixed128_heuristic = FixedpointConfig(
+    scaling_base=2,
+    nbits=128,
+    precision_integral=20,
+    precision_fractional=32,
     matmul_threshold=256,
     truncation_gap=0,
     use_noninteractive_truncation=False,

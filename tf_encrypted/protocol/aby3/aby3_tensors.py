@@ -195,10 +195,10 @@ class ABY3Tensor(TFETensor):
         return self.prot.mul(self, other)
 
     def __mul__(self, other):
-        return self.prot.mul(self, other)
+        return self.mul(other)
 
     def __rmul__(self, other):
-        return self.prot.mul(other, self)
+        return self.mul(other)
 
     def __truediv__(self, other):
         return self.prot.div(self, other)
@@ -253,14 +253,14 @@ class ABY3Tensor(TFETensor):
         """
         return self.prot.transpose(self, perm)
 
-    def truncate(self, trunc_type="trunc2"):
+    def truncate(self, amount=None):
         """
         Truncate this tensor.
 
         :return: A new ABY3Tensor
         :rtype: ABY3Tensor
         """
-        return self.prot.truncate(self, trunc_type)
+        return self.prot.truncate(self, amount=amount)
 
     def expand_dims(self, axis=None):
         """
@@ -468,11 +468,11 @@ class ABY3PublicTensor(ABY3Tensor, TFEPublicTensor):
     def bone(self) -> ABY3PublicTensorBone:
         values = [None, None, None]
         with tf.device(self.prot.servers[0].device_name):
-            values[0] = self.values[0].to_native()
+            values[0] = self.values[0].value
         with tf.device(self.prot.servers[1].device_name):
-            values[1] = self.values[1].to_native()
+            values[1] = self.values[1].value
         with tf.device(self.prot.servers[2].device_name):
-            values[2] = self.values[2].to_native()
+            values[2] = self.values[2].value
         return ABY3PublicTensorBone(
             self.is_scaled, self.share_type, self.unwrapped[0].factory.nbits, values
         )
@@ -598,14 +598,14 @@ class ABY3PrivateTensor(ABY3Tensor, TFEPrivateTensor):
     def bone(self) -> ABY3PrivateTensorBone:
         shares = [[None, None], [None, None], [None, None]]
         with tf.device(self.prot.servers[0].device_name):
-            shares[0][0] = self.shares[0][0].to_native()
-            shares[0][1] = self.shares[0][1].to_native()
+            shares[0][0] = self.shares[0][0].value
+            shares[0][1] = self.shares[0][1].value
         with tf.device(self.prot.servers[1].device_name):
-            shares[1][0] = self.shares[1][0].to_native()
-            shares[1][1] = self.shares[1][1].to_native()
+            shares[1][0] = self.shares[1][0].value
+            shares[1][1] = self.shares[1][1].value
         with tf.device(self.prot.servers[2].device_name):
-            shares[2][0] = self.shares[2][0].to_native()
-            shares[2][1] = self.shares[2][1].to_native()
+            shares[2][0] = self.shares[2][0].value
+            shares[2][1] = self.shares[2][1].value
         return ABY3PrivateTensorBone(
             self.is_scaled, self.share_type, self.unwrapped[0][0].factory.nbits, shares
         )
