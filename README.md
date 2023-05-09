@@ -19,7 +19,7 @@ For those developers who want to use TF1 like TFE, we suggest them to use [versi
 
 # Installation
 
-Currently we suggest install TFE from source: 
+Currently we suggest installing TFE from source: 
 (make sure Python 3.8+ and TensorFlow 2.9.1+ are installed)
 
 ```bash
