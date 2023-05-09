@@ -19,22 +19,8 @@ For those developers who want to use TF1 like TFE, we suggest them to use [versi
 
 # Installation
 
-TF Encrypted is available as a package on [PyPI](https://pypi.org/project/tf-encrypted/) supporting Python 3.8+ and TensorFlow 2.9.1+:
-
-```bash
-pip install tf-encrypted
-```
-
-Creating a conda environment to run TF Encrypted code can be done using:
-
-```
-conda create -n tfe python=3.8
-conda activate tfe
-conda install tensorflow notebook
-pip install tf-encrypted
-```
-
-Alternatively, installing from source can be done using:
+Currently we suggest install TFE from source: 
+(make sure Python 3.8+ and TensorFlow 2.9.1+ are installed)
 
 ```bash
 git clone https://github.com/tf-encrypted/tf-encrypted.git
@@ -42,9 +28,6 @@ cd tf-encrypted
 pip install -e .
 make build
 ```
-
-This latter is useful on platforms for which the pip package has not yet been compiled but is also needed for [development](./docs/CONTRIBUTING.md).
-Note that this will get you a working basic installation, yet a few more steps are required to match the performance and security of the version shipped in the pip package, see the [installation instructions](./docs/INSTALL.md).
 
 # Usage
 
