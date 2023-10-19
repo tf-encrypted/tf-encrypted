@@ -580,7 +580,7 @@ class DepthwiseConv2D(Conv2D):
             w_out = int(np.ceil(float(w_x) / float(self.strides[0])))
         if self.padding == "VALID":
             h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides[0])))
-            w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))            
+            w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))
         n_output_channel = n_filters * n_input_channel
         return [n_x, n_output_channel, h_out, w_out]
 
