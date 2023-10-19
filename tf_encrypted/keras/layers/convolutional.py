@@ -568,7 +568,7 @@ class DepthwiseConv2D(Conv2D):
 
     def compute_output_shape(self, input_shape):
         """Compute output_shape for the layer."""
-        h_filter, w_filter, _, n_filters = self.kernel_shape
+        h_filter, w_filter, n_input_channel, n_filters = self.kernel_shape
 
         if self.data_format == "channels_first":
             n_x, _, h_x, w_x = input_shape
@@ -582,7 +582,7 @@ class DepthwiseConv2D(Conv2D):
             h_out = int(np.ceil(float(h_x - h_filter + 1) / float(self.strides[0])))
             w_out = int(np.ceil(float(w_x - w_filter + 1) / float(self.strides[0])))
 
-        return [n_x, n_filters, h_out, w_out]
+        return [n_x, n_filters*n_input_channel, h_out, w_out]
 
     def get_mask(self, in_channels):
         mask = np.zeros(
