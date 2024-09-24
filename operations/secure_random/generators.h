@@ -64,7 +64,7 @@ protected:
     typedef typename std::make_unsigned<T>::type uT;
 
     // add one for inclusive range, subtract 1 from high input to get exclusive range
-    auto range = static_cast<uT>(high) - static_cast<uT>(low) + 1;
+    uT range = static_cast<uT>(high) - static_cast<uT>(low) + 1;
 
     auto unsigned_max = std::numeric_limits<uT>::max();
 
